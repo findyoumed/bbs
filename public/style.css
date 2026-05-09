@@ -1,0 +1,1954 @@
+/* [LOG: 20260424_1730] �׸� CSS ���� ���� ? ��� �� �� ��� ��Ұ� �� ������ ���� */
+:root {
+    --bgcolor: #000000;
+    --color: #ffffff;
+    --mobile-visual-viewport-height: 100dvh;
+    --mobile-visual-viewport-width: 100vw;
+    --mobile-visual-viewport-top: 0px;
+    --mobile-keyboard-inset: 0px;
+}
+
+
+/* ?�?� ?�트 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+@font-face {
+    font-family: 'Sam3KRFont';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/Sam3KRFont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
+@font-face {
+    font-family: 'BbsHybridFont';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F;
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
+@font-face {
+    font-family: 'BbsPrimaryFont';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
+@font-face {
+    font-family: 'BbsHintFont';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
+@font-face {
+    font-family: 'BbsLineFont';
+    src: local('GulimChe'), local('DotumChe'), local('monospace');
+    unicode-range: U+002D, U+007C, U+2500-257F, U+2580-259F;
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* ?�?� 기본 ?�이?�웃 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100dvh;
+    background: var(--bgcolor, #000);
+    color: #fff;
+    padding: 0;
+    font-family: 'Sam3KRFont', 'GulimChe', monospace;
+    font-size: 17px !important;
+    line-height: 1.4 !important;
+    font-weight: normal;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+/* [LOG: 20260410_1145] C ?�로 ?��??�는 ?��? 배경 ?�마 */
+body.theme-blue {
+    background: #0000aa;
+}
+
+body.theme-blue #terminal-wrapper,
+body.theme-blue #terminal-container,
+body.theme-blue #terminal-screen,
+body.theme-blue #terminal-footer,
+body.theme-blue #cmd-input {
+    background: #0000aa;
+}
+
+body.theme-blue .cmd-token:hover,
+body.theme-blue .cmd-token:focus-visible {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+body.theme-blue .ansi-hotspot:hover,
+body.theme-blue .ansi-hotspot:focus-visible,
+body.theme-blue .ansi-hotspot.is-group-hovered {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+body.theme-blue .post-row:hover,
+body.theme-blue .bbs-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.theme-blue .cmd-clickable:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+body.theme-blue .ansi-screen,
+body.theme-blue .post-header-box,
+body.theme-blue .bbs-btn,
+body.theme-blue .write-field input,
+body.theme-blue .write-field select,
+body.theme-blue .write-field textarea {
+    background: var(--bgcolor, #0000aa);
+}
+
+
+.app-shell {
+    width: min(100%, 800px);
+    min-height: calc(100vh - 64px);
+    margin: 0 auto;
+    display: block;
+}
+
+/* ?�?� ?��????�퍼 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+#terminal-wrapper {
+    width: 100%;
+    max-width: 800px;
+    height: 100dvh;
+    margin: 0 auto;
+    background-color: var(--bgcolor, transparent);
+    border: none !important;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+    #terminal-wrapper {
+        height: min(calc(100dvh - 64px), 640px);
+        margin-top: 32px;
+    }
+
+    /* [LOG: 20260428_1025] 노트북 등 세로 해상도가 낮은 화면(800px 이하) 대응 */
+    @media (max-height: 800px) {
+        #terminal-wrapper {
+            margin-top: 8px;
+            height: min(calc(100dvh - 20px), 640px);
+        }
+    }
+}
+
+#terminal-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: 100%;
+    background-color: var(--bgcolor, transparent);
+    font-family: 'BbsPrimaryFont', 'BbsLineFont', 'Sam3KRFont', 'GulimChe', monospace;
+    font-size: 17px;
+    line-height: 1.4;
+    color: #fff;
+    font-weight: normal;
+    border: none !important;
+}
+
+/* ?면 ?역 (?크?가?? */
+/* [LOG: 20260428_1030] 힌트바가 내용 바로 아래에 붙도록 가변 레이아웃 적용 */
+#terminal-screen {
+    flex: 0 1 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 100%;
+    overflow: hidden;
+    padding: 0;
+    cursor: text;
+}
+
+/* ?단 ?력 ?역 ???이???우?리 PC?신 ?태?????*/
+#terminal-footer {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1px;
+    padding: 2px 16px 1px;
+    background: var(--bgcolor, #000);
+    border-top: none;
+    z-index: 100;
+    /* [LOG: 20260417_1000] 기본: 숨김 (JS 로드 전 노출 방지) */
+    font-size: inherit;
+    line-height: 1.1;
+    min-height: 36px;
+    /* 상단바와 동일한 폰트를 적용하여 너비 계산(ch) 통일 */
+    font-family: 'DungGeunMo', 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace;
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* [LOG: 20260427_1510] 로딩 중에는 footer 전체를 숨기고 준비 완료 후 노출 */
+/* [LOG: 20260428_1545] 로딩 중에는 하단 구분선(::before)도 숨김 처리 */
+#terminal-footer[data-footer-state="hidden"]::before,
+#terminal-container.is-loading #terminal-footer::before {
+    display: none !important;
+}
+
+#terminal-footer[data-footer-state="hidden"] {
+    display: none !important;
+}
+
+/* [LOG: 20260427_1055] UI 조급함 해소: 로딩 중에도 구분선은 항상 표시 */
+#terminal-footer::before {
+    content: '────────────────────────────────────────────────────────────────────────────────';
+    display: block;
+    color: var(--hr-color, #fff);
+    margin: 0 0 6px;
+    padding: 0;
+    font-family: 'DungGeunMo', 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace;
+    font-size: 17px;
+    line-height: 1.4;
+    white-space: pre;
+    text-align: left;
+    width: 100%;
+}
+
+#cmd-hint {
+    color: #fff;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+}
+
+#cmd-hint.has-cmd-tokens {
+    min-height: 18px;
+    line-height: inherit;
+}
+
+#cmd-hint.is-expanded {
+    overflow: visible;
+    white-space: normal;
+}
+
+#cmd-hint.is-expanded.has-cmd-tokens {
+    min-height: 34px;
+}
+
+.cmd-entry-list {
+    display: inline;
+}
+
+.cmd-entry {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.cmd-sep {
+    display: inline;
+}
+
+.cmd-entry--last-visible .cmd-sep {
+    display: none;
+}
+
+#terminal-prompt-row {
+    display: flex;
+    align-items: center;
+    gap: 1ch;
+    min-height: 18px;
+    width: 100%;
+}
+
+#terminal-prompt-row.terminal-prompt-row--inline {
+    gap: 1ch;
+    min-height: 0;
+}
+
+#terminal-prompt-row.terminal-prompt-row--inline label {
+    margin-right: 0;
+}
+
+#cmd-input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    position: relative;
+}
+
+#cmd-mask-text {
+    /* [LOG: 20260507_1757] Password masks are rendered as ASCII stars instead of browser glyphs. */
+    color: #ffffff;
+    display: block;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    min-height: 0;
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    white-space: pre;
+    z-index: 1;
+}
+
+#cmd-mask-text[hidden] {
+    display: none !important;
+}
+
+#user-info {
+    color: #fff;
+    font-size: inherit;
+    line-height: inherit;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+#terminal-footer label {
+    color: #ffffff;
+    cursor: default;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+#cmd-input {
+    background: var(--bgcolor, #000);
+    border: none;
+    outline: none;
+    color: #ffffff;
+    /* [LOG: 20260505_2241] Use the browser caret for exact input positioning. */
+    caret-color: #ffffff;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    display: block;
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    min-width: 0;
+    height: 1.1em;
+    margin: 0;
+    padding: 0;
+    box-sizing: content-box;
+    border-radius: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    z-index: 2;
+}
+
+#cmd-input[data-masked="true"] {
+    /* [LOG: 20260507_1757] Hide the real password field and let #cmd-mask-text show visible stars. */
+    -webkit-text-fill-color: transparent;
+    -webkit-text-security: none;
+    background: transparent;
+    color: transparent;
+    caret-color: #ffffff;
+}
+
+/* ?�?� BBS ?�면 공통 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+.bbs-box {
+    padding: 8px;
+}
+
+.bbs-title {
+    color: #fff;
+    padding: 4px 0 6px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #444;
+    font-size: inherit;
+}
+
+.bbs-error {
+    color: #fff;
+    padding: 8px;
+}
+
+.loading {
+    color: #fff;
+    padding: 16px 8px;
+    font-size: 13px;
+}
+
+.empty {
+    color: #bbb;
+    padding: 8px;
+    text-align: center;
+}
+
+/* ?�?� 메인 메뉴 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+.bbs-banner {
+    color: #fff;
+    padding: 8px 4px 12px;
+    font-size: inherit;
+    line-height: 1.6;
+}
+
+.bbs-menu {
+    padding: 4px 0;
+}
+
+.bbs-menu-item {
+    padding: 5px 8px;
+    color: #fff;
+    cursor: pointer;
+    font-size: inherit;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bbs-menu-item:hover {
+    background: #111;
+}
+
+/* ?�?� 게시�?목록 ?�이�??�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+.post-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.post-header th {
+    color: #fff;
+    border-bottom: 1px solid #444;
+    padding: 4px 6px;
+    text-align: left;
+    font-weight: normal;
+}
+
+.post-row {
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.post-row:hover {
+    background: #111;
+}
+
+.post-row td {
+    padding: 4px 6px;
+    color: #fff;
+    vertical-align: middle;
+}
+
+.post-row .num {
+    color: #bbb;
+    width: 40px;
+    text-align: right;
+    padding-right: 10px;
+}
+
+.post-row .date {
+    color: #bbb;
+    width: 50px;
+    text-align: right;
+}
+
+.post-row .author {
+    color: #fff;
+    width: 90px;
+}
+
+.post-row .title {
+    color: #fff;
+}
+
+.reply-cnt {
+    color: #fff;
+    font-size: 11px;
+}
+
+/* ?�?� 게시�?본문 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+.post-header-box {
+    border: 1px solid #444;
+    background: var(--bgcolor, #000);
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+.post-title {
+    color: #fff;
+    font-size: 15px;
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.post-meta {
+    color: #bbb;
+    font-size: 12px;
+}
+
+.meta-val {
+    color: #fff;
+}
+
+.post-body {
+    padding: 8px 2px 12px;
+    color: #fff;
+    font-size: inherit;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border-bottom: 1px solid #333;
+    margin-bottom: 8px;
+}
+
+.post-actions {
+    display: flex;
+    gap: 6px;
+    padding-top: 4px;
+}
+
+/* ?�?� 버튼 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+.bbs-btn {
+    background: var(--bgcolor, #000);
+    border: 1px solid #666;
+    color: #fff;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.bbs-btn:hover {
+    background: #1a1a1a;
+    border-color: #fff;
+}
+
+.del-btn {
+    color: #fff;
+    border-color: #666;
+}
+
+.del-btn:hover {
+    background: #1a1a1a;
+    border-color: #fff;
+}
+
+/* ?�?� 글?�기 / 로그?????�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+.write-form {
+    padding: 4px 0;
+}
+
+.write-field {
+    margin-bottom: 10px;
+}
+
+.write-field label {
+    display: block;
+    color: #fff;
+    font-size: 12px;
+    margin-bottom: 3px;
+}
+
+.write-field input,
+.write-field select,
+.write-field textarea {
+    width: 100%;
+    background: var(--bgcolor, #000);
+    border: 1px solid #666;
+    color: #fff;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 5px 7px;
+    outline: none;
+}
+
+.write-field input:focus,
+.write-field select:focus,
+.write-field textarea:focus {
+    border-color: #fff;
+}
+
+.write-field textarea {
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.write-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* ?�?� ANSI ?�면 (top.txt ?�더�? ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+.ansi-screen {
+    position: relative;
+    overflow: hidden;
+    background: var(--bgcolor, transparent);
+    max-width: calc(80ch + 32px);
+    font-family: 'BbsPrimaryFont', 'BbsLineFont', 'Sam3KRFont', 'GulimChe', monospace;
+    font-size: 17px;
+}
+
+.ansi-screen-body {
+    max-width: calc(80ch + 32px);
+    margin: 0 auto;
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+.myinfo-screen,
+.ansi-screen-body[data-screen-kind="myinfo"] {
+    padding-top: 2px;
+}
+
+.ansi-screen[data-screen-kind="myinfo-password"]>.myinfo-message,
+.ansi-screen[data-screen-kind="myinfo-password"]>.myinfo-password-block {
+    max-width: calc(80ch + 32px);
+    margin: 0 auto;
+    padding-left: 16px;
+    padding-right: 16px;
+    box-sizing: border-box;
+}
+
+.ansi-screen[data-screen-kind="myinfo-password"]>.myinfo-message {
+    padding-top: 2px;
+}
+
+.myinfo-password-block {
+    color: #fff;
+    font-family: 'DungGeunMo', 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace;
+    font-size: 17px;
+    line-height: 1.1;
+    white-space: normal;
+    margin: 0 auto;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.myinfo-password-line,
+.myinfo-password-prompt-host {
+    min-height: 1.1em;
+    line-height: 1.1;
+}
+
+.myinfo-password-prompt-host {
+    display: block;
+}
+
+.myinfo-password-prompt-host #terminal-prompt-row {
+    /* [LOG: 20260509_1018] Inline MyInfo prompts must look like transcript text, not the boxed footer input. */
+    align-items: baseline;
+    min-height: 1.1em;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.myinfo-password-prompt-host #terminal-prompt-row label {
+    color: #ffffff;
+    cursor: default;
+    flex-shrink: 0;
+    line-height: inherit;
+    white-space: nowrap;
+}
+
+.myinfo-password-prompt-host #cmd-input-wrapper {
+    min-height: 1.1em;
+}
+
+.myinfo-password-prompt-host #cmd-input {
+    height: 1.1em;
+    min-height: 0;
+    line-height: inherit;
+}
+
+#terminal-footer.terminal-footer--prompt-detached {
+    display: none !important;
+}
+
+.myinfo-panel {
+    color: #fff;
+    padding: 0;
+}
+
+.myinfo-title {
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.myinfo-row {
+    display: grid;
+    grid-template-columns: 12ch 1fr;
+    gap: 2ch;
+    padding: 2px 0;
+    color: #fff;
+}
+
+.myinfo-label,
+.myinfo-value,
+.myinfo-help {
+    color: #fff;
+}
+
+.myinfo-help {
+    display: flex;
+    flex-direction: column;
+    margin-top: 4px;
+    padding-top: 0;
+    line-height: 1.6;
+}
+
+.myinfo-menu-item {
+    display: flex;
+    width: fit-content;
+    gap: 1ch;
+    padding: 0 4px;
+    margin-left: -4px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.myinfo-menu-item:hover {
+    background: rgba(255, 255, 255, 0.14);
+    outline: 1px solid rgba(255, 255, 255, 0.55);
+    outline-offset: 0;
+}
+
+.myinfo-menu-code {
+    min-width: 0;
+}
+
+.myinfo-form {
+    margin-top: 10px;
+}
+
+.myinfo-message {
+    margin-bottom: 10px;
+    color: #fff;
+    line-height: 1.6;
+}
+
+.myinfo-message--error {
+    color: #fff;
+}
+
+.signup-terminal-screen {
+    padding-top: 2px;
+}
+
+.signup-terminal-block {
+    color: #fff;
+    min-height: 1.4em;
+}
+
+.signup-terminal-line {
+    min-height: 1.4em;
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+
+.signup-terminal-line--error {
+    color: #fff;
+}
+
+.signup-terminal-prompt-host {
+    display: block;
+    min-height: 1.4em;
+    line-height: 1.4;
+}
+
+.signup-terminal-prompt-host #terminal-prompt-row {
+    /* [LOG: 20260508_1615] Signup email prompts render inline below the transcript. */
+    align-items: baseline;
+    min-height: 1.4em;
+}
+
+.signup-terminal-prompt-host #terminal-prompt-row label {
+    color: #ffffff;
+    cursor: default;
+    flex-shrink: 0;
+    line-height: inherit;
+    white-space: nowrap;
+}
+
+.signup-terminal-prompt-host #terminal-prompt-row label .cmd-clickable {
+    /* [LOG: 20260508_1648] Keep the default confirm choice clickable inside the inline prompt label. */
+    cursor: pointer;
+}
+
+.signup-terminal-prompt-host #cmd-input-wrapper {
+    min-height: 1.4em;
+}
+
+.myinfo-warning {
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border: 1px solid #444;
+    line-height: 1.6;
+}
+
+.ansi-line {
+    display: block;
+    white-space: pre;
+    line-height: 1.4;
+    min-height: 24px;
+    font-family: 'BbsPrimaryFont', 'BbsLineFont', 'Sam3KRFont', 'GulimChe', monospace;
+    font-size: 17px;
+}
+
+.ansi-line .wc {
+    display: inline-block;
+    width: 2ch;
+    text-align: center;
+}
+
+#terminal-screen .retro-topbar--ansi {
+    background: var(--bgcolor, #000) !important;
+    color: var(--color, #fff) !important;
+    padding: 4px 0;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: 'BbsPrimaryFont', 'BbsLineFont', 'Sam3KRFont', 'GulimChe', monospace;
+    font-size: 17px;
+    line-height: 1.4;
+}
+
+#terminal-screen .retro-topbar--ansi * {
+    font-size: inherit;
+    line-height: inherit;
+    font-family: inherit;
+}
+
+.retro-topbar--ansi .retro-topbar-row1 {
+    display: flex;
+    align-items: center;
+    margin: 0 auto 4px;
+    padding: 0 16px;
+    max-width: calc(80ch + 32px);
+    box-sizing: border-box;
+}
+
+.retro-topbar--ansi .retro-topbar-row2 {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    margin: 0 auto 4px;
+    padding: 0 16px;
+    max-width: calc(80ch + 32px);
+    box-sizing: border-box;
+}
+
+.retro-topbar--ansi .retro-topbar-hr {
+    border-top: 1px solid #fff;
+    max-width: 80ch;
+    margin: 0 auto;
+}
+
+.retro-topbar--ansi .retro-topbar-left {
+    background: #fff;
+    color: #000;
+    padding: 2px 8px;
+    font-weight: normal;
+    white-space: nowrap;
+    display: inline-block;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.retro-topbar--ansi .retro-topbar-left:hover,
+.retro-topbar--ansi .retro-topbar-left:focus-visible {
+    outline: 2px solid #fff;
+}
+
+.retro-topbar--ansi .retro-topbar-line {
+    flex: 1;
+    border-top: 1px solid #fff;
+    margin: 0 8px;
+}
+
+.retro-topbar--ansi .retro-topbar-clock {
+    font-weight: normal;
+    white-space: nowrap;
+}
+
+.retro-topbar--ansi .retro-topbar-menu,
+.retro-topbar--ansi .retro-topbar-center,
+.retro-topbar--ansi .retro-topbar-url {
+    font-weight: normal;
+    padding: 2px 4px;
+    display: inline-block;
+}
+
+.retro-topbar--ansi .retro-topbar-menu {
+    text-align: left;
+}
+
+.retro-topbar--ansi .retro-topbar-center {
+    text-align: center;
+    justify-self: center;
+}
+
+.retro-topbar--ansi .retro-topbar-url {
+    text-align: right;
+    justify-self: end;
+    white-space: nowrap;
+}
+
+/* [LOG: 20260427_1240] Mirror the ANSI 44-column compact header instead of hiding the clock/line on mobile. */
+.retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-row1 {
+    display: grid;
+    grid-template-columns: max-content minmax(2ch, 1fr) max-content;
+    column-gap: 1ch;
+    width: 100%;
+    max-width: 44ch;
+    padding: 0 1px;
+    margin-bottom: 2px;
+}
+
+.retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-row2 {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    width: 100%;
+    max-width: 44ch;
+    padding: 0 1px;
+    margin-bottom: 2px;
+}
+
+.retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-hr {
+    width: 100%;
+    max-width: 44ch;
+}
+
+.retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-left {
+    padding: 1px 0.5ch;
+}
+
+.retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-line {
+    min-width: 2ch;
+    width: 100%;
+    margin: 0;
+    align-self: center;
+}
+
+.retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-clock {
+    justify-self: end;
+}
+
+body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .ansi-screen-body {
+    width: 100%;
+    max-width: 44ch;
+    padding: 0 1px;
+}
+
+/* [LOG: 20260504_2010] 뉴스 상세 대표 사진은 한 페이지 안에 들어오도록 제한한다. */
+.news-article-image-frame {
+    width: 100%;
+    max-width: 80ch;
+    max-height: 168px;
+    margin: 2px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: hidden;
+    background: var(--bgcolor, #000);
+}
+
+.news-article-image {
+    display: block;
+    max-width: 100%;
+    max-height: 168px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-article-image-frame,
+body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-article-image {
+    max-height: 112px;
+}
+
+/* [LOG: 20260416_2241] 로딩 중일 ?�만 25번째 �??�태�??? ?��? */
+#terminal-container.is-loading #terminal-screen>div>div:nth-child(25) {
+    visibility: hidden;
+}
+
+.ansi-hotspot-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.ansi-hotspot {
+    position: absolute;
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ansi-hotspot {
+    transition: background 0.15s ease;
+}
+
+.ansi-hotspot:hover,
+.ansi-hotspot:focus-visible,
+.ansi-hotspot.is-group-hovered {
+    background: rgba(255, 255, 255, 0.14);
+    outline: 1px solid rgba(255, 255, 255, 0.55);
+    outline-offset: 0;
+}
+
+/* ?�?� 명령???�트 tooltip ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
+.cmd-token {
+    cursor: default;
+    display: inline-block;
+    vertical-align: top;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    white-space: nowrap;
+    padding: 0 1px;
+    border-radius: 2px;
+    outline: 1px solid transparent;
+    transition: background 0.15s ease, outline-color 0.15s ease;
+}
+
+.cmd-token-overflow {
+    cursor: default;
+}
+
+.cmd-token:hover,
+.cmd-token:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+    outline-color: rgba(255, 255, 255, 0.45);
+}
+
+/* [LOG: 20240410_1235] ?�릭 가?�한 명령???��???*/
+.cmd-clickable {
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.cmd-clickable:hover {
+    background: #222;
+}
+
+#cmd-tooltip {
+    position: fixed;
+    background: var(--bgcolor, #0000aa);
+    color: var(--color, #ffffff);
+    border: 1px solid var(--border-color, #ffffff);
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: inherit;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+}
+
+
+/* [LOG: 20260421_1558] ?�로?�트 ?�체 ?�스?��? ?�일???�기/굵기/?�상?�로 ?�일 */
+#terminal-wrapper,
+#terminal-wrapper button,
+#terminal-wrapper input,
+#terminal-wrapper textarea,
+#terminal-wrapper select,
+#terminal-wrapper label {
+    color: #fff;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: normal;
+}
+
+#terminal-footer,
+#terminal-footer *,
+#terminal-screen> :not(.ansi-screen),
+#terminal-screen> :not(.ansi-screen) *,
+#terminal-wrapper .loading,
+#terminal-wrapper .empty,
+#terminal-wrapper .bbs-title,
+#terminal-wrapper .post-title,
+#terminal-wrapper .post-meta,
+#terminal-wrapper .reply-cnt {
+    color: var(--color) !important;
+    font-size: inherit !important;
+    font-weight: normal !important;
+}
+
+#terminal-wrapper input::placeholder,
+#terminal-wrapper textarea::placeholder {
+    color: #fff !important;
+    opacity: 1;
+}
+
+
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+    body {
+        padding: 8px 4px 16px;
+        font-size: 14px;
+    }
+
+    .app-shell {
+        width: 100%;
+        min-height: 100vh;
+    }
+
+    #terminal-wrapper {
+        max-width: 100%;
+        height: auto;
+        min-height: 0;
+    }
+
+    #terminal-container {
+        height: auto;
+        min-height: 0;
+        max-height: 100%;
+        font-size: 12px;
+    }
+
+    #terminal-screen {
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #terminal-footer {
+        padding: 2px 4px 1px;
+        min-height: 32px;
+    }
+
+    #cmd-input {
+        font-size: 14px;
+    }
+
+    .ansi-screen,
+    .ansi-line {
+        font-size: 12px;
+    }
+
+    .ansi-screen {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .ansi-screen-body {
+        max-width: 100%;
+        padding: 0 4px;
+    }
+
+    .retro-topbar--ansi {
+        font-size: 12px;
+    }
+
+    .retro-topbar--ansi .retro-topbar-row1,
+    .retro-topbar--ansi .retro-topbar-row2 {
+        padding: 0 4px;
+    }
+
+    .retro-topbar--ansi .retro-topbar-left {
+        padding: 1px 4px;
+        font-size: 11px;
+    }
+
+    .retro-topbar--ansi .retro-topbar-clock {
+        font-size: 11px;
+    }
+
+    .post-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .bbs-menu-item {
+        padding: 12px 10px;
+    }
+
+    .post-row td {
+        padding: 10px 8px;
+    }
+
+    .post-row .date,
+    .post-row .num {
+        display: none;
+    }
+
+    .write-field input,
+    .write-field textarea {
+        font-size: 16px;
+    }
+
+    /* [LOG: Mobile Portrait] fixed touch target sizes */
+    .bbs-btn {
+        padding: 8px 16px;
+        min-height: 40px;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ansi-hotspot {
+        min-width: 24px;
+        min-height: 24px;
+    }
+
+    /* [LOG: Mobile Portrait] fixed touch target sizes for command tokens */
+    .cmd-token {
+        padding: 4px 8px;
+        margin: 2px 1px;
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+    }
+}
+
+@media (max-width: 400px) {
+
+    #terminal-container,
+    .ansi-screen,
+    .ansi-line {
+        font-size: 10px;
+    }
+}
+
+/* [LOG: 20260424_2034] Mobile command input UI polish */
+@media (max-width: 768px) {
+    #terminal-footer {
+        gap: 4px;
+        padding: 4px 4px 3px;
+    }
+
+    #cmd-hint {
+        overflow: visible;
+        white-space: normal;
+        text-overflow: initial;
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    #cmd-hint.has-cmd-tokens,
+    #cmd-hint.is-expanded.has-cmd-tokens {
+        min-height: 0;
+    }
+
+    .cmd-token {
+        padding: 1px 2px;
+    }
+
+    #terminal-prompt-row {
+        min-height: 36px;
+        gap: 6px;
+        padding: 3px 6px;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    #terminal-prompt-row:focus-within {
+        border-color: #fff;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    #terminal-footer label {
+        min-width: 2ch;
+    }
+
+    #cmd-input {
+        min-height: 24px;
+        font-size: 16px;
+        line-height: 1.4;
+    }
+}
+
+@media (max-width: 400px) {
+    #cmd-hint {
+        font-size: 10px;
+    }
+
+    #terminal-prompt-row {
+        min-height: 34px;
+        gap: 4px;
+        padding: 2px 5px;
+    }
+
+    #cmd-input {
+        font-size: 16px;
+    }
+}
+
+/* [LOG: Mobile Landscape] Optimize vertical space for small landscape screens to prevent terminal layout collapse */
+@media (max-height: 480px) and (orientation: landscape) {
+
+    /* [LOG: Mobile Landscape] use safe-area-inset to prevent UI overlap with device notches and home indicators */
+    body {
+        padding: 4px max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left));
+    }
+
+    .app-shell {
+        width: 100%;
+        max-width: 100%;
+        min-height: 100vh;
+    }
+
+    #terminal-wrapper {
+        height: 100vh;
+        min-height: 100vh;
+        max-width: 100%;
+    }
+
+    #terminal-container {
+        min-height: auto;
+    }
+
+    .bbs-banner {
+        padding: 4px 4px 8px;
+    }
+
+    .bbs-title {
+        padding: 2px 0 4px;
+        margin-bottom: 4px;
+    }
+
+    #terminal-footer {
+        padding: 1px 4px;
+        min-height: 28px;
+    }
+
+    #terminal-prompt-row {
+        min-height: 28px;
+    }
+}
+
+/* [LOG: Mobile Landscape] Ultra-short height optimization (e.g. keyboard open or small devices) */
+@media (max-height: 350px) and (orientation: landscape) {
+
+    /* [LOG: Mobile Landscape] Hide banner and optimize fonts to maximize terminal space */
+    .bbs-banner {
+        display: none;
+    }
+
+    #terminal-container,
+    .ansi-screen,
+    .ansi-line {
+        font-size: 8px;
+        /* Slightly smaller for maximum visibility */
+        line-height: 1.2;
+    }
+
+    .retro-topbar--ansi .retro-topbar-row1 {
+        display: none;
+    }
+
+    .retro-topbar--ansi .retro-topbar-row2 {
+        margin-bottom: 0;
+        font-size: 8px;
+    }
+
+    #cmd-hint {
+        display: none;
+    }
+
+    /* [LOG: Mobile Landscape] fixed terminal footer height on ultra-short screens */
+    #terminal-footer {
+        padding: 0 4px;
+        min-height: 20px;
+    }
+
+    #terminal-prompt-row {
+        min-height: 20px;
+        gap: 2px;
+        padding: 1px 4px;
+        border-width: 1px;
+    }
+
+    #cmd-input {
+        font-size: 14px;
+        min-height: 18px;
+    }
+
+    /* [LOG: Mobile Landscape] Ensure terminal screen utilizes all available space */
+    #terminal-screen {
+        padding: 0;
+    }
+}
+
+/* PC Screen Fixes */
+@media (min-width: 769px) {
+
+    /* [LOG: PC screen] Add smooth scroll behavior to html for better navigation on large monitors */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* [LOG: PC screen] Enhance focus states for accessible keyboard navigation on PC */
+    :focus-visible {
+        outline: 2px dashed rgba(255, 255, 255, 0.6);
+        outline-offset: 2px;
+    }
+
+    /* [LOG: PC screen] Add subtle box-shadow to terminal wrapper to pop out from pure black background on large screens */
+    #terminal-wrapper {
+        box-shadow: none !important;
+    }
+
+    /* [LOG: 20260427_2033] 일부 노트북에서 PC 상단 첫 줄이 잘리는 문제를 막기 위해 화면 자체에 상단 안전 여백을 확보한다 */
+    #terminal-screen {
+        padding-top: 8px;
+        box-sizing: border-box;
+    }
+
+    #terminal-screen .retro-topbar--ansi {
+        padding: 0 0 4px;
+    }
+
+    .retro-topbar--ansi .retro-topbar-left {
+        display: inline-flex;
+        align-items: center;
+        min-height: 1.35em;
+        padding: 4px 8px 2px;
+    }
+
+    /* [LOG: PC screen] Improve scrollbar styling for webkit browsers on desktop */
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--bgcolor, #000);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #888;
+    }
+
+    /* [LOG: PC screen] Ensure pointer cursor on terminal prompt row to indicate focusable area */
+    #terminal-prompt-row {
+        cursor: text;
+    }
+
+    /* [LOG: PC screen] Adjust tooltip styling to prevent it from clipping on the right edge of large screens */
+    #cmd-tooltip {
+        max-width: 300px;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+
+    /* [LOG: PC screen] Add minimum width to terminal container to prevent collapse on weird window resizes */
+    #terminal-container {
+        min-width: 320px;
+    }
+
+    /* [LOG: PC screen] Optimize font antialiasing for PC screens */
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* [LOG: PC screen] Add transition to myinfo-menu-item for smoother hover feedback */
+    .myinfo-menu-item {
+        transition: background-color 0.2s ease;
+    }
+
+    /* [LOG: PC screen] Make myinfo-menu-item background change on hover for PC interaction */
+    .myinfo-menu-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+}
+
+/* Mobile Portrait Fixes */
+@media (max-width: 768px) and (orientation: portrait) {
+
+    /* [LOG: 20260426_2250] 모바일 세로 본문 크기를 화면별 분기 없이 공통값으로 통일한다 */
+    #terminal-container,
+    .ansi-screen,
+    .ansi-line {
+        font-size: clamp(12px, min(4.2vw, 2.7vh), 16px);
+        line-height: 1.32;
+    }
+
+    .retro-topbar--ansi {
+        font-size: clamp(13px, 3.6vw, 14px);
+    }
+
+    .retro-topbar--ansi .retro-topbar-left,
+    .retro-topbar--ansi .retro-topbar-clock {
+        font-size: clamp(12px, 3.2vw, 13px);
+    }
+
+    body {
+        padding: 0;
+        margin: 0;
+        height: 100dvh;
+        width: 100vw;
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+    }
+
+    .app-shell {
+        position: fixed;
+        top: env(safe-area-inset-top, 0);
+        left: 0;
+        right: 0;
+        bottom: env(safe-area-inset-bottom, 0);
+        width: 100%;
+        height: auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0;
+    }
+
+    #terminal-wrapper {
+        flex: 0 1 auto;
+        height: auto;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .ansi-screen-body {
+        padding: 0 1px;
+    }
+
+    .retro-topbar--ansi .retro-topbar-row1,
+    .retro-topbar--ansi .retro-topbar-row2 {
+        padding: 0 1px;
+    }
+
+    /* [LOG: Mobile Portrait] fixed #user-info overflow by setting a max-width and using ellipsis to prevent squeezing the input field */
+    #user-info {
+        max-width: 12ch;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* [LOG: Mobile Portrait] Adjust input padding to prevent text from being obscured by rounded corners on mobile */
+    .write-field input,
+    .write-field textarea {
+        padding: 8px 12px;
+        border-radius: 4px;
+    }
+
+    /* [LOG: Mobile Portrait] Ensure select inputs do not zoom automatically on iOS by setting minimum font size to 16px */
+    .write-field select {
+        font-size: 16px;
+    }
+
+    /* [LOG: Mobile Portrait] Fix long post titles overlapping meta data by adding word-break */
+    .post-title {
+        word-break: break-word;
+        hyphens: auto;
+    }
+
+    /* [LOG: Mobile Portrait] Improve spacing in myinfo-row for narrow vertical screens */
+    .myinfo-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    /* [LOG: Mobile Portrait] Make bbs-menu-item flex and center content for better touch area */
+    .bbs-menu-item {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+    }
+
+    /* [LOG: Mobile Portrait] Adjust loading indicator text size for readability */
+    .loading {
+        font-size: 14px;
+        padding: 24px 8px;
+    }
+
+    /* [LOG: Mobile Portrait] Ensure cmd-tooltip does not overflow screen width on small devices */
+    #cmd-tooltip {
+        max-width: 90vw;
+        white-space: normal;
+        left: 5vw !important;
+    }
+
+    /* [LOG: 20260428_2002] 모바일 세로에서는 접힌 명령 footer도 줄바꿈 허용으로 화면 밖 overflow를 막는다. */
+    #cmd-hint.has-cmd-tokens:not(.is-expanded) {
+        overflow: visible;
+        white-space: normal;
+        text-overflow: initial;
+    }
+
+    #cmd-hint.has-cmd-tokens .cmd-entry-list {
+        display: inline-flex;
+        flex-wrap: wrap;
+        max-width: 100%;
+        vertical-align: top;
+    }
+
+    /* [LOG: 20260426_2035] 모바일 공통 터치 토큰 스타일이 힌트바를 2줄로 밀지 않도록 세로 화면에서만 원복 */
+    #cmd-hint .cmd-token {
+        display: inline-block;
+        min-height: 0;
+        margin: 0;
+        padding: 0 1px;
+        vertical-align: baseline;
+    }
+
+    #cmd-hint .cmd-entry {
+        vertical-align: baseline;
+    }
+
+    #cmd-hint {
+        font-size: 10px;
+        line-height: 1.2;
+    }
+
+    #terminal-footer {
+        gap: 1px;
+        padding: 4px 8px env(safe-area-inset-bottom, 8px);
+        background: var(--bgcolor);
+        z-index: 10;
+    }
+
+    #terminal-prompt-row {
+        min-height: 30px;
+        gap: 3px;
+        padding: 2px 4px;
+    }
+
+    /* [LOG: 20260426_2250] 메뉴형 화면은 장식만 압축하고 본문 크기는 공통 규칙을 그대로 사용한다. */
+    body[data-screen="main"] .ansi-screen-body,
+    body[data-screen="board-select"] .ansi-screen-body,
+    body[data-screen="news-menu"] .ansi-screen-body,
+    body[data-screen="weather-menu"] .ansi-screen-body {
+        padding: 0 1px;
+    }
+
+    /* [LOG: Mobile Portrait] Fix myinfo-form margin to prevent cramped inputs */
+    .myinfo-form {
+        margin-top: 16px;
+        margin-bottom: 16px;
+    }
+}
+
+/* [LOG: Mobile Landscape] Screen height too small causing terminal layout to collapse */
+@media (max-height: 480px) and (orientation: landscape) {
+
+    /* [LOG: Mobile Landscape] Allow horizontal scrolling for cmd-hint on short screens to prevent vertical growth */
+    #cmd-hint.has-cmd-tokens:not(.is-expanded) {
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        /* Hide scrollbar for cleaner retro look */
+    }
+
+    #cmd-hint.has-cmd-tokens::-webkit-scrollbar {
+        display: none;
+    }
+
+    body {
+        padding: 4px 8px;
+    }
+
+    #terminal-container {
+        min-height: 200px;
+    }
+
+    #terminal-wrapper {
+        height: calc(100vh - 8px);
+    }
+
+    #terminal-footer {
+        min-height: 28px;
+        padding: 1px 4px;
+    }
+
+    /* Restrict max-width of write-field inputs so they don't stretch excessively */
+    .write-field input,
+    .write-field textarea,
+    .write-field select {
+        max-width: 80%;
+        margin: 0 auto;
+    }
+
+    /* [LOG: Mobile Landscape] Adjust post-body line-height to fit more text on short screens */
+    .post-body {
+        line-height: 1.4;
+    }
+
+    /* [LOG: Mobile Landscape] Make post-actions sticky or inline to save vertical space */
+    .post-actions {
+        position: sticky;
+        bottom: 0;
+        background: var(--bgcolor, #000);
+        padding: 4px;
+        border-top: 1px solid #333;
+    }
+
+    /* [LOG: Mobile Landscape] Hide empty states or reduce their padding to preserve vertical space */
+    .empty {
+        padding: 4px;
+        font-size: 11px;
+    }
+
+    /* [LOG: Mobile Landscape] Adjust write-form spacing to be more compact */
+    .write-form {
+        padding: 2px 0;
+    }
+
+    /* [LOG: Mobile Landscape] Reduce padding on post-header-box to save vertical space */
+    .post-header-box {
+        padding: 4px;
+        margin-bottom: 4px;
+    }
+
+    /* [LOG: Mobile Landscape] Reduce bbs-btn padding to fit within smaller vertical constraints */
+    .bbs-btn {
+        padding: 2px 8px;
+        min-height: 28px;
+    }
+
+    /* [LOG: Mobile Landscape] Scale down myinfo-panel padding for landscape view */
+    .myinfo-panel {
+        padding: 6px 0;
+    }
+
+    /* [LOG: Mobile Landscape] Make myinfo-title more compact */
+    .myinfo-title {
+        margin-bottom: 4px;
+        font-size: 14px;
+    }
+
+    /* [LOG: Mobile Landscape] Reduce heights of agreement and guide boxes to prevent overflow on short screens */
+    .entry-signup-agreement-box {
+        min-height: 80px;
+        max-height: 120px;
+    }
+
+    .entry-guide,
+    .entry-signup-guide {
+        min-height: 60px;
+    }
+
+    /* [LOG: Mobile Landscape] fixed terminal layout collapse by reducing ansi-line min-height */
+    .ansi-line {
+        min-height: auto;
+    }
+}
+
+/* [LOG: Mobile Landscape] optimized terminal height for ultra-short landscape screens */
+@media (max-height: 360px) and (orientation: landscape) {
+    #terminal-container {
+        font-size: 11px;
+    }
+
+    .ansi-screen,
+    .ansi-line {
+        font-size: 11px;
+    }
+
+    #terminal-footer {
+        min-height: 24px;
+    }
+
+    #terminal-prompt-row {
+        min-height: 24px;
+    }
+
+    #cmd-input {
+        font-size: 14px;
+    }
+
+    .bbs-banner {
+        display: none;
+        /* Hide banner on ultra-short landscape to save space */
+    }
+}
+
+/* [LOG: Mobile Landscape] Hide topbar entirely on ultra-short landscape screens to maximize terminal visibility */
+@media (max-height: 300px) and (orientation: landscape) {
+    .retro-topbar--ansi {
+        display: none;
+    }
+}
+
+/* [LOG: PC] Ultra-high resolution causing the terminal width to look unnaturally wide */
+@media (min-width: 1920px) {
+    #terminal-wrapper {
+        max-width: 1200px;
+        height: min(calc(100vh - 120px), 800px);
+    }
+
+    .retro-topbar--ansi {
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    #terminal-container {
+        font-size: 20px;
+    }
+
+    .ansi-screen,
+    .ansi-line {
+        font-size: 20px;
+    }
+}
+
+/* [LOG: 20260427_1145] SURGICAL FIX: Authoritative Mobile Portrait Layout */
+@media (max-width: 768px) and (orientation: portrait) {
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: var(--mobile-visual-viewport-height, 100dvh) !important;
+        min-height: var(--mobile-visual-viewport-height, 100dvh) !important;
+        width: 100vw !important;
+        position: fixed !important;
+        inset: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .app-shell {
+        position: fixed !important;
+        top: var(--mobile-visual-viewport-top, 0px) !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: auto !important;
+        width: 100% !important;
+        height: var(--mobile-visual-viewport-height, 100dvh) !important;
+        min-height: var(--mobile-visual-viewport-height, 100dvh) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    #terminal-wrapper {
+        height: auto !important;
+        max-height: 100dvh !important;
+        flex: 0 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    #terminal-container {
+        height: auto !important;
+        min-height: 0px !important;
+        flex: 0 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        font-size: clamp(12px, min(4.2vw, 2.7vh), 15px) !important;
+        line-height: 1.32 !important;
+    }
+
+    #terminal-screen {
+        flex: 0 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        display: block !important;
+    }
+
+    body[data-mobile-keyboard="visible"] #terminal-screen {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain !important;
+        padding-bottom: 6px !important;
+    }
+
+    .ansi-screen,
+    .ansi-line,
+    #terminal-screen .retro-topbar--ansi,
+    #terminal-screen .retro-topbar--ansi * {
+        font-size: inherit !important;
+        line-height: inherit !important;
+    }
+
+    .retro-topbar--ansi:not([data-layout-mode="compact"]) .retro-topbar-row1,
+    .retro-topbar--ansi:not([data-layout-mode="compact"]) .retro-topbar-row2 {
+        padding: 0 8px !important;
+    }
+
+    .retro-topbar--ansi:not([data-layout-mode="compact"]) .retro-topbar-line {
+        margin: 0 4px !important;
+    }
+
+    .retro-topbar--ansi .retro-topbar-left,
+    .retro-topbar--ansi .retro-topbar-clock {
+        white-space: nowrap !important;
+    }
+
+    #terminal-footer {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        background: var(--bgcolor, #000) !important;
+        position: relative !important;
+        bottom: auto !important;
+        z-index: 999 !important;
+        padding: 4px 8px max(calc(env(safe-area-inset-bottom, 0px) + 4px), 8px) !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+    }
+
+    #terminal-footer[data-footer-state="hidden"] {
+        display: none !important;
+    }
+
+    #terminal-footer,
+    #terminal-footer *,
+    #cmd-hint,
+    #cmd-hint * {
+        color: #ffffff !important;
+        opacity: 1 !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+    }
+
+    #terminal-footer::before {
+        display: block !important;
+        opacity: 1 !important;
+        color: #ffffff !important;
+    }
+}
+
+#terminal-footer #cmd-input[data-masked="true"] {
+    /* [LOG: 20260507_1757] Keep the raw value hidden even under footer-wide color overrides. */
+    -webkit-text-fill-color: transparent !important;
+    -webkit-text-security: none;
+    background: transparent !important;
+    color: transparent !important;
+    caret-color: #ffffff !important;
+}

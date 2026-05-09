@@ -1,0 +1,446 @@
+- main [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - link "초기화면으로 이동" [ref=e9] [cursor=pointer]:
+            - /url: /
+            - text: PC통신동호회 01410
+          - generic [ref=e11]: 2026-04-22 19:55:43
+        - generic [ref=e12]:
+          - generic [ref=e13]: NEWS
+          - generic [ref=e14]: 최신
+          - generic [ref=e15]: (01/11)
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - text: "1."
+          - generic [ref=e19]:
+            - generic [ref=e20]: 야
+            - generic [ref=e21]: 스
+            - generic [ref=e22]: 쿠
+            - generic [ref=e23]: 니
+            - generic [ref=e24]: 서
+            - text: "'"
+            - generic [ref=e25]: 독
+            - generic [ref=e26]: 도
+            - generic [ref=e27]: 는
+            - generic [ref=e28]: 우
+            - generic [ref=e29]: 리
+            - generic [ref=e30]: 땅
+            - text: "'"
+            - generic [ref=e31]: 현
+            - generic [ref=e32]: 수
+            - generic [ref=e33]: 막
+            - text: …
+            - generic [ref=e34]: 한
+            - generic [ref=e35]: 국
+            - generic [ref=e36]: 인
+            - generic [ref=e37]: 남
+            - generic [ref=e38]: 성
+            - generic [ref=e39]: 체
+            - generic [ref=e40]: 포
+        - generic [ref=e41]:
+          - text: "2."
+          - generic [ref=e42]:
+            - generic [ref=e43]: 야
+            - generic [ref=e44]: 스
+            - generic [ref=e45]: 쿠
+            - generic [ref=e46]: 니
+            - generic [ref=e47]: 서
+            - text: "'"
+            - generic [ref=e48]: 독
+            - generic [ref=e49]: 도
+            - generic [ref=e50]: 는
+            - generic [ref=e51]: 우
+            - generic [ref=e52]: 리
+            - generic [ref=e53]: 땅
+            - text: "'"
+            - generic [ref=e54]: 현
+            - generic [ref=e55]: 수
+            - generic [ref=e56]: 막
+            - text: …
+            - generic [ref=e57]: 한
+            - generic [ref=e58]: 국
+            - generic [ref=e59]: 남
+            - generic [ref=e60]: 성
+            - generic [ref=e61]: 일
+            - generic [ref=e62]: 본
+            - generic [ref=e63]: 경
+            - generic [ref=e64]: 찰
+            - generic [ref=e65]: 에
+            - generic [ref=e66]: 체
+        - generic [ref=e67]:
+          - text: "3."
+          - generic [ref=e68]:
+            - text: "["
+            - generic [ref=e69]: 이
+            - generic [ref=e70]: 슈
+            - generic [ref=e71]: 빡
+            - text: "]"
+            - generic [ref=e72]: 트
+            - generic [ref=e73]: 럼
+            - generic [ref=e74]: 프
+            - text: ","
+            - generic [ref=e75]: 또
+            - text: "\""
+            - generic [ref=e76]: 휴
+            - generic [ref=e77]: 전
+            - generic [ref=e78]: 연
+            - generic [ref=e79]: 장
+            - text: "\"…"
+            - generic [ref=e80]: 이
+            - generic [ref=e81]: 란
+            - text: "\""
+            - generic [ref=e82]: 인
+            - generic [ref=e83]: 정
+            - generic [ref=e84]: 못
+            - generic [ref=e85]: 해
+            - text: "\""
+        - generic [ref=e86]:
+          - text: "4."
+          - generic [ref=e87]:
+            - text: "1661"
+            - generic [ref=e88]: 만
+            - generic [ref=e89]: 돌
+            - generic [ref=e90]: 파
+            - text: "'"
+            - generic [ref=e91]: 왕
+            - generic [ref=e92]: 사
+            - generic [ref=e93]: 남
+            - text: "', 76"
+            - generic [ref=e94]: 일
+            - generic [ref=e95]: 만
+            - generic [ref=e96]: 에
+            - text: OTT
+            - generic [ref=e97]: 로
+            - text: …
+            - generic [ref=e98]: 개
+            - generic [ref=e99]: 별
+            - generic [ref=e100]: 구
+            - generic [ref=e101]: 매
+            - generic [ref=e102]: 로
+            - text: "2"
+            - generic [ref=e103]: 차
+            - generic [ref=e104]: 수
+            - generic [ref=e105]: 익
+            - generic [ref=e106]: 기
+        - generic [ref=e107]:
+          - text: "5."
+          - generic [ref=e108]:
+            - text: "'"
+            - generic [ref=e109]: 악
+            - generic [ref=e110]: 프
+            - text: 2',
+            - generic [ref=e111]: 북
+            - generic [ref=e112]: 미
+            - generic [ref=e113]: 개
+            - generic [ref=e114]: 봉
+            - generic [ref=e115]: 첫
+            - generic [ref=e116]: 주
+            - generic [ref=e117]: 최
+            - generic [ref=e118]: 대
+            - text: 9,500
+            - generic [ref=e119]: 만
+            - generic [ref=e120]: 달
+            - generic [ref=e121]: 러
+            - generic [ref=e122]: 수
+            - generic [ref=e123]: 익
+            - generic [ref=e124]: 예
+            - generic [ref=e125]: 측
+            - text: …
+            - generic [ref=e126]: 한
+            - generic [ref=e127]: 국
+        - generic [ref=e128]:
+          - text: "6."
+          - generic [ref=e129]:
+            - generic [ref=e130]: 송
+            - generic [ref=e131]: 중
+            - generic [ref=e132]: 기
+            - text: ♥
+            - generic [ref=e133]: 케
+            - generic [ref=e134]: 이
+            - generic [ref=e135]: 티
+            - generic [ref=e136]: 부
+            - generic [ref=e137]: 부
+            - text: ","
+            - generic [ref=e138]: 결
+            - generic [ref=e139]: 혼
+            - text: "3"
+            - generic [ref=e140]: 년
+            - generic [ref=e141]: 만
+            - generic [ref=e142]: 에
+            - generic [ref=e143]: 동
+            - generic [ref=e144]: 반
+            - generic [ref=e145]: 일
+            - generic [ref=e146]: 정
+            - text: …
+            - generic [ref=e147]: 한
+            - generic [ref=e148]: 국
+            - generic [ref=e149]: 어
+            - text: ·
+            - generic [ref=e150]: 영
+            - generic [ref=e151]: 어
+            - generic [ref=e152]: 로
+            - generic [ref=e153]: 내
+        - generic [ref=e154]:
+          - text: "7."
+          - generic [ref=e155]:
+            - generic [ref=e156]: 코
+            - generic [ref=e157]: 스
+            - generic [ref=e158]: 피
+            - text: 6,400
+            - generic [ref=e159]: 선
+            - generic [ref=e160]: 첫
+            - generic [ref=e161]: 돌
+            - generic [ref=e162]: 파
+            - text: …
+            - generic [ref=e163]: 하
+            - generic [ref=e164]: 루
+            - generic [ref=e165]: 만
+            - generic [ref=e166]: 에
+            - generic [ref=e167]: 또
+            - text: "'"
+            - generic [ref=e168]: 신
+            - generic [ref=e169]: 고
+            - generic [ref=e170]: 가
+            - text: "'"
+        - generic [ref=e171]:
+          - text: "8."
+          - generic [ref=e172]:
+            - text: "\""
+            - generic [ref=e173]: 석
+            - generic [ref=e174]: 유
+            - generic [ref=e175]: 최
+            - generic [ref=e176]: 고
+            - generic [ref=e177]: 가
+            - generic [ref=e178]: 격
+            - generic [ref=e179]: 제
+            - text: ", 3"
+            - generic [ref=e180]: 월
+            - generic [ref=e181]: 물
+            - generic [ref=e182]: 가
+            - text: 0.8%p
+            - generic [ref=e183]: 낮
+            - generic [ref=e184]: 춰
+            - text: "\"…"
+            - generic [ref=e185]: 가
+            - generic [ref=e186]: 격
+            - generic [ref=e187]: 왜
+            - generic [ref=e188]: 곡
+            - generic [ref=e189]: 비
+            - generic [ref=e190]: 판
+            - generic [ref=e191]: 도
+        - generic [ref=e192]:
+          - text: "9."
+          - generic [ref=e193]:
+            - generic [ref=e194]: 오
+            - generic [ref=e195]: 늘
+            - generic [ref=e196]: 의
+            - text: SBS 8
+            - generic [ref=e197]: 뉴
+            - generic [ref=e198]: 스
+            - generic [ref=e199]: 예
+            - generic [ref=e200]: 고
+            - text: (4
+            - generic [ref=e201]: 월
+            - text: "22"
+            - generic [ref=e202]: 일
+            - text: )
+        - generic [ref=e203]:
+          - text: "10."
+          - generic [ref=e204]:
+            - generic [ref=e205]: 미
+            - generic [ref=e206]: 국
+            - generic [ref=e207]: 산
+            - generic [ref=e208]: 원
+            - generic [ref=e209]: 유
+            - generic [ref=e210]: 수
+            - generic [ref=e211]: 입
+            - generic [ref=e212]: 급
+            - generic [ref=e213]: 증
+            - generic [ref=e214]: 했
+            - generic [ref=e215]: 지
+            - generic [ref=e216]: 만
+            - text: …'
+            - generic [ref=e217]: 고
+            - generic [ref=e218]: 유
+            - generic [ref=e219]: 가
+            - generic [ref=e220]: 쇼
+            - generic [ref=e221]: 크
+            - text: "'"
+            - generic [ref=e222]: 심
+            - generic [ref=e223]: 화
+        - generic [ref=e224]:
+          - text: "11."
+          - generic [ref=e225]:
+            - generic [ref=e226]: 일
+            - generic [ref=e227]: 본
+            - generic [ref=e228]: 판
+            - text: ‘
+            - generic [ref=e229]: 늑
+            - generic [ref=e230]: 구
+            - text: ’
+            - generic [ref=e231]: 소
+            - generic [ref=e232]: 동
+            - text: …
+            - generic [ref=e233]: 산
+            - generic [ref=e234]: 책
+            - generic [ref=e235]: 중
+            - generic [ref=e236]: 탈
+            - generic [ref=e237]: 출
+            - generic [ref=e238]: 한
+            - generic [ref=e239]: 늑
+            - generic [ref=e240]: 대
+            - generic [ref=e241]: 개
+            - text: "18"
+            - generic [ref=e242]: 시
+            - generic [ref=e243]: 간
+            - generic [ref=e244]: 만
+            - generic [ref=e245]: 에
+            - generic [ref=e246]: 잡
+            - generic [ref=e247]: 혀
+        - generic [ref=e248]:
+          - text: "12."
+          - generic [ref=e249]:
+            - text: SK
+            - generic [ref=e250]: 하
+            - generic [ref=e251]: 이
+            - generic [ref=e252]: 닉
+            - generic [ref=e253]: 스
+            - text: ", 150"
+            - generic [ref=e254]: 억
+            - generic [ref=e255]: 규
+            - generic [ref=e256]: 모
+            - generic [ref=e257]: 자
+            - generic [ref=e258]: 사
+            - generic [ref=e259]: 주
+            - generic [ref=e260]: 처
+            - generic [ref=e261]: 분
+            - text: …"
+            - generic [ref=e262]: 경
+            - generic [ref=e263]: 영
+            - generic [ref=e264]: 진
+            - generic [ref=e265]: 에
+            - generic [ref=e266]: 지
+            - generic [ref=e267]: 급
+            - text: "\""
+        - generic [ref=e268]:
+          - text: "13."
+          - generic [ref=e269]:
+            - generic [ref=e270]: 기
+            - generic [ref=e271]: 안
+            - text: 84,
+            - generic [ref=e272]: 폐
+            - generic [ref=e273]: 지
+            - generic [ref=e274]: 줍
+            - generic [ref=e275]: 는
+            - generic [ref=e276]: 어
+            - generic [ref=e277]: 르
+            - generic [ref=e278]: 신
+            - text: "100"
+            - generic [ref=e279]: 명
+            - generic [ref=e280]: 에
+            - text: "1"
+            - generic [ref=e281]: 억
+            - generic [ref=e282]: 원
+            - generic [ref=e283]: 기
+            - generic [ref=e284]: 부
+        - generic [ref=e285]:
+          - text: "14."
+          - generic [ref=e286]:
+            - generic [ref=e287]: 강
+            - generic [ref=e288]: 훈
+            - generic [ref=e289]: 식
+            - text: "\""
+            - generic [ref=e290]: 선
+            - generic [ref=e291]: 제
+            - generic [ref=e292]: 적
+            - generic [ref=e293]: 정
+            - generic [ref=e294]: 책
+            - generic [ref=e295]: 대
+            - generic [ref=e296]: 응
+            - generic [ref=e297]: 으
+            - generic [ref=e298]: 로
+            - generic [ref=e299]: 물
+            - generic [ref=e300]: 가
+            - generic [ref=e301]: 상
+            - generic [ref=e302]: 승
+            - generic [ref=e303]: 최
+            - generic [ref=e304]: 소
+            - generic [ref=e305]: 화
+            - text: ·
+            - generic [ref=e306]: 취
+            - generic [ref=e307]: 약
+            - generic [ref=e308]: 계
+            - generic [ref=e309]: 층
+            - generic [ref=e310]: 영
+            - generic [ref=e311]: 향
+            - generic [ref=e312]: 완
+        - generic [ref=e313]:
+          - text: "15."
+          - generic [ref=e314]:
+            - generic [ref=e315]: 중
+            - generic [ref=e316]: 동
+            - generic [ref=e317]: 서
+            - generic [ref=e318]: 입
+            - generic [ref=e319]: 증
+            - generic [ref=e320]: 된
+            - text: K-
+            - generic [ref=e321]: 방
+            - generic [ref=e322]: 산
+            - text: ","
+            - generic [ref=e323]: 동
+            - generic [ref=e324]: 남
+            - generic [ref=e325]: 아
+            - generic [ref=e326]: 로
+            - generic [ref=e327]: 확
+            - generic [ref=e328]: 산
+      - generic:
+        - button "야스쿠니서 '독도는 우리 땅' 현수막…한국인 남성 체포" [ref=e339] [cursor=pointer]
+        - button "야스쿠니서 '독도는 우리 땅' 현수막…한국 남성 일본 경찰에 체포" [ref=e340] [cursor=pointer]
+        - button "[이슈빡] 트럼프, 또 \"휴전 연장\"…이란 \"인정 못 해\"" [ref=e341] [cursor=pointer]
+        - button "1661만 돌파 '왕사남', 76일 만에 OTT로…개별구매로 2차 수익 기대" [ref=e342] [cursor=pointer]
+        - button "'악프 2', 북미 개봉 첫 주 최대 9,500만 달러 수익 예측…한국 예매율도 1위" [ref=e343] [cursor=pointer]
+        - button "송중기♥케이티 부부, 결혼 3년 만에 동반 일정…한국어·영어로 내레이션" [ref=e344] [cursor=pointer]
+        - button "코스피 6,400선 첫 돌파…하루만에 또 '신고가'" [ref=e345] [cursor=pointer]
+        - button "\"석유 최고가격제, 3월 물가 0.8%p 낮춰\"…가격 왜곡 비판도" [ref=e346] [cursor=pointer]
+        - button "오늘의 SBS 8뉴스 예고 (4월 22일)" [ref=e347] [cursor=pointer]
+        - button "미국산 원유 수입 급증했지만…'고유가 쇼크' 심화" [ref=e348] [cursor=pointer]
+        - button "일본판 ‘늑구’ 소동…산책 중 탈출한 늑대개 18시간 만에 잡혀" [ref=e349] [cursor=pointer]
+        - button "SK하이닉스, 150억 규모 자사주 처분…\"경영진에 지급\"" [ref=e350] [cursor=pointer]
+        - button "기안84, 폐지 줍는 어르신 100명에 1억 원 기부" [ref=e351] [cursor=pointer]
+        - button "강훈식 \"선제적 정책대응으로 물가상승 최소화·취약계층 영향 완화\"" [ref=e352] [cursor=pointer]
+        - button "중동서 입증된 K-방산, 동남아로 확산" [ref=e353] [cursor=pointer]
+    - generic [ref=e354]:
+      - generic [ref=e355]:
+        - text: 번호/명령(
+        - generic [ref=e356]:
+          - generic [ref=e357]:
+            - generic [ref=e358] [cursor=pointer]: 다음[F]
+            - text: ","
+          - generic [ref=e359]:
+            - generic [ref=e360] [cursor=pointer]: 목록[L]
+            - text: ","
+          - generic [ref=e361]:
+            - generic [ref=e362] [cursor=pointer]: 상위[P]
+            - text: ","
+          - generic [ref=e363]:
+            - generic [ref=e364] [cursor=pointer]: 도움말[H]
+            - text: ","
+          - generic [ref=e365]:
+            - generic [ref=e366] [cursor=pointer]: 이동[GO]
+            - text: ","
+          - generic [ref=e367]:
+            - generic [ref=e368] [cursor=pointer]: 로그인[LOGIN]
+            - text: ","
+          - generic [ref=e369]:
+            - generic [ref=e370] [cursor=pointer]: 초기화면[T]
+            - text: ","
+          - generic [ref=e371]:
+            - generic [ref=e372] [cursor=pointer]: 바탕색[C]
+            - text: ","
+          - generic [ref=e374] [cursor=pointer]: "+7"
+        - text: )
+      - generic [ref=e375]:
+        - generic [ref=e376]: ">>"
+        - textbox ">>" [active] [ref=e377]

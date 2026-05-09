@@ -1,0 +1,133 @@
+.entry-signup-rule--tight {
+    margin: 8px 0 10px;
+}
+
+.entry-inline-form {
+    margin: 0;
+}
+
+.entry-inline-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+}
+
+.entry-inline-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+.entry-inline-field--dual {
+    flex: 1 1 calc(50% - 9px);
+}
+
+.entry-inline-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.entry-inline-label {
+    min-width: 8ch;
+    color: #fff;
+}
+
+.entry-inline-input-wrap {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0 4px;
+    background: rgba(0, 0, 0, 0.16);
+    border: none;
+    flex: 1 1 auto;
+}
+
+.entry-inline-input-wrap::before,
+.entry-inline-input-wrap::after {
+    color: #fff;
+}
+
+.entry-inline-input-wrap::before {
+    content: none;
+}
+
+.entry-inline-input-wrap::after {
+    content: none;
+}
+
+.entry-inline-input {
+    width: 100%;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #fff;
+    caret-color: var(--color, #fff);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.45;
+    padding: 2px 0 2px 1ch;
+}
+
+.entry-inline-input:focus {
+    background: transparent;
+}
+
+.entry-inline-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.entry-inline-button {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    background: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.2;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.entry-inline-button:hover,
+.entry-inline-button:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    outline: none;
+}
+
+.entry-inline-button:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+@media (max-width: 560px) {
+    .entry-inline-grid {
+        gap: 6px;
+    }
+
+    .entry-inline-field,
+    .entry-inline-field--dual {
+        flex-basis: 100%;
+    }
+
+    .entry-inline-field {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .entry-inline-meta {
+        width: 100%;
+    }
+
+    .entry-inline-input-wrap {
+        width: 100%;
+    }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "www-bbs",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node scripts/run-unit-tests.js",
+    "build": "node scripts/smoke-vercel-ready.js",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node scripts/check-supabase-ready.js",
+    "smoke:boards": "node scripts/smoke-boards.js",
+    "smoke:command-parity": "node scripts/smoke-command-parity.js",
+    "smoke:renderer-ui": "node scripts/smoke-renderer-ui.js",
+    "smoke:runtime-diagnostics": "node scripts/smoke-runtime-diagnostics.js",
+    "smoke:ui-geometry": "node scripts/smoke-ui-geometry.js",
+    "smoke:ui-layout": "node scripts/smoke-ui-layout.js",
+    "smoke:printable-view": "node scripts/smoke-printable-view.js",
+    "smoke:rss-services": "node scripts/smoke-rss-services.js",
+    "smoke:auth-bridge": "node scripts/smoke-auth-bridge.js",
+    "smoke:chat-counts": "node scripts/smoke-chat-counts.js",
+    "smoke:chat-realtime": "node scripts/smoke-chat-realtime.js",
+    "smoke:chat-members-supabase": "node scripts/smoke-chat-members-supabase.js",
+    "smoke:chat-rooms": "node scripts/smoke-chat-rooms.js",
+    "smoke:chat-rooms-supabase": "node scripts/smoke-chat-rooms-supabase.js",
+    "smoke:supabase-live": "node scripts/smoke-supabase-live.js",
+    "smoke:supabase-auth-write": "node scripts/smoke-supabase-auth-write.js",
+    "smoke:supabase-realtime": "node scripts/smoke-supabase-realtime.js",
+    "smoke:vercel-ready": "node scripts/smoke-vercel-ready.js",
+    "smoke:full-traversal": "node scripts/smoke-full-traversal.js",
+    "qa:final": "node scripts/final-qa-report.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
+  }
+}

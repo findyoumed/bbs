@@ -1,0 +1,31 @@
+{
+  "nextId": 4,
+  "attachments": [
+    {
+      "id": 1,
+      "boardId": "plaza",
+      "postId": 32,
+      "userId": "guest",
+      "nickName": "손님",
+      "originalName": "smoke.txt",
+      "storedName": "1-1774093269644-da98f6d2.txt",
+      "mimeType": "text/plain",
+      "size": 16,
+      "downloadCount": 1,
+      "createdAt": "2026-03-21T11:41:09.645Z"
+    },
+    {
+      "id": 2,
+      "boardId": "plaza",
+      "postId": 32,
+      "userId": "guest",
+      "nickName": "손님",
+      "originalName": "smoke.txt",
+      "storedName": "2-1774093380176-c28ce462.txt",
+      "mimeType": "text/plain",
+      "size": 16,
+      "downloadCount": 1,
+      "createdAt": "2026-03-21T11:43:00.176Z"
+    }
+  ]
+}

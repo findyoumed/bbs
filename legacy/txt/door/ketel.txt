@@ -1,0 +1,20 @@
+  [S[=1G[2J[=15F
+ Connect 2400 MNP
+ 
+ ### ketel에 연결되었습니다. (korea:pc)
+ ### Welcome to ketel!! 
+ ### 서비스 명에 ketel 을 입력하십시요. 
+ ### Please type 'ke' for KETEL English Service.
+  
+ 서비스 명(Login):
+  
+       KK  KKK   EEEEE   TTTTTTT   EEEEEE    L   tm
+      KK  KK    EE         TT     EE        L
+     KKK       EEEE       TT     EEEE      LL
+    KK KK     EE         TT     EE        LL
+   KK   KKK   EEEEEE    TT    EEEEEE     LLLLLLLL
+ 
+  <<<알립니다>>>
+ 
+ 1. 비밀번호를 분실하셨나요? 'PASS' 를 입력하세요.
+ 2. 게시판 및 대화실 이용시 건전한 언어를 사용합시다.

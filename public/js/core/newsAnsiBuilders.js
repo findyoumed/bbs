@@ -1,0 +1,266 @@
+import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
+import { shouldDisplayNewsArticleImage } from './newsPhotoArticleUtils.js';
+
+export function createNewsAnsiBuilders(deps) {
+  const {
+    ANSI_RESET,
+    ansiColor,
+    buildPageLabel,
+    buildTopHeader,
+    ansiHLine,
+    displayWidth,
+    fitCell,
+    formatLongDate,
+    formatShortDate,
+    wrapAnsiText
+  } = createAnsiBuilderUtils(deps);
+
+  const NEWS_LIST_PAGE_SIZE = 15;
+  const HEADLINE_TRUNCATION_SUFFIX = '..';
+  const DATE_COLUMN_GUARD_COLS = 1;
+
+  function writeDisplayText(cells, startCol, text) {
+    const source = String(text || '');
+    let cursor = Math.max(0, Number(startCol) || 0);
+
+    for (const ch of source) {
+      const charWidth = deps.isWideChar(ch) ? 2 : 1;
+      if (cursor + charWidth > cells.length) {
+        break;
+      }
+      cells[cursor] = ch;
+      if (charWidth === 2 && cursor + 1 < cells.length) {
+        cells[cursor + 1] = '';
+      }
+      cursor += charWidth;
+    }
+  }
+
+  function readDisplayCells(cells, startCol, endCol) {
+    return cells
+      .slice(Math.max(0, startCol), Math.max(0, endCol))
+      .filter((cell) => cell !== '')
+      .join('');
+  }
+
+  function escapeRegExp(value) {
+    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function normalizeHeadlineText(text, sourceTitle = '') {
+    let headline = String(text || '').replace(/\s+/g, ' ').trim();
+    const source = String(sourceTitle || '').replace(/\s+/g, ' ').trim();
+
+    if (!headline || !source) {
+      return headline;
+    }
+
+    const escapedSource = escapeRegExp(source);
+    headline = headline
+      .replace(new RegExp(`^\\[\\s*${escapedSource}\\s*\\]\\s*`), '')
+      .replace(new RegExp(`^${escapedSource}\\s*[:|\\-]\\s*`), '')
+      .trim();
+
+    return headline;
+  }
+
+  function normalizeTerminalHeadlineText(text) {
+    // [LOG: 20260428_2218] 터미널 폰트 fallback으로 날짜 컬럼이 밀리지 않도록 비표준 문장부호를 ASCII로 정규화
+    // [LOG: 20260428_2222] RSS 제목에 섞이는 zero-width/bidi formatting 문자를 제거해 날짜 컬럼 밀림을 방지
+    return String(text || '')
+      .replace(/[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFF0-\uFFF8]/g, '')
+      .replace(/\u2026/g, '...')
+      .replace(/[\u2018\u2019\u201B\u2032]/g, '\'')
+      .replace(/[\u201C\u201D\u201F\u2033]/g, '"')
+      .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-')
+      .replace(/[\u223C\u301C\uFF5E]/g, '~')
+      .replace(/[\u3008\u300A]/g, '<')
+      .replace(/[\u3009\u300B]/g, '>')
+      .replace(/[\u2460-\u2468]/g, (ch) => String(ch.codePointAt(0) - 0x245F))
+      .replace(/\u2469/g, '10')
+      .replace(/\u00A0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function fitHeadlineCell(text, maxWidth) {
+    const width = Math.max(0, Number(maxWidth) || 0);
+    const source = String(text || '').replace(/\s+/g, ' ').trim();
+
+    if (width <= 0) {
+      return '';
+    }
+    if (displayWidth(source) <= width) {
+      return fitCell(source, width);
+    }
+    if (width <= HEADLINE_TRUNCATION_SUFFIX.length) {
+      return fitCell(source, width);
+    }
+
+    const clipped = fitCell(source, width - HEADLINE_TRUNCATION_SUFFIX.length).replace(/\s+$/g, '');
+    return fitCell(`${clipped}${HEADLINE_TRUNCATION_SUFFIX}`, width);
+  }
+
+  function buildNewsListTitle(topic) {
+    const topicTitle = String(topic || '').replace(/\s+/g, ' ').trim();
+    if (!topicTitle) {
+      return '오늘의 주요기사';
+    }
+    if (topicTitle.startsWith('오늘의 주요기사')) {
+      return topicTitle;
+    }
+    return `오늘의 주요기사-${topicTitle}`;
+  }
+
+  function buildNewsListAnsi(topic, articles, pageNo = 1) {
+    // [LOG: 20260426_2345] Adaptive layout: Use 44 columns for mobile portrait
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+
+    const items = Array.isArray(articles) ? articles : [];
+    const pageCount = Math.max(1, Math.ceil(Math.max(1, items.length) / NEWS_LIST_PAGE_SIZE));
+    const currentPage = Math.min(Math.max(Number.parseInt(pageNo, 10) || 1, 1), pageCount);
+    const pageOffset = (currentPage - 1) * NEWS_LIST_PAGE_SIZE;
+    const visibleItems = items.slice(pageOffset, pageOffset + NEWS_LIST_PAGE_SIZE);
+    const pageLabel = buildPageLabel(currentPage, pageCount);
+
+    const titleStartCol = isMobile ? 5 : 6;
+    const dateWidth = 8;
+    const dateStartCol = Math.max(titleStartCol + 10, targetCols - dateWidth);
+    const titleMaxWidth = Math.max(8, dateStartCol - titleStartCol - 1 - DATE_COLUMN_GUARD_COLS);
+    const headerCells = Array.from({ length: targetCols }, () => ' ');
+
+    // [LOG: 20260506_1123] Match the NowNuri news list header without changing article loading or hotspots.
+    writeDisplayText(headerCells, 0, '번호');
+    writeDisplayText(headerCells, titleStartCol, '제목');
+    writeDisplayText(headerCells, dateStartCol, '제공일');
+
+    const parts = [
+      buildTopHeader({ leftLabel: 'NEWS', centerLabel: buildNewsListTitle(topic) }, pageLabel, targetCols),
+      ansiColor(15) + headerCells.filter((cell) => cell !== '').join('') + ANSI_RESET,
+      ansiHLine(targetCols, 8)
+    ];
+
+    visibleItems.forEach((article, index) => {
+      const articleNo = article?.no || (pageOffset + index + 1);
+      const numPart = `${String(articleNo).padStart(3)} `;
+      const dateText = formatShortDate(article.date || article.dateTime || '');
+      const headline = normalizeTerminalHeadlineText(
+        normalizeHeadlineText(article.title || '', article.sourceTitle)
+      );
+      const cells = Array.from({ length: targetCols }, () => ' ');
+      const title = fitHeadlineCell(headline, titleMaxWidth);
+
+      // [LOG: 20260430_2030] 제목 길이와 무관하게 날짜를 우측 고정 컬럼에 배치한다.
+      writeDisplayText(cells, 0, numPart);
+      writeDisplayText(cells, titleStartCol, title);
+      writeDisplayText(cells, dateStartCol, dateText);
+
+      const prefixSegment = readDisplayCells(cells, 0, titleStartCol);
+      const titleSegment = readDisplayCells(cells, titleStartCol, dateStartCol);
+      const dateSegment = readDisplayCells(cells, dateStartCol, targetCols);
+      const row = `${ansiColor(11)}${prefixSegment}${ANSI_RESET}${ansiColor(15)}${titleSegment}${ANSI_RESET}${ansiColor(8)}${dateSegment}${ANSI_RESET}`;
+      parts.push(row);
+    });
+
+
+    return {
+      items: visibleItems,
+      pageCount,
+      pageNo: currentPage,
+      pageSize: NEWS_LIST_PAGE_SIZE,
+      text: parts.join('\n')
+    };
+  }
+
+  function buildNewsArticleAnsi(topic, article, pageNo = 1) {
+    // [LOG: 20260426_2345] Adaptive layout: Use 44 columns for mobile portrait
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+
+    const parts = [];
+    const articleTitle = normalizeTerminalHeadlineText(
+      normalizeHeadlineText(article?.title || '', article?.sourceTitle)
+    );
+
+    // Title wrapping: targetCols - 6 (label "제목: ")
+    const titleLines = wrapAnsiText(articleTitle, Math.max(10, targetCols - 6));
+
+    const bodyText = String(article?.body || article?.description || '').trim() || 'RSS 본문 요약이 없습니다.';
+    const bodyLines = wrapAnsiText(bodyText, targetCols);
+
+    const source = String(article?.sourceTitle || '').trim();
+    const date = formatLongDate(article?.dateTime || article?.date || '');
+    const hasImage = shouldDisplayNewsArticleImage(article);
+    const sourceLink = String(article?.link || '').trim();
+    const sourceLinkLines = sourceLink
+      ? wrapAnsiText(`원문: ${sourceLink}`, targetCols)
+      : [];
+
+    const imageRowBudget = hasImage ? (isMobile ? 5 : 7) : 0;
+    const newsBodyRowBudget = Math.max(10, 18 - imageRowBudget);
+    const metaParts = [
+      source ? `출처:${source}` : '',
+      date ? `일시:${date}` : ''
+    ].filter(Boolean);
+
+    // Meta info: One per line on mobile to prevent ugly splitting
+    let headerLineCount = titleLines.length + 1; // +1 for HLine
+    if (isMobile) {
+      headerLineCount += metaParts.length;
+    } else {
+      headerLineCount += metaParts.length ? 1 : 0;
+    }
+
+    const lastPageFooterLines = sourceLinkLines.length + 1;
+    const linesPerPage = Math.max(5, newsBodyRowBudget - headerLineCount - lastPageFooterLines);
+
+    const pageCount = Math.max(1, Math.ceil(Math.max(1, bodyLines.length) / linesPerPage));
+    const currentPage = Math.min(Math.max(Number.parseInt(pageNo, 10) || 1, 1), pageCount);
+    const pageOffset = (currentPage - 1) * linesPerPage;
+    const visibleBodyLines = bodyLines.slice(pageOffset, pageOffset + linesPerPage);
+    const pageLabel = buildPageLabel(currentPage, pageCount);
+
+    // Pass targetCols to top header
+    parts.push(buildTopHeader(topic ? ['뉴스/인물', topic, '기사 읽기'] : ['뉴스/인물', '기사 읽기'], pageLabel, targetCols));
+
+    titleLines.forEach((line, index) => {
+      const label = index === 0 ? '제목: ' : '      ';
+      parts.push(ansiColor(14) + label + ansiColor(15) + line + ANSI_RESET);
+    });
+
+    if (metaParts.length) {
+      if (isMobile) {
+        metaParts.forEach(part => {
+          parts.push(ansiColor(8) + part + ANSI_RESET);
+        });
+      } else {
+        parts.push(ansiColor(8) + metaParts.join('  ') + ANSI_RESET);
+      }
+    }
+
+    parts.push(ansiHLine(targetCols, 8));
+
+    visibleBodyLines.forEach((line) => {
+      parts.push(ansiColor(15) + line + ANSI_RESET);
+    });
+
+    if (currentPage >= pageCount) {
+      sourceLinkLines.forEach((line) => {
+        parts.push(ansiColor(8) + line + ANSI_RESET);
+      });
+      parts.push(ansiColor(14) + '마지막 페이지입니다' + ANSI_RESET);
+    }
+
+    return {
+      pageCount,
+      pageNo: currentPage,
+      text: parts.join('\n')
+    };
+  }
+
+  return {
+    buildNewsArticleAnsi,
+    buildNewsListAnsi
+  };
+}

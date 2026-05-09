@@ -1,0 +1,432 @@
+'use strict';
+
+const BaseRouter = require('./BaseRouter');
+const { validateEmail } = require('../httpUtils');
+const {
+  getReservedNicknameMessage,
+  validateReservedNickname
+} = require('../ReservedNicknamePolicy');
+
+/**
+ * [LOG: 20260426_1910] Simplified MemberRouter by offloading Auth and Memo responsibilities (Evolution Mode: Structural Optimization)
+ */
+class MemberRouter extends BaseRouter {
+  get routes() {
+    return [
+      { method: 'GET', pattern: '/api/members', handler: 'listMembers', middlewares: ['ensureAdmin'] },
+      { method: 'GET', pattern: '/api/members/search', handler: 'search', needContext: true },
+      { 
+        method: 'POST', 
+        pattern: '/api/members/profile', 
+        handler: 'updateProfile', 
+        middlewares: ['ensureAuthenticated'],
+        validate: {
+          body: {
+            nickName: { minLength: 2, maxLength: 20 },
+            sex: { enum: ['M', 'F'] }
+          }
+        }
+      },
+      { method: 'GET', pattern: '/api/members/:userId', handler: 'getMember', needContext: true },
+      { method: 'DELETE', pattern: '/api/members/:userId', handler: 'deleteMember', middlewares: ['ensureAuthenticated'] },
+      {
+        method: 'POST',
+        pattern: '/api/members/:userId/password/verify',
+        handler: 'verifyPassword',
+        needBody: true,
+        validate: {
+          body: {
+            password: { required: true }
+          }
+        }
+      },
+      {
+        method: 'POST',
+        pattern: '/api/members/:userId/email',
+        handler: 'setEmail',
+        needBody: true,
+        validate: {
+          body: {
+            password: { required: true },
+            email: { required: true }
+          }
+        }
+      },
+      { 
+        method: 'POST', 
+        pattern: '/api/members/:userId/password', 
+        handler: 'setPassword', 
+        middlewares: ['ensureAuthenticated'],
+        needContext: true, 
+        needBody: true,
+        validate: {
+          body: {
+            password: { required: true, minLength: 6 }
+          }
+        }
+      },
+      { method: 'POST', pattern: '/api/members/:userId/level', handler: 'setLevel', middlewares: ['ensureAdmin'], needBody: true }
+    ];
+  }
+
+  // --- Profile & Search ---
+
+  async listMembers() {
+    const { memberRepository } = this.deps;
+    const options = this.getQueryOptions({ orderBy: 'user_id' });
+    const search = this.requestUrl.searchParams.get('search') || '';
+    const level = this.requestUrl.searchParams.get('level') || '';
+
+    return this.send(200, await memberRepository.listMembers({ 
+      ...options,
+      search, 
+      level 
+    }));
+  }
+
+  async search() {
+    const { memberRepository } = this.deps;
+    const userId = this.requestUrl.searchParams.get('userId') || '';
+    const nickName = this.requestUrl.searchParams.get('nickName') || '';
+    const email = this.requestUrl.searchParams.get('email') || '';
+    const allowMissing = this.requestUrl.searchParams.get('allowMissing') === '1';
+    let member = null;
+
+    if (userId) {
+      member = await memberRepository.getMember(userId);
+    } else if (nickName && typeof memberRepository.findByNickName === 'function') {
+      member = await memberRepository.findByNickName(nickName);
+    } else if (email && typeof memberRepository.findByEmail === 'function') {
+      member = await memberRepository.findByEmail(email);
+    } else {
+      this.validationError('검색 조건이 필요합니다.');
+    }
+
+    if (!member) {
+      if (allowMissing) return this.send(200, { found: false, member: null });
+      this.notFound('회원 정보를 찾을 수 없습니다.');
+    }
+
+    if (allowMissing) return this.send(200, { found: true, member });
+    return this.send(200, member);
+  }
+
+  async updateProfile() {
+    const { memberRepository, authBridge } = this.deps;
+    const body = await this.getBody();
+    const context = await this.getContext();
+
+    const existing = await memberRepository.getMember(context.userId);
+    const nextProfile = {
+      userId: context.userId,
+      nickName: body?.nickName ?? existing?.nickName ?? context.nickName ?? '',
+      email: body?.email ? validateEmail(body.email) : (existing?.email ?? context.email ?? ''),
+      birthday: String(body?.birthday ?? existing?.birthday ?? '').trim(),
+      sex: String(body?.sex ?? existing?.sex ?? 'M').trim() || 'M',
+      level: existing?.level ?? context.level ?? 1,
+      isAdmin: existing?.isAdmin ?? context.isAdmin,
+      isOpen: existing?.isOpen ?? true,
+      registrationDateTime: existing?.registrationDateTime ?? '',
+      lastLoginDateTime: existing?.lastLoginDateTime ?? ''
+    };
+
+    const reservedNickName = validateReservedNickname(nextProfile.nickName, context.userId);
+    if (!reservedNickName.allowed) {
+      this.conflict(getReservedNicknameMessage(reservedNickName.keyword));
+    }
+
+    if (typeof memberRepository.findByNickName === 'function' && nextProfile.nickName !== existing?.nickName) {
+      const duplicateNick = await memberRepository.findByNickName(nextProfile.nickName);
+      if (duplicateNick && duplicateNick.userId !== context.userId) this.conflict('이미 등록된 닉네임입니다.');
+    }
+    if (nextProfile.email && typeof memberRepository.findByEmail === 'function' && nextProfile.email !== existing?.email) {
+      const duplicateEmail = await memberRepository.findByEmail(nextProfile.email);
+      if (duplicateEmail && duplicateEmail.userId !== context.userId) this.conflict('이미 등록된 이메일 주소입니다.');
+    }
+
+    const savedProfile = await memberRepository.ensureMember(nextProfile);
+    if (authBridge?.syncMemberAuthProfile) {
+      try {
+        await authBridge.syncMemberAuthProfile(savedProfile, {
+          authUserId: context?.authUserId,
+          lookupEmail: context?.email,
+          allowMissingAuthUser: true
+        });
+      } catch (error) {
+        // Rollback local profile if sync fails
+        if (existing) await memberRepository.ensureMember(existing);
+        throw error;
+      }
+    }
+    return this.send(200, savedProfile);
+  }
+
+  // --- Member Account Management ---
+
+  async getMember(params) {
+    const { memberRepository } = this.deps;
+    const targetUserId = params.userId;
+    const context = await this.getContext();
+    const allowMissing = this.requestUrl.searchParams.get('allowMissing') === '1';
+
+    let member = await memberRepository.getMember(targetUserId);
+    if (!member && targetUserId === context?.userId) {
+      member = {
+        userId: context.userId,
+        nickName: context.nickName || context.userId,
+        email: context.email || '',
+        level: context.isAdmin ? 99 : Number(context.level || 1),
+        isAdmin: Boolean(context.isAdmin)
+      };
+    }
+    if (!member && targetUserId === 'guest') {
+      member = { userId: 'guest', nickName: '손님', email: '', level: 1, isAdmin: false };
+    }
+    // [LOG: 20260429_0606] Allow profile screens to fail closed on missing users
+    // without forcing a 404 fetch error into the browser console.
+    if (!member) {
+      if (allowMissing) return this.send(200, { found: false, member: null });
+      this.notFound('회원 정보를 찾을 수 없습니다.');
+    }
+    if (allowMissing) return this.send(200, { found: true, member });
+    return this.send(200, member);
+  }
+
+  async deleteMember(params) {
+    const { memberRepository } = this.deps;
+    const targetUserId = params.userId;
+    const context = await this.getContext();
+
+    const isSelf = context.userId === targetUserId;
+    if (!context.isAdmin && !isSelf) this.forbidden('본인 계정만 탈퇴할 수 있습니다.');
+
+    const deletedMember = await memberRepository.deleteMember(targetUserId);
+    let authDeleted = false;
+    let authDeleteError = '';
+
+    if (isSelf) {
+      const result = await this.tryDeleteAuthAccount(context.authUserId);
+      authDeleted = result.deleted;
+      authDeleteError = result.error;
+    }
+
+    return this.send(200, { success: true, member: deletedMember, authDeleted, authDeleteError });
+  }
+
+  async verifyPassword(params) {
+    const targetUserId = params.userId;
+    const body = await this.getBody();
+    const password = String(body?.password || '').trim();
+    const result = await this.verifyMemberPassword(targetUserId, password);
+
+    // [LOG: 20260507_1722] Wrong passwords are transcript state, not API authorization errors.
+    return this.send(200, { verified: result.verified });
+  }
+
+  async setEmail(params) {
+    const { memberRepository, authBridge } = this.deps;
+    const targetUserId = params.userId;
+    const body = await this.getBody();
+    const password = String(body?.password || '').trim();
+    const nextEmailValue = validateEmail(body?.email || '');
+
+    const passwordVerification = await this.verifyMemberPassword(targetUserId, password);
+    if (!passwordVerification.verified) {
+      return this.send(200, { verified: false, member: null });
+    }
+
+    const existing = await memberRepository.getMember(targetUserId);
+    if (!existing) {
+      this.notFound('회원 정보를 찾을 수 없습니다.');
+    }
+
+    if (nextEmailValue && typeof memberRepository.findByEmail === 'function' && nextEmailValue !== existing?.email) {
+      const duplicateEmail = await memberRepository.findByEmail(nextEmailValue);
+      if (duplicateEmail && duplicateEmail.userId !== targetUserId) this.conflict('이미 등록된 이메일 주소입니다.');
+    }
+
+    const nextProfile = {
+      ...existing,
+      userId: targetUserId,
+      email: nextEmailValue
+    };
+
+    // [LOG: 20260507_1722] Update only email so the stored member password stays intact.
+    const savedProfile = typeof memberRepository.setEmail === 'function'
+      ? await memberRepository.setEmail(targetUserId, nextEmailValue)
+      : await memberRepository.ensureMember(nextProfile);
+    if (authBridge?.syncMemberAuthProfile) {
+      try {
+        await authBridge.syncMemberAuthProfile(savedProfile, {
+          authUserId: existing?.authUserId,
+          lookupEmail: existing?.email,
+          allowMissingAuthUser: true
+        });
+      } catch (error) {
+        if (existing) {
+          if (typeof memberRepository.setEmail === 'function') {
+            await memberRepository.setEmail(targetUserId, existing.email || '');
+          } else {
+            await memberRepository.ensureMember(existing);
+          }
+        }
+        throw error;
+      }
+    }
+
+    return this.send(200, savedProfile);
+  }
+
+  async setPassword(params) {
+    const { authBridge, memberRepository } = this.deps;
+    const targetUserId = params.userId;
+    const body = await this.getBody();
+    const context = await this.getContext();
+    if (!context?.isAdmin && context?.userId !== targetUserId) this.forbidden('권한이 없습니다.');
+    const nextPassword = String(body?.password || '').trim();
+
+    const defaults = {};
+    if (Object.prototype.hasOwnProperty.call(body || {}, 'nickNameHint')) {
+      defaults.nickName = body?.nickNameHint;
+    }
+    if (Object.prototype.hasOwnProperty.call(body || {}, 'emailHint')) {
+      defaults.email = body?.emailHint;
+    }
+    if (Object.prototype.hasOwnProperty.call(body || {}, 'isAdminHint')) {
+      defaults.isAdmin = body?.isAdminHint === true;
+    }
+
+    const authPasswordSync = await this.updateAuthPasswordForMember(authBridge, {
+      context,
+      password: nextPassword,
+      targetUserId
+    });
+    const member = await memberRepository.setPassword(targetUserId, nextPassword, defaults);
+    return this.send(200, {
+      ...member,
+      authPasswordSynced: authPasswordSync.synced,
+      authPasswordSyncReason: authPasswordSync.reason
+    });
+  }
+
+  async setLevel(params) {
+    const { memberRepository, runtimeConfig } = this.deps;
+    const targetUserId = params.userId;
+    const body = await this.getBody();
+
+    const validLevels = runtimeConfig?.validLevels || [1, 2, 99];
+    const nextLevel = Number(body?.level);
+    if (!validLevels.includes(nextLevel)) {
+      this.validationError(`허용된 회원 레벨만 입력해 주세요. (${validLevels.join(', ')})`);
+    }
+    return this.send(200, await memberRepository.setLevel(targetUserId, body?.level, {
+      nickName: body?.nickNameHint || targetUserId
+    }));
+  }
+
+  // --- Helpers ---
+
+  async updateAuthPasswordForMember(authBridge, options = {}) {
+    const { context, password, targetUserId } = options;
+    if (!authBridge?.client?.auth?.admin?.updateUserById) {
+      return { synced: false, reason: 'disabled' };
+    }
+
+    const authUser = typeof authBridge._resolveAuthUser === 'function'
+      ? await authBridge._resolveAuthUser({
+        authUserId: context?.authUserId,
+        userId: targetUserId,
+        lookupEmail: context?.email,
+        allowTargetEmailLookup: context?.email
+      })
+      : null;
+
+    if (!authUser?.id) {
+      if (context?.authUserId) {
+        this.error(502, 'Supabase Auth 계정을 찾지 못해 비밀번호를 변경하지 못했습니다.');
+      }
+      return { synced: false, reason: 'auth-user-not-found' };
+    }
+
+    const { error } = await authBridge.client.auth.admin.updateUserById(authUser.id, {
+      password
+    });
+    if (error) {
+      if (typeof authBridge._throwAdminError === 'function') {
+        authBridge._throwAdminError('Supabase Auth 비밀번호 변경', error);
+      }
+      this.error(502, `Supabase Auth 비밀번호 변경 실패: ${error.message || '알 수 없는 오류'}`);
+    }
+
+    return { synced: true, reason: 'auth-password-updated' };
+  }
+
+  async tryDeleteAuthAccount(authUserId) {
+    const { authBridge } = this.deps;
+    const id = String(authUserId || '').trim();
+    if (!id || typeof authBridge?.client?.auth?.admin?.deleteUser !== 'function') {
+      return { attempted: false, deleted: false, error: '' };
+    }
+    const { error } = await authBridge.client.auth.admin.deleteUser(id);
+    if (error) {
+      return { attempted: true, deleted: false, error: error.message };
+    }
+    return { attempted: true, deleted: true, error: '' };
+  }
+
+  async verifyMemberPassword(targetUserId, password) {
+    const { authBridge, memberRepository } = this.deps;
+    const normalizedUserId = String(targetUserId || '').trim();
+    const normalizedPassword = String(password || '').trim();
+    if (!normalizedUserId || !normalizedPassword) {
+      return { verified: false, source: 'empty' };
+    }
+
+    if (typeof memberRepository.verifyPassword === 'function') {
+      const localVerified = await memberRepository.verifyPassword(normalizedUserId, normalizedPassword);
+      if (localVerified) {
+        return { verified: true, source: 'member-password' };
+      }
+    }
+
+    const member = typeof memberRepository.getMember === 'function'
+      ? await memberRepository.getMember(normalizedUserId)
+      : null;
+    const email = validateEmail(member?.email || '');
+    if (!email || typeof authBridge?.client?.auth?.signInWithPassword !== 'function') {
+      return { verified: false, source: 'member-password' };
+    }
+
+    try {
+      const { data, error } = await authBridge.client.auth.signInWithPassword({
+        email,
+        password: normalizedPassword
+      });
+
+      if (error || !data?.user) {
+        return { verified: false, source: 'auth-password' };
+      }
+
+      // [LOG: 20260508_1702] Email signup stores the password in Supabase Auth first;
+      // successful Auth verification repairs the local member password used by MyInfo.
+      if (typeof memberRepository.setPassword === 'function') {
+        await memberRepository.setPassword(normalizedUserId, normalizedPassword, {
+          nickName: member?.nickName || normalizedUserId,
+          email,
+          isAdmin: member?.isAdmin === true
+        });
+      }
+      return { verified: true, source: 'auth-password' };
+    } catch (error) {
+      console.error('[MemberRouter] Auth password fallback verification failed:', error.message);
+      return { verified: false, source: 'auth-password' };
+    }
+  }
+}
+
+async function handleMemberRoutes(deps) {
+  const router = new MemberRouter(deps);
+  return await router.handle();
+}
+
+module.exports = handleMemberRoutes;

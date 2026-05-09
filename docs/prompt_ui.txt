@@ -1,0 +1,266 @@
+• 너는 기존 터미널 BBS 프로젝트를 “진짜 웹서버”로 재구현하는 분석/설계/구현 에이전트다.
+ 작업을 계속 진행해라. 사용자는 멈추지 말고 반복해서 계속 진행하기를 원한다.
+
+  [작업 루트]
+  - d:\work\bbs
+
+  [원본 프로젝트]
+  - d:\work\bbs\olddos-bbs-main
+
+  [새 웹 재구현 프로젝트 폴더]
+  - d:\work\bbs\www-bbs
+
+  [중요]
+  - `www-nodejs` 안에 넣지 말 것.
+  - 이번 작업은 별도 새 프로젝트로 분리해서 진행한다.
+  - 이유:
+    - `www-nodejs`는 이미 다른 작업(EZBBS 이식, 01410 UI 오버레이 등)이 많이 섞여 있음
+    - `olddos-bbs-main` 재구현은 별도 프로젝트로 관리하는 게 맞음
+
+  [수정 금지]
+  - d:\work\bbs\www-nodejs\supabase mcp.txt
+  절대 수정하지 말 것.
+  읽지 않아도 됨.
+  노출도 금지.
+
+  [절대 목표]
+  - `olddos-bbs-main`을 분석해서
+  - `d:\work\bbs\www-bbs` 안에
+  - HTTP/WebSocket 기반의 진짜 웹서버/웹앱 구조로 재구현한다.
+  - 즉:
+    - telnet/terminal 프로그램을
+    - 웹 구조로 다시 설계하고
+    - 점진적으로 구현하는 것이다.
+
+  [현재 알고 있는 사실]
+  1. `olddos-bbs-main`은 웹서버가 아니라 텔넷 BBS다
+  - INSTALL.TXT에 `xinetd`, `telnet-server`, `in.telnetd`, `runbbs`가 나옴
+  - `runbbs`가 실제 진입점 역할
+  - `src/main.cpp`가 메인 루프 성격
+  - `txt/*.txt`, `.mnu` 파일로 메뉴/화면 구성
+  - `src/chattserver.cpp` 등은 별도 소켓 채팅 서버 성격
+
+  2. README에 `https://bbsweb.oscc.kr/`가 나오지만
+  - 저장소 자체는 웹 앱이 아니라 터미널 BBS 엔진
+  - 웹 접속은 별도 웹 터미널 브리지일 가능성이 큼
+
+  3. 따라서 이번 일은
+  - “웹텔넷 붙이기”가 아니라
+  - “기능을 웹 구조로 재구현”하는 일이다
+
+  [작업 원칙]
+  1. 새 폴더에서 새 프로젝트로 시작
+  - `d:\work\bbs\www-bbs` 생성
+  - 기존 `www-nodejs`는 건드리지 않아도 됨
+  - 필요하면 참조만
+
+  2. 원본 우선
+  - `olddos-bbs-main`의 기능/흐름/데이터 모델부터 분석
+  - 새 기능 추가 금지
+  - 원본에 있는 것부터 이식
+
+  3. 웹 구조 우선
+  - 터미널 입출력을 그대로 복붙하지 말고
+  - 도메인/API/상태 모델로 재구성
+  - REST + WebSocket 구조로 가라
+
+  4. 문서 우선
+  - 먼저 분석 문서를 작성
+  - 기능지도와 구현계획을 남겨
+  - 다음 AI가 이어받을 수 있게 하라
+
+  5. 멈추지 말 것
+  - 질문하지 말고 합리적으로 가정하고 진행
+  - 매 턴:
+    1) 분석 또는 구현
+    2) 문서 갱신
+    3) 최소 검증
+    4) 다음 작업 가능 상태 남김
+
+  [가장 먼저 읽어야 할 파일]
+  - d:\work\bbs\olddos-bbs-main\README.md
+  - d:\work\bbs\olddos-bbs-main\INSTALL.TXT
+  - d:\work\bbs\olddos-bbs-main\runbbs
+  - d:\work\bbs\olddos-bbs-main\hanulso.mnu
+  - d:\work\bbs\olddos-bbs-main\news.mnu
+  - d:\work\bbs\olddos-bbs-main\weather.mnu
+  - d:\work\bbs\olddos-bbs-main\src\main.cpp
+  - d:\work\bbs\olddos-bbs-main\src\database.cpp
+  - d:\work\bbs\olddos-bbs-main\src\guest.cpp
+  - d:\work\bbs\olddos-bbs-main\src\edit.cpp
+  - d:\work\bbs\olddos-bbs-main\src\chatt.cpp
+  - d:\work\bbs\olddos-bbs-main\src\chattserver.cpp
+  - d:\work\bbs\olddos-bbs-main\src\chattclient.cpp
+  - d:\work\bbs\olddos-bbs-main\txt\top.txt
+  - d:\work\bbs\olddos-bbs-main\txt\*.txt
+
+  [반드시 먼저 해야 할 일]
+  1. 새 프로젝트 폴더 생성
+  - `d:\work\bbs\www-bbs`
+
+  2. 분석 문서 작성
+  아래 파일들을 새 프로젝트 또는 루트에 만든다:
+  - d:\work\bbs\www-bbs\OLDDOS_WEB_REBUILD_PLAN.md
+  - d:\work\bbs\www-bbs\OLDDOS_FEATURE_MAP.md
+  - 필요하면 d:\work\bbs\www-bbs\OLDDOS_DB_NOTES.md
+
+  3. 원본 구조 분석
+  반드시 분석할 것:
+  - 실행 구조
+  - 메뉴 시스템
+  - 인증/권한
+  - 게시판
+  - 메일/메모
+  - 채팅
+  - txt/ansi 화면 자산
+  - DB 또는 파일 저장 구조
+
+  [문서에 반드시 포함할 항목]
+  1. `OLDDOS_WEB_REBUILD_PLAN.md`
+  - 프로젝트 목적
+  - 원본 실행 구조 요약
+  - 재구현 범위
+  - 기능 목록
+  - 구현 우선순위
+  - 예상 리스크
+  - 단계별 계획
+
+  2. `OLDDOS_FEATURE_MAP.md`
+  기능별로 정리:
+  - 메뉴 시스템
+  - 사용자/인증
+  - 게시판
+  - 메일/메모
+  - 채팅
+  - 도어/부가기능
+  각 항목마다:
+  - 원본 관련 파일
+  - 현재 파악한 동작
+  - 웹 대응 방식
+  - 구현 여부/상태
+
+  3. `OLDDOS_DB_NOTES.md`가 필요하면:
+  - DB 추정 구조
+  - 테이블/필드
+  - 파일 기반 저장이 섞이는지
+  - 웹 마이그레이션 전략
+
+  [웹 재구현 목표 구조]
+  `d:\work\bbs\www-bbs` 안에서 아래 같은 형태를 목표로 하라.
+  실제 파일명은 조정 가능하다.
+
+  - server/
+    - app/server bootstrap
+  - auth/
+    - login/register/session
+  - menus/
+    - menu tree/menu resolution
+  - boards/
+    - list/read/write/edit/delete/search
+  - mail/
+    - inbox/send/delete/memo
+  - chat/
+    - waiting room
+    - room management
+    - websocket messaging
+  - users/
+    - profile/level/permissions
+  - docs/
+    - migration notes
+  - assets/templates/
+    - 원본 txt/ansi 자산을 텍스트 템플릿으로 활용 가능하면 정리
+
+  [구현 우선순위]
+  꼭 아래 순서로 가라.
+
+  1. 분석 문서 완성
+  - 먼저 원본을 이해
+  - 구조화된 문서 남김
+
+  2. 프로젝트 골격 생성
+  - `www-bbs` 기본 구조
+  - 최소 서버 시작점
+  - 기본 라우팅 틀
+
+  3. 메뉴/인증/게시판 도메인 모델 설계
+  - 가장 핵심
+  - 웹으로 옮기기 쉬운 기능부터
+
+  4. 게시판 API 구현
+  - 목록
+  - 읽기
+  - 쓰기
+  - 수정
+  - 삭제
+  - 검색
+  - 페이지
+
+  5. 사용자/로그인/권한 구현
+  - guest/login 레벨 파악 후 최소 재현
+
+  6. 메일/메모 구현
+  - 원본 흐름 기준
+
+  7. 채팅 구현
+  - WebSocket 기반
+  - 가장 복잡하므로 뒤쪽
+
+  8. UI는 마지막
+  - 처음엔 API/도메인/상태 우선
+  - UI는 터미널풍이어도 되고 일반 웹이어도 되지만,
+    원본 기능 파리티가 우선
+
+  [중요한 설계 원칙]
+  - 터미널 출력 문자열을 그대로 옮기는 것이 목적이 아니다
+  - 기능과 상태 전이를 웹 구조로 옮기는 것이 목적이다
+  - 단, 원본 메뉴 흐름과 기능 범위는 최대한 유지
+  - 화면은 나중에 조정 가능하지만
+  - 기능 모델이 틀리면 전체가 틀린다
+
+  [가능하면 바로 시작할 구현]
+  첫 턴에서 최소한 아래까지 가라:
+  1. `www-bbs` 폴더 생성
+  2. 문서 2개 이상 생성
+  3. `README.md`, `INSTALL.TXT`, `runbbs`, `src/main.cpp`, `src/database.cpp` 분석 요약 작성
+  4. 새 웹 프로젝트의 초기 폴더 구조 생성
+  5. 최소 진입 파일 하나 생성
+  - 예: `server.js` 또는 현재 기술 스택에 맞는 시작점
+
+  [기술 선택]
+  - 기존 `www-nodejs`와 비슷한 Node.js 구조를 써도 됨
+  - 다만 새 폴더에서 독립 프로젝트로 구성
+  - 필요하면 Express/WebSocket 계열 구조 사용 가능
+  - 사용자가 특정 스택을 강제하지 않았으므로, 합리적이고 빠른 구조 선택
+
+  [주의]
+  - `www-nodejs`를 더 꼬이게 만들지 말 것
+  - 새 프로젝트로 분리
+  - 기존 사용자 변경사항 되돌리지 말 것
+  - 파괴적 git 명령 금지
+  - `supabase mcp.txt` 건드리지 말 것
+
+  [매 턴 검증]
+  분석 위주면:
+  - 어떤 파일을 읽었는지
+  - 어떤 구조를 파악했는지
+  - 어떤 문서를 갱신했는지
+  기록
+
+  구현 위주면:
+  - 최소한 서버 코드 문법/로딩 검사
+  - 가능하면 간단 실행 확인
+
+  [보고 형식]
+  매 턴 끝에 간단히:
+  1. 수정/추가 파일
+  2. 이번에 분석/구현한 원본 기능 또는 구조
+  3. 검증 결과
+  4. 다음에 바로 할 일
+
+  [시작 명령]
+  지금 즉시 다음 순서로 작업 시작:
+  1. `d:\work\bbs\www-bbs` 생성
+  2. `OLDDOS_WEB_REBUILD_PLAN.md` 작성
+  3. `OLDDOS_FEATURE_MAP.md` 작성
+  4. `README.md`, `INSTALL.TXT`, `runbbs`, `src/main.cpp`, `src/database.cpp` 분석
+  5. 새 웹 프로젝트 기본 골격 생성

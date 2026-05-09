@@ -1,0 +1,108 @@
+다음 작업을 이 저장소에서 이어서 수행해 주세요.
+
+[목표]
+`public/js/app.js`를 아주 작은 단위로 안전하게 모듈화하고 싶습니다.
+이전에는 한 번에 크게 분리하다가 브라우저 import/export 오류가 나서 프런트가 깨졌습니다.
+그래서 지금은 "부팅 경로를 건드리지 않는 작은 분리 1개 -> 즉시 검증" 방식만 허용합니다.
+
+[반드시 먼저 읽을 것]
+1. `AGENTS.md`
+2. `WORK_LOG.md`
+3. `public/js/app.js`
+4. `public/js/core/commandFooter.js`
+
+[현재 상태 요약]
+- 프런트는 한 번 복구되었습니다.
+- `public/js/app.js`는 현재 다시 동작하는 단일 엔트리입니다.
+- 최근 1차 안전 분리로 `public/js/core/commandFooter.js`가 추가되었습니다.
+- 이 모듈에는 다음 helper만 분리되어 있습니다.
+  - `loadAssetText`
+  - `parseCommandFooter`
+  - `looksLikeCommandFooter`
+- 현재 검증 통과 상태:
+  - `npm run smoke:vercel-ready`
+  - `npm run smoke:boards`
+- 최근 작업 기록은 `WORK_LOG.md` 상단의
+  - `20260410_1720`
+  - `20260410_1735`
+  - `20260410_1755`
+  를 보면 됩니다.
+
+[중요한 배경]
+- 과거에 `app.js`를 대규모 import 구조로 바꿨다가 브라우저가 깨졌습니다.
+- 특히 export 누락 때문에 다음과 같은 오류가 났었습니다.
+  - `does not provide an export named 'loadAssetText'`
+- 따라서 이번에는 절대 대규모 분리 금지입니다.
+- `showSignup`, `handleCmd`, 네비게이션 전체, 인증 전체를 한 번에 분리하지 마세요.
+
+[절대 금지]
+- `public/js/app.js`를 여러 import로 한꺼번에 갈아엎는 작업
+- `showSignup()` 대규모 분리
+- `handleCmd()` 대규모 분리
+- 메뉴 네비게이션 전체 분리
+- 동작 확인 없이 여러 파일을 연속으로 쪼개는 작업
+- 요청 범위 밖 리팩토링
+
+[이번에 해줬으면 하는 정확한 작업]
+다음 작은 단위 하나만 처리해 주세요.
+
+후보 1. 가장 추천
+`public/js/app.js` 안의 footer text helper만 추가 분리
+
+대상 후보:
+- `getCommandFooterText()`
+- `getSupportedFooterText()`
+
+원칙:
+- 새 파일 예시: `public/js/core/commandFooterText.js`
+- 기존 `applyCommandFooter()` 흐름은 유지
+- 화면 전환, 라우팅, 회원가입, 로그인, 채팅 로직은 손대지 말 것
+- import/export 이름은 단순하고 명확하게 유지
+
+[작업 범위]
+- 가능하면 아래 파일만 수정
+  - `public/js/app.js`
+  - `public/js/core/commandFooterText.js` 신규 생성
+  - `WORK_LOG.md`
+
+[수행 방식]
+1. 현재 `app.js`에서 `getCommandFooterText`, `getSupportedFooterText`의 의존성을 먼저 확인
+2. 의존성이 작은 경우에만 새 모듈로 분리
+3. `app.js`는 import 연결만 최소 수정
+4. 바로 검증
+5. 검증 통과 시에만 종료
+
+[검증 명령]
+아래 4개는 반드시 실행해 주세요.
+
+```bash
+Get-Content -Path public/js/app.js -Encoding UTF8 -Raw | node --input-type=module --check
+Get-Content -Path public/js/core/commandFooterText.js -Encoding UTF8 -Raw | node --input-type=module --check
+npm run smoke:vercel-ready
+npm run smoke:boards
+```
+
+[기대 결과]
+- 브라우저 import/export 오류가 없어야 함
+- 메인 메뉴/게시판/채팅 footer 힌트와 prompt 동작이 유지되어야 함
+- `smoke:vercel-ready` 통과
+- `smoke:boards` 통과
+
+[실패 시 대응]
+- 바로 다음 큰 분리로 넘어가지 말 것
+- 실패하면 `app.js` import/export 연결부터 다시 확인
+- 특히 새 모듈의 export 이름과 `app.js` import 이름 불일치부터 점검
+- 복구 없이 추가 리팩토링 금지
+
+[보고 형식]
+결과 보고는 아래 4가지를 꼭 포함해 주세요.
+1. 실제 수정 파일
+2. 왜 이 단위가 안전한지
+3. 실행한 검증 명령
+4. 실패 시 어디를 먼저 봐야 하는지
+
+[추가 메모]
+- 이 저장소는 `Vanilla JS / HTML / CSS / Node.js`만 사용합니다.
+- React, TypeScript, 번들러 도입 금지입니다.
+- `WORK_LOG.md` 기록은 반드시 남겨 주세요.
+- 브라우저가 한 번 깨졌던 이력이 있으니, "조금씩 분리하고 바로 검증" 원칙을 지켜 주세요.

@@ -1,0 +1,1196 @@
+@font-face {
+    font-family: 'DungGeunMo';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
+:root,
+:root[data-theme="dark"] {
+    --bgcolor: #000000;
+    /* 다크 모드(기본)는 검정 배경 */
+    --color: #ffffff;
+    --glow-color: rgba(255, 255, 255, 0.4);
+    --topbar-bg: #000000;
+    --topbar-label-bg: #ffffff;
+    --topbar-label-color: #000000;
+    --help-bg: rgba(0, 0, 0, 0.9);
+    --border-color: rgba(255, 255, 255, 0.3);
+    --btn-bg: #ffffff;
+    --btn-color: #000000;
+    --btn-border: #ffffff;
+    --input-bg: rgba(255, 255, 255, 0.1);
+    --hr-color: #ffffff;
+    --text-shadow: none;
+}
+
+:root[data-theme="blue"] {
+    --bgcolor: #0000aa;
+    /* 고전 BBS 파란 배경 */
+    --color: #ffffff;
+    --glow-color: rgba(255, 255, 255, 0.4);
+    --topbar-bg: #0000aa;
+    --topbar-label-bg: #ffffff;
+    --topbar-label-color: #0000aa;
+    --help-bg: rgba(0, 0, 170, 0.9);
+    --border-color: rgba(255, 255, 255, 0.5);
+    --btn-bg: #ffffff;
+    --btn-color: #0000aa;
+    --btn-border: #ffffff;
+    --input-bg: rgba(255, 255, 255, 0.15);
+    --hr-color: #ffffff;
+    --text-shadow: none;
+}
+
+/* 
+   FORCE GLOBAL THEME 
+   이 설정은 모든 요소가 테마 배경색을 따르도록 강제하여 배경색 불일치 문제를 해결합니다.
+*/
+html,
+body,
+#terminal-wrapper,
+#terminal-container,
+#terminal-screen,
+#container,
+.retro-home,
+.retro-topbar,
+.retro-cmd,
+.retro-help-content,
+.auth-box,
+.ansi-screen {
+    background-color: var(--bgcolor);
+    color: var(--color);
+    text-shadow: var(--text-shadow);
+    border: none !important;
+}
+
+/* 텍스트 입력 및 선택 영역 가독성 확보 */
+::selection {
+    background-color: var(--color);
+    color: var(--bgcolor);
+}
+
+/* ANSI 전용 상단바 배경 강제 수정 */
+.retro-topbar--ansi,
+.retro-topbar.retro-topbar--ansi,
+#terminal-screen .retro-topbar--ansi {
+    background-color: var(--bgcolor);
+}
+
+/* [LOG: 20260426_1720] Terminal Scaling (Evolution Mode: Responsive Experience) */
+:root {
+    --terminal-scale: 1.15;
+}
+
+#terminal-container {
+    transform: scale(var(--terminal-scale));
+    transform-origin: top center;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    height: 100%;
+}
+
+@media (min-width: 1600px) {
+    :root {
+        --terminal-scale: 1.25;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --terminal-scale: 1;
+    }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+    :root {
+        --terminal-scale: 1;
+    }
+}
+
+/* [LOG: 20260428_1025] 노트북 등 세로 해상도가 낮은 환경(800px 이하)에서는 확대 비활성화 */
+@media (max-height: 800px) {
+    :root {
+        --terminal-scale: 1 !important;
+    }
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'DungGeunMo', 'Sam3KRFont', monospace;
+    font-size: 17px;
+    line-height: 1.4;
+    font-weight: normal;
+    overflow: hidden;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+a {
+    color: inherit !important;
+    text-decoration: none;
+}
+
+.retro-topbar-hr,
+.retro-topbar-line,
+.retro-home-hr,
+.retro-cmd,
+.bbs-title {
+    border-color: var(--hr-color) !important;
+}
+
+.retro-menu,
+.retro-panel,
+.post-header-box {
+    border: none !important;
+}
+
+/* Hide Scrollbars */
+::-webkit-scrollbar {
+    display: none;
+}
+
+* {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.retro-topbar-left {
+    background: var(--topbar-label-bg) !important;
+    color: var(--topbar-label-color) !important;
+    padding: 2px 8px;
+    display: inline-block;
+    text-shadow: none;
+    /* 배경이 반전된 곳은 쉐도우 제거 */
+}
+
+/* [LOG: 20260426_1915] Ghost text and Input styles for better command experience */
+#terminal-prompt-row {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+#cmd-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.retro-cmd-input input,
+#cmd-input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    color: var(--color) !important;
+    outline: none;
+    position: relative;
+    z-index: 2;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+#cmd-ghost-text {
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--color);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 1;
+    white-space: pre;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.terminal-cursor {
+    position: absolute;
+    width: 10px;
+    height: 1.2em;
+    background-color: var(--color);
+    z-index: 3;
+    pointer-events: none;
+    display: none !important;
+    animation: cursor-blink 1s step-end infinite;
+}
+
+@keyframes cursor-blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+/* [LOG: 20260426_0500] Visual feedback for errors (Evolution Mode) */
+@keyframes terminal-shake {
+    0% {
+        transform: translate(1px, 1px) rotate(0deg);
+    }
+
+    10% {
+        transform: translate(-1px, -2px) rotate(-1deg);
+    }
+
+    20% {
+        transform: translate(-3px, 0px) rotate(1deg);
+    }
+
+    30% {
+        transform: translate(3px, 2px) rotate(0deg);
+    }
+
+    40% {
+        transform: translate(1px, -1px) rotate(1deg);
+    }
+
+    50% {
+        transform: translate(-1px, 2px) rotate(-1deg);
+    }
+
+    60% {
+        transform: translate(-3px, 1px) rotate(0deg);
+    }
+
+    70% {
+        transform: translate(3px, 1px) rotate(-1deg);
+    }
+
+    80% {
+        transform: translate(-1px, -1px) rotate(1deg);
+    }
+
+    90% {
+        transform: translate(1px, 2px) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(1px, -2px) rotate(-1deg);
+    }
+}
+
+.is-shaking {
+    animation: terminal-shake 0.3s;
+}
+
+@keyframes terminal-flash {
+    0% {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+.terminal-flash {
+    animation: terminal-flash 0.15s ease-out;
+}
+
+.is-flashing-error {
+    background-color: transparent !important;
+}
+
+/* [LOG: 20260426_0610] Retro Terminal Enhancements (Evolution Mode) */
+/* 전체 화면 스캔라인 효과 */
+/* [LOG: 20260425_2135] 눈의 피로를 줄이기 위해 스캔라인 및 깜빡임 효과 비활성화 */
+/* [LOG: 20260427_0945] Body scanline effect completely removed */
+
+/* [LOG: 20260427_0942] Flicker animation removed per user request */
+
+#terminal-wrapper {
+    position: relative;
+}
+
+/* [LOG: 20260426_1340] Shimmer Effect Removed */
+
+/* [LOG: 20260426_1340] Loading Shimmer Removed */
+#terminal-screen.is-loading::after {
+    display: none;
+}
+
+/* [LOG: 20260427_2205] 로딩 중 커서 숨김 처리 (화면 렌더링 전 깜빡임 방지) */
+.fonts-loading .terminal-cursor,
+#terminal-container.is-loading .terminal-cursor,
+#terminal-container.is-busy .terminal-cursor {
+    display: none !important;
+}
+
+
+
+/* 버튼 스타일 진화 */
+.bbs-btn {
+    background-color: var(--bgcolor) !important;
+    color: var(--color) !important;
+    border: 1px solid var(--hr-color) !important;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bbs-btn:hover {
+    background-color: var(--color) !important;
+    color: var(--bgcolor) !important;
+    text-shadow: none;
+}
+
+/* [LOG: 20260426_1400] Status LED and Notification styles (Evolution Mode) */
+
+
+/* [LOG: 20260428_2010] HUD Dashboard Layout Styles (Evolution Mode) */
+.hud-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    color: var(--ansi-white);
+    font-family: 'Sam3KRFont', 'DungGeunMo', monospace;
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.hud-left,
+.hud-right {
+    display: flex;
+    align-items: center;
+}
+
+/* [LOG: 20260428_1430] Workspace System Styles (Evolution Mode 15) */
+.hud-workspaces {
+    padding-right: 12px;
+}
+
+.ws-tab {
+    cursor: pointer;
+    color: var(--ansi-white);
+    opacity: 0.6;
+    margin-right: 4px;
+    font-size: 0.75rem;
+    padding: 0 2px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.ws-tab:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.ws-tab.is-active {
+    color: var(--ansi-yellow);
+    opacity: 1;
+    font-weight: bold;
+    border: 1px solid rgba(255, 255, 0, 0.3);
+}
+
+.hud-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    white-space: nowrap;
+}
+
+.hud-item:first-child {
+    border-left: none;
+}
+
+.hud-user {
+    font-weight: bold;
+}
+
+.hud-location {
+    color: var(--ansi-yellow);
+    min-width: 60px;
+    text-align: center;
+}
+
+.hud-vfs {
+    color: var(--ansi-green);
+    font-weight: bold;
+}
+
+.hud-latency {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.hud-latency.is-fast {
+    color: var(--ansi-green);
+}
+
+.hud-latency.is-medium {
+    color: var(--ansi-yellow);
+}
+
+.hud-latency.is-slow {
+    color: var(--ansi-red);
+}
+
+.hud-clock {
+    font-family: 'DungGeunMo', monospace;
+    color: var(--ansi-cyan);
+    min-width: 70px;
+}
+
+.hud-memo {
+    color: var(--ansi-red);
+    font-weight: bold;
+    animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.5;
+    }
+}
+
+#data-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #333;
+    transition: background 0.2s, box-shadow 0.2s;
+    margin-right: 4px;
+}
+
+#data-indicator.is-active {
+    background: var(--ansi-green);
+    box-shadow: 0 0 5px var(--ansi-green);
+}
+
+#terminal-container.is-data-busy #data-indicator {
+    background: var(--ansi-yellow);
+    box-shadow: 0 0 5px var(--ansi-yellow);
+}
+
+/* [LOG: 20260426_2030] Busy state for terminal (subtle dimming and pulsing) */
+#terminal-container.is-busy::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.05);
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* [LOG: 20260426_1645] 파란 테마에서는 오버레이가 색감을 해치므로 비활성화 */
+:root[data-theme="blue"] #terminal-container.is-busy::after {
+    display: none;
+}
+
+
+#terminal-container.is-data-busy::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.02);
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* [LOG: 20260426_1645] 파란 테마에서는 데이터 비지 오버레이 비활성화 */
+:root[data-theme="blue"] #terminal-container.is-data-busy::after {
+    display: none;
+}
+
+
+/* [LOG: 20260427_0945] Busy state pulse animations removed per user demand */
+
+/* [LOG: 20260427_0115] Command Echo Styling (Evolution Mode 5/500) */
+.command-echo {
+    padding: 2px 0;
+    opacity: 0.85;
+    border-left: 2px solid rgba(0, 255, 255, 0.4);
+    padding-left: 10px;
+    margin: 4px 0;
+    background: rgba(0, 255, 255, 0.03);
+}
+
+/* [LOG: 20260427_0120] CRT Scanlines and Shimmer Effects */
+/* [LOG: 20260426_1340] Scanlines Removed */
+
+/* [LOG: 20260426_1726] 모바일 오버레이는 뷰포트를 넘지 않도록 폭과 높이를 제한한다. */
+.bbs-notification {
+    position: absolute;
+    right: max(12px, env(safe-area-inset-right, 12px));
+    bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+    background: var(--bgcolor);
+    color: var(--color);
+    border: 2px solid var(--color);
+    padding: 8px 16px;
+    font-size: 14px;
+    max-width: min(420px, calc(100vw - 24px));
+    overflow-wrap: anywhere;
+    z-index: 2000;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+    animation: notification-slide-in 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.bbs-notification.level-error {
+    color: #ff5555;
+    border-color: #ff5555;
+}
+
+.bbs-notification.level-success {
+    color: #55ff55;
+    border-color: #55ff55;
+}
+
+.bbs-notification.level-info {
+    color: #55ffff;
+    border-color: #55ffff;
+}
+
+@keyframes notification-slide-in {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.bbs-notification.is-fading {
+    animation: notification-slide-out 0.3s forwards;
+}
+
+@keyframes notification-slide-out {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* [LOG: 20260426_0910] Terminal Dialog Styles (Evolution Mode 16/100) */
+.terminal-dialog-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: dialog-overlay-in 0.2s ease-out;
+}
+
+.terminal-dialog-overlay.is-closing {
+    animation: dialog-overlay-out 0.2s ease-in forwards;
+}
+
+.terminal-dialog-box {
+    background: var(--bgcolor);
+    border: 2px solid var(--color);
+    padding: 24px;
+    min-width: min(320px, calc(100vw - 32px));
+    max-width: min(80%, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+    animation: dialog-box-in 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.terminal-dialog-box--large {
+    width: min(800px, calc(100vw - 32px));
+    height: min(500px, calc(100vh - 32px));
+    display: flex;
+    flex-direction: column;
+}
+
+.terminal-dialog-box--large .terminal-dialog-input-wrapper {
+    flex: 1;
+    display: flex;
+}
+
+.terminal-dialog-textarea {
+    width: 100%;
+    height: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--color);
+    color: var(--color);
+    padding: 12px;
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1.5;
+    outline: none;
+    resize: none;
+    white-space: pre;
+    overflow: auto;
+}
+
+.terminal-dialog-textarea:focus {
+    box-shadow: inset 0 0 10px var(--glow-color);
+}
+
+.terminal-dialog-overlay.is-closing .terminal-dialog-box {
+    animation: dialog-box-out 0.2s ease-in forwards;
+}
+
+.terminal-dialog-content {
+    margin-bottom: 24px;
+    white-space: pre-wrap;
+    text-align: center;
+}
+
+.terminal-dialog-input-wrapper {
+    margin-bottom: 24px;
+}
+
+.terminal-dialog-input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--color);
+    color: var(--color);
+    padding: 8px;
+    font-family: inherit;
+    font-size: inherit;
+    outline: none;
+}
+
+.terminal-dialog-buttons {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+@keyframes dialog-overlay-in {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes dialog-overlay-out {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes dialog-box-in {
+    0% {
+        transform: scale(0.9) translateY(20px);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes dialog-box-out {
+    0% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0.9) translateY(20px);
+        opacity: 0;
+    }
+}
+
+/* [LOG: 20260427_1000] Command Palette Styles (Evolution Mode) */
+/* [LOG: 20260427_1115] Evolution: Categorized view, close button, and highlighting */
+.command-palette-box {
+    width: 600px;
+    max-width: 90%;
+    height: 400px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid var(--color);
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
+    background: var(--bgcolor);
+}
+
+.palette-header {
+    background: var(--color);
+    color: var(--bgcolor);
+    padding: 6px 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.palette-close-btn {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    margin-left: 8px;
+    transition: opacity 0.2s;
+}
+
+.palette-close-btn:hover {
+    opacity: 0.7;
+}
+
+.command-palette-box .terminal-dialog-input-wrapper {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+    margin-bottom: 0;
+}
+
+.palette-input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--color);
+    color: var(--color);
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 18px;
+    outline: none;
+}
+
+.palette-input:focus {
+    border-color: var(--color);
+    box-shadow: 0 0 8px var(--glow-color);
+}
+
+.palette-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.palette-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.palette-group-header {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    padding: 4px 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.palette-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-left: 4px solid transparent;
+    transition: background 0.1s;
+}
+
+.palette-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.palette-item.is-selected {
+    background: rgba(255, 255, 255, 0.2);
+    border-left-color: var(--color);
+}
+
+.palette-item-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.palette-item-key {
+    color: #55ffff;
+    /* ANSI Cyan-ish */
+    font-weight: bold;
+    min-width: 6ch;
+}
+
+.palette-item-label {
+    color: #ffff55;
+    /* ANSI Yellow-ish */
+}
+
+.palette-item-desc {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 7.5ch;
+}
+
+.palette-highlight {
+    color: #ffffff;
+    background-color: rgba(255, 255, 0, 0.3);
+    border-radius: 2px;
+    text-shadow: none;
+}
+
+.palette-item.is-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.palette-footer {
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.palette-hint {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+    .palette-item-desc {
+        display: none;
+    }
+}
+
+/* [LOG: 20260427_1120] Shortcut Helper Styles (Evolution Mode) */
+.shortcut-helper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: var(--help-bg);
+    border: 2px solid var(--color);
+    padding: 24px;
+    width: min(800px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    z-index: 9999;
+    pointer-events: none;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    box-shadow: 0 0 100px rgba(0, 0, 0, 0.9);
+}
+
+.shortcut-helper.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    border: 1px solid var(--color);
+    color: var(--color);
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Sam3KRFont', monospace;
+    z-index: 10000;
+    transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+    background: var(--color);
+    color: var(--bgcolor);
+}
+
+.shortcut-helper-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.shortcut-helper-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--ansi-yellow);
+    text-align: center;
+    border-bottom: 1px solid var(--color);
+    padding-bottom: 10px;
+    margin-bottom: 5px;
+    font-family: 'DungGeunMo', monospace;
+}
+
+.shortcut-item {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 15px;
+    align-items: center;
+}
+
+.shortcut-key {
+    background: var(--color);
+    color: var(--bgcolor);
+    padding: 2px 6px;
+    font-weight: bold;
+    min-width: 100%;
+    text-align: center;
+    box-shadow: 2px 2px 0 rgba(255, 255, 255, 0.2);
+    font-size: 14px;
+}
+
+.shortcut-desc {
+    color: var(--color);
+    font-size: 14px;
+    opacity: 0.9;
+    overflow-wrap: anywhere;
+}
+
+.shortcut-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    margin: 15px 0;
+}
+
+.shortcut-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.column-title {
+    color: var(--ansi-yellow);
+    font-weight: bold;
+    font-size: 0.9em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+}
+
+.shortcut-helper-footer {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 10px;
+}
+
+@media (max-width: 800px) {
+    .shortcut-helper {
+        width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+        padding: 16px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .shortcut-item {
+        grid-template-columns: 72px 1fr;
+        gap: 12px;
+        align-items: start;
+    }
+
+    .shortcut-desc {
+        white-space: normal;
+        line-height: 1.45;
+    }
+
+    .shortcut-columns {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+/* [LOG: 20260427_1200] Evolution Mode: Scroll Guardian and Progress Styles */
+.scroll-bottom-indicator {
+    position: absolute;
+    right: max(12px, env(safe-area-inset-right, 12px));
+    bottom: max(80px, calc(env(safe-area-inset-bottom, 0px) + 80px));
+    background: var(--color);
+    color: var(--bgcolor);
+    padding: 6px 12px;
+    font-size: 14px;
+    max-width: calc(100vw - 24px);
+    white-space: nowrap;
+    cursor: pointer;
+    z-index: 1500;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+    display: none;
+    animation: bounce-y 1s infinite alternate;
+}
+
+.scroll-bottom-indicator.is-visible {
+    display: block;
+}
+
+@keyframes bounce-y {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-5px);
+    }
+}
+
+.render-progress-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: transparent;
+    z-index: 1500;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+@media (max-width: 800px) {
+    .terminal-dialog-box {
+        padding: 16px;
+    }
+
+    .terminal-dialog-box--large {
+        width: calc(100vw - 16px);
+        height: min(500px, calc(100vh - 16px));
+    }
+
+    .bbs-notification {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+
+    .scroll-bottom-indicator {
+        right: max(8px, env(safe-area-inset-right, 8px));
+        bottom: max(64px, calc(env(safe-area-inset-bottom, 0px) + 64px));
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+}
+
+.render-progress-container.is-visible {
+    opacity: 1;
+}
+
+/* [LOG: 20260426_2200] Evolution Mode: Quick Command Hint Styles */
+/* [LOG: 20260428_1747] Suggestion box overflow prevention */
+.suggestion-box.has-suggestions {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* [LOG: 20260428_1800] Quick hint flex overflow fix (`min-width: 0;` applied) */
+.suggestion-quick-hint {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    animation: hint-fade-in 0.2s ease-out;
+}
+
+@keyframes hint-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.suggestion-quick-hint .hint-label {
+    color: var(--ansi-yellow);
+    font-weight: bold;
+    background: rgba(255, 255, 0, 0.15);
+    padding: 1px 6px;
+    border-radius: 2px;
+}
+
+.suggestion-quick-hint .hint-sep {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.suggestion-quick-hint .hint-tip {
+    color: var(--ansi-cyan);
+    font-family: 'DungGeunMo', monospace;
+    font-size: 0.9em;
+}
+
+.suggestion-quick-hint .hint-desc {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85em;
+    margin-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.suggestion-label {
+    color: var(--ansi-white);
+    opacity: 0.6;
+    margin-right: 8px;
+    font-size: 0.8em;
+}
+
+.suggestion-token {
+    margin-right: 8px;
+    font-size: 0.9em;
+}
+
+.suggestion-token.is-selected {
+    background: var(--color);
+    color: var(--bgcolor);
+    box-shadow: 0 0 5px var(--glow-color);
+}

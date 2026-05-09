@@ -1,0 +1,227 @@
+.entry-screen--signup {
+    font-size: inherit;
+    line-height: 1.45;
+}
+
+.entry-screen--signup *,
+.entry-screen--signup input,
+.entry-screen--signup button {
+    color: var(--color);
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: normal;
+}
+
+.entry-screen--signup .entry-signup-top {
+    align-items: flex-start;
+}
+
+.entry-screen--signup .entry-signup-brand {
+    width: 9ch;
+}
+
+.entry-screen--signup .entry-signup-title,
+.entry-screen--signup .entry-signup-subtitle,
+.entry-screen--signup .entry-signup-guide-note,
+.entry-screen--signup .entry-error,
+.entry-screen--signup .entry-signup-guide-line,
+.entry-screen--signup .entry-inline-button {
+    color: var(--color);
+    font-size: inherit;
+}
+
+.entry-screen--signup .entry-signup-subtitle {
+    display: none;
+}
+
+.entry-screen--signup .entry-signup-rule,
+.entry-screen--signup .entry-signup-rule--tight {
+    background: var(--color);
+    opacity: 0.8;
+}
+
+.entry-screen--signup .entry-inline-grid {
+    gap: 6px 0;
+}
+
+.entry-screen--signup .entry-signup-guide {
+    min-height: auto;
+    gap: 2px;
+}
+
+.entry-screen--signup .entry-signup-guide-note {
+    margin-top: 2px;
+}
+
+.entry-screen--signup .entry-inline-field,
+.entry-screen--signup .entry-inline-field--dual {
+    flex-basis: 100%;
+    min-height: 22px;
+}
+
+/* [LOG: 20260429_1733] Keep row space so #signup-field-hint stays fixed while fields reveal. */
+.entry-screen--signup .entry-inline-field.is-signup-step-hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.entry-screen--signup .entry-inline-meta {
+    width: 140px;
+    flex-shrink: 0;
+}
+
+.entry-screen--signup .entry-signup-field-hint {
+    color: #ffffff;
+    opacity: 1;
+    font-size: inherit;
+    line-height: inherit;
+    min-height: 16px;
+    padding: 2px 0 0;
+}
+
+.signup-confirm-input {
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    caret-color: #ffffff !important;
+}
+
+.entry-screen--signup .entry-signup-confirm-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.entry-screen--signup .entry-signup-confirm-input-wrap {
+    flex: 0 0 auto;
+    width: 4.8ch;
+    min-width: 4.8ch;
+}
+
+.entry-screen--signup .entry-signup-confirm-input {
+    text-align: center;
+    text-transform: lowercase;
+}
+
+.entry-screen--signup .entry-signup-confirm-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    color: #ffffff;
+    opacity: 0.8;
+}
+
+.entry-screen--signup .entry-signup-choice-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.entry-screen--signup .entry-signup-choice {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0 2px;
+    cursor: pointer;
+}
+
+.entry-screen--signup .entry-signup-choice:hover,
+.entry-screen--signup .entry-signup-choice:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+    outline: 1px solid rgba(255, 255, 255, 0.55);
+    outline-offset: 0;
+}
+
+.entry-screen--signup .entry-signup-choice:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.entry-screen--signup .entry-inline-input-wrap {
+    padding: 0;
+    background: transparent;
+    border: none;
+}
+
+.entry-screen--signup .entry-inline-input-wrap::before,
+.entry-screen--signup .entry-inline-input-wrap::after {
+    color: #ffffff;
+}
+
+.entry-screen--signup .entry-inline-input {
+    padding: 0 0 0 1ch;
+    background: transparent;
+    color: #ffffff;
+    caret-color: #ffffff;
+}
+
+.entry-screen--signup .entry-inline-input::placeholder {
+    color: var(--color);
+    opacity: 0.6;
+}
+
+.entry-screen--signup .entry-inline-field:focus-within,
+.entry-screen--signup .entry-inline-input:focus,
+.entry-screen--signup .entry-inline-input:focus-visible {
+    background: transparent;
+    outline: none !important;
+}
+
+.entry-screen--signup .entry-inline-input-wrap:focus-within {
+    outline: none !important;
+}
+
+.entry-screen--signup .entry-inline-button {
+    border-color: var(--color);
+}
+
+.entry-screen--signup .entry-inline-button:hover,
+.entry-screen--signup .entry-inline-button:focus-visible {
+    background: var(--color);
+    color: var(--bgcolor);
+}
+
+.entry-screen--signup .entry-signup-guide.is-processing .entry-signup-guide-line:first-child,
+.entry-screen--signup .entry-signup-guide.is-success .entry-signup-guide-line:first-child,
+.entry-screen--signup .entry-signup-guide.is-error .entry-signup-guide-line:first-child {
+    color: var(--color);
+}
+
+@media (max-width: 560px) {
+    .entry-screen--signup .entry-signup-confirm-actions {
+        flex-basis: 100%;
+    }
+
+    .entry-screen--signup .entry-inline-field--dual {
+        flex-basis: 100%;
+    }
+
+    .entry-screen--signup .entry-inline-label {
+        min-width: 9ch;
+    }
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px var(--bgcolor, #000) inset !important;
+    -webkit-text-fill-color: var(--color, #fff) !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px var(--bgcolor, #000) inset !important;
+    -webkit-text-fill-color: var(--color, #fff) !important;
+    transition: background-color 5000s ease-in-out 0s;
+}

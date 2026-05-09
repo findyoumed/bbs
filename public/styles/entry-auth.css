@@ -1,0 +1,552 @@
+.login-error {
+    color: var(--color);
+    font-size: 12px;
+    margin-top: 6px;
+    min-height: 16px;
+}
+
+/* ── PC통신 이용 신청/로그인 공통 폼 ───────────────── */
+.entry-screen {
+    padding: 6px 8px 10px;
+    font-size: inherit;
+    line-height: 1.65;
+    color: var(--color);
+}
+
+.entry-header {
+    background: var(--bgcolor);
+    color: var(--color);
+    padding: 2px 8px;
+    margin-bottom: 6px;
+    border: 1px solid var(--hr-color, #444);
+    white-space: pre-wrap;
+    overflow: hidden;
+}
+
+.entry-divider {
+    color: var(--hr-color, #555);
+    margin: 5px 0;
+    white-space: pre;
+    overflow: hidden;
+}
+
+.entry-form-row {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+
+.entry-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 22px;
+    color: var(--color);
+    opacity: 0.7;
+}
+
+.entry-item-label {
+    min-width: 122px;
+    color: var(--color);
+    flex-shrink: 0;
+}
+
+.entry-item-colon {
+    color: var(--hr-color, #444);
+}
+
+.entry-field {
+    display: inline-flex;
+    align-items: center;
+    color: var(--color);
+}
+
+.entry-field::before,
+.entry-field::after {
+    color: var(--hr-color, #777);
+}
+
+.entry-field::before {
+    content: '[';
+    margin-right: 4px;
+}
+
+.entry-field::after {
+    content: ']';
+    margin-left: 4px;
+}
+
+.entry-value {
+    display: inline-block;
+    min-height: 18px;
+    padding: 0 4px;
+    border-bottom: 1px solid var(--hr-color, #555);
+    color: var(--color);
+}
+
+.entry-value--wide {
+    min-width: 18ch;
+}
+
+.entry-value--id,
+.entry-value--pw {
+    min-width: 11ch;
+}
+
+.entry-value--confirm {
+    min-width: 13ch;
+}
+
+.entry-item.is-active {
+    opacity: 1;
+}
+
+.entry-item.is-active .entry-item-label,
+.entry-item.is-active .entry-field::before,
+.entry-item.is-active .entry-field::after {
+    color: var(--color);
+}
+
+.entry-item.is-active .entry-value {
+    color: var(--color);
+    border-bottom-color: var(--color);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.entry-guide {
+    min-height: 76px;
+    margin: 8px 0 4px;
+    padding: 6px 8px;
+    background: var(--bgcolor);
+    border: 1px solid var(--hr-color, #444);
+    color: var(--color);
+}
+
+.entry-guide-title {
+    color: var(--color);
+    margin-bottom: 4px;
+}
+
+.entry-guide-note {
+    color: var(--color);
+    opacity: 0.6;
+}
+
+.entry-guide-extra {
+    margin-top: 6px;
+    color: var(--color);
+}
+
+.entry-guide.is-processing .entry-guide-title,
+.entry-guide.is-success .entry-guide-title,
+.entry-guide.is-error .entry-guide-title {
+    color: var(--color);
+}
+
+.entry-error {
+    color: var(--color);
+    min-height: 18px;
+    font-size: 12px;
+    margin: 6px 0 0;
+}
+
+.entry-note {
+    color: var(--color);
+    opacity: 0.6;
+    margin-top: 4px;
+}
+
+.entry-screen--authlog {
+    padding: 10px 12px 12px;
+    background: var(--bgcolor);
+    color: var(--color);
+}
+
+.entry-auth-head,
+.entry-auth-sub,
+.entry-auth-message,
+.entry-log-line {
+    white-space: pre-wrap;
+    word-break: keep-all;
+}
+
+.entry-auth-head,
+.entry-auth-sub,
+.entry-auth-message {
+    color: var(--color);
+}
+
+.entry-auth-gap {
+    height: 18px;
+}
+
+.entry-auth-log {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.entry-log-line {
+    display: flex;
+    align-items: baseline;
+    color: var(--color);
+}
+
+.entry-log-label {
+    min-width: 110px;
+    padding-right: 8px;
+    flex-shrink: 0;
+}
+
+.entry-log-value {
+    min-width: 8ch;
+    color: var(--color);
+}
+
+.entry-log-line.is-active .entry-log-label,
+.entry-log-line.is-active .entry-log-value,
+.entry-log-line.is-committed .entry-log-value {
+    color: var(--color);
+}
+
+.entry-auth-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.entry-screen--authlog .entry-error {
+    color: var(--color);
+    margin-top: 10px;
+}
+
+.entry-auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.entry-auth-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--color);
+}
+
+.entry-auth-label {
+    flex: 0 0 8em;
+    color: var(--color);
+    white-space: nowrap;
+}
+
+.entry-auth-colon {
+    color: var(--color);
+    flex: 0 0 auto;
+}
+
+.entry-auth-field {
+    display: inline-flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--color);
+}
+
+.entry-auth-field::before,
+.entry-auth-field::after {
+    color: var(--color);
+}
+
+.entry-auth-field::before {
+    content: '[';
+    margin-right: 4px;
+}
+
+.entry-auth-field::after {
+    content: ']';
+    margin-left: 4px;
+}
+
+.entry-auth-input {
+    width: 100%;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--color);
+    caret-color: var(--color);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.45;
+    padding: 0;
+    outline: none;
+}
+
+.entry-auth-input::placeholder {
+    color: var(--color);
+    opacity: 0.5;
+}
+
+/* [LOG: 20260429_1705] Remove bracket-style borders around login ID/password inputs. */
+.entry-screen--login .entry-auth-field::before,
+.entry-screen--login .entry-auth-field::after {
+    content: none;
+    margin: 0;
+}
+
+.entry-screen--login #l-id,
+.entry-screen--login #l-pw {
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+/* [LOG: 20260503_2135] Keep login rows in the old PC통신 prompt shape: label + colon + inline input. */
+.entry-screen--login .entry-auth-form {
+    gap: 0;
+}
+
+/* [LOG: 20260503_2213] Login transcript keeps previous output above the current one-line prompt. */
+.entry-screen--login .entry-login-transcript {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.entry-screen--login .entry-auth-row {
+    gap: 0;
+}
+
+.entry-screen--login .entry-auth-label {
+    flex: 0 0 9ch;
+}
+
+.entry-screen--login .entry-auth-colon {
+    flex: 0 0 2ch;
+}
+
+.entry-screen--login .entry-auth-field {
+    flex: 0 0 24ch;
+}
+
+.entry-screen--login .entry-auth-row.is-login-step-hidden {
+    display: none;
+}
+
+.entry-screen--login #l-id[readonly] {
+    opacity: 1;
+}
+
+.entry-screen--login .entry-login-message,
+.entry-screen--login .entry-login-committed-value,
+.entry-screen--login .entry-login-blank-line {
+    color: var(--color);
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.entry-screen--login .entry-login-blank-line {
+    min-height: 1.65em;
+}
+
+/* [LOG: 20260503_2158] Login error text should match the PC통신 prompt font size. */
+.entry-screen--login #l-error {
+    font-size: inherit;
+    line-height: inherit;
+    min-height: 1.65em;
+}
+
+.entry-screen--login #l-error.entry-login-error-buffer {
+    display: none;
+}
+
+/* [LOG: 20240429_1448] 테두리 실선 제거 요청 반영: focus 시 outline 제거 */
+.entry-auth-row--field:focus-within .entry-auth-field {
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* [LOG: 20260503_2231] Login prompts should redraw like terminal text without a focus afterimage. */
+.entry-screen--login .entry-auth-row--field:focus-within .entry-auth-field {
+    background: transparent;
+}
+
+/* [LOG: 20260509_1030] Password reset follows the PC통신 transcript flow: output lines first, one short prompt below. */
+.entry-screen--password-reset .entry-password-form {
+    gap: 0;
+}
+
+.entry-screen--password-reset .entry-password-transcript {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.entry-screen--password-reset .entry-password-line,
+.entry-screen--password-reset .entry-password-prompt-row {
+    color: var(--color);
+    font-size: inherit;
+    line-height: inherit;
+    min-height: 1.65em;
+}
+
+.entry-screen--password-reset .entry-password-prompt-row {
+    display: flex;
+    align-items: baseline;
+    gap: 1ch;
+    min-width: 0;
+}
+
+.entry-screen--password-reset .entry-password-prompt-host {
+    display: block;
+    min-height: 1.65em;
+    line-height: inherit;
+}
+
+.entry-screen--password-reset .entry-password-prompt-host #terminal-prompt-row {
+    /* [LOG: 20260509_1304] 비밀번호 찾기 입력줄은 footer가 아니라 본문 transcript의 다음 줄처럼 보이게 한다. */
+    align-items: baseline;
+    min-height: 1.65em;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.entry-screen--password-reset .entry-password-prompt-host #terminal-prompt-row label {
+    color: var(--color);
+    cursor: default;
+    flex-shrink: 0;
+    line-height: inherit;
+    white-space: nowrap;
+}
+
+.entry-screen--password-reset .entry-password-prompt-host #cmd-input-wrapper {
+    min-height: 1.65em;
+}
+
+.entry-screen--password-reset .entry-password-prompt-host #cmd-input {
+    background: transparent;
+    height: 1.65em;
+    line-height: inherit;
+    min-height: 0;
+}
+
+.entry-screen--password-reset .entry-password-prompt-row[hidden] {
+    display: none;
+}
+
+.entry-screen--password-reset .entry-password-prompt-label {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.entry-screen--password-reset .entry-password-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 1.65em;
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    color: var(--color);
+    caret-color: var(--color);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0;
+}
+
+.entry-screen--password-reset .entry-password-input:focus,
+.entry-screen--password-reset .entry-password-input:focus-visible {
+    outline: none;
+    background: transparent;
+}
+
+.entry-screen--password-reset .entry-password-hidden-message {
+    display: none;
+}
+
+.entry-auth-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.entry-auth-action {
+    appearance: none;
+    border: 1px solid var(--hr-color, #ccc);
+    background: transparent;
+    color: var(--color);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.2;
+    padding: 3px 10px;
+    cursor: pointer;
+}
+
+.entry-auth-action:hover,
+.entry-auth-action:focus-visible {
+    background: var(--color);
+    color: var(--bgcolor);
+    outline: none;
+}
+
+.entry-screen--authlog .entry-error:empty {
+    display: none;
+}
+
+@media (max-width: 560px) {
+    .entry-form-row {
+        gap: 6px;
+    }
+
+    .entry-item {
+        width: 100%;
+        flex-wrap: nowrap;
+    }
+
+    .entry-item-label {
+        min-width: 110px;
+    }
+
+    .entry-value--wide {
+        min-width: 14ch;
+    }
+
+    .entry-value--id,
+    .entry-value--pw,
+    .entry-value--confirm {
+        min-width: 10ch;
+    }
+
+    .entry-log-label {
+        min-width: 98px;
+    }
+
+    .entry-auth-row--field {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .entry-auth-label {
+        flex-basis: 100%;
+    }
+
+    .entry-screen--login .entry-auth-row--field {
+        flex-wrap: nowrap;
+        gap: 0;
+    }
+
+    .entry-screen--login .entry-auth-label {
+        flex: 0 0 9ch;
+    }
+
+    .entry-auth-field {
+        width: 100%;
+    }
+}

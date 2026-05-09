@@ -1,0 +1,2 @@
+번호/명령(H,C,B,P,T,M,N,A,W,K,KW,DD,AP,UD,PR,DN,S,GO,WHO,ME,HI,Z,X)
+>>

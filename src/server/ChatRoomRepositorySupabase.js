@@ -1,0 +1,151 @@
+'use strict';
+const { createClient } = require('@supabase/supabase-js');
+const BaseRepository = require('./BaseRepository');
+const { createHttpError, maybeUuid, normalizeMaxUser, normalizeRoomSecret, normalizeRoomText, normalizeSessionKey, normalizeText, publicRoom, summarizeParticipantCounts, roomKeyForNo } = require('./ChatRoomRepositoryShared');
+const { ChatRoomMemberPersistence } = require('./ChatRoomMemberPersistence');
+const { ChatRoomRepositorySupabaseQueries } = require('./ChatRoomRepositorySupabaseQueries');
+
+class SupabaseChatRoomRepository extends BaseRepository {
+  constructor(options = {}) {
+    super({ ...options, driverName: 'supabase' });
+    this.client = createClient(options.url, options.serviceRoleKey, { auth: { persistSession: false } });
+    this.table = options.table || 'chat_rooms';
+    this.membersTable = options.membersTable || 'chat_room_members';
+    this.participantTtlMs = Number(options.participantTtlMs ?? 1000 * 60 * 60 * 6);
+    this.roomTtlMs = Number(options.roomTtlMs ?? 0);
+    this.defaultRoom = options.defaultRoom !== false;
+    this.participantsByRoomNo = new Map();
+    this.messagesByRoomNo = new Map();
+    this.defaultRoomPromise = null;
+    this.memberPersistence = new ChatRoomMemberPersistence({ client: this.client, membersTable: this.membersTable, participantTtlMs: this.participantTtlMs });
+    this.queries = new ChatRoomRepositorySupabaseQueries(this.client, this.table);
+  }
+
+  getMeta() {
+    return {
+      ...super.getMeta(),
+      table: this.table,
+      membersTable: this.membersTable,
+      participantPersistence: 'auth-members:database, sessions:memory'
+    };
+  }
+
+  async list() {
+    await this._ensureDefaultRoom(); await this._cleanup();
+    const rows = await this.queries.listRows();
+    const authCounts = await this.memberPersistence.loadActiveAuthMemberCounts(rows.map(r => r.id));
+    return rows.map(r => this._toPublicRoom(r, summarizeParticipantCounts(this._participantsForRoom(r.room_no), authCounts.get(r.id) || 0)));
+  }
+
+  async get(roomNo) {
+    await this._ensureDefaultRoom(); await this._cleanup();
+    const row = await this.queries.findRoomByNo(roomNo);
+    const authCount = await this.memberPersistence.loadActiveAuthMemberCount(row.id);
+    return this._toPublicRoom(row, summarizeParticipantCounts(this._participantsForRoom(row.room_no), authCount));
+  }
+
+  async create(payload = {}, context = {}) {
+    await this._ensureDefaultRoom(); await this._cleanup();
+    const title = normalizeRoomText(payload.title); if (!title) throw createHttpError(400, '제목 필수');
+    const greeting = normalizeRoomText(payload.greeting); if (!greeting) throw createHttpError(400, '환영 메시지 필수');
+    const isPrivate = ['private', 'secret', '2'].includes(normalizeText(payload.visibility || payload.mode || 'public').toLowerCase());
+    const password = isPrivate ? normalizeRoomSecret(payload.password || '') : '';
+    if (isPrivate && password.length < 4) throw createHttpError(400, '비밀번호 4자 이상');
+
+    for (let i = 0; i < 5; i++) {
+      const nextNo = await this.queries.nextRoomNo();
+      const { data, error } = await this.client.from(this.table).insert({
+        room_no: nextNo, room_key: roomKeyForNo(nextNo), name: title.slice(0, 60), description: greeting.slice(0, 120),
+        owner_user_id: normalizeText(context.userId, 'guest'), owner_name: normalizeText(context.nickName, '손님'),
+        creator_id: maybeUuid(context.userId), max_user: normalizeMaxUser(payload.maxUser, 10), password, is_private: isPrivate, is_locked: false, last_activity_at: new Date().toISOString()
+      }).select(this.queries._selectColumns()).single();
+      if (!error) return this._toPublicRoom(data);
+      if (!this._isConflict(error)) throw createHttpError(502, `생성 실패: ${error.message}`);
+    }
+    throw createHttpError(502, '방 번호 할당 실패');
+  }
+
+  async join(roomNo, payload = {}, context = {}) {
+    await this._ensureDefaultRoom(); await this._cleanup();
+    const room = await this.queries.findRoomByNo(roomNo);
+    if (room.password && room.password !== normalizeRoomSecret(payload.password || '')) throw createHttpError(403, '비밀번호 틀림');
+    const sessionKey = normalizeSessionKey(payload.sessionKey), participants = this._participantsForRoom(room.room_no);
+    const existing = participants.find(p => p.sessionKey === sessionKey), now = new Date().toISOString();
+    const p = { sessionKey, userId: normalizeText(context.userId, 'guest'), nickName: normalizeText(context.nickName, '손님'), joinedAt: existing?.joinedAt || now, lastSeenAt: now };
+    const authCount = await this.memberPersistence.loadActiveAuthMemberCount(room.id);
+    const nextSummary = summarizeParticipantCounts(existing ? participants.map(e => e.sessionKey === sessionKey ? p : e) : participants.concat([p]), authCount);
+    if (!existing && nextSummary.userCount > normalizeMaxUser(room.max_user, 99)) throw createHttpError(409, '정원 초과');
+    if (existing) Object.assign(existing, p); else participants.push(p);
+    this.participantsByRoomNo.set(Number(room.room_no), participants);
+    await this.memberPersistence.persistJoin(room, p); await this._touch(room.room_no);
+    room.last_activity_at = now; return this._toPublicRoom(room, nextSummary);
+  }
+
+  async leave(roomNo, payload = {}, context = {}) {
+    await this._ensureDefaultRoom(); await this._cleanup();
+    const room = await this.queries.findRoomByNo(roomNo), sessionKey = payload.sessionKey ? normalizeSessionKey(payload.sessionKey) : '';
+    const filtered = this._participantsForRoom(room.room_no).filter(p => p.sessionKey !== sessionKey);
+    if (filtered.length) this.participantsByRoomNo.set(Number(room.room_no), filtered); else this.participantsByRoomNo.delete(Number(room.room_no));
+    await this.memberPersistence.persistLeave(room, payload, context, filtered);
+    const authCount = await this.memberPersistence.loadActiveAuthMemberCount(room.id);
+    await this._touch(room.room_no); room.last_activity_at = new Date().toISOString();
+    return this._toPublicRoom(room, summarizeParticipantCounts(filtered, authCount));
+  }
+
+  async sendMessage(roomNo, payload = {}, context = {}) {
+    const num = Number(roomNo);
+    const messages = this.messagesByRoomNo.get(num) || [];
+    const msg = {
+      id: Date.now() + Math.random(),
+      userId: normalizeText(context.userId, 'guest'),
+      nickName: normalizeText(context.nickName, '손님'),
+      content: normalizeText(payload.content),
+      createdAt: new Date().toISOString()
+    };
+    messages.push(msg);
+    if (messages.length > 100) messages.shift(); // 최근 100개 유지
+    this.messagesByRoomNo.set(num, messages);
+    await this._touch(num);
+    return msg;
+  }
+
+  async listMessages(roomNo) {
+    return this.messagesByRoomNo.get(Number(roomNo)) || [];
+  }
+
+  _toPublicRoom(row, summary = null) {
+    const n = Number(row.room_no || 0);
+    return publicRoom({ no: n, roomId: normalizeText(row.room_key, roomKeyForNo(n)), title: row.name, greeting: row.description, ownerUserId: row.owner_user_id, ownerName: row.owner_name, maxUser: row.max_user, password: row.password, isPrivate: row.is_private, createdAt: row.created_at }, summary || summarizeParticipantCounts(this._participantsForRoom(n), 0));
+  }
+
+  _participantsForRoom(no) {
+    const num = Number(no || 0), list = (this.participantsByRoomNo.get(num) || []).filter(p => Date.parse(p.lastSeenAt || p.joinedAt) >= Date.now() - this.participantTtlMs);
+    if (list.length) this.participantsByRoomNo.set(num, list); else this.participantsByRoomNo.delete(num);
+    return list;
+  }
+
+  async _cleanup() {
+    Array.from(this.participantsByRoomNo.keys()).forEach(n => this._participantsForRoom(n));
+    await this.memberPersistence.cleanupExpired();
+    if (this.roomTtlMs <= 0) return;
+    const { data, error } = await this.client.from(this.table).select('room_no').neq('room_no', 1).eq('is_locked', false).lt('last_activity_at', new Date(Date.now() - this.roomTtlMs).toISOString());
+    if (error) return;
+    for (const r of data || []) {
+      if (this._participantsForRoom(r.room_no).length === 0) await this.client.from(this.table).delete().eq('room_no', r.room_no);
+    }
+  }
+
+  async _ensureDefaultRoom() {
+    if (!this.defaultRoom) return;
+    if (!this.defaultRoomPromise) this.defaultRoomPromise = (async () => {
+      const { data } = await this.client.from(this.table).select('id').eq('room_no', 1).maybeSingle();
+      return data || await this.queries.createDefaultRoom();
+    })();
+    await this.defaultRoomPromise;
+  }
+
+  _isConflict(e) { return String(e?.message).toLowerCase().includes('duplicate key'); }
+  async _touch(n) { await this.client.from(this.table).update({ last_activity_at: new Date().toISOString() }).eq('room_no', Number(n)); }
+}
+
+module.exports = { SupabaseChatRoomRepository };

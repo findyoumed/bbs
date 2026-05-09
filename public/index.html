@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC통신동호회 01410</title>
+    <!-- [LOG: 20260427_2025] 파비콘 설정: 모바일(PNG/흰색배경) 우선, PC탭용(SVG/투명) 보조 -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- [LOG: 20260426_1410] 테마 로딩 초고속 동기화: 자바스크립트 실행 즉시 스타일 주입 (플리커 완전 차단) -->
+    <style>
+        /* [LOG: 20260426_1640] 최우선순위 배경색: 브라우저 기본 흰색 노출 방지 */
+        html,
+        body {
+            background-color: #000 !important;
+            color: #fff;
+        }
+    </style>
+    <script>
+        (function () {
+            try {
+                // [LOG: 20260427_2033] 앱 초기 렌더 전에 폰트 대기 상태를 먼저 표시한다.
+                document.documentElement.classList.add('fonts-loading');
+
+                // [LOG: 20260426_1640] 저장 키 통일: settingsService와 동일하게 'bbs_theme' 사용
+                const theme = localStorage.getItem('bbs_theme') || 'default';
+                const isBlue = theme === 'blue';
+                const bgColor = isBlue ? '#0000aa' : '#000000';
+
+                document.documentElement.setAttribute('data-theme', isBlue ? 'blue' : 'dark');
+
+                const textShadow = isBlue ? '0 0 2px rgba(255, 255, 255, 0.4)' : 'none';
+
+                // [LOG: 20260426_1425] 배경색 단일화: body에만 배경을 주고 나머지는 투명하게 처리 (색상차 방지)
+                document.write('<style id="theme-immediate-style">' +
+                    ':root { ' +
+                    '--bgcolor: ' + bgColor + ' !important; ' +
+                    '--text-shadow: ' + textShadow + ' !important; ' +
+                    '--color: #ffffff !important; ' +
+                    '}' +
+                    'html, body { ' +
+                    'background-color: ' + bgColor + ' !important; ' +
+                    'background: ' + bgColor + ' !important; ' +
+                    'color: #ffffff !important; ' +
+                    'text-shadow: ' + textShadow + ' !important; ' +
+                    'transition: none !important; ' +
+                    '}' +
+                    '.app-shell, #terminal-wrapper, #terminal-container, #terminal-screen, .ansi-screen { ' +
+                    'background-color: transparent !important; ' +
+                    'background: transparent !important; ' +
+                    'border: none !important; ' +
+                    'box-shadow: none !important; ' +
+                    'transition: none !important; ' +
+                    '}' +
+                    '</style>');
+
+                // 테마 컬러 메타 태그 설정
+                const meta = document.createElement('meta');
+                meta.name = 'theme-color';
+                meta.content = bgColor;
+                document.head.appendChild(meta);
+            } catch (e) { }
+        })();
+    </script>
+    <!-- CDN 사전 연결 (DNS + TCP + TLS 준비) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
+    <!-- 폰트 사전 로드 (CSS 파싱 전에 다운로드 시작) -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/Sam3KRFont.woff" as="font"
+        type="font/woff" crossorigin>
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff" as="font"
+        type="font/woff" crossorigin>
+
+    <!-- CSS 병렬 로드 (@import 제거 → link 태그로 동시 다운로드) -->
+    <link rel="stylesheet" href="/styles/retro-terminal.css">
+    <link rel="stylesheet" href="/styles/entry-signup.css">
+    <link rel="stylesheet" href="/styles/entry-auth.css">
+    <link rel="stylesheet" href="/style.css">
+
+    <!-- JS 모듈 진입점 사전 로드 -->
+    <link rel="modulepreload" href="/js/app.js">
+    <link rel="modulepreload" href="/js/core/appFactory.js">
+</head>
+
+<body>
+    <main class="app-shell">
+        <div id="terminal-wrapper">
+            <!-- [LOG: 20260427_1205] Rendering Progress Bar -->
+            <div id="render-progress" class="render-progress-container">
+                <div class="render-progress-bar"></div>
+            </div>
+
+            <!-- [LOG: 20260417_1000] 초기 로딩 상태: JS 실행 전 푸터 선 숨김 -->
+            <div id="terminal-container" class="is-loading">
+                <div id="hud-container" class="hud-container"></div>
+                <div id="terminal-screen"></div>
+                <!-- [LOG: 20260427_1210] Scroll to Bottom Guardian -->
+                <div id="scroll-bottom-btn" class="scroll-bottom-indicator">
+                    ▼ 최하단으로 스크롤
+                </div>
+                <div id="terminal-footer">
+                    <!-- [LOG: 20260506_1315] Command suggestion UI disabled due to frequent misfires. -->
+                    <!-- <div id="cmd-suggestion-box" class="suggestion-box"></div> -->
+                    <div id="cmd-hint"></div>
+                    <div id="terminal-prompt-row">
+                        <label id="cmd-prompt" for="cmd-input"></label>
+                        <input id="cmd-input" type="text" autocomplete="off" maxlength="40" spellcheck="false">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <div id="shortcut-helper" class="shortcut-helper">
+        <button id="shortcut-helper-close" class="modal-close-btn" aria-label="닫기">&times;</button>
+        <div class="shortcut-helper-content">
+            <div class="shortcut-helper-title">BBS 빠른 명령어 가이드 (H)</div>
+
+            <div class="shortcut-columns">
+                <div class="shortcut-column">
+                    <div class="column-title">NAV (이동)</div>
+                    <div class="shortcut-item"><span class="shortcut-key">GO</span> <span
+                            class="shortcut-desc">바로가기</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">T</span> <span
+                            class="shortcut-desc">초기화면</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">P/M</span> <span
+                            class="shortcut-desc">상위메뉴</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">Z</span> <span
+                            class="shortcut-desc">이전화면</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">B/F</span> <span
+                            class="shortcut-desc">이전/다음</span></div>
+                </div>
+
+                <div class="shortcut-column">
+                    <div class="column-title">POST (게시판)</div>
+                    <div class="shortcut-item"><span class="shortcut-key">L</span> <span
+                            class="shortcut-desc">목록보기</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">W</span> <span
+                            class="shortcut-desc">글쓰기</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">R</span> <span
+                            class="shortcut-desc">답글달기</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">E</span> <span
+                            class="shortcut-desc">글수정</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">D</span> <span
+                            class="shortcut-desc">글삭제</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">V</span> <span
+                            class="shortcut-desc">글추천</span></div>
+                </div>
+
+                <div class="shortcut-column">
+                    <div class="column-title">SYS/UI (시스템)</div>
+                    <div class="shortcut-item"><span class="shortcut-key">H</span> <span
+                            class="shortcut-desc">명령가이드</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">USER</span> <span
+                            class="shortcut-desc">접속자목록</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">C</span> <span
+                            class="shortcut-desc">배경색변경</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">Y</span> <span class="shortcut-desc">소리
+                            끄기</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">X</span> <span
+                            class="shortcut-desc">접속종료</span></div>
+                    <div class="shortcut-item"><span class="shortcut-key">ESC</span> <span class="shortcut-desc">창
+                            닫기</span></div>
+                </div>
+            </div>
+            <div class="shortcut-helper-footer">Alt 키를 다시 누르거나 ESC를 눌러 닫을 수 있습니다.</div>
+        </div>
+    </div>
+
+    <!-- defer: HTML 파싱 블로킹 없이 로드, module script 실행 전 완료 보장 -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="/js/app.js"></script>
+</body>
+
+</html>
