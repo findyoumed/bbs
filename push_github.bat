@@ -31,10 +31,16 @@ echo [4/5] Syncing with remote (Pull)...
 git pull origin main --rebase
 if errorlevel 1 (
     echo.
-    echo [!] Pull 실패! 원격 저장소와 충돌이 있거나 상태가 다릅니다.
-    echo     해결이 안 되면 'git push -u origin main --force'를 고려하세요.
+    echo [!] Pull 실패! (충돌 발생)
+    echo     로컬 코드를 최우선으로 간주하여 강제로 GitHub에 덮어씌웁니다.
+    git rebase --abort
+    git push -u origin main --force
+    echo.
+    echo ============================================
+    echo   Success! Force pushed to GitHub.
+    echo ============================================
     pause
-    exit /b 1
+    exit /b 0
 )
 
 :: 5. Push
