@@ -57,6 +57,7 @@ export function createAnsiBuilderUtils(deps) {
     return `(${currentText}/${totalText})`;
   }
 
+  // [LOG: 20260424_1947] 통신동호회 또는 PC 명칭이 들어오면 초기화면으로 표시
   function truncateDisplayText(text, maxWidth) {
     const width = Math.max(0, Number(maxWidth) || 0);
     if (width <= 0) {
@@ -143,7 +144,7 @@ export function createAnsiBuilderUtils(deps) {
   function buildHeaderTimestamp(value = new Date()) {
     const date = value instanceof Date ? value : new Date(value);
     const parts = [
-      1993,
+      date.getFullYear(), // [LOG: 20260609_1132] 1993 고정을 현재 연도로 변경
       String(date.getMonth() + 1).padStart(2, '0'),
       String(date.getDate()).padStart(2, '0')
     ];

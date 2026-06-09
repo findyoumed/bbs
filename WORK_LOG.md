@@ -1,3 +1,55 @@
+## [2026-06-09 11:32] 탑바 시계 연도 잔상 버그 수정
+
+**LOG_ID: 20260609_1132**
+목표:
+- 첫 로딩 시 혹은 회원가입 화면 초기 로딩 시 시계에 1993년이 잠깐 보였다가 현재 연도로 바뀌는 잔상 깜빡임 버그를 해결한다.
+
+변경 파일:
+- `public/js/core/ansiBuilderUtils.js`
+- `public/js/core/signupScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `ansiBuilderUtils.js` 내의 `buildHeaderTimestamp` 함수에서 연도 파트를 `1993` 대신 `date.getFullYear()`로 구성하여 초기 렌더링 시에도 현재 연도가 들어가도록 했다.
+2. `signupScreens.js` 내의 `makeSignupTopbar` 함수에서 `timestamp` 연도를 `1993` 대신 `now.getFullYear()`를 쓰도록 변경하여 회원가입 관련 화면 진입 시에도 현재 연도로 표시되게 했다.
+
+실행:
+- `node --check public/js/core/ansiBuilderUtils.js`
+- `node --check public/js/core/signupScreens.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 초기 로딩 시에도 1993년이 노출되지 않고 현재 연도(2026년 등)로 깔끔하게 렌더링된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-09 11:30] 탑바 시계 연도 표시 현재 연도로 변경
+
+**LOG_ID: 20260609_1130**
+목표:
+- 탑바 시계 영역(`retro-topbar-clock`)에 고정된 연도 '1993'을 현재 연도로 수정한다.
+
+변경 파일:
+- `public/js/core/ansiTopbarScreen.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `formatCurrentTime` 함수 내 `const y = 1993;`을 `const y = now.getFullYear();`로 변경하여 현재 연도를 출력하도록 했다.
+2. `extractTopbarModel` 함수 내에서 `timestampMatch[1].replace(/^\d{4}/, '1993')` 부분을 `timestampMatch[1]` 그대로 사용하여 서버에서 전달되는 실제 현재 연도가 노출되도록 보정했다.
+
+실행:
+- `node --check public/js/core/ansiTopbarScreen.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 탑바 시계 영역에 1993년이 아닌 현재 연도(2026년 등)가 정상 표시된다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-05-09 13:18] 비밀번호 재설정 링크 token_hash 직접 처리 고정
 
 **LOG_ID: 20260509_1314**

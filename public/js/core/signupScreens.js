@@ -13,7 +13,7 @@ export function createSignupScreens(deps) {
   function makeSignupTopbar(centerLabel) {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
-    const timestamp = `1993-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`; // [LOG: 20260609_1132] 1993 고정을 현재 연도로 변경
     return buildTopbarHtml({
       siteLabel: 'PC통신 동호회 01410',
       timestamp,
@@ -107,6 +107,7 @@ export function createSignupScreens(deps) {
     );
   }
 
+  // [LOG: 20260424_1947] 통신동호회 또는 PC 명칭이 들어오면 초기화면으로 표시
   function renderOAuthProfileScreen(options = {}) {
     const values = options.values || {};
     const errorText = options.error ? `※ ${options.error} ` : '';

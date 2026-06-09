@@ -13,7 +13,7 @@ function stripLeadingAnsiLines(text, lineCount = 4) {
 
 function formatCurrentTime() {
   const now = new Date();
-  const y = 1993; // [LOG: 20260423_1425] 레트로 감성을 위해 연도를 1993년으로 고정
+  const y = now.getFullYear(); // [LOG: 20260609_1130] 고정되었던 연도(1993)를 현재 연도로 변경
   const m = String(now.getMonth() + 1).padStart(2, '0');
   const d = String(now.getDate()).padStart(2, '0');
   const h = String(now.getHours()).padStart(2, '0');
@@ -51,7 +51,7 @@ function extractTopbarModel(rows) {
   const timestampMatch = topLine.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s*$/);
   const shortTimeMatch = topLine.match(/(\d{2}:\d{2})\s*$/);
   const timestamp = timestampMatch
-    ? timestampMatch[1].replace(/^\d{4}/, '1993')
+    ? timestampMatch[1] // [LOG: 20260609_1130] 1993 강제 변환 제거하고 실제 서버 연도 유지
     : (shortTimeMatch ? shortTimeMatch[1] : formatCurrentTime());
   // [LOG: 20260427_1240] Treat the 44-column mobile header as a dedicated compact topbar layout.
   const layoutMode = (!timestampMatch && shortTimeMatch) || trimmedTopLine.length <= 44
