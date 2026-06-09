@@ -208,8 +208,7 @@ body.theme-blue .write-field textarea {
 
 /* [LOG: 20260427_1510] 로딩 중에는 footer 전체를 숨기고 준비 완료 후 노출 */
 /* [LOG: 20260428_1545] 로딩 중에는 하단 구분선(::before)도 숨김 처리 */
-#terminal-footer[data-footer-state="hidden"]::before,
-#terminal-container.is-loading #terminal-footer::before {
+#terminal-footer[data-footer-state="hidden"]::before {
     display: none !important;
 }
 
@@ -1951,4 +1950,19 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
     background: transparent !important;
     color: transparent !important;
     caret-color: #ffffff !important;
+}
+
+/* [LOG: 20260609_1156] 로딩 중 모든 폼 입력창 및 버튼 클릭/포커싱 비활성화 (중복 제출/입력 방지) */
+#terminal-container.is-loading input,
+#terminal-container.is-loading textarea,
+#terminal-container.is-loading select,
+#terminal-container.is-loading button,
+#terminal-container.is-loading .bbs-btn,
+#terminal-container.is-loading .cmd-clickable,
+#terminal-container.is-loading .myinfo-menu-item,
+#terminal-container.is-loading .post-row,
+#terminal-container.is-loading .bbs-menu-item {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
 }

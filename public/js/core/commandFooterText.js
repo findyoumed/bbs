@@ -6,8 +6,8 @@ import { CMD_META } from './commandService.js';
  */
 
 export const CMD_ORDER = {
-  top: ['GO', 'LOGIN', 'WHO', 'PF', 'C:바탕색', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
-  menu: ['P', 'T', 'GO', 'LOGIN', 'WHO', 'PF', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
+  top: ['GO', 'LOGIN', 'PF', 'C:바탕색', 'H'], // [LOG: 20260609_1157] WHO(회원정보) 삭제, HI(내정보) 삭제
+  menu: ['P', 'T', 'GO', 'LOGIN', 'PF', 'H'], // [LOG: 20260609_1157] WHO(회원정보) 삭제, HI(내정보) 삭제
   authMenu: ['P', 'T', 'GO', 'H'],
   help: ['F', 'B', 'P', 'T', 'GO'],
   history: ['P', 'T', 'GO', 'H'],
