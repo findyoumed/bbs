@@ -1,3 +1,56 @@
+## [2026-06-09 11:36] 테마 변경 시 힌트바 알림 제거
+
+**LOG_ID: 20260609_1136**
+목표:
+- 테마 변경(명령어 `C`) 시 하단 힌트바(`#cmd-hint`)에 `터미널 테마 변경: BLUE` 피드백이 표시되어 기존 힌트바를 가려버리는 현상을 방지한다.
+
+변경 파일:
+- `public/js/core/commandRouter.js`
+- `public/js/core/commandRouterGlobalRuntime.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `commandRouter.js`의 `cmd === 'C'` 핸들러 내에서 `setHint` 호출 부분을 제거했다.
+2. `commandRouterGlobalRuntime.js`의 `cmd === 'C'` 핸들러 내에서 `setHint` 및 `setDefaultPrompt` 호출 부분을 제거했다.
+3. 이를 통해 테마 변경 시에도 힌트바가 다른 피드백 메시지로 가려지지 않고 원래 화면의 명령어 힌트를 온전하게 유지하게 했다.
+
+실행:
+- `node --check public/js/core/commandRouter.js`
+- `node --check public/js/core/commandRouterGlobalRuntime.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 테마 변경 명령어(C)를 실행했을 때 화면 색상이 바뀌며, 하단 힌트바에는 `터미널 테마 변경: ...` 메시지 없이 기존 힌트가 그대로 노출된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-09 11:35] 하단 힌트에서 내정보(HI) 제거
+
+**LOG_ID: 20260609_1135**
+목표:
+- 명령어 힌트 영역(`#cmd-hint`)에서 기능이 중복되는 `내정보(HI)` 항목을 삭제한다.
+
+변경 파일:
+- `public/js/core/commandFooterText.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `commandFooterText.js` 파일의 `CMD_ORDER` 객체에서 `HI` 토큰을 삭제했다. 대상 카테고리는 `top`, `menu`, `chat`, `chatLobby`이다.
+2. 힌트 목록에서만 내정보가 노출되지 않도록 처리하고, 실제 라우팅 및 키 입력 기능(직접 이동 기능 등)은 유지하여 버그 가능성을 방지했다.
+
+실행:
+- `node --check public/js/core/commandFooterText.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 메인 화면 및 게시판 메뉴 화면의 하단 명령어 힌트에 `내정보(HI)` 힌트가 노출되지 않는다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-06-09 11:32] 탑바 시계 연도 잔상 버그 수정
 
 **LOG_ID: 20260609_1132**

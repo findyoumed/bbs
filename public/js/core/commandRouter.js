@@ -57,7 +57,7 @@ export function createCommandHandler(deps) {
     }
     if (cmd === 'C') {
       toggleTheme();
-      setHint(`터미널 테마 변경: ${state.theme.toUpperCase()}`);
+      // [LOG: 20260609_1136] 터미널 테마 변경 힌트 표시 제거 (원래 힌트바 유지)
       return true;
     }
     if (cmd === 'H' || cmd === 'HELP' || cmd === '?') {

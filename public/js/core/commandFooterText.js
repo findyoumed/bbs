@@ -6,8 +6,8 @@ import { CMD_META } from './commandService.js';
  */
 
 export const CMD_ORDER = {
-  top: ['GO', 'LOGIN', 'WHO', 'PF', 'HI', 'C:바탕색', 'H'],
-  menu: ['P', 'T', 'GO', 'LOGIN', 'WHO', 'PF', 'HI', 'H'],
+  top: ['GO', 'LOGIN', 'WHO', 'PF', 'C:바탕색', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
+  menu: ['P', 'T', 'GO', 'LOGIN', 'WHO', 'PF', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
   authMenu: ['P', 'T', 'GO', 'H'],
   help: ['F', 'B', 'P', 'T', 'GO'],
   history: ['P', 'T', 'GO', 'H'],
@@ -18,8 +18,8 @@ export const CMD_ORDER = {
   postList: ['F', 'B', 'L', 'P', 'T', 'GO', 'W:글쓰기', 'LT:제목검색', 'LI:ID검색', 'H'],
   postView: ['L:목록', 'N', 'A', 'P', 'T', 'GO', 'RE:답장', 'E:수정', 'D:삭제', 'V:추천', 'U:첨부', 'LT:제목검색', 'LI:ID검색', 'H'],
   postWrite: ['P:취소', 'S:저장', 'H'],
-  chat: ['P', 'T', 'GO', 'O:방만들기', 'HI', 'H'],
-  chatLobby: ['P', 'T', 'GO', 'O:방만들기', 'HI', 'H'],
+  chat: ['P', 'T', 'GO', 'O:방만들기', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
+  chatLobby: ['P', 'T', 'GO', 'O:방만들기', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
   memoList: ['P', 'T', 'GO', 'W:쓰기', 'H'],
   memoView: ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'DD:삭제', 'H'],
   memoWrite: ['P:취소', 'SEND:전송', 'H'],
