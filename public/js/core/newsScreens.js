@@ -340,33 +340,45 @@ export function createNewsScreens(deps) {
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
 
+    if (shouldAutoFocusCommandInput()) cmdInput.focus();
+  }
+
   async function showNewsList(topicDoor, options = false) {
     const normalizedOptions = typeof options === 'boolean' ? { fromHistory: options } : (options || {});
     const fromHistory = Boolean(normalizedOptions.fromHistory);
     const requestedPageNo = Math.max(1, Number.parseInt(normalizedOptions.pageNo, 10) || 1);
 
-    state.screen = 'news-list';
-    // [LOG: 20260610_1452] Show loading overlay during news list retrieval to give instant feedback.
-    showNewsLoading('뉴스 목록을 불러오는 중입니다...');
-    const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor);
-    const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo);
+    // [LOG: 20260610_1510] Delightful loader delay to prevent screen flashing on fast/cached loads
+    let loadingTimer = setTimeout(() => {
+      showNewsLoading('뉴스 목록을 불러오는 중입니다...');
+    }, 150);
 
-    state.serviceData = {
-      topics, topicDoor, topicTitle, items,
-      pageCount: newsListView.pageCount, pageNo: newsListView.pageNo,
-      listPageNo: newsListView.pageNo, listPageSize: newsListView.pageSize
-    };
-    if (!fromHistory) { updateURL(); pushHistory(); }
-    const rendered = await renderAnsiScreenWithTopbarSequential({
-      ansiText: newsListView.text,
-      ansiToHTML,
-      screenEl,
-      renderScreenSequential
-    });
-    renderNewsArticleHotspots(rendered.screenNode, newsListView.items, 2);
+    try {
+      const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor);
+      clearTimeout(loadingTimer);
 
-    await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('newsList'));
-    if (shouldAutoFocusCommandInput()) cmdInput.focus();
+      const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo);
+
+      state.serviceData = {
+        topics, topicDoor, topicTitle, items,
+        pageCount: newsListView.pageCount, pageNo: newsListView.pageNo,
+        listPageNo: newsListView.pageNo, listPageSize: newsListView.pageSize
+      };
+      if (!fromHistory) { updateURL(); pushHistory(); }
+      const rendered = await renderAnsiScreenWithTopbarSequential({
+        ansiText: newsListView.text,
+        ansiToHTML,
+        screenEl,
+        renderScreenSequential
+      });
+      renderNewsArticleHotspots(rendered.screenNode, newsListView.items, 2);
+
+      await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('newsList'));
+      if (shouldAutoFocusCommandInput()) cmdInput.focus();
+    } catch (error) {
+      clearTimeout(loadingTimer);
+      throw error;
+    }
   }
 
   async function showNewsArticle(topicDoor, articleNo, options = {}) {
