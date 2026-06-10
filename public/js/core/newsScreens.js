@@ -379,7 +379,7 @@ export function createNewsScreens(deps) {
       && Number(state.serviceData?.pageNo || 1) === requestedPageNo
       && (!requestedArticleKey || String(state.serviceData?.articleKey || '').trim() === requestedArticleKey);
     state.screen = 'news-view';
-    showNewsLoading('뉴스 기사 화면으로 이동하는 중입니다...');
+    // [LOG: 20260610_1453] Skip loading overlay when navigating to article view since it is fast and waitable.
     const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor);
     const article = findNewsArticle(items, articleNo, options);
     const articleIndex = items.findIndex((item) => item === article);
