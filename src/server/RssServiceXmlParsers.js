@@ -232,9 +232,11 @@ function readAttr(source, attrName) {
   return match ? decodeXmlEntities(String(match[1] || '').trim()) : '';
 }
 
+// [LOG: 20260610_0341] Strip HTML tags safely, preserving book bracket notations.
 function cleanFeedText(value) {
   return decodeXmlEntities(String(value || ''))
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<[a-zA-Z/!][^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -244,7 +246,7 @@ function cleanHtmlToText(value) {
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(/<[a-zA-Z/!][^>]*>/g, ' ')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .replace(/[ \t]+\n/g, '\n')

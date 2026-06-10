@@ -13,10 +13,11 @@ function normalizeHtmlBlock(value) {
     .replace(/<br\s*\/?>/gi, '\n'));
 }
 
+// [LOG: 20260610_0341] Strip HTML tags safely, preserving book bracket notations.
 function normalizePlainText(value) {
   return decodeJavaScriptEscapes(decodeHtmlEntities(String(value || '')))
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(/<[a-zA-Z/!][^>]*>/g, ' ')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .replace(/\u00a0/g, ' ')
