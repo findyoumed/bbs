@@ -41,6 +41,49 @@
     --input-bg: rgba(255, 255, 255, 0.15);
     --hr-color: #ffffff;
     --text-shadow: none;
+@font-face {
+    font-family: 'DungGeunMo';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
+:root,
+:root[data-theme="dark"] {
+    --bgcolor: #000000;
+    /* 다크 모드(기본)는 검정 배경 */
+    --color: #ffffff;
+    --glow-color: rgba(255, 255, 255, 0.4);
+    --topbar-bg: #000000;
+    --topbar-label-bg: #ffffff;
+    --topbar-label-color: #000000;
+    --help-bg: rgba(0, 0, 0, 0.9);
+    --border-color: rgba(255, 255, 255, 0.3);
+    --btn-bg: #ffffff;
+    --btn-color: #000000;
+    --btn-border: #ffffff;
+    --input-bg: rgba(255, 255, 255, 0.1);
+    --hr-color: #ffffff;
+    --text-shadow: none;
+}
+
+:root[data-theme="blue"] {
+    --bgcolor: #0000aa;
+    /* 고전 BBS 파란 배경 */
+    --color: #ffffff;
+    --glow-color: rgba(255, 255, 255, 0.4);
+    --topbar-bg: #0000aa;
+    --topbar-label-bg: #ffffff;
+    --topbar-label-color: #0000aa;
+    --help-bg: rgba(0, 0, 170, 0.9);
+    --border-color: rgba(255, 255, 255, 0.5);
+    --btn-bg: #ffffff;
+    --btn-color: #0000aa;
+    --btn-border: #ffffff;
+    --input-bg: rgba(255, 255, 255, 0.15);
+    --hr-color: #ffffff;
+    --text-shadow: none;
 }
 
 /* 
@@ -49,7 +92,6 @@
 */
 html,
 body,
-#terminal-wrapper,
 #terminal-container,
 #terminal-screen,
 #container,
@@ -63,6 +105,12 @@ body,
     color: var(--color);
     text-shadow: var(--text-shadow);
     border: none !important;
+}
+
+#terminal-wrapper {
+    background-color: var(--bgcolor);
+    color: var(--color);
+    text-shadow: var(--text-shadow);
 }
 
 /* 텍스트 입력 및 선택 영역 가독성 확보 */
@@ -211,12 +259,13 @@ a {
 
 .terminal-cursor {
     position: absolute;
-    width: 10px;
+    width: 1ch;
     height: 1.2em;
     background-color: var(--color);
+    mix-blend-mode: difference;
     z-index: 3;
     pointer-events: none;
-    display: none !important;
+    display: none;
     animation: cursor-blink 1s step-end infinite;
 }
 
@@ -1193,4 +1242,105 @@ a {
     background: var(--color);
     color: var(--bgcolor);
     box-shadow: 0 0 5px var(--glow-color);
+}
+
+/* [LOG: 20260610_1145] Modern Terminal Scrollbar styling for #terminal-screen */
+#terminal-screen {
+    overflow-y: auto !important;
+    scrollbar-width: thin !important;
+    -ms-overflow-style: auto !important;
+}
+
+#terminal-screen::-webkit-scrollbar {
+    display: block !important;
+    width: 6px !important;
+}
+
+#terminal-screen::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+#terminal-screen::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-radius: 3px !important;
+}
+
+#terminal-screen::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* [LOG: 20260610_1145] Modern terminal titlebar and window wrapper design */
+.terminal-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 36px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+    padding: 0 16px;
+    user-select: none;
+    -webkit-user-select: none;
+    flex-shrink: 0;
+}
+
+body.theme-blue .terminal-titlebar {
+    background-color: rgba(0, 0, 0, 0.18);
+}
+
+.terminal-titlebar .window-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.terminal-titlebar .control-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.terminal-titlebar .control-dot.close {
+    background-color: #ff5f56;
+}
+
+.terminal-titlebar .control-dot.minimize {
+    background-color: #ffbd2e;
+}
+
+.terminal-titlebar .control-dot.maximize {
+    background-color: #27c93f;
+}
+
+.terminal-titlebar .window-title {
+    font-family: 'DungGeunMo', monospace;
+    font-size: 14px;
+    color: var(--color);
+    opacity: 0.8;
+    text-align: center;
+    flex-grow: 1;
+    margin-right: 52px; /* Offset window controls to center title */
+}
+
+#terminal-wrapper {
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15)) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65) !important;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* [LOG: 20260610_1145] Enable pointer events bypass during text selection for smooth drag selection */
+#terminal-container.is-selecting .ansi-hotspot {
+    pointer-events: none !important;
+}
+
+@media (max-width: 1023px) {
+    .terminal-titlebar {
+        display: none !important;
+    }
+    #terminal-wrapper {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0;
+    }
 }

@@ -177,4 +177,14 @@ export function bindAppEvents(deps) {
       });
     }
   }
+
+  // [LOG: 20260610_1145] Enable smooth text selection by disabling pointer-events on hotspots during dragging
+  document.addEventListener('selectionchange', () => {
+    const selection = window.getSelection();
+    const isSelecting = selection && selection.toString().trim().length > 0;
+    const container = document.getElementById('terminal-container');
+    if (container) {
+      container.classList.toggle('is-selecting', isSelecting);
+    }
+  });
 }

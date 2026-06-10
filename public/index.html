@@ -35,6 +35,7 @@
                 const textShadow = isBlue ? '0 0 2px rgba(255, 255, 255, 0.4)' : 'none';
 
                 // [LOG: 20260426_1425] 배경색 단일화: body에만 배경을 주고 나머지는 투명하게 처리 (색상차 방지)
+                // [LOG: 20260610_1145] Allow #terminal-wrapper to have custom background, border, and shadows on desktop.
                 document.write('<style id="theme-immediate-style">' +
                     ':root { ' +
                     '--bgcolor: ' + bgColor + ' !important; ' +
@@ -48,7 +49,10 @@
                     'text-shadow: ' + textShadow + ' !important; ' +
                     'transition: none !important; ' +
                     '}' +
-                    '.app-shell, #terminal-wrapper, #terminal-container, #terminal-screen, .ansi-screen { ' +
+                    '#terminal-wrapper { ' +
+                    'background-color: ' + bgColor + ' !important; ' +
+                    '}' +
+                    '.app-shell, #terminal-container, #terminal-screen, .ansi-screen { ' +
                     'background-color: transparent !important; ' +
                     'background: transparent !important; ' +
                     'border: none !important; ' +
@@ -89,6 +93,16 @@
 <body>
     <main class="app-shell">
         <div id="terminal-wrapper">
+            <!-- [LOG: 20260610_1145] Modern terminal titlebar/window frame -->
+            <div class="terminal-titlebar">
+                <div class="window-controls">
+                    <span class="control-dot close"></span>
+                    <span class="control-dot minimize"></span>
+                    <span class="control-dot maximize"></span>
+                </div>
+                <div class="window-title">BBS 01410 Terminal</div>
+            </div>
+
             <!-- [LOG: 20260427_1205] Rendering Progress Bar -->
             <div id="render-progress" class="render-progress-container">
                 <div class="render-progress-bar"></div>

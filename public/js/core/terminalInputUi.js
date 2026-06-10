@@ -1,6 +1,7 @@
 import { UI_TEXT } from './i18n.js';
 import { CMD_META } from './commandService.js';
 import { esc } from './uiUtils.js';
+import { displayWidth } from './ansiRenderUtils.js';
 
 export function createTerminalInputUi(deps) {
   const {
@@ -16,7 +17,8 @@ export function createTerminalInputUi(deps) {
   let maskTextEl = null;
   let selectedSuggestionIndex = -1;
   let cursorStateObserver = null;
-  const useCustomCursor = false;
+  // [LOG: 20260610_1145] Enable custom blinking terminal block cursor
+  const useCustomCursor = true;
   // [LOG: 20260506_1315] Command suggestion UI disabled due to frequent misfires.
   // const suggestionBoxEl = document.getElementById('cmd-suggestion-box');
   const suggestionBoxEl = null;
@@ -25,11 +27,6 @@ export function createTerminalInputUi(deps) {
     const el = document.createElement('span');
     el.className = 'terminal-cursor';
     return el;
-  })();
-
-  const measureContext = (() => {
-    const canvas = document.createElement('canvas');
-    return canvas.getContext('2d');
   })();
 
   const cmdTooltipEl = (() => {
@@ -73,16 +70,15 @@ export function createTerminalInputUi(deps) {
     });
   }
 
+  // [LOG: 20260610_1145] Update cursor position in exact character width units (ch)
   function updateCursorPosition() {
-    if (!cmdInput || !cursorEl || !measureContext) {
+    if (!cmdInput || !cursorEl) {
       return;
     }
 
-    const style = window.getComputedStyle(cmdInput);
-    measureContext.font = `${style.fontSize} ${style.fontFamily}`;
     const textBeforeCaret = cmdInput.value.substring(0, cmdInput.selectionStart || 0);
-    const textWidth = measureContext.measureText(textBeforeCaret).width;
-    cursorEl.style.left = `${textWidth}px`;
+    const chCount = displayWidth(textBeforeCaret);
+    cursorEl.style.left = `${chCount}ch`;
   }
 
   function getTerminalContainer() {

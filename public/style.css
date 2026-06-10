@@ -179,7 +179,7 @@ body.theme-blue .write-field textarea {
     height: auto !important;
     min-height: 0 !important;
     max-height: 100%;
-    overflow: hidden;
+    overflow-y: auto !important;
     padding: 0;
     cursor: text;
 }
@@ -337,8 +337,8 @@ body.theme-blue .write-field textarea {
     border: none;
     outline: none;
     color: #ffffff;
-    /* [LOG: 20260505_2241] Use the browser caret for exact input positioning. */
-    caret-color: #ffffff;
+    /* [LOG: 20260610_1145] Hide the browser caret as we are using the custom blinking block cursor. */
+    caret-color: transparent !important;
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;

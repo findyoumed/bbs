@@ -6278,7 +6278,7 @@
 목표: xterm.js 적용에 앞서 현재 정상 동작 상태를 백업(Git 로컬 커밋 및 기록)하고 다음 작업 단계를 수립한다.
 변경 파일:
 - `WORK_LOG.md` (작업 기록 추가)
-수행 작업:
+- 수행 작업:
 1. 현재 작업 트리가 깨끗함(clean)을 확인.
 2. 로컬 저장소에 `chore: backup point before refactoring to xterm.js` 빈 커밋 생성.
 실행:
@@ -6289,4 +6289,31 @@
 결과: ✅ 완료
 
 ---
+
+## [2026-06-10 11:45] 현대식 터미널 UI/UX 고도화 및 xterm.js 시뮬레이션 적용
+
+**LOG_ID: 20260610_1145**
+목표: xterm.js 스타일 시뮬레이션을 구현하여, 기존 DOM 및 HTML 속성 기반 마우스 인터랙션을 온전히 보존하면서 현대적인 터미널 UI/UX(윈도우 타이틀바, 드래그 선택 차단 해제, 블록형 커서, 스크롤바)를 도입한다.
+변경 파일:
+- `public/index.html` (타이틀바 추가, 로드 스타일 조정)
+- `public/js/core/appEvents.js` (텍스트 선택 drag 시 핫스팟 pointer-events 차단)
+- `public/js/core/terminalInputUi.js` (가상 블록 커서 활성화 및 ch 단위 연산 최적화)
+- `public/styles/retro-terminal.css` (타이틀바, 스크롤바, 가상 커서, 선택 방지 무력화 스타일 추가)
+- `public/style.css` (cmd-input의 기본 캐럿 숨김 및 terminal-screen 스크롤 허용)
+수행 작업:
+1. `index.html`에 macOS 스타일 제어 도트가 포함된 터미널 윈도우 타이틀바(`.terminal-titlebar`)를 추가하고, `#terminal-wrapper`가 투명 강제 규칙에서 해제되도록 배경색 스타일을 분리하였습니다.
+2. `appEvents.js`에 `selectionchange` 리스너를 결합해 드래그 선택이 시작되면 컨테이너에 `.is-selecting` 클래스를 켜고, CSS를 통해 모든 핫스팟의 `pointer-events`를 임시 비활성화해 드래그 방해 현상을 완벽히 해결하였습니다.
+3. `terminalInputUi.js`에서 Canvas 기반 텍스트 폭 측정기 대신 `displayWidth`를 활용해 커서의 가로축 위치를 `ch` 단위로 배치하도록 간소화 및 최적화하고, 가상 블록 커서 사용 여부를 `true`로 켰습니다.
+4. `retro-terminal.css` 및 `style.css`에서 `#terminal-screen`의 `overflow`를 허용해 스크롤백이 가능하도록 휠과 스크롤바를 켜고, 얇은 반투명 디자인의 스크롤바를 커스텀 적용하였습니다.
+5. 브라우저 기본 캐럿(`caret-color`)을 투명화하여 중복 커서 출력을 막고, 가상 커서가 글자 위에 중첩될 때 시인성을 확보하기 위해 `mix-blend-mode: difference`를 입혔습니다.
+실행:
+- `node --check public/js/core/appEvents.js`
+- `node --check public/js/core/terminalInputUi.js`
+- `npm run smoke:vercel-ready`
+기대:
+- 자바스크립트 문법 검사 통과 및 빌드 검증 성공 (`ok: true` 출력).
+결과: ✅ 완료
+
+---
+
 
