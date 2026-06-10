@@ -6,6 +6,7 @@ export function isWideChar(ch) {
   const cp = ch.codePointAt(0);
   // [LOG: 20260427_1150] CJK Unified Ideographs (Hanja) + Hangul + Full-width Symbols
   // [LOG: 20260428_2225] Include CJK Extension A / Compatibility Ideographs so titles like "李" occupy 2 cells
+  // [LOG: 20260610_1423] Include CJK Enclosed Letters and Months (U+3200-U+32FF) like ㈜ to display as wide chars
   return (cp >= 0x3400 && cp <= 0x4DBF) // CJK Unified Ideographs Extension A
     || (cp >= 0x4E00 && cp <= 0x9FFF) // CJK Unified Ideographs (Hanja)
     || (cp >= 0xF900 && cp <= 0xFAFF) // CJK Compatibility Ideographs
@@ -13,6 +14,7 @@ export function isWideChar(ch) {
     || (cp >= 0x1100 && cp <= 0x11FF) // Hangul Jamo
     || (cp >= 0x3130 && cp <= 0x318F) // Hangul Compatibility Jamo
     || (cp >= 0x3000 && cp <= 0x303F) // CJK Symbols and Punctuation
+    || (cp >= 0x3200 && cp <= 0x32FF) // CJK Enclosed Letters and Months (e.g. ㈜)
     || (cp >= 0x3300 && cp <= 0x33FF) // CJK Compatibility (e.g. ㎞, ㎡)
     || (cp >= 0xFE30 && cp <= 0xFE4F) // CJK Compatibility Forms
     || (cp >= 0xFF01 && cp <= 0xFF60) // Full-width Forms
