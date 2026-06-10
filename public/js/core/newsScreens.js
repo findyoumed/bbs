@@ -346,6 +346,8 @@ export function createNewsScreens(deps) {
     const requestedPageNo = Math.max(1, Number.parseInt(normalizedOptions.pageNo, 10) || 1);
 
     state.screen = 'news-list';
+    // [LOG: 20260610_1452] Show loading overlay during news list retrieval to give instant feedback.
+    showNewsLoading('뉴스 목록을 불러오는 중입니다...');
     const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor);
     const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo);
 
