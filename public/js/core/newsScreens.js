@@ -280,19 +280,23 @@ export function createNewsScreens(deps) {
     return true;
   }
 
+  // [LOG: 20260610_1427] Clear screen and hide footer during news loading to hide unrelated command hints
   function showNewsLoading(message) {
     const text = String(message || '뉴스 기사로 이동 중 입니다...').trim();
-    if (screenEl) {
-      screenEl.parentElement?.classList.remove('is-loading');
-      screenEl.classList.add('is-loading');
+    if (typeof setLoading === 'function') {
+      setLoading(text);
+    } else {
+      if (screenEl) {
+        screenEl.classList.add('is-loading');
+        screenEl.innerHTML = `<div class="loading">${esc(text)}</div>`;
+      }
+      if (cmdInput) {
+        cmdInput.disabled = true;
+      }
+      if (typeof setFooterVisibility === 'function') {
+        setFooterVisibility(false);
+      }
     }
-    if (cmdInput) {
-      cmdInput.disabled = true;
-    }
-    if (typeof setFooterVisibility === 'function') {
-      setFooterVisibility(true);
-    }
-    void message;
   }
 
   function getNewsSourceLoadingMessage(article) {
