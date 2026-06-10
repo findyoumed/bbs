@@ -851,8 +851,16 @@ body.theme-blue .write-field textarea {
     box-sizing: border-box;
 }
 
+/* [LOG: 20260610_1354] Unify horizontal lines using text characters */
 .retro-topbar--ansi .retro-topbar-hr {
-    border-top: 1px solid #fff;
+    border-top: none !important;
+    font-family: 'DungGeunMo', 'Sam3KRFont', monospace;
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--hr-color, #fff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-align: left;
     max-width: 80ch;
     margin: 0 auto;
 }
@@ -873,9 +881,17 @@ body.theme-blue .write-field textarea {
     outline: 2px solid #fff;
 }
 
+/* [LOG: 20260610_1354] Unify horizontal lines using text characters */
 .retro-topbar--ansi .retro-topbar-line {
     flex: 1;
-    border-top: 1px solid #fff;
+    border-top: none !important;
+    font-family: 'DungGeunMo', 'Sam3KRFont', monospace;
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--hr-color, #fff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
     margin: 0 8px;
 }
 

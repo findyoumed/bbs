@@ -85,6 +85,7 @@ function extractTopbarModel(rows) {
   };
 }
 
+// [LOG: 20260610_1354] Use text-based characters for horizontal lines to unify look with footer line
 function buildTopbarHtml(model) {
   const siteLabel = escapeHtml(model?.siteLabel || 'PC통신동호회 01410');
   const timestamp = escapeHtml(model?.timestamp || '');
@@ -98,7 +99,7 @@ function buildTopbarHtml(model) {
 <div class="retro-topbar retro-topbar--ansi" data-layout-mode="${layoutMode}" data-layout-cols="${layoutCols}">
   <div class="retro-topbar-row1">
     <a class="retro-topbar-left" href="/" data-menu-path="top" aria-label="초기화면으로 이동">${siteLabel}</a>
-    <span class="retro-topbar-line"></span>
+    <span class="retro-topbar-line">────────────────────────────────────────────────────────────────────────────────</span>
     <span class="retro-topbar-clock">${timestamp}</span>
   </div>
   <div class="retro-topbar-row2">
@@ -106,7 +107,7 @@ function buildTopbarHtml(model) {
     <span class="retro-topbar-center retro-topbar-menu">${centerLabel || '&nbsp;'}</span>
     <span class="retro-topbar-url">${rightLabel || '&nbsp;'}</span>
   </div>
-  <div class="retro-topbar-hr"></div>
+  <div class="retro-topbar-hr">────────────────────────────────────────────────────────────────────────────────</div>
 </div>`.trim();
 }
 

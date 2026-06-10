@@ -1,3 +1,30 @@
+## [2026-06-10 13:54] 텍스트 문자 기반 가로선으로 전체 구분선 통일
+
+**LOG_ID: 20260610_1354**
+목표:
+- 화면 크기나 배율(확대/축소) 조정 시 상단/중간 CSS 1px 실선 테두리가 소수점 픽셀에 걸려 회색으로 뭉개지고 어둡게 보이던 현상을 해결하기 위해, 모든 구분선을 하단의 텍스트 문자(`─`, U+2500) 기반 가로선으로 통일한다.
+
+변경 파일:
+- `public/js/core/ansiTopbarScreen.js`
+- `public/style.css`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/js/core/ansiTopbarScreen.js` 파일 내 `buildTopbarHtml` 함수에서 상단바의 `.retro-topbar-line`과 `.retro-topbar-hr` 요소 내부에 80글자의 `─` 문자열을 주입했다.
+2. `public/style.css` 파일에서 `.retro-topbar--ansi .retro-topbar-line`과 `.retro-topbar--ansi .retro-topbar-hr` 요소의 `border-top` 속성을 비활성화(`border-top: none !important;`)하고, 둥근모 폰트(`DungGeunMo`) 및 폰트 크기(`17px`), 줄 높이(`1.4`)를 설정하여 하단 구분선과 완전히 매칭되게 가공했다.
+3. 폭이 좁거나 넓은 환경에서도 라인이 레이아웃을 해치지 않고 맞춤 크기로 잘리도록 `overflow: hidden; white-space: nowrap;` 스타일을 부여했다.
+
+실행:
+- `node --check public/js/core/ansiTopbarScreen.js` 문법 검사
+- `npm run smoke:vercel-ready` 빌드 유효성 테스트
+
+기대:
+- 브라우저 확대 배율이나 창 크기에 영향받지 않고, 상단/중단/하단의 세 가로선이 모두 동일한 두께, 밝기, 폰트로 일관성 있고 선명하게 표시된다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-06-09 11:57] 명령어 힌트바에서 회원정보(WHO) 항목 제외
 
 **LOG_ID: 20260609_1157**
