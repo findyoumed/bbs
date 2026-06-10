@@ -61,8 +61,11 @@ function parseNewsFeedXml(xml) {
       continue;
     }
 
+    // [LOG: 20260610_1435] Fallback to extract date from image URL if RSS date and article URL date are missing (e.g. Hankyoreh)
     const date = cleanFeedText(readFirstTag(rawItem, ['pubDate', 'dc:date', 'date', 'updated', 'published']));
-    const normalizedDate = normalizeNewsDate(date || deriveDateFromUrl(link));
+    const imageUrl = extractNewsImageUrl(rawItem);
+    const derivedDate = date || deriveDateFromUrl(link) || deriveDateFromImageUrl(imageUrl);
+    const normalizedDate = normalizeNewsDate(derivedDate);
     items.push({
       no,
       author: cleanFeedText(readTag(rawItem, 'author')),
@@ -72,7 +75,7 @@ function parseNewsFeedXml(xml) {
       body,
       date: normalizedDate.date,
       dateTime: normalizedDate.dateTime,
-      imageUrl: extractNewsImageUrl(rawItem)
+      imageUrl
     });
     no += 1;
   }
@@ -128,7 +131,8 @@ function readFirstTagAttr(source, tagNames, attrNames) {
 
 function readFirstHtmlImageUrl(values) {
   for (const value of values || []) {
-    const match = String(value || '').match(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i);
+    const match = String(value || '').match(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i)
+      || String(value || '').match(/<img\b[^>]*\bsrc=([^"'\s>]+)[^>]*>/i);
     if (match?.[1]) {
       return decodeXmlEntities(match[1]);
     }
@@ -162,6 +166,16 @@ function deriveDateFromUrl(value) {
     return formatUrlDate(compact[1], compact[2], compact[3]);
   }
 
+  return '';
+}
+
+// [LOG: 20260610_1435] Fallback parser to extract date (YYYY-MM-DD) from image attachment/thumbnail URLs (e.g. /YYYY/MMDD/ format)
+function deriveDateFromImageUrl(value) {
+  const source = String(value || '');
+  const match = source.match(/\/((?:19|20)\d{2})\/([01]\d)([0-3]\d)\//) || source.match(/\/((?:19|20)\d{2})([01]\d)([0-3]\d)/);
+  if (match) {
+    return formatUrlDate(match[1], match[2], match[3]);
+  }
   return '';
 }
 
