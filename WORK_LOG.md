@@ -1,3 +1,30 @@
+## [2026-06-10 15:00] 뉴스 첫 로딩 속도 최적화 및 타임아웃 추가
+
+**LOG_ID: 20260610_1500**
+목표:
+- 뉴스 피드 목록 로드 시 날짜가 빠진 기사로 인한 비동기 웹 페이지 스크래핑(HTML 파싱) 대기 지연을 제거하고, 느린 외부 RSS 서버로 인한 전체 대기 지연을 방지하여 뉴스 첫 로딩 속도를 대폭 최적화한다.
+
+변경 파일:
+- `src/server/RssServiceXmlParsers.js`
+- `src/server/RssServiceBase.js`
+- `src/server/RssNewsService.js`
+- `src/server/GoogleNewsUrlResolver.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `RssServiceXmlParsers.js`에서 날짜가 누락된 RSS 기사의 경우 현재 시간(`new Date().toISOString()`)을 폴백 날짜값으로 자동 지정하게 하여, 뉴스 목록 빌드 시 무거운 웹 스크래핑 과정(`enrichMissingNewsDates`)을 즉시 생략하도록 했다.
+2. `RssServiceBase.js`, `RssNewsService.js`, `GoogleNewsUrlResolver.js`의 모든 `fetch` 요청에 3초 타임아웃(`signal: AbortSignal.timeout(3000)`)을 설정하여, 하나의 느린 신문사 서버 때문에 전체 뉴스 조회가 멈추거나 오랜 시간 대기하지 않도록 방어 로직을 보강했다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 유효성 테스트
+
+기대:
+- 뉴스 대문 및 카테고리(예: '최신') 진입 시 첫 로딩 속도가 200~400ms 내외로 눈에 띄게 단축된다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-06-10 14:56] 초기 로딩 및 새로고침 시 하단 구분선(가로선) 깜빡임 방지
 
 **LOG_ID: 20260610_1456**

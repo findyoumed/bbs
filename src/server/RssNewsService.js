@@ -209,9 +209,11 @@ class RssNewsService extends RssServiceBase {
       }
 
       const fetchTarget = resolvedSourceLink || normalizedLink;
+      // [LOG: 20260610_1500] Add 3 second timeout to avoid hanging on slow servers
       const response = await this.fetchImpl(fetchTarget, {
         headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' },
-        redirect: 'follow'
+        redirect: 'follow',
+        signal: AbortSignal.timeout(3000)
       });
       if (!response?.ok) {
         throw new Error(`upstream failed${response?.status ? ` (${response.status})` : ''}`);

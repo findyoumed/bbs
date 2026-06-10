@@ -64,7 +64,8 @@ function parseNewsFeedXml(xml) {
     // [LOG: 20260610_1435] Fallback to extract date from image URL if RSS date and article URL date are missing (e.g. Hankyoreh)
     const date = cleanFeedText(readFirstTag(rawItem, ['pubDate', 'dc:date', 'date', 'updated', 'published']));
     const imageUrl = extractNewsImageUrl(rawItem);
-    const derivedDate = date || deriveDateFromUrl(link) || deriveDateFromImageUrl(imageUrl);
+    // [LOG: 20260610_1500] Fallback to current date/time to avoid expensive HTML scraping during initial load
+    const derivedDate = date || deriveDateFromUrl(link) || deriveDateFromImageUrl(imageUrl) || new Date().toISOString();
     const normalizedDate = normalizeNewsDate(derivedDate);
     items.push({
       no,

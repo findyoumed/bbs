@@ -211,7 +211,8 @@ async function fetchTextResponse(fetchImpl, url, options = {}) {
       ...DEFAULT_HEADERS,
       ...(options.headers || {})
     },
-    redirect: options.redirect || 'follow'
+    redirect: options.redirect || 'follow',
+    signal: AbortSignal.timeout(3000)
   });
 
   if (!response?.ok) {
