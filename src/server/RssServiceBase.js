@@ -4,7 +4,8 @@ const fs = require('fs');
 class RssServiceBase {
   constructor(options = {}) {
     this.fetchImpl = options.fetchImpl || global.fetch;
-    this.cacheTtlMs = Number(options.cacheTtlMs || 5 * 60 * 1000);
+    // [LOG: 20260610_1505] Extend news/weather cache TTL to 15 minutes to reduce server load
+    this.cacheTtlMs = Number(options.cacheTtlMs || 15 * 60 * 1000);
     this.menuCacheTtlMs = Number(options.menuCacheTtlMs || 60 * 60 * 1000);
     this.cacheStore = options.cacheStore || null;
     this.menuCache = new Map();

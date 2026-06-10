@@ -346,7 +346,9 @@ async function getCachedTopicFeed(service, cacheKey) {
   const persistent = await service._getPersistentCacheEntry(`rss:feed:${cacheKey}`);
   if (persistent) {
     const repaired = await repairCachedTopicFeed(service, cacheKey, persistent);
-    service._setMemoryCacheEntry(service.feedCache, cacheKey, repaired, service.cacheTtlMs);
+    // [LOG: 20260610_1505] Set in memory cache with the extended 12 hour stale TTL
+    const extendedTtl = 12 * 60 * 60 * 1000;
+    service._setMemoryCacheEntry(service.feedCache, cacheKey, repaired, extendedTtl);
     return repaired;
   }
 
@@ -354,8 +356,13 @@ async function getCachedTopicFeed(service, cacheKey) {
 }
 
 async function setCachedTopicFeed(service, cacheKey, value) {
-  service._setMemoryCacheEntry(service.feedCache, cacheKey, value, service.cacheTtlMs);
-  await service._setPersistentCacheEntry(`rss:feed:${cacheKey}`, value, service.cacheTtlMs);
+  // [LOG: 20260610_1505] Store freshUntil inside value and save with extended 12 hour TTL for Stale-While-Revalidate
+  const freshUntil = value.freshUntil || (Date.now() + service.cacheTtlMs);
+  const entryWithValue = { ...value, freshUntil };
+  const extendedTtl = 12 * 60 * 60 * 1000;
+
+  service._setMemoryCacheEntry(service.feedCache, cacheKey, entryWithValue, extendedTtl);
+  await service._setPersistentCacheEntry(`rss:feed:${cacheKey}`, entryWithValue, extendedTtl);
 }
 
 async function buildTopicFeed(service, parseNewsFeedXml, topic) {
@@ -453,6 +460,28 @@ async function getOrBuildTopicFeed(service, parseNewsFeedXml, topic) {
   const cacheKey = getTopicFeedCacheKey(topic?.door);
   const cached = await getCachedTopicFeed(service, cacheKey);
   if (cached) {
+    const now = Date.now();
+    const isFresh = cached.freshUntil && now < cached.freshUntil;
+    if (isFresh) {
+      return cached;
+    }
+
+    // [LOG: 20260610_1505] Stale-While-Revalidate: Return stale data instantly, and fetch fresh feed in background
+    const inflight = service.topicFeedInflight.get(cacheKey);
+    if (!inflight) {
+      const job = (async () => {
+        try {
+          const freshFeed = await buildTopicFeed(service, parseNewsFeedXml, topic);
+          await setCachedTopicFeed(service, cacheKey, freshFeed);
+        } catch (error) {
+          // ignore background errors
+        }
+      })();
+      service.topicFeedInflight.set(cacheKey, job);
+      job.finally(() => {
+        service.topicFeedInflight.delete(cacheKey);
+      });
+    }
     return cached;
   }
 
