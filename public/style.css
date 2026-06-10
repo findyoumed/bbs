@@ -1952,17 +1952,21 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
     caret-color: #ffffff !important;
 }
 
-/* [LOG: 20260609_1156] 로딩 중 모든 폼 입력창 및 버튼 클릭/포커싱 비활성화 (중복 제출/입력 방지) */
+/* [LOG: 20260610_1208] 로딩 중 모든 폼 입력창 및 버튼 클릭/포커싱 비활성화 (중복 제출/입력 방지), .cmd-clickable은 색상 깜빡임 방지를 위해 불투명도 저하 제외 */
 #terminal-container.is-loading input,
 #terminal-container.is-loading textarea,
 #terminal-container.is-loading select,
 #terminal-container.is-loading button,
 #terminal-container.is-loading .bbs-btn,
-#terminal-container.is-loading .cmd-clickable,
 #terminal-container.is-loading .myinfo-menu-item,
 #terminal-container.is-loading .post-row,
 #terminal-container.is-loading .bbs-menu-item {
     pointer-events: none !important;
     cursor: not-allowed !important;
     opacity: 0.6 !important;
+}
+
+#terminal-container.is-loading .cmd-clickable {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
 }

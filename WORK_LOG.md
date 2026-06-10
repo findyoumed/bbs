@@ -6367,6 +6367,19 @@
 기대:
 - 스모크 테스트 무결성 유지 (`ok: true` 출력).
 결과: ✅ 완료
+## [2026-06-10 12:08] 로딩 중 하단 푸터 버튼(.cmd-clickable) 불투명도 저하 제외 처리
+
+**LOG_ID: 20260610_1208**
+목표: 대화실(CHAT) 등 화면 로딩 시 `#terminal-container.is-loading` 상태로 전환될 때 하단 푸터 버튼("이동", "로그인", "도움말" 등)의 투명도가 일시적으로 낮아지면서(0.6) 색상이 깜빡이던(어두워졌다 밝아지는) 현상을 방지한다.
+변경 파일:
+- `public/style.css` (is-loading 투명도 저하 대상에서 .cmd-clickable 제외)
+수행 작업:
+1. `.is-loading` 시점의 전체 비활성화 규칙에서 `.cmd-clickable` 클래스를 분리하여 `pointer-events: none` 및 `cursor: not-allowed`는 여전히 유지하되, `opacity: 0.6` 투명도 적용은 제외되도록 하였습니다.
+실행:
+- `npm run smoke:vercel-ready`
+기대:
+- 빌드 무결성 유지 (`ok: true`).
+결과: ✅ 완료
 
 ---
 
