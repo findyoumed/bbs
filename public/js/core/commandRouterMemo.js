@@ -40,7 +40,7 @@ export function createMemoCommandHandler(deps) {
 
         const answer = String(input || '').trim().toUpperCase();
         if (answer === 'Y' || answer === 'YES') {
-            setHint?.('쪽지를 삭제하는 중입니다...');
+            setHint?.('쪽지를 삭제하는 중입니다..');
             await apiFetch(`/api/memos/${pending.memoId}`, { method: 'DELETE' });
             state._memoDeleteConfirm = null;
             await showMemoList();

@@ -42,7 +42,16 @@ export function createNewsScreens(deps) {
       const rowIdx = lineOffset + index;
       if (!lineNodes[rowIdx]) return;
       const bounds = measureServiceLineBounds(screenNode, lineNodes[rowIdx]) || estimateServiceLineBounds(screenNode, lineNodes[rowIdx]);
-      layer.appendChild(createHotspotButton(board?.door || '', board.name || '', bounds));
+      const btn = createHotspotButton(board?.door || '', board.name || '', bounds);
+
+      // [LOG: 20260610_2005] Hover pre-fetching for snappy terminal feel
+      btn.addEventListener('mouseover', () => {
+        if (!topicCache.has(String(board.door))) {
+          void loadNewsTopicState(board.door);
+        }
+      });
+
+      layer.appendChild(btn);
     });
 
     if (layer.childElementCount > 0) screenNode.appendChild(layer);
@@ -282,7 +291,7 @@ export function createNewsScreens(deps) {
 
   // [LOG: 20260610_1427] Clear screen and hide footer during news loading to hide unrelated command hints
   function showNewsLoading(message) {
-    const text = String(message || '뉴스 기사로 이동 중 입니다...').trim();
+    const text = String(message || '뉴스 기사로 이동 중입니다..').trim();
     if (typeof setLoading === 'function') {
       setLoading(text);
     } else {
@@ -299,21 +308,33 @@ export function createNewsScreens(deps) {
     }
   }
 
-  // [LOG: 20260610_1436] Removed getNewsSourceLoadingMessage as two-stage connection loading is no longer required.
+  // [LOG: 20260610_1935] Module-level cache for instant news topic switching
+  const topicCache = new Map();
 
   async function loadNewsTopicState(topicDoor) {
+    const topics = getNewsTopics(state.serviceData);
+    const cached = topicCache.get(String(topicDoor));
+
+    if (cached && cached.items.length > 0) {
+      return cached;
+    }
+
     const currentTopicDoor = String(state.serviceData?.topicDoor || '').trim();
     const currentItems = Array.isArray(state.serviceData?.items) ? state.serviceData.items : [];
-    const topics = getNewsTopics(state.serviceData);
 
     if (currentTopicDoor === String(topicDoor) && currentItems.length > 0) {
-      return { topics, topicTitle: String(state.serviceData?.topicTitle || '').trim(), items: currentItems };
+      const result = { topics, topicTitle: String(state.serviceData?.topicTitle || '').trim(), items: currentItems };
+      topicCache.set(String(topicDoor), result);
+      return result;
     }
 
     const articles = await loadNewsArticles(topicDoor);
     const topic = topics.find((item) => String(item.door) === String(topicDoor));
     const topicTitle = String(articles?.topic?.title || articles?.category?.title || topic?.title || topic?.name || '').trim();
-    return { topics, topicTitle, items: articles?.items || [] };
+    const result = { topics, topicTitle, items: articles?.items || [] };
+    
+    topicCache.set(String(topicDoor), result);
+    return result;
   }
 
   async function showNewsMenu(fromHistory = false) {
@@ -346,10 +367,10 @@ export function createNewsScreens(deps) {
     const requestedPageNo = Math.max(1, Number.parseInt(normalizedOptions.pageNo, 10) || 1);
 
     state.screen = 'news-list';
-    // [LOG: 20260610_1510] Delightful loader delay to prevent screen flashing on fast/cached loads
+    // [LOG: 20260610_1930] Snappier loader delay for authentic terminal responsiveness
     let loadingTimer = setTimeout(() => {
-      showNewsLoading('뉴스 목록을 불러오는 중입니다...');
-    }, 150);
+      showNewsLoading('연결하는 중입니다..');
+    }, 80);
 
     try {
       const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor);

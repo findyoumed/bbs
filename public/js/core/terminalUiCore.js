@@ -146,14 +146,6 @@ export function createTerminalUiCore(deps) {
 
   function buildLoadingScreenMarkup(message) {
     const lines = [];
-    const prompt = String(cmdPromptEl?.textContent || '').trim();
-    const pendingInput = String(cmdInput?.value || '').trim();
-
-    if (prompt && pendingInput) {
-      lines.push(
-        `<div class="ansi-line command-echo"><span class="ansi-cyan">${esc(prompt)}</span> <span class="ansi-white">${esc(pendingInput)}</span></div>`
-      );
-    }
 
     if (message) {
       lines.push(`<div class="loading">${esc(message)}</div>`);
@@ -213,11 +205,23 @@ export function createTerminalUiCore(deps) {
 
     setReady: (isReady) => {
       if (!screenEl) return;
+      if (core._loadingTimer) {
+        clearTimeout(core._loadingTimer);
+        core._loadingTimer = null;
+      }
+      if (core._progressTimer) {
+        clearInterval(core._progressTimer);
+        core._progressTimer = null;
+      }
+
       if (isReady) {
         screenEl.parentElement?.classList.remove('is-loading');
         screenEl.classList.remove('is-loading');
         setBusy(false);
         setFooterVisibility(true);
+        if (cmdInput) {
+          cmdInput.disabled = false;
+        }
       } else {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
@@ -227,17 +231,29 @@ export function createTerminalUiCore(deps) {
     },
     setLoading: (message) => {
       if (!screenEl) return;
-      screenEl.parentElement?.classList.add('is-loading');
-      screenEl.classList.add('is-loading');
+      if (core._loadingTimer) clearTimeout(core._loadingTimer);
+      if (core._progressTimer) {
+        clearInterval(core._progressTimer);
+        core._progressTimer = null;
+      }
+
+      // [LOG: 20260610_2020] Pure static terminal feel: no animations, instant response.
       setBusy(true);
-      setFooterVisibility(false);
-      if (cmdInput) {
-        cmdInput.disabled = true;
+      if (cmdInput) cmdInput.disabled = true;
+
+      const staticMessage = String(message || '연결하는 중입니다..').trim();
+      
+      // Show static text in footer immediately
+      if (hintEl) {
+        hintEl.innerHTML = `<span class="bbs-loading-text">${esc(staticMessage)}</span>`;
+        setFooterVisibility(true);
       }
-      screenEl.innerHTML = buildLoadingScreenMarkup(message);
-      if (message && hintEl) {
-        hintEl.innerHTML = `<span class="bbs-loading-text">${esc(message)}</span>`;
-      }
+
+      core._loadingTimer = setTimeout(() => {
+        screenEl.parentElement?.classList.add('is-loading');
+        screenEl.classList.add('is-loading');
+        screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
+      }, 20);
     },
     buildLoadingScreenMarkup,
     setBusy,

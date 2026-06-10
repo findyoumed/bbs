@@ -23,6 +23,14 @@ export function createSignupScreens(deps) {
     });
   }
 
+  // [LOG: 20260610_1525] 회원가입 화면 로딩 상태 클래스 제거 도우미
+  function clearLoadingState() {
+    if (screenEl?.parentElement) {
+      screenEl.parentElement.classList.remove('is-loading');
+    }
+    screenEl?.classList.remove('is-loading');
+  }
+
   function showSignupMenu(options = {}) {
     const errorText = options.error ? `※ ${options.error}` : '';
 
@@ -45,6 +53,7 @@ export function createSignupScreens(deps) {
       + `</div>`
       + `</div>`
     );
+    clearLoadingState();
   }
 
   function showSignupAgreement(options = {}) {
@@ -77,6 +86,7 @@ export function createSignupScreens(deps) {
     const privacyBox = document.getElementById('privacy-box');
     if (tosBox) tosBox.scrollTop = 0;
     if (privacyBox) privacyBox.scrollTop = 0;
+    clearLoadingState();
   }
 
   function renderEmailScreen(options = {}) {
@@ -105,6 +115,7 @@ export function createSignupScreens(deps) {
       + `</div>`
       + `</div>`
     );
+    clearLoadingState();
   }
 
   // [LOG: 20260424_1947] 통신동호회 또는 PC 명칭이 들어오면 초기화면으로 표시
@@ -134,6 +145,7 @@ export function createSignupScreens(deps) {
       + `</div>`
       + `</div>`
     );
+    clearLoadingState();
   }
 
   return {

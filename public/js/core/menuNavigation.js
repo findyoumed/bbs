@@ -31,6 +31,7 @@ export function createMenuNavigation(deps) {
     renderScreenSequential,
     screenEl,
     setHint,
+    setLoading,
     setPrompt,
     state,
     updateURL
@@ -97,7 +98,7 @@ export function createMenuNavigation(deps) {
       void updateURL();
     }
 
-    screenEl.innerHTML = '<div class="loading">연결하는 중 입니다...</div>';
+    setLoading('연결하는 중입니다..');
     setHint('');
     setPrompt('');
 
@@ -164,7 +165,7 @@ export function createMenuNavigation(deps) {
       void updateURL();
     }
 
-    screenEl.innerHTML = '<div class="loading">연결하는 중 입니다...</div>';
+    setLoading('연결하는 중입니다..');
     setHint('');
     setPrompt('');
 

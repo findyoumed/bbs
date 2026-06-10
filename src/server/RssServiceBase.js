@@ -20,10 +20,10 @@ class RssServiceBase {
     if (persistent) { this._setMemoryCacheEntry(this.feedCache, cacheKey, persistent, this.cacheTtlMs); return persistent; }
     let val;
     try {
-      // [LOG: 20260610_1500] Add 3 second timeout to avoid hanging on slow RSS servers
+      // [LOG: 20260610_1500] Add 2 second timeout to avoid hanging on slow RSS servers
       const res = await this.fetchImpl(url, {
         headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' },
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(2000)
       });
       if (!res?.ok) throw new Error(`upstream failed${res?.status ? ` (${res.status})` : ''}`);
       val = parser(await res.text());

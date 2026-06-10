@@ -7,7 +7,7 @@ export function createPostScreens(deps) {
     ansiToHTML, applyCommandFooter, buildPostListAnsi, buildPostViewAnsi, buildAttachmentListAnsi,
     cmdInput, createPost, downloadAttachment, esc, findBoardByKey, getBoardKey, getBoardSelectTitle,
     getCommandFooterText, getSupportedFooterText, loadAttachments, loadPost, loadPosts, replyPost,
-    screenEl, setHint, setPrompt, showMain, state, updatePost, updateURL,
+    screenEl, setHint, setLoading, setPrompt, showMain, state, updatePost, updateURL,
     renderScreenSequential
   } = deps;
 
@@ -37,7 +37,7 @@ export function createPostScreens(deps) {
     if (!fromHistory) {
       void updateURL(true);
     }
-    screenEl.innerHTML = '<div class="loading">연결하는 중 입니다...</div>';
+    setLoading('연결하는 중입니다..');
     const list = await loadAttachments(resolvedBoardId, resolvedPostId); state._attachments = list || [];
     const rendered = ansiToHTML(buildAttachmentListAnsi(state._attachments));
     screenEl.innerHTML = `<div class="ansi-screen">${rendered.html}</div>`;

@@ -11,6 +11,7 @@ export function createMemoScreens(deps) {
         getMenuNodeByKey,
         screenEl,
         setHint,
+        setLoading,
         setPrompt,
         state,
         updateURL
@@ -58,7 +59,7 @@ export function createMemoScreens(deps) {
         if (!fromHistory) {
             updateURL();
         }
-        screenEl.innerHTML = '<div class="loading">쪽지함을 불러오는 중..</div>';
+        setLoading('데이터를 송수신 중입니다..');
 
         try {
             const memos = await apiFetch('/api/memos');
@@ -83,7 +84,7 @@ export function createMemoScreens(deps) {
             return;
         }
         if (!fromHistory) updateURL();
-        screenEl.innerHTML = '<div class="loading">쪽지 내용을 읽는 중..</div>';
+        setLoading('데이터를 송수신 중입니다..');
 
         try {
             const memo = await apiFetch(`/api/memos/${memoId}`);
@@ -225,7 +226,7 @@ export function createMemoScreens(deps) {
             if (flow) {
                 flow.sending = true;
             }
-            setHint('쪽지를 발송하는 중입니다...');
+            setHint('쪽지를 발송하는 중입니다..');
             await apiFetch('/api/memos', {
                 method: 'POST',
                 body: JSON.stringify({

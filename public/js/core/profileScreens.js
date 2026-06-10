@@ -2,7 +2,7 @@
  * [LOG: 20260410_2315] 사용자 프로필 화면 처리 모듈
  */
 export function createProfileScreens(deps) {
-  const { apiFetch, esc, getCommandFooterText, getSupportedFooterText, screenEl, updateURL, setHint, setPrompt, cmdInput, state } = deps;
+  const { apiFetch, esc, getCommandFooterText, getSupportedFooterText, screenEl, setLoading, updateURL, setHint, setPrompt, cmdInput, state } = deps;
 
   function shouldAutoFocusCommandInput() {
     return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -42,7 +42,7 @@ export function createProfileScreens(deps) {
     state.screen = 'profile';
     state._profileUserId = userId;
     if (!fromHistory) updateURL();
-    screenEl.innerHTML = '<div class="loading">연결하는 중 입니다...</div>';
+    setLoading('연결하는 중입니다..');
     try {
       // [LOG: 20260429_0606] Missing profile routes should render an inline
       // fail-closed screen instead of surfacing a 404 fetch error.

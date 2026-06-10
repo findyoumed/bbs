@@ -152,7 +152,8 @@ export function createSignupFlow(deps) {
     async function handleSignupMethodChoice(rawChoice) {
       const choice = String(rawChoice || '').trim().toLowerCase();
       if (!choice) {
-        showSignupMenu({ error: '??? ?????.' });
+        // [LOG: 20260610_1521] 잘못된 명령 에러 표시 제거
+        showSignupMenu();
         attachSignupMenuEvents();
         return;
       }
@@ -170,7 +171,8 @@ export function createSignupFlow(deps) {
 
       const method = SIGNUP_METHOD_LOOKUP[choice];
       if (!method) {
-        showSignupMenu({ error: '??? ?????.' });
+        // [LOG: 20260610_1521] 잘못된 명령 에러 표시 제거
+        showSignupMenu();
         attachSignupMenuEvents();
         return;
       }

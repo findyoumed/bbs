@@ -217,7 +217,8 @@ body.theme-blue .write-field textarea {
 }
 
 /* [LOG: 20260427_1055] UI 조급함 해소: 로딩 중에도 구분선은 항상 표시 */
-#terminal-footer::before {
+/* [LOG: 20260610_1720] 로딩 중 가로줄 중복 노출 방지를 위해 hidden 상태일 때는 명시적으로 제거 */
+#terminal-footer:not([data-footer-state="hidden"])::before {
     content: '────────────────────────────────────────────────────────────────────────────────';
     display: block;
     color: var(--hr-color, #fff);
@@ -229,6 +230,13 @@ body.theme-blue .write-field textarea {
     white-space: pre;
     text-align: left;
     width: 100%;
+}
+
+/* [LOG: 20260610_1720] 로딩 상태 가로줄 및 푸터 완전 박멸 */
+#terminal-container.is-loading #terminal-footer,
+#terminal-container.is-loading #terminal-footer::before {
+    display: none !important;
+    content: none !important;
 }
 
 #cmd-hint {
@@ -276,18 +284,22 @@ body.theme-blue .write-field textarea {
 #terminal-prompt-row {
     display: flex;
     align-items: center;
-    gap: 1ch;
+    gap: 0 !important;
     min-height: 18px;
     width: 100%;
 }
 
 #terminal-prompt-row.terminal-prompt-row--inline {
-    gap: 1ch;
+    gap: 0 !important;
     min-height: 0;
 }
 
+#terminal-prompt-row label {
+    margin-right: 0 !important;
+}
+
 #terminal-prompt-row.terminal-prompt-row--inline label {
-    margin-right: 0;
+    margin-right: 0 !important;
 }
 
 #cmd-input-wrapper {
@@ -328,8 +340,11 @@ body.theme-blue .write-field textarea {
 #terminal-footer label {
     color: #ffffff;
     cursor: default;
-    white-space: nowrap;
+    white-space: pre !important;
     flex-shrink: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-width: 0 !important;
 }
 
 #cmd-input {
@@ -1952,7 +1967,7 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
         line-height: inherit !important;
     }
 
-    #terminal-footer::before {
+    #terminal-footer:not([data-footer-state="hidden"])::before {
         display: block !important;
         opacity: 1 !important;
         color: #ffffff !important;
@@ -1985,4 +2000,41 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 #terminal-container.is-loading .cmd-clickable {
     pointer-events: none !important;
     cursor: not-allowed !important;
+}
+
+#terminal-container.is-loading #terminal-screen > * {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+#terminal-container.is-loading .loading {
+    border: none !important;
+    outline: none !important;
+}
+
+/* [LOG: 20260610_2000] 로딩 중 레이아웃 흔들림 방지: 푸터 틀은 유지하되 내용만 숨김 */
+#terminal-container.is-loading #terminal-footer {
+    display: flex !important;
+    visibility: visible !important;
+    min-height: 24px; /* 최소 높이 보장 */
+}
+
+#terminal-container.is-loading #terminal-footer > * {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+#terminal-container.is-loading .terminal-hud,
+#terminal-container.is-loading .scroll-bottom-indicator {
+    display: none !important;
+}
+
+#terminal-container.is-loading #terminal-screen > :not(.loading):not(.ansi-screen) {
+    display: none !important;
+}
+
+/* [LOG: 20260610_1920] .loading 클래스가 화면에 존재할 때 푸터 자동 숨김 (Fail-safe) */
+#terminal-container:has(.loading) #terminal-footer,
+#terminal-container:has(.loading) .terminal-hud {
+    display: none !important;
 }

@@ -372,6 +372,7 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
   })));
   const unavailable = results.filter((result) => result.feed.unavailable);
   const cutoffTime = getFreshNewsCutoffTime();
+  const nowStr = new Date().toISOString();
   const items = results.flatMap((result) => (result.feed.items || [])
     .filter((item) => isFreshNewsItem(item, cutoffTime))
     .map((item) => ({
@@ -382,14 +383,29 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
       author: service._buildAuthor(result.source.newspaperTitle, item.author)
     })));
 
-  await enrichMissingNewsDates(service, items);
-  // [LOG: 20260506_0907] Merge duplicate articles collected from overlapping RSS sources before numbering.
-  const datedItems = dedupeNewsItems(
-    service,
-    items.filter((item) => String(item?.dateTime || item?.date || '').trim())
-  );
-  // [LOG: 20260610_1413] Keep only articles within 3 days of the latest article date
-  const finalItems = applyThreeDayFilter(service, datedItems);
+  // [LOG: 20260610_1800] Optimization: Limit date enrichment to top 12 items missing dates
+  // to avoid hundreds of serial fetches on first-load topics.
+  await enrichMissingNewsDates(service, items, 12);
+
+  // [LOG: 20260610_1800] Optimization: Fallback to current time if date is still missing
+  // to prevent recent articles from being dropped by the dedupe/dated filter.
+  const itemsWithDates = items.map(item => {
+    if (!String(item?.dateTime || item?.date || '').trim()) {
+      return { ...item, date: nowStr, dateTime: nowStr, isDateFallback: true };
+    }
+    return item;
+  });
+
+  const datedItems = dedupeNewsItems(service, itemsWithDates);
+  
+  // [LOG: 20260610_1800] Optimization: Sort and clip to top 150 items to reduce client-side JSON parsing load.
+  datedItems.sort((left, right) => {
+    const rightTime = Date.parse(right.dateTime || right.date || 0) || 0;
+    const leftTime = Date.parse(left.dateTime || left.date || 0) || 0;
+    return rightTime - leftTime;
+  });
+
+  const finalItems = applyThreeDayFilter(service, datedItems).slice(0, 150);
 
   const allFail = unavailable.length === results.length;
   const message = unavailable.length > 0 ? `실패: ${unavailable.map((result) => result.source.newspaperTitle).join(', ')}` : '';
@@ -407,7 +423,7 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
     sourceUrl: topic.sources.length === 1
       ? topic.sources[0].rss
       : `${topic.sources.map((source) => source.newspaperTitle).join(', ')} / ${topic.title}`,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt: nowStr,
     unavailable: allFail,
     message: allFail ? (results[0]?.feed?.message || message) : message,
     items: finalItems.map((item, index) => ({
@@ -418,9 +434,10 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
   };
 }
 
-async function enrichMissingNewsDates(service, items) {
+async function enrichMissingNewsDates(service, items, maxEnrich = 10) {
   const targets = (Array.isArray(items) ? items : [])
-    .filter((item) => item?.link && !String(item.date || '').trim());
+    .filter((item) => item?.link && !String(item.date || '').trim())
+    .slice(0, maxEnrich);
 
   if (!targets.length) {
     return;

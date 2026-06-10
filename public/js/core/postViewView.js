@@ -13,6 +13,7 @@ export function createPostViewView(deps) {
     loadMenuTree,
     loadPost,
     screenEl,
+    setLoading,
     state,
     updateURL,
     renderScreenSequential
@@ -23,7 +24,7 @@ export function createPostViewView(deps) {
     state._postNavigation = null;
     if (!state.post || String(state.post.id) !== String(postId)) state.post = { id: postId };
     if (!fromHistory) updateURL();
-    screenEl.innerHTML = '<div class="loading">연결하는 중 입니다...</div>';
+    setLoading('연결하는 중입니다..');
     const boardKey = String(boardId || '').trim();
     const data = await loadPost(boardKey, postId);
     state.post = data.post;

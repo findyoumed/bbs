@@ -109,36 +109,45 @@ export function createSignupFlowUi(deps) {
     }
   }
 
-  function showSignupMenu(options = {}) {
-    const errorText = options.error ? `※ ${options.error}` : '';
-
-    screenEl.innerHTML = (
-      `<div class="entry-screen entry-screen--signup">`
-      + `<div class="entry-signup-top">`
-      + `<div class="entry-signup-brand">${signupHeading.brandHtml}</div>`
-      + `<div class="entry-signup-headings">`
-      + `<div class="entry-signup-title">${esc(signupHeading.title)}</div>`
-      + `<div class="entry-signup-subtitle">${esc(signupHeading.subtitle)}</div>`
-      + `</div>`
-      + `<div class="entry-signup-brand entry-signup-brand--ghost">&nbsp;</div>`
-      + `</div>`
-      + `<div class="entry-signup-rule"></div>`
-      + `<div class="entry-signup-method-list">`
-      + SIGNUP_METHODS.map((method) => (
-        `<button type="button" class="entry-signup-method" data-signup-method="${method.key}">`
-        + `<span class="entry-signup-method-number">${method.key}.</span>`
-        + `<span class="entry-signup-method-copy">`
-        + `<span class="entry-signup-method-label">${esc(method.label)}</span>`
-        + `<span class="entry-signup-method-desc">${esc(method.description)}</span>`
-        + `</span>`
-        + `</button>`
-      )).join('')
-      + `</div>`
-      + `<div class="entry-signup-rule entry-signup-rule--tight"></div>`
-      + `<div class="entry-error">${errorText}</div>`
-      + `</div>`
-    );
+  // [LOG: 20260610_1525] 회원가입 화면 로딩 상태 클래스 제거 도우미
+  function clearLoadingState() {
+    if (screenEl?.parentElement) {
+      screenEl.parentElement.classList.remove('is-loading');
+    }
+    screenEl?.classList.remove('is-loading');
   }
+
+  function showSignupMenu(options = {}) {
+     const errorText = options.error ? `※ ${options.error}` : '';
+
+     screenEl.innerHTML = (
+       `<div class="entry-screen entry-screen--signup">`
+       + `<div class="entry-signup-top">`
+       + `<div class="entry-signup-brand">${signupHeading.brandHtml}</div>`
+       + `<div class="entry-signup-headings">`
+       + `<div class="entry-signup-title">${esc(signupHeading.title)}</div>`
+       + `<div class="entry-signup-subtitle">${esc(signupHeading.subtitle)}</div>`
+       + `</div>`
+       + `<div class="entry-signup-brand entry-signup-brand--ghost">&nbsp;</div>`
+       + `</div>`
+       + `<div class="entry-signup-rule"></div>`
+       + `<div class="entry-signup-method-list">`
+       + SIGNUP_METHODS.map((method) => (
+         `<button type="button" class="entry-signup-method" data-signup-method="${method.key}">`
+         + `<span class="entry-signup-method-number">${method.key}.</span>`
+         + `<span class="entry-signup-method-copy">`
+         + `<span class="entry-signup-method-label">${esc(method.label)}</span>`
+         + `<span class="entry-signup-method-desc">${esc(method.description)}</span>`
+         + `</span>`
+         + `</button>`
+       )).join('')
+       + `</div>`
+       + `<div class="entry-signup-rule entry-signup-rule--tight"></div>`
+       + `<div class="entry-error">${errorText}</div>`
+       + `</div>`
+     );
+     clearLoadingState();
+   }
 
   function showSignupAgreement(options = {}) {
     const errorText = options.error ? `※${options.error}` : '';
@@ -177,6 +186,7 @@ export function createSignupFlowUi(deps) {
     if (privacyBox) {
       privacyBox.scrollTop = 0;
     }
+    clearLoadingState();
   }
 
   function renderEmailScreen(options = {}) {
@@ -223,6 +233,7 @@ export function createSignupFlowUi(deps) {
       + `</form>`
       + `</div>`
     );
+    clearLoadingState();
   }
 
   return {

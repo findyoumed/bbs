@@ -13,7 +13,7 @@ export const UI_TEXT = {
   ERROR: '오류',
   SUCCESS: '성공',
   WARNING: '경고',
-  LOADING: '불러오는 중...',
+  LOADING: '불러오는 중..',
   SEARCH: '검색',
   ID: '아이디',
   PASSWORD: '비밀번호',
@@ -48,7 +48,7 @@ export const UI_TEXT = {
   GO_TO_UPPER: '상위 메뉴로 이동합니다.',
   
   // Feedback
-  DATA_LOADING: '데이터를 송수신 중입니다...',
+  DATA_LOADING: '데이터를 송수신 중입니다..',
   RENDER_ERROR: '화면 출력 중 일부 오류가 발생했습니다.',
 
   // Help & Categories

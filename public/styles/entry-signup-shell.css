@@ -56,10 +56,12 @@
     background: rgba(255, 255, 255, 0.8);
 }
 
+/* [LOG: 20260610_1521] 회원가입 메뉴 줄간격을 단단하게 조정 */
 .entry-signup-method-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: flex-start; /* [LOG: 20260610_1650] 호버 영역을 텍스트 너비로 제한 */
+    gap: 0;
 }
 
 .entry-signup-method {
@@ -69,13 +71,14 @@
     color: #fff;
     font-family: inherit;
     font-size: inherit;
-    line-height: 1.45;
+    line-height: 1.4;
     text-align: left;
-    padding: 2px 4px;
+    padding: 0 4px;
     display: flex;
     align-items: flex-start;
     gap: 8px;
     cursor: pointer;
+    transition: background 0.2s; /* [LOG: 20260610_1650] 다른 clickable 요소와 호버 피드백 일관성 유지 */
 }
 
 .entry-signup-method:hover,
@@ -103,6 +106,10 @@
 .entry-signup-method-desc {
     color: #aaa;
     font-size: 12px;
+}
+
+.entry-signup-method-desc:empty {
+    display: none;
 }
 
 .entry-signup-agreement {

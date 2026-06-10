@@ -101,6 +101,16 @@ export function createWeatherScreens(deps) {
     renderWeatherRegionHotspots(rendered.screenNode, items, bodyOffset, result.half);
   }
 
+  function normalizeRegionName(name) {
+    const mapping = {
+      '서울특별시': '서울시',
+      '강원특별자치도': '강원도',
+      '전북특별자치도': '전라북도',
+      '제주특별자치도': '제주도'
+    };
+    return mapping[name] || name;
+  }
+
   async function showWeatherMenu(fromHistory = false) {
     state.screen = 'weather-menu';
     if (!fromHistory) { updateURL(); pushHistory(); }
@@ -108,9 +118,9 @@ export function createWeatherScreens(deps) {
     const data = await loadWeatherRegions();
     state.serviceData = data;
     const items = [
-      { door: '0', name: '내위치 정보', kind: 'local', id: 'weather-local', boardId: 'weather-local' },
+      { door: '0', name: '내 위치 날씨', kind: 'local', id: 'weather-local', boardId: 'weather-local' },
       ...(data?.items || []).map((region) => ({
-        door: region.door, name: region.title || region.province,
+        door: region.door, name: normalizeRegionName(region.title || region.province),
         id: `weather-${region.door}`, boardId: `weather-${region.door}`
       }))
     ];
@@ -178,7 +188,7 @@ export function createWeatherScreens(deps) {
     const isSameRegion = String(state.serviceData?.regionDoor) === String(regionDoor)
       && Array.isArray(state.serviceData?.weatherItems) && Array.isArray(state.serviceData?.dailyItems);
     if (!isSameRegion) {
-      if (typeof setLoading === 'function') setLoading('날씨 정보를 불러오는 중 입니다...');
+      if (typeof setLoading === 'function') setLoading('연결하는 중입니다..');
       const feed = await loadWeatherFeed(regionDoor);
       const regions = state.serviceData?.items || [];
       const region = regions.find((item) => String(item.door) === String(regionDoor));

@@ -214,8 +214,10 @@ export function createTerminalHintFooter(deps) {
     }
 
     if (cmdPromptEl) {
-      // [LOG: 20260506_1804] 문자열 끝 공백은 제거하고 CSS gap(1ch)으로 일관된 간격 유지
-      cmdPromptEl.textContent = promptText.trimEnd();
+      // [LOG: 20260610_2025] CSS gap을 제거하고 white-space: pre를 적용했으므로 
+      // 일반 공백(' ')을 사용하여 터미널의 정직한 1칸 간격을 구현함.
+      const trimmed = promptText.trimEnd();
+      cmdPromptEl.textContent = trimmed ? (trimmed + ' ') : '';
     }
   }
 

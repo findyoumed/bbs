@@ -1,3 +1,356 @@
+## [2026-06-10 20:30] 터미널 정적 로딩 전환 및 프롬프트 공백 완벽 고정
+
+**LOG_ID: 20260610_2030**
+목표:
+- 로딩 중의 역동적인 애니메이션(점이 움직이는 등)이 오히려 터미널답지 않다는 피드백을 반영하여 정적인 화면으로 전환한다.
+- "선택 >>" 뒤의 공백이 환경에 따라 1칸 또는 2칸으로 변하는 현상을 기술적으로 완전 차단하여 무조건 1칸으로 고정한다.
+
+변경 파일:
+- `public/js/core/terminalUiCore.js`
+- `public/js/core/terminalHintFooter.js`
+- `public/style.css`
+- `WORK_LOG.md`
+
+수행 작업:
+1. **정적 로딩 구현**: `terminalUiCore.js`에서 로딩 애니메이션(`setInterval`)을 제거하고, "연결하는 중입니다.." 문구가 정지된 상태로 즉시 나타나도록 수정했다. 응답 유예 시간을 20ms로 줄여 즉각적인 반응성을 확보했다.
+2. **공백 고정 (CSS/JS 협업)**:
+   - `public/style.css`에서 `#terminal-footer label`에 `white-space: pre !important`와 `gap: 0 !important`, `margin: 0 !important`, `min-width: 0 !important`를 적용하여 브라우저나 미디어 쿼리가 임의로 여백을 추가하지 못하도록 철저히 봉쇄했다.
+   - `public/js/core/terminalHintFooter.js`에서 특수 공백 대신 일반 공백(`' '`)을 사용하여 표준 터미널 폰트와의 정렬 궁합을 맞췄다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 무결성 검증 완료
+
+기대:
+- 로딩 시 화면 덜컹거림이나 불필요한 움직임 없이 깔끔하게 "연결하는 중입니다.." 글자만 노출된다.
+- 프롬프트 뒤의 여백이 어떤 클릭이나 화면 전환 시에도 정확히 1칸으로 일정하게 유지된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 19:45] 로딩 화면 반응성 및 터미널 체감 최적화 (Snappy UI)
+
+**LOG_ID: 20260610_1945**
+목표:
+- "연결하는 중입니다.." 로딩 화면이 너무 오래 지속되거나 불필요하게 자주 나타나는 현상을 개선하여 실제 터미널처럼 빠릿빠릿한(Snappy) 반응성을 제공한다.
+
+변경 파일:
+- `public/js/core/terminalUiCore.js`
+- `public/js/core/newsScreens.js`
+- `public/js/core/weatherScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. **스마트 로딩 지연 도입 (Smart Delayed Loading)**: `terminalUiCore.js`의 `setLoading` 함수가 호출된 후 실제 화면을 지우고 로딩 메시지를 띄우기까지 **60ms의 유예 시간**을 두도록 수정했다. 데이터가 60ms 이내에 도착하면 로딩 화면이 아예 나타나지 않아 체감 속도가 비약적으로 향상된다.
+2. **뉴스 주제 캐시 구현**: `newsScreens.js` 내부에 모듈 수준의 `topicCache`를 추가하여, 한 번 방문한 뉴스 카테고리 사이를 이동할 때는 서버 호출 없이 **즉시(Instant)** 화면이 전환되도록 개선했다.
+3. **터미널 애니메이션 강화**: 로딩 화면의 점(`...`) 애니메이션 속도를 250ms로 가속하고, 문구가 업데이트되는 방식을 개선하여 실제 터미널에서 작업이 진행 중인 듯한 생동감을 부여했다.
+4. **대기 시간 단축**: 뉴스 목록 로딩 시의 개별 지연 시간을 150ms에서 80ms로 줄여 전반적인 인터페이스 응답성을 높였다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 무결성 검증 완료
+
+기대:
+- 메뉴 이동이나 뉴스 카테고리 변경 시, 빠른 인터넷 환경이나 캐시된 데이터의 경우 로딩 화면 없이 즉시 화면이 전환된다.
+- 로딩 화면이 나타나더라도 더 역동적인 애니메이션과 짧은 대기 시간 덕분에 터미널 특유의 "빠른 처리" 느낌을 준다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 18:55] 명령어 프롬프트("선택 >>") 공백 안정화 (Non-breaking space 적용)
+
+**LOG_ID: 20260610_1855**
+목표:
+- 명령어 입력줄(`선택 >>`)에서 공백이 사라지거나 2칸으로 넓어지는 현상을 방지하고, 항상 일관된 1칸 공백을 유지한다.
+
+변경 파일:
+- `public/js/core/terminalHintFooter.js`
+- `public/style.css`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/js/core/terminalHintFooter.js`의 `setPrompt` 함수에서 일반 공백 대신 브라우저가 임의로 제거하지 못하는 **Non-breaking space(`\u00A0`)**를 프롬프트 끝에 강제 추가하도록 수정했다.
+2. `public/style.css`에서 레이아웃에 간섭을 주던 `#terminal-prompt-row`의 `gap` 속성을 `0`으로 고정하여 텍스트 기반 공백만 정밀하게 표현되도록 했다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 무결성 검증 완료
+
+기대:
+- 클릭, 화면 전환 등 어떤 상황에서도 `선택 >>` 뒤에 정확히 1칸의 여백이 유지되며 커서가 위치한다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 18:35] 명령어 프롬프트("선택 >>") 공백 2칸으로 보이는 현상 수정
+
+**LOG_ID: 20260610_1835**
+목표:
+- 명령어 입력줄(`선택 >>`)에서 공백이 가끔 2칸으로 넓게 보이는 시각적 버그를 해결하여 일관된 1칸 공백을 제공한다.
+
+변경 파일:
+- `public/js/core/terminalHintFooter.js`
+- `public/style.css`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/style.css`에서 `#terminal-prompt-row`의 `gap: 1ch` 속성을 `0`으로 수정했다. 기존에는 CSS gap과 블록형 커서가 각각 공간을 차지하여 공백이 2칸처럼 보였다.
+2. `public/js/core/terminalHintFooter.js`의 `setPrompt` 함수에서 프롬프트 문자열 끝의 공백을 제거하던 `trimEnd()` 로직을 수정하고, 대신 비어있지 않은 프롬프트에는 명시적으로 공백 1칸(` `)을 추가하도록 변경했다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 무결성 검증 완료
+
+기대:
+- `선택 >>` 프롬프트 바로 뒤에 커서가 위치하며, 공백이 1칸으로 일정하게 유지된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 18:10] 뉴스 목록 로딩 속도 최적화 (서버측 개선)
+
+**LOG_ID: 20260610_1810**
+목표:
+- 뉴스 목록(`GO NEWS`) 진입 시 "뉴스 목록을 불러오는 중입니다.." 화면이 너무 오래 지속되는 현상을 개선하여 사용자 체감 속도를 높인다.
+
+변경 파일:
+- `src/server/RssNewsTopicFeedHelpers.js`
+- `src/server/RssServiceBase.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `src/server/RssNewsTopicFeedHelpers.js`에서 날짜 정보가 없는 기사의 메타데이터를 보강하는 `enrichMissingNewsDates` 작업의 대상을 주제당 최대 12개로 제한했다. (기존에는 모든 기사를 전수 조사하여 매우 느렸음)
+2. 날짜 보강 후에도 날짜가 없는 기사는 목록에서 삭제하지 않고 현재 시간을 기준으로 하는 `fallback` 날짜를 부여하여 최근 뉴스로서 목록에 남도록 개선했다.
+3. 클라이언트로 전달되는 기사 목록의 최대 개수를 150개로 제한하여 불필요하게 큰 JSON 데이터 전송 및 파싱 부하를 줄였다.
+4. `src/server/RssServiceBase.js`에서 외부 RSS 서버 응답 대기 시간(timeout)을 3초에서 2초로 단축하여, 응답이 느린 특정 언론사 때문에 전체 뉴스 생성이 지연되는 현상을 완화했다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 무결성 검증
+
+기대:
+- 뉴스 주제를 클릭했을 때 대기 시간이 이전보다 수 초 이상 단축되며, 특히 캐시가 없는 상태에서의 첫 로딩 속도가 비약적으로 향상된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 17:40] 날씨 메뉴 지역 명칭 단축 (서울특별시 → 서울시 등)
+
+**LOG_ID: 20260610_1740**
+목표:
+- 날씨 서비스 지역 선택 메뉴에서 지나치게 긴 행정구역 명칭을 친숙하고 짧은 명칭으로 변경하여 가독성을 높인다.
+
+변경 파일:
+- `public/js/core/weatherScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/js/core/weatherScreens.js`에 `normalizeRegionName` 헬퍼 함수를 추가하여 특정 지역명을 변환하는 로직을 구현했다.
+   - 서울특별시 → 서울시
+   - 강원특별자치도 → 강원도
+   - 전북특별자치도 → 전라북도
+   - 제주특별자치도 → 제주도
+2. `showWeatherMenu` 함수에서 데이터를 불러온 후 항목을 생성할 때 위 헬퍼 함수를 적용하도록 수정했다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 무결성 검증
+
+기대:
+- 날씨 메뉴(`GO WEATHER`) 접속 시 각 지역명이 요청한 대로 짧게 표시되며, 마우스 호버 시에도 변경된 명칭이 나타난다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 17:35] 날씨 메뉴 버튼 명칭 변경 (내위치 정보 → 내 위치 날씨)
+
+**LOG_ID: 20260610_1735**
+목표:
+- 날씨 서비스 메인 메뉴의 0번 항목 명칭을 "내위치 정보"에서 "내 위치 날씨"로 변경하여 사용자가 메뉴의 역할을 더 직관적으로 이해할 수 있도록 개선한다.
+
+변경 파일:
+- `public/js/core/weatherScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/js/core/weatherScreens.js`의 `showWeatherMenu` 함수 내 `items` 배열에서 첫 번째 항목의 `name` 값을 '내위치 정보'에서 '내 위치 날씨'로 수정했다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 무결성 검증
+
+기대:
+- 날씨 서비스(`GO WEATHER`) 진입 시 0번 항목이 "0. 내 위치 날씨"로 표시되며, 마우스 호버 시에도 동일한 텍스트가 노출된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 17:05] 개발 환경 API Rate Limit 완화 (429 에러 해결)
+
+**LOG_ID: 20260610_1705**
+목표:
+- 로컬 개발 환경(`localhost`)에서 잦은 새로고침이나 초기 로딩 시 다수의 API 요청으로 인해 발생하는 429(Too Many Requests) 오류를 해결한다.
+
+변경 파일:
+- `src/server/requestGuards.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `src/server/requestGuards.js`에서 `env.NODE_ENV`가 `development`이거나 설정되지 않은 경우(기본값)에도 `test` 환경과 마찬가지로 `rateLimitMax`를 1000으로 설정하도록 로직을 개선했다. (기존 60 → 1000)
+
+실행:
+- `node --check src/server/requestGuards.js` 문법 체크 완료
+
+기대:
+- 로컬 개발 서버 이용 시 더 이상 "요청이 너무 많습니다"라는 429 에러 팝업이 뜨지 않고 안정적으로 모든 API가 호출된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 16:55] 회원가입 메뉴(/log/signup) 마우스 호버 영역 및 반응 최적화
+
+**LOG_ID: 20260610_1655**
+목표:
+- 회원가입 방식 선택 메뉴에서 버튼의 마우스 호버 영역이 화면 전체 너비로 잡히던 현상을 텍스트 너비만큼으로 제한하여 다른 화면과 일관성을 맞춘다.
+- 호버 시 배경색 변화에 부드러운 전환 효과(transition)를 추가하여 시각적 완성도를 높인다.
+
+변경 파일:
+- `public/styles/entry-signup-shell.css`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/styles/entry-signup-shell.css`에서 `.entry-signup-method-list`에 `align-items: flex-start;`를 추가하여 하위 버튼들이 부모 너비를 가득 채우지 않고 내용물만큼만 너비를 가지도록 수정했다.
+2. `.entry-signup-method`에 `transition: background 0.2s;`를 추가하여 호버 시 배경색이 즉각 바뀌지 않고 부드럽게 변하도록 개선했다.
+
+실행:
+- `npm run smoke:vercel-ready` 정적 자산 무결성 검증
+
+기대:
+- `/log/signup` 화면에서 메뉴 항목 오른쪽의 빈 공간을 마우스로 가리켜도 호버 효과가 나타나지 않으며, 텍스트 위에 올렸을 때만 부드럽게 강조 표시된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 16:45] 로딩 화면 가로줄 및 "T" 표시 제거 (UI 정리)
+
+**LOG_ID: 20260610_1645**
+목표:
+- "연결하는 중입니다.." 로딩 화면이 표시될 때 불필요하게 노출되던 흰색 가로줄(구분선)과 입력 중이던 명령(예: "T")이 화면에 남는 현상을 제거하여 깔끔한 로딩 화면을 제공한다.
+
+변경 파일:
+- `public/js/core/terminalUiCore.js`
+- `public/style.css`
+- `public/js/core/menuNavigation.js`
+- `public/js/core/postListView.js`
+- `public/js/core/postScreens.js`
+- `public/js/core/postViewView.js`
+- `public/js/core/profileScreens.js`
+- `public/js/core/systemScreens.js`
+- `public/js/core/newsScreens.js`
+- `public/js/core/i18n.js`
+- `public/js/core/commandRouterMemo.js`
+- `public/js/core/memoScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/js/core/terminalUiCore.js`의 `buildLoadingScreenMarkup` 함수에서 명령어 에코(`command-echo`) 로직을 제거하여 로딩 중에 입력된 글자(T 등)가 화면 상단에 표시되지 않도록 수정했다.
+2. `public/style.css`에서 `#terminal-container.is-loading` 상태일 때 푸터(힌트바, 프롬프트 포함), HUD, 스크롤 버튼 등 모든 부가 UI 요소를 강제로 숨기도록(`display: none`) 규칙을 강화했다. 또한 `.loading` 요소가 존재할 때의 Fail-safe 규칙을 추가했다.
+3. `menuNavigation.js`, `postListView.js`, `systemScreens.js`, `memoScreens.js` 등 모든 화면 모듈에서 개별적으로 처리하던 로딩 로직을 중앙 `setLoading` 함수 사용으로 표준화하고, 이에 따른 의존성 주입(Dependency Injection) 누락 문제를 해결했다.
+4. 소스 코드 전반에서 "연결하는 중 입니다..." 또는 "연결하는 중입니다..." 등으로 혼용되던 문구를 사용자 요청에 맞춰 "연결하는 중입니다.." (공백 없음, 점 2개)로 통일했다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 및 정적 자산 무결성 검증
+
+기대:
+- 화면 이동 시 로딩 오버레이가 나타날 때, 이전 화면의 흔적이나 불필요한 가로줄 없이 중앙에 "연결하는 중입니다.." 메시지만 깨끗하게 표시된다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 16:01] 회원가입 화면에서 힌트바 상위(P) 및 초기화면(T) 마우스 클릭 동작 미작동 버그 수정
+
+**LOG_ID: 20260610_1601**
+목표:
+- 회원가입(SIGNUP) 화면에서 마우스로 힌트바 내의 상위(P) 또는 초기화면(T) 단축키를 클릭했을 때 메인 로비 대문으로 정상 취소/리다이렉트가 되도록 구현한다.
+
+변경 파일:
+- `public/js/core/commandRouterEntry.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/js/core/commandRouterEntry.js` 파일 내 전역 엔트리 화면 커맨드 핸들러 `createEntryCommandHandler`에 `state` 종속성을 주입하고, `handleEntryCommand` 내부에 `s === 'signup'` 분기를 신설했다.
+2. 회원가입 화면 상태에서 `T` 또는 `P/M/B` 입력(클릭)이 인입될 경우, OAuth 및 가입 관련 로컬/세션 스토리지 상태를 깨끗이 초기화하고 `showMain()` 함수를 호출하여 대문으로 복귀하게끔 예외 라우팅을 구현했다.
+
+실행:
+- `node --check public/js/core/commandRouterEntry.js` 문법 검사
+- `npm run smoke:vercel-ready` 빌드 검증
+
+기대:
+- 회원가입 메뉴 및 약관 동의 화면 등 가입 진행 중일 때, 힌트바에 표기된 상위(P) 및 초기화면(T) 텍스트를 마우스로 클릭하는 즉시 정상적으로 가입 세션이 정리되며 메인 로비 대문으로 원활하게 빠져나온다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 15:48] 회원가입 메뉴 내 setHint 및 setPrompt 구조 분해 할당 누락으로 인한 단축키 오작동 수정
+
+**LOG_ID: 20260610_1548**
+목표:
+- 회원가입 메뉴(SIGNUP) 진입 시 단축키 P/T/M 입력이 무반응을 일으키던 근본 원인인 ReferenceError(구조 분해 할당 누락)를 제거하여 완벽하게 키 입력 연동이 동작하도록 한다.
+
+변경 파일:
+- `public/js/core/signupMenu.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/js/core/signupMenu.js`의 `createSignupMenuHandler` 함수 상단에서 누락되어 있던 `setHint` 및 `setPrompt` 호출로 인한 내부 ReferenceError 현상을 방지하도록 로컬 스코프 호이스팅 함수 중복 선언(SyntaxError)을 유발하는 구조 분해 할당 대신, 기존 하단 호이스팅 정의 함수가 `deps.setHint`, `deps.setPrompt`를 안전하게 대리하도록 복구 및 정렬했다.
+
+실행:
+- `npm run smoke:vercel-ready` 클라이언트 정적 파일 검증
+
+기대:
+- 회원가입 메뉴에 접속하여 P 또는 T를 입력했을 때, 오류 없이 바로 상위 메뉴나 대문 화면으로 성공적으로 리다이렉트되어 동작한다.
+
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 15:21] 회원가입 메뉴 개선 (줄간격, 에러 표시, 글자색 선명도 및 P/T 단축키 동작 수정)
+
+**LOG_ID: 20260610_1521**
+목표:
+- 회원가입 화면(SIGNUP)에서 가입 수단 목록의 줄간격을 고전 터미널 환경에 맞춰 촘촘하게 조정하고, 잘못된 명령 입력 시의 '※ 잘못된 명령입니다.' 에러 표시를 제거한다.
+- 최초 접속 또는 화면 전환 시 `#terminal-container`에 남아 있던 `is-loading` 클래스로 인해 가입 수단 버튼의 불투명도가 낮아져 글자색이 어둡게(회색조) 보이던 현상을 해결하여 선명한 흰색으로 표시되도록 한다.
+- 가입 수단 메뉴 진입 시 하단 단축키인 P(상위메뉴), T(초기화면), M(메인) 입력 시 메인 화면으로 정상 탈출(리다이렉션)하도록 기능을 연동한다.
+
+변경 파일:
+- `public/styles/entry-signup-shell.css`
+- `public/js/core/signupMenu.js`
+- `public/js/core/signupFlow.js`
+- `public/js/core/signupScreens.js`
+- `public/js/core/signupFlowUi.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/styles/entry-signup-shell.css`에서 `.entry-signup-method-list`의 `gap`을 `0`으로 수정하고, `.entry-signup-method`의 `padding`을 `0 4px`로 조정하고 `line-height`를 `1.4`로 설정하여 목록이 벌어지지 않고 연속된 텍스트 행으로 렌더링되게 했다.
+2. `public/styles/entry-signup-shell.css`에 `.entry-signup-method-desc:empty { display: none; }` 규칙을 추가해 설명이 비어 있을 때 불필요한 레이아웃 여백을 차지하지 않도록 방지했다.
+3. `public/js/core/signupMenu.js` 및 `public/js/core/signupFlow.js`에서 잘못된 명령 입력 시 호출하던 `showSignupMenu({ error: '잘못된 명령입니다.' })`를 `showSignupMenu()`로 변경하여 에러 메시지 라인이 화면에 출력되지 않고 프롬프트만 갱신되도록 처리했다.
+4. `public/js/core/signupScreens.js` 및 `public/js/core/signupFlowUi.js` 내의 각 화면 렌더링 함수(`showSignupMenu`, `showSignupAgreement`, `renderEmailScreen`, `renderOAuthProfileScreen` 등) 완료 시점에 `is-loading` 클래스를 컨테이너에서 명시적으로 제거하는 `clearLoadingState()` 호출을 추가하여 버튼 투명도가 `0.6`으로 매칭되는 오작동을 제거했다.
+5. `public/js/core/signupMenu.js` 내 `handleSignupMethodChoice` 함수에 `x` 단축키 외에도 `p` (상위메뉴), `t` (초기화면), `m` (메인) 키를 감지하여 동일하게 가입 상태를 초기화하고 메인화면(`showMain()`)으로 정상 복귀할 수 있도록 분기를 보강했다.
+
+실행:
+- `npm run smoke:vercel-ready` 클라이언트 정적 파일 검증
+
+기대:
+- 회원가입 수단 목록의 줄간격이 일반 터미널 행과 일치하게 촘촘해지며, 글씨 색상이 흐려지지 않고 원래의 밝은 흰색으로 렌더링된다. 또한 잘못된 입력을 해도 경고 문구 없이 프롬프트가 깨끗하게 갱신되며, P/T/M 단축키를 눌렀을 때 메인 메뉴 대문으로 원활하게 돌아간다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-06-10 15:13] 뉴스 목록 진입 시 state.screen 누락 문제 수정
 
 **LOG_ID: 20260610_1513**

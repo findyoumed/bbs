@@ -13,6 +13,7 @@ export function createPostListView(deps) {
     loadMenuTree,
     loadPosts,
     screenEl,
+    setLoading,
     state,
     updateURL,
     findBoardByKey,
@@ -53,7 +54,7 @@ export function createPostListView(deps) {
     const searchParams = options.searchParams || state.searchParams || {};
     state.searchParams = searchParams;
     if (!fromHistory) updateURL();
-    screenEl.innerHTML = '<div class="loading">연결하는 중 입니다...</div>';
+    setLoading('연결하는 중입니다..');
     const data = await loadPosts(boardKey, page, searchParams);
     if (data.board) {
       const resolvedKey = String(getBoardKey(data.board) || boardKey).trim();

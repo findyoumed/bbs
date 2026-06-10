@@ -1,4 +1,5 @@
 export function createSignupMenuHandler(deps) {
+  // [LOG: 20260610_1548] 중복 선언 방지를 위해 setHint, setPrompt 구조 분해 할당 제거
   const {
     SIGNUP_METHOD_LOOKUP,
     cleanupSignupHandlers,
@@ -49,8 +50,10 @@ export function createSignupMenuHandler(deps) {
     const { attachAgreementEvents, attachEmailEvents } = handlers;
     const choice = String(rawChoice || '').trim().toLowerCase();
     const promptRowEl = document.getElementById('terminal-prompt-row');
-    if (!choice) { showSignupMenu({ error: '잘못된 명령입니다.' }); attachSignupMenuEvents(handlers); return; }
-    if (choice === 'x') {
+    // [LOG: 20260610_1521] 잘못된 명령 에러 표시 제거
+    if (!choice) { showSignupMenu(); attachSignupMenuEvents(handlers); return; }
+    // [LOG: 20260610_1532] P, T, M 입력 시 메인 화면으로 돌아가도록 수정
+    if (choice === 'x' || choice === 'p' || choice === 't' || choice === 'm') {
       state._oauthSignupError = '';
       clearPendingOAuthProfile();
       setSignupAgreementAccepted(false); setPendingSignupMethod(''); setPendingSignupDraft(null);
@@ -59,7 +62,8 @@ export function createSignupMenuHandler(deps) {
     }
 
     const method = SIGNUP_METHOD_LOOKUP[choice];
-    if (!method) { showSignupMenu({ error: '잘못된 명령입니다.' }); attachSignupMenuEvents(handlers); return; }
+    // [LOG: 20260610_1521] 잘못된 명령 에러 표시 제거
+    if (!method) { showSignupMenu(); attachSignupMenuEvents(handlers); return; }
 
     state._oauthSignupError = '';
     clearPendingOAuthProfile();

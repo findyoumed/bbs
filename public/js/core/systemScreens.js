@@ -10,6 +10,7 @@ export function createSystemScreens(deps) {
     getCommandFooterText,
     getSupportedFooterText,
     screenEl,
+    setLoading,
     updateURL,
     setHint,
     setPrompt,
@@ -24,7 +25,7 @@ export function createSystemScreens(deps) {
   async function showActiveUsers(fromHistory = false) {
     state.screen = 'active-users';
     if (!fromHistory) updateURL();
-    screenEl.innerHTML = '<div class="loading">연결하는 중 입니다...</div>';
+    setLoading('연결하는 중입니다..');
     try {
       const users = await apiFetch('/api/system/active-users');
       const rendered = ansiToHTML(buildActiveUsersAnsi(users || []));
@@ -44,7 +45,7 @@ export function createSystemScreens(deps) {
   async function showActivitySummary(fromHistory = false) {
     state.screen = 'activity-summary';
     if (!fromHistory) updateURL();
-    screenEl.innerHTML = '<div class="loading">활동 내역을 분석하는 중...</div>';
+    setLoading('활동 내역을 분석하는 중입니다..');
     try {
       const data = await apiFetch('/api/system/activity-summary');
       const { buildActivitySummaryAnsi } = deps;
@@ -66,7 +67,7 @@ export function createSystemScreens(deps) {
 
     state.screen = 'system-diagnostics';
     if (!fromHistory) updateURL();
-    screenEl.innerHTML = '<div class="loading">시스템 정보를 수집하는 중...</div>';
+    setLoading('시스템 정보를 수집하는 중입니다..');
     try {
       const info = await apiFetch('/api/system/info');
       const rendered = ansiToHTML(buildSystemDiagnosticsAnsi(info));
