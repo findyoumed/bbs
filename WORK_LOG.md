@@ -3,22 +3,24 @@
 **LOG_ID: 20260610_1405**
 목표:
 - 뉴스 피드 병합 시 특정 언론사(구글 뉴스 검색 RSS를 사용하는 매체)의 오래된 기사가 마지막 페이지에 홀로 남아 날짜가 수십 일씩 갑자기 크게 건너뛰는(불연속성) 문제를 해결하기 위해, 날짜 간격이 3일 이상 벌어지는 지점부터 그 뒤의 기사들을 동적으로 잘라내는 필터를 구현한다.
+- 기존에 이미 데이터베이스(Supabase)나 메모리에 저장되어 있는 뉴스 캐시 데이터도 즉시 필터링 및 자가 치유(Self-healing)될 수 있도록 정상화 로직을 보강한다.
 
 변경 파일:
 - `src/server/RssNewsTopicFeedHelpers.js`
 - `WORK_LOG.md`
 
 수행 작업:
-1. `src/server/RssNewsTopicFeedHelpers.js`의 `buildTopicFeed` 함수 내에서 기사들을 날짜 내림차순(최신순)으로 정렬한 뒤, 앞뒤 기사의 날짜 차이를 계산하는 동적 단선 검출(Gap Cutting) 로직을 추가했다.
+1. `src/server/RssNewsTopicFeedHelpers.js` 파일 내에 날짜 단선 감지 및 절단을 전담하는 `applyDateGapCutoff` 헬퍼 함수를 신설했다.
 2. 기사 개수가 너무 적게 남지 않도록 최소 50개(MIN_PRESERVE_COUNT)의 최신 기사는 무조건 보존한 상태에서, 기사 간의 날짜 간격이 3일을 넘어서면 그 시점부터 뒤의 기사들을 제외하도록 처리했다.
-3. 잘려진 리스트(`finalItems`)가 최종 피드 결과물(`items`)로 반환되도록 코드를 변경했다.
+3. `normalizeTopicFeedItems` 함수 내부에서 캐시 데이터 정합성을 복구할 때 `applyDateGapCutoff`를 함께 거치도록 설계했다. 이를 통해 Supabase 등에서 오래된 캐시가 로딩되더라도 실시간으로 가로채어 자르고, 변경된 데이터는 자동으로 Supabase 캐시 테이블에 다시 업데이트되도록 처리(자가 치유)했다.
+4. `buildTopicFeed` 함수 내의 인라인 코드를 신설된 `applyDateGapCutoff` 함수 호출로 대체하여 모듈화를 극대화했다.
 
 실행:
 - `node --check src/server/RssNewsTopicFeedHelpers.js` 문법 검사
-- `npm run smoke:rss-services` RSS 기능 동작 및 병합 검증
+- `npm run smoke:rss-services` RSS 기능 동작 및 캐시 복구 검증
 
 기대:
-- 뉴스 최신 피드(1번) 조회 시 수십 일 전 옛날 기사가 섞여 나오며 날짜가 툭 튀는 현상이 완벽히 방지되고, 연속성 높은 기사들만 매끄럽게 조회된다.
+- 뉴스 최신 피드(1번) 조회 시 Supabase 영구 캐시의 만료 여부와 무관하게, 수십 일 전 옛날 기사가 섞여 나오며 날짜가 툭 튀는 현상이 완벽히 방지되고 항상 연속성 높은 기사들만 매끄럽게 조회된다.
 
 결과: ✅ 완료
 

@@ -280,13 +280,40 @@ function dedupeNewsItems(service, items) {
   return uniqueItems;
 }
 
+// [LOG: 20260610_1409] Helper function to cut off the feed when date gap exceeds 3 days (keeps at least 50 items)
+function applyDateGapCutoff(service, items) {
+  const sortedItems = [...(items || [])];
+  sortedItems.sort((left, right) => {
+    const rightTime = Date.parse(right.dateTime || right.date || 0) || 0;
+    const leftTime = Date.parse(left.dateTime || left.date || 0) || 0;
+    return rightTime - leftTime;
+  });
+
+  let cutIndex = sortedItems.length;
+  const MIN_PRESERVE_COUNT = 50;
+  for (let i = 0; i < sortedItems.length - 1; i++) {
+    const currentTime = Date.parse(sortedItems[i].dateTime || sortedItems[i].date || 0) || 0;
+    const nextTime = Date.parse(sortedItems[i + 1].dateTime || sortedItems[i + 1].date || 0) || 0;
+    if (currentTime > 0 && nextTime > 0) {
+      const gapMs = currentTime - nextTime;
+      const gapDays = gapMs / (1000 * 60 * 60 * 24);
+      if (gapDays > 3 && (i + 1) >= MIN_PRESERVE_COUNT) {
+        cutIndex = i + 1;
+        break;
+      }
+    }
+  }
+  return sortedItems.slice(0, cutIndex);
+}
+
 function normalizeTopicFeedItems(service, feed) {
   if (!feed || !Array.isArray(feed.items)) {
     return { feed, changed: false };
   }
 
   const dedupedItems = dedupeNewsItems(service, feed.items);
-  const changed = dedupedItems.length !== feed.items.length;
+  const cutItems = applyDateGapCutoff(service, dedupedItems);
+  const changed = cutItems.length !== feed.items.length;
   if (!changed) {
     return { feed, changed: false };
   }
@@ -294,7 +321,7 @@ function normalizeTopicFeedItems(service, feed) {
   return {
     feed: {
       ...feed,
-      items: dedupedItems.map((item, index) => ({
+      items: cutItems.map((item, index) => ({
         ...item,
         no: index + 1,
         articleKey: item.articleKey || buildNewsArticleKey(service, item)
@@ -359,28 +386,8 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
     service,
     items.filter((item) => String(item?.dateTime || item?.date || '').trim())
   );
-  datedItems.sort((left, right) => {
-    const rightTime = Date.parse(right.dateTime || right.date || 0) || 0;
-    const leftTime = Date.parse(left.dateTime || left.date || 0) || 0;
-    return rightTime - leftTime;
-  });
-
   // [LOG: 20260610_1404] Dynamic gap cutting: if date gap exceeds 3 days, discard subsequent items (keep at least 50 items)
-  let cutIndex = datedItems.length;
-  const MIN_PRESERVE_COUNT = 50;
-  for (let i = 0; i < datedItems.length - 1; i++) {
-    const currentTime = Date.parse(datedItems[i].dateTime || datedItems[i].date || 0) || 0;
-    const nextTime = Date.parse(datedItems[i + 1].dateTime || datedItems[i + 1].date || 0) || 0;
-    if (currentTime > 0 && nextTime > 0) {
-      const gapMs = currentTime - nextTime;
-      const gapDays = gapMs / (1000 * 60 * 60 * 24);
-      if (gapDays > 3 && (i + 1) >= MIN_PRESERVE_COUNT) {
-        cutIndex = i + 1;
-        break;
-      }
-    }
-  }
-  const finalItems = datedItems.slice(0, cutIndex);
+  const finalItems = applyDateGapCutoff(service, datedItems);
 
   const allFail = unavailable.length === results.length;
   const message = unavailable.length > 0 ? `실패: ${unavailable.map((result) => result.source.newspaperTitle).join(', ')}` : '';
