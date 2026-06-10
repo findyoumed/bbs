@@ -94,6 +94,7 @@
 */
 html,
 body,
+#terminal-wrapper,
 #terminal-container,
 #terminal-screen,
 #container,
@@ -107,12 +108,6 @@ body,
     color: var(--color);
     text-shadow: var(--text-shadow);
     border: none !important;
-}
-
-#terminal-wrapper {
-    background-color: var(--bgcolor);
-    color: var(--color);
-    text-shadow: var(--text-shadow);
 }
 
 /* 텍스트 입력 및 선택 영역 가독성 확보 */
@@ -1323,29 +1318,14 @@ body.theme-blue .terminal-titlebar {
     margin-right: 52px; /* Offset window controls to center title */
 }
 
-#terminal-wrapper {
-    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15)) !important;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65) !important;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
+
 
 /* [LOG: 20260610_1145] Enable pointer events bypass during text selection for smooth drag selection */
 #terminal-container.is-selecting .ansi-hotspot {
     pointer-events: none !important;
 }
 
-@media (max-width: 1023px) {
-    .terminal-titlebar {
-        display: none !important;
-    }
-    #terminal-wrapper {
-        border: none !important;
-        box-shadow: none !important;
-        border-radius: 0;
-    }
-}
+
 
 /* [LOG: 20260610_1150] Hide scroll bottom button and shortcut helper modal visually per user request */
 .scroll-bottom-indicator {

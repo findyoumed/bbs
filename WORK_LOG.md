@@ -6353,4 +6353,21 @@
 
 ---
 
+## [2026-06-10 11:56] 터미널 프레임 테두리/그림자/클리핑 제거 및 레이아웃 복원
+
+**LOG_ID: 20260610_1156**
+목표: `#terminal-wrapper`에 주어지는 윈도우 보더, 섀도우, `overflow: hidden` 스타일을 제거하여 1.25배율 확대 모드(대형 모니터)에서도 화면이 좌우로 잘리지 않도록 본래 레이아웃을 완벽 복원한다.
+변경 파일:
+- `public/styles/retro-terminal.css` (terminal-wrapper 클리핑 및 데코레이션 스타일 제거)
+수행 작업:
+1. `#terminal-wrapper`에 임시 지정했던 테두리(border), 그림자(shadow), 모서리 라운딩(border-radius) 및 클리핑(`overflow: hidden`) 속성을 삭제하였습니다.
+2. `#terminal-wrapper`를 원래의 글로벌 무테 테마 리셋 목록(`border: none !important;`)에 다시 묶어 화면 크기가 100% 가득 차고 잘림 없이 렌더링되도록 복원했습니다.
+실행:
+- `npm run smoke:vercel-ready`
+기대:
+- 스모크 테스트 무결성 유지 (`ok: true` 출력).
+결과: ✅ 완료
+
+---
+
 
