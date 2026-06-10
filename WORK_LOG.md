@@ -1,3 +1,26 @@
+## [2026-06-10 15:13] 뉴스 목록 진입 시 state.screen 누락 문제 수정
+
+**LOG_ID: 20260610_1513**
+목표:
+- 뉴스 목록 진입 함수(`showNewsList`) 리팩토링 시 누락되었던 `state.screen = 'news-list';` 상태 지정을 복구하여 목록 번호 입력 시 핫스팟/입력 핸들러가 올바르게 작동하도록 한다.
+
+변경 파일:
+- `public/js/core/newsScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `public/js/core/newsScreens.js`의 `showNewsList` 함수 맨 앞줄에 `state.screen = 'news-list';` 상태 변수를 다시 명시적으로 활성화했다.
+
+실행:
+- `npm run smoke:vercel-ready` 클라이언트 정적 파일 검증
+
+기대:
+- 뉴스 목록에 진입한 후 숫자를 누르면 뉴스 메뉴 번호로 인식되어 다른 카테고리로 이동하지 않고, 해당 기사 번호에 맞게 기사 본문 상세 화면으로 정상 이동한다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-06-10 15:10] 뉴스 로딩 화면 지연 노출(Delightful Loader Delay) 구현
 
 **LOG_ID: 20260610_1510**

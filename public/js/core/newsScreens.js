@@ -345,6 +345,7 @@ export function createNewsScreens(deps) {
     const fromHistory = Boolean(normalizedOptions.fromHistory);
     const requestedPageNo = Math.max(1, Number.parseInt(normalizedOptions.pageNo, 10) || 1);
 
+    state.screen = 'news-list';
     // [LOG: 20260610_1510] Delightful loader delay to prevent screen flashing on fast/cached loads
     let loadingTimer = setTimeout(() => {
       showNewsLoading('뉴스 목록을 불러오는 중입니다...');
