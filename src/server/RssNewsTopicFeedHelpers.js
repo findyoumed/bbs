@@ -280,8 +280,8 @@ function dedupeNewsItems(service, items) {
   return uniqueItems;
 }
 
-// [LOG: 20260610_1409] Helper function to cut off the feed when date gap exceeds 3 days (keeps at least 50 items)
-function applyDateGapCutoff(service, items) {
+// [LOG: 20260610_1413] Helper function to filter items to only keep those within 3 days of the latest article date
+function applyThreeDayFilter(service, items) {
   const sortedItems = [...(items || [])];
   sortedItems.sort((left, right) => {
     const rightTime = Date.parse(right.dateTime || right.date || 0) || 0;
@@ -289,21 +289,16 @@ function applyDateGapCutoff(service, items) {
     return rightTime - leftTime;
   });
 
-  let cutIndex = sortedItems.length;
-  const MIN_PRESERVE_COUNT = 50;
-  for (let i = 0; i < sortedItems.length - 1; i++) {
-    const currentTime = Date.parse(sortedItems[i].dateTime || sortedItems[i].date || 0) || 0;
-    const nextTime = Date.parse(sortedItems[i + 1].dateTime || sortedItems[i + 1].date || 0) || 0;
-    if (currentTime > 0 && nextTime > 0) {
-      const gapMs = currentTime - nextTime;
-      const gapDays = gapMs / (1000 * 60 * 60 * 24);
-      if (gapDays > 3 && (i + 1) >= MIN_PRESERVE_COUNT) {
-        cutIndex = i + 1;
-        break;
-      }
-    }
-  }
-  return sortedItems.slice(0, cutIndex);
+  if (sortedItems.length === 0) return sortedItems;
+
+  const latestTime = Date.parse(sortedItems[0].dateTime || sortedItems[0].date || 0) || 0;
+  if (latestTime <= 0) return sortedItems;
+
+  const cutoffTime = latestTime - 3 * 24 * 60 * 60 * 1000; // 3 days ago from the latest article
+  return sortedItems.filter((item) => {
+    const itemTime = Date.parse(item.dateTime || item.date || 0) || 0;
+    return itemTime >= cutoffTime;
+  });
 }
 
 function normalizeTopicFeedItems(service, feed) {
@@ -312,7 +307,7 @@ function normalizeTopicFeedItems(service, feed) {
   }
 
   const dedupedItems = dedupeNewsItems(service, feed.items);
-  const cutItems = applyDateGapCutoff(service, dedupedItems);
+  const cutItems = applyThreeDayFilter(service, dedupedItems);
   const changed = cutItems.length !== feed.items.length;
   if (!changed) {
     return { feed, changed: false };
@@ -386,8 +381,8 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
     service,
     items.filter((item) => String(item?.dateTime || item?.date || '').trim())
   );
-  // [LOG: 20260610_1404] Dynamic gap cutting: if date gap exceeds 3 days, discard subsequent items (keep at least 50 items)
-  const finalItems = applyDateGapCutoff(service, datedItems);
+  // [LOG: 20260610_1413] Keep only articles within 3 days of the latest article date
+  const finalItems = applyThreeDayFilter(service, datedItems);
 
   const allFail = unavailable.length === results.length;
   const message = unavailable.length > 0 ? `실패: ${unavailable.map((result) => result.source.newspaperTitle).join(', ')}` : '';
