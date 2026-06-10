@@ -365,6 +365,23 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
     return rightTime - leftTime;
   });
 
+  // [LOG: 20260610_1404] Dynamic gap cutting: if date gap exceeds 3 days, discard subsequent items (keep at least 50 items)
+  let cutIndex = datedItems.length;
+  const MIN_PRESERVE_COUNT = 50;
+  for (let i = 0; i < datedItems.length - 1; i++) {
+    const currentTime = Date.parse(datedItems[i].dateTime || datedItems[i].date || 0) || 0;
+    const nextTime = Date.parse(datedItems[i + 1].dateTime || datedItems[i + 1].date || 0) || 0;
+    if (currentTime > 0 && nextTime > 0) {
+      const gapMs = currentTime - nextTime;
+      const gapDays = gapMs / (1000 * 60 * 60 * 24);
+      if (gapDays > 3 && (i + 1) >= MIN_PRESERVE_COUNT) {
+        cutIndex = i + 1;
+        break;
+      }
+    }
+  }
+  const finalItems = datedItems.slice(0, cutIndex);
+
   const allFail = unavailable.length === results.length;
   const message = unavailable.length > 0 ? `실패: ${unavailable.map((result) => result.source.newspaperTitle).join(', ')}` : '';
 
@@ -384,7 +401,7 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
     fetchedAt: new Date().toISOString(),
     unavailable: allFail,
     message: allFail ? (results[0]?.feed?.message || message) : message,
-    items: datedItems.map((item, index) => ({
+    items: finalItems.map((item, index) => ({
       ...item,
       no: index + 1,
       articleKey: item.articleKey || buildNewsArticleKey(service, item)
