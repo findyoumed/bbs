@@ -299,13 +299,7 @@ export function createNewsScreens(deps) {
     }
   }
 
-  function getNewsSourceLoadingMessage(article) {
-    const sourceTitle = String(article?.sourceTitle || article?.publisher || '').trim();
-    if (sourceTitle) {
-      return `${sourceTitle} 원본에 연결하는 중입니다...`;
-    }
-    return '뉴스 원본에 연결하는 중입니다...';
-  }
+  // [LOG: 20260610_1436] Removed getNewsSourceLoadingMessage as two-stage connection loading is no longer required.
 
   async function loadNewsTopicState(topicDoor) {
     const currentTopicDoor = String(state.serviceData?.topicDoor || '').trim();
@@ -408,8 +402,7 @@ export function createNewsScreens(deps) {
       resolvedTopicTitle = String(state.serviceData?.topicTitle || topicTitle).trim() || topicTitle;
     } else {
       try {
-        // [LOG: 20260429_0955] Keep the source-connection stage visible while the article body is fetched.
-        showNewsLoading(getNewsSourceLoadingMessage(article));
+        // [LOG: 20260610_1436] Skip updating loading message to 'connecting to source' since load time is fast.
         const requestOptions = getNewsArticleRequestOptions(article, options);
         const detail = await loadNewsArticle(topicDoor, article?.no || articleNo, requestOptions);
         if (detail?.article && isExpectedNewsArticle(detail.article, requestOptions)) {
