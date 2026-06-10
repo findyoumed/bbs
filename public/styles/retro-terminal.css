@@ -41,6 +41,8 @@
     --input-bg: rgba(255, 255, 255, 0.15);
     --hr-color: #ffffff;
     --text-shadow: none;
+}
+
 @font-face {
     font-family: 'DungGeunMo';
     src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
@@ -1343,4 +1345,13 @@ body.theme-blue .terminal-titlebar {
         box-shadow: none !important;
         border-radius: 0;
     }
+}
+
+/* [LOG: 20260610_1150] Hide scroll bottom button and shortcut helper modal visually per user request */
+.scroll-bottom-indicator {
+    display: none !important;
+}
+
+.shortcut-helper {
+    display: none !important;
 }

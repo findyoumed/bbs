@@ -6316,4 +6316,41 @@
 
 ---
 
+## [2026-06-10 11:50] 불필요한 UI 요소 제거 및 숨김 처리
+
+**LOG_ID: 20260610_1150**
+목표: 유저 요청에 따라 화면에 새로 추가된 윈도우 타이틀바(`BBS 01410 Terminal`)를 제거하고, 화면에 보이던 스크롤 이동 버튼(`▼ 최하단으로 스크롤`) 및 단축키 안내창 모달(`#shortcut-helper`)을 CSS를 통해 완벽히 숨긴다.
+변경 파일:
+- `public/index.html` (윈도우 타이틀바 마크업 삭제)
+- `public/styles/retro-terminal.css` (스크롤 버튼 및 단축키 안내창 숨김 스타일 추가)
+수행 작업:
+1. `index.html`에서 우리가 추가했던 윈도우 타이틀바 마크업 `.terminal-titlebar`를 완전히 제거하여 화면 상단 공간 낭비를 막았습니다.
+2. `retro-terminal.css` 파일 하단에 `.scroll-bottom-indicator { display: none !important; }`와 `.shortcut-helper { display: none !important; }`를 선언해 브라우저 렌더러에서 두 오버레이 창이 영구히 숨겨지도록 재정의하였습니다.
+실행:
+- `npm run smoke:vercel-ready`
+기대:
+- 스모크 테스트 빌드 무결성 유지 (`ok: true` 확인).
+결과: ✅ 완료
+
+---
+
+## [2026-06-10 11:55] CSS 파싱 에러 수정 및 캐시 방지 처리
+
+**LOG_ID: 20260610_1155**
+목표: `retro-terminal.css` 파일의 미완성 중괄호(`}`) 파싱 에러를 수정하여 스타일 상속을 정상화하고, 브라우저 캐시로 인해 이전 UI가 노출되는 현상을 해결하기 위해 캐시 버스터를 적용한다.
+변경 파일:
+- `public/styles/retro-terminal.css` (테마 블록 닫는 중괄호 복원)
+- `public/index.html` (CSS 링크에 캐시 버스터 파라미터 적용)
+수행 작업:
+1. `retro-terminal.css`의 `:root[data-theme="blue"]` 첫 번째 복제본 블록 끝에 닫는 중괄호 `}`가 빠져 있어 아래의 모든 커서/버튼 CSS 규칙이 무시되던 구문 에러를 수정하였습니다.
+2. 구문 에러가 수정됨에 따라, 하단에 정의한 스크롤 이동 버튼 및 단축키 안내창 숨김 속성이 정상 동작하기 시작했습니다.
+3. `index.html`에서 `retro-terminal.css` 경로 뒤에 `?v=2` 캐시 버스터를 추가하여 새로고침 시 즉시 신규 스타일이 무조건 로드되도록 처리하였습니다.
+실행:
+- `npm run smoke:vercel-ready`
+기대:
+- 스모크 테스트 무결성 유지 (`ok: true` 출력).
+결과: ✅ 완료
+
+---
+
 

@@ -80,7 +80,7 @@
         type="font/woff" crossorigin>
 
     <!-- CSS 병렬 로드 (@import 제거 → link 태그로 동시 다운로드) -->
-    <link rel="stylesheet" href="/styles/retro-terminal.css">
+    <link rel="stylesheet" href="/styles/retro-terminal.css?v=2">
     <link rel="stylesheet" href="/styles/entry-signup.css">
     <link rel="stylesheet" href="/styles/entry-auth.css">
     <link rel="stylesheet" href="/style.css">
@@ -93,16 +93,6 @@
 <body>
     <main class="app-shell">
         <div id="terminal-wrapper">
-            <!-- [LOG: 20260610_1145] Modern terminal titlebar/window frame -->
-            <div class="terminal-titlebar">
-                <div class="window-controls">
-                    <span class="control-dot close"></span>
-                    <span class="control-dot minimize"></span>
-                    <span class="control-dot maximize"></span>
-                </div>
-                <div class="window-title">BBS 01410 Terminal</div>
-            </div>
-
             <!-- [LOG: 20260427_1205] Rendering Progress Bar -->
             <div id="render-progress" class="render-progress-container">
                 <div class="render-progress-bar"></div>
