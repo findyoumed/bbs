@@ -120,6 +120,38 @@ export function bindAppEvents(deps) {
     // [LOG: 20260426_1800] Removed auto-hide on keyup to support toggle mode
   });
 
+  // [LOG: 20260610_1425] Redirect keyboard inputs to the main command input if no other input is focused
+  window.addEventListener('keydown', (e) => {
+    if (!cmdInput || cmdInput.disabled) {
+      return;
+    }
+
+    // Do nothing if command input is already focused
+    if (document.activeElement === cmdInput) {
+      return;
+    }
+
+    // Do nothing if typing in another input, textarea, select, or contenteditable element
+    const activeEl = document.activeElement;
+    if (activeEl) {
+      const tagName = activeEl.tagName.toLowerCase();
+      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || activeEl.isContentEditable) {
+        return;
+      }
+    }
+
+    // Ignore modifier combinations
+    if (e.ctrlKey || e.altKey || e.metaKey) {
+      return;
+    }
+
+    // Redirect printable characters and backspace
+    if (e.key.length === 1 || e.key === 'Backspace') {
+      cmdInput.focus();
+      moveCaretToEnd();
+    }
+  });
+
   document.addEventListener('click', (event) => {
     const action = getCommandClickAction(event.target);
     if (!action) {
