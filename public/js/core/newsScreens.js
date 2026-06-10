@@ -340,9 +340,6 @@ export function createNewsScreens(deps) {
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
 
-    if (shouldAutoFocusCommandInput()) cmdInput.focus();
-  }
-
   async function showNewsList(topicDoor, options = false) {
     const normalizedOptions = typeof options === 'boolean' ? { fromHistory: options } : (options || {});
     const fromHistory = Boolean(normalizedOptions.fromHistory);
