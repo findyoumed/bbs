@@ -6271,3 +6271,22 @@
 결과: ✅ 완료. 수정 파일 문법 체크, 완료 단계 Enter 단위 확인, smoke 2종 통과.
 
 ---
+
+## [2026-06-10 11:40] xterm.js 마이그레이션 전 세이브포인트 생성
+
+**LOG_ID: 20260610_1140**
+목표: xterm.js 적용에 앞서 현재 정상 동작 상태를 백업(Git 로컬 커밋 및 기록)하고 다음 작업 단계를 수립한다.
+변경 파일:
+- `WORK_LOG.md` (작업 기록 추가)
+수행 작업:
+1. 현재 작업 트리가 깨끗함(clean)을 확인.
+2. 로컬 저장소에 `chore: backup point before refactoring to xterm.js` 빈 커밋 생성.
+실행:
+- `git status`
+- `git commit --allow-empty -m "chore: backup point before refactoring to xterm.js"`
+기대:
+- 로컬 저장소에 세이브포인트 커밋이 안전하게 기록됨.
+결과: ✅ 완료
+
+---
+
