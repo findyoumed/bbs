@@ -1112,10 +1112,36 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
     font-weight: normal;
 }
 
+/* [LOG: 20260611_1300] ANSI 색상 통일 (사용자 요청: 모든 글자는 흰색으로 고정, 굵기만 유지) */
+.ansi-fg-0, .ansi-fg-1, .ansi-fg-2, .ansi-fg-3, .ansi-fg-4, .ansi-fg-5, .ansi-fg-6, .ansi-fg-7,
+.ansi-fg-8, .ansi-fg-9, .ansi-fg-10, .ansi-fg-11, .ansi-fg-12, .ansi-fg-13, .ansi-fg-14, .ansi-fg-15,
+.ansi-black, .ansi-red, .ansi-green, .ansi-yellow, .ansi-blue, .ansi-magenta, .ansi-cyan, .ansi-white { 
+    color: #ffffff !important; 
+}
+
+.ansi-bg-0 { background-color: transparent !important; }
+.ansi-bg-1 { background-color: #aa0000 !important; }
+.ansi-bg-2 { background-color: #00aa00 !important; }
+.ansi-bg-3 { background-color: #aa5500 !important; }
+.ansi-bg-4 { background-color: #0000aa !important; }
+.ansi-bg-5 { background-color: #aa00aa !important; }
+.ansi-bg-6 { background-color: #00aaaa !important; }
+.ansi-bg-7 { background-color: #aaaaaa !important; }
+.ansi-bg-8 { background-color: #555555 !important; }
+.ansi-bg-9 { background-color: #ff5555 !important; }
+.ansi-bg-10 { background-color: #55ff55 !important; }
+.ansi-bg-11 { background-color: #ffff55 !important; }
+.ansi-bg-12 { background-color: #5555ff !important; }
+.ansi-bg-13 { background-color: #ff55ff !important; }
+.ansi-bg-14 { background-color: #55ffff !important; }
+.ansi-bg-15 { background-color: #ffffff !important; }
+
+.ansi-bold { font-weight: bold !important; }
+
 #terminal-footer,
-#terminal-footer *,
-#terminal-screen> :not(.ansi-screen),
-#terminal-screen> :not(.ansi-screen) *,
+#terminal-footer *:not([class*="ansi-"]),
+#terminal-screen> :not(.ansi-screen):not([class*="ansi-"]),
+#terminal-screen> :not(.ansi-screen) *:not([class*="ansi-"]),
 #terminal-wrapper .loading,
 #terminal-wrapper .empty,
 #terminal-wrapper .bbs-title,
@@ -1292,7 +1318,8 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 
     #terminal-prompt-row {
         min-height: 36px;
-        gap: 6px;
+        /* [LOG: 20260611_1127] Disallow gap to ensure exact 1-space character spacing */
+        gap: 0 !important;
         padding: 3px 6px;
         border: 1px solid rgba(255, 255, 255, 0.38);
         border-radius: 4px;
@@ -1322,7 +1349,8 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 
     #terminal-prompt-row {
         min-height: 34px;
-        gap: 4px;
+        /* [LOG: 20260611_1127] Disallow gap to ensure exact 1-space character spacing */
+        gap: 0 !important;
         padding: 2px 5px;
     }
 
@@ -1411,7 +1439,8 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 
     #terminal-prompt-row {
         min-height: 20px;
-        gap: 2px;
+        /* [LOG: 20260611_1127] Disallow gap to ensure exact 1-space character spacing */
+        gap: 0 !important;
         padding: 1px 4px;
         border-width: 1px;
     }
@@ -1671,7 +1700,8 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 
     #terminal-prompt-row {
         min-height: 30px;
-        gap: 3px;
+        /* [LOG: 20260611_1127] Disallow gap to ensure exact 1-space character spacing */
+        gap: 0 !important;
         padding: 2px 4px;
     }
 
