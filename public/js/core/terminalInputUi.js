@@ -218,9 +218,9 @@ export function createTerminalInputUi(deps) {
     syncMaskedInputDisplay();
     syncCursorVisibility();
 
-    // [LOG: 20260611_1135] Re-sync cursor position once fonts are loaded to fix spacing anomalies caused by system font fallback layout.
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(() => {
+    // [LOG: 20260611_1145] Re-sync cursor layout on any font loading done event to handle SPA font changes robustly.
+    if (document.fonts) {
+      document.fonts.addEventListener('loadingdone', () => {
         syncMaskedInputDisplay();
         syncCursorVisibility();
       });
