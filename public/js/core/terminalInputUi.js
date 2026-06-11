@@ -217,6 +217,14 @@ export function createTerminalInputUi(deps) {
 
     syncMaskedInputDisplay();
     syncCursorVisibility();
+
+    // [LOG: 20260611_1135] Re-sync cursor position once fonts are loaded to fix spacing anomalies caused by system font fallback layout.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        syncMaskedInputDisplay();
+        syncCursorVisibility();
+      });
+    }
   }
 
   function setSuggestions(matches, selectedIndex = -1) {
