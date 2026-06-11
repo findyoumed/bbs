@@ -68,7 +68,8 @@ const SCREEN_TO_CATEGORY = {
 
 export function createCommandFooterTextUtils(deps) {
   const { state } = deps;
-  const DEFAULT_COMMAND_PROMPT = '선택 >> ';
+  // [LOG: 20260611_1524] Store prompts without trailing spaces; CSS owns the one-cell prompt gap.
+  const DEFAULT_COMMAND_PROMPT = '선택 >>';
 
   function formatCommandToken(token) {
     const [cmdPart, labelPart = ''] = String(token || '').split(':');
@@ -94,7 +95,7 @@ export function createCommandFooterTextUtils(deps) {
 
   function getCommandFooterText(category) {
     if (category === 'newsList') {
-      return '상위(P), 초기메뉴(T), 다음쪽(F), 이전쪽(B), 직접이동(GO), 명령어안내(H)\n선택 >> ';
+      return '상위(P), 초기메뉴(T), 다음쪽(F), 이전쪽(B), 직접이동(GO), 명령어안내(H)\n선택 >>';
     }
 
     const order = Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category] : [];

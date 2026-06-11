@@ -18,7 +18,8 @@ export function createTerminalHintFooter(deps) {
 
   let hintTrimFrame = 0;
   let footerLoadPending = false;
-  const DEFAULT_COMMAND_PROMPT = '선택 >> ';
+  // [LOG: 20260611_1524] Store prompts without trailing spaces; CSS owns the one-cell prompt gap.
+  const DEFAULT_COMMAND_PROMPT = '선택 >>';
   const terminalFooter = document.getElementById('terminal-footer');
   const promptRowEl = document.getElementById('terminal-prompt-row');
   const promptRowHome = promptRowEl?.parentElement || null;
@@ -214,10 +215,9 @@ export function createTerminalHintFooter(deps) {
     }
 
     if (cmdPromptEl) {
-      // [LOG: 20260610_2025] CSS gap을 제거하고 white-space: pre를 적용했으므로 
-      // 일반 공백(' ')을 사용하여 터미널의 정직한 1칸 간격을 구현함.
+      // [LOG: 20260611_1516] Keep prompt text exact; forced trailing spaces shift the empty cursor start.
       const trimmed = promptText.trimEnd();
-      cmdPromptEl.textContent = trimmed ? (trimmed + ' ') : '';
+      cmdPromptEl.textContent = trimmed || '';
     }
   }
 
@@ -261,8 +261,9 @@ export function createTerminalHintFooter(deps) {
       setHint(fallbackText);
       setPrompt(DEFAULT_COMMAND_PROMPT);
     } finally {
-      if (screenEl?.parentElement) {
-        screenEl.parentElement.classList.remove('is-loading');
+      if (screenEl) {
+        screenEl.parentElement?.classList.remove('is-loading');
+        screenEl.classList.remove('is-loading');
       }
       setFooterVisibility(true);
       footerLoadPending = false;

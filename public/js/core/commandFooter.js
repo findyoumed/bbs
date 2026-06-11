@@ -13,7 +13,8 @@ export function createCommandFooterUtils(deps = {}) {
       .join('/');
   }
 
-  const DEFAULT_COMMAND_PROMPT = '선택 >> ';
+  // [LOG: 20260611_1524] Store prompts without trailing spaces; CSS owns the one-cell prompt gap.
+  const DEFAULT_COMMAND_PROMPT = '선택 >>';
 
   async function loadAssetText(assetPath) {
     const key = String(assetPath || '').trim();
@@ -60,7 +61,7 @@ export function createCommandFooterUtils(deps = {}) {
 
     source.forEach((line) => {
       if (line.trimmed.includes('>>')) {
-        prompt = line.trimmed.includes('??') ? DEFAULT_COMMAND_PROMPT : line.raw.trimStart();
+        prompt = line.trimmed.includes('??') ? DEFAULT_COMMAND_PROMPT : line.raw.trim();
         return;
       }
       hintLines.push(line.trimmed);
@@ -68,7 +69,7 @@ export function createCommandFooterUtils(deps = {}) {
 
     return {
       hint: hintLines.join(' '),
-      prompt: prompt || '>>'
+      prompt: String(prompt || '>>').trimEnd()
     };
   }
 

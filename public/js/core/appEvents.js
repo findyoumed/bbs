@@ -4,6 +4,7 @@
  * [LOG: 20260428_1635] Evolution Mode 16/500: Extracted InteractionHandlers to separate module.
  */
 import { bindCommandInputEvents } from './appEventsCommandInput.js';
+import { trackCommandPending } from './commandPendingUi.js';
 
 export function bindAppEvents(deps) {
   const {
@@ -54,6 +55,7 @@ export function bindAppEvents(deps) {
   }
 
   function clearPendingWhenSettled(result, value) {
+    trackCommandPending(result, { value });
     Promise.resolve(result).finally(() => clearPendingCommandInput(value));
   }
 

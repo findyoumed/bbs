@@ -5,6 +5,7 @@
  */
 
 import { isMobileDevice } from './uiUtils.js';
+import { trackCommandPending } from './commandPendingUi.js';
 
 export function createInteractionHandlers(deps) {
   const {
@@ -62,6 +63,7 @@ export function createInteractionHandlers(deps) {
   }
 
   function clearPendingWhenSettled(result, value) {
+    trackCommandPending(result, { value });
     Promise.resolve(result).finally(() => clearPendingCommandInput(value));
   }
 

@@ -71,6 +71,11 @@ export function createTerminalFeedback(deps) {
       cmdPromptEl.textContent = '>>';
     }
 
+    // [LOG: 20260611_1430] Ensure loading timer is cleared even on error
+    if (typeof deps.setReady === 'function') {
+      deps.setReady(true);
+    }
+
     triggerVisualFeedback(document.body, 'shake');
     soundService.playError();
   }

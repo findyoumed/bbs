@@ -1,4 +1,5 @@
 import { getCommandMatches } from './commandService.js';
+import { trackCommandPending } from './commandPendingUi.js';
 
 export function bindCommandInputEvents(deps) {
   const {
@@ -290,7 +291,9 @@ export function bindCommandInputEvents(deps) {
 
     if (cmdInput.type !== 'text') cmdInput.type = 'text';
 
-    void handleCmd(cmd);
+    const result = handleCmd(cmd);
+    trackCommandPending(result, { value: cmd, clearOnSettled: true });
+    void result;
   }
 
   cmdInput.addEventListener('input', handleInput);

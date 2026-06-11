@@ -32,6 +32,7 @@ export function createMenuNavigation(deps) {
     screenEl,
     setHint,
     setLoading,
+    setReady,
     setPrompt,
     state,
     updateURL
@@ -109,10 +110,14 @@ export function createMenuNavigation(deps) {
       fetch('/api/system/stats').then(res => res.ok ? res.json() : null).catch(() => null)
     ]);
 
+    // [LOG: 20260611_1400] Clear loading timer before rendering to prevent overwriting content
+    setReady(true);
+
     if (!menuTree) {
       screenEl.innerHTML = '<div class="bbs-error">메뉴를 불러오지 못했습니다.</div>';
       setHint('메뉴 로드 실패');
       setPrompt('>>');
+      setReady(true);
       if (shouldAutoFocusCommandInput()) {
         cmdInput.focus();
       }
@@ -170,6 +175,9 @@ export function createMenuNavigation(deps) {
     setPrompt('');
 
     await Promise.all([loadBoards(), loadMenuTree()]);
+    
+    // [LOG: 20260611_1405] Clear loading timer before rendering
+    setReady(true);
 
     const menuNode = menuPath === 'top'
       ? state.menuTree

@@ -131,7 +131,8 @@ export function createTerminalUiCore(deps) {
     cmdInput,
     soundService,
     getOutputListener: () => outputListener,
-    setFooterVisibility
+    setFooterVisibility,
+    setReady: (isReady) => core.setReady(isReady)
   });
 
   function echoCommand(cmdText) {
@@ -196,7 +197,13 @@ export function createTerminalUiCore(deps) {
     setPrompt,
     setSuggestions,
     setGhostText,
-    applyCommandFooter,
+    applyCommandFooter: async (assetPath, fallbackText, fallbackAssetPath) => {
+      try {
+        await hintFooter.applyCommandFooter(assetPath, fallbackText, fallbackAssetPath);
+      } finally {
+        core.setReady(true);
+      }
+    },
     mountPromptRow,
     restorePromptRow,
     setFooterVisibility,
@@ -249,11 +256,12 @@ export function createTerminalUiCore(deps) {
         setFooterVisibility(true);
       }
 
+      // [LOG: 20260611_1330] Avoid flickering by waiting 200ms before showing the full loading overlay.
       core._loadingTimer = setTimeout(() => {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
-      }, 20);
+      }, 200);
     },
     buildLoadingScreenMarkup,
     setBusy,

@@ -171,7 +171,13 @@ function streamFile(res, filePath) {
       '.ttf': 'font/ttf'
     }[ext] || 'text/plain; charset=utf-8';
 
-    res.writeHead(200, { 'Content-Type': mimeType });
+    const headers = { 'Content-Type': mimeType };
+    if (['.html', '.js', '.css'].includes(ext)) {
+      // [LOG: 20260611_1540] Revalidate UI assets so prompt/cursor fixes are not hidden by stale browser cache.
+      headers['Cache-Control'] = 'no-cache';
+    }
+
+    res.writeHead(200, headers);
     const stream = fs.createReadStream(filePath);
     stream.on('error', reject);
     stream.on('end', resolve);

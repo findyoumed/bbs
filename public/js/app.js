@@ -88,6 +88,10 @@ async function init() {
     }
   } catch (e) {
     console.error('초기 화면 렌더 실패:', e.message);
+    const terminal = await import('./core/appFactory.js').then(m => window.terminal); // Try to get terminal instance
+    if (terminal?.setReady) {
+      terminal.setReady(true);
+    }
     renderInitError(`초기화 과정에서 오류가 발생했습니다. (${e.message})`);
   }
 }

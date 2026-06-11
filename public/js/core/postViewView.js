@@ -14,6 +14,7 @@ export function createPostViewView(deps) {
     loadPost,
     screenEl,
     setLoading,
+    setReady,
     state,
     updateURL,
     renderScreenSequential
@@ -27,6 +28,10 @@ export function createPostViewView(deps) {
     setLoading('연결하는 중입니다..');
     const boardKey = String(boardId || '').trim();
     const data = await loadPost(boardKey, postId);
+    
+    // [LOG: 20260611_1415] Clear loading timer before rendering
+    setReady(true);
+
     state.post = data.post;
     // [LOG: 20260429_0047] Direct /board/:boardId/:postId entry must keep
     // server-side prev/next information so post-view commands do not depend on a prior list visit.

@@ -55,6 +55,7 @@ export function createAppFactoryScreens(deps) {
     setHint: terminalUiCore.setHint,
     setFooterVisibility: terminalUiCore.setFooterVisibility,
     setPrompt: terminalUiCore.setPrompt,
+    setReady: terminalUiCore.setReady,
     setLoading: terminalUiCore.setLoading,
     buildLoadingScreenMarkup: terminalUiCore.buildLoadingScreenMarkup,
     esc: terminalUiCore.esc,

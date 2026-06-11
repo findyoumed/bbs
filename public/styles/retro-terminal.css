@@ -218,6 +218,9 @@ a {
 #terminal-prompt-row {
     display: flex;
     align-items: center;
+    /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
+    column-gap: 0 !important;
+    row-gap: 0 !important;
     position: relative;
 }
 

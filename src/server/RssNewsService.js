@@ -146,12 +146,16 @@ class RssNewsService extends RssServiceBase {
     const expectedKey = this._normalize(options.articleKey || options.key || '');
     const expectedLink = this._normalize(options.link || '');
 
-    if (expectedKey) {
-      return list.find((item) => this._buildNewsArticleKey(item) === expectedKey) || null;
+    if (expectedLink) {
+      const byLink = list.find((item) => this._normalize(item?.link || '') === expectedLink) || null;
+      if (byLink) {
+        // [LOG: 20260611_1630] RSS topic feeds can be rebuilt between list and detail; a matching link is the stable identity.
+        return byLink;
+      }
     }
 
-    if (expectedLink) {
-      return list.find((item) => this._normalize(item?.link || '') === expectedLink) || null;
+    if (expectedKey) {
+      return list.find((item) => this._buildNewsArticleKey(item) === expectedKey) || null;
     }
 
     const target = String(targetNo || '').trim();

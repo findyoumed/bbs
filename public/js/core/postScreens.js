@@ -7,7 +7,7 @@ export function createPostScreens(deps) {
     ansiToHTML, applyCommandFooter, buildPostListAnsi, buildPostViewAnsi, buildAttachmentListAnsi,
     cmdInput, createPost, downloadAttachment, esc, findBoardByKey, getBoardKey, getBoardSelectTitle,
     getCommandFooterText, getSupportedFooterText, loadAttachments, loadPost, loadPosts, replyPost,
-    screenEl, setHint, setLoading, setPrompt, showMain, state, updatePost, updateURL,
+    screenEl, setHint, setLoading, setReady, setPrompt, showMain, state, updatePost, updateURL,
     renderScreenSequential
   } = deps;
 

@@ -14,6 +14,7 @@ export function createPostListView(deps) {
     loadPosts,
     screenEl,
     setLoading,
+    setReady,
     state,
     updateURL,
     findBoardByKey,
@@ -56,6 +57,10 @@ export function createPostListView(deps) {
     if (!fromHistory) updateURL();
     setLoading('연결하는 중입니다..');
     const data = await loadPosts(boardKey, page, searchParams);
+    
+    // [LOG: 20260611_1410] Clear loading timer before rendering
+    setReady(true);
+
     if (data.board) {
       const resolvedKey = String(getBoardKey(data.board) || boardKey).trim();
       state.board = { ...state.board, ...data.board, id: resolvedKey, boardId: resolvedKey };

@@ -186,7 +186,8 @@ export function createNewsAnsiBuilders(deps) {
     // Title wrapping: targetCols - 6 (label "제목: ")
     const titleLines = wrapAnsiText(articleTitle, Math.max(10, targetCols - 6));
 
-    const bodyText = String(article?.body || article?.description || '').trim() || 'RSS 본문 요약이 없습니다.';
+    // [LOG: 20260611_1640] Do not render a fallback sentence when RSS article body text is unavailable.
+    const bodyText = String(article?.body || article?.description || '').trim();
     const bodyLines = wrapAnsiText(bodyText, targetCols);
 
     const source = String(article?.sourceTitle || '').trim();
@@ -200,8 +201,8 @@ export function createNewsAnsiBuilders(deps) {
     const imageRowBudget = hasImage ? (isMobile ? 5 : 7) : 0;
     const newsBodyRowBudget = Math.max(10, 18 - imageRowBudget);
     const metaParts = [
-      source ? `출처:${source}` : '',
-      date ? `일시:${date}` : ''
+      source ? `출처: ${source}` : '',
+      date ? `일시: ${date}` : ''
     ].filter(Boolean);
 
     // Meta info: One per line on mobile to prevent ugly splitting

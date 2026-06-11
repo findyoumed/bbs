@@ -82,12 +82,23 @@ export function createAnsiEngine(deps) {
 
             const flush = () => {
                 if (!chunk) return;
-                const actualFg = cFg < 0 ? 7 : cFg;
-                const actualBg = cBg < 0 ? 0 : cBg;
-                const isBrandInvert = actualFg === 0 && actualBg !== 0;
-                const fColor = isBrandInvert ? '#000000' : '#ffffff';
-                const bColor = isBrandInvert ? '#ffffff' : 'transparent';
-                html += `<span style="color:${fColor};background:${bColor};font-weight:normal">${escCell(chunk)}</span>`;
+                let actualFg = cFg < 0 ? 7 : cFg;
+                let actualBg = cBg < 0 ? 0 : cBg;
+
+                // [LOG: 20260611_1220] Handle ANSI Reverse attribute
+                if (cRev) {
+                    const tmp = actualFg;
+                    actualFg = (actualBg === 0) ? 0 : actualBg;
+                    actualBg = (tmp === 7 && cFg < 0) ? 7 : tmp;
+                }
+
+                const classes = [];
+                classes.push(`ansi-fg-${actualFg}`);
+                if (actualBg !== 0) classes.push(`ansi-bg-${actualBg}`);
+                if (cBold) classes.push('ansi-bold');
+
+                const classAttr = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
+                html += `<span${classAttr}>${escCell(chunk)}</span>`;
                 chunk = '';
             };
 

@@ -15,10 +15,12 @@ export function createTerminalInputUi(deps) {
 
   let ghostTextEl = null;
   let maskTextEl = null;
+  let cursorMeasureContext = null;
   let selectedSuggestionIndex = -1;
   let cursorStateObserver = null;
-  // [LOG: 20260610_1145] Enable custom blinking terminal block cursor
-  const useCustomCursor = true;
+  let fontCursorSyncRegistered = false;
+  // [LOG: 20260611_1610] Use the browser caret again; the absolute overlay cursor drifts outside text flow.
+  const useCustomCursor = false;
   // [LOG: 20260506_1315] Command suggestion UI disabled due to frequent misfires.
   // const suggestionBoxEl = document.getElementById('cmd-suggestion-box');
   const suggestionBoxEl = null;
@@ -70,15 +72,85 @@ export function createTerminalInputUi(deps) {
     });
   }
 
-  // [LOG: 20260610_1145] Update cursor position in exact character width units (ch)
+  // [LOG: 20260611_1454] Update cursor position from the input's measured text width, not estimated ch units.
   function updateCursorPosition() {
     if (!cmdInput || !cursorEl) {
       return;
     }
 
     const textBeforeCaret = cmdInput.value.substring(0, cmdInput.selectionStart || 0);
-    const chCount = displayWidth(textBeforeCaret);
-    cursorEl.style.left = `${chCount}ch`;
+    const measuredWidth = measureInputTextWidth(textBeforeCaret);
+    cursorEl.style.left = `${measuredWidth}px`;
+  }
+
+  function getCursorMeasureContext() {
+    if (cursorMeasureContext) {
+      return cursorMeasureContext;
+    }
+
+    const canvas = document.createElement('canvas');
+    cursorMeasureContext = canvas.getContext('2d');
+    return cursorMeasureContext;
+  }
+
+  function measureInputTextWidth(text) {
+    const normalizedText = String(text || '');
+    if (!normalizedText) {
+      return 0;
+    }
+
+    const measureContext = getCursorMeasureContext();
+    if (!cmdInput || !measureContext) {
+      return displayWidth(text);
+    }
+
+    const inputStyle = window.getComputedStyle(cmdInput);
+    measureContext.font = inputStyle.font;
+
+    const baseWidth = measureContext.measureText(normalizedText).width;
+    const letterSpacing = Number.parseFloat(inputStyle.letterSpacing);
+    if (!Number.isFinite(letterSpacing) || letterSpacing === 0) {
+      return baseWidth;
+    }
+
+    return baseWidth + (Math.max(0, Array.from(normalizedText).length - 1) * letterSpacing);
+  }
+
+  // [LOG: 20260611_1413] Re-run cursor sync after web fonts and layout frames settle.
+  function scheduleCursorLayoutSync() {
+    syncMaskedInputDisplay();
+    syncCursorVisibility();
+
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      syncMaskedInputDisplay();
+      syncCursorVisibility();
+
+      window.setTimeout(() => {
+        syncMaskedInputDisplay();
+        syncCursorVisibility();
+      }, 50);
+    });
+  }
+
+  // [LOG: 20260611_1413] document.fonts.ready covers the initial font-load race that can skew cursor width.
+  function registerFontCursorSync() {
+    if (fontCursorSyncRegistered || typeof document === 'undefined' || !document.fonts) {
+      return;
+    }
+
+    fontCursorSyncRegistered = true;
+
+    document.fonts.ready
+      .then(scheduleCursorLayoutSync)
+      .catch(() => {});
+
+    if (typeof document.fonts.addEventListener === 'function') {
+      document.fonts.addEventListener('loadingdone', scheduleCursorLayoutSync);
+    }
   }
 
   function getTerminalContainer() {
@@ -108,7 +180,8 @@ export function createTerminalInputUi(deps) {
     }
 
     const visible = shouldShowCursor();
-    cursorEl.style.setProperty('display', visible ? 'inline-block' : 'none', visible ? 'important' : '');
+    // [LOG: 20260611_1510] Do not use inline !important; loading CSS must hide stale cursor synchronously.
+    cursorEl.style.setProperty('display', visible ? 'inline-block' : 'none');
 
     if (visible) {
       updateCursorPosition();
@@ -172,7 +245,13 @@ export function createTerminalInputUi(deps) {
       syncMaskedInputDisplay();
       syncCursorVisibility();
     });
+    cmdInput.addEventListener('beforeinput', () => window.requestAnimationFrame(syncCursorVisibility));
     cmdInput.addEventListener('click', syncCursorVisibility);
+    cmdInput.addEventListener('keyup', syncCursorVisibility);
+    cmdInput.addEventListener('mouseup', syncCursorVisibility);
+    cmdInput.addEventListener('select', syncCursorVisibility);
+    cmdInput.addEventListener('compositionupdate', syncCursorVisibility);
+    cmdInput.addEventListener('compositionend', syncCursorVisibility);
     cmdInput.addEventListener('focus', () => {
       syncMaskedInputDisplay();
       syncCursorVisibility();
@@ -187,6 +266,11 @@ export function createTerminalInputUi(deps) {
       syncCursorVisibility();
     }, 0));
     cmdInput.addEventListener('bbs:mask-state-change', syncMaskedInputDisplay);
+    document.addEventListener('selectionchange', () => {
+      if (document.activeElement === cmdInput) {
+        syncCursorVisibility();
+      }
+    });
 
     cursorStateObserver?.disconnect();
     cursorStateObserver = new MutationObserver(() => {
@@ -217,14 +301,7 @@ export function createTerminalInputUi(deps) {
 
     syncMaskedInputDisplay();
     syncCursorVisibility();
-
-    // [LOG: 20260611_1145] Re-sync cursor layout on any font loading done event to handle SPA font changes robustly.
-    if (document.fonts) {
-      document.fonts.addEventListener('loadingdone', () => {
-        syncMaskedInputDisplay();
-        syncCursorVisibility();
-      });
-    }
+    registerFontCursorSync();
   }
 
   function setSuggestions(matches, selectedIndex = -1) {

@@ -41,6 +41,32 @@ function toKoreanCity(city, region) {
   return CITY_KO[city] || CITY_KO[region] || city || region || '알 수 없음';
 }
 
+function createWeatherFetchOptions(timeoutMs = 5000) {
+  const options = {
+    headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' }
+  };
+
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    options.signal = AbortSignal.timeout(timeoutMs);
+  }
+
+  return options;
+}
+
+function getFriendlyLocalWeatherError(error, stageLabel) {
+  const rawMessage = String(error?.message || '').trim();
+  const rawName = String(error?.name || '').trim();
+  const rawCode = String(error?.cause?.code || error?.code || '').trim();
+  const technicalText = `${rawName} ${rawCode} ${rawMessage}`;
+
+  // [LOG: 20260611_1715] Do not expose Node fetch internals such as "fetch failed" to the BBS screen.
+  if (/fetch failed|aborted|timeout|terminated|network|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(technicalText)) {
+    return `${stageLabel} 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.`;
+  }
+
+  return `${stageLabel} 처리 중 오류가 발생했습니다.`;
+}
+
 class RssWeatherService extends RssServiceBase {
   constructor(options = {}) {
     super(options);
@@ -111,14 +137,17 @@ class RssWeatherService extends RssServiceBase {
       // 1) IP → 위치 (로컬/사설 IP면 공인IP 자동 감지)
       const isLocal = !clientIp || clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.startsWith('192.168.') || clientIp.startsWith('10.') || clientIp.startsWith('172.');
       const geoPath = isLocal ? '' : clientIp;
-      const geoRes = await this.fetchImpl(`http://ip-api.com/json/${geoPath}?fields=status,city,regionName,lat,lon&lang=ko`, { headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' } });
+      const geoRes = await this.fetchImpl(
+        `http://ip-api.com/json/${geoPath}?fields=status,city,regionName,lat,lon&lang=ko`,
+        createWeatherFetchOptions()
+      );
       if (!geoRes?.ok) return { unavailable: true, message: '위치 조회 실패' };
       const geo = JSON.parse(await geoRes.text());
       if (geo.status !== 'success' || !geo.lat || !geo.lon) return { unavailable: true, message: '위치 확인 불가' };
 
       // 2) 현재 날씨 + 5일 예보
       const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current=weather_code,temperature_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia/Seoul&forecast_days=5`;
-      const wxRes = await this.fetchImpl(wxUrl, { headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' } });
+      const wxRes = await this.fetchImpl(wxUrl, createWeatherFetchOptions());
       if (!wxRes?.ok) return { unavailable: true, message: '날씨 조회 실패' };
       const wx = JSON.parse(await wxRes.text());
 
@@ -151,7 +180,7 @@ class RssWeatherService extends RssServiceBase {
       this._setMemoryCacheEntry(this.feedCache, cacheKey, result, this.cacheTtlMs);
       return result;
     } catch (e) {
-      return { unavailable: true, message: `위치 날씨 오류: ${e.message}` };
+      return { unavailable: true, message: getFriendlyLocalWeatherError(e, '위치 날씨') };
     }
   }
 

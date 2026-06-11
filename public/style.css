@@ -233,7 +233,6 @@ body.theme-blue .write-field textarea {
 }
 
 /* [LOG: 20260610_1720] 로딩 상태 가로줄 및 푸터 완전 박멸 */
-#terminal-container.is-loading #terminal-footer,
 #terminal-container.is-loading #terminal-footer::before {
     display: none !important;
     content: none !important;
@@ -284,18 +283,26 @@ body.theme-blue .write-field textarea {
 #terminal-prompt-row {
     display: flex;
     align-items: center;
-    gap: 0 !important;
+    column-gap: 0 !important;
+    row-gap: 0 !important;
     min-height: 18px;
     width: 100%;
 }
 
 #terminal-prompt-row.terminal-prompt-row--inline {
-    gap: 0 !important;
+    column-gap: 0 !important;
+    row-gap: 0 !important;
     min-height: 0;
 }
 
 #terminal-prompt-row label {
     margin-right: 0 !important;
+}
+
+#terminal-prompt-row label:not(:empty)::after {
+    /* [LOG: 20260611_1600] Render exactly one terminal blank after the prompt; flex gap and string spaces stay zero. */
+    content: " ";
+    white-space: pre;
 }
 
 #terminal-prompt-row.terminal-prompt-row--inline label {
@@ -352,8 +359,8 @@ body.theme-blue .write-field textarea {
     border: none;
     outline: none;
     color: #ffffff;
-    /* [LOG: 20260610_1145] Hide the browser caret as we are using the custom blinking block cursor. */
-    caret-color: transparent !important;
+    /* [LOG: 20260611_1610] Browser caret stays in the real input flow; the custom overlay cursor is disabled. */
+    caret-color: #ffffff !important;
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
@@ -1318,8 +1325,9 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 
     #terminal-prompt-row {
         min-height: 36px;
-        /* [LOG: 20260611_1127] Disallow gap to ensure exact 1-space character spacing */
-        gap: 0 !important;
+        /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
+        column-gap: 0 !important;
+        row-gap: 0 !important;
         padding: 3px 6px;
         border: 1px solid rgba(255, 255, 255, 0.38);
         border-radius: 4px;
@@ -1332,7 +1340,7 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
     }
 
     #terminal-footer label {
-        min-width: 2ch;
+        min-width: 0 !important;
     }
 
     #cmd-input {
@@ -1349,8 +1357,9 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 
     #terminal-prompt-row {
         min-height: 34px;
-        /* [LOG: 20260611_1127] Disallow gap to ensure exact 1-space character spacing */
-        gap: 0 !important;
+        /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
+        column-gap: 0 !important;
+        row-gap: 0 !important;
         padding: 2px 5px;
     }
 
@@ -1439,8 +1448,9 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 
     #terminal-prompt-row {
         min-height: 20px;
-        /* [LOG: 20260611_1127] Disallow gap to ensure exact 1-space character spacing */
-        gap: 0 !important;
+        /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
+        column-gap: 0 !important;
+        row-gap: 0 !important;
         padding: 1px 4px;
         border-width: 1px;
     }
@@ -1700,8 +1710,9 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 
     #terminal-prompt-row {
         min-height: 30px;
-        /* [LOG: 20260611_1127] Disallow gap to ensure exact 1-space character spacing */
-        gap: 0 !important;
+        /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
+        column-gap: 0 !important;
+        row-gap: 0 !important;
         padding: 2px 4px;
     }
 
@@ -2042,16 +2053,89 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
     outline: none !important;
 }
 
-/* [LOG: 20260610_2000] 로딩 중 레이아웃 흔들림 방지: 푸터 틀은 유지하되 내용만 숨김 */
+.terminal-cursor {
+    /* [LOG: 20260611_1610] Prevent the old absolute overlay cursor from competing with the native caret. */
+    display: none !important;
+}
+
+/* [LOG: 20260611_1413] Keep news article loading padding aligned with the completed compact article body. */
+body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > .loading {
+    width: 100%;
+    max-width: 44ch;
+    margin: 0 auto;
+    padding: 16px 1px;
+    box-sizing: border-box;
+}
+
+/* [LOG: 20260611_1655] Keep the loading hint visible while hiding only the input prompt row. */
 #terminal-container.is-loading #terminal-footer {
     display: flex !important;
     visibility: visible !important;
-    min-height: 24px; /* 최소 높이 보장 */
+    min-height: 36px !important;
 }
 
-#terminal-container.is-loading #terminal-footer > * {
+#terminal-container.is-loading #cmd-hint {
+    display: block !important;
+    visibility: visible !important;
+}
+
+#terminal-container.is-loading .bbs-loading-text::after {
+    /* [LOG: 20260611_1655] Preserve the underscore wait cursor without using the input overlay cursor. */
+    content: "_";
+    display: inline-block;
+    margin-left: 1ch;
+    animation: cursor-blink 1s step-end infinite;
+}
+
+#terminal-container.is-loading #cmd-hint:empty::after {
+    /* [LOG: 20260611_1705] Some route loaders only set is-loading; show the wait cursor even when hint text is empty. */
+    content: "_";
+    display: inline-block;
+    animation: cursor-blink 1s step-end infinite;
+}
+
+#terminal-container.is-loading #terminal-prompt-row {
+    display: none !important;
     visibility: hidden !important;
     pointer-events: none !important;
+}
+
+#terminal-container.is-command-pending #terminal-footer {
+    /* [LOG: 20260611_1725] Numeric/menu command submissions need a visible wait caret before full loading starts. */
+    display: flex !important;
+    visibility: visible !important;
+    min-height: 36px !important;
+}
+
+#terminal-container.is-command-pending #cmd-hint {
+    display: block !important;
+    visibility: visible !important;
+}
+
+#terminal-container.is-command-pending #terminal-prompt-row {
+    display: flex !important;
+    visibility: visible !important;
+    pointer-events: none !important;
+}
+
+#terminal-container.is-command-pending #cmd-input {
+    /* [LOG: 20260611_1800] Keep the submitted number visible and replace only the native caret. */
+    flex: 0 0 auto !important;
+    width: calc(max(1, var(--pending-command-length, 1)) * 1ch) !important;
+    caret-color: transparent !important;
+}
+
+#terminal-container.is-command-pending #cmd-input-wrapper::after {
+    /* [LOG: 20260611_1800] Render the wait caret immediately to the right of the submitted command text. */
+    content: "_";
+    display: inline-block;
+    color: #ffffff !important;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.1;
+    margin-left: 0;
+    white-space: pre;
+    animation: cursor-blink 1s step-end infinite;
 }
 
 #terminal-container.is-loading .terminal-hud,
@@ -2064,7 +2148,11 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 }
 
 /* [LOG: 20260610_1920] .loading 클래스가 화면에 존재할 때 푸터 자동 숨김 (Fail-safe) */
-#terminal-container:has(.loading) #terminal-footer,
 #terminal-container:has(.loading) .terminal-hud {
+    display: none !important;
+}
+
+#terminal-container:has(.loading) #terminal-prompt-row {
+    /* [LOG: 20260611_1655] A loading screen may coexist with the footer hint, but not with the command input row. */
     display: none !important;
 }

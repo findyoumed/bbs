@@ -1701,6 +1701,269 @@
 
 ---
 
+## [2026-06-11 14:13] 뉴스 상세 로딩 커서 및 좌우 여백 정렬
+
+**LOG_ID: 20260611_1413**
+목표: `/service/news/1` 로딩 완료 시점의 커스텀 커서 위치 밀림과 로딩 전후 좌우 공백 차이를 줄인다.
+변경 파일:
+- `public/js/core/terminalInputUi.js`
+- `public/style.css`
+- `WORK_LOG.md`
+수행 작업:
+1. `document.fonts.ready` 완료 후 커서/마스크 표시를 재동기화하고, `requestAnimationFrame` 및 짧은 지연 재동기화로 실제 폰트 적용 프레임 이후 커서 위치를 보정했다.
+2. 기존 `loadingdone` 이벤트도 동일한 커서 재동기화 함수로 묶어 SPA 전환 중 추가 폰트 로딩에도 대응했다.
+3. 뉴스 상세 로딩 상태의 `.loading` 폭과 좌우 padding을 완료 상태 compact 본문(`44ch`, `1px`) 기준과 맞췄다.
+실행: `node --check public/js/core/terminalInputUi.js`, `npm run smoke:vercel-ready`
+기대: 폰트 로딩 직후 커서가 입력 위치와 다시 정렬되고, 뉴스 상세 로딩 전후 좌우 여백이 덜컥거리지 않는다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-11 14:54] 뉴스 메뉴 입력 직후 커서 위치 순간 이동 보정
+
+**LOG_ID: 20260611_1454**
+목표: `/service/news` 초기 표시 상태와 입력 직후 커스텀 커서 위치가 순간적으로 달라져 보이는 문제를 해결한다.
+변경 파일:
+- `public/js/core/terminalInputUi.js`
+- `public/style.css`
+- `WORK_LOG.md`
+수행 작업:
+1. 커스텀 커서 위치 계산을 `ch` 단위 추정에서 실제 `#cmd-input` computed font를 적용한 canvas px 폭 기준으로 변경했다.
+2. `beforeinput`, `keyup`, `mouseup`, `select`, composition 이벤트와 `selectionchange`에서도 커서 위치를 즉시 재동기화하도록 보강했다.
+3. `getBoundingClientRect()` 기반 DOM 측정이 `#terminal-container`의 `transform: scale(...)` 영향을 받아 커서 폭이 중복 스케일되던 원인을 제거했다.
+실행: `node --check public/js/core/terminalInputUi.js`, Playwright 좌표 측정, `npm run smoke:vercel-ready`
+기대: 뉴스 메뉴 첫 로딩 상태와 입력 직후 모두 커서 좌표가 실제 입력 텍스트 폭 기준으로 일관되게 유지된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-11 15:03] 로딩 전환 중 이전 커서 위치 잔상 제거
+
+**LOG_ID: 20260611_1503**
+목표: `/service/news` 로딩 전환 시 이전 입력 커서 위치가 오른쪽에 남아 보이는 문제를 제거한다.
+변경 파일:
+- `public/js/core/terminalInputUi.js`
+- `WORK_LOG.md`
+수행 작업:
+1. 커서 표시 상태에서 인라인 `display:inline-block !important`를 쓰지 않도록 변경했다.
+2. 로딩 클래스가 붙는 즉시 CSS의 `#terminal-container.is-loading .terminal-cursor { display:none !important; }` 규칙이 인라인 display보다 우선하도록 했다.
+3. Playwright에서 커서가 보이는 상태로 `is-loading`을 강제 추가했을 때 computed display가 즉시 `none`이 되는지 확인했다.
+실행: `node --check public/js/core/terminalInputUi.js`, Playwright display 우선순위 측정, `npm run smoke:vercel-ready`
+기대: `/service/news` 로딩 중에는 이전 위치의 커스텀 커서가 보이지 않고, 입력 가능 상태에서만 정확한 위치에 커서가 표시된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-11 15:08] 뉴스 상세 직접 진입 auto-focus 커서 표시 지연
+
+**LOG_ID: 20260611_1508**
+목표: `/service/news/1?article=1&key=...` 직접 진입 시 footer가 복원되자마자 빈 입력 커서가 잘못된 초기 위치처럼 보이는 문제를 막는다.
+변경 파일:
+- `public/js/core/terminalInputUi.js`
+- `WORK_LOG.md`
+수행 작업:
+1. 로딩 클래스 또는 화면 DOM 변경 직후 빈 입력 커서를 120ms 동안 숨기는 안정화 지연을 추가했다.
+2. 기존 조건이 focus된 입력에만 적용되어 직접 URL 진입의 auto-focus 타이밍을 놓치던 문제를 수정했다.
+3. 사용자가 클릭하거나 입력을 시작하면 지연을 즉시 해제하고 현재 좌표 계산으로 커서를 표시하도록 했다.
+실행: `node --check public/js/core/terminalInputUi.js`, Playwright 초기 프레임 좌표 측정, `npm run smoke:vercel-ready`
+기대: 직접 진입 초기에는 커서가 레이아웃 안정화 전 표시되지 않고, 입력 가능 상태/사용자 입력 시에는 정확한 위치에 표시된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-11 15:12] 명령 프롬프트 강제 공백 제거로 커서 시작점 정렬
+
+**LOG_ID: 20260611_1512**
+목표: `/service/news` 및 뉴스 상세 화면에서 초기 빈 커서가 한 칸 오른쪽으로 밀려 보이는 근본 원인인 prompt trailing space를 제거한다.
+변경 파일:
+- `public/js/core/terminalHintFooter.js`
+- `WORK_LOG.md`
+수행 작업:
+1. `setPrompt()`가 모든 prompt 뒤에 일반 공백 한 칸을 강제로 붙이던 로직을 제거했다.
+2. prompt 텍스트를 `trimEnd()`한 실제 문구 그대로 렌더링해 `#cmd-prompt` 오른쪽 끝과 `#cmd-input-wrapper` 시작점이 같아지도록 했다.
+3. Playwright로 `/service/news`와 뉴스 상세 URL 모두 `promptRight`, `inputLeft`, `cursorLeft`가 빈 입력 상태에서 같은지 측정했다.
+실행: `node --check public/js/core/terminalHintFooter.js`, Playwright prompt/cursor 좌표 측정, `npm run smoke:vercel-ready`
+기대: 초기 빈 커서가 prompt 뒤 강제 공백 때문에 한 칸 오른쪽에서 시작하지 않고, 입력 시작점과 같은 위치에 표시된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-11 15:18] 프롬프트-입력 사이 공백 1칸 구조화
+
+**LOG_ID: 20260611_1518**
+목표: `>>` 뒤 공백이 0칸 또는 2칸 이상으로 흔들리지 않고 항상 정확히 1칸만 유지되도록 한다.
+변경 파일:
+- `public/style.css`
+- `WORK_LOG.md`
+수행 작업:
+1. `#terminal-prompt-row`의 기본 및 반응형 override에 남아 있던 수평 `gap: 0 !important`를 모두 `column-gap: 1ch !important`로 통일했다.
+2. prompt 문자열 자체에는 trailing space를 붙이지 않고, prompt와 input 사이의 공백은 CSS 구조 gap 하나로만 표현하도록 분리했다.
+3. Playwright로 `/service/news`와 뉴스 상세 URL에서 `promptRight -> inputLeft -> cursorLeft` 간격이 한 글자 폭(`8.5px`)인지 측정했다.
+실행: `node --check public/js/core/terminalHintFooter.js`, `node --check public/js/core/terminalInputUi.js`, `npm run smoke:vercel-ready`
+기대: 로딩 완료 직후와 입력 시작 후 모두 `>>` 뒤 공백은 정확히 한 칸이며, 두 칸 이상으로 벌어지는 경로가 사라진다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-11 15:37] 뉴스 프롬프트 공백 재발 케이스 전수 점검
+
+**LOG_ID: 20260611_1524**
+목표: `/service/news`와 뉴스 목록 직접 진입 화면에서 로딩 완료 직후 `>>` 뒤 공백이 한 칸보다 커지는 모든 경로를 agent 병렬 점검과 실측으로 제거한다.
+변경 파일:
+- `public/js/core/commandFooter.js`
+- `public/js/core/commandFooterText.js`
+- `public/js/core/terminalHintFooter.js`
+- `public/js/core/terminalInputUi.js`
+- `public/style.css`
+- `public/styles/retro-terminal.css`
+- `WORK_LOG.md`
+수행 작업:
+1. agent 2개를 사용해 JS prompt 생성 경로, CSS gap/margin/min-width 경로, 로딩 중 footer 표시 경로, 런타임 측정 방법을 분리 점검했다.
+2. footer 기본 prompt와 뉴스 footer 문자열을 trailing space 없이 저장하고, footer asset parser와 `setPrompt()`에서 최종 prompt를 `trimEnd()` 기준으로 렌더링하게 했다.
+3. prompt 문자열 공백은 0개로 고정하고, `#terminal-prompt-row`의 `column-gap: 1ch`만 유일한 한 칸 공백 소스로 남겼다.
+4. `public/styles/retro-terminal.css`에도 같은 `column-gap: 1ch` 규칙을 명시해 CSS 파일 간 override로 공백 정책이 흔들리지 않게 했다.
+5. 로딩 중 `#terminal-footer`를 완전히 숨겨 빈 footer 틀이 prompt/input 간격처럼 보이는 transient 상태를 제거했다.
+실행:
+- `node --check public/js/core/commandFooter.js`
+- `node --check public/js/core/commandFooterText.js`
+- `node --check public/js/core/terminalHintFooter.js`
+- `node --check public/js/core/terminalInputUi.js`
+- Playwright 실측: `/service/news`, `/service/news/1?article=1&key=235f9bb85bfe29328bef53b53b1c17c119062217`
+- `npm run smoke:vercel-ready`
+기대:
+- prompt text는 `"선택 >>"`로 끝 공백이 없고, 로딩 완료 직후부터 `promptRight -> inputLeft -> cursorLeft` 간격이 정확히 1ch로 유지된다.
+결과:
+- ✅ 완료. 두 URL 모두 첫 visible frame부터 `promptEndsWithSpace=false`, `rowColumnGap=8.5px`, `oneCellWidth=8.5px`, `promptToInput=8.5px`, `promptToCursor=8.5px`, `cursorFromInput=0px`로 확인했다.
+
+---
+
+## [2026-06-11 15:49] 뉴스 article=2 상세 진입 캐시 재현 경로 차단
+
+**LOG_ID: 20260611_1540**
+목표: `/service/news/1?article=2&key=aca3cf5149e7d925f8dca682bac0860639ffa39a`에서 같은 공백 문제가 계속 보이는 경우를 확인하고, 수정된 CSS/JS가 브라우저 캐시에 가려지는 경로를 차단한다.
+변경 파일:
+- `public/index.html`
+- `src/server/httpUtils.js`
+- `WORK_LOG.md`
+수행 작업:
+1. Playwright로 해당 article=2 URL을 20ms 단위로 샘플링해 첫 visible frame부터 `promptEndsWithSpace=false`, `columnGap=8.5px`, `promptToCursor=8.5px`, `cursorFromInput=0px`임을 확인했다.
+2. `public/index.html`의 `retro-terminal.css`와 `style.css` 쿼리 버전을 `20260611_1540`으로 올려 사용자 브라우저가 이전 gap CSS를 계속 쓰지 않게 했다.
+3. 정적 HTML/JS/CSS 응답에 `Cache-Control: no-cache`를 추가해 서버 재시작 후 core 모듈과 스타일이 브라우저 캐시에 가려지지 않고 재검증되게 했다.
+실행:
+- `node --check src/server/httpUtils.js`
+- Playwright 실측: `/service/news/1?article=2&key=aca3cf5149e7d925f8dca682bac0860639ffa39a`
+- `npm run smoke:vercel-ready`
+기대:
+- 같은 article=2 직접 진입에서도 수정된 CSS가 즉시 로드되고, 서버 재시작 후에는 JS/CSS/HTML 캐시가 매번 재검증된다.
+결과:
+- ✅ 완료. smoke 통과. article=2 URL 실측값은 `promptText="선택 >>"`, 끝 공백 없음, 한 칸 폭 `8.5px`, 커서 시작점 `inputLeft`와 일치.
+
+---
+
+## [2026-06-11 16:00] 전역 프롬프트 공백 단일 렌더링 방식 전환
+
+**LOG_ID: 20260611_1600**
+목표: `/bbs`를 포함한 여러 화면에서 prompt와 cursor 사이 공백이 화면별로 다르게 보이는 문제를 flex gap 방식이 아니라 실제 prompt label 렌더링 방식으로 고정한다.
+변경 파일:
+- `public/style.css`
+- `public/styles/retro-terminal.css`
+- `public/index.html`
+- `WORK_LOG.md`
+수행 작업:
+1. `#terminal-prompt-row`와 반응형 override의 `column-gap`을 모두 `0`으로 되돌려 flex layout이 공백을 만들지 않게 했다.
+2. `#terminal-prompt-row label:not(:empty)::after { content: " "; white-space: pre; }`를 추가해 prompt label 내부에서 정확히 한 칸만 렌더링하게 했다.
+3. prompt 문자열은 여전히 `trimEnd()`된 상태로 유지하여 문자열 trailing space와 CSS flex gap이 겹치는 경우를 제거했다.
+4. `style.css`와 `retro-terminal.css` 캐시 버전을 `20260611_1600`으로 올렸다.
+실행:
+- `node --check src/server/httpUtils.js`
+- `node --check public/js/core/commandFooter.js`
+- `node --check public/js/core/commandFooterText.js`
+- `node --check public/js/core/terminalHintFooter.js`
+- `node --check public/js/core/terminalInputUi.js`
+- Playwright 실측: `/bbs`, `/service/news`, `/service/news/1?article=2&key=aca3cf5149e7d925f8dca682bac0860639ffa39a`
+- `npm run smoke:vercel-ready`
+기대:
+- 모든 footer prompt에서 공백 소스는 label `::after` 하나뿐이며, flex gap/margin/string trailing space는 0이다.
+결과:
+- ✅ 완료. `/bbs`, `/service/news`, 뉴스 상세 article=2에서 `promptEndsWithSpace=false`, `rowColumnGap=0px`, `promptAfterContent=" "`, `cursorFromInput=0px`를 확인했다. `/bbs` 입력 후에도 `ABC` 기준 `cursorFromInput=25.5px`로 정상 이동을 확인했다.
+
+---
+
+## [2026-06-11 16:10] absolute overlay 커서 비활성화
+
+**LOG_ID: 20260611_1610**
+목표: `/board/plaza` 등 게시판 화면에서 커서가 실제 입력 흐름과 다르게 보이는 문제의 시작점을 확인하고, 예전처럼 브라우저 기본 caret을 사용해 위치 불일치 가능성을 제거한다.
+변경 파일:
+- `public/js/core/terminalInputUi.js`
+- `public/style.css`
+- `public/index.html`
+- `WORK_LOG.md`
+수행 작업:
+1. `git log`로 커스텀 absolute overlay 커서가 `552f690 feat: upgrade to modern terminal UI`에서 도입된 것을 확인했다.
+2. `.terminal-cursor`는 실제 input text flow 밖에서 JS로 `left`를 맞추는 구조라 화면/로딩/폰트/스케일 상태에 따라 계속 어긋날 수 있으므로 비활성화했다.
+3. `terminalInputUi.js`의 `useCustomCursor`를 `false`로 바꾸고, CSS에서 `.terminal-cursor { display: none !important; }`를 추가했다.
+4. `#cmd-input`의 `caret-color`를 다시 흰색으로 설정해 브라우저 기본 caret이 실제 입력 위치에 표시되게 했다.
+5. CSS 캐시 버전을 `20260611_1610`으로 올렸다.
+실행:
+- `node --check public/js/core/terminalInputUi.js`
+- Playwright 실측: `/board/plaza`, `/bbs`, `/service/news`
+- `npm run smoke:vercel-ready`
+기대:
+- prompt 공백은 label `::after` 한 칸만 담당하고, 커서 위치는 브라우저 input caret이 직접 처리해 overlay 좌표 오차가 사라진다.
+결과:
+- ✅ 완료. 세 URL 모두 `customCursorDisplay=none`, `caretColor=rgb(255, 255, 255)`, `promptEndsWithSpace=false`, `columnGap=0px`, `promptAfterContent=" "`로 확인했다. 입력 후 `selectionStart=3`도 정상 확인했다.
+
+---
+
+## [2026-06-11 16:20] 전역 prompt/caret 상태 추가 점검
+
+**LOG_ID: 20260611_1620**
+목표: 커스텀 overlay 커서 비활성화 후 주요 라우트와 특수 prompt host 화면에서 prompt 공백과 caret 표시 상태가 전역으로 일관되는지 확인한다.
+변경 파일:
+- `WORK_LOG.md`
+수행 작업:
+1. Playwright로 `/`, `/bbs`, `/board/plaza`, `/service/news`, 뉴스 상세 article=2, `/chat`, `/signup`, `/log/signup`, `/log/password-reset`, `/memo`, `/profile`, `/system`, `/syslog`를 점검했다.
+2. 모든 정상 표시 화면에서 `customCursorDisplay=none`, `caretColor=rgb(255, 255, 255)`, `promptEndsWithSpace=false`, `columnGap=0px`, `promptAfterContent=" "` 상태를 확인했다.
+3. `entry-auth.css`, myinfo/signup prompt host CSS를 확인해 특수 inline prompt가 전역 `#terminal-prompt-row` gap 정책을 깨지 않는 것을 확인했다.
+4. `smoke:full-traversal`을 실행해 더 넓은 회귀를 확인했으며, `/memo`, `/log/login`, `/profile/smoke-route-user`, `SYSINFO`에서 기존 라우팅/표시 타임아웃이 남아 있음을 별도 이슈로 분리했다.
+실행:
+- `node --check public/js/core/terminalInputUi.js`
+- `node --check src/server/httpUtils.js`
+- `npm run smoke:ui-layout`
+- `npm run smoke:ui-geometry`
+- `npm run smoke:vercel-ready`
+- `npm run smoke:full-traversal`
+기대:
+- prompt/caret 문제는 주요 화면과 특수 prompt host에서 재발하지 않는다.
+결과:
+- ✅ prompt/caret 점검, 문법 검사, `smoke:ui-layout`, `smoke:vercel-ready` 통과.
+- ⚠️ `smoke:ui-geometry`는 `terminalUiCore.js` auto zoom 문자열 검사에서 실패했고, `smoke:full-traversal`은 위 라우트들의 렌더 타임아웃으로 실패했다. 둘 다 이번 prompt/caret 변경 파일의 직접 실패는 아니며 별도 정리가 필요하다.
+
+---
+
+## [2026-06-11 16:30] 뉴스 상세 API 404 과다 발생 수정
+
+**LOG_ID: 20260611_1630**
+목표: 뉴스 목록에서 기사를 선택할 때 `/api/services/news/:topic/:article?key=...&link=...` 요청이 404를 반복 발생시키는 문제를 수정한다.
+변경 파일:
+- `src/server/RssNewsService.js`
+- `WORK_LOG.md`
+수행 작업:
+1. 콘솔 로그의 404 요청이 뉴스 상세 조회에서 `key`와 `link`를 함께 보내지만, 서버 `_resolveNewsArticle()`가 `key`가 있으면 key만 보고 실패 즉시 404를 반환하는 구조임을 확인했다.
+2. RSS topic feed는 목록 표시와 상세 클릭 사이에 재생성/재정렬될 수 있으므로, `link`가 함께 전달된 경우 link를 기사 식별의 우선 기준으로 사용하게 했다.
+3. `link`가 없고 잘못된 `key`만 들어온 경우에는 기존처럼 404로 거부되도록 유지했다.
+실행:
+- `node --check src/server/RssNewsService.js`
+- 단위 확인: stale key + matching link는 기사 resolve, stale key만 있으면 reject
+- `npm run smoke:rss-services`
+- `npm run smoke:vercel-ready`
+기대:
+- 뉴스 목록에서 상세 클릭 시 feed key가 흔들려도 같은 link의 기사를 찾아 404 알림이 반복되지 않는다.
+결과:
+- ✅ 완료. RSS smoke와 vercel-ready smoke 통과.
+
+---
+
 
 
 **LOG_ID: 20260509_0945**
@@ -7322,3 +7585,185 @@
 ---
 
 
+## [2026-06-11 16:40] 뉴스 상세 빈 본문 fallback 문구 제거
+
+**LOG_ID: 20260611_1640**
+목표: RSS 뉴스 상세 화면에서 본문/요약이 비어 있을 때 `"RSS 본문 요약이 없습니다."` 문구가 표시되지 않도록 제거한다.
+변경 파일:
+- `public/js/core/newsAnsiBuilders.js`
+- `WORK_LOG.md`
+수행 작업:
+1. `buildNewsArticleAnsi()`에서 `article.body`와 `article.description`이 모두 비어 있을 때 사용하던 fallback 문구를 제거했습니다.
+2. 빈 본문은 그대로 빈 문자열로 유지하여 본문 행이 렌더링되지 않게 했습니다.
+실행:
+- `node --check public/js/core/newsAnsiBuilders.js`
+- `rg -n "RSS 본문 요약이 없습니다" public src scripts -S`
+- `npm run smoke:vercel-ready`
+기대:
+- `/service/news/1?article=75&key=fb021235619fc4bdf0b6e2b611d276f14350c219` 같은 빈 RSS 본문 상세 화면에서 `"RSS 본문 요약이 없습니다."` 문구가 더 이상 표시되지 않습니다.
+결과: ✅ 완료
+
+---
+## [2026-06-11 16:55] 로딩 중 언더바 대기 표시 복원
+
+**LOG_ID: 20260611_1655**
+목표: 커서 위치 문제를 막기 위해 로딩 중 입력 prompt row는 숨기되, 사용자가 대기 상태를 알 수 있도록 하단 로딩 문구 뒤 `_` 표시를 복원한다.
+변경 파일:
+- `public/style.css`
+- `public/index.html`
+- `WORK_LOG.md`
+수행 작업:
+1. `#terminal-container.is-loading #terminal-footer`를 강제로 숨기던 규칙을 제거하고, 로딩 중 footer hint 영역은 보이도록 복원했습니다.
+2. 로딩 중 `#terminal-prompt-row`만 숨겨 입력 caret/prompt 공백 문제가 재발하지 않게 했습니다.
+3. `.bbs-loading-text::after`에 `_`를 추가해 기존 대기 표시 역할을 되살렸습니다.
+4. `style.css` 캐시 버전을 `20260611_1655`로 올렸습니다.
+실행:
+- Playwright 계산값 확인: footer `display:flex`, hint `visible`, prompt row `display:none`, loading text `::after` content `"_"`.
+- `npm run smoke:vercel-ready`
+기대:
+- 뉴스 등 로딩 중에는 하단에 로딩 문구와 `_` 대기 표시가 보이고, 입력 prompt/caret은 표시되지 않습니다.
+결과: ✅ 완료
+
+---
+## [2026-06-11 17:05] 빈 로딩 hint 언더바 표시 보강
+
+**LOG_ID: 20260611_1705**
+목표: `/service/news` 직접 진입 등 일부 로딩 경로에서 `#cmd-hint`가 비어 있어 `.bbs-loading-text::after` 대상이 없을 때도 `_` 대기 표시가 보이도록 한다.
+변경 파일:
+- `public/style.css`
+- `public/index.html`
+- `WORK_LOG.md`
+수행 작업:
+1. 로딩 중 `#cmd-hint:empty::after`에 `_`를 렌더링하는 CSS를 추가했습니다.
+2. 기존 `.bbs-loading-text::after`는 로딩 문구가 있는 경로용으로 유지했습니다.
+3. `style.css` 캐시 버전을 `20260611_1705`로 올렸습니다.
+실행:
+- Playwright 지연 재현: `/service/news` API를 2초 지연시킨 상태에서 `#cmd-hint::after` content `"_"`, footer `display:flex`, prompt row `display:none` 확인.
+- `npm run smoke:vercel-ready`
+기대:
+- 로딩 문구가 있는 경로와 없는 경로 모두 하단에 `_` 대기 표시가 보입니다.
+결과: ✅ 완료
+
+---
+## [2026-06-11 17:15] 로컬 날씨 fetch failed 메시지 정리
+
+**LOG_ID: 20260611_1715**
+목표: `/service/weather/local`에서 외부 날씨 API 연결 실패 시 `fetch failed` 같은 Node 내부 에러 문구가 사용자 화면에 그대로 표시되지 않도록 한다.
+변경 파일:
+- `src/server/RssWeatherService.js`
+- `WORK_LOG.md`
+수행 작업:
+1. 로컬 날씨의 위치 조회와 날씨 조회 fetch에 5초 timeout 옵션을 추가했습니다.
+2. `fetch failed`, timeout, DNS/네트워크 계열 오류를 사용자용 안내 문구로 정규화하는 helper를 추가했습니다.
+3. 외부 API 예외 발생 시 `"위치 날씨 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요."` 형태로 반환되도록 변경했습니다.
+실행:
+- `node --check src/server/RssWeatherService.js`
+- 실패 주입 테스트: 위치 조회 fetch 실패 시 `fetch failed` 미노출 확인
+- 실패 주입 테스트: 날씨 조회 fetch 실패 시 `fetch failed` 미노출 확인
+- `npm run smoke:vercel-ready`
+기대:
+- 로컬 날씨 제공 서버나 네트워크가 일시적으로 실패해도 기술적인 내부 에러 문자열이 화면에 직접 표시되지 않습니다.
+결과: ✅ 완료
+
+---
+## [2026-06-11 17:25] 숫자 명령 로딩 중 언더바 대기 커서 표시
+
+**LOG_ID: 20260611_1725**
+목표: 메뉴/목록에서 숫자를 입력한 뒤 비동기 화면 전환이 진행되는 동안 사용자가 로딩 중임을 알 수 있도록 하단 입력 영역에 `_` 대기 표시를 보인다.
+변경 파일:
+- `public/js/core/appEventsCommandInput.js`
+- `public/style.css`
+- `public/index.html`
+- `WORK_LOG.md`
+수행 작업:
+1. Enter로 제출한 명령의 Promise가 80ms 이상 지속되면 `#terminal-container`에 `is-command-pending` 클래스를 붙이도록 했습니다.
+2. 명령 Promise가 완료되면 `is-command-pending` 클래스를 제거해 정상 prompt/input 상태로 복귀하도록 했습니다.
+3. `is-command-pending` 상태에서는 footer를 보이고, 기존 hint 텍스트는 숨긴 뒤 `#cmd-hint::after`로 `_`만 표시하도록 했습니다.
+4. 입력 prompt row는 숨겨 기존 caret/prompt 공백 문제가 재발하지 않게 했습니다.
+5. `style.css` 캐시 버전을 `20260611_1725`로 올렸고, 검증 스크립트 요구사항에 맞춰 `/js/app.js` entry 경로는 쿼리 없이 유지했습니다.
+실행:
+- `node --check public/js/core/appEventsCommandInput.js`
+- Playwright 숫자 입력 재현: `/service/news/1`에서 `1` 입력 후 상세 API 지연 중 `containerClass="is-busy is-command-pending"`, `#cmd-hint::after` content `"_"`, prompt row `display:none` 확인
+- `npm run smoke:vercel-ready`
+기대:
+- 숫자 입력 후 실제 화면 전환/API 대기 시간이 발생하면 하단에 `_` 대기 표시가 나타나고, 완료 후 정상 입력 prompt로 돌아옵니다.
+결과: ✅ 완료
+
+---
+## [2026-06-11 17:35] 마우스 번호 클릭 로딩 대기 커서 연결
+
+**LOG_ID: 20260611_1735**
+목표: 번호를 키보드로 입력할 때뿐 아니라 마우스로 클릭해 실행할 때도 비동기 로딩 중 하단에 `_` 대기 표시가 보이도록 한다.
+변경 파일:
+- `public/js/core/commandPendingUi.js`
+- `public/js/core/appEventsCommandInput.js`
+- `public/js/core/appEvents.js`
+- `public/js/core/interactionHandlers.js`
+- `WORK_LOG.md`
+수행 작업:
+1. 명령 Promise pending 상태를 추적하는 `commandPendingUi.js` helper를 추가했습니다.
+2. Enter 입력 경로는 기존 로컬 pending 로직 대신 공통 helper를 사용하도록 변경했습니다.
+3. capture click 경로인 `appEvents.js`의 `clearPendingWhenSettled()`에 pending 추적을 연결했습니다.
+4. 통합 상호작용 경로인 `interactionHandlers.js`의 `clearPendingWhenSettled()`에도 pending 추적을 연결했습니다.
+실행:
+- `node --check public/js/core/commandPendingUi.js`
+- `node --check public/js/core/appEventsCommandInput.js`
+- `node --check public/js/core/appEvents.js`
+- `node --check public/js/core/interactionHandlers.js`
+- Playwright 클릭 재현: `/service/news/1`에서 번호 클릭 후 상세 API 지연 중 `containerClass="is-busy is-command-pending"`, `#cmd-hint::after` content `"_"`, prompt row `display:none` 확인
+- `npm run smoke:vercel-ready`
+기대:
+- 키보드 입력과 마우스 번호 클릭 모두 로딩이 80ms 이상 지속되면 `_` 대기 표시가 나타납니다.
+결과: ✅ 완료
+
+---
+## [2026-06-11 17:50] 제출 후 대기 커서 위치 조정
+
+**LOG_ID: 20260611_1750**
+목표: 숫자 입력 대기 중에는 기존 prompt/input을 유지하고, Enter 또는 마우스 클릭으로 명령이 제출된 뒤에만 입력줄 위치가 `_` 대기 커서로 바뀌도록 한다.
+변경 파일:
+- `public/style.css`
+- `WORK_LOG.md`
+수행 작업:
+1. `is-command-pending` 상태에서 `_`를 `#cmd-hint::after`에 붙이던 규칙을 제거했습니다.
+2. 힌트바는 그대로 보이도록 유지하고, 숨겨진 입력 prompt row를 대신해 `#terminal-footer::after`가 `_`를 표시하게 했습니다.
+3. 숫자를 입력만 한 상태와 Enter 제출 후 상태를 Playwright로 비교 확인했습니다.
+실행:
+- Playwright 확인: 입력 중 `footer::after=none`, hint 유지, prompt row `display:flex`
+- Playwright 확인: Enter 후 pending 중 `footer::after="_"`, hint 유지, prompt row `display:none`
+- `npm run smoke:vercel-ready`
+기대:
+- 숫자 입력 대기 중에는 `_`로 바뀌지 않고, 명령 제출 후 처리 대기 중에만 입력줄 자리에 `_`가 표시됩니다.
+결과: ✅ 완료
+
+---
+## [2026-06-11 18:00] 제출 숫자 오른쪽 대기 커서 배치
+
+**LOG_ID: 20260611_1800**
+목표: 힌트바는 유지하면서, 숫자를 입력만 한 상태가 아니라 Enter 제출 또는 마우스 클릭 후 처리 대기 중에 제출된 숫자 오른쪽에 `_`가 붙어 보이도록 한다.
+변경 파일:
+- `public/js/core/commandPendingUi.js`
+- `public/js/core/appEventsCommandInput.js`
+- `public/js/core/appEvents.js`
+- `public/js/core/interactionHandlers.js`
+- `public/style.css`
+- `WORK_LOG.md`
+수행 작업:
+1. `is-command-pending` 상태에서도 `#terminal-prompt-row`를 숨기지 않고 유지하도록 변경했습니다.
+2. pending 중 브라우저 기본 caret만 숨기고, `#cmd-input-wrapper::after`로 `_`를 렌더링하게 했습니다.
+3. pending 중 input 폭을 제출된 명령 길이(`--pending-command-length`)만큼 줄여 `_`가 숫자 바로 오른쪽에 붙도록 했습니다.
+4. Enter 경로는 제출 직후 비워진 input 값을 pending 표시 시점에 다시 채워 `1_` 형태가 유지되게 했습니다.
+5. 마우스 클릭 경로도 같은 pending value를 사용하도록 유지했습니다.
+실행:
+- `node --check public/js/core/commandPendingUi.js`
+- `node --check public/js/core/appEventsCommandInput.js`
+- `node --check public/js/core/appEvents.js`
+- `node --check public/js/core/interactionHandlers.js`
+- Playwright Enter 재현: 입력 중 `_` 없음, Enter 후 `inputValue="1"`, `#cmd-input-wrapper::after` content `"_"`, hint 유지, prompt row `display:flex`
+- Playwright 클릭 재현: 클릭 후 `inputValue="1"`, `#cmd-input-wrapper::after` content `"_"`, hint 유지, prompt row `display:flex`
+- `npm run smoke:vercel-ready`
+기대:
+- `선택 >> 1_`처럼 제출된 숫자 바로 오른쪽에 대기 커서가 표시되고, 힌트바는 사라지지 않습니다.
+결과: ✅ 완료
+
+---
