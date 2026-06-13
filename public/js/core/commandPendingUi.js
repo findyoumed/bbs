@@ -1,3 +1,5 @@
+import { displayWidth } from './ansiRenderUtils.js';
+
 let commandPendingTimer = 0;
 let commandPendingToken = 0;
 
@@ -11,8 +13,8 @@ function setCommandPending(active) {
 
   if (active) {
     const cmdInput = document.getElementById('cmd-input');
-    const commandLength = Math.max(1, Array.from(String(cmdInput?.value || '')).length);
-    // [LOG: 20260611_1800] Size the pending input so the underscore sits immediately after the submitted text.
+    const commandLength = Math.max(1, displayWidth(cmdInput?.value));
+    // [LOG: 20260613_1248] Size the pending input so the underscore sits immediately after the submitted text.
     container.style.setProperty('--pending-command-length', String(commandLength));
   } else {
     container.style.removeProperty('--pending-command-length');
