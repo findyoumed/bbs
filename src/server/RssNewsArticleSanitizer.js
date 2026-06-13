@@ -52,7 +52,7 @@ function sanitizeArticleText(value) {
     .replace(/\r/g, '\n')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
-    .replace(/\[%%IMAGE\d+%%\]/gi, '') // [LOG: 20260613_1145] 언론사 본문에 잔존하는 이미지 플레이스홀더 [%%IMAGE1%%] 제거
+    .replace(/\[%%(?:IMAGE|MEDIA)\d+%%\]/gi, '') // [LOG: 20260613_1243] 이미지 및 미디어 플레이스홀더 [%%IMAGE1%%], [%%MEDIA1%%] 등 제거
     .trim();
   // [LOG: 20260613_1212] 마침표(.), 물음표(?), 느낌표(!) 바로 뒤에 공백이나 개행 없이 한글이 붙어오는 경우(예: '꺼졌다.이') 띄어쓰기를 보정해 줌.
   const spacingFixed = normalized.replace(/([.!?])([가-힣])/g, '$1 $2');
