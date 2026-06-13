@@ -241,7 +241,10 @@ a {
     position: relative;
     z-index: 2;
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
-    font-size: 1em !important;
+    font-size: 17px !important;
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: none !important;
+    text-rendering: optimizeSpeed !important;
 }
 
 #cmd-ghost-text {

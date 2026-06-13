@@ -377,6 +377,9 @@ body.theme-blue .write-field textarea {
     appearance: none;
     -webkit-appearance: none;
     vertical-align: middle;
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: none !important;
+    text-rendering: optimizeSpeed !important;
     z-index: 2;
 }
 
