@@ -25,12 +25,12 @@ function pickPreferredArticleBody(feedBody, detailBody, detailDescription) {
   const cleanFeedBody = sanitizeArticleText(feedBody);
   const cleanDetailBody = sanitizeArticleText(detailBody);
   const cleanDetailDescription = sanitizeArticleText(detailDescription);
+  // [LOG: 20260613_1241] If actual detail body meets min length, prioritize it over feed to preserve paragraph structures, bypassing noise filter
+  if (cleanDetailBody && cleanDetailBody.length >= 100) {
+    return cleanDetailBody;
+  }
   if (cleanFeedBody && (!cleanDetailBody || isLikelyNoisyBody(cleanDetailBody))) {
     return cleanFeedBody;
-  }
-  // [LOG: 20260613_1226] If actual detail body is valid and meets min length, prioritize it over feed to preserve paragraph structures
-  if (cleanDetailBody && !isLikelyNoisyBody(cleanDetailBody) && cleanDetailBody.length >= 100) {
-    return cleanDetailBody;
   }
   return pickArticleBody([cleanDetailBody, cleanFeedBody, cleanDetailDescription]);
 }
