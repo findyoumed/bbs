@@ -28,6 +28,10 @@ function pickPreferredArticleBody(feedBody, detailBody, detailDescription) {
   if (cleanFeedBody && (!cleanDetailBody || isLikelyNoisyBody(cleanDetailBody))) {
     return cleanFeedBody;
   }
+  // [LOG: 20260613_1226] If actual detail body is valid and meets min length, prioritize it over feed to preserve paragraph structures
+  if (cleanDetailBody && !isLikelyNoisyBody(cleanDetailBody) && cleanDetailBody.length >= 100) {
+    return cleanDetailBody;
+  }
   return pickArticleBody([cleanDetailBody, cleanFeedBody, cleanDetailDescription]);
 }
 

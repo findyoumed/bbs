@@ -231,29 +231,33 @@ function scoreArticleText(text, sourceType = 'body') {
 
   const lines = source.split('\n').map((line) => line.trim()).filter(Boolean);
   const length = source.length;
-  const avgLine = lines.length ? (length / lines.length) : 0;
+  const avgLine = lines.length ? Math.min(80, length / lines.length) : 0;
   const paragraphCount = lines.filter((line) => line.length >= 20).length;
   const penalty = /(\uB85C\uADF8\uC778|\uD68C\uC6D0\uAC00\uC785|\uAD11\uACE0|\uAE30\uC790 \uAD6C\uB3C5|\uAE30\uC0AC\uC81C\uBCF4|\uBB34\uB2E8\s*\uC804\uC7AC|\uC7AC\uBC30\uD3EC \uAE08\uC9C0|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uACF5\uC720\uD558\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC\s*\uC2A4\uD06C\uB7A9|\uD55C\uACBD\s*PREMIUM|\uD6C4\uC18D\uAE30\uC0AC|\uAD6C\uB3C5\uC2E0\uCCAD|ADVERTISEMENT|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4)/.test(source) ? 520 : 0;
   const teaserPenalty = looksLikeTruncatedTeaser(source)
     ? (length <= 320 ? 1100 : 420)
     : (paragraphCount <= 1 && length < 160 ? 240 : 0);
-  const sourceBonus = sourceType === 'jsonld'
-    ? 2400
+  const sourceBonus = sourceType === 'container'
+    ? 2000
     : sourceType === 'structured'
-      ? 2200
+      ? 1900
       : sourceType === 'script'
-        ? 2100
-    : sourceType === 'container'
-      ? 1600
-      : sourceType === 'article'
-        ? 1200
-        : 0;
+        ? 1850
+        : sourceType === 'jsonld'
+          ? 1800
+          : sourceType === 'article'
+            ? 1600
+            : 0;
 
-  // [LOG: 20260613_1212] 마침표/물음표/느낌표 등 문장 종결 부호가 전혀 없는 단순 뉴스 제목/링크 목록에 강력한 감점을 주어 진짜 기사 본문이 선택되도록 필터링을 보강함.
+  // [LOG: 20260613_1218] 마침표/물음표/느낌표 등 문장 종결 부호가 전혀 없는 단순 뉴스 제목/링크 목록에 강력한 감점을 주어 진짜 기사 본문이 선택되도록 필터링을 보강함.
   const sentenceCount = (source.match(/[.!?]/g) || []).length;
   const sentencePenalty = sentenceCount === 0 ? 1500 : 0;
 
-  return sourceBonus + length + (avgLine * 6) + (paragraphCount * 12) - penalty - teaserPenalty - sentencePenalty;
+  // [LOG: 20260613_1218] 줄바꿈이 유실된 채 긴 본문이 통째로 뭉쳐진 후보(JSON-LD 등)에 대해 감점을 주고, 단락 개수에 대한 가중치를 대폭 상향함.
+  const newlineCount = (source.match(/\n/g) || []).length;
+  const newlinePenalty = (length >= 200 && newlineCount <= 1) ? 600 : 0;
+
+  return sourceBonus + length + (avgLine * 6) + (paragraphCount * 80) - penalty - teaserPenalty - sentencePenalty - newlinePenalty;
 }
 
 function looksLikeTruncatedTeaser(value) {
@@ -263,5 +267,6 @@ function looksLikeTruncatedTeaser(value) {
 
 module.exports = {
   chooseBestArticleBody,
-  refineArticleText
+  refineArticleText,
+  scoreArticleText
 };
