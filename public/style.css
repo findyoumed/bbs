@@ -2116,20 +2116,23 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
 }
 
 #terminal-container.is-command-pending #cmd-input {
-    /* [LOG: 20260611_1800] Keep the submitted number visible and replace only the native caret. */
+    /* [LOG: 20260613_1254] Keep the submitted number visible and replace only the native caret. Ensure font sizing matches parent. */
     flex: 0 0 auto !important;
     width: calc(max(1, var(--pending-command-length, 1)) * 1ch) !important;
     caret-color: transparent !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    line-height: inherit !important;
 }
 
 #terminal-container.is-command-pending #cmd-input-wrapper::after {
-    /* [LOG: 20260611_1800] Render the wait caret immediately to the right of the submitted command text. */
+    /* [LOG: 20260613_1254] Render the wait caret immediately to the right of the submitted command text. Force match parent styling. */
     content: "_";
     display: inline-block;
     color: #ffffff !important;
-    font-family: inherit;
-    font-size: inherit;
-    line-height: 1.1;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
     margin-left: 0;
     white-space: pre;
     animation: cursor-blink 1s step-end infinite;
