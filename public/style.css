@@ -2067,11 +2067,9 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     box-sizing: border-box;
 }
 
-/* [LOG: 20260613_1140] Keep the loading hint visible only when not explicitly hidden. */
-#terminal-container.is-loading #terminal-footer:not([data-footer-state="hidden"]) {
-    display: flex !important;
-    visibility: visible !important;
-    min-height: 36px !important;
+/* [LOG: 20260613_1148] Hide footer completely when container is loading to prevent duplicate messages. */
+#terminal-container.is-loading #terminal-footer {
+    display: none !important;
 }
 
 #terminal-container.is-loading #cmd-hint {
