@@ -1,3 +1,34 @@
+## [2026-06-13 11:45] 뉴스 캐시 수명 단축 및 중복 로딩 UI 최종 픽스 & 이미지 플레이스홀더 제거
+
+**LOG_ID: 20260613_1145**
+목표:
+- 뉴스 수집 캐시 TTL을 15분에서 2분으로 대폭 줄여 오늘 날짜의 신규 뉴스가 거의 실시간으로 인입되도록 한다.
+- css와 js의 우선순위 경쟁으로 인해 발생한 "연결하는 중입니다.." 로딩 텍스트의 중복 표시 버그를 완전히 수정한다.
+- 크롤링된 뉴스 기사 본문에 지저분하게 노출되던 언론사 이미지 플레이스홀더(`[%%IMAGE1%%]`)를 깔끔히 제거한다.
+
+변경 파일:
+- `public/style.css`
+- `src/server/RssNewsService.js`
+- `src/server/RssNewsArticleSanitizer.js`
+
+수행 작업:
+1. **CSS 로딩 푸터 규칙 수정**: `public/style.css`에서 `#terminal-container.is-loading #terminal-footer` 강제 표시 스타일이 `data-footer-state="hidden"`을 무시하지 않도록 `:not([data-footer-state="hidden"])` 가드를 추가해 중복 로딩 문제를 최종 해결했다.
+2. **캐시 수명(TTL) 2분 단축**: `RssNewsService.js` 생성자 내에서 `this.cacheTtlMs = 2 * 60 * 1000;`을 설정해 오늘 기사의 실시간 수집을 보장했다.
+3. **이미지 플레이스홀더 정화**: `RssNewsArticleSanitizer.js`의 `sanitizeArticleText` 함수 내에 `replace(/\[%%IMAGE\d+%%\]/gi, '')`를 추가해 크롤링 본문에 섞인 `[%%IMAGE1%%]` 등의 마커를 제거했다.
+
+실행:
+- `node --check src/server/RssNewsService.js` 문법 통과
+- `node --check src/server/RssNewsArticleSanitizer.js` 문법 통과
+- `node scratch/clear_rss_cache.js` 실행 완료
+- `npm run smoke:vercel-ready` 빌드 무결성 확인 완료
+
+기대:
+- 뉴스 진입 시 더 이상 로딩 텍스트가 2개로 중복 노출되지 않으며, 오늘 기사 목록 및 상세 본문이 실시간 갱신되어 제공되고 `[%%IMAGE1%%]`과 같은 지저분한 플레이스홀더 문구가 표시되지 않는다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-06-13 11:34] 뉴스 300개 수집 캐시 갱신 및 로딩 메시지 중복 버그 해결
 
 **LOG_ID: 20260613_1134**

@@ -2067,8 +2067,8 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     box-sizing: border-box;
 }
 
-/* [LOG: 20260611_1655] Keep the loading hint visible while hiding only the input prompt row. */
-#terminal-container.is-loading #terminal-footer {
+/* [LOG: 20260613_1140] Keep the loading hint visible only when not explicitly hidden. */
+#terminal-container.is-loading #terminal-footer:not([data-footer-state="hidden"]) {
     display: flex !important;
     visibility: visible !important;
     min-height: 36px !important;

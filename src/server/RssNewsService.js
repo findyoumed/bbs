@@ -27,6 +27,8 @@ const {
 class RssNewsService extends RssServiceBase {
   constructor(options = {}) {
     super(options);
+    // [LOG: 20260613_1142] 실시간 오늘 뉴스 기사 전체 수집을 보장하기 위해 캐시 TTL을 15분에서 2분으로 단축
+    this.cacheTtlMs = 2 * 60 * 1000;
     this.newsMenuPath = options.newsMenuPath || '';
     this.prefetchNewsTopicsOnMenu = options.prefetchNewsTopicsOnMenu !== false;
     this.topicFeedInflight = new Map();

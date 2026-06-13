@@ -48,6 +48,7 @@ function sanitizeArticleText(value) {
     .replace(/\r/g, '\n')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
+    .replace(/\[%%IMAGE\d+%%\]/gi, '') // [LOG: 20260613_1145] 언론사 본문에 잔존하는 이미지 플레이스홀더 [%%IMAGE1%%] 제거
     .trim();
   if (!normalized) {
     return '';
