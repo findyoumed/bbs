@@ -8,7 +8,8 @@ export function createServiceCommandHandler(deps) {
     showWeatherView,
     showNewsMenu,
     showNewsList,
-    state
+    state,
+    showToast
   } = deps;
 
   function getNewsArticleOptions(article, extra = {}) {
@@ -222,9 +223,18 @@ export function createServiceCommandHandler(deps) {
           const text = [title, '', body, '', source, link].filter((l, i) => i < 2 || l).join('\n');
           try {
             await navigator.clipboard.writeText(text);
-            setHint('기사 내용이 클립보드에 복사되었습니다.');
+            // [LOG: 20260613_1205] 힌트바 대신 푸터 하단 알림창에 띄우도록 수정
+            if (typeof showToast === 'function') {
+              showToast('기사 내용이 클립보드에 복사되었습니다.', 3000, 'success');
+            } else {
+              setHint('기사 내용이 클립보드에 복사되었습니다.');
+            }
           } catch {
-            setHint('복사 실패: 브라우저 권한을 확인하세요.');
+            if (typeof showToast === 'function') {
+              showToast('복사 실패: 브라우저 권한을 확인하세요.', 3000, 'error');
+            } else {
+              setHint('복사 실패: 브라우저 권한을 확인하세요.');
+            }
           }
         }
         return true;

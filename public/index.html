@@ -85,7 +85,7 @@
     <link rel="stylesheet" href="/styles/entry-signup-inline.css?v=2">
     <link rel="stylesheet" href="/styles/entry-signup-theme.css?v=2">
     <link rel="stylesheet" href="/styles/entry-auth.css?v=2">
-    <link rel="stylesheet" href="/style.css?v=20260613_1155">
+    <link rel="stylesheet" href="/style.css?v=20260613_1205">
 
     <!-- JS 모듈 진입점 사전 로드 -->
     <!-- [LOG: 20260611_1540] UI assets are revalidated by server cache headers after spacing fixes. -->
@@ -117,6 +117,8 @@
                         <label id="cmd-prompt" for="cmd-input"></label>
                         <input id="cmd-input" type="text" autocomplete="off" maxlength="40" spellcheck="false">
                     </div>
+                    <!-- [LOG: 20260613_1205] 별도 알림 영역 추가 (단축키 힌트 가림 방지) -->
+                    <div id="terminal-notification" class="terminal-notification-row" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -179,7 +181,7 @@
 
     <!-- defer: HTML 파싱 블로킹 없이 로드, module script 실행 전 완료 보장 -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="/js/app.js"></script>
+    <script type="module" src="/js/app.js?v=20260613_1205"></script>
 </body>
 
 </html>

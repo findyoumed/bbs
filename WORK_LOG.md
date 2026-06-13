@@ -1,3 +1,33 @@
+## [2026-06-13 12:05] 기사 복사 완료 시 힌트바가 가려지는 버그 해결 및 푸터 전용 알림창 도입
+
+**LOG_ID: 20260613_1205**
+목표:
+- 뉴스 기사 상세 보기 화면에서 "기사 내용이 클립보드에 복사되었습니다." 알림 메시지가 출력될 때 기존 힌트바(단축키 가이드) 전체를 덮어 씌우는 오작동을 해결한다. 힌트바를 전혀 가리지 않고 푸터 하단 부분에 독립적인 노란색 레트로 알림(토스트)이 뜨도록 구현한다.
+
+변경 파일:
+- `public/index.html`
+- `public/style.css`
+- `public/js/core/terminalFeedback.js`
+- `public/js/core/appFactoryHandlers.js`
+- `public/js/core/commandRouterService.js`
+
+수행 작업:
+1. **DOM 알림 노드 추가**: `public/index.html` 의 `#terminal-footer` 내부에 `#terminal-notification` 을 새롭게 배치했다.
+2. **레트로 알림 CSS 스타일링**: `public/style.css` 에 노란색 알림과 상태 레벨(error, warn, success)에 따른 텍스트 컬러 지정 및 은은하게 깜빡이는 애니메이션을 추가했다.
+3. **showNotification 비동기 타이머 제어**: `terminalFeedback.js` 의 `showNotification` 함수가 호출되면 `#terminal-notification` 요소의 클래스를 갱신하여 3초간 띄워준 뒤 자동으로 사라지게(fade-out) 만들었으며, 다중 호출 시 비동기 타이머를 중복 갱신해 오작동을 미연에 방지했다.
+4. **서비스 커맨드 연동**: `appFactoryHandlers.js` 에서 서비스 핸들러에 `showToast` API를 공급하고, `commandRouterService.js` 에서 클립보드 복사(PR) 수행 시 `setHint` 대신 `showToast` 를 이용해 힌트 가이드 침범을 원천 격리했다.
+5. **버전 캐시 무효화**: `public/index.html` 에서 css 및 js 호출 쿼리 파라미터를 `v=20260613_1205` 로 리프레시했다.
+
+실행:
+- `npm run smoke:vercel-ready` 성공 통과
+
+기대:
+- 복사를 실행했을 때 단축키 가이드가 유지되면서, 아래 줄에 레트로한 노란색 안내문이 자연스럽게 나타나고 3초 후 깔끔하게 숨겨진다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-06-13 11:55] 로딩 상태에서 발생하는 "연결하는 중입니다.." 중복 노출 CSS 충돌 최종 해결
 
 **LOG_ID: 20260613_1155**

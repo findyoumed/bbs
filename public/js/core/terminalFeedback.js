@@ -13,15 +13,33 @@ export function createTerminalFeedback(deps) {
 
   let busyTimeout = null;
 
+  let notificationTimeout = null;
+
   function showNotification(text, duration = 3000, level = 'info', options = {}) {
     const normalizedText = String(text || '').trim();
-    const method = level === 'error'
-      ? 'error'
-      : level === 'warn'
-        ? 'warn'
-        : 'info';
-    if (normalizedText) {
-      // [LOG: 20260507_1520] Toast/notification messages must not appear in the terminal UI.
+    if (!normalizedText) return;
+
+    const notifyEl = document.getElementById('terminal-notification');
+    if (notifyEl) {
+      if (notificationTimeout) {
+        clearTimeout(notificationTimeout);
+      }
+
+      notifyEl.className = `terminal-notification-row level-${level}`;
+      notifyEl.textContent = normalizedText;
+      notifyEl.style.display = 'block';
+
+      notificationTimeout = setTimeout(() => {
+        notifyEl.style.display = 'none';
+        notifyEl.textContent = '';
+        notificationTimeout = null;
+      }, duration);
+    } else {
+      const method = level === 'error'
+        ? 'error'
+        : level === 'warn'
+          ? 'warn'
+          : 'info';
       console[method]('[BBS Notification]', normalizedText);
     }
   }

@@ -2153,3 +2153,36 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     /* [LOG: 20260611_1655] A loading screen may coexist with the footer hint, but not with the command input row. */
     display: none !important;
 }
+
+/* [LOG: 20260613_1205] 레트로 알림(토스트) 한 줄 노출용 스타일 추가 */
+.terminal-notification-row {
+    font-family: 'Sam3KRFont', 'DungGeunMo', monospace;
+    font-size: 15px;
+    color: #ffff55; /* ANSI 밝은 노란색 */
+    padding: 4px 8px;
+    margin-top: 4px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.2);
+    width: 100%;
+    text-align: left;
+    white-space: pre-wrap;
+    box-sizing: border-box;
+    animation: notification-flash 1.5s step-end infinite;
+}
+
+.terminal-notification-row.level-error {
+    color: #ff5555; /* ANSI 빨간색 */
+}
+
+.terminal-notification-row.level-warn {
+    color: #ffaa00; /* ANSI 주황색 */
+}
+
+.terminal-notification-row.level-success {
+    color: #55ff55; /* ANSI 초록색 */
+}
+
+@keyframes notification-flash {
+    50% {
+        opacity: 0.7;
+    }
+}

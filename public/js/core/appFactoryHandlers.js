@@ -24,7 +24,11 @@ export function createAppFactoryHandlers(deps) {
     updateURL: (...args) => refs.updateURL(...args)
   };
 
-  const handleServiceCommand = createServiceCommandHandler({ ...handlerDeps, ...screens.serviceScreens });
+  const handleServiceCommand = createServiceCommandHandler({
+    ...handlerDeps,
+    ...screens.serviceScreens,
+    showToast: services.terminalUiCore.showToast
+  });
   const handleEntryCommand = createEntryCommandHandler({
     ...handlerDeps,
     handleLoginSubmit: () => refs.handleLoginSubmit(),
