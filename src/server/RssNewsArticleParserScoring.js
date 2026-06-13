@@ -249,7 +249,11 @@ function scoreArticleText(text, sourceType = 'body') {
         ? 1200
         : 0;
 
-  return sourceBonus + length + (avgLine * 6) + (paragraphCount * 12) - penalty - teaserPenalty;
+  // [LOG: 20260613_1212] 마침표/물음표/느낌표 등 문장 종결 부호가 전혀 없는 단순 뉴스 제목/링크 목록에 강력한 감점을 주어 진짜 기사 본문이 선택되도록 필터링을 보강함.
+  const sentenceCount = (source.match(/[.!?]/g) || []).length;
+  const sentencePenalty = sentenceCount === 0 ? 1500 : 0;
+
+  return sourceBonus + length + (avgLine * 6) + (paragraphCount * 12) - penalty - teaserPenalty - sentencePenalty;
 }
 
 function looksLikeTruncatedTeaser(value) {

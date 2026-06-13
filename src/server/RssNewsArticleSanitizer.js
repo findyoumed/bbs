@@ -50,11 +50,13 @@ function sanitizeArticleText(value) {
     .replace(/\n{3,}/g, '\n\n')
     .replace(/\[%%IMAGE\d+%%\]/gi, '') // [LOG: 20260613_1145] 언론사 본문에 잔존하는 이미지 플레이스홀더 [%%IMAGE1%%] 제거
     .trim();
-  if (!normalized) {
+  // [LOG: 20260613_1212] 마침표(.), 물음표(?), 느낌표(!) 바로 뒤에 공백이나 개행 없이 한글이 붙어오는 경우(예: '꺼졌다.이') 띄어쓰기를 보정해 줌.
+  const spacingFixed = normalized.replace(/([.!?])([가-힣])/g, '$1 $2');
+  if (!spacingFixed) {
     return '';
   }
 
-  const leadTrimmed = trimKnownArticleLeadNoise(normalized);
+  const leadTrimmed = trimKnownArticleLeadNoise(spacingFixed);
   const strippedLines = stripKnownArticleBoilerplateLines(leadTrimmed);
   const trimmedTail = trimKnownArticleTailNoise(strippedLines);
   const inlineTrimmed = trimInlineRelatedHeadlineNoise(trimmedTail);
