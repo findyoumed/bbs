@@ -2067,14 +2067,13 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     box-sizing: border-box;
 }
 
-/* [LOG: 20260613_1148] Hide footer completely when container is loading to prevent duplicate messages. */
-#terminal-container.is-loading #terminal-footer {
+/* [LOG: 20260613_1155] Hide footer and cmd-hint completely when loading to prevent duplicate messages. */
+#terminal-container.is-loading #terminal-footer,
+#terminal-screen.is-loading ~ #terminal-footer,
+#terminal-container.is-loading #cmd-hint,
+#terminal-screen.is-loading ~ #terminal-footer #cmd-hint {
     display: none !important;
-}
-
-#terminal-container.is-loading #cmd-hint {
-    display: block !important;
-    visibility: visible !important;
+    visibility: hidden !important;
 }
 
 #terminal-container.is-loading .bbs-loading-text::after {
