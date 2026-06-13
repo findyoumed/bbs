@@ -405,8 +405,9 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
     return rightTime - leftTime;
   });
 
-  // [LOG: 20260613_1130] 뉴스 수집 한도를 150개에서 300개로 확장하여 오늘 뉴스 표시 범위 확대
+  // [LOG: 20260613_1133] 뉴스 수집 한도를 150개에서 300개로 확장하여 오늘 뉴스 표시 범위 확대
   const finalItems = applyThreeDayFilter(service, datedItems).slice(0, 300);
+  console.log("[LOG_DEBUG] finalItems length in helper:", finalItems.length);
 
   const allFail = unavailable.length === results.length;
   const message = unavailable.length > 0 ? `실패: ${unavailable.map((result) => result.source.newspaperTitle).join(', ')}` : '';

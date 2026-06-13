@@ -261,6 +261,8 @@ export function createTerminalUiCore(deps) {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
+        // [LOG: 20260613_1134] Hide footer to prevent duplicate loading message display
+        setFooterVisibility(false);
       }, 200);
     },
     buildLoadingScreenMarkup,
