@@ -241,7 +241,7 @@ a {
     position: relative;
     z-index: 2;
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
-    font-size: inherit;
+    font-size: 1em !important;
 }
 
 #cmd-ghost-text {

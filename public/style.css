@@ -362,7 +362,7 @@ body.theme-blue .write-field textarea {
     /* [LOG: 20260611_1610] Browser caret stays in the real input flow; the custom overlay cursor is disabled. */
     caret-color: #ffffff !important;
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
-    font-size: inherit;
+    font-size: 1em !important;
     line-height: inherit;
     display: block;
     flex: 1;
