@@ -1,3 +1,26 @@
+## [2026-06-13 13:10] 인풋창 텍스트와 라벨 수직 정렬(Baseline) 및 오차 해소 (center 정렬 및 middle 고정)
+
+**LOG_ID: 20260613_1310**
+목표:
+- 타이핑 텍스트("선택")의 폰트 크기와 형태는 똑같으나, 브라우저가 `<input>`의 고유 정렬 방식으로 인해 1px 아래로 쏠려서 정렬되던 세로선 불일치(Baseline) 버그를 완전히 정렬한다.
+
+변경 파일:
+- `public/style.css`
+
+수행 작업:
+1. **수직 정렬 속성 center화**: `public/style.css` 315라인 근처 `#cmd-input-wrapper`에 오버라이드로 남아있던 `align-items: baseline;`를 `align-items: center;`로 변경했다. (이는 `retro-terminal.css`에 선언된 `align-items: center` 설정과 일치하지 않아 어긋나던 현상을 해결함)
+2. **vertical-align 속성 주입**: `#cmd-input` 요소에 `vertical-align: middle;`을 추가하여 인풋 박스 내부 텍스트의 미세한 상하 오프셋을 바로잡았다.
+
+실행:
+- `npm run smoke:vercel-ready` 빌드 무결성 검증 완료
+
+기대:
+- 터미널 풋터에 타이핑하는 텍스트가 왼쪽에 출력된 라벨("선택 >>") 텍스트와 완벽하게 1:1 수평 중심선이 정밀 정렬되어 한 글자처럼 흐른다.
+
+결과: ✅ 완료
+
+---
+
 ## [2026-06-13 13:08] 반응형 미디어 쿼리 폰트 스케일 불일치 정밀 보정 (12px 통일)
 
 **LOG_ID: 20260613_1308**
