@@ -245,7 +245,6 @@ a {
     -webkit-font-smoothing: none !important;
     -moz-osx-font-smoothing: none !important;
     text-rendering: optimizeSpeed !important;
-    transform: translateY(-1px) !important;
 }
 
 #cmd-ghost-text {
