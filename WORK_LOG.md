@@ -21,6 +21,18 @@
 
 ---
 
+## [2026-06-15 15:27] 터미널 입력창/라벨 폰트 렌더링 정밀 보정
+
+**LOG_ID: 20260615_1527**
+목표: 터미널 풋터의 `input#cmd-input`과 `label#cmd-prompt`가 한글 입력 및 대기 커서 상태에서도 같은 폰트 크기, 라인박스, 두께, 렌더링 컨텍스트를 사용하도록 CSS를 정밀 보정한다.
+변경 파일: public/style.css, public/styles/retro-terminal.css
+수행 작업: 1) footer 라벨과 입력창을 같은 font-family/font-size/line-height/font-smoothing 규칙으로 묶음 2) 브라우저 기본 input padding/border/appearance/min-height 차이를 제거함 3) 모바일 및 command-pending 상태에서 입력창만 다른 line-height/font-size로 바뀌는 규칙을 통일함
+실행: `npm run smoke:vercel-ready`
+기대: `선택 >>` 라벨과 입력 중인 한글 텍스트가 computed style 기준으로 같은 폰트/라인박스/렌더링 값을 사용하고, input 기본 스타일로 인한 1px 정렬 오차가 줄어든다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-13 13:14] 인풋창 1px 수직 밀림(Baseline 오프셋) 최종 해결 (translateY 적용)
 
 **LOG_ID: 20260613_1314**
