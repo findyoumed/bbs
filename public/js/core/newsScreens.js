@@ -190,6 +190,7 @@ export function createNewsScreens(deps) {
     });
   }
 
+  // [LOG: 20260615_1640] Support YouTube video rendering for video news article
   function renderNewsArticleImage(screenNode, article, pageNo = 1) {
     const imageUrl = normalizeNewsImageUrl(article?.imageUrl);
     if (!screenNode || !imageUrl || Number(pageNo) !== 1 || !shouldDisplayNewsArticleImage(article)) return;
@@ -203,19 +204,44 @@ export function createNewsScreens(deps) {
     });
     if (!hlineNode) return;
 
-    const frame = document.createElement('div');
-    frame.className = 'news-article-image-frame';
+    const isYoutube = imageUrl.includes('youtube.com/') || imageUrl.includes('youtu.be/') || imageUrl.includes('youtube-nocookie.com/');
 
-    const img = document.createElement('img');
-    img.className = 'news-article-image';
-    img.src = imageUrl;
-    img.alt = String(article?.title || '뉴스 사진').trim() || '뉴스 사진';
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    img.referrerPolicy = 'no-referrer';
+    if (isYoutube) {
+      const frame = document.createElement('div');
+      frame.className = 'news-article-video-frame';
 
-    frame.appendChild(img);
-    hlineNode.insertAdjacentElement('afterend', frame);
+      let embedUrl = imageUrl;
+      if (!imageUrl.includes('/embed/')) {
+        const watchMatch = imageUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?]+)/);
+        if (watchMatch && watchMatch[1]) {
+          embedUrl = `https://www.youtube.com/embed/${watchMatch[1]}`;
+        }
+      }
+
+      const iframe = document.createElement('iframe');
+      iframe.className = 'news-article-video';
+      iframe.src = embedUrl;
+      iframe.title = String(article?.title || '뉴스 영상').trim() || '뉴스 영상';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.allowFullscreen = true;
+
+      frame.appendChild(iframe);
+      hlineNode.insertAdjacentElement('afterend', frame);
+    } else {
+      const frame = document.createElement('div');
+      frame.className = 'news-article-image-frame';
+
+      const img = document.createElement('img');
+      img.className = 'news-article-image';
+      img.src = imageUrl;
+      img.alt = String(article?.title || '뉴스 사진').trim() || '뉴스 사진';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+
+      frame.appendChild(img);
+      hlineNode.insertAdjacentElement('afterend', frame);
+    }
   }
 
   function normalizeNewsImageUrl(value) {
@@ -264,17 +290,39 @@ export function createNewsScreens(deps) {
     return { articleKey, link };
   }
 
+  // [LOG: 20260615_1740] URL key-no mismatch conflict resolution (prefer manual no query)
   function findNewsArticle(items, articleNo, options = {}) {
     const list = Array.isArray(items) ? items : [];
     const requestOptions = getNewsArticleRequestOptions(null, options);
-    if (requestOptions.articleKey) {
-      return list.find((item) => getNewsArticleKey(item) === requestOptions.articleKey) || null;
-    }
-    if (requestOptions.link) {
-      return list.find((item) => getNewsArticleLink(item) === requestOptions.link) || null;
+    const expectedKey = String(requestOptions?.articleKey || '').trim();
+    const expectedLink = String(requestOptions?.link || '').trim();
+    const target = String(articleNo || '').trim();
+
+    let byLink = null;
+    if (expectedLink) {
+      byLink = list.find((item) => getNewsArticleLink(item) === expectedLink) || null;
     }
 
-    return list.find((item, index) => String(item?.no || (index + 1)) === String(articleNo)) || null;
+    let byKey = null;
+    if (expectedKey) {
+      byKey = list.find((item) => getNewsArticleKey(item) === expectedKey) || null;
+    }
+
+    const byNo = target ? list.find((item, index) => String(item?.no || (index + 1)) === target) : null;
+
+    // Detect user manual URL update conflict (different key vs no)
+    const keyConflict = byKey && byNo && byKey !== byNo;
+    const linkConflict = byLink && byNo && byLink !== byNo;
+
+    if (keyConflict || linkConflict) {
+      return byNo;
+    }
+
+    if (byLink) return byLink;
+    if (byKey) return byKey;
+    if (byNo) return byNo;
+
+    return null;
   }
 
   function isExpectedNewsArticle(article, requestOptions = {}) {

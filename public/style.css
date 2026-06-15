@@ -1092,6 +1092,38 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
     max-height: 112px;
 }
 
+.news-article-video-frame {
+    width: 100%;
+    max-width: 80ch;
+    max-height: 168px;
+    margin: 4px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: hidden;
+    background: var(--bgcolor, #000);
+}
+
+.news-article-video {
+    display: block;
+    max-width: 100%;
+    max-height: 168px;
+    width: auto;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.3));
+}
+
+body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-article-video-frame,
+body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-article-video {
+    max-height: 112px;
+}
+
+/* [LOG: 20260615_1706] 영상 뉴스 페이지 이동 시 터미널 상자 높이 흔들림 방지 */
+body[data-screen="news-view"] #terminal-screen {
+    min-height: 570px !important;
+}
+
 /* [LOG: 20260416_2241] 로딩 중일 ?�만 25번째 �??�태�??? ?��? */
 #terminal-container.is-loading #terminal-screen>div>div:nth-child(25) {
     visibility: hidden;

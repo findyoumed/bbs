@@ -186,8 +186,11 @@ export function createNewsAnsiBuilders(deps) {
     // Title wrapping: targetCols - 6 (label "제목: ")
     const titleLines = wrapAnsiText(articleTitle, Math.max(10, targetCols - 6));
 
-    // [LOG: 20260611_1640] Do not render a fallback sentence when RSS article body text is unavailable.
-    const bodyText = String(article?.body || article?.description || '').trim();
+    // [LOG: 20260615_1744] Render fallback guidance when RSS article body text is too short or unavailable (e.g. Google News 429 block)
+    let bodyText = String(article?.body || article?.description || '').trim();
+    if (bodyText.length < 120) {
+      bodyText += '\n\n' + '[상세 본문을 불러오지 못했습니다. 하단의 \'원문\' 링크를 클릭하여 전체 기사를 확인해 주세요.]';
+    }
     const bodyLines = wrapAnsiText(bodyText, targetCols);
 
     const source = String(article?.sourceTitle || '').trim();
@@ -198,8 +201,6 @@ export function createNewsAnsiBuilders(deps) {
       ? wrapAnsiText(`원문: ${sourceLink}`, targetCols)
       : [];
 
-    const imageRowBudget = hasImage ? (isMobile ? 5 : 7) : 0;
-    const newsBodyRowBudget = Math.max(10, 18 - imageRowBudget);
     const metaParts = [
       source ? `출처: ${source}` : '',
       date ? `일시: ${date}` : ''
@@ -214,12 +215,31 @@ export function createNewsAnsiBuilders(deps) {
     }
 
     const lastPageFooterLines = sourceLinkLines.length + 1;
-    const linesPerPage = Math.max(5, newsBodyRowBudget - headerLineCount - lastPageFooterLines);
 
-    const pageCount = Math.max(1, Math.ceil(Math.max(1, bodyLines.length) / linesPerPage));
+    // [LOG: 20260615_1720] 페이지별 가용 라인 수 시뮬레이션 분할 로직 구현
+    const pages = [];
+    let currentLineIdx = 0;
+    const totalBodyLines = Math.max(1, bodyLines.length);
+
+    while (currentLineIdx < totalBodyLines) {
+      const pageIdx = pages.length; // 0-based page index
+      const isFirstPage = pageIdx === 0;
+      const baseLines = isFirstPage 
+        ? Math.max(5, Math.max(10, 18 - (hasImage ? (isMobile ? 5 : 7) : 0)) - headerLineCount)
+        : Math.max(5, 18 - headerLineCount);
+
+      // 마지막 페이지인지 판별 (남은 줄이 현재 페이지 가용 기본 줄 수 이하인 경우)
+      const isLastPage = (totalBodyLines - currentLineIdx) <= baseLines;
+      const allowedLines = isLastPage ? Math.max(3, baseLines - lastPageFooterLines) : baseLines;
+
+      const chunk = bodyLines.slice(currentLineIdx, currentLineIdx + allowedLines);
+      pages.push(chunk);
+      currentLineIdx += chunk.length;
+    }
+
+    const pageCount = pages.length;
     const currentPage = Math.min(Math.max(Number.parseInt(pageNo, 10) || 1, 1), pageCount);
-    const pageOffset = (currentPage - 1) * linesPerPage;
-    const visibleBodyLines = bodyLines.slice(pageOffset, pageOffset + linesPerPage);
+    const visibleBodyLines = pages[currentPage - 1] || [];
     const pageLabel = buildPageLabel(currentPage, pageCount);
 
     // Pass targetCols to top header

@@ -143,25 +143,38 @@ class RssNewsService extends RssServiceBase {
     return buildNewsArticleKey(this, article);
   }
 
+  // [LOG: 20260615_1740] URL key-no mismatch conflict resolution (prefer manual no query)
   _resolveNewsArticle(items, targetNo, options = {}) {
     const list = Array.isArray(items) ? items : [];
     const expectedKey = this._normalize(options.articleKey || options.key || '');
     const expectedLink = this._normalize(options.link || '');
-
-    if (expectedLink) {
-      const byLink = list.find((item) => this._normalize(item?.link || '') === expectedLink) || null;
-      if (byLink) {
-        // [LOG: 20260611_1630] RSS topic feeds can be rebuilt between list and detail; a matching link is the stable identity.
-        return byLink;
-      }
-    }
-
-    if (expectedKey) {
-      return list.find((item) => this._buildNewsArticleKey(item) === expectedKey) || null;
-    }
-
     const target = String(targetNo || '').trim();
-    return list.find((item, index) => String(item?.no || (index + 1)) === target) || null;
+
+    let byLink = null;
+    if (expectedLink) {
+      byLink = list.find((item) => this._normalize(item?.link || '') === expectedLink) || null;
+    }
+
+    let byKey = null;
+    if (expectedKey) {
+      byKey = list.find((item) => this._buildNewsArticleKey(item) === expectedKey) || null;
+    }
+
+    const byNo = target ? list.find((item, index) => String(item?.no || (index + 1)) === target) : null;
+
+    // Detect user manual URL update conflict (different key vs no)
+    const keyConflict = byKey && byNo && byKey !== byNo;
+    const linkConflict = byLink && byNo && byLink !== byNo;
+
+    if (keyConflict || linkConflict) {
+      return byNo;
+    }
+
+    if (byLink) return byLink;
+    if (byKey) return byKey;
+    if (byNo) return byNo;
+
+    return null;
   }
 
   async _resolveTopic(topicDoor) {

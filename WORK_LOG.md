@@ -1,3 +1,87 @@
+## [2026-06-15 17:47] 구글 뉴스 429 차단에 의한 본문 누락 방지 및 Fallback 안내 로직 구현
+
+**LOG_ID: 20260615_1747**
+목표: 구글 뉴스 URL 리다이렉트 우회(`resolveGoogleNewsSourceUrl`)가 429 Rate Limit 등으로 차단되어 본문을 긁어오지 못할 때, 본문 영역에 친절한 설명과 함께 원문 바로가기 가이드를 출력하도록 보완한다.
+변경 파일: public/js/core/newsAnsiBuilders.js
+수행 작업: 1) `buildNewsArticleAnsi` 함수 내 본문 길이 검사 로직(120자 미만인 경우)을 보강하여 상세 본문 획득 실패 시 Fallback 안내 문구 삽입
+실행: `node --check public/js/core/newsAnsiBuilders.js` 및 `npm run smoke:vercel-ready`
+기대: 994번 기사처럼 본문 로딩이 실패한 기사 진입 시 하단에 안내 문구와 원문 보기 링크가 올바르게 렌더링된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-15 17:41] 뉴스 기사 번호-키 불일치(Conflict) 정합성 복원 및 해결
+
+**LOG_ID: 20260615_1741**
+목표: 브라우저 주소창 등에서 사용자가 수동으로 기사 번호(`articleNo`)를 수정했을 때, URL에 여전히 이전 기사의 `key` 또는 `link` 파라미터가 잔상으로 남아 엉뚱한 이전 기사의 본문이 렌더링되던 데이터 오매칭 버그를 완벽하게 고친다.
+변경 파일: src/server/RssNewsService.js, public/js/core/newsScreens.js
+수행 작업: 1) 백엔드 `_resolveNewsArticle` 로직에 번호와 키/링크가 서로 다른 기사를 가리키는 충돌(Conflict) 상황 감지부 구현 및 충돌 시 사용자가 입력한 번호 기사를 최우선으로 리턴하도록 보완 2) 프론트엔드 `newsScreens.js` 의 `findNewsArticle` 함수에도 대칭되는 충돌 감지 로직 적용
+실행: `node scratch/test_news_article.js` 및 `npm run smoke:vercel-ready`
+기대: 999번 기사 조회 요청 시 오염된 키 파라미터가 잔존하더라도 999번 기사의 실제 내용과 본문이 올바르게 렌더링되고, 주소창의 키가 해당 기사의 진짜 키로 자동 보정된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-15 17:20] 동적 페이지네이션 분할(시뮬레이션 방식) 구현
+
+**LOG_ID: 20260615_1720**
+목표: 이미지/비디오가 기사에 존재할 경우, 오직 1페이지에만 나타남에도 불구하고 2페이지 이후의 페이지네이션에도 이미지 영역 만큼 줄 수(Line Budget)를 깎아 글 내용이 5줄 정도로 지나치게 적게 출력되던 버그를 고친다.
+변경 파일: public/js/core/newsAnsiBuilders.js
+수행 작업: 1) 이미지/비디오 공간 차감을 1페이지에만 적용하고 2페이지부터는 텍스트를 꽉 채워 보여줄 수 있도록 페이지별 가용 라인 수 독립 계산 설계 2) 본문의 정확한 슬라이싱 및 페이지수 할당을 위해 줄 단위로 루프를 돌며 가용 라인 만큼 담는 '시뮬레이션 분할 방식' 도입
+실행: `npm run smoke:vercel-ready`
+기대: 영상 뉴스 및 이미지 뉴스의 2페이지 진입 시 본문 텍스트가 5줄 수준으로 줄지 않고, 12~13줄 이상 꽉 차서 정상적인 밀도로 제공된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-15 16:54] 뉴스 상세 비디오 플레이어 글 높이(수직 레이아웃) 보정
+
+**LOG_ID: 20260615_1654**
+목표: 유튜브 비디오 플레이어(iframe)가 화면에 추가되면서 터미널 스크린 한도(24줄)를 초과하여 수직 레이아웃과 글 높이가 이상해지던 정렬 버그를 해결한다.
+변경 파일: public/style.css, public/index.html
+수행 작업: 1) public/style.css에서 .news-article-video-frame 및 .news-article-video의 max-height를 이미지 크기와 동일하게 168px(컴팩트 모드 112px)로 제한하고 aspect-ratio에 따라 가로가 자동 계산되게 보정 2) public/index.html의 style.css 로드 버전을 v=20260615_1654로 갱신하여 즉시 적용
+실행: `npm run smoke:vercel-ready`
+기대: 비디오 뉴스의 플레이어 높이가 본문 높이를 무너뜨리지 않도록 제한되어, 비디오 하단 텍스트들의 줄 간격(글 높이) 및 화면 구도가 예전처럼 온전하게 복구된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-15 16:51] [영상] 태그 및 동영상 뉴스 렌더링 지원
+
+**LOG_ID: 20260615_1651**
+목표: 제목에 [영상] 태그가 있거나 imageUrl에 유튜브 동영상 URL이 탑재된 동영상 뉴스 기사에서 비디오 플레이어(iframe)가 누락 없이 정상 렌더링되도록 식별 정규식을 고도화한다.
+변경 파일: public/js/core/newsPhotoArticleUtils.js
+수행 작업: 1) shouldDisplayNewsArticleImage 함수 내부에 imageUrl이 유튜브 도메인을 가지고 있을 경우 무조건 true를 리턴하여 우회하도록 바이패스 로직 구현 2) PHOTO_NEWS_LABEL_PATTERN 및 PHOTO_NEWS_PHRASE_PATTERN에 '영상'(\uC601\uC0C1), '동영상'(\uB3D9\uC601\uC0C1), 'video' 키워드 추가 3) PHOTO_NEWS_LINK_PATTERN에 'video', 'videos', 'vod', 'clip' 패턴 보강
+실행: `npm run smoke:vercel-ready`
+기대: '[영상]' 접두어가 붙거나 유튜브 임베드 주소를 포함하는 동영상 기사 조회 시, 화면에 비디오 플레이어가 누락 없이 깔끔하게 렌더링된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-15 16:44] [사진] 태그 기사의 포토 렌더링 지원
+
+**LOG_ID: 20260615_1644**
+목표: 제목에 [사진] 태그가 붙어 있거나 링크에 언더스코어 형태의 photo 키워드가 포함된 포토 기사의 본문 이미지가 화면에서 정상 노출되도록 식별 정규식을 보강한다.
+변경 파일: public/js/core/newsPhotoArticleUtils.js
+수행 작업: 1) PHOTO_NEWS_LABEL_PATTERN 및 PHOTO_NEWS_PHRASE_PATTERN에 '사진'(\uC0AC\uC9C4) 유니코드 추가 2) PHOTO_NEWS_LINK_PATTERN에 언더스코어(_)가 조합된 형태도 감지할 수 있도록 정규식 보강
+실행: `npm run smoke:vercel-ready`
+기대: '[사진]' 접두어가 붙은 기사 상세 진입 시 본문 내의 이미지가 누락 없이 깨끗하게 출력된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-15 16:40] 뉴스 상세 내 유튜브 동영상(영상 뉴스) 재생 지원
+
+**LOG_ID: 20260615_1640**
+목표: 영상 뉴스 상세 페이지 조회 시 이미지 대신 유튜브 영상 플레이어(iframe)가 올바르게 렌더링되고 작동하도록 개선한다.
+변경 파일: public/style.css, public/js/core/newsScreens.js
+수행 작업: 1) public/style.css에 유튜브 비디오 프레임(.news-article-video-frame) 및 iframe(.news-article-video) 스타일 추가 2) public/js/core/newsScreens.js의 renderNewsArticleImage에서 유튜브 링크 판별 및 iframe 삽입 로직 구현
+실행: `npm run smoke:vercel-ready`
+기대: 영상 뉴스 기사 상세 화면에서 유튜브 영상 플레이어가 깨짐 없이 정상 노출되어 영상 재생이 가능해진다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-13 13:16] 인풋창 불필요한 translateY 오프셋 제거 및 완벽 정렬 완료
 
 **LOG_ID: 20260613_1316**

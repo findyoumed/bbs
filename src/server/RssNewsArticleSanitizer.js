@@ -255,6 +255,8 @@ function stripKnownArticleBoilerplateLines(value) {
     /재배포\s*금지/i,
     /^▲+$/i,
     /^(?:▶\s*)?영상\s*시청$/i,
+    /^youtube$/i,
+    /^유튜브로\s*보기$/i,
     // [LOG: 20260505_2325] Enhanced lead boilerplate patterns
     /^[▲△]\s*[^\n]{1,200}$/,
     /^\([가-힣]{2,5}=\uC5F0\uD569\uB274\uC2A4\)$/,
