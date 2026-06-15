@@ -1,11 +1,11 @@
-## [2026-06-15 17:47] 구글 뉴스 429 차단에 의한 본문 누락 방지 및 Fallback 안내 로직 구현
+## [2026-06-15 17:53] 구글 뉴스 429 차단에 의한 본문 누락 조건부 Fallback 안내 로직 보완
 
-**LOG_ID: 20260615_1747**
-목표: 구글 뉴스 URL 리다이렉트 우회(`resolveGoogleNewsSourceUrl`)가 429 Rate Limit 등으로 차단되어 본문을 긁어오지 못할 때, 본문 영역에 친절한 설명과 함께 원문 바로가기 가이드를 출력하도록 보완한다.
+**LOG_ID: 20260615_1753**
+목표: 구글 뉴스 URL 리다이렉트 우회(`resolveGoogleNewsSourceUrl`)가 429 Rate Limit 등으로 차단되어 본문을 긁어오지 못할 때, 사진/동영상 등 미디어 컨텐츠가 없는 깡통 기사에 한해서만 상세 본문 확인 불가 안내를 노출하도록 개선한다.
 변경 파일: public/js/core/newsAnsiBuilders.js
-수행 작업: 1) `buildNewsArticleAnsi` 함수 내 본문 길이 검사 로직(120자 미만인 경우)을 보강하여 상세 본문 획득 실패 시 Fallback 안내 문구 삽입
+수행 작업: 1) `buildNewsArticleAnsi` 함수 내 본문 길이 검사 시 `shouldDisplayNewsArticleImage(article)` 여부 조건을 덧붙여 미디어가 존재하는 경우에는 에러 안내가 노출되지 않고 깨끗하게 보이도록 처리.
 실행: `node --check public/js/core/newsAnsiBuilders.js` 및 `npm run smoke:vercel-ready`
-기대: 994번 기사처럼 본문 로딩이 실패한 기사 진입 시 하단에 안내 문구와 원문 보기 링크가 올바르게 렌더링된다.
+기대: 사진이나 영상이 이미 화면에 쾌적하게 나오고 있는 기사들(예: 994번, 995번 등) 하단에는 에러 메시지가 뜨지 않는다.
 결과: ✅ 완료
 
 ---

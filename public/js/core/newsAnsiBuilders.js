@@ -186,9 +186,9 @@ export function createNewsAnsiBuilders(deps) {
     // Title wrapping: targetCols - 6 (label "제목: ")
     const titleLines = wrapAnsiText(articleTitle, Math.max(10, targetCols - 6));
 
-    // [LOG: 20260615_1744] Render fallback guidance when RSS article body text is too short or unavailable (e.g. Google News 429 block)
+    // [LOG: 20260615_1748] Render fallback guidance ONLY when there is no media content (image/video) and the body is extremely short.
     let bodyText = String(article?.body || article?.description || '').trim();
-    if (bodyText.length < 120) {
+    if (!shouldDisplayNewsArticleImage(article) && bodyText.length < 80) {
       bodyText += '\n\n' + '[상세 본문을 불러오지 못했습니다. 하단의 \'원문\' 링크를 클릭하여 전체 기사를 확인해 주세요.]';
     }
     const bodyLines = wrapAnsiText(bodyText, targetCols);
