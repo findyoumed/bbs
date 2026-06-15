@@ -1,3 +1,27 @@
+## [2026-06-15 18:08] 언론사별 기사 본문 HTML 파싱 정확도 및 위젯 노이즈 오진 필터링 개선
+
+**LOG_ID: 20260615_1808**
+목표: KBS 뉴스 등 특정 언론사에서 본문 영역 태그가 클래스명(예: `detail-body` vs `detail_body`) 차이나 위젯 노이즈 판정식 오동작(`looksLikeWidgetNoise`가 유니코드 이스케이프 문자나 특정 키워드 다수 포함 시 진짜 본문을 코드로 인식해 차단하는 현상)으로 인해 본문을 유실하고 메뉴바를 대신 반환하던 오작동을 완전히 고친다.
+변경 파일: src/server/RssNewsArticleParserExtractors.js, src/server/RssNewsArticleParserText.js
+수행 작업: 1) `RssNewsArticleParserExtractors.js` 의 `extractArticleContainerBodies` 함수 내 Preferred 및 Fallback 매처 정규식을 언더바(`_`)와 하이픈(`-`) 모두 매칭 가능하도록 개선하여 `detail-body`, `cont_newstext` 등 다양한 언론사 본문 컨테이너를 올바르게 포착하도록 지원 2) `RssNewsArticleParserText.js` 의 `looksLikeWidgetNoise` 판단식에서 글 내용에 종결 문자(마침표/물음표 등)가 3개 이상 있고 200자 이상으로 본문 길이가 충분한 경우 노이즈 오진을 하지 않고 즉시 통과시키도록 예외 처리 보완
+실행: `node scratch/test_news_article.js` 및 `npm run smoke:vercel-ready`
+기대: KBS 기사("‘현대미술 거장’ 데이비드 호크니 타계...") 파싱 테스트 시 메뉴 텍스트 대신 진짜 기사 본문("예술계에서도 안타까운 비보가 전해졌습니다...")이 최고 점수(`3218.4`)를 획득하여 정확히 추출된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-15 17:54] 구글 뉴스 디코딩 429 차단 우회 및 원본 뉴스 상세 본문 크롤링 복원
+
+**LOG_ID: 20260615_1754**
+목표: 백엔드가 구글 뉴스 리다이렉트 URL(`resolveGoogleNewsSourceUrl`)을 풀 때 봇 감지(429/CAPTCHA)에 걸려 원본 기사 주소를 얻지 못하고, 결국 상세 본문을 긁어오지 못해 깡통 텍스트만 렌더링되던 문제를 모던 Chrome 헤더 적용과 `/rss` 경로 유지 조합으로 완벽하게 해결한다.
+변경 파일: src/server/GoogleNewsUrlResolver.js, src/server/RssNewsService.js
+수행 작업: 1) `GoogleNewsUrlResolver.js` 및 `RssNewsService.js` 에 모던 데스크톱 Chrome 브라우저 헤더(`CHROME_HEADERS`) 적용 2) `GoogleNewsUrlResolver` 에서 주소 파싱 시 봇 차단율이 높은 `/articles` 대신 `/rss/articles` 원래 RSS 경로를 그대로 사용하도록 보정 3) `extractGoogleNewsBatchResolvedUrl` 의 `garturlres` 응답 정규식을 최신 포맷에 맞춰 유연하게 개선
+실행: `node scratch/test_news_article.js` 및 `npm run smoke:vercel-ready`
+기대: 995번 등 구글 리다이렉트 기사의 진짜 언론사 URL(예: MBC 뉴스 `imnews.imbc.com/...`)이 정상적으로 해소되어, 화면에 기사 실제 본문 텍스트(예: "우리나라 성인 3명 중 1명은 비만...")가 정상 크롤링되어 풍부하게 렌더링된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-15 17:53] 구글 뉴스 429 차단에 의한 본문 누락 조건부 Fallback 안내 로직 보완
 
 **LOG_ID: 20260615_1753**

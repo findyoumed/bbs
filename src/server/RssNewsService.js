@@ -1,5 +1,19 @@
 'use strict';
 const crypto = require('crypto');
+// [LOG: 20260615_1754] Use modern Chrome headers to bypass bot detection and prevent 429 rate limit errors
+const CHROME_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+  'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"Windows"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1'
+};
 const RssServiceBase = require('./RssServiceBase');
 const { parseNewsFeedXml, parseNewsMenuXml } = require('./RssServiceXmlParsers');
 const { parseNewsArticleHtml } = require('./RssNewsArticleParser');
@@ -209,13 +223,14 @@ class RssNewsService extends RssServiceBase {
 
     const cacheKey = `news:article:v24:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
-    if (memory) {
+    // [LOG: 20260615_1754] Ignore cached error results and retry fetch if body is empty or unavailable
+    if (memory && !memory.unavailable && memory.body && memory.body.length >= 80) {
       return memory;
     }
 
     const storeKey = `rss:feed:${cacheKey}`;
     const persistent = await this._getPersistentCacheEntry(storeKey);
-    if (persistent) {
+    if (persistent && !persistent.unavailable && persistent.body && persistent.body.length >= 80) {
       this._setMemoryCacheEntry(this.feedCache, cacheKey, persistent, this.cacheTtlMs);
       return persistent;
     }
@@ -230,7 +245,7 @@ class RssNewsService extends RssServiceBase {
       const fetchTarget = resolvedSourceLink || normalizedLink;
       // [LOG: 20260610_1500] Add 3 second timeout to avoid hanging on slow servers
       const response = await this.fetchImpl(fetchTarget, {
-        headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' },
+        headers: CHROME_HEADERS,
         redirect: 'follow',
         signal: AbortSignal.timeout(3000)
       });
@@ -251,7 +266,7 @@ class RssNewsService extends RssServiceBase {
         && normalizedResponseUrl !== fetchTarget
         && normalizedResponseUrl !== rawResponseUrl) {
         const canonicalResponse = await this.fetchImpl(normalizedResponseUrl, {
-          headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' },
+          headers: CHROME_HEADERS,
           redirect: 'follow'
         });
         if (canonicalResponse?.ok) {

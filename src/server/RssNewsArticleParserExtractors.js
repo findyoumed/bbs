@@ -260,11 +260,11 @@ function collectJsonLdDate(node, out) {
 
 function extractArticleContainerBodies(source) {
   const preferredMatchers = [
-    /(?:id|class)=["'][^"']*(article_body|article_word|article-word|article_txt|articleText|article-view-content|article-view-content-div|story-news|storynews|news-view|news_view|news_body|news_body_area|newsct_article|news_end|news_article|content-body|view_content|articleWrap|article-wrap|news_cnt_detail_wrap|news_cnt_detail|art_txt|article_txt|art_body|article_body_wrap|news_detail_wrap|news_detail_area|news_text|detail_body|view_txt)[^"']*["']/i
+    /(?:id|class)=["'][^"']*(article[-_]body|article[-_]word|article[-_]txt|articleText|article[-_]view[-_]content|article[-_]view[-_]content[-_]div|story[-_]news|storynews|news[-_]view|news[-_]body|news[-_]body[-_]area|newsct[-_]article|news[-_]end|news[-_]article|content[-_]body|view[-_]content|articleWrap|article[-_]wrap|news[-_]cnt[-_]detail[-_]wrap|news[-_]cnt[-_]detail|art[-_]txt|article[-_]txt|art[-_]body|article[-_]body[-_]wrap|news[-_]detail[-_]wrap|news[-_]detail[-_]area|news[-_]text|detail[-_]body|view[-_]txt|cont[-_]newstext|cont[-_]news[-_]text)[^"']*["']/i
   ];
   const fallbackMatchers = [
     /itemprop=["']articleBody["']/i,
-    /(?:id|class)=["'][^"']*(articleBody|article-content|post-content|entry-content|news-content|story-body|article-body-wrap|article-body|article_view|article-view)[^"']*["']/i
+    /(?:id|class)=["'][^"']*(articleBody|article[-_]content|post[-_]content|entry[-_]content|news[-_]content|story[-_]body|article[-_]body[-_]wrap|article[-_]body|article[-_]view|article[-_]view)[^"']*["']/i
   ];
 
   const bodies = [

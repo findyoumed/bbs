@@ -58,8 +58,16 @@ function looksLikeWidgetNoise(rawSource, normalizedSource) {
   const normalizedScriptCount = countMatches(normalizedText, /\$\(document\)\.ready|_spinTop|spinTopParams|draw_contents[A-Za-z0-9_]*|contbox[A-Za-z0-9_]*_html|clickStatistics_[A-Za-z0-9_]*|Object\.keys\(data\)|\$\.each\(/g);
   const normalizedWidgetCount = countMatches(normalizedText, /\uC624\uB298\uC758 \uCD94\uCC9C\uC601\uC0C1|\uC9C0\uAE08 \uB728\uB294 \uB274\uC2A4|\uC88B\uC544\uC694|\uCF54\uBA58\uD2B8|\uB313\uAE00/g);
 
+  // [LOG: 20260615_1754] Long content with sentences is likely valid article text, bypass widget noise checks
+  const sentenceCount = (normalizedText.match(/[.!?]/g) || []).length;
+  if (sentenceCount >= 3 && normalizedText.length >= 200) {
+    return false;
+  }
+
   if (rawEscapeCount >= 6 && (rawScriptCount >= 1 || rawWidgetCount >= 2)) {
-    return true;
+    if (normalizedText.length < 150) {
+      return true;
+    }
   }
 
   return normalizedScriptCount >= 1 && normalizedWidgetCount >= 1;

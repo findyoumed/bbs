@@ -2,7 +2,20 @@
 
 const GOOGLE_NEWS_ORIGIN = 'https://news.google.com';
 const GOOGLE_NEWS_BATCH_EXECUTE_URL = `${GOOGLE_NEWS_ORIGIN}/_/DotsSplashUi/data/batchexecute?rpcids=Fbv4je`;
-const DEFAULT_HEADERS = { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' };
+// [LOG: 20260615_1754] Use modern Chrome headers to bypass Google News bot detection and prevent 429 rate limit errors
+const DEFAULT_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+  'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"Windows"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1'
+};
 
 function normalizeValue(value) {
   return String(value || '').trim();
@@ -41,7 +54,7 @@ function buildGoogleNewsArticlePageUrl(value) {
     const parsed = new URL(source);
     parsed.protocol = 'https:';
     parsed.host = 'news.google.com';
-    parsed.pathname = parsed.pathname.replace(/^\/rss(?=\/articles\/)/i, '');
+    // [LOG: 20260615_1754] Do NOT strip /rss prefix since rss endpoint is less prone to bot/CAPTCHA blocks
     return parsed.toString();
   } catch (error) {
     void error;
@@ -186,7 +199,7 @@ function extractGoogleNewsBatchResolvedUrl(rawText) {
   const source = String(rawText || '')
     .replace(/\\u0026/g, '&')
     .replace(/\\"/g, '"');
-  const match = source.match(/\["garturlres","((?:\\.|[^"])*)",/);
+  const match = source.match(/\["garturlres","((?:\\.|[^"])*)",/) || source.match(/\["garturlres","((?:\\.|[^"])*)"/);
   if (!match) {
     return '';
   }
