@@ -186,6 +186,7 @@ body.theme-blue .write-field textarea {
 
 /* ?단 ?력 ?역 ???이???우?리 PC?신 ?태?????*/
 #terminal-footer {
+    --cmd-font-size: 17px;
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
@@ -196,7 +197,7 @@ body.theme-blue .write-field textarea {
     border-top: none;
     z-index: 100;
     /* [LOG: 20260417_1000] 기본: 숨김 (JS 로드 전 노출 방지) */
-    font-size: inherit;
+    font-size: var(--cmd-font-size) !important;
     line-height: 1.1;
     min-height: 36px;
     /* 상단바와 동일한 폰트를 적용하여 너비 계산(ch) 통일 */
@@ -354,13 +355,13 @@ body.theme-blue .write-field textarea {
     min-width: 0 !important;
 }
 
-/* [LOG: 20260615_1527] Keep the footer prompt label and command input in one font rendering context. */
+/* [LOG: 20260615_1538] Keep the footer prompt label and command input in one explicit font rendering context. */
 #terminal-footer label,
 #cmd-input,
 #cmd-mask-text,
 #terminal-container.is-command-pending #cmd-input-wrapper::after {
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
-    font-size: inherit !important;
+    font-size: var(--cmd-font-size, 17px) !important;
     font-weight: normal !important;
     font-style: normal !important;
     font-variant-ligatures: none !important;
@@ -1224,9 +1225,10 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
     }
 
     #terminal-footer {
+        --cmd-font-size: 12px;
         padding: 2px 4px 1px;
         min-height: 32px;
-        font-size: 12px !important;
+        font-size: var(--cmd-font-size) !important;
     }
 
     #cmd-input {
@@ -1396,6 +1398,7 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
     }
 
     #terminal-footer {
+        --cmd-font-size: 12px;
         font-size: 12px !important;
     }
 
@@ -2121,16 +2124,16 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
 }
 
 #terminal-container.is-loading .bbs-loading-text::after {
-    /* [LOG: 20260611_1655] Preserve the underscore wait cursor without using the input overlay cursor. */
-    content: "_";
+    /* [LOG: 20260615_1538] Use a single blinking dot as the loading indicator. */
+    content: ".";
     display: inline-block;
-    margin-left: 1ch;
+    margin-left: 0;
     animation: cursor-blink 1s step-end infinite;
 }
 
 #terminal-container.is-loading #cmd-hint:empty::after {
-    /* [LOG: 20260611_1705] Some route loaders only set is-loading; show the wait cursor even when hint text is empty. */
-    content: "_";
+    /* [LOG: 20260615_1538] Some route loaders only set is-loading; show the blinking dot even when hint text is empty. */
+    content: ".";
     display: inline-block;
     animation: cursor-blink 1s step-end infinite;
 }

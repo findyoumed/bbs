@@ -231,12 +231,12 @@ a {
     align-items: center;
 }
 
-/* [LOG: 20260615_1527] Match command prompt labels and inputs at the computed font/line-box level. */
+/* [LOG: 20260615_1538] Match command prompt labels and inputs at the computed font/line-box level. */
 #terminal-prompt-row label,
 .retro-cmd-input input,
 #cmd-input {
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
-    font-size: inherit !important;
+    font-size: var(--cmd-font-size, 17px) !important;
     font-weight: normal !important;
     font-style: normal !important;
     font-variant-ligatures: none !important;

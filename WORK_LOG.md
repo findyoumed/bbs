@@ -8283,3 +8283,14 @@
 결과: ✅ 완료
 
 ---
+## [2026-06-15 15:38] 로딩 표시 깜빡이는 점 적용 및 입력 폰트 크기 재검증
+
+**LOG_ID: 20260615_1538**
+목표: `연결하는 중입니다..`처럼 고정된 마침표 두 개가 보이는 로딩 문구를 제거하고, CSS로 깜빡이는 `.` 하나만 표시한다. 동시에 `#cmd-input`과 `#cmd-prompt`의 실제 계산된 글자 크기가 같도록 캐시 버전과 CSS 기준값을 정리한다.
+변경 파일: public/js/core/terminalUiCore.js, public/style.css, public/styles/retro-terminal.css, public/index.html
+수행 작업: 1) 로딩 메시지 끝의 점을 제거하는 정규화 함수를 추가함 2) `.loading`과 footer 로딩 문구를 `.bbs-loading-text`로 감싸고 `::after`의 깜빡이는 `.`로 표시함 3) command prompt/input 폰트 크기를 `--cmd-font-size` 기준으로 명시함 4) CSS 캐시 버전을 `20260615_1538`로 갱신함
+실행: `node --check public/js/core/terminalUiCore.js`, `npm run smoke:vercel-ready`, Playwright computed style 확인
+기대: 로딩 중에는 `연결하는 중입니다.`에서 마지막 점 하나만 깜빡이고, `#cmd-prompt`와 `#cmd-input`은 데스크톱 기준 `17px`로 일치한다.
+결과: ✅ 완료
+
+---

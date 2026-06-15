@@ -149,10 +149,17 @@ export function createTerminalUiCore(deps) {
     const lines = [];
 
     if (message) {
-      lines.push(`<div class="loading">${esc(message)}</div>`);
+      lines.push(`<div class="loading"><span class="bbs-loading-text">${esc(message)}</span></div>`);
     }
 
     return lines.join('');
+  }
+
+  function normalizeLoadingMessage(message) {
+    // [LOG: 20260615_1538] Keep loading copy static and let CSS render the single blinking dot.
+    return String(message || '연결하는 중입니다')
+      .trim()
+      .replace(/[.．。]+$/u, '');
   }
 
   const {
@@ -248,7 +255,7 @@ export function createTerminalUiCore(deps) {
       setBusy(true);
       if (cmdInput) cmdInput.disabled = true;
 
-      const staticMessage = String(message || '연결하는 중입니다..').trim();
+      const staticMessage = normalizeLoadingMessage(message);
       
       // Show static text in footer immediately
       if (hintEl) {
