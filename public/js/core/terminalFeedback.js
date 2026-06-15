@@ -87,6 +87,12 @@ export function createTerminalFeedback(deps) {
 
     if (cmdPromptEl) {
       cmdPromptEl.textContent = '>>';
+      const cmdPromptRendererEl = document.getElementById('cmd-prompt-renderer');
+      if (cmdPromptRendererEl) {
+        // [LOG: 20260615_1621] Keep the input-rendered prompt fallback in sync with init errors.
+        cmdPromptRendererEl.value = '>>';
+        cmdPromptRendererEl.style.width = '2ch';
+      }
     }
 
     // [LOG: 20260611_1430] Ensure loading timer is cleared even on error

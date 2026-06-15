@@ -306,6 +306,17 @@ body.theme-blue .write-field textarea {
     white-space: pre;
 }
 
+#terminal-prompt-row label:not(.signup-confirm-prompt-label):not(.myinfo-delete-confirm-prompt-label) {
+    /* [LOG: 20260615_1621] Keep the real label for accessibility; visual prompt is rendered by #cmd-prompt-renderer. */
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+}
+
 #terminal-prompt-row.terminal-prompt-row--inline label {
     margin-right: 0 !important;
 }
@@ -357,6 +368,7 @@ body.theme-blue .write-field textarea {
 
 /* [LOG: 20260615_1538] Keep the footer prompt label and command input in one explicit font rendering context. */
 #terminal-footer label,
+#cmd-prompt-renderer,
 #cmd-input,
 #cmd-mask-text,
 #terminal-container.is-command-pending #cmd-input-wrapper::after {
@@ -401,7 +413,45 @@ body.theme-blue .write-field textarea {
     text-align: left;
     word-spacing: 0 !important;
     -webkit-text-size-adjust: 100%;
+    /* [LOG: 20260615_1628] Editable input glyphs render about 1px higher than the prompt renderer in Chromium. */
+    transform: translateY(1px) !important;
     z-index: 2;
+}
+
+#cmd-prompt-renderer {
+    background: var(--bgcolor, #000);
+    border: 0 !important;
+    outline: none;
+    color: #ffffff;
+    caret-color: transparent !important;
+    display: block;
+    flex: 0 0 auto;
+    position: relative;
+    min-height: 1.1em;
+    min-width: 1ch;
+    max-height: 1.1em;
+    height: 1.1em;
+    margin: 0 1ch 0 0;
+    padding: 0 !important;
+    box-sizing: content-box;
+    border-radius: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    vertical-align: middle;
+    text-indent: 0 !important;
+    text-align: left;
+    word-spacing: 0 !important;
+    -webkit-text-size-adjust: 100%;
+    cursor: text;
+    pointer-events: auto;
+    transform: none !important;
+    user-select: none;
+}
+
+#cmd-prompt.signup-confirm-prompt-label + #cmd-prompt-renderer,
+#cmd-prompt.myinfo-delete-confirm-prompt-label + #cmd-prompt-renderer {
+    display: none !important;
 }
 
 #cmd-input[data-masked="true"] {
@@ -2170,6 +2220,7 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     font-size: inherit !important;
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
     line-height: 1.1 !important;
+    transform: translateY(1px) !important;
 }
 
 #terminal-container.is-command-pending #cmd-input-wrapper::after {
@@ -2234,5 +2285,41 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
 @keyframes notification-flash {
     50% {
         opacity: 0.7;
+    }
+}
+
+/* [LOG: 20260615_1611] Final command prompt/input font lock: keep #cmd-prompt and #cmd-input the same computed text size. */
+#terminal-footer {
+    --cmd-font-size: 17px;
+}
+
+#cmd-prompt,
+#cmd-prompt-renderer,
+#cmd-input {
+    font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
+    font-size: var(--cmd-font-size, 17px) !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    font-variant-ligatures: none !important;
+    font-variant-numeric: normal !important;
+    font-kerning: none !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    text-rendering: optimizeSpeed !important;
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: none !important;
+    -webkit-text-size-adjust: 100% !important;
+}
+
+@media (max-width: 768px) {
+    #terminal-footer {
+        --cmd-font-size: 12px;
+    }
+
+    #cmd-prompt,
+    #cmd-prompt-renderer,
+    #cmd-input {
+        font-size: var(--cmd-font-size, 12px) !important;
+        line-height: 1.1 !important;
     }
 }

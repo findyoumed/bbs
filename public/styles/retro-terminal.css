@@ -233,6 +233,7 @@ a {
 
 /* [LOG: 20260615_1538] Match command prompt labels and inputs at the computed font/line-box level. */
 #terminal-prompt-row label,
+#cmd-prompt-renderer,
 .retro-cmd-input input,
 #cmd-input {
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
@@ -251,6 +252,7 @@ a {
 }
 
 .retro-cmd-input input,
+#cmd-prompt-renderer,
 #cmd-input {
     flex: 1;
     border: none !important;
@@ -272,6 +274,22 @@ a {
     text-align: left;
     word-spacing: 0 !important;
     -webkit-text-size-adjust: 100%;
+}
+
+#cmd-prompt-renderer {
+    flex: 0 0 auto;
+    min-width: 1ch;
+    margin: 0 1ch 0 0;
+    caret-color: transparent !important;
+    cursor: text;
+    pointer-events: auto;
+    transform: none !important;
+    user-select: none;
+}
+
+#cmd-input {
+    /* [LOG: 20260615_1628] Match editable input glyph Y-position to the prompt renderer. */
+    transform: translateY(1px) !important;
 }
 
 #cmd-ghost-text {
@@ -1367,4 +1385,40 @@ body.theme-blue .terminal-titlebar {
 
 .shortcut-helper {
     display: none !important;
+}
+
+/* [LOG: 20260615_1611] Mirror the command prompt/input font lock before style.css loads. */
+#terminal-footer {
+    --cmd-font-size: 17px;
+}
+
+#cmd-prompt,
+#cmd-prompt-renderer,
+#cmd-input {
+    font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
+    font-size: var(--cmd-font-size, 17px) !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    font-variant-ligatures: none !important;
+    font-variant-numeric: normal !important;
+    font-kerning: none !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    text-rendering: optimizeSpeed !important;
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: none !important;
+    -webkit-text-size-adjust: 100% !important;
+}
+
+@media (max-width: 768px) {
+    #terminal-footer {
+        --cmd-font-size: 12px;
+    }
+
+    #cmd-prompt,
+    #cmd-prompt-renderer,
+    #cmd-input {
+        font-size: var(--cmd-font-size, 12px) !important;
+        line-height: 1.1 !important;
+    }
 }

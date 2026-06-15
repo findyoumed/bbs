@@ -1,5 +1,6 @@
 import { createTerminalHintLayout } from './terminalHintLayout.js';
 import { createTerminalHintMarkup } from './terminalHintMarkup.js';
+import { displayWidth } from './ansiRenderUtils.js';
 
 export function createTerminalHintFooter(deps) {
   const {
@@ -22,6 +23,7 @@ export function createTerminalHintFooter(deps) {
   const DEFAULT_COMMAND_PROMPT = '선택 >>';
   const terminalFooter = document.getElementById('terminal-footer');
   const promptRowEl = document.getElementById('terminal-prompt-row');
+  const cmdPromptRendererEl = document.getElementById('cmd-prompt-renderer');
   const promptRowHome = promptRowEl?.parentElement || null;
   let promptRowPlaceholder = null;
   const { resetHintExpansion, toggleHintExpansion, trimHintEntriesToFit } = createTerminalHintLayout({
@@ -31,6 +33,14 @@ export function createTerminalHintFooter(deps) {
     state,
     esc
   });
+
+  if (cmdPromptRendererEl && cmdInput) {
+    cmdPromptRendererEl.addEventListener('mousedown', (event) => {
+      // [LOG: 20260615_1621] Clicking the input-rendered prompt should behave like clicking the old label.
+      event.preventDefault();
+      cmdInput.focus();
+    });
+  }
 
   function scheduleHintTrim(attempt = 0) {
     if (!hintEl || typeof window === 'undefined') {
@@ -218,6 +228,11 @@ export function createTerminalHintFooter(deps) {
       // [LOG: 20260611_1516] Keep prompt text exact; forced trailing spaces shift the empty cursor start.
       const trimmed = promptText.trimEnd();
       cmdPromptEl.textContent = trimmed || '';
+      if (cmdPromptRendererEl) {
+        // [LOG: 20260615_1621] Render the normal prompt through an input control so it matches #cmd-input rasterization.
+        cmdPromptRendererEl.value = trimmed || '';
+        cmdPromptRendererEl.style.width = `${Math.max(1, displayWidth(trimmed || ''))}ch`;
+      }
     }
   }
 

@@ -8294,3 +8294,39 @@
 결과: ✅ 완료
 
 ---
+
+## [2026-06-15 16:11] cmd prompt/input font-size final lock
+
+**LOG_ID: 20260615_1611**
+목표: `#cmd-prompt`와 `#cmd-input`의 실제 계산 글자 크기가 항상 같도록 최종 CSS 우선순위에서 고정한다.
+변경 파일: public/style.css, public/styles/retro-terminal.css, public/index.html
+수행 작업: 1) 두 CSS 파일 끝에 `#cmd-prompt`, `#cmd-input` 전용 최종 font-size/font-family/line-height 고정 규칙 추가 2) 모바일에서도 두 요소가 같은 `--cmd-font-size`를 쓰도록 동일 미디어 쿼리 추가 3) CSS 캐시 버전을 `20260615_1611`로 갱신
+실행: `node --check public/js/core/terminalInputUi.js`, `npm run smoke:vercel-ready`
+기대: 데스크톱과 모바일 모두 `#cmd-prompt`와 `#cmd-input`의 계산된 `font-size`, `line-height`, `font-family`가 동일하다.
+결과: ✅ 완료 - Playwright 확인 결과 데스크톱 `17px/17px`, 모바일 폭 `15px/15px`로 두 요소의 계산 글자 크기가 일치함.
+
+---
+
+## [2026-06-15 16:21] command prompt input-renderer rasterization match
+
+**LOG_ID: 20260615_1621**
+목표: 일반 label 텍스트와 input 텍스트의 브라우저 래스터라이즈 차이로 `선택 >>`와 입력 중인 `선택`이 서로 다르게 보이는 문제를 해결한다.
+변경 파일: public/index.html, public/js/core/terminalHintFooter.js, public/js/core/terminalFeedback.js, public/style.css, public/styles/retro-terminal.css
+수행 작업: 1) 접근성용 `#cmd-prompt` label은 유지하고, 실제 일반 프롬프트 표시는 읽기 전용 `input#cmd-prompt-renderer`로 렌더링 2) `setPrompt()`에서 label 텍스트와 input 렌더러 값을 함께 동기화하고 표시 폭을 `displayWidth()` 기준으로 설정 3) 회원가입/탈퇴 확인처럼 클릭 가능한 특수 label 프롬프트는 기존 label 렌더링을 유지 4) CSS 캐시 버전을 `20260615_1621`로 갱신
+실행: `node --check public/js/core/terminalHintFooter.js`, `node --check public/js/core/terminalFeedback.js`, `npm run smoke:vercel-ready`, Playwright computed style 확인
+기대: 보이는 왼쪽 프롬프트와 오른쪽 입력 텍스트가 모두 input 렌더링 경로를 사용해 픽셀 뭉개짐/두께 차이가 줄어든다.
+결과: ✅ 완료 - Playwright 확인 결과 데스크톱/모바일 모두 보이는 프롬프트 렌더러와 `#cmd-input`이 `INPUT` 태그이며 font-size, line-height, font-family, text-rendering, rect height가 일치함.
+
+---
+
+## [2026-06-15 16:28] cmd input glyph vertical pixel offset
+
+**LOG_ID: 20260615_1628**
+목표: 보이는 프롬프트와 입력 텍스트의 박스 좌표가 같아도 editable input 내부 글리프가 약 1px 위로 렌더링되는 시각 차이를 보정한다.
+변경 파일: public/style.css, public/styles/retro-terminal.css, public/index.html
+수행 작업: 1) `#cmd-input`에 `transform: translateY(1px)` 최종 보정 추가 2) command-pending 상태의 `#cmd-input`에도 같은 보정 적용 3) CSS 캐시 버전을 `20260615_1628`로 갱신
+실행: `node --check public/js/core/terminalHintFooter.js`, `node --check public/js/core/terminalFeedback.js`, `npm run smoke:vercel-ready`, Playwright 좌표 확인
+기대: 오른쪽 입력 텍스트가 왼쪽 프롬프트보다 1px 위로 떠 보이는 현상이 줄어든다.
+결과: ✅ 완료 - Playwright 확인 결과 `#cmd-prompt-renderer`는 `transform: none`, `#cmd-input`은 `translateY(1px)`이며 데스크톱/모바일 모두 입력창 top이 프롬프트보다 1px 아래로 보정됨.
+
+---
