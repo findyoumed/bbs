@@ -1,45 +1,48 @@
-const path = require('path');
-const { createAppServices } = require('../src/server/createAppServices');
+const {
+  extractArticleContainerBodies,
+  extractBodyHtml,
+  extractJsonLdBodies,
+  extractScriptDataBodies,
+  extractStructuredContentElementBodies,
+  extractTagHtml
+} = require('../src/server/RssNewsArticleParserExtractors');
+const {
+  chooseBestArticleBody,
+  refineArticleText,
+  scoreArticleText
+} = require('../src/server/RssNewsArticleParserScoring');
+const {
+  normalizeHtmlBlock
+} = require('../src/server/RssNewsArticleParserText');
 
-const rootDir = path.resolve(__dirname, '..');
-const services = createAppServices(rootDir);
-const rssService = services.rssService;
+const url = 'https://news.kbs.co.kr/news/pc/view/view.do?ncd=8585988';
+const CHROME_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+};
 
 async function run() {
-  try {
-    const topicDoor = "1";
-    console.log(`Fetching topic feed ${topicDoor}...`);
-    const feed = await rssService.getNewsTopicFeed(topicDoor);
-    const items = feed.items || [];
-    
-    const targetKey = "a791ab0c1386c4ab2af9ef9d38617ca60b75f101";
-    const item = items.find(i => i.articleKey === targetKey);
-    
-    if (!item) {
-      console.log(`Could not find item with key ${targetKey} in feed items!`);
-      return;
-    }
+  const res = await fetch(url, { headers: CHROME_HEADERS });
+  const html = await res.text();
+  const source = String(html || '');
 
-    console.log("\n==========================================");
-    console.log("TEST: 특정 기사 디버깅 (우선순위 룰 적용 후)");
-    console.log("Title:", item.title);
-    
-    // Clear memory cache
-    rssService.news.feedCache.clear();
-    
-    // Simulate selection logic with our updated pickPreferredArticleBody policy
-    const detail = await rssService.getNewsArticle(topicDoor, "175", {
-      articleKey: item.articleKey,
-      link: item.link
-    });
-    
-    console.log("BODY (Newline count):", (detail.article?.body?.match(/\n/g) || []).length);
-    console.log("BODY TEXT:\n", detail.article?.body);
-    console.log("==========================================");
-    
-  } catch (err) {
-    console.error("Error:", err);
-  }
+  const candidates = [
+    ...extractJsonLdBodies(source).map((text) => ({ text: refineArticleText(text), source: 'jsonld', raw: text })),
+    ...extractScriptDataBodies(source).map((text) => ({ text: refineArticleText(text), source: 'script', raw: text })),
+    ...extractStructuredContentElementBodies(source).map((text) => ({ text: refineArticleText(text), source: 'structured', raw: text })),
+    ...extractArticleContainerBodies(source).map((text) => ({ text: refineArticleText(text), source: 'container', raw: text })),
+    { text: refineArticleText(normalizeHtmlBlock(extractTagHtml(source, 'article'))), source: 'article', raw: extractTagHtml(source, 'article') },
+    { text: refineArticleText(normalizeHtmlBlock(extractBodyHtml(source))), source: 'body', raw: extractBodyHtml(source) }
+  ];
+
+  console.log('--- ALL CANDIDATES DUMP ---');
+  candidates.forEach((cand, i) => {
+    const refinedLen = cand.text ? cand.text.length : 0;
+    const rawLen = cand.raw ? cand.raw.length : 0;
+    const score = scoreArticleText(cand.text, cand.source);
+    console.log(`\nCANDIDATE ${i} [Source: ${cand.source}]`);
+    console.log(`Raw Length: ${rawLen}, Refined Length: ${refinedLen}, Score: ${score}`);
+    console.log(`Snippet: ${cand.text ? cand.text.substring(0, 300) : 'EMPTY / WEED OUT'}`);
+  });
 }
 
-run();
+run().catch(console.error);
