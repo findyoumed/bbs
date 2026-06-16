@@ -87,6 +87,7 @@ export function createNewsScreens(deps) {
     const positionedButtons = [];
     const sourceLinkGroup = `news-source-link-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+    // [LOG: 20260616_1410] Ensure correct path is resolved
     function getSourceLinkBounds(rowIdx) {
       const sourceText = String(lineNodes[rowIdx]?.textContent || '');
       if (!sourceText.trim() || sourceText.trim() === '마지막 페이지입니다') return null;
@@ -284,6 +285,7 @@ export function createNewsScreens(deps) {
     return String(article?.link || '').trim();
   }
 
+  // [LOG: 20260616_1410] Resolve request metadata helper
   function getNewsArticleRequestOptions(article, options = {}) {
     const articleKey = String(options?.articleKey || options?.key || getNewsArticleKey(article)).trim();
     const link = String(options?.link || getNewsArticleLink(article)).trim();
@@ -506,6 +508,15 @@ export function createNewsScreens(deps) {
     if (canReuseCurrentArticle) {
       resolvedArticle = { ...article, ...state.serviceData.article };
       resolvedTopicTitle = String(state.serviceData?.topicTitle || topicTitle).trim() || topicTitle;
+
+      // [LOG: 20260616_1512] Send back to news list if cached article is set as failed crawl
+      if (resolvedArticle.detailFetched === false) {
+        await showNewsList(topicDoor, {
+          fromHistory: true,
+          pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
+        });
+        return;
+      }
     } else {
       try {
         // [LOG: 20260610_1436] Skip updating loading message to 'connecting to source' since load time is fast.
@@ -513,6 +524,17 @@ export function createNewsScreens(deps) {
         const requestOptions = getNewsArticleRequestOptions(article, options);
         const detail = await loadNewsArticle(topicDoor, article?.no || articleNo, requestOptions);
         const targetValidationOptions = getNewsArticleRequestOptions(article, {});
+
+        // [LOG: 20260616_1512] If detail content fetch failed (fallback status), immediately block entry and send to list view
+        if (detail?.article?.detailFetched === false) {
+          console.warn('Blocked entering article detail due to failed web crawl');
+          await showNewsList(topicDoor, {
+            fromHistory: true,
+            pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
+          });
+          return;
+        }
+
         if (detail?.article && isExpectedNewsArticle(detail.article, targetValidationOptions)) {
           // [LOG: 20260616_1110] Safe metadata merge to prevent empty/blank fields from wiping current state
           resolvedArticle = {
@@ -524,7 +546,15 @@ export function createNewsScreens(deps) {
           };
         }
         if (detail?.topic?.title) resolvedTopicTitle = String(detail.topic.title).trim() || topicTitle;
-      } catch (error) { console.error('뉴스 본문 상세 로드 실패:', error.message); }
+      } catch (error) {
+        console.error('뉴스 본문 상세 로드 실패:', error.message);
+        // [LOG: 20260616_1410] Redirect to news list when detail loading fails or key mismatch occurs to prevent displaying incorrect information
+        await showNewsList(topicDoor, {
+          fromHistory: true,
+          pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
+        });
+        return;
+      }
     }
 
     const articleView = buildNewsArticleAnsi(resolvedTopicTitle, resolvedArticle, requestedPageNo);

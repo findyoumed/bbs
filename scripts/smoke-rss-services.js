@@ -57,11 +57,11 @@ const SAMPLE_NEWS_ARTICLE_HTML = `<!doctype html>
         <div class="article_txt">
           <div class="article_word" id="article_body">
             <div class="photo_view"><p>사진 설명</p></div>
-            <br><br>[예시신문 홍길동 기자] 첫 번째 문단입니다.
-            <br><br>두 번째 문단입니다.
-            <br><br><div class="view_center">광고 스크립트</div>세 번째 문단입니다.
-            <br><br>네 번째 문단입니다.
-            <br><br>다섯 번째 문단입니다.
+            <br><br>[예시신문 홍길동 기자] 첫 번째 문단입니다. 이 문장은 기사 내용을 풍부하게 만들기 위해 작성된 정상적인 문장입니다.
+            <br><br>두 번째 문단입니다. 기사 본문의 완성도를 높이기 위해서 각 문단의 글자 수를 충분히 늘려야 스코어링 조건에 만족하게 됩니다.
+            <br><br><div class="view_center">광고 스크립트</div>세 번째 문단입니다. 뉴스의 핵심 사실과 정황을 자세하게 서술하는 단락이며, 독자가 읽기에 유용한 정보를 포함합니다.
+            <br><br>네 번째 문단입니다. 기자가 발로 뛰어 취재한 생생한 현장의 목소리를 고스란히 담아내어 기사의 신뢰성을 한층 더 높였습니다.
+            <br><br>다섯 번째 문단입니다. 본 기사 서비스는 독자들에게 실시간으로 안전하고 깨끗한 정보만을 전달하는 것을 목표로 합니다.
             <br><br>홍길동 기자 test@example.com
             <br><br>Copyright &copy; 예시신문. All rights reserved. 무단 전재, 재배포 및 AI학습 이용 금지
           </div>
