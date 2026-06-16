@@ -38,8 +38,8 @@ function pickPreferredArticleBody(feedBody, detailBody, detailDescription) {
   const cleanFeedBody = sanitizeArticleText(feedBody);
   const cleanDetailBody = sanitizeArticleText(detailBody);
   const cleanDetailDescription = sanitizeArticleText(detailDescription);
-  // [LOG: 20260613_1241] If actual detail body meets min length, prioritize it over feed to preserve paragraph structures, bypassing noise filter
-  if (cleanDetailBody && cleanDetailBody.length >= 100) {
+  // [LOG: 20260613_1241] If actual detail body meets min length and is NOT noisy, prioritize it over feed to preserve paragraph structures
+  if (cleanDetailBody && cleanDetailBody.length >= 100 && !isLikelyNoisyBody(cleanDetailBody)) {
     return cleanDetailBody;
   }
   if (cleanFeedBody && (!cleanDetailBody || isLikelyNoisyBody(cleanDetailBody))) {

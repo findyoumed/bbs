@@ -187,6 +187,11 @@ class RssNewsService extends RssServiceBase {
       throw this._notFoundError(`뉴스 기사 없음: ${articleNo}`);
     }
 
+    const actualKey = this._buildNewsArticleKey(article);
+    if (requestedKey && actualKey !== requestedKey && !recoveredFromCache) {
+      throw this._notFoundError(`뉴스 기사 키 불일치: ${articleNo}`);
+    }
+
     const resolvedArticle = {
       ...article,
       articleKey: this._buildNewsArticleKey(article)

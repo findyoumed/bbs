@@ -1,3 +1,15 @@
+## [2026-06-16 11:55] RSS 뉴스 복구 및 파싱 파이프라인 안정화
+
+**LOG_ID: 20260616_1155**
+목표: RSS 스모크 테스트의 미세 시간차(Temporal Drift)에 의한 중복제거 오작동 방지, mismatched key 에러 거절 정상화, 비동기 백그라운드 캐시 무효화 경합 방지, 노이즈 필터링 우회 방지 및 테스트 어설션 인덱스 정렬
+변경 파일: src/server/RssNewsService.js, src/server/RssNewsArticleSanitizer.js, scripts/smoke-rss-services.js
+수행 작업: 1) `smoke-rss-services.js` 에서 날짜 생성 시 시간대를 반영한 동적 `ISOString` 을 생성하여 중복 제거 키 시간차 불일치를 완벽히 방지 2) `RssNewsService.js` 에 클라이언트가 전달한 `requestedKey` 가 실제 복원/식별된 기사 키와 다른 경우 올바르게 404 에러를 발생시키는 키 불일치 검증 절차 복원 3) `smoke-rss-services.js` 의 캐시 모의 주입 데이터에 `freshUntil` 미래 값을 세팅하여 stale-while-revalidate에 의한 비동기 캐시 무효화 및 덮어쓰기 경합 차단 4) `RssNewsArticleSanitizer.js` 에서 상세 본문이 100자 이상이라도 노이즈가 있다면 필터를 우회하지 않도록 조건부 본문 채택 수정 5) 스모크 테스트 기사 검증 인덱스를 피드 정렬 순서(3번)에 맞춰 복구하고 API 라우트 테스트에서도 동일 적용
+실행: `npm run smoke:rss-services`
+기대: RSS 및 날씨 서비스 모의 파이프라인 전체 테스트가 에러 없이 성공적으로 검증 통과된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-16 11:25] 기사 상세 크롤링 시 URL 프로토콜 누락 버그(ERR_INVALID_URL) 해결 및 전체 본문 복원
 
 **LOG_ID: 20260616_1125**

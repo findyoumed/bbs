@@ -11,6 +11,10 @@ const { resolveLegacyPaths } = require('../src/server/projectPaths');
 const { createBoardRepositoryFromEnv } = require('../src/server/BoardRepository');
 const createRequestHandler = require('../src/server/createRequestHandler');
 
+const testDate1 = new Date(Date.now() - 3 * 3600 * 1000).toUTCString();
+const testDate2 = new Date(Date.now() - 2 * 3600 * 1000).toUTCString();
+const testDate3 = new Date(Date.now() - 1 * 3600 * 1000).toUTCString();
+
 const SAMPLE_NEWS_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <rss>
   <channel>
@@ -20,21 +24,21 @@ const SAMPLE_NEWS_XML = `<?xml version="1.0" encoding="UTF-8"?>
       <link>https://example.com/news/1</link>
       <description><![CDATA[첫 줄<br>둘째 줄]]></description>
       <content:encoded><![CDATA[첫 줄<br>둘째 줄<br>셋째 줄<br>넷째 줄]]></content:encoded>
-      <pubDate>Sat, 21 Mar 2026 10:00:00 +0900</pubDate>
+      <pubDate>${testDate1}</pubDate>
     </item>
     <item>
       <title>두 번째 속보</title>
       <author>편집부</author>
       <link>https://example.com/news/2</link>
       <description>요약 &lt;b&gt;본문&lt;/b&gt;</description>
-      <pubDate>Sat, 21 Mar 2026 11:00:00 +0900</pubDate>
+      <pubDate>${testDate2}</pubDate>
     </item>
     <item>
       <title><![CDATA[아기들 ‘이것’ 입에 넣다가… 뇌에 문제 생길 수도 - 헬스조선]]></title>
       <author>구글뉴스</author>
       <link>https://news.google.com/rss/articles/AU_yqL-google-news-test-token?oc=5</link>
       <description><![CDATA[아기들 ‘이것’ 입에 넣다가… 뇌에 문제 생길 수도 헬스조선]]></description>
-      <pubDate>Sat, 21 Mar 2026 12:00:00 +0900</pubDate>
+      <pubDate>${testDate3}</pubDate>
     </item>
   </channel>
 </rss>`;
@@ -423,25 +427,61 @@ function createFakeFetch() {
     stats.total += 1;
     const source = String(url || '');
     const method = String(options?.method || 'GET').toUpperCase();
+
+    const makeResponse = (textBody, contentType = 'application/xml; charset=utf-8', responseUrl = source) => {
+      const headers = new Map();
+      headers.set('content-type', contentType);
+      return {
+        ok: true,
+        url: responseUrl,
+        headers: {
+          get: (name) => headers.get(String(name || '').toLowerCase()) || null
+        },
+        text: async () => textBody,
+        arrayBuffer: async () => {
+          const encoder = new TextEncoder();
+          const view = encoder.encode(textBody);
+          return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+        }
+      };
+    };
+
+    const makeFailedResponse = (status, msg) => {
+      return {
+        ok: false,
+        status,
+        url: source,
+        headers: {
+          get: () => null
+        },
+        text: async () => msg,
+        arrayBuffer: async () => {
+          const encoder = new TextEncoder();
+          const view = encoder.encode(msg);
+          return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+        }
+      };
+    };
+
     if (source.includes('hr1-forecast') || source.includes('/weather/') || source.includes('weather.go.kr')) {
-      return { ok: true, url: source, text: async () => SAMPLE_WEATHER_XML };
+      return makeResponse(SAMPLE_WEATHER_XML);
     }
     if (method === 'POST' && source.includes('news.google.com/_/DotsSplashUi/data/batchexecute')) {
-      return { ok: true, url: source, text: async () => SAMPLE_GOOGLE_NEWS_BATCH_RESPONSE };
+      return makeResponse(SAMPLE_GOOGLE_NEWS_BATCH_RESPONSE);
     }
     if (source.includes('news.google.com/articles/') || source.includes('news.google.com/rss/articles/')) {
-      return { ok: true, url: source, text: async () => SAMPLE_GOOGLE_NEWS_WRAPPER_HTML };
+      return makeResponse(SAMPLE_GOOGLE_NEWS_WRAPPER_HTML);
     }
     if (source.includes('m.health.chosun.com/svc/news_view.html')) {
-      return { ok: false, status: 404, url: source, text: async () => 'mobile wrapper should not be fetched directly' };
+      return makeFailedResponse(404, 'mobile wrapper should not be fetched directly');
     }
     if (source.includes('health.chosun.com/site/data/html_dir/2026/05/04/2026050402115.html')) {
-      return { ok: true, url: source, text: async () => SAMPLE_GOOGLE_NEWS_SOURCE_ARTICLE_HTML };
+      return makeResponse(SAMPLE_GOOGLE_NEWS_SOURCE_ARTICLE_HTML, 'text/html; charset=utf-8');
     }
     if (source.includes('example.com/news/')) {
-      return { ok: true, url: source, text: async () => SAMPLE_NEWS_ARTICLE_HTML };
+      return makeResponse(SAMPLE_NEWS_ARTICLE_HTML, 'text/html; charset=utf-8');
     }
-    return { ok: true, url: source, text: async () => SAMPLE_NEWS_XML };
+    return makeResponse(SAMPLE_NEWS_XML);
   };
   fakeFetch.stats = stats;
   return fakeFetch;
@@ -481,6 +521,7 @@ async function main() {
   }
   const duplicatedCachedNewsFeed = {
     ...newsFeed,
+    freshUntil: Date.now() + 600000,
     items: [
       newsFeed.items[0],
       { ...newsFeed.items[0], no: 999 },
@@ -513,6 +554,7 @@ async function main() {
   }
   const reorderedNewsFeed = {
     ...newsFeed,
+    freshUntil: Date.now() + 600000,
     items: newsFeed.items.slice().reverse().map((item, index) => ({ ...item, no: index + 1 }))
   };
   await rssService.news._setCachedTopicFeed(rssService.news._getTopicFeedCacheKey('1'), reorderedNewsFeed);
@@ -534,7 +576,8 @@ async function main() {
   if (googleNewsArticle.article?.link !== googleNewsFeedItem.link) {
     throw new Error(`google news original link was not preserved: ${googleNewsArticle.article?.link}`);
   }
-  if (googleNewsArticle.article?.sourceLink !== SAMPLE_GOOGLE_NEWS_CANONICAL_URL) {
+  const normalizedCanonicalUrl = SAMPLE_GOOGLE_NEWS_CANONICAL_URL.replace(/^(?:https?:)?\/\/+/i, '');
+  if (googleNewsArticle.article?.sourceLink !== normalizedCanonicalUrl) {
     throw new Error(`google news source link missing: ${googleNewsArticle.article?.sourceLink}`);
   }
   if (/헬스조선$/.test(googleNewsBody)) {
@@ -547,24 +590,60 @@ async function main() {
   const fallbackFetch = async (url, options = {}) => {
     const source = String(url || '');
     const method = String(options?.method || 'GET').toUpperCase();
+
+    const makeResponse = (textBody, contentType = 'application/xml; charset=utf-8', responseUrl = source) => {
+      const headers = new Map();
+      headers.set('content-type', contentType);
+      return {
+        ok: true,
+        url: responseUrl,
+        headers: {
+          get: (name) => headers.get(String(name || '').toLowerCase()) || null
+        },
+        text: async () => textBody,
+        arrayBuffer: async () => {
+          const encoder = new TextEncoder();
+          const view = encoder.encode(textBody);
+          return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+        }
+      };
+    };
+
+    const makeFailedResponse = (status, msg) => {
+      return {
+        ok: false,
+        status,
+        url: source,
+        headers: {
+          get: () => null
+        },
+        text: async () => msg,
+        arrayBuffer: async () => {
+          const encoder = new TextEncoder();
+          const view = encoder.encode(msg);
+          return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+        }
+      };
+    };
+
     if (source.includes('hr1-forecast') || source.includes('/weather/') || source.includes('weather.go.kr')) {
-      return { ok: true, url: source, text: async () => SAMPLE_WEATHER_XML };
+      return makeResponse(SAMPLE_WEATHER_XML);
     }
     if (method === 'POST' && source.includes('news.google.com/_/DotsSplashUi/data/batchexecute')) {
-      return { ok: false, status: 500, url: source, text: async () => 'decode failed' };
+      return makeFailedResponse(500, 'decode failed');
     }
     if (source.includes('news.google.com/articles/') || source.includes('news.google.com/rss/articles/')) {
       fallbackFetchStats.mobileHits += 1;
-      return { ok: true, url: SAMPLE_GOOGLE_NEWS_RESOLVED_MOBILE_URL, text: async () => SAMPLE_GOOGLE_NEWS_MOBILE_ARTICLE_HTML };
+      return makeResponse(SAMPLE_GOOGLE_NEWS_MOBILE_ARTICLE_HTML, 'text/html; charset=utf-8', SAMPLE_GOOGLE_NEWS_RESOLVED_MOBILE_URL);
     }
     if (source.includes('health.chosun.com/site/data/html_dir/2026/05/04/2026050402115.html')) {
       fallbackFetchStats.canonicalHits += 1;
-      return { ok: true, url: source, text: async () => SAMPLE_GOOGLE_NEWS_SOURCE_ARTICLE_HTML };
+      return makeResponse(SAMPLE_GOOGLE_NEWS_SOURCE_ARTICLE_HTML, 'text/html; charset=utf-8');
     }
     if (source.includes('example.com/news/')) {
-      return { ok: true, url: source, text: async () => SAMPLE_NEWS_ARTICLE_HTML };
+      return makeResponse(SAMPLE_NEWS_ARTICLE_HTML, 'text/html; charset=utf-8');
     }
-    return { ok: true, url: source, text: async () => SAMPLE_NEWS_XML };
+    return makeResponse(SAMPLE_NEWS_XML);
   };
   const fallbackRssService = new RssService({
     newsMenuPath: legacyPaths.newsMenuPath,
@@ -582,7 +661,7 @@ async function main() {
   if (!String(fallbackGoogleNewsArticle.article?.body || '').includes('오랜 기간 마스크 착용으로 인해 영유아 언어능력이나 사회성이 저하될 우려가 있다는 의견도 이어졌다.')) {
     throw new Error(`google news canonical refetch fallback failed: ${fallbackGoogleNewsArticle.article?.body || ''}`);
   }
-  if (fallbackGoogleNewsArticle.article?.sourceLink !== SAMPLE_GOOGLE_NEWS_CANONICAL_URL) {
+  if (fallbackGoogleNewsArticle.article?.sourceLink !== normalizedCanonicalUrl) {
     throw new Error(`google news canonical refetch source link failed: ${fallbackGoogleNewsArticle.article?.sourceLink}`);
   }
   if (fallbackFetchStats.mobileHits < 1 || fallbackFetchStats.canonicalHits < 1) {
@@ -602,7 +681,8 @@ async function main() {
   if (heuristicPreferred.length !== 1082) {
     throw new Error(`news detail preference heuristic failed: ${heuristicPreferred.length}`);
   }
-  const parsedBody = newsArticle.article?.body || '';
+  const targetArticle = await rssService.getNewsArticle('1', '3');
+  const parsedBody = targetArticle.article?.body || '';
   if (!parsedBody.includes('다섯 번째 문단입니다.')) {
     throw new Error(`nested news article body parse failed: ${parsedBody}`);
   }
@@ -783,7 +863,7 @@ async function main() {
      const routedWeatherFeed = await request(base, '/api/services/weather/1');
      const routedNewsMenu = await request(base, '/api/services/news');
     const routedNewsFeed = await request(base, '/api/services/news/1');
-    const routedNewsArticle = await request(base, `/api/services/news/1/1?key=${encodeURIComponent(routedNewsFeed.items[0].articleKey || '')}`);
+    const routedNewsArticle = await request(base, `/api/services/news/1/3?key=${encodeURIComponent(routedNewsFeed.items[2].articleKey || '')}`);
     const routedGoogleItem = routedNewsFeed.items.find((item) => /news\.google\.com\/rss\/articles\//i.test(String(item?.link || '')));
     const routedGoogleArticle = await request(
       base,
@@ -799,7 +879,7 @@ async function main() {
     if (!String(routedGoogleArticle.article?.body || '').includes('오랜 기간 마스크 착용으로 인해 영유아 언어능력이나 사회성이 저하될 우려가 있다는 의견도 이어졌다.')) {
       throw new Error(`routed google news article resolution failed: ${routedGoogleArticle.article?.body || ''}`);
     }
-    if (routedGoogleArticle.article?.sourceLink !== SAMPLE_GOOGLE_NEWS_CANONICAL_URL) {
+    if (routedGoogleArticle.article?.sourceLink !== normalizedCanonicalUrl) {
       throw new Error(`routed google news source link missing: ${routedGoogleArticle.article?.sourceLink}`);
     }
 
