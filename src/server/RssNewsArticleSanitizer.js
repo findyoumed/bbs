@@ -6,6 +6,19 @@ function normalize(value) {
   return String(value || '').replace(/\s+/g, ' ').replace(/[/:|,-]+\s*$/g, '').trim();
 }
 
+// [LOG: 20260616_1110] Powerful URL normalizer to ensure reliable article key pairing
+function normalizeUrl(value) {
+  let str = String(value || '').trim();
+  if (!str) return '';
+  str = str.replace(/^https?:\/\//i, '');
+  str = str.replace(/^www\./i, '');
+  const qIdx = str.indexOf('?');
+  if (qIdx !== -1) str = str.substring(0, qIdx);
+  const hIdx = str.indexOf('#');
+  if (hIdx !== -1) str = str.substring(0, hIdx);
+  return str.replace(/\/+$/, '').trim();
+}
+
 function buildAuthor(src, aut) {
   const source = normalize(src);
   const author = normalize(aut);
@@ -587,6 +600,7 @@ module.exports = {
   buildAuthor,
   isLikelyNoisyBody,
   normalize,
+  normalizeUrl,
   pickArticleBody,
   pickPreferredArticleBody,
   sanitizeArticleText

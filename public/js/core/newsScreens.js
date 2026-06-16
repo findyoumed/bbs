@@ -325,13 +325,36 @@ export function createNewsScreens(deps) {
     return null;
   }
 
+  // [LOG: 20260616_1110] Normalize URL helper for client-side comparison
+  function normalizeUrl(value) {
+    let str = String(value || '').trim();
+    if (!str) return '';
+    str = str.replace(/^https?:\/\//i, '');
+    str = str.replace(/^www\./i, '');
+    const qIdx = str.indexOf('?');
+    if (qIdx !== -1) str = str.substring(0, qIdx);
+    const hIdx = str.indexOf('#');
+    if (hIdx !== -1) str = str.substring(0, hIdx);
+    return str.replace(/\/+$/, '').trim();
+  }
+
   function isExpectedNewsArticle(article, requestOptions = {}) {
     const expectedKey = String(requestOptions?.articleKey || '').trim();
     const expectedLink = String(requestOptions?.link || '').trim();
-    if (expectedKey && getNewsArticleKey(article) && getNewsArticleKey(article) !== expectedKey) {
+    
+    const articleLink = getNewsArticleLink(article);
+    const articleKey = getNewsArticleKey(article);
+    
+    if (expectedLink && articleLink) {
+      if (normalizeUrl(articleLink) === normalizeUrl(expectedLink)) {
+        return true;
+      }
+    }
+    
+    if (expectedKey && articleKey && articleKey !== expectedKey) {
       return false;
     }
-    if (expectedLink && getNewsArticleLink(article) && getNewsArticleLink(article) !== expectedLink) {
+    if (expectedLink && articleLink && normalizeUrl(articleLink) !== normalizeUrl(expectedLink)) {
       return false;
     }
     return true;
@@ -359,7 +382,7 @@ export function createNewsScreens(deps) {
   // [LOG: 20260610_1935] Module-level cache for instant news topic switching
   const topicCache = new Map();
 
-  async function loadNewsTopicState(topicDoor) {
+  async function loadNewsTopicState(topicDoor, pageNo = 1) {
     const topics = getNewsTopics(state.serviceData);
     const cached = topicCache.get(String(topicDoor));
 
@@ -376,7 +399,8 @@ export function createNewsScreens(deps) {
       return result;
     }
 
-    const articles = await loadNewsArticles(topicDoor);
+    // [LOG: 20260616_0937] Pass current page number to API for fast load times
+    const articles = await loadNewsArticles(topicDoor, pageNo);
     const topic = topics.find((item) => String(item.door) === String(topicDoor));
     const topicTitle = String(articles?.topic?.title || articles?.category?.title || topic?.title || topic?.name || '').trim();
     const result = { topics, topicTitle, items: articles?.items || [] };
@@ -421,7 +445,8 @@ export function createNewsScreens(deps) {
     }, 80);
 
     try {
-      const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor);
+      // [LOG: 20260616_0937] Request page-optimized news data
+      const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor, requestedPageNo);
       clearTimeout(loadingTimer);
 
       const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo);
@@ -484,10 +509,19 @@ export function createNewsScreens(deps) {
     } else {
       try {
         // [LOG: 20260610_1436] Skip updating loading message to 'connecting to source' since load time is fast.
+        // [LOG: 20260616_1052] Use the actual found article's key/link for validation to prevent truncation when indices shift
         const requestOptions = getNewsArticleRequestOptions(article, options);
         const detail = await loadNewsArticle(topicDoor, article?.no || articleNo, requestOptions);
-        if (detail?.article && isExpectedNewsArticle(detail.article, requestOptions)) {
-          resolvedArticle = { ...article, ...detail.article };
+        const targetValidationOptions = getNewsArticleRequestOptions(article, {});
+        if (detail?.article && isExpectedNewsArticle(detail.article, targetValidationOptions)) {
+          // [LOG: 20260616_1110] Safe metadata merge to prevent empty/blank fields from wiping current state
+          resolvedArticle = {
+            ...article,
+            ...detail.article,
+            title: detail.article.title || article?.title || '',
+            description: detail.article.description || article?.description || '',
+            body: detail.article.body || detail.article.description || article?.body || article?.description || ''
+          };
         }
         if (detail?.topic?.title) resolvedTopicTitle = String(detail.topic.title).trim() || topicTitle;
       } catch (error) { console.error('뉴스 본문 상세 로드 실패:', error.message); }

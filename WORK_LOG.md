@@ -1,3 +1,52 @@
+## [2026-06-16 11:10] 피드 인덱스 불일치 시 URL 정규화 기반 DB 캐시 복원 및 클라이언트 메타데이터 오염 차단
+
+**LOG_ID: 20260616_1110**
+목표: 기사 링크의 미세한 형식 차이(프로토콜, www., 쿼리 파라미터, 트레일링 슬래시 등)로 인한 캐시 미스와 기사 key/link 매칭 결함을 원천 방지하고, 키 불일치 상태에서 백엔드가 껍데기 기사를 가공할 때 타 기사의 낡은 메타데이터가 상속되어 오염되는 오작동을 차단한다.
+변경 파일: src/server/RssNewsArticleSanitizer.js, src/server/RssNewsService.js, public/js/core/newsScreens.js
+수행 작업: 1) `RssNewsArticleSanitizer.js` 에 프로토콜/쿼리/트레일링 슬래시 정제 전용인 `normalizeUrl` 헬퍼 함수를 추가 및 export. 2) `RssNewsService.js` 의 `_hashUrl` 및 `_normalize`가 이 `normalizeUrl`을 이용하여 기사 해시 키와 매칭 대조를 처리하도록 연동하여 과거 캐시 DB의 본문 복원 성공률 극대화. 3) 캐시 및 매칭 실패 시 `RssNewsService.js` 가 임시 껍데기 기사를 제조할 때, 불일치 기사의 메타데이터(title, description, date 등)를 상속받지 않고 모두 빈 값으로 초기화하여 오염을 차단. 4) 프론트엔드 `newsScreens.js` 의 `isExpectedNewsArticle` 에 `normalizeUrl`을 이식하여 주소창이나 피드의 미세한 링크 차이에도 동일 기사로 바르게 식별하도록 지원. 5) 상세 기사 머지 시 백엔드 응답의 빈 필드가 프론트엔드가 이미 가지고 있는 요약본(title, description 등)을 덮어씌워 유실하지 않도록 안전한 머지 로직(Safe merge) 수립.
+실행: `npm run smoke:vercel-ready` 검증 완료
+기대: 기사 주소의 미세한 차이에 무관하게 DB 캐시로부터 본문을 정확히 불러오고, 기사 상세 렌더링 화면에 타 기사 정보가 오염되거나 짤리는 오작동이 원천 해결된다.
+결과: ✅ 완료
+
+---
+
+
+## [2026-06-16 10:42] 로컬 개발 서버 프로세스 재기동 및 캐시 버전 v26 상향 조정
+
+**LOG_ID: 20260616_1042**
+목표: 로컬 환경에서 실행 중이던 node 서버가 소스 변경 시 자동 리스타트되지 않아 이전 v24/v25 캐시를 참조하여 기사 본문이 계속 짤려 보이던 문제를 해결한다.
+변경 파일: src/server/RssNewsService.js
+수행 작업: 1) `RssNewsService.js` 의 상세 기사 캐시 버전을 `v25`에서 `v26`으로 추가 상향하여 Supabase DB 및 인메모리 상의 짤린 요약 캐시를 완전히 무효화 2) 로컬 3000번 포트를 점유하던 기존 node 프로세스(PID 2600)를 PowerShell `Stop-Process`로 안전하게 강제 종료 3) `npm run dev` 스크립트를 재실행하여 v26 캐시 변경사항이 메모리에 로드되도록 조치 4) 테스트 스크립트 `test_news_article.js` 실행 결과 본문 1051자 전체가 정상 추출 및 보존됨을 최종 확인.
+실행: `npm run dev` 리스타트 및 `node scratch/test_news_article.js` 검증
+기대: 기사 요약본 캐시가 제거되고, 3000번 포트로 재기동된 최신 서버가 정상적으로 기사 전체 본문을 서빙한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-16 10:33] 뉴스 괘선 실선 복원 및 기사 본문 캐시 리셋 (캐시 v25 업데이트)
+
+**LOG_ID: 20260616_1033**
+목표: 기사 상하단 구분선 `─` (U+2500) 등의 괘선 기호가 wide char로 오인되어 점선 모양으로 벌어지는 현상 복구 및, 과거에 짧은 요약본만 짤린 상태로 DB 캐시에 들어가 있던 기사들을 fresh하게 다시 수집하도록 캐시 정책 개선.
+변경 파일: public/js/core/ansiRenderUtils.js, scratch/debug_article_wrap.js, src/server/RssNewsService.js
+수행 작업: 1) `ansiRenderUtils.js` 내 `isWideChar` 의 기호 영역 하한값을 `0x2500`에서 `0x25A0`으로 높여 괘선 기호(Box Drawings) 영역을 제외하여 실선(`──────`)이 벌어지지 않도록 복원 2) `scratch/debug_article_wrap.js` 스크립트에도 이 판별 로직을 동일하게 반영하여 검증 3) `RssNewsService.js` 내 상세 기사 캐시 버전을 `v24`에서 `v25`로 올려 구버전 요약 기사를 일괄 리셋하고 본문 전체를 실시간 크롤링하여 채우도록 캐시 무효화 4) 브라우저 서브에이전트 캡쳐 검증을 통해 정상 실선 출력 및 3페이지 분량의 기사 본문 전체 출력을 최종 확인.
+실행: `npm run smoke:vercel-ready` 및 로컬 3000포트 검증
+기대: 구분선이 깨끗한 실선으로 복원되고, 기사 본문 내용 전체가 끊김 없이 화면에 출력된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-16 09:37] 뉴스 로딩 속도 최적화 (API 페이징 연동 및 백그라운드 캐시 워밍 구현)
+
+**LOG_ID: 20260616_0937**
+목표: 첫 진입 시 수백 개 기사의 날짜 보강을 위해 무더기 원문 스크래핑을 수행해 로딩이 극도로 지연되던 문제를 해결한다. 클라이언트가 현재 요청한 페이지 영역(1페이지)의 기사 날짜만 우선적으로 동기 보강하여 즉시 렌더링하고, 나머지 기사는 백그라운드에서 비동기로 수집 및 캐싱하도록 개선한다. 캐시 TTL 수명을 조절해 로딩 응답성을 극대화한다.
+변경 파일: public/js/core/dataService.js, public/js/core/newsScreens.js, src/server/RssNewsService.js, src/server/RssNewsTopicFeedHelpers.js, src/server/routeHandlers/chatServiceRoutes.js, archive/dev-only/tests/unit/commandNormalizer.test.js, archive/dev-only/tests/unit/commandService.test.js
+수행 작업: 1) `dataService.js` 및 `newsScreens.js` 가 API 호출 시 현재 보고 있는 페이지 번호(`pageNo`)를 쿼리 파라미터로 넘기도록 개선 2) `chatServiceRoutes.js` 및 `RssNewsService.js` 가 이를 라우터에서 수신하여 피드 빌더 헬퍼로 전달하도록 보정 3) `RssNewsTopicFeedHelpers.js` 의 `buildTopicFeed`에서 `page`가 1 이상일 경우 해당 페이지(기사 15개) 영역의 누락된 날짜만 동기 보강(HTML fetch)하여 응답 시간을 1초 미만으로 단축 4) 피드 헬퍼의 `getOrBuildTopicFeed`가 동기 반환 직후 백그라운드에서 전체 피드 빌드(`page=0`)를 비동기로 수행하여 최종 캐시를 완전히 보강 5) 캐시 TTL 수명을 2분에서 5분으로 늘려 캐시 재사용성 강화 6) ESM 관련 신규 export문으로 인해 깨져 있던 기존 단위 테스트 스크립트(`commandNormalizer.test.js`, `commandService.test.js`) 2건의 구문 치환 및 단언문을 현재 프로덕션 스펙에 맞춰 정상 수정
+실행: `npm run smoke:vercel-ready` 및 `npm test`
+기대: 뉴스 토픽 로딩 시간이 크게 단축되고, Vercel 배포 스모크 테스트와 전체 단위 테스트가 오류 없이 정상 통과한다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-15 18:08] 언론사별 기사 본문 HTML 파싱 정확도 및 위젯 노이즈 오진 필터링 개선
 
 **LOG_ID: 20260615_1808**

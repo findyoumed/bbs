@@ -33,6 +33,7 @@ const {
   buildAuthor,
   isLikelyNoisyBody,
   normalize,
+  normalizeUrl,
   pickArticleBody,
   pickPreferredArticleBody,
   sanitizeArticleText
@@ -41,8 +42,8 @@ const {
 class RssNewsService extends RssServiceBase {
   constructor(options = {}) {
     super(options);
-    // [LOG: 20260613_1142] 실시간 오늘 뉴스 기사 전체 수집을 보장하기 위해 캐시 TTL을 15분에서 2분으로 단축
-    this.cacheTtlMs = 2 * 60 * 1000;
+    // [LOG: 20260616_0937] Extend cache TTL to 5 minutes to balance live updates with speed
+    this.cacheTtlMs = 5 * 60 * 1000;
     this.newsMenuPath = options.newsMenuPath || '';
     this.prefetchNewsTopicsOnMenu = options.prefetchNewsTopicsOnMenu !== false;
     this.topicFeedInflight = new Map();
@@ -67,32 +68,86 @@ class RssNewsService extends RssServiceBase {
     return { kind: 'news', title: `뉴스 / ${paper.name} / ${cat.name}`, level: 'articles', newspaper: { door: paper.door, title: paper.name }, category: { door: cat.door, title: cat.name }, sourceUrl: cat.rss, fetchedAt: new Date().toISOString(), unavailable: !!feed.unavailable, message: feed.message || '', items: feed.items };
   }
 
-  async getNewsTopicFeed(topicDoor) {
+  async getNewsTopicFeed(topicDoor, page = 1) {
     const topic = await this._resolveTopic(topicDoor);
     if (!topic) {
       throw this._notFoundError(`뉴스 주제 없음: ${topicDoor}`);
     }
-    return this._getOrBuildTopicFeed(topic);
+    return this._getOrBuildTopicFeed(topic, page);
   }
 
-  async _getOrBuildTopicFeed(topic) {
-    return getOrBuildTopicFeed(this, parseNewsFeedXml, topic);
+  async _getOrBuildTopicFeed(topic, page = 1) {
+    return getOrBuildTopicFeed(this, parseNewsFeedXml, topic, page);
   }
 
-  async _buildTopicFeed(topic) {
+  async _buildTopicFeed(topic, page = 1) {
     const cacheKey = this._getTopicFeedCacheKey(topic?.door);
     const cached = await this._getCachedTopicFeed(cacheKey);
     if (cached) {
       return cached;
     }
-    return getOrBuildTopicFeed(this, parseNewsFeedXml, topic);
+    return getOrBuildTopicFeed(this, parseNewsFeedXml, topic, page);
   }
 
   async getNewsArticle(topicDoor, articleNo, options = {}) {
     const target = String(articleNo || '');
     const feed = await this.getNewsTopicFeed(topicDoor);
 
-    const article = this._resolveNewsArticle(feed.items || [], target, options);
+    let article = this._resolveNewsArticle(feed.items || [], target, options);
+
+    // [LOG: 20260616_1110] Recovery mechanism for shifted or missing feed indices
+    const requestedKey = String(options.articleKey || options.key || '').trim();
+    const requestedLink = String(options.link || '').trim();
+
+    let recoveredFromCache = false;
+    let cachedDetail = null;
+
+    if (requestedKey || requestedLink) {
+      const hash = requestedKey || this._hashUrl(requestedLink);
+      // Scan active versions of detail cache. We support v26 primarily.
+      const cacheKey = `news:article:v26:${hash}`;
+      const storeKey = `rss:feed:${cacheKey}`;
+      try {
+        cachedDetail = await this._getPersistentCacheEntry(storeKey);
+        if (cachedDetail && !cachedDetail.unavailable && cachedDetail.body && cachedDetail.body.length >= 80) {
+          recoveredFromCache = true;
+        }
+      } catch (err) {
+        console.warn('캐시 복원 시도 중 오류 발생:', err.message);
+      }
+    }
+
+    if (recoveredFromCache && cachedDetail) {
+      article = {
+        no: parseInt(target, 10) || 0,
+        title: cachedDetail.title || (article?.title || ''),
+        link: cachedDetail.link || requestedLink || (article?.link || ''),
+        description: cachedDetail.description || (article?.description || ''),
+        body: cachedDetail.body,
+        date: cachedDetail.date || (article?.date || ''),
+        dateTime: cachedDetail.dateTime || (article?.dateTime || ''),
+        imageUrl: cachedDetail.imageUrl || (article?.imageUrl || ''),
+        sourceTitle: cachedDetail.sourceTitle || (article?.sourceTitle || ''),
+        sourceDoor: article?.sourceDoor || '',
+        categoryTitle: article?.categoryTitle || ''
+      };
+    } else if (requestedLink && (!article || this._buildNewsArticleKey(article) !== requestedKey)) {
+      // [LOG: 20260616_1110] Fabricate clean target container using requestedLink. Do NOT inherit mismatched article's metadata.
+      article = {
+        no: parseInt(target, 10) || 0,
+        title: '',
+        link: requestedLink,
+        description: '',
+        body: '',
+        date: '',
+        dateTime: '',
+        imageUrl: '',
+        sourceTitle: '',
+        sourceDoor: '',
+        categoryTitle: ''
+      };
+    }
+
     if (!article) {
       throw this._notFoundError(`뉴스 기사 없음: ${articleNo}`);
     }
@@ -221,7 +276,7 @@ class RssNewsService extends RssServiceBase {
       return { unavailable: true, message: '피드 오류: 기사 링크 없음', items: [] };
     }
 
-    const cacheKey = `news:article:v24:${this._hashUrl(normalizedLink)}`;
+    const cacheKey = `news:article:v26:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
     // [LOG: 20260615_1754] Ignore cached error results and retry fetch if body is empty or unavailable
     if (memory && !memory.unavailable && memory.body && memory.body.length >= 80) {
@@ -289,7 +344,7 @@ class RssNewsService extends RssServiceBase {
     return detail;
   }
 
-  _normalize(v) { return normalize(v); }
+  _normalize(v) { return normalizeUrl(v); }
   _buildAuthor(src, aut) {
     return buildAuthor(src, aut);
   }
@@ -306,7 +361,7 @@ class RssNewsService extends RssServiceBase {
     return isLikelyNoisyBody(value);
   }
   _hashUrl(value) {
-    return crypto.createHash('sha1').update(String(value || '')).digest('hex');
+    return crypto.createHash('sha1').update(normalizeUrl(value)).digest('hex');
   }
 }
 
