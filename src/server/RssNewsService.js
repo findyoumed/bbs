@@ -327,12 +327,18 @@ class RssNewsService extends RssServiceBase {
 
     let detail;
     let resolvedSourceLink = '';
+    let rawResolvedSourceLink = '';
     try {
-      if (isGoogleNewsArticleUrl(normalizedLink)) {
-        resolvedSourceLink = this._normalize(await resolveGoogleNewsSourceUrl(normalizedLink, this.fetchImpl));
+      // [LOG: 20260616_1125] Ensure raw resolved links retain protocols for network fetch targets
+      if (isGoogleNewsArticleUrl(link)) {
+        const rawLink = await resolveGoogleNewsSourceUrl(link, this.fetchImpl);
+        if (rawLink) {
+          rawResolvedSourceLink = rawLink;
+          resolvedSourceLink = this._normalize(rawLink);
+        }
       }
 
-      const fetchTarget = resolvedSourceLink || normalizedLink;
+      const fetchTarget = rawResolvedSourceLink || link;
       // [LOG: 20260610_1500] Add 3 second timeout to avoid hanging on slow servers
       const response = await this.fetchImpl(fetchTarget, {
         headers: CHROME_HEADERS,
@@ -347,17 +353,18 @@ class RssNewsService extends RssServiceBase {
       const primaryBuf = await response.arrayBuffer();
       detail = parseNewsArticleHtml(decodeHtmlBuffer(primaryBuf, response.headers.get('content-type')));
 
-      const rawResponseUrl = this._normalize(response?.url || '');
-      const normalizedResponseUrl = this._normalize(normalizePublisherArticleUrl(rawResponseUrl));
-      if (!resolvedSourceLink && normalizedResponseUrl && !isGoogleNewsArticleUrl(normalizedResponseUrl)) {
+      const rawResponseUrl = response?.url || '';
+      const rawNormalizedResponseUrl = normalizePublisherArticleUrl(rawResponseUrl);
+      const normalizedResponseUrl = this._normalize(rawNormalizedResponseUrl);
+      if (!resolvedSourceLink && normalizedResponseUrl && !isGoogleNewsArticleUrl(rawResponseUrl)) {
         resolvedSourceLink = normalizedResponseUrl;
       }
 
-      if (normalizedResponseUrl
-        && !isGoogleNewsArticleUrl(normalizedResponseUrl)
-        && normalizedResponseUrl !== fetchTarget
-        && normalizedResponseUrl !== rawResponseUrl) {
-        const canonicalResponse = await this.fetchImpl(normalizedResponseUrl, {
+      if (rawNormalizedResponseUrl
+        && !isGoogleNewsArticleUrl(rawNormalizedResponseUrl)
+        && normalizedResponseUrl !== this._normalize(fetchTarget)
+        && normalizedResponseUrl !== this._normalize(rawResponseUrl)) {
+        const canonicalResponse = await this.fetchImpl(rawNormalizedResponseUrl, {
           headers: CHROME_HEADERS,
           redirect: 'follow'
         });
