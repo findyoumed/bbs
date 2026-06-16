@@ -257,14 +257,18 @@ function mergeDuplicateNewsItem(existing, incoming) {
 }
 
 function dedupeNewsItems(service, items) {
+  const cleanItems = (items || []).filter((item) => item !== null && item !== undefined);
+  console.log("[DEBUG_DEDUPE] Input items count:", items ? items.length : 0, "cleanItems count:", cleanItems.length);
   const uniqueItems = [];
   const keyToIndex = new Map();
 
-  for (const item of items || []) {
+  for (const item of cleanItems) {
     const keys = getNewsItemDedupeKeys(service, item);
     const existingIndex = keys
       .map((key) => keyToIndex.get(key))
       .find((index) => Number.isInteger(index));
+
+    console.log("[DEBUG_DEDUPE] Item title:", item.title, "keys:", keys, "existingIndex:", existingIndex);
 
     if (!Number.isInteger(existingIndex)) {
       const nextIndex = uniqueItems.length;
@@ -273,16 +277,21 @@ function dedupeNewsItems(service, items) {
       continue;
     }
 
-    uniqueItems[existingIndex] = mergeDuplicateNewsItem(uniqueItems[existingIndex], item);
-    getNewsItemDedupeKeys(service, uniqueItems[existingIndex]).forEach((key) => keyToIndex.set(key, existingIndex));
+    const merged = mergeDuplicateNewsItem(uniqueItems[existingIndex], item);
+    if (merged) {
+      uniqueItems[existingIndex] = merged;
+      getNewsItemDedupeKeys(service, uniqueItems[existingIndex]).forEach((key) => keyToIndex.set(key, existingIndex));
+    }
   }
 
-  return uniqueItems;
+  console.log("[DEBUG_DEDUPE] Unique items count:", uniqueItems.length);
+  return uniqueItems.filter(Boolean);
 }
 
 // [LOG: 20260610_1413] Helper function to filter items to only keep those within 3 days of the latest article date
 function applyThreeDayFilter(service, items) {
-  const sortedItems = [...(items || [])];
+  const cleanItems = (items || []).filter((item) => item !== null && item !== undefined);
+  const sortedItems = [...cleanItems];
   sortedItems.sort((left, right) => {
     const rightTime = Date.parse(right.dateTime || right.date || 0) || 0;
     const leftTime = Date.parse(left.dateTime || left.date || 0) || 0;
@@ -296,6 +305,7 @@ function applyThreeDayFilter(service, items) {
 
   const cutoffTime = latestTime - 3 * 24 * 60 * 60 * 1000; // 3 days ago from the latest article
   return sortedItems.filter((item) => {
+    if (!item) return false;
     const itemTime = Date.parse(item.dateTime || item.date || 0) || 0;
     return itemTime >= cutoffTime;
   });

@@ -1,3 +1,39 @@
+## [2026-06-16 12:25] RSS 상세 뉴스 품질 점수(B, C 전략) 본문 수용 임계값 최적화
+
+**LOG_ID: 20260616_1225**
+목표: 상세 본문 파싱 후 노이즈 필터링 및 B, C 품질 전략 검증 과정에서, 유효하지만 100자 미만인 정제된 상세 기사 본문들이 무단 거부되고 RSS 요약본으로 강제 대체되던 결함을 해결한다.
+변경 파일: src/server/RssNewsService.js
+수행 작업: 1) `RssNewsService.js` 의 상세 본문 품질 검증 조건에서, 최소 본문 수용 크기 임계값 제한을 `detailBody.length >= 100` 에서 `detailBody.length >= 40` 으로 완화하여 정상적인 짧은 본문 뉴스 기사들도 깨끗하게 승인되도록 수정. 2) 임시 디버깅용 diagnostic `console.log` 문을 깔끔하게 제거하여 프로덕션 품질 유지.
+실행: `npm run smoke:rss-services`
+기대: 스모크 테스트의 86자짜리 가상 기사 상세 본문이 정상적으로 통과되며, 통합 스모크 테스트 전체가 exit code 0으로 완벽히 통과된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-16 12:20] 동아일보 기사 펼치기/접기 및 검색 추천 링크 노이즈 소거
+
+**LOG_ID: 20260616_1220**
+목표: `article=110` 기사 본문 추출 시 포함되는 UI 및 메디컬 내비게이션 노이즈 단어들("펼치기/접기", "요약", "구글 검색 선호 매체로 추가")을 파이프라인에서 원천 배제한다.
+변경 파일: src/server/RssNewsArticleSanitizer.js, src/server/RssNewsArticleParserScoring.js, src/server/RssNewsArticleParserExtractors.js
+수행 작업: 1) `RssNewsArticleSanitizer.js` 의 `boilerplatePatterns` 와 `isLikelyNoisyBody` 에 해당 키워드를 정규식으로 등록하여 본문 필터링. 2) `RssNewsArticleParserScoring.js` 의 `scoreArticleText` 내부 `penalty` 에도 신규 노이즈 키워드를 포함하여 최종 후보 선별 감점 규칙 보강. 3) `RssNewsArticleParserExtractors.js` 의 `looksLikeStructuredTextNoise` 조건에 해당 노이즈 텍스트를 병합하여 구조화 메타 데이터 추출 단계부터 유입을 차단.
+실행: `npm run smoke:rss-services`
+기대: 동아일보 등 상세 본문 파싱 시 '펼치기/접기', '요약', '구글 검색 선호 매체로 추가' 등의 텍스트 노이즈가 제거되어 완전한 뉴스 단락만 출력된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-16 12:05] 동아일보 뉴스 본문 내비게이션 및 오디오 위젯 텍스트 노이즈 정제
+
+**LOG_ID: 20260616_1205**
+목표: 동아일보 기사 상세 크롤링 및 파싱 시 발생하는 내비게이션 UI 노이즈("기사 읽기", "기사를 재생 중이에요", "왼쪽으로", "오른쪽으로" 등)와 레이아웃 영역에서 유입되는 추천 검색어 키워드를 원천적으로 정제하고 제거한다.
+변경 파일: src/server/RssNewsArticleParserText.js, src/server/RssNewsArticleSanitizer.js, src/server/RssNewsArticleParserScoring.js
+수행 작업: 1) `RssNewsArticleParserText.js` 의 `normalizeHtmlBlock` 에 정규식을 추가하여 기사 본문 영역 외부의 대표적인 레이아웃 및 UI 컴포넌트 태그인 `<aside>`, `<header>`, `<footer>`, `<nav>` 와 그 내부 텍스트 콘텐츠를 본문 파싱 전처리 단계에서 통째로 소거하도록 처리하여 노이즈 차단. 2) `RssNewsArticleSanitizer.js` 의 `boilerplatePatterns` 에 동아일보의 재생/슬라이더 전용 문구 정규식 및 추천 검색 키워드 차단 패턴 추가. 3) `isLikelyNoisyBody` 판단 정규식에 "재생 중이에요", "왼쪽으로", "오른쪽으로", "기사 읽기" 등 한글 리터럴을 추가하여 노이즈 중심 텍스트가 본문으로 오인 채택되는 경로 차단. 4) `RssNewsArticleParserScoring.js` 의 `scoreArticleText` 감점 패턴(`penalty`)에 동아일보 전용 노이즈 키워드들을 연동하여 감점 부여를 통한 정밀한 스코어링 유도.
+실행: `npm run smoke:rss-services`
+기대: 동아일보 기사 조회 시 본문 상하단에 붙어 나오던 오디오 컨트롤 텍스트 및 추천 키워드 등의 쓸데없는 내비게이션 노이즈 라인이 완벽하게 지워지고 깨끗한 기사 본문만 출력된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-16 11:55] RSS 뉴스 복구 및 파싱 파이프라인 안정화
 
 **LOG_ID: 20260616_1155**

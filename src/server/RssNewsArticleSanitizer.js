@@ -251,7 +251,12 @@ function stripKnownArticleBoilerplateLines(value) {
     /^AD$/i,
     /^이\s*시각\s*관심정보$/i,
     /^(?:사진|이미지)\s*(?:확대|확대보기|크게보기|보기|저장)$/i,
-    /^(?:기사\s*)?(?:읽어주기|본문\s*듣기)$/i,
+    // [LOG: 20260616_1205] 동아일보의 기사 재생 문구 제거 패턴 추가
+    /^(?:기사(?:를)?\s*)?(?:읽어주기|본문\s*듣기|읽기|재생\s*중이에요)$/i,
+    // [LOG: 20260616_1205] 동아일보 슬라이더 내비게이션 및 추천 검색 키워드 보일러플레이트 제거
+    /^(?:왼쪽|오른쪽)으로$/i,
+    /^(?:6·3\s*지방선거|부동산\s*경매|호르무즈\s*해협|백도빈\s*다이어트|감자튀김\s*당뇨|정치를\s*부탁해|가상자산\s*해킹|중장년\s*세대)$/i,
+    /^홈플러스\s*정상화\s*약속\s*이행\s*촉구\s*정부·여당이\s*나서라$/i,
     /^\[Mandatory Credit:[^\]]+\]$/i,
     /^\[[^\]\n]{1,160}=(?:연합뉴스|뉴시스)\]$/i,
     /^(?:ⓒ\s*)?(?:연합뉴스|뉴시스|뉴스1|유토이미지)$/i,
@@ -270,9 +275,11 @@ function stripKnownArticleBoilerplateLines(value) {
     /^(?:▶\s*)?영상\s*시청$/i,
     /^youtube$/i,
     /^유튜브로\s*보기$/i,
+    // [LOG: 20260616_1220] 펼치기/접기, 요약, 구글 검색 선호 매체로 추가 제거패턴 추가
+    /^(?:펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)$/i,
     // [LOG: 20260505_2325] Enhanced lead boilerplate patterns
     /^[▲△]\s*[^\n]{1,200}$/,
-    /^\([가-힣]{2,5}=\uC5F0\uD569\uB274\uC2A4\)$/,
+    /^\([가-힣]{2,5}=\uC5F0\uD569\uB274\uC2A4\)\$/,
     /^\[[\uAC00-\uD7A3]{2,6}\s*\uAE30\uC790\([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\)\]$/i,
     /^\[[\uAC00-\uD7A3]{2,10}\s*(?:스타투데이|포토|자료사진)\]$/i,
     /^\(사진=[^\)]+\)$/i,
@@ -592,8 +599,8 @@ function isLikelyNoisyBody(value) {
   if (!source) {
     return false;
   }
-  // [LOG: 20260505_2325] Include placeholder characters like "(" or ")" as noisy.
-  return /(\\u[0-9a-fA-F]{4}|\$\(document\)\.ready|spinTopParams|_spinTop|\uC624\uB298\uC758 \uCD94\uCC9C\uC601\uC0C1|\uC9C0\uAE08 \uB728\uB294 \uB274\uC2A4|\uC88B\uC544\uC694|\uCF54\uBA58\uD2B8|\uB313\uAE00|\uACF5\uC720\uD558\uAE30|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC \uC77D\uC5B4\uC8FC\uAE30|\uC0AC\uC9C4\s*\uD655\uB300|\uC774\uBBF8\uC9C0\s*\uD655\uB300|\uD070\uC0AC\uC9C4\uBCF4\uAE30|\uAD00\uB828\uC0AC\uC9C4\uBCF4\uAE30|\uCE74\uCE74\uC624\uD1A1|\uD398\uC774\uC2A4\uBD81\uBA54\uC2E0\uC800|\uBCF5\uC0AC|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|\uC7AC\uD310\uB9E4\s*(?:\uBC0F\s*DB)?\uAE08\uC9C0|video\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|\uC624\uB514\uC624\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|^[\(\)\[\]\s]+$)/.test(source);
+  // [LOG: 20260616_1220] 기사 읽기, 재생 중이에요, 왼쪽으로, 오른쪽으로, 펼치기/접기, 요약, 구글 검색 선호 매체 등 UI 노이즈가 과반 포함된 텍스트 본문 감지
+  return /(\\u[0-9a-fA-F]{4}|\$\(document\)\.ready|spinTopParams|_spinTop|\uC624\uB298\uC758 \uCD94\uCC9C\uC601\uC0C1|\uC9C0\uAE08 \uB728\uB294 \uB274\uC2A4|\uC88B\uC544\uC694|\uCF54\uBA58\uD2B8|\uB313\uAE00|\uACF5\uC720\uD558\uAE30|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC \uC77D\uC5B4\uC8FC\uAE30|기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|\uC0AC\uC9C4\s*\uD655\uB300|\uC774\uBBF8\uC9C0\s*\uD655\uB300|\uD070\uC0AC\uC9C4\uBCF4\uAE30|\uAD00\uB828\uC0AC\uC9C4\uBCF4\uAE30|\uCE74\uCE74\uC624\uD1A1|\uD398\uC774\uC2A4\uBD81\uBA54\uC2E0\uC800|\uBCF5\uC0AC|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|\uC7AC\uD310\uB9E4\s*(?:\uBC0F\s*DB)?\uAE08\uC9C0|video\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|\uC624\uB514\uC624\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|^[\(\)\[\]\s]+$)/.test(source);
 }
 
 module.exports = {

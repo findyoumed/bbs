@@ -18,7 +18,7 @@ function refineArticleText(value) {
   source = stripEmbeddedWidgetNoise(source);
   source = normalizePlainText(source);
 
-  if (!source || looksLikeWidgetNoise(rawSource, source)) {
+  if (!source || looksLikeWidgetNoise(rawSource, source) || looksLikeListNoise(source)) {
     return '';
   }
 
@@ -210,6 +210,36 @@ function stripEmbeddedWidgetNoise(source) {
   return text.slice(0, cutIndex).trim();
 }
 
+// [LOG: 20260616_1145] 뉴스 목록 카드/추천 칼럼 영역에서 추출된 텍스트 노이즈를 식별하여 걸러내는 헬퍼 함수
+function looksLikeListNoise(text) {
+  const normalized = String(text || '').trim();
+  if (!normalized) {
+    return false;
+  }
+
+  // 1. 텍스트 마지막에 날짜/시간 정보가 붙은 목록성 레이아웃 검출 (예: "11시간 전", "8분 전", "2026-06-13")
+  if (/(?:\d{1,2}\s*(?:시간|분|일|달)\s*전|\d{4}[.-]\d{1,2}[.-]\d{1,2})\s*$/i.test(normalized)) {
+    return true;
+  }
+
+  // 2. 문장 종결 부호가 거의 없는 매우 짧은 한 줄짜리 링크 텍스트인 경우
+  // 단, [속보]나 [Breaking] 등의 키워드가 포함된 경우는 실제 짧은 속보 기사일 수 있으므로 제외
+  const length = normalized.length;
+  const sentenceCount = (normalized.match(/[.!?]/g) || []).length;
+  const hasBreakingNewsKeyword = /\[\s*(속보|Breaking|포토)\s*\]/i.test(normalized);
+
+  if (length < 150 && !hasBreakingNewsKeyword) {
+    const lines = normalized.split('\n').filter(Boolean);
+    if (lines.length <= 1 && sentenceCount <= 1) {
+      if (!/[.!?]["']?\s*$/.test(normalized)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function chooseBestArticleBody(candidates) {
   const scored = candidates
     .map((entry) => ({ ...entry, score: scoreArticleText(entry.text, entry.source) }))
@@ -225,7 +255,8 @@ function scoreArticleText(text, sourceType = 'body') {
     return 0;
   }
 
-  if (looksLikeWidgetNoise(text, source)) {
+  // [LOG: 20260616_1145] 위젯 노이즈나 뉴스 카드 목록 노이즈인 경우 점수를 0점으로 즉시 기각함
+  if (looksLikeWidgetNoise(text, source) || looksLikeListNoise(source)) {
     return 0;
   }
 
@@ -233,7 +264,8 @@ function scoreArticleText(text, sourceType = 'body') {
   const length = source.length;
   const avgLine = lines.length ? Math.min(80, length / lines.length) : 0;
   const paragraphCount = lines.filter((line) => line.length >= 20).length;
-  const penalty = /(\uB85C\uADF8\uC778|\uD68C\uC6D0\uAC00\uC785|\uAD11\uACE0|\uAE30\uC790 \uAD6C\uB3C5|\uAE30\uC0AC\uC81C\uBCF4|\uBB34\uB2E8\s*\uC804\uC7AC|\uC7AC\uBC30\uD3EC \uAE08\uC9C0|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uACF5\uC720\uD558\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC\s*\uC2A4\uD06C\uB7A9|\uD55C\uACBD\s*PREMIUM|\uD6C4\uC18D\uAE30\uC0AC|\uAD6C\uB3C5\uC2E0\uCCAD|ADVERTISEMENT|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4)/.test(source) ? 520 : 0;
+  // [LOG: 20260616_1205] 동아일보의 재생/슬라이더 문구(기사 읽기, 재생 중이에요, 왼쪽으로, 오른쪽으로) 및 [LOG: 20260616_1220] 펼치기/접기, 요약, 구글 검색 선호 매체 포함 시 감점 처리하도록 보강
+  const penalty = /(\uB85C\uADF8\uC778|\uD68C\uC6D0\uAC00\uC785|\uAD11\uACE0|\uAE30\uC0AC\s*\uAD6C\uB3C5|\uAE30\uC0AC\uC81C\uBCF4|\uBB34\uB2E8\s*\uC804\uC7AC|\uC7AC\uBC30\uD3EC \uAE08\uC9C0|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uACF5\uC720\uD558\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC\s*\uC2A4\uD06C\uB7A9|\uD55C\uACBD\s*PREMIUM|\uD6C4\uC18D\uAE30\uC0AC|\uAD6C\uB3C5\uC2E0\uCCAD|ADVERTISEMENT|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)/.test(source) ? 520 : 0;
   const teaserPenalty = looksLikeTruncatedTeaser(source)
     ? (length <= 320 ? 1100 : 420)
     : (paragraphCount <= 1 && length < 160 ? 240 : 0);
@@ -249,9 +281,10 @@ function scoreArticleText(text, sourceType = 'body') {
             ? 1600
             : 0;
 
-  // [LOG: 20260613_1218] 마침표/물음표/느낌표 등 문장 종결 부호가 전혀 없는 단순 뉴스 제목/링크 목록에 강력한 감점을 주어 진짜 기사 본문이 선택되도록 필터링을 보강함.
+  // [LOG: 20260616_1145] 속보 키워드가 포함된 경우에는 마침표/종결부호 미비 페널티를 면제함
+  const hasBreakingNewsKeyword = /\[\s*(속보|Breaking|포토)\s*\]/i.test(source);
   const sentenceCount = (source.match(/[.!?]/g) || []).length;
-  const sentencePenalty = sentenceCount === 0 ? 1500 : 0;
+  const sentencePenalty = (sentenceCount === 0 && !hasBreakingNewsKeyword) ? 1500 : 0;
 
   // [LOG: 20260613_1218] 줄바꿈이 유실된 채 긴 본문이 통째로 뭉쳐진 후보(JSON-LD 등)에 대해 감점을 주고, 단락 개수에 대한 가중치를 대폭 상향함.
   const newlineCount = (source.match(/\n/g) || []).length;

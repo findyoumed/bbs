@@ -162,6 +162,7 @@ function extractBalancedJsonValue(source, startIndex) {
   return '';
 }
 
+// [LOG: 20260616_1220] looksLikeStructuredTextNoise check embedded in collectStructuredContentText
 function collectStructuredContentText(node, out) {
   if (!node) {
     return;
@@ -502,7 +503,8 @@ function looksLikeStructuredTextNoise(field, text, nodeType = '') {
     return true;
   }
 
-  if (text.length < 160 && /(공유하기|구독하기|좋아요|싫어요|댓글|기사 공유|글자크기|사진\s*확대|이미지\s*확대|원문\s*보기|본문\s*바로가기|카카오톡|페이스북(?:\s*메신저)?|URL\s*복사)/.test(text)) {
+  // [LOG: 20260616_1220] 펼치기/접기, 요약, 구글 검색 선호 매체로 추가 등의 레이아웃 단추 텍스트를 구조화 데이터 노이즈 판정식에 추가
+  if (text.length < 160 && /(공유하기|구독하기|좋아요|싫어요|댓글|기사 공유|글자크기|사진\s*확대|이미지\s*확대|원문\s*보기|본문\s*바로가기|카카오톡|페이스북(?:\s*메신저)?|URL\s*복사|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)/.test(text)) {
     return true;
   }
 

@@ -1,11 +1,16 @@
 'use strict';
 
+// [LOG: 20260616_1205] GNB, 푸터, 사이드바 등 레이아웃성 노이즈 태그(aside, header, footer, nav)와 그 콘텐츠를 일괄적으로 제거하여 텍스트 정제
 function normalizeHtmlBlock(value) {
   const withoutNoise = String(value || '')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
     .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
     .replace(/<template\b[^>]*>[\s\S]*?<\/template>/gi, ' ')
+    .replace(/<aside\b[^>]*>[\s\S]*?<\/aside>/gi, ' ')
+    .replace(/<header\b[^>]*>[\s\S]*?<\/header>/gi, ' ')
+    .replace(/<footer\b[^>]*>[\s\S]*?<\/footer>/gi, ' ')
+    .replace(/<nav\b[^>]*>[\s\S]*?<\/nav>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ');
 
   return normalizePlainText(withoutNoise

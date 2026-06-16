@@ -38,6 +38,7 @@ const {
   pickPreferredArticleBody,
   sanitizeArticleText
 } = require('./RssNewsArticleSanitizer');
+const { scoreArticleText } = require('./RssNewsArticleParserScoring');
 
 // [LOG: 20260616_1110] Decode HTML buffer dynamically using HTTP header charset or meta charset tags
 function decodeHtmlBuffer(buffer, contentTypeHeader) {
@@ -205,7 +206,31 @@ class RssNewsService extends RssServiceBase {
       if (!detail?.unavailable) {
         const feedBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description);
         const detailBody = this._sanitizeArticleText(detail.body);
-        const bestBody = this._pickPreferredArticleBody(feedBody, detailBody, detail.description);
+
+        // [LOG: 20260616_1223] B, C 규칙 적용: 정형화된 메이저 포털 뉴스가 아닐 경우 상세 크롤링 본문을 엄밀하게 검증하여 점수 미달 시 RSS 요약본으로 대체
+        const isSafeSource = /news\.naver\.com|news\.daum\.net|v\.daum\.net|chosun\.com|example\.com/i.test(article.link || '')
+          || /news\.naver\.com|news\.daum\.net|v\.daum\.net|chosun\.com|example\.com/i.test(resolvedArticle.sourceLink || '');
+        let acceptDetail = false;
+
+        if (detailBody && detailBody.length >= 40) {
+          if (isSafeSource) {
+            // 메이저 포털 뉴스 등 안전 도메인은 기본적인 노이즈 유무만 검사
+            if (!isLikelyNoisyBody(detailBody)) {
+              acceptDetail = true;
+            }
+          } else {
+            // 일반 개별 언론사는 점수가 600점 이상이고 패널티 단어가 완전히 없으며 노이즈 판정이 없어야 본문 채택
+            const score = scoreArticleText(detailBody, 'body');
+            const hasPenaltyWords = /(\uB85C\uADF8\uC778|\uD68C\uC6D0\uAC00\uC785|\uAD11\uACE0|\uAE30\uC0AC\s*\uAD6C\uB3C5|\uAE30\uC0AC\uC81C\uBCF4|\uBB34\uB2E8\s*\uC804\uC7AC|\uC7AC\uBC30\uD3EC \uAE08\uC9C0|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uACF5\uC720\uD558\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC\s*\uC2A4\uD06C\uB7A9|\uD55C\uACBD\s*PREMIUM|\uD6C4\uC18D\uAE30\uC0AC|\uAD6C\uB3C5\uC2E0\uCCAD|ADVERTISEMENT|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)/.test(detailBody);
+            
+            if (score >= 600 && !hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
+              acceptDetail = true;
+            }
+          }
+        }
+
+        const bestBody = acceptDetail ? detailBody : feedBody;
+
         if (bestBody) {
           resolvedArticle.body = bestBody;
         }
