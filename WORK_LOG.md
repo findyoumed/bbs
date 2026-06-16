@@ -1,3 +1,15 @@
+## [2026-06-16 11:25] 기사 상세 크롤링 시 URL 프로토콜 누락 버그(ERR_INVALID_URL) 해결 및 전체 본문 복원
+
+**LOG_ID: 20260616_1125**
+목표: URL 정규화 과정에서 프로토콜(`http://`, `https://`)이 제거된 표준화 문자열이 실제 HTTP Fetch 대상(`fetchTarget`)으로 그대로 흘러 들어가 `ERR_INVALID_URL` 에러로 크롤링이 차단되고 상세 본문 대신 짤막한 요약만 렌더링되던 뉴스 파이프라인 버그를 완전히 해결한다.
+변경 파일: src/server/RssNewsService.js
+수행 작업: 1) `_fetchNewsArticleDetail` 함수 내에서 `isGoogleNewsArticleUrl` 판별 및 `resolveGoogleNewsSourceUrl` 호출 시 프로토콜이 온전히 유지된 원본 `link` 변수를 인자로 전달하도록 수정. 2) 실제 HTTP 요청을 보내는 `fetchTarget` 설정 시, 프로토콜이 제거된 `normalizedLink` 대신 프로토콜이 온전히 포함된 `rawResolvedSourceLink` 또는 `link` 원본 주소를 사용하도록 개선. 3) Canonical 리다이렉트 기사 Fetch를 처리하는 조건절에서도 프로토콜이 보존된 `rawNormalizedResponseUrl` 변수를 신설하여 `fetchImpl`의 타겟 주소로 사용함으로써 URL 파싱 오류(`ERR_INVALID_URL`)를 원천 해결. 4) 로컬 3000번 포트 서버 재기동을 거쳐 184번 기사(연합뉴스 유류할증료 기사)의 상세 크롤링 성공 및 1350자 본문 데이터 정상 로딩을 확인.
+실행: `node scratch/test_news_article.js` 및 로컬 API 재조회 검증
+기대: 상세 기사 원문의 주소를 Fetch 할 때 프로토콜이 누락되는 결함이 해결되어, 사용자 화면에서 "상세 본문을 불러오지 못했습니다" fallback 문구 대신 1000자 이상의 상세 기사 전체 본문이 에러 없이 출력된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-16 11:20] RSS XML 및 기사 HTML 한글 인코딩(EUC-KR/CP949) 동적 디코딩 통합 및 캐시 리셋
 
 **LOG_ID: 20260616_1120**
