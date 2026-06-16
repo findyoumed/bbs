@@ -1,3 +1,15 @@
+## [2026-06-16 12:30] 인라인 결합 노이즈 선제거 및 피드 Fallback 정합성 확보
+
+**LOG_ID: 20260616_1230**
+목표: 1) 구버전 수집 과정에서 인라인 공백으로 한 줄에 병합되어 수집/캐시된 상세 기사의 선두 노이즈("기사 읽기 요약 기사를 재생 중이에요...")가 정규식을 우회하여 출력되던 문제를 문자열 시작(Lead) 인라인 치환 패턴으로 완벽 차단한다. 2) 상세 크롤링 본문이 품질 미달로 기각(acceptDetail = false)되었을 때, Fallback 대상인 `feedBody` 역시 캐시된 오염 기사 본문으로 오염되는 결함을 수정하기 위해, 기사 병합 이전 피드의 최초 원본 본문/요약을 변수에 백업하여 완벽한 Fallback 구조를 완성한다.
+변경 파일: src/server/RssNewsArticleSanitizer.js, src/server/RssNewsService.js
+수행 작업: 1) `RssNewsArticleSanitizer.js` 의 `trimKnownArticleLeadNoise` 함수 맨 앞단에 문자열의 선두 부분 인라인 노이즈 묶음 제거용 `replace(leadInlineBoilerplate, '')` 패턴을 추가하여, 줄바꿈 없이 한 문장으로 뭉쳐 들어오는 UI 문구들을 소거하고 실기사 텍스트를 보존. 2) `RssNewsService.js` 의 `getNewsArticle` 진입부에 피드 원본 요약본(`originalFeedDescription`, `originalFeedBody`)을 상수로 백업하고, `feedBody` 생성 시 해당 백업 변수들을 사용하도록 대체 로직을 보장.
+실행: `npm run smoke:rss-services`
+기대: 통합 스모크 테스트 전체가 정상으로 완료되며, 수집된 피드의 순수 데이터 흐름이 안정화된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-16 12:25] RSS 상세 뉴스 품질 점수(B, C 전략) 본문 수용 임계값 최적화
 
 **LOG_ID: 20260616_1225**

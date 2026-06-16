@@ -131,6 +131,10 @@ class RssNewsService extends RssServiceBase {
 
     let article = this._resolveNewsArticle(feed.items || [], target, options);
 
+    // [LOG: 20260616_1228] Preserve original feed attributes before merging with crawl detail cache to guarantee clean fallback
+    const originalFeedDescription = article?.description || '';
+    const originalFeedBody = article?.body || '';
+
     // [LOG: 20260616_1110] Recovery mechanism for shifted or missing feed indices
     const requestedKey = String(options.articleKey || options.key || '').trim();
     const requestedLink = String(options.link || '').trim();
@@ -204,7 +208,7 @@ class RssNewsService extends RssServiceBase {
       }
 
       if (!detail?.unavailable) {
-        const feedBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description);
+        const feedBody = this._sanitizeArticleText(originalFeedBody || originalFeedDescription);
         const detailBody = this._sanitizeArticleText(detail.body);
 
         // [LOG: 20260616_1223] B, C 규칙 적용: 정형화된 메이저 포털 뉴스가 아닐 경우 상세 크롤링 본문을 엄밀하게 검증하여 점수 미달 시 RSS 요약본으로 대체

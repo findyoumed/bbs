@@ -118,24 +118,29 @@ function trimInlineRelatedHeadlineNoise(value) {
   return text;
 }
 
-// [LOG: 20260505_1849] Trim publisher UI blocks before the first real article paragraph.
+// [LOG: 20260616_1228] Trim publisher UI blocks before the first real article paragraph.
 function trimKnownArticleLeadNoise(value) {
-  const text = String(value || '').trim();
-  if (!text) {
+  let cleanText = String(value || '').trim();
+  
+  // [LOG: 20260616_1228] Remove leading inline metadata/navigation chains directly to protect trailing article sentences
+  const leadInlineBoilerplate = /^\s*(?:기사\s*읽기|요약|기사를\s*재생\s*중이에요|구글\s*검색\s*선호\s*매체로\s*추가|펼치기\/접기|왼쪽으로|오른쪽으로|[\s\-|/])+/gi;
+  cleanText = cleanText.replace(leadInlineBoilerplate, '').trim();
+
+  if (!cleanText) {
     return '';
   }
 
-  const lines = text
+  const lines = cleanText
     .split('\n')
     .map((line) => String(line || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean);
   if (lines.length < 4) {
-    return text;
+    return cleanText;
   }
 
   const metadataIndex = lines.findIndex((line, index) => index <= 35 && isArticleLeadMetadataLine(line));
   if (metadataIndex < 0) {
-    return text;
+    return cleanText;
   }
 
   let startIndex = metadataIndex + 1;
@@ -155,7 +160,7 @@ function trimKnownArticleLeadNoise(value) {
 
   const bodyLines = lines.slice(startIndex);
   if (!bodyLines.some((line) => line.length >= 20)) {
-    return text;
+    return cleanText;
   }
 
   return bodyLines.join('\n').trim();
