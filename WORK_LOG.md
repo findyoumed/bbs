@@ -1,3 +1,39 @@
+## [2026-06-16 15:12] 본문 파싱 실패 기사(detailFetched === false) 상세 화면 진입 원천 차단
+
+**LOG_ID: 20260616_1512**
+목표: 상세 웹 크롤링이 실패하거나 품질 점수 기준 미달로 기각되어 요약본 껍데기만 노출되는 기사들을 클릭했을 때, 상세 화면으로 넘어가지 않고 뉴스 목록 화면에 머무르거나 복귀하도록 차단한다.
+변경 파일: public/js/core/newsScreens.js
+수행 작업: 1) `newsScreens.js` 의 `showNewsArticle` 함수 내에서 API로부터 기사 데이터를 성공적으로 수신(200 OK)했더라도, `detailFetched` 플래그가 `false` 인 기사의 경우에는 즉시 `showNewsList` 를 호출하고 함수를 리턴하도록 복귀 조건 보강. 2) 클라이언트 단에서 캐시된 기사를 재사용하여 진입할 때도 동일한 `detailFetched === false` 검사를 적용해 원천 차단.
+실행: `npm run smoke:vercel-ready`
+기대: 본문 로드 실패 상태의 기사들을 클릭했을 때 상세 껍데기 화면이 노출되지 않고, 뉴스 목록 화면에 안전하게 머무르게 된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-16 14:48] 만료되거나 키가 불일치하는 기사 상세 진입 시 뉴스 목록으로의 강제 리다이렉트 처리
+
+**LOG_ID: 20260616_1448**
+목표: RSS 피드가 새로고침되거나 만료되어 1000번 기사가 엉뚱한 기사로 바뀌었음에도, 낡은 주소(동일한 번호, 다른 key)를 통해 진입할 때 껍데기 기사 화면이 렌더링되던 버그를 정정한다.
+변경 파일: public/js/core/newsScreens.js
+수행 작업: 1) 클라이언트 단 `newsScreens.js` 의 `showNewsArticle` 함수 내에서 상세 기사 데이터를 불러올 때 `loadNewsArticle` API가 404 (키 불일치) 에러를 뱉으면, 해당 오류를 씹지 않고 목록 화면(`showNewsList`)으로 사용자를 강제 복귀시키는 분기 로직을 catch 절에 추가. 2) 상단 Import 블록에 실수로 붙은 문법 타이포("Clause")를 소거하여 온전한 SPA 런타임을 보장.
+실행: `npm run smoke:vercel-ready`
+기대: 키가 다른 만료된 기사 상세 주소로 진입 시, 잘못된 기사 내용이 렌더링되지 않고 즉시 해당 뉴스 토픽의 목록 화면으로 돌아간다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-16 12:50] 고품질 일원화 검증 필터 오탐 방지 및 모의 기사 규격 보정
+
+**LOG_ID: 20260616_1250**
+목표: 1) 일원화된 뉴스 기사 검증 로직에서 일반 기사 단락에 흔히 등장할 수 있는 일반 단어("광고", "로그인", "회원가입")가 포함되었다는 이유로 정상 기사가 억울하게 기각당하지 않도록, `hasPenaltyWords` 및 `scoreArticleText` 패널티 정규식을 순수 UI 동작어 중심으로 조율한다. 2) 600점 점수 미달로 인해 스모크 테스트의 부실한 모의 기사가 기각당하던 현상을 해결하기 위해, 테스트용 모의 기사의 단락 길이를 현실적인 수준(300자 이상, 단락당 20자 이상)으로 보강한다.
+변경 파일: src/server/RssNewsService.js, src/server/RssNewsArticleParserScoring.js, scripts/smoke-rss-services.js
+수행 작업: 1) `RssNewsService.js` 와 `RssNewsArticleParserScoring.js` 의 기각/감점 패널티 정규식에서 광고, 로그인 등 일반 어휘를 제외하고 `기사 재생`, `내비게이션 화살표`, `펼치기/접기` 등의 전형적인 UI 어휘들로 제한하여 오탐을 원천 차단. 2) `scripts/smoke-rss-services.js` 의 `SAMPLE_NEWS_ARTICLE_HTML` 내 각 단락의 텍스트 길이를 늘려 정상 기사 형태로 보정, 600점 이상(실제 1102점 획득)으로 통과시킴.
+실행: `npm run smoke:rss-services`
+기대: 통합 스모크 테스트의 3번 모의 기사가 기각 없이 정상 기사 본문으로 안전하게 통과하며, 전체 테스트가 성공(Green)한다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-16 12:30] 인라인 결합 노이즈 선제거 및 피드 Fallback 정합성 확보
 
 **LOG_ID: 20260616_1230**
@@ -8571,3 +8607,26 @@
 결과: ✅ 완료 - Playwright 확인 결과 `#cmd-prompt-renderer`는 `transform: none`, `#cmd-input`은 `translateY(1px)`이며 데스크톱/모바일 모두 입력창 top이 프롬프트보다 1px 아래로 보정됨.
 
 ---
+
+## [2026-06-16 16:35] 뉴스 기사 캐시 복원 출처 불일치 해결 및 중복 기사 정제 개선
+
+**LOG_ID: 20260616_1630**
+목표: 상세 페이지에서 다른 기사 키/주소로 요청되어 캐시 복원(`recoveredFromCache`)될 때, 피드 기사의 `sourceDoor`와 `categoryTitle`을 잘못 상속받아 출처가 꼬이거나 다르게 노출되는 현상을 수정한다. 아울러 중복되는 뉴스 기사 목록을 띄어쓰기/문장기호/언론사 접미사 차이에도 견고하게 하나의 기사로 deduplicate하도록 정규화 키 생성을 강화한다.
+변경 파일:
+- `src/server/RssNewsService.js`
+- `src/server/RssNewsTopicFeedHelpers.js`
+- `WORK_LOG.md`
+수행 작업:
+1. `RssNewsService.js` 에 `_findSourceDoorByTitle(sourceTitle)` 도우미 메소드를 추가하여, 복원된 기사의 `sourceTitle` 텍스트로부터 신문사 `door` 를 찾아 매핑할 수 있게 했습니다.
+2. `getNewsArticle` 에서 `recoveredFromCache` 시, 요청된 기사 키가 피드 매칭 기사 키와 다를 때(`isShifted`) 피드 기사의 `sourceDoor` 및 `categoryTitle` 을 상속하지 않고 캐시 정보에서 파생된 출처 매핑을 우선 사용하도록 했습니다.
+3. `RssNewsTopicFeedHelpers.js` 의 `normalizeNewsDedupeTitle` 함수를 개선하여, 접두어 대괄호(예: `[영상]`, `[속보]`), 기사 끝의 언론사 꼬리말 패턴, 공백 및 문장 부호를 전폭 제거하여 동일한 뉴스 스토리가 100% 동일한 dedupe key로 매핑되도록 처리했습니다.
+실행:
+- `node --check src/server/RssNewsService.js`
+- `node --check src/server/RssNewsTopicFeedHelpers.js`
+- `node scratch/test_duplicate_article.js > scratch/test_output.txt` 및 검증
+- `node scratch/test_dedupe_title.js` 및 검증
+- `npm run smoke:vercel-ready`
+기대:
+- 상세 조회 시 캐시 복원된 기사가 피드 매칭 기사의 오염된 출처를 상속받지 않아 상단 바 및 출처가 올바르게 렌더링되고, 피드 목록에서 micro-spacing이나 문장 부호 차이로 생기던 중복 기사들이 하나의 단일 항목으로 깨끗하게 축소(deduplicate)됩니다.
+결과: ✅ 완료
+

@@ -191,9 +191,18 @@ function escapeRegExp(value) {
 }
 
 function normalizeNewsDedupeTitle(service, item) {
+  // [LOG: 20260616_1630] Enhance title deduplication key generation using aggressive brackets, publisher stripping, and symbol/space stripping
   let title = service._normalize(item?.title || '');
   const sourceTitle = service._normalize(item?.sourceTitle || item?.author || '');
 
+  // 1. Remove bracketed media prefixes at the very beginning (e.g., [속보], [포토], [영상], [단독])
+  title = title.replace(/^\[[^\]]+\]\s*/i, '');
+  title = title.replace(/^\([^)]+\)\s*/i, '');
+
+  // 2. Remove standard brackets / keywords like (종합), [종합], (상보), (1보), [1보]
+  title = title.replace(/\s*[([](?:종합|상보|속보|단독|포토|영상|\d+보|종합\d+보)[)\]]/gi, '');
+
+  // 3. Remove sourceTitle prefix or suffix if available
   if (title && sourceTitle) {
     const escapedSource = escapeRegExp(sourceTitle);
     title = title
@@ -202,7 +211,16 @@ function normalizeNewsDedupeTitle(service, item) {
       .trim();
   }
 
-  return normalizeNewsDedupeText(title);
+  // 4. Forcefully strip common Korean media name patterns at the end (usually ends with " - PublisherName" or " / PublisherName")
+  title = title.replace(/\s*[-—|•/]\s*[A-Za-z0-9가-힣\s]+(?:뉴스|tv|신문|일보|경제|포커스|데일리|타임즈|타임스|코리아|닷컴|net|한민족센터)?$/i, '');
+
+  // 5. Apply normal dedupe text normalization (NFKC, lowercase, etc.)
+  let clean = normalizeNewsDedupeText(title);
+
+  // 6. Strip all whitespace and punctuation symbols to handle spacing and quotes mismatch
+  clean = clean.replace(/[\s\Q!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~…“”’‘『』「」〈〉\E]/g, '');
+
+  return clean;
 }
 
 function getNewsItemDedupeKeys(service, item) {

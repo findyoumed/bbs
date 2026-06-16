@@ -158,6 +158,10 @@ class RssNewsService extends RssServiceBase {
     }
 
     if (recoveredFromCache && cachedDetail) {
+      // [LOG: 20260616_1620] Avoid inheriting mismatched metadata from feed article when cache resolves a shifted article
+      const resolvedKey = article ? this._buildNewsArticleKey(article) : '';
+      const isShifted = resolvedKey && requestedKey && resolvedKey !== requestedKey;
+
       article = {
         no: parseInt(target, 10) || 0,
         title: cachedDetail.title || (article?.title || ''),
@@ -168,8 +172,10 @@ class RssNewsService extends RssServiceBase {
         dateTime: cachedDetail.dateTime || (article?.dateTime || ''),
         imageUrl: cachedDetail.imageUrl || (article?.imageUrl || ''),
         sourceTitle: cachedDetail.sourceTitle || (article?.sourceTitle || ''),
-        sourceDoor: article?.sourceDoor || '',
-        categoryTitle: article?.categoryTitle || ''
+        sourceDoor: isShifted
+          ? (this._findSourceDoorByTitle(cachedDetail.sourceTitle) || '')
+          : (article?.sourceDoor || this._findSourceDoorByTitle(cachedDetail.sourceTitle) || ''),
+        categoryTitle: isShifted ? '' : (article?.categoryTitle || '')
       };
     } else if (requestedLink && (!article || this._buildNewsArticleKey(article) !== requestedKey)) {
       // [LOG: 20260616_1110] Fabricate clean target container using requestedLink. Do NOT inherit mismatched article's metadata.
@@ -211,25 +217,15 @@ class RssNewsService extends RssServiceBase {
         const feedBody = this._sanitizeArticleText(originalFeedBody || originalFeedDescription);
         const detailBody = this._sanitizeArticleText(detail.body);
 
-        // [LOG: 20260616_1223] B, C 규칙 적용: 정형화된 메이저 포털 뉴스가 아닐 경우 상세 크롤링 본문을 엄밀하게 검증하여 점수 미달 시 RSS 요약본으로 대체
-        const isSafeSource = /news\.naver\.com|news\.daum\.net|v\.daum\.net|chosun\.com|example\.com/i.test(article.link || '')
-          || /news\.naver\.com|news\.daum\.net|v\.daum\.net|chosun\.com|example\.com/i.test(resolvedArticle.sourceLink || '');
+        // [LOG: 20260616_1250] Unify quality rules: treat all domains identically. Only accept body if it has sufficient length, high score, zero penalty keywords, and passes noise check.
         let acceptDetail = false;
 
-        if (detailBody && detailBody.length >= 40) {
-          if (isSafeSource) {
-            // 메이저 포털 뉴스 등 안전 도메인은 기본적인 노이즈 유무만 검사
-            if (!isLikelyNoisyBody(detailBody)) {
-              acceptDetail = true;
-            }
-          } else {
-            // 일반 개별 언론사는 점수가 600점 이상이고 패널티 단어가 완전히 없으며 노이즈 판정이 없어야 본문 채택
-            const score = scoreArticleText(detailBody, 'body');
-            const hasPenaltyWords = /(\uB85C\uADF8\uC778|\uD68C\uC6D0\uAC00\uC785|\uAD11\uACE0|\uAE30\uC0AC\s*\uAD6C\uB3C5|\uAE30\uC0AC\uC81C\uBCF4|\uBB34\uB2E8\s*\uC804\uC7AC|\uC7AC\uBC30\uD3EC \uAE08\uC9C0|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uACF5\uC720\uD558\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC\s*\uC2A4\uD06C\uB7A9|\uD55C\uACBD\s*PREMIUM|\uD6C4\uC18D\uAE30\uC0AC|\uAD6C\uB3C5\uC2E0\uCCAD|ADVERTISEMENT|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)/.test(detailBody);
-            
-            if (score >= 600 && !hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
-              acceptDetail = true;
-            }
+        if (detailBody && detailBody.length >= 80) {
+          const score = scoreArticleText(detailBody, 'body');
+          const hasPenaltyWords = /(기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|본문으로\s*바로가기|전체메뉴)/.test(detailBody);
+          
+          if (score >= 600 && !hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
+            acceptDetail = true;
           }
         }
 
@@ -313,6 +309,48 @@ class RssNewsService extends RssServiceBase {
     if (byNo) return byNo;
 
     return null;
+  }
+
+  // [LOG: 20260616_1620] Helper to map sourceTitle to its corresponding legacy newspaper door
+  _findSourceDoorByTitle(sourceTitle) {
+    if (!sourceTitle) return '';
+    const cleanTitle = String(sourceTitle).trim().toLowerCase();
+    
+    const mappings = {
+      '연합뉴스tv': '1',
+      'sbs': '2',
+      'sbs뉴스': '2',
+      'sbs 뉴스': '2',
+      '동아일보': '3',
+      '뉴시스': '4',
+      '조선일보': '5',
+      '경향신문': '6',
+      '매일경제': '7',
+      '한국경제': '8',
+      '연합뉴스': '9',
+      '프레시안': '10',
+      'jtbc': '11',
+      'jtbc뉴스': '11',
+      '한겨레': '12',
+      '오마이뉴스': '13',
+      '지디넷코리아': '14',
+      '블로터': '15',
+      'mbc': '16',
+      'mbc뉴스': '16',
+      'kbs': '17',
+      'kbs뉴스': '17',
+      '전자신문': '18',
+      '뉴스1': '19',
+      '머니투데이': '20',
+      '구글뉴스': '21'
+    };
+
+    for (const key in mappings) {
+      if (cleanTitle.includes(key) || key.includes(cleanTitle)) {
+        return mappings[key];
+      }
+    }
+    return '';
   }
 
   async _resolveTopic(topicDoor) {
