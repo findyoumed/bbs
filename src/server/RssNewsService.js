@@ -132,8 +132,8 @@ class RssNewsService extends RssServiceBase {
     let article = this._resolveNewsArticle(feed.items || [], target, options);
 
     // [LOG: 20260616_1228] Preserve original feed attributes before merging with crawl detail cache to guarantee clean fallback
-    const originalFeedDescription = article?.description || '';
-    const originalFeedBody = article?.body || '';
+    let originalFeedDescription = article?.description || '';
+    let originalFeedBody = article?.body || '';
 
     // [LOG: 20260616_1110] Recovery mechanism for shifted or missing feed indices
     const requestedKey = String(options.articleKey || options.key || '').trim();
@@ -175,8 +175,13 @@ class RssNewsService extends RssServiceBase {
         sourceDoor: isShifted
           ? (this._findSourceDoorByTitle(cachedDetail.sourceTitle) || '')
           : (article?.sourceDoor || this._findSourceDoorByTitle(cachedDetail.sourceTitle) || ''),
-        categoryTitle: isShifted ? '' : (article?.categoryTitle || '')
+        categoryTitle: isShifted ? '' : (article?.categoryTitle || ''),
+        // [LOG: 20260616_1715] Set detailFetched to true for successfully recovered cached articles
+        detailFetched: true
       };
+      // [LOG: 20260616_1715] Update mutable backup variables to keep them in sync with the recovered article
+      originalFeedDescription = article.description || '';
+      originalFeedBody = article.body || '';
     } else if (requestedLink && (!article || this._buildNewsArticleKey(article) !== requestedKey)) {
       // [LOG: 20260616_1110] Fabricate clean target container using requestedLink. Do NOT inherit mismatched article's metadata.
       article = {
@@ -192,6 +197,9 @@ class RssNewsService extends RssServiceBase {
         sourceDoor: '',
         categoryTitle: ''
       };
+      // [LOG: 20260616_1715] Clear original feed backup variables to ensure fabricated article does not inherit mismatch data
+      originalFeedDescription = '';
+      originalFeedBody = '';
     }
 
     if (!article) {
@@ -249,7 +257,26 @@ class RssNewsService extends RssServiceBase {
         if (!resolvedArticle.imageUrl && detail.imageUrl) {
           resolvedArticle.imageUrl = this._normalize(detail.imageUrl);
         }
+
+        // [LOG: 20260616_1715] Set detailFetched based on detail crawl success or feed fallback validity
+        const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '');
+        if (acceptDetail || (finalBody && finalBody.length >= 80)) {
+          resolvedArticle.detailFetched = true;
+        } else {
+          resolvedArticle.detailFetched = false;
+        }
+      } else {
+        // [LOG: 20260616_1715] Fallback check if the original feed text itself is long enough to show
+        const finalBody = this._sanitizeArticleText(resolvedArticle.body || originalFeedBody || originalFeedDescription || '');
+        if (finalBody && finalBody.length >= 80) {
+          resolvedArticle.detailFetched = true;
+        } else {
+          resolvedArticle.detailFetched = false;
+        }
       }
+    } else {
+      // [LOG: 20260616_1715] Default fallback for articles with missing links
+      resolvedArticle.detailFetched = false;
     }
 
     resolvedArticle.description = this._sanitizeArticleText(resolvedArticle.description);

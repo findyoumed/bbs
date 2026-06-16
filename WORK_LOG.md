@@ -1,3 +1,15 @@
+## [2026-06-16 17:15] 기사 속성 백업 변수 동기화 누락 수정 및 detailFetched 판정 버그 해결
+
+**LOG_ID: 20260616_1715**
+목표: Google News 기사 본문 크롤링 실패 시 detailFetched 가 false 가 되어 프론트엔드가 상세 화면 진입을 차단하도록 구현하였으나, 수동 기사 번호/링크 덮어쓰기(Fabrication) 분기 시 백업된 original feed description/body 속성이 오염된 채로 흘러 들어가 detailFetched 가 여전히 true 로 오판되던 버그를 정밀 해결한다.
+변경 파일: src/server/RssNewsService.js
+수행 작업: 1) `getNewsArticle` 내부의 `originalFeedDescription`, `originalFeedBody` 상수를 `let` 변수로 수정하여 가변성을 확보. 2) 캐시 복원(`recoveredFromCache`) 및 링크 기반 수동 가공(`Fabrication`) 분기 완료 시점마다, 해당 가공 상태 of `article` 의 실제 description 과 body 값을 반영하여 백업 변수들을 동적 동기화/리셋 처리하도록 개선. 3) 이를 통해 본문 크롤링이 실패한 모의/실제 기사가 이전 캐시나 불일치 기사의 메타데이터를 불법 상속받아 detailFetched가 true로 둔갑하는 버그를 원천 차단.
+실행: `node scratch/test_mock_fail.js` 실행 및 detailFetched: false 확인
+기대: 본문 크롤링이 실패한 Google News 기사 진입 시 백엔드가 정확하게 detailFetched: false 를 보장함으로써, 프론트엔드가 즉시 목록화면으로 사용자를 리다이렉트시킨다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-16 15:12] 본문 파싱 실패 기사(detailFetched === false) 상세 화면 진입 원천 차단
 
 **LOG_ID: 20260616_1512**
