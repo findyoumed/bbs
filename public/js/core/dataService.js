@@ -21,8 +21,9 @@ export function createDataService(deps) {
     return await apiFetch('/api/services/news');
   }
 
-  async function loadNewsArticles(topicId) {
-    return await apiFetch(`/api/services/news/${encodeURIComponent(topicId)}`);
+  async function loadNewsArticles(topicId, pageNo = 1) {
+    // [LOG: 20260616_0937] Pass page query parameter to optimize news loading speed
+    return await apiFetch(`/api/services/news/${encodeURIComponent(topicId)}?page=${encodeURIComponent(pageNo)}`);
   }
 
   async function loadNewsArticle(topicId, articleNo, options = {}) {

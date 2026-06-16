@@ -106,7 +106,7 @@ async function resolveTopic(service, parseNewsMenuXml, topicDoor) {
 }
 
 function getTopicFeedCacheKey(topicDoor) {
-  return `news:topicfeed:v12:${String(topicDoor || '').trim()}`;
+  return `news:topicfeed:v13:${String(topicDoor || '').trim()}`;
 }
 
 function getFreshNewsCutoffTime(days = 90) {
@@ -365,10 +365,10 @@ async function setCachedTopicFeed(service, cacheKey, value) {
   await service._setPersistentCacheEntry(`rss:feed:${cacheKey}`, entryWithValue, extendedTtl);
 }
 
-async function buildTopicFeed(service, parseNewsFeedXml, topic) {
+async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
   const results = await Promise.all(topic.sources.map(async (source) => ({
     source,
-    feed: await service._fetchCached(`newsfeed:v4:${source.newspaperDoor}:${source.categoryDoor}`, source.rss, parseNewsFeedXml)
+    feed: await service._fetchCached(`newsfeed:v5:${source.newspaperDoor}:${source.categoryDoor}`, source.rss, parseNewsFeedXml)
   })));
   const unavailable = results.filter((result) => result.feed.unavailable);
   const cutoffTime = getFreshNewsCutoffTime();
@@ -383,9 +383,27 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic) {
       author: service._buildAuthor(result.source.newspaperTitle, item.author)
     })));
 
-  // [LOG: 20260610_1800] Optimization: Limit date enrichment to top 12 items missing dates
-  // to avoid hundreds of serial fetches on first-load topics.
-  await enrichMissingNewsDates(service, items, 12);
+  // [LOG: 20260616_0937] Optimize: Target date enrichment to the currently requested page
+  const tempItems = items.map(item => {
+    const d = item.dateTime || item.date || nowStr;
+    return { ...item, _tempTime: Date.parse(d) || 0 };
+  });
+  tempItems.sort((left, right) => right._tempTime - left._tempTime);
+
+  let enrichTargets = [];
+  if (page > 0) {
+    const pageSize = 15;
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = page * pageSize;
+    const pageItems = tempItems.slice(startIndex, endIndex);
+    enrichTargets = pageItems.filter(item => !String(item.date || '').trim());
+  } else {
+    enrichTargets = tempItems.filter(item => !String(item.date || '').trim()).slice(0, 100);
+  }
+
+  if (enrichTargets.length > 0) {
+    await enrichMissingNewsDates(service, enrichTargets, enrichTargets.length);
+  }
 
   // [LOG: 20260610_1800] Optimization: Fallback to current time if date is still missing
   // to prevent recent articles from being dropped by the dedupe/dated filter.
@@ -475,7 +493,7 @@ async function enrichMissingNewsDates(service, items, maxEnrich = 10) {
   await Promise.allSettled(Array.from({ length: workerCount }, () => worker()));
 }
 
-async function getOrBuildTopicFeed(service, parseNewsFeedXml, topic) {
+async function getOrBuildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
   const cacheKey = getTopicFeedCacheKey(topic?.door);
   const cached = await getCachedTopicFeed(service, cacheKey);
   if (cached) {
@@ -490,7 +508,8 @@ async function getOrBuildTopicFeed(service, parseNewsFeedXml, topic) {
     if (!inflight) {
       const job = (async () => {
         try {
-          const freshFeed = await buildTopicFeed(service, parseNewsFeedXml, topic);
+          // [LOG: 20260616_0937] Back-ground fetch builds the full feed (page = 0)
+          const freshFeed = await buildTopicFeed(service, parseNewsFeedXml, topic, 0);
           await setCachedTopicFeed(service, cacheKey, freshFeed);
         } catch (error) {
           // ignore background errors
@@ -510,8 +529,19 @@ async function getOrBuildTopicFeed(service, parseNewsFeedXml, topic) {
   }
 
   const job = (async () => {
-    const feed = await buildTopicFeed(service, parseNewsFeedXml, topic);
-    await setCachedTopicFeed(service, cacheKey, feed);
+    // [LOG: 20260616_0937] 1. Sync load optimized for the requested page first
+    const feed = await buildTopicFeed(service, parseNewsFeedXml, topic, page);
+    
+    // [LOG: 20260616_0937] 2. Fire and forget full feed build in background to fill cache
+    (async () => {
+      try {
+        const fullFeed = await buildTopicFeed(service, parseNewsFeedXml, topic, 0);
+        await setCachedTopicFeed(service, cacheKey, fullFeed);
+      } catch (error) {
+        // ignore background errors
+      }
+    })();
+
     return feed;
   })();
 

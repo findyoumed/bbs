@@ -1,6 +1,34 @@
 'use strict';
 const fs = require('fs');
 
+// [LOG: 20260616_1110] Decode XML buffer dynamically using HTTP header charset or XML declaration encoding
+function decodeXmlBuffer(buffer, contentTypeHeader) {
+  let charset = '';
+
+  if (contentTypeHeader) {
+    const headerMatch = contentTypeHeader.match(/charset=["']?([a-zA-Z0-9_-]+)/i);
+    if (headerMatch) {
+      charset = headerMatch[1].trim().toLowerCase();
+    }
+  }
+
+  if (!charset) {
+    const previewLen = Math.min(buffer.byteLength, 256);
+    const head = new TextDecoder('ascii').decode(new Uint8Array(buffer.slice(0, previewLen)));
+    const enc = (head.match(/encoding=["']([^"']+)["']/i)?.[1] || '').trim().toLowerCase();
+    if (enc) {
+      charset = enc;
+    }
+  }
+
+  const decoderName = /^(euc-kr|cp949|windows-949|ks_c_5601-1987)$/.test(charset) ? 'windows-949' : 'utf-8';
+  try {
+    return new TextDecoder(decoderName).decode(new Uint8Array(buffer));
+  } catch (err) {
+    return new TextDecoder('utf-8').decode(new Uint8Array(buffer));
+  }
+}
+
 class RssServiceBase {
   constructor(options = {}) {
     this.fetchImpl = options.fetchImpl || global.fetch;
@@ -26,7 +54,9 @@ class RssServiceBase {
         signal: AbortSignal.timeout(2000)
       });
       if (!res?.ok) throw new Error(`upstream failed${res?.status ? ` (${res.status})` : ''}`);
-      val = parser(await res.text());
+      // [LOG: 20260616_1110] Dynamic charset detection and decoding for RSS feeds
+      const buf = await res.arrayBuffer();
+      val = parser(decodeXmlBuffer(buf, res.headers.get('content-type')));
     } catch (e) { val = { unavailable: true, message: `피드 오류: ${e.message}`, items: [] }; }
     this._setMemoryCacheEntry(this.feedCache, cacheKey, val, this.cacheTtlMs);
     await this._setPersistentCacheEntry(storeKey, val, this.cacheTtlMs);

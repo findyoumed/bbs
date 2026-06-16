@@ -1,3 +1,15 @@
+## [2026-06-16 11:20] RSS XML 및 기사 HTML 한글 인코딩(EUC-KR/CP949) 동적 디코딩 통합 및 캐시 리셋
+
+**LOG_ID: 20260616_1120**
+목표: 뉴시스(Newsis) 등 EUC-KR/CP949 인코딩으로 서비스되는 RSS XML 피드 및 언론사 상세 기사 HTML 본문을 가져올 때 무조건 UTF-8로 오인 디코딩하여 한글이 와장창 깨지던 인코딩 결함을 완벽히 해결한다.
+변경 파일: src/server/RssServiceBase.js, src/server/RssNewsService.js, src/server/RssNewsTopicFeedHelpers.js
+수행 작업: 1) `RssServiceBase.js`에 Content-Type charset 헤더 및 XML 헤더의 encoding 지정을 분석하여 동적으로 디코딩하는 `decodeXmlBuffer` 헬퍼를 이식하고, `_fetchCached` 내 `res.text()` 파싱부를 이 헬퍼를 통한 동적 버퍼 디코딩으로 개정하여 피드 유입 시점의 한글 깨짐을 원천 차단. 2) `RssNewsService.js`에 HTML 헤더 및 meta 태그 charset 선언을 분석하는 `decodeHtmlBuffer` 헬퍼를 추가하고 `_fetchNewsArticleDetail` 내 `response.text()` 호출 부를 이를 통한 가변 디코딩으로 수정하여 상세 기사 수집 시 한글 깨짐 방지. 3) 기사 수집 캐시 버전(`news:article:v26` -> `v27`), 피드 소스 캐시 버전(`newsfeed:v4` -> `v5`), 주제별 피드 캐시 버전(`news:topicfeed:v12` -> `v13`)을 일제히 상향하여 DB 및 메모리에 남아있던 오염된 한글 기사 캐시 데이터를 깔끔하게 소거하고 실시간 재수집 강제.
+실행: `npm run smoke:vercel-ready` 검증 및 로컬 API 한글 디코딩 원본 대조 테스트 완료
+기대: 뉴시스 및 모든 비표준 인코딩 언론사 피드/기사들이 단 한 글자도 깨지지 않고 완벽하고 정밀한 한글로 출력된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-16 11:10] 피드 인덱스 불일치 시 URL 정규화 기반 DB 캐시 복원 및 클라이언트 메타데이터 오염 차단
 
 **LOG_ID: 20260616_1110**

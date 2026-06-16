@@ -138,8 +138,10 @@ class ChatServiceRouter extends BaseRouter {
 
   async getNewsFeed(params) {
     const { rssService } = this.deps;
+    const page = Math.max(1, Number.parseInt(this.requestUrl.searchParams.get('page'), 10) || 1);
+    // [LOG: 20260616_0937] Read page query parameter and pass it to getNewsTopicFeed
     return this.send(200, await (rssService.getNewsTopicFeed
-      ? rssService.getNewsTopicFeed(params.topic)
+      ? rssService.getNewsTopicFeed(params.topic, page)
       : rssService.listNewsCategories(params.topic)));
   }
 }

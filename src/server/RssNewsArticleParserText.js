@@ -17,7 +17,8 @@ function normalizeHtmlBlock(value) {
 function normalizePlainText(value) {
   return decodeJavaScriptEscapes(decodeHtmlEntities(String(value || '')))
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/<[a-zA-Z/!][^>]*>/g, ' ')
+    // [LOG: 20260616_1110] Robust tag stripping regex that safely skips '>' inside quotes
+    .replace(/<[a-zA-Z/!](?:[^>'"]|"[^"]*"|'[^']*')*>/g, ' ')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .replace(/\u00a0/g, ' ')

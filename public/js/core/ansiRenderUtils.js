@@ -7,6 +7,7 @@ export function isWideChar(ch) {
   // [LOG: 20260427_1150] CJK Unified Ideographs (Hanja) + Hangul + Full-width Symbols
   // [LOG: 20260428_2225] Include CJK Extension A / Compatibility Ideographs so titles like "李" occupy 2 cells
   // [LOG: 20260610_1423] Include CJK Enclosed Letters and Months (U+3200-U+32FF) like ㈜ to display as wide chars
+  // [LOG: 20260616_0945] Include U+203B Reference Mark (※) and U+2500 to U+27BF ranges (Geometric shapes, Box drawings, Symbols) as wide chars
   return (cp >= 0x3400 && cp <= 0x4DBF) // CJK Unified Ideographs Extension A
     || (cp >= 0x4E00 && cp <= 0x9FFF) // CJK Unified Ideographs (Hanja)
     || (cp >= 0xF900 && cp <= 0xFAFF) // CJK Compatibility Ideographs
@@ -19,7 +20,9 @@ export function isWideChar(ch) {
     || (cp >= 0xFE30 && cp <= 0xFE4F) // CJK Compatibility Forms
     || (cp >= 0xFF01 && cp <= 0xFF60) // Full-width Forms
     || (cp >= 0x3040 && cp <= 0x309F) // Hiragana
-    || (cp >= 0x30A0 && cp <= 0x30FF); // Katakana
+    || (cp >= 0x30A0 && cp <= 0x30FF) // Katakana
+    || (cp === 0x203B) // Reference Mark (※)
+    || (cp >= 0x25A0 && cp <= 0x27BF); // Geometric shapes, Dingbats (excludes Box Drawings 0x2500-0x259F)
 }
 
 export function displayWidth(text) {

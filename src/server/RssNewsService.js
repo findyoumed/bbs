@@ -39,6 +39,41 @@ const {
   sanitizeArticleText
 } = require('./RssNewsArticleSanitizer');
 
+// [LOG: 20260616_1110] Decode HTML buffer dynamically using HTTP header charset or meta charset tags
+function decodeHtmlBuffer(buffer, contentTypeHeader) {
+  let charset = '';
+
+  if (contentTypeHeader) {
+    const headerMatch = contentTypeHeader.match(/charset=["']?([a-zA-Z0-9_-]+)/i);
+    if (headerMatch) {
+      charset = headerMatch[1].trim().toLowerCase();
+    }
+  }
+
+  const previewLen = Math.min(buffer.byteLength, 2048);
+  const previewText = new TextDecoder('ascii').decode(new Uint8Array(buffer.slice(0, previewLen)));
+
+  if (!charset) {
+    const metaCharsetMatch = previewText.match(/<meta\s+[^>]*charset=["']?([a-zA-Z0-9_-]+)/i);
+    if (metaCharsetMatch) {
+      charset = metaCharsetMatch[1].trim().toLowerCase();
+    } else {
+      const equivMatch = previewText.match(/http-equiv=["']content-type["'][^>]*content=["'][^"']*charset=([a-zA-Z0-9_-]+)/i)
+        || previewText.match(/content=["'][^"']*charset=([a-zA-Z0-9_-]+)["'][^>]*http-equiv=["']content-type["']/i);
+      if (equivMatch) {
+        charset = equivMatch[1].trim().toLowerCase();
+      }
+    }
+  }
+
+  const decoderName = /^(euc-kr|cp949|windows-949|ks_c_5601-1987)$/.test(charset) ? 'windows-949' : 'utf-8';
+  try {
+    return new TextDecoder(decoderName).decode(new Uint8Array(buffer));
+  } catch (err) {
+    return new TextDecoder('utf-8').decode(new Uint8Array(buffer));
+  }
+}
+
 class RssNewsService extends RssServiceBase {
   constructor(options = {}) {
     super(options);
@@ -64,7 +99,7 @@ class RssNewsService extends RssServiceBase {
     if (!paper) throw this._notFoundError(`신문사 없음: ${newspaperDoor}`);
     const cat = paper.categories.find(c => c.door === String(categoryDoor));
     if (!cat) throw this._notFoundError(`카테고리 없음: ${categoryDoor}`);
-    const feed = await this._fetchCached(`newsfeed:v4:${paper.door}:${cat.door}`, cat.rss, parseNewsFeedXml);
+    const feed = await this._fetchCached(`newsfeed:v5:${paper.door}:${cat.door}`, cat.rss, parseNewsFeedXml);
     return { kind: 'news', title: `뉴스 / ${paper.name} / ${cat.name}`, level: 'articles', newspaper: { door: paper.door, title: paper.name }, category: { door: cat.door, title: cat.name }, sourceUrl: cat.rss, fetchedAt: new Date().toISOString(), unavailable: !!feed.unavailable, message: feed.message || '', items: feed.items };
   }
 
@@ -104,8 +139,8 @@ class RssNewsService extends RssServiceBase {
 
     if (requestedKey || requestedLink) {
       const hash = requestedKey || this._hashUrl(requestedLink);
-      // Scan active versions of detail cache. We support v26 primarily.
-      const cacheKey = `news:article:v26:${hash}`;
+      // Scan active versions of detail cache. We support v27 primarily.
+      const cacheKey = `news:article:v27:${hash}`;
       const storeKey = `rss:feed:${cacheKey}`;
       try {
         cachedDetail = await this._getPersistentCacheEntry(storeKey);
@@ -276,7 +311,7 @@ class RssNewsService extends RssServiceBase {
       return { unavailable: true, message: '피드 오류: 기사 링크 없음', items: [] };
     }
 
-    const cacheKey = `news:article:v26:${this._hashUrl(normalizedLink)}`;
+    const cacheKey = `news:article:v27:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
     // [LOG: 20260615_1754] Ignore cached error results and retry fetch if body is empty or unavailable
     if (memory && !memory.unavailable && memory.body && memory.body.length >= 80) {
@@ -308,7 +343,9 @@ class RssNewsService extends RssServiceBase {
         throw new Error(`upstream failed${response?.status ? ` (${response.status})` : ''}`);
       }
 
-      detail = parseNewsArticleHtml(await response.text());
+      // [LOG: 20260616_1110] Dynamic charset detection and decoding for primary content fetch
+      const primaryBuf = await response.arrayBuffer();
+      detail = parseNewsArticleHtml(decodeHtmlBuffer(primaryBuf, response.headers.get('content-type')));
 
       const rawResponseUrl = this._normalize(response?.url || '');
       const normalizedResponseUrl = this._normalize(normalizePublisherArticleUrl(rawResponseUrl));
@@ -325,7 +362,9 @@ class RssNewsService extends RssServiceBase {
           redirect: 'follow'
         });
         if (canonicalResponse?.ok) {
-          detail = parseNewsArticleHtml(await canonicalResponse.text());
+          // [LOG: 20260616_1110] Dynamic charset detection and decoding for canonical redirect fetch
+          const canonicalBuf = await canonicalResponse.arrayBuffer();
+          detail = parseNewsArticleHtml(decodeHtmlBuffer(canonicalBuf, canonicalResponse.headers.get('content-type')));
         }
       }
     } catch (error) {
