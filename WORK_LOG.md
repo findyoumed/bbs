@@ -1,3 +1,15 @@
+## [2026-06-17 21:58] 뉴스 상세 API 요청 URL 간소화 (HTTP Header 전송 방식 적용)
+
+**LOG_ID: 20260617_2158**
+목표: 콘솔 로그 및 네트워크 탭에서도 API 요청 URL 뒤에 기사 암호키(key)와 링크(link)가 구구절절 길게 붙어 출력되지 않도록, 해당 메타데이터를 HTTP Header에 실어 보내어 백엔드 API URL까지 완전하게 정돈한다.
+변경 파일: public/js/core/dataService.js, src/server/routeHandlers/chatServiceRoutes.js
+수행 작업: 1) `dataService.js`의 `loadNewsArticle`에서 `key`와 `link`를 URL 쿼리 파라미터가 아닌 `X-Article-Key`와 `X-Article-Link` 헤더에 실어 전송하도록 수정. 2) `chatServiceRoutes.js`의 `getNewsArticle` 핸들러에서 요청 헤더(`x-article-key`, `x-article-link`)를 우선 조회하고, 없을 시 기존 쿼리 파라미터(key, link)를 조회하도록 하위 호환성 유지 구현.
+실행: `node --check src/server/routeHandlers/chatServiceRoutes.js` 및 `npm run smoke:vercel-ready` 성공 통과.
+기대: 주소창뿐만 아니라 브라우저 개발자 도구의 콘솔 및 네트워크 탭에서도 `/api/services/news/1/6` 처럼 완벽하게 깔끔한 형태의 API 요청 주소만 노출된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-17 21:55] 뉴스 상세 페이지 Clean URL 및 sessionStorage 메타데이터 연동 적용
 
 **LOG_ID: 20260617_2155**

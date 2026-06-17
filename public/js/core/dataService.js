@@ -27,13 +27,17 @@ export function createDataService(deps) {
   }
 
   async function loadNewsArticle(topicId, articleNo, options = {}) {
-    const query = new URLSearchParams();
     const articleKey = String(options?.articleKey || options?.key || '').trim();
     const link = String(options?.link || '').trim();
-    if (articleKey) query.set('key', articleKey);
-    if (link) query.set('link', link);
-    const suffix = query.toString() ? `?${query.toString()}` : '';
-    return await apiFetch(`/api/services/news/${encodeURIComponent(topicId)}/${encodeURIComponent(articleNo)}${suffix}`);
+
+    // [LOG: 20260617_2158] Send key and link via headers to keep the API URL clean and concise
+    const headers = {};
+    if (articleKey) headers['X-Article-Key'] = articleKey;
+    if (link) headers['X-Article-Link'] = encodeURIComponent(link);
+
+    return await apiFetch(`/api/services/news/${encodeURIComponent(topicId)}/${encodeURIComponent(articleNo)}`, {
+      headers
+    });
   }
 
   return { loadLocalWeather, loadNewsArticle, loadNewsArticles, loadNewsMenu, loadStats, loadWeatherFeed, loadWeatherRegions };

@@ -126,12 +126,33 @@ class ChatServiceRouter extends BaseRouter {
   async getNewsArticle(params) {
     const { rssService } = this.deps;
     if (typeof rssService.getNewsArticle !== 'function') return false;
+
+    // [LOG: 20260617_2158] Support both X-Article-Key/Link headers and query params for compatibility
+    const headerKey = this.req.headers['x-article-key'] || '';
+    const rawHeaderLink = this.req.headers['x-article-link'] || '';
+    let headerLink = '';
+    if (rawHeaderLink) {
+      try {
+        headerLink = decodeURIComponent(rawHeaderLink);
+      } catch (e) {
+        headerLink = rawHeaderLink;
+      }
+    }
+
+    const articleKey = headerKey 
+      || this.requestUrl.searchParams.get('key') 
+      || this.requestUrl.searchParams.get('articleKey') 
+      || '';
+    const link = headerLink 
+      || this.requestUrl.searchParams.get('link') 
+      || '';
+
     return this.send(200, await rssService.getNewsArticle(
       params.newspaper,
       params.topic,
       {
-        articleKey: this.requestUrl.searchParams.get('key') || this.requestUrl.searchParams.get('articleKey') || '',
-        link: this.requestUrl.searchParams.get('link') || ''
+        articleKey,
+        link
       }
     ));
   }
