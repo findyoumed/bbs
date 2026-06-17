@@ -6,17 +6,36 @@ function normalize(value) {
   return String(value || '').replace(/\s+/g, ' ').replace(/[/:|,-]+\s*$/g, '').trim();
 }
 
-// [LOG: 20260616_1110] Powerful URL normalizer to ensure reliable article key pairing
+// [LOG: 20260617_1830] Robust URL normalizer to ensure reliable article key pairing.
+// Preserves content IDs in query strings while stripping known tracking parameters.
 function normalizeUrl(value) {
-  let str = String(value || '').trim();
-  if (!str) return '';
-  str = str.replace(/^https?:\/\//i, '');
-  str = str.replace(/^www\./i, '');
-  const qIdx = str.indexOf('?');
-  if (qIdx !== -1) str = str.substring(0, qIdx);
-  const hIdx = str.indexOf('#');
-  if (hIdx !== -1) str = str.substring(0, hIdx);
-  return str.replace(/\/+$/, '').trim();
+  let source = String(value || '').trim();
+  if (!source) return '';
+
+  try {
+    const url = new URL(source);
+    url.protocol = 'https:';
+    url.hostname = url.hostname.replace(/^www\./i, '').toLowerCase();
+    url.hash = '';
+
+    const toRemove = [
+      'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+      'fbclid', 'gclid', 'oc', 'hl', 'gl', 'ceid', 'plink', 'cooper'
+    ];
+    toRemove.forEach(p => url.searchParams.delete(p));
+    url.searchParams.sort();
+
+    return url.toString()
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/$/, '')
+      .trim();
+  } catch (e) {
+    return source
+      .replace(/^https?:\/\//i, '')
+      .replace(/^www\./i, '')
+      .replace(/\/+$/, '')
+      .trim();
+  }
 }
 
 function buildAuthor(src, aut) {
@@ -391,7 +410,9 @@ function stripKnownArticleBoilerplateLines(value) {
 
     if (cutIndex !== normalizedLine.length) {
       const preserved = normalizedLine.slice(0, cutIndex).trim();
-      if (preserved.length >= 12) {
+      // [LOG: 20260617_1745] Discard partial slices containing residual copyright/contact noise
+      const hasNoise = /저작권자|무단\s*전재|재배포\s*금지|제보|카카오톡|okjebo/i.test(preserved);
+      if (preserved.length >= 12 && !hasNoise) {
         filtered.push(preserved);
         previousBlank = false;
         continue;
@@ -597,6 +618,12 @@ function trimKnownArticleTailNoise(value) {
       cutIndex = Math.min(cutIndex, match.index);
     }
   });
+
+  if (cutIndex !== text.length) {
+    // [LOG: 20260617_1749] Backtrack to the start of the matched line to prune the entire noisy line
+    const lastNewline = text.lastIndexOf('\n', cutIndex);
+    cutIndex = lastNewline >= 0 ? lastNewline : 0;
+  }
 
   return text.slice(0, cutIndex).trim();
 }

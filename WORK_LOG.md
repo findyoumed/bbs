@@ -1,3 +1,15 @@
+## [2026-06-17 21:45] 오염된 캐시 및 크롤링 본문 품질 검사 강화 및 404 Not Found 강제 조치
+
+**LOG_ID: 20260617_2145**
+목표: 쉼표(,)나 말줄임표(...) 등으로 끝나는 손상되거나 불완전한 기사가 캐시 혹은 신규 크롤링을 통해 조회될 때, 화면에 비정상 노출되는 현상을 막고 404 에러를 던져 목록으로 안전하게 튕기게 한다.
+변경 파일: src/server/RssNewsService.js, src/server/RssNewsArticleSanitizer.js
+수행 작업: 1) `RssNewsArticleSanitizer.js`의 `trimKnownArticleTailNoise`에서 꼬리 노이즈 제거 시 매칭된 라인 전체가 삭제되도록 개행 백트래킹 추가. 2) `RssNewsService.js`에서 캐시 복원 본문 및 크롤링 본문 판정 시 종결 어미가 불완전한 쉼표(,), 대시(-), 불완전 연결어미(며, 고, 나 등)로 끝나는 케이스를 `detailFetched = false`로 강제 판정하도록 품질 검사 강화. 3) `detailFetched === false`인 경우 fallback body 채우지 않고 예외 없이 `throw this._notFoundError`를 실행하여 404 반환.
+실행: `node scratch/test_diagnose_yna_mismatch.js` 실행 시 기존 오염 캐시 기사(35번)에 대해 404 Not Found 에러가 던져짐을 확인.
+기대: 사용자가 어정쩡한 문장으로 종결되거나 쉼표로 잘린 손상된 뉴스를 절대 볼 수 없으며, 안전하게 목록 화면으로 리다이렉트된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-17 16:50] 뉴스 기사 크롤링 실패 시 짤린 요약본 노출 차단 및 404 강제 리다이렉트
 
 **LOG_ID: 20260617_1650**
@@ -8857,3 +8869,14 @@ Work: 1) Disabled news topic feed warmup by default on the news menu API path. 2
 Run: `node --check src/server/RssNewsService.js`, `npm run smoke:vercel-ready`, measured `/api/services/news` and `/service/news` on a fresh server, compared Playwright computed styles, `npm test`
 Expected: News menu entry renders quickly and the prompt row keeps white text on black background with opacity 1.
 Result: Done
+## [2026-06-17 16:51] 뉴스 상세 404 차단 제거 및 링크 기반 복원 보강
+
+**LOG_ID: 20260617_1651**
+목표: 뉴스 상세 진입 시 기사 키 불일치 또는 본문 수집 실패가 사용자 콘솔에 404 에러로 노출되지 않도록 한다.
+변경 파일: src/server/RssNewsService.js, public/js/core/routingUrlBuilder.js, public/js/core/routingStateRestorer.js, public/js/core/newsScreens.js
+수행 작업: 1) `RssNewsService.js`에서 `detailFetched === false`인 경우 404를 던지지 않고 피드 본문/요약을 fallback body로 유지하도록 변경. 2) 뉴스 상세 URL 생성 시 기사 원문 `link`를 함께 보존하고, URL 복원 시 `showNewsArticle`에 다시 전달하도록 보강. 3) `newsScreens.js`의 `state.serviceData.articleLink`에 현재 기사 링크를 저장해 URL 빌더가 안정적으로 참조하도록 수정.
+실행: `node --check src/server/RssNewsService.js`, `node --check public/js/core/routingUrlBuilder.js`, `node --check public/js/core/routingStateRestorer.js`, `node --check public/js/core/newsScreens.js`, 동일 뉴스 API 재현 검증, `npm run smoke:vercel-ready`
+기대: `/api/services/news/{topic}/{article}?key=...&link=...` 요청이 키/본문 상태 때문에 404로 실패하지 않고, 새로고침 후에도 원문 링크로 같은 기사를 우선 복원한다.
+결과: ✅ 완료
+
+---

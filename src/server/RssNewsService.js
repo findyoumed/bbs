@@ -164,6 +164,12 @@ class RssNewsService extends RssServiceBase {
       const resolvedKey = article ? this._buildNewsArticleKey(article) : '';
       const isShifted = resolvedKey && requestedKey && resolvedKey !== requestedKey;
 
+      // [LOG: 20260617_2145] Subject cached articles to the same quality check to reject polluted cache entries
+      const cachedBody = cachedDetail.body || '';
+      const trimmed = cachedBody.trim();
+      const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed) || /[며고나면지를을은는이가와과의로]$/.test(trimmed.slice(-1));
+      const detailFetched = cachedBody && cachedBody.length >= 30 && !isTruncated;
+
       article = {
         no: parseInt(target, 10) || 0,
         title: cachedDetail.title || (article?.title || ''),
@@ -178,8 +184,7 @@ class RssNewsService extends RssServiceBase {
           ? (this._findSourceDoorByTitle(cachedDetail.sourceTitle) || '')
           : (article?.sourceDoor || this._findSourceDoorByTitle(cachedDetail.sourceTitle) || ''),
         categoryTitle: isShifted ? '' : (article?.categoryTitle || ''),
-        // [LOG: 20260616_1715] Set detailFetched to true for successfully recovered cached articles
-        detailFetched: true
+        detailFetched: !!detailFetched
       };
       // [LOG: 20260616_1715] Update mutable backup variables to keep them in sync with the recovered article
       originalFeedDescription = article.description || '';
@@ -208,14 +213,11 @@ class RssNewsService extends RssServiceBase {
       throw this._notFoundError(`뉴스 기사 없음: ${articleNo}`);
     }
 
-    const actualKey = this._buildNewsArticleKey(article);
     // [LOG: 20260617_2010] UX Priority: Disable strict key mismatch blocking.
     // Feed shifting and URL normalization changes often cause keys to mismatch
     // between the list view and detail view. We now allow entry as long as 
     // the article exists in the feed (via link or no).
-    if (requestedKey && actualKey !== requestedKey && !recoveredFromCache) {
-      console.warn(`[News] Key mismatch for #${articleNo}: Req=${requestedKey.substring(0,8)}, Actual=${actualKey.substring(0,8)}. Allowing entry.`);
-    }
+    // [LOG: 20260617_1651] Key drift is expected with live RSS feeds; allow silently.
 
     const resolvedArticle = {
       ...article,
@@ -270,9 +272,10 @@ class RssNewsService extends RssServiceBase {
           resolvedArticle.imageUrl = this._normalize(detail.imageUrl);
         }
 
-        // [LOG: 20260617_1647] Check for truncation indicators (e.g. ..., …) and mark detailFetched=false to reject partial content
+        // [LOG: 20260617_2145] Enhanced check for ellipsis, trailing punctuation, and incomplete Korean endings
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '', resolvedArticle.title);
-        const isTruncated = /[.]{2,}$|…$/.test(finalBody.trim());
+        const trimmed = (finalBody || '').trim();
+        const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed) || /[며고나면지를을은는이가와과의로]$/.test(trimmed.slice(-1));
         if (acceptDetail || (finalBody && finalBody.length >= 30 && !isTruncated)) {
           resolvedArticle.detailFetched = true;
         } else {
@@ -281,9 +284,10 @@ class RssNewsService extends RssServiceBase {
       } else {
         // [LOG: 20260616_1715] Fallback check if the original feed text itself is long enough to show
         // [LOG: 20260617_0940] Lower minimum threshold to 30 for detailFetched fallback check
-        // [LOG: 20260617_1647] Check for truncation indicators (e.g. ..., …) and mark detailFetched=false to reject partial content
+        // [LOG: 20260617_2145] Enhanced check for ellipsis, trailing punctuation, and incomplete Korean endings
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || originalFeedBody || originalFeedDescription || '', resolvedArticle.title);
-        const isTruncated = /[.]{2,}$|…$/.test(finalBody.trim());
+        const trimmed = (finalBody || '').trim();
+        const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed) || /[며고나면지를을은는이가와과의로]$/.test(trimmed.slice(-1));
         if (finalBody && finalBody.length >= 30 && !isTruncated) {
           resolvedArticle.detailFetched = true;
         } else {
@@ -301,9 +305,10 @@ class RssNewsService extends RssServiceBase {
       resolvedArticle.description
     ]);
 
-    // [LOG: 20260617_1647] UX Rule: Throw 404 for articles that are truncated or failed to fetch fully
+    // [LOG: 20260617_2145] Strictly throw 404 Not Found error on articles failing quality/integrity checks
+    // This blocks navigation to truncated or partial news fragments and forces list redirection.
     if (resolvedArticle.detailFetched === false) {
-      throw this._notFoundError(`뉴스 기사 본문 수집 실패: ${articleNo}`);
+      throw this._notFoundError(`불완전한 뉴스 기사입니다: ${articleNo}`);
     }
 
     return {
@@ -345,14 +350,6 @@ class RssNewsService extends RssServiceBase {
     }
 
     const byNo = target ? list.find((item, index) => String(item?.no || (index + 1)) === target) : null;
-
-    if (options.articleKey || options.link) {
-      const dbgKey = expectedKey.substring(0, 8);
-      const dbgLink = expectedLink.substring(0, 30);
-      console.log(`[DEBUG: Resolve] Target: ${target}, ReqKey: ${dbgKey}, ReqLink: ${dbgLink}`);
-      console.log(`  Matches: ByLink: ${!!byLink}, ByKey: ${!!byKey}, ByNo: ${!!byNo} (Title: ${byNo?.title?.substring(0, 15)})`);
-      if (byLink && byLink !== byNo) console.log(`  Link Match Shifting detected! Feed No: ${byLink.no} vs Requested: ${target}`);
-    }
 
     if (byLink) return byLink;
     if (byKey) return byKey;
