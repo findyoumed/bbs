@@ -142,10 +142,29 @@ export function createRoutingStateRestorer(deps) {
       if (service === 'news') {
         if (param) {
           if (articleNo) {
+            // [LOG: 20260617_2155] Retrieve news metadata from sessionStorage if missing in URL
+            let articleKey = query.get('key') || query.get('articleKey') || '';
+            let link = query.get('link') || '';
+
+            if (!articleKey && !link) {
+              const sessionKey = `news:metadata:${param}:${articleNo}`;
+              try {
+                const sessionData = sessionStorage.getItem(sessionKey);
+                if (sessionData) {
+                  const parsed = JSON.parse(sessionData);
+                  articleKey = parsed.key || '';
+                  link = parsed.link || '';
+                }
+              } catch (e) {
+                console.error('Failed to load news metadata from sessionStorage', e);
+              }
+            }
+
             return await showNewsArticle(param, articleNo, {
               fromHistory: true,
               pageNo: page,
-              articleKey: query.get('key') || query.get('articleKey') || ''
+              articleKey,
+              link
             });
           }
           return await showNewsList(param, { fromHistory: true, pageNo: page });

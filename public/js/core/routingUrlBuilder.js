@@ -71,11 +71,24 @@ export function createRoutingUrlBuilder(deps) {
 
       case 'news-view': {
         const query = new URLSearchParams();
-        query.set('article', String(serviceData?.articleNo || ''));
+        const articleNo = String(serviceData?.articleNo || '');
+        query.set('article', articleNo);
         const articleKey = String(serviceData?.articleKey || serviceData?.article?.articleKey || '').trim();
-        if (articleKey) query.set('key', articleKey);
+        const articleLink = String(serviceData?.article?.link || serviceData?.articleLink || '').trim();
+        
+        // [LOG: 20260617_2155] Store news metadata in sessionStorage to keep URL clean
+        const topicDoor = serviceData?.topicDoor || '';
+        if (topicDoor && articleNo && (articleKey || articleLink)) {
+          const sessionKey = `news:metadata:${topicDoor}:${articleNo}`;
+          try {
+            sessionStorage.setItem(sessionKey, JSON.stringify({ key: articleKey, link: articleLink }));
+          } catch (e) {
+            console.error('Failed to store news metadata in sessionStorage', e);
+          }
+        }
+
         if (Number(serviceData?.pageNo || 1) > 1) query.set('page', String(serviceData?.pageNo || 1));
-        return `/service/news/${serviceData?.topicDoor || ''}?${query.toString()}`;
+        return `/service/news/${topicDoor}?${query.toString()}`;
       }
 
       case 'login':
