@@ -1,3 +1,15 @@
+## [2026-06-17 10:32] API 응답 지연/오류 알림바 폰트 및 밝기 일관화 작업
+
+**LOG_ID: 20260617_1032**
+목표: "데이터 응답 지연 - 잠시 후 다시 시도해 주세요" 등 하단 알림바(`#terminal-notification`)에 출력되는 경고/안내 텍스트가 다른 터미널 요소들에 비해 폰트가 상이하고, 깜빡임 애니메이션으로 인해 어둡게 보이던(밝기가 다른) 현상을 수정한다.
+변경 파일: public/style.css
+수행 작업: 1) `public/style.css` 내 `.terminal-notification-row` 클래스의 `font-family`를 다른 터미널 전반에 쓰이는 `'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;`로 교체하여 글꼴을 일치시킴. 2) `font-size`를 푸터 전용 가변 크기 변수인 `var(--cmd-font-size, 17px) !important;`로 설정하여 크기를 통합. 3) 일반 텍스트 기본 색상을 `#ffffff !important;`로 변경하고 50% 불투명도로 점멸하며 밝기 저하를 유발하던 `animation`을 완전히 제거해 100% 선명한 밝기로 유지시킴. 4) 레벨별 색상 설정(`level-error`, `level-warn`, `level-success`)에도 `!important`를 추가해 일관된 발색을 보장함.
+실행: `npm run smoke:vercel-ready`
+기대: API 응답 지연 등의 토스트 안내 메시지가 떴을 때, 튕기거나 튀지 않고 기존 터미널 하단 입력바 및 텍스트들과 완벽하게 동일한 폰트 패밀리 및 일관성 있는 밝기로 조화롭게 렌더링된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-17 09:46] 뉴스 본문에서 이전/다음 기사 단축키(A, N) 입력 시 튕김 현상 수정
 
 **LOG_ID: 20260617_0946**
@@ -8690,3 +8702,14 @@
 - 상세 조회 시 캐시 복원된 기사가 피드 매칭 기사의 오염된 출처를 상속받지 않아 상단 바 및 출처가 올바르게 렌더링되고, 피드 목록에서 micro-spacing이나 문장 부호 차이로 생기던 중복 기사들이 하나의 단일 항목으로 깨끗하게 축소(deduplicate)됩니다.
 결과: ✅ 완료
 
+## [2026-06-17 10:08] 프로젝트 검증 에러 수정 및 QA 통과
+
+**LOG_ID: 20260617_1005**
+목표: `npm test`, API fetch smoke, 배포 준비 smoke, 최종 QA에서 발생하던 실패를 제거하여 현재 프로젝트 검증을 에러 없이 통과시키는 상태로 만든다.
+변경 파일: public/js/core/commandService.js, public/js/core/apiFetch.js, public/js/core/apiFetchHelpers.js, public/js/core/terminalUiCore.js, public/js/core/terminalViewportMetrics.js, public/js/core/terminalLoadingUi.js, public/js/core/memoScreens.js, public/js/core/authScreens.js, public/js/core/profileScreens.js, src/server/RssNewsTopicFeedHelpers.js, scripts/smoke-api-fetch.js, scripts/smoke-full-traversal.js, WORK_LOG.md
+수행 작업: 1) `commandService.js`에 `createCommandService()`를 복원하고 명령 자동완성 정렬을 exact match, priority, 길이 기준으로 정리했으며 `COLOR` 별칭을 복원했다. 2) `apiFetch.js`의 에러/재시도/응답 helper를 `apiFetchHelpers.js`로 분리해 QA 줄 수 제한을 통과시키고, 서버 payload 메시지와 timeout 메시지 계약을 smoke 테스트에 맞췄다. 3) `terminalUiCore.js`의 viewport/로딩 helper를 각각 `terminalViewportMetrics.js`, `terminalLoadingUi.js`로 분리해 250줄 제한을 통과시켰다. 4) `smoke-api-fetch.js`의 테스트 로더가 분리된 ESM helper를 data URL 안에서 함께 로드하도록 수정했다. 5) full traversal이 기존 3002 포트 서버에 의존하지 않도록 임시 포트 서버를 사용하게 했고, 직접 렌더 화면들이 loading 상태를 해제하도록 memo/auth/profile 화면에 `setReady(true)`를 연결했다. 6) RSS 뉴스 dedupe 임시 디버그 로그를 제거했다.
+실행: `node --check public/js/core/commandService.js`, `node --check public/js/core/apiFetch.js`, `node --check public/js/core/apiFetchHelpers.js`, `node --check public/js/core/terminalUiCore.js`, `node --check public/js/core/terminalViewportMetrics.js`, `node --check public/js/core/terminalLoadingUi.js`, `node --check public/js/core/memoScreens.js`, `node --check public/js/core/authScreens.js`, `node --check public/js/core/profileScreens.js`, `node --check src/server/RssNewsTopicFeedHelpers.js`, `node --check scripts/smoke-api-fetch.js`, `node --check scripts/smoke-full-traversal.js`, `node scripts/smoke-api-fetch.js`, `npm test`, `npm run smoke:vercel-ready`, `npm run qa:final`, `npm run smoke:full-traversal`
+기대: 기존 테스트/QA 실패가 모두 사라지고 API fetch smoke 5개 시나리오 및 최종 QA가 성공한다.
+결과: ✅ 완료
+
+---

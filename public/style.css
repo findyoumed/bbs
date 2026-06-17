@@ -2287,11 +2287,11 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     display: none !important;
 }
 
-/* [LOG: 20260613_1205] 레트로 알림(토스트) 한 줄 노출용 스타일 추가 */
+/* [LOG: 20260617_1032] Align terminal notification font and brightness with main terminal themes */
 .terminal-notification-row {
-    font-family: 'Sam3KRFont', 'DungGeunMo', monospace;
-    font-size: 15px;
-    color: #ffff55; /* ANSI 밝은 노란색 */
+    font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
+    font-size: var(--cmd-font-size, 17px) !important;
+    color: #ffffff !important; /* General white text matching command layout */
     padding: 4px 8px;
     margin-top: 4px;
     border-top: 1px dashed rgba(255, 255, 255, 0.2);
@@ -2299,25 +2299,18 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     text-align: left;
     white-space: pre-wrap;
     box-sizing: border-box;
-    animation: notification-flash 1.5s step-end infinite;
 }
 
 .terminal-notification-row.level-error {
-    color: #ff5555; /* ANSI 빨간색 */
+    color: #ff5555 !important; /* ANSI red */
 }
 
 .terminal-notification-row.level-warn {
-    color: #ffaa00; /* ANSI 주황색 */
+    color: #ffaa00 !important; /* ANSI orange */
 }
 
 .terminal-notification-row.level-success {
-    color: #55ff55; /* ANSI 초록색 */
-}
-
-@keyframes notification-flash {
-    50% {
-        opacity: 0.7;
-    }
+    color: #55ff55 !important; /* ANSI green */
 }
 
 /* [LOG: 20260615_1611] Final command prompt/input font lock: keep #cmd-prompt and #cmd-input the same computed text size. */
