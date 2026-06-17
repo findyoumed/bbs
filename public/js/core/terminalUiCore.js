@@ -1,4 +1,4 @@
-import { esc, applyTerminalEffects } from './uiUtils.js';
+import { esc, applyTerminalEffects, shouldAutoFocusCommandInput } from './uiUtils.js';
 import { createTerminalDialog } from './terminalDialog.js';
 import { createTerminalFeedback } from './terminalFeedback.js';
 import { createTerminalHintFooter } from './terminalHintFooter.js';
@@ -63,14 +63,14 @@ export function createTerminalUiCore(deps) {
     onOpen: () => {
       if (cmdInput) {
         cmdInput.disabled = false;
-        cmdInput.focus();
+        if (shouldAutoFocusCommandInput()) cmdInput.focus();
       }
       soundService.playTransition();
     },
     onClose: () => {
       if (cmdInput && terminalFooter?.dataset.footerState !== 'hidden') {
         cmdInput.disabled = false;
-        cmdInput.focus();
+        if (shouldAutoFocusCommandInput()) cmdInput.focus();
       }
     }
   });

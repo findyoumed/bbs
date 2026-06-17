@@ -6,6 +6,7 @@
 
 import { initApp } from './core/appFactory.js';
 import { SIGNUP_TOS_TEXT, SIGNUP_PRIVACY_TEXT } from './core/signupPolicyText.js';
+import { beginCommandExecution, trackCommandExecution, cancelCommandExecution } from './core/commandExecutionState.js';
 
 let state = {
   screen: 'main', user: null, token: '', supabase: null, authConfig: { enabled: false },
@@ -69,8 +70,19 @@ async function init() {
   state.user = guestUser();
 
   // 브라우저 뒤로가기/앞으로가기 처리
+  // [LOG: 20260617_1742] Cancel pending navigation or commands and start new restoration with AbortController support.
   window.onpopstate = async () => {
-    await restoreStateFromURL();
+    cancelCommandExecution(state);
+    const token = beginCommandExecution(state);
+    try {
+      const result = restoreStateFromURL();
+      trackCommandExecution(state, result, token);
+      await result;
+    } catch (e) {
+      if (e?.type !== 'cancelled') {
+        console.error('Navigation error:', e.message);
+      }
+    }
   };
 
   try {

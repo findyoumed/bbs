@@ -1,16 +1,16 @@
 /**
  * [LOG: 20260410_2315] 사용자 프로필 화면 처리 모듈
  */
-export function createProfileScreens(deps) {
-  const { apiFetch, esc, getCommandFooterText, getSupportedFooterText, screenEl, setLoading, updateURL, setHint, setPrompt, cmdInput, state } = deps;
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
+export function createProfileScreens(deps) {
+  const { apiFetch, esc, getCommandFooterText, getSupportedFooterText, screenEl, setLoading, setReady, updateURL, setHint, setPrompt, cmdInput, state } = deps;
 
   function applyProfileFooter() {
     setHint(getSupportedFooterText(state) || getCommandFooterText('profile'));
     setPrompt('>>');
+    // [LOG: 20260617_1005] Profile renders without applyCommandFooter, so clear loading here.
+    setReady?.(true);
   }
 
   function extractProfileMember(payload) {

@@ -1,6 +1,7 @@
 import { createTerminalHintLayout } from './terminalHintLayout.js';
 import { createTerminalHintMarkup } from './terminalHintMarkup.js';
 import { displayWidth } from './ansiRenderUtils.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createTerminalHintFooter(deps) {
   const {
@@ -38,7 +39,7 @@ export function createTerminalHintFooter(deps) {
     cmdPromptRendererEl.addEventListener('mousedown', (event) => {
       // [LOG: 20260615_1621] Clicking the input-rendered prompt should behave like clicking the old label.
       event.preventDefault();
-      cmdInput.focus();
+      if (shouldAutoFocusCommandInput()) cmdInput.focus();
     });
   }
 
@@ -140,7 +141,7 @@ export function createTerminalHintFooter(deps) {
       cmdInput.disabled = false;
       window.setTimeout(() => {
         if (document.activeElement !== cmdInput) {
-          cmdInput.focus();
+          if (shouldAutoFocusCommandInput()) cmdInput.focus();
         }
       }, 0);
     }
@@ -165,7 +166,7 @@ export function createTerminalHintFooter(deps) {
     if (cmdInput && !cmdInput.disabled) {
       window.setTimeout(() => {
         if (document.activeElement !== cmdInput) {
-          cmdInput.focus();
+          if (shouldAutoFocusCommandInput()) cmdInput.focus();
         }
       }, 0);
     }
@@ -239,7 +240,7 @@ export function createTerminalHintFooter(deps) {
   async function applyCommandFooter(assetPath, fallbackText = '', fallbackAssetPath = '') {
     syncScreenContext();
     footerLoadPending = true;
-    setFooterVisibility(false);
+    // [LOG: 20260617_1638] Do not hide footer while loading assets to maintain UI stability.
     if (screenEl?.parentElement) {
       screenEl.parentElement.classList.add('is-loading');
     }

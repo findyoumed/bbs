@@ -174,6 +174,10 @@ export function createCommandDispatcherExecution(deps) {
 
       return handled;
     } catch (error) {
+      if (error?.type === 'cancelled') {
+        setPrompt('선택 >>');
+        return false;
+      }
       console.error('[Dispatcher] Error processing command:', error);
       terminalUiCore.showError(`오류: ${error.message}`);
       setPrompt('>>');

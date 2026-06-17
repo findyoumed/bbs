@@ -1,3 +1,5 @@
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
+
 export function createMemoScreens(deps) {
     const {
         ansiToHTML,
@@ -13,13 +15,10 @@ export function createMemoScreens(deps) {
         setHint,
         setLoading,
         setPrompt,
+        setReady,
         state,
         updateURL
     } = deps;
-
-    function shouldAutoFocusCommandInput() {
-        return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    }
 
     function focusCommandInput() {
         if (shouldAutoFocusCommandInput()) {
@@ -33,6 +32,8 @@ export function createMemoScreens(deps) {
         screenEl.innerHTML = `<div class="bbs-box"><div class="bbs-error">${esc(safeMessage)}</div></div>`;
         setHint(safeMessage);
         setPrompt('>>');
+        // [LOG: 20260617_1005] Guest/direct memo status screens finish without applyCommandFooter.
+        setReady?.(true);
         focusCommandInput();
     }
 
@@ -189,6 +190,7 @@ export function createMemoScreens(deps) {
 
         setHint('전송(/s 또는 SEND), 취소(/q, P, M, B)');
         setPrompt(flow.stage === 'target' ? '받는 사람 >>' : '내용 >>');
+        setReady?.(true);
         focusCommandInput();
     }
 

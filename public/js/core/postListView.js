@@ -1,4 +1,5 @@
 import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createPostListView(deps) {
   const {
@@ -94,7 +95,7 @@ export function createPostListView(deps) {
       footerAssetPath ? 'txt/cmd_board_footer.txt' : ''
     );
     // [LOG: 20260424_2020] 모바일에서 게시판 목록 진입 시 키보드 자동 팝업 방지
-    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
     }
   }

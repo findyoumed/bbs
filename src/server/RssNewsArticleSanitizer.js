@@ -266,7 +266,7 @@ function stripKnownArticleBoilerplateLines(value) {
     /^본문\s*글씨\s*(키우기|줄이기)$/i,
     /^스크롤\s*이동\s*상태바$/i,
     /^[^\n]{1,30}기자$/i,
-    /^저작권자\s*(?:[ⓒ©]|&copy;).*$/i,
+    /^(?:<|\[)?저작권자\s*(?:\(c\)|[ⓒ©]|&copy;)?.*$/i,
     /RSS\s*피드는\s*개인\s*리더\s*이용\s*목적으로\s*허용/i,
     /피드를\s*이용한\s*게시\s*등의\s*무단\s*복제/i,
     /(?:▶\s*)?SBS\s*뉴스\s*앱\s*다운로드/i,
@@ -332,13 +332,15 @@ function stripKnownArticleBoilerplateLines(value) {
     /^유튜브로\s*보기$/i,
     // [LOG: 20260616_1220] 펼치기/접기, 요약, 구글 검색 선호 매체로 추가 제거패턴 추가
     /^(?:펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)$/i,
-    // [LOG: 20260505_2325] Enhanced lead boilerplate patterns
-    /^[▲△]\s*[^\n]{1,200}$/,
+    // [LOG: 20260617_2159] Avoid deleting complete paragraphs starting with ▲/△. Restrict to short captions (<60 chars) with no sentence terminators.
+    /^[▲△]\s*(?![^.!?]*[.!?])[^\n]{1,60}$/,
     /^\([가-힣]{2,5}=\uC5F0\uD569\uB274\uC2A4\)\$/,
     /^\[[\uAC00-\uD7A3]{2,6}\s*\uAE30\uC790\([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\)\]$/i,
     /^\[[\uAC00-\uD7A3]{2,10}\s*(?:스타투데이|포토|자료사진)\]$/i,
     /^\(사진=[^\)]+\)$/i,
     /\*재판매\s*및\s*DB\s*금지/i,
+    /재판매\s*(?:및\s*DB)?\s*금지/i,
+    /^(?:제보\s*[:：]|제보는\s*카카오톡)/i,
     /^(?:[\uAC00-\uD7A3]{2,6}\s*\uAE30\uC790(?:,\s*)?)+\s*[=＝]\s*$/
   ];
 
@@ -598,7 +600,7 @@ function trimKnownArticleTailNoise(value) {
     /\n{1,2}\s*헬스조선을\s*만나는\s*또다른\s*방법[\s\S]*$/i,
     /\n{1,2}\s*PC버전[\s\S]*$/i,
     /\n{1,2}\s*맨위로\s*[↑↗↥]?\s*[\s\S]*$/i,
-    /\n{1,2}\s*저작권자[\s\S]*$/i,
+    /\n{1,2}\s*[<\[(]?저작권자[\s\S]*$/i,
     /\n{1,2}\s*(?:한국경제|한경프리미엄9)\s*구독신청[\s\S]*$/i,
     /\n{1,2}\s*이\s*시각\s*관심정보[\s\S]*$/i,
     /\n{1,2}\s*ADVERTISEMENT[\s\S]*$/i,
@@ -620,9 +622,16 @@ function trimKnownArticleTailNoise(value) {
   });
 
   if (cutIndex !== text.length) {
-    // [LOG: 20260617_1749] Backtrack to the start of the matched line to prune the entire noisy line
+    // [LOG: 20260617_2159] Backtrack to the start of the matched line to prune the entire noisy line,
+    // but only if that segment is short noise. If it contains a complete sentence or is long,
+    // just cut at the match index to avoid content loss.
     const lastNewline = text.lastIndexOf('\n', cutIndex);
-    cutIndex = lastNewline >= 0 ? lastNewline : 0;
+    const lineStartIndex = lastNewline >= 0 ? lastNewline + 1 : 0;
+    const prefixOnLine = text.slice(lineStartIndex, cutIndex).trim();
+
+    if (prefixOnLine.length < 15 && !/[.!?]/.test(prefixOnLine)) {
+      cutIndex = lastNewline >= 0 ? lastNewline : 0;
+    }
   }
 
   return text.slice(0, cutIndex).trim();

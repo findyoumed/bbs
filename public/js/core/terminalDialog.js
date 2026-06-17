@@ -3,7 +3,7 @@
  * [LOG: 20260426_0900] Unified Terminal Dialog System (Evolution Mode 16/100)
  * [LOG: 20260426_2200] Evolution: Integrated i18n and replaced hardcoded labels.
  */
-import { esc } from './uiUtils.js';
+import { esc, shouldAutoFocusCommandInput } from './uiUtils.js';
 import { UI_TEXT } from './i18n.js';
 
 export function createTerminalDialog(deps) {
@@ -38,7 +38,7 @@ export function createTerminalDialog(deps) {
     if (cmdInput) {
       cmdInput.value = '';
       cmdInput.disabled = false;
-      cmdInput.focus();
+      if (shouldAutoFocusCommandInput()) cmdInput.focus();
     }
     onClose?.();
     resolve(value);
@@ -62,7 +62,7 @@ export function createTerminalDialog(deps) {
       setPrompt?.(promptText);
       cmdInput.disabled = false;
       cmdInput.value = defaultValue || '';
-      cmdInput.focus();
+      if (shouldAutoFocusCommandInput()) cmdInput.focus();
       if (defaultValue) cmdInput.select();
 
       const handleKeyDown = (event) => {

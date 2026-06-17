@@ -1,3 +1,5 @@
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
+
 /**
  * [LOG: 20260410_2350] 내비게이션 시스템 코어
  */
@@ -152,7 +154,7 @@ export function createNavigationCore(deps) {
             } catch (error) {
                 setHint(error.message || '소셜 로그인을 시작할 수 없습니다.');
                 setPrompt('>>');
-                cmdInput.focus();
+                if (shouldAutoFocusCommandInput()) cmdInput.focus();
             }
             return true;
         }

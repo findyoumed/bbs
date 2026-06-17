@@ -1,3 +1,5 @@
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
+
 export function createMenuNavigationActions(deps) {
   const {
     cmdInput,
@@ -21,10 +23,6 @@ export function createMenuNavigationActions(deps) {
     startOAuthLogin,
     state
   } = deps;
-
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
 
   async function executeGoCommand(rawCmd) {
     const match = String(rawCmd || '').trim().match(/^GO\s+(.+)$/i);

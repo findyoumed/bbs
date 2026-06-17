@@ -2,6 +2,7 @@
  * commandService.js
  * [LOG: 20260428_1725] Massive Purge Re-applied: Only core BBS functions.
  * [LOG: 20260504_1200] Evolution Mode 38: Restoring and expanding scripting & VFS metadata.
+ * [LOG: 20260617_1005] Restore command service factory and priority-ranked matching.
  */
 
 export const CMD_META = {
@@ -17,6 +18,7 @@ export const CMD_META = {
   F: { label: '다음쪽', tip: 'F, [ENTER]', priority: 70, cat: 'NAV', desc: '다음 페이지로 이동합니다. (또는 엔터키)' },
   B: { label: '이전쪽', tip: 'B', priority: 70, cat: 'NAV', desc: '이전 페이지로 이동합니다.' },
   C: { label: '배경색', tip: 'C', priority: 36, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
+  COLOR: { label: '배경색', tip: 'COLOR', priority: 35, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
   CLS: { label: '화면지움', tip: 'CLS, CLEAR', priority: 10, cat: 'SYS', desc: '터미널 화면을 깨끗이 지웁니다.' },
   CLEAR: { label: '화면지움', tip: 'CLS, CLEAR', priority: 10, cat: 'SYS', desc: '터미널 화면을 깨끗이 지웁니다.' },
   HIST: { label: '작업기록', tip: 'HIST', priority: 10, cat: 'SYS', desc: '최근에 입력한 명령어 기록을 보여줍니다.' },
@@ -112,17 +114,31 @@ export const CMD_META = {
  * Returns commands matching the prefix. Used for autocomplete.
  */
 export function getCommandMatches(prefix) {
-  if (!prefix) return [];
-  const upper = prefix.toUpperCase();
-  return Object.keys(CMD_META).filter(cmd => cmd.startsWith(upper));
+  const upper = String(prefix || '').trim().toUpperCase();
+  if (!upper) return [];
+
+  return Object.keys(CMD_META)
+    .filter(cmd => cmd.startsWith(upper))
+    .sort((left, right) => {
+      const leftExact = left === upper ? 1 : 0;
+      const rightExact = right === upper ? 1 : 0;
+      if (leftExact !== rightExact) return rightExact - leftExact;
+
+      const leftPriority = Number(CMD_META[left]?.priority || 0);
+      const rightPriority = Number(CMD_META[right]?.priority || 0);
+      if (leftPriority !== rightPriority) return rightPriority - leftPriority;
+
+      if (left.length !== right.length) return left.length - right.length;
+      return left.localeCompare(right);
+    });
 }
 
 /**
  * Returns the best matching command for the given string.
  */
 export function getBestMatch(cmd) {
-  if (!cmd) return null;
-  const upper = cmd.toUpperCase();
+  const upper = String(cmd || '').trim().toUpperCase();
+  if (!upper) return null;
   if (CMD_META[upper]) return upper;
 
   const matches = getCommandMatches(upper);
@@ -142,4 +158,24 @@ export function getCommandDesc(cmd) {
  */
 export function isValidCommand(cmd) {
   return !!CMD_META[String(cmd || '').toUpperCase()];
+}
+
+export function createCommandService(deps = {}) {
+  const state = deps.state || {};
+
+  function isCommandAvailable(cmd) {
+    const meta = CMD_META[String(cmd || '').trim().toUpperCase()];
+    if (!meta) return false;
+    if (!meta.login) return true;
+    return !!state.user && state.user.isGuest === false;
+  }
+
+  return {
+    CMD_META,
+    getCommandMatches,
+    getBestMatch,
+    getCommandDesc,
+    isValidCommand,
+    isCommandAvailable
+  };
 }

@@ -4,7 +4,7 @@
  * [LOG: 20260427_1105] Evolve: Categorized view, fuzzy ranking, and highlighting.
  * [LOG: 20260429_1010] Evolution Mode 20/500: Added History Search Mode.
  */
-import { esc } from './uiUtils.js';
+import { esc, shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createCommandPalette(deps) {
   const { terminalUiCore, soundService } = deps;
@@ -23,7 +23,8 @@ export function createCommandPalette(deps) {
 
   function focusCommandInput() {
     const cmdInput = document.getElementById('cmd-input');
-    if (!cmdInput) return;
+    // [LOG: 20260617_1555] Prevent keyboard popup on mobile.
+    if (!cmdInput || !shouldAutoFocusCommandInput()) return;
 
     cmdInput.disabled = false;
     cmdInput.focus();

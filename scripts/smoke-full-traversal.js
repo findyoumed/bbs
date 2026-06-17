@@ -15,8 +15,9 @@ const { createAppRuntime } = require('../src/server/createAppRuntime');
 const { getNavigation: getSupabaseBoardNavigation } = require('../src/server/SupabaseBoardRepositoryPostReads');
 
 const HOST = '127.0.0.1';
-const PORT = 3002;
-const BASE_URL = `http://${HOST}:${PORT}`;
+// [LOG: 20260617_1005] Default to an ephemeral port so stale local servers cannot break traversal.
+let PORT = Number(process.env.SMOKE_FULL_TRAVERSAL_PORT || 0);
+let BASE_URL = `http://${HOST}:${PORT || 3002}`;
 const TIMEOUT = 30000;
 const TEST_ROUTES = [
     '/',
@@ -405,8 +406,7 @@ async function isServerRunning(url) {
 }
 
 async function startServer() {
-    const running = await isServerRunning(BASE_URL);
-    if (running) {
+    if (PORT > 0 && await isServerRunning(BASE_URL)) {
         console.log(`ℹ️  Server is already running on ${BASE_URL}.`);
         return {
             startedHere: false,
@@ -436,6 +436,8 @@ async function startServer() {
         server.once('error', handleError);
         server.listen(PORT, HOST, handleListening);
     });
+    PORT = server.address().port;
+    BASE_URL = `http://${HOST}:${PORT}`;
 
     return {
         startedHere: true,

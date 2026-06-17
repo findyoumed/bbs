@@ -30,6 +30,18 @@ export function isMobileDevice() {
 }
 
 /**
+ * Decide whether to autofocus the command input.
+ * [LOG: 20260617_1540] Only auto-focus on devices with a hoverable fine pointer (mouse/stylus).
+ * Forcing focus on mobile causes the virtual keyboard to pop up and cover the screen.
+ * @returns {boolean}
+ */
+export function shouldAutoFocusCommandInput() {
+  if (isMobileDevice()) return false;
+  if (typeof window === 'undefined' || !window.matchMedia) return true;
+  return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
+/**
  * Throttles a function call.
  */
 export function throttle(func, limit) {

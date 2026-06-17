@@ -1,5 +1,6 @@
 import { createMenuNavigationActions } from './menuNavigationActions.js';
 import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createMenuNavigation(deps) {
   const {
@@ -83,10 +84,6 @@ export function createMenuNavigation(deps) {
 
   function resolveAnyMenuNodeTarget(target) {
     return resolveMenuNodeTarget(target, Object.values(state.menuLookup || {}));
-  }
-
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   }
 
   async function showMain(fromHistory = false) {

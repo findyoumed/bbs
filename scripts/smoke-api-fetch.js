@@ -30,9 +30,17 @@ function makeResponse(status, payload, headers = {}) {
 }
 
 async function loadBrowserModule(relPath) {
-  const absPath = path.join(path.resolve(__dirname, '..'), relPath);
-  const source = fs.readFileSync(absPath, 'utf-8');
-  const moduleUrl = `data:text/javascript;base64,${Buffer.from(source, 'utf-8').toString('base64')}`;
+  const root = path.resolve(__dirname, '..');
+  const absPath = path.join(root, relPath);
+  const helperPath = path.join(root, 'public/js/core/apiFetchHelpers.js');
+  const helperSource = fs.readFileSync(helperPath, 'utf-8')
+    .replace(/\bexport\s+class\s+/g, 'class ')
+    .replace(/\bexport\s+const\s+/g, 'const ')
+    .replace(/\bexport\s+function\s+/g, 'function ');
+  const source = fs.readFileSync(absPath, 'utf-8')
+    .replace(/import\s+\{[\s\S]*?\}\s+from\s+['"]\.\/apiFetchHelpers\.js['"];\s*/, '');
+  // [LOG: 20260617_1005] Inline helper source so the data URL loader supports split ESM modules.
+  const moduleUrl = `data:text/javascript;base64,${Buffer.from(`${helperSource}\n${source}`, 'utf-8').toString('base64')}`;
   return import(moduleUrl);
 }
 

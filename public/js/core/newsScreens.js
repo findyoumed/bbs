@@ -1,5 +1,6 @@
 import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 import { shouldDisplayNewsArticleImage } from './newsPhotoArticleUtils.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createNewsScreens(deps) {
   const {
@@ -28,9 +29,7 @@ export function createNewsScreens(deps) {
     renderScreenSequential
   } = deps;
 
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
+  const NEWS_HOVER_PREFETCH_DELAY_MS = 250;
 
   function renderBoardSelectHotspots(screenNode, boards, lineOffset = 0) {
     if (!screenNode || !boards.length) return;
@@ -46,12 +45,25 @@ export function createNewsScreens(deps) {
 
       // [LOG: 20260610_2005] Hover pre-fetching for snappy terminal feel
       // [LOG: 20260617_0945] Pre-fetch hover checks key with page 1 index
-      btn.addEventListener('mouseover', () => {
-        const prefetchKey = `${board.door}:1`;
-        if (!topicCache.has(prefetchKey)) {
-          void loadNewsTopicState(board.door, 1);
+      // [LOG: 20260617_1124] Delay hover prefetch so click navigation is not forced to wait on an accidental mouse pass.
+      let prefetchTimer = 0;
+      const clearPrefetchTimer = () => {
+        if (prefetchTimer) {
+          window.clearTimeout(prefetchTimer);
+          prefetchTimer = 0;
         }
+      };
+      btn.addEventListener('mouseover', () => {
+        clearPrefetchTimer();
+        const prefetchKey = `${board.door}:1`;
+        prefetchTimer = window.setTimeout(() => {
+          prefetchTimer = 0;
+          if (!topicCache.has(prefetchKey) && !topicPendingRequests.has(prefetchKey)) {
+            void loadNewsTopicState(board.door, 1);
+          }
+        }, NEWS_HOVER_PREFETCH_DELAY_MS);
       });
+      btn.addEventListener('mouseout', clearPrefetchTimer);
 
       layer.appendChild(btn);
     });
@@ -193,7 +205,6 @@ export function createNewsScreens(deps) {
     });
   }
 
-  // [LOG: 20260615_1640] Support YouTube video rendering for video news article
   function renderNewsArticleImage(screenNode, article, pageNo = 1) {
     const imageUrl = normalizeNewsImageUrl(article?.imageUrl);
     if (!screenNode || !imageUrl || Number(pageNo) !== 1 || !shouldDisplayNewsArticleImage(article)) return;
@@ -287,14 +298,12 @@ export function createNewsScreens(deps) {
     return String(article?.link || '').trim();
   }
 
-  // [LOG: 20260616_1410] Resolve request metadata helper
   function getNewsArticleRequestOptions(article, options = {}) {
     const articleKey = String(options?.articleKey || options?.key || getNewsArticleKey(article)).trim();
     const link = String(options?.link || getNewsArticleLink(article)).trim();
     return { articleKey, link };
   }
 
-  // [LOG: 20260615_1740] URL key-no mismatch conflict resolution (prefer manual no query)
   function findNewsArticle(items, articleNo, options = {}) {
     const list = Array.isArray(items) ? items : [];
     const requestOptions = getNewsArticleRequestOptions(null, options);
@@ -314,7 +323,6 @@ export function createNewsScreens(deps) {
 
     const byNo = target ? list.find((item, index) => String(item?.no || (index + 1)) === target) : null;
 
-    // Detect user manual URL update conflict (different key vs no)
     const keyConflict = byKey && byNo && byKey !== byNo;
     const linkConflict = byLink && byNo && byLink !== byNo;
 
@@ -329,7 +337,6 @@ export function createNewsScreens(deps) {
     return null;
   }
 
-  // [LOG: 20260616_1110] Normalize URL helper for client-side comparison
   function normalizeUrl(value) {
     let str = String(value || '').trim();
     if (!str) return '';
@@ -364,7 +371,6 @@ export function createNewsScreens(deps) {
     return true;
   }
 
-  // [LOG: 20260610_1427] Clear screen and hide footer during news loading to hide unrelated command hints
   function showNewsLoading(message) {
     const text = String(message || '뉴스 기사로 이동 중입니다..').trim();
     if (typeof setLoading === 'function') {
@@ -385,6 +391,11 @@ export function createNewsScreens(deps) {
 
   // [LOG: 20260610_1935] Module-level cache for instant news topic switching
   const topicCache = new Map();
+  const topicPendingRequests = new Map();
+
+  // [LOG: 20260617_1725] Module-level cache for news article details to avoid redundant crawling
+  const articleCache = new Map();
+  const articlePendingRequests = new Map();
 
   // [LOG: 20260617_0945] Support pageNo in topicCache to isolate page datasets
   async function loadNewsTopicState(topicDoor, pageNo = 1) {
@@ -406,14 +417,59 @@ export function createNewsScreens(deps) {
       return result;
     }
 
-    // [LOG: 20260616_0937] Pass current page number to API for fast load times
-    const articles = await loadNewsArticles(topicDoor, pageNo);
-    const topic = topics.find((item) => String(item.door) === String(topicDoor));
-    const topicTitle = String(articles?.topic?.title || articles?.category?.title || topic?.title || topic?.name || '').trim();
-    const result = { topics, topicTitle, items: articles?.items || [] };
+    const pending = topicPendingRequests.get(cacheKey);
+    if (pending) {
+      return await pending;
+    }
+
+    const request = (async () => {
+      const articles = await loadNewsArticles(topicDoor, pageNo);
+      const topic = topics.find((item) => String(item.door) === String(topicDoor));
+      const topicTitle = String(articles?.topic?.title || articles?.category?.title || topic?.title || topic?.name || '').trim();
+      const result = { topics, topicTitle, items: articles?.items || [] };
+
+      topicCache.set(cacheKey, result);
+      return result;
+    })();
+
+    topicPendingRequests.set(cacheKey, request);
+    try {
+      return await request;
+    } finally {
+      if (topicPendingRequests.get(cacheKey) === request) {
+        topicPendingRequests.delete(cacheKey);
+      }
+    }
+  }
+
+  // [LOG: 20260617_1730] Unified article load helper with client-side caching
+  async function loadNewsArticleState(topicDoor, articleNo, requestOptions) {
+    const articleKey = requestOptions.articleKey || '';
+    const link = requestOptions.link || '';
+    const cacheKey = articleKey || (link ? `link:${normalizeUrl(link)}` : `no:${articleNo}`);
     
-    topicCache.set(cacheKey, result);
-    return result;
+    const cached = articleCache.get(cacheKey);
+    if (cached) return cached;
+
+    const pending = articlePendingRequests.get(cacheKey);
+    if (pending) return await pending;
+
+    const request = (async () => {
+      const detail = await loadNewsArticle(topicDoor, articleNo, requestOptions);
+      if (detail?.article) {
+        articleCache.set(cacheKey, detail);
+      }
+      return detail;
+    })();
+
+    articlePendingRequests.set(cacheKey, request);
+    try {
+      return await request;
+    } finally {
+      if (articlePendingRequests.get(cacheKey) === request) {
+        articlePendingRequests.delete(cacheKey);
+      }
+    }
   }
 
   async function showNewsMenu(fromHistory = false) {
@@ -446,13 +502,11 @@ export function createNewsScreens(deps) {
     const requestedPageNo = Math.max(1, Number.parseInt(normalizedOptions.pageNo, 10) || 1);
 
     state.screen = 'news-list';
-    // [LOG: 20260610_1930] Snappier loader delay for authentic terminal responsiveness
     let loadingTimer = setTimeout(() => {
       showNewsLoading('연결하는 중입니다..');
     }, 80);
 
     try {
-      // [LOG: 20260616_0937] Request page-optimized news data
       const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor, requestedPageNo);
       clearTimeout(loadingTimer);
 
@@ -490,8 +544,6 @@ export function createNewsScreens(deps) {
       && Number(state.serviceData?.pageNo || 1) === requestedPageNo
       && (!requestedArticleKey || String(state.serviceData?.articleKey || '').trim() === requestedArticleKey);
     state.screen = 'news-view';
-    // [LOG: 20260610_1453] Skip loading overlay when navigating to article view since it is fast and waitable.
-    // [LOG: 20260617_0945] Pass requestedPageNo to loadNewsTopicState to load the correct page article metadata
     const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor, requestedPageNo);
     const article = findNewsArticle(items, articleNo, options);
     const articleIndex = items.findIndex((item) => item === article);
@@ -515,34 +567,21 @@ export function createNewsScreens(deps) {
       resolvedArticle = { ...article, ...state.serviceData.article };
       resolvedTopicTitle = String(state.serviceData?.topicTitle || topicTitle).trim() || topicTitle;
 
-      // [LOG: 20260616_1512] Send back to news list if cached article is set as failed crawl
       if (resolvedArticle.detailFetched === false) {
-        await showNewsList(topicDoor, {
-          fromHistory: true,
-          pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
-        });
-        return;
+        console.warn('Article detail not fully fetched, but allowing entry as fallback');
       }
     } else {
       try {
-        // [LOG: 20260610_1436] Skip updating loading message to 'connecting to source' since load time is fast.
-        // [LOG: 20260616_1052] Use the actual found article's key/link for validation to prevent truncation when indices shift
         const requestOptions = getNewsArticleRequestOptions(article, options);
-        const detail = await loadNewsArticle(topicDoor, article?.no || articleNo, requestOptions);
+        // [LOG: 20260617_1735] Use loadNewsArticleState with client-side caching to avoid redundant slow crawls
+        const detail = await loadNewsArticleState(topicDoor, article?.no || articleNo, requestOptions);
         const targetValidationOptions = getNewsArticleRequestOptions(article, {});
 
-        // [LOG: 20260616_1512] If detail content fetch failed (fallback status), immediately block entry and send to list view
         if (detail?.article?.detailFetched === false) {
-          console.warn('Blocked entering article detail due to failed web crawl');
-          await showNewsList(topicDoor, {
-            fromHistory: true,
-            pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
-          });
-          return;
+          console.warn('Article detail crawl failed or content too short, but allowing entry');
         }
 
         if (detail?.article && isExpectedNewsArticle(detail.article, targetValidationOptions)) {
-          // [LOG: 20260616_1110] Safe metadata merge to prevent empty/blank fields from wiping current state
           resolvedArticle = {
             ...article,
             ...detail.article,
@@ -553,8 +592,10 @@ export function createNewsScreens(deps) {
         }
         if (detail?.topic?.title) resolvedTopicTitle = String(detail.topic.title).trim() || topicTitle;
       } catch (error) {
+        if (error?.type === 'cancelled') {
+          return;
+        }
         console.error('뉴스 본문 상세 로드 실패:', error.message);
-        // [LOG: 20260616_1410] Redirect to news list when detail loading fails or key mismatch occurs to prevent displaying incorrect information
         await showNewsList(topicDoor, {
           fromHistory: true,
           pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
@@ -576,6 +617,8 @@ export function createNewsScreens(deps) {
       topics, topicDoor, topicTitle: resolvedTopicTitle,
       articleNo: String(article?.no || articleNo),
       articleKey: getNewsArticleKey(resolvedArticle),
+      // [LOG: 20260617_1651] Store article link separately so URL building keeps a stable restore handle.
+      articleLink: getNewsArticleLink(resolvedArticle),
       article: resolvedArticle, items,
       pageCount: articleView.pageCount, pageNo: articleView.pageNo,
       listPageNo: resolvedListPageNo, listPageSize: currentListPageSize

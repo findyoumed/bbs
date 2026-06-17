@@ -1,4 +1,5 @@
 import { buildTopbarHtml } from './ansiTopbarScreen.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createMyInfoRenderer(deps) {
     const {
@@ -109,7 +110,7 @@ export function createMyInfoRenderer(deps) {
     }
 
     function focusCommandInputAtEnd() {
-        if (!cmdInput) {
+        if (!cmdInput || !shouldAutoFocusCommandInput()) {
             return;
         }
 

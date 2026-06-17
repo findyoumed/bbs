@@ -1,5 +1,11 @@
 import { getCommandMatches } from './commandService.js';
-import { trackCommandPending } from './commandPendingUi.js';
+import {
+  beginCommandExecution,
+  cancelCommandExecution,
+  isCommandExecutionLocked as isExecutionLocked,
+  trackCommandExecution
+} from './commandExecutionState.js';
+import { cancelCommandPending, getPendingCommandValue, isCommandPending, trackCommandPending } from './commandPendingUi.js';
 
 export function bindCommandInputEvents(deps) {
   const {
@@ -9,6 +15,8 @@ export function bindCommandInputEvents(deps) {
     jumpToContent,
     saveHistory,
     setGhostText,
+    setPrompt,
+    setReady,
     setSuggestions,
     state
   } = deps;
@@ -31,7 +39,22 @@ export function bindCommandInputEvents(deps) {
     return state?._maskCommandInput === true;
   }
 
+  function isCommandExecutionLocked() {
+    return isCommandPending() || isExecutionLocked(state);
+  }
+
   function handleInput(event) {
+    if (isCommandExecutionLocked()) {
+      // [LOG: 20260617_1035] Keep submitted command immutable while the PC-style wait cursor is active.
+      const pendingValue = getPendingCommandValue();
+      if (cmdInput.value !== pendingValue) {
+        cmdInput.value = pendingValue;
+        moveCaretToEnd();
+      }
+      event.preventDefault?.();
+      return;
+    }
+
     if (interruptRendering) interruptRendering();
 
     const rawVal = cmdInput.value;
@@ -182,6 +205,19 @@ export function bindCommandInputEvents(deps) {
   }
 
   function handleKeyDown(event) {
+    if (isCommandExecutionLocked()) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        cancelCommandExecution(state, { cmdInput, interruptRendering, setGhostText, setPrompt, setReady, setSuggestions });
+        cancelCommandPending();
+      } else {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      return;
+    }
+
     if (interruptRendering) interruptRendering();
 
     const val = cmdInput.value.trim();
@@ -291,7 +327,18 @@ export function bindCommandInputEvents(deps) {
 
     if (cmdInput.type !== 'text') cmdInput.type = 'text';
 
-    const result = handleCmd(cmd);
+    const token = beginCommandExecution(state);
+    let result;
+    try {
+      result = handleCmd(cmd);
+    } catch (error) {
+      state._commandInFlight = false;
+      delete state._commandInFlightToken;
+      delete state._commandAbortController;
+      delete state._commandScreenBeforeInFlight;
+      throw error;
+    }
+    trackCommandExecution(state, result, token);
     trackCommandPending(result, { value: cmd, clearOnSettled: true });
     void result;
   }

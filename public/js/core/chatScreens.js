@@ -1,4 +1,5 @@
 import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createChatScreens(deps) {
   const {
@@ -15,11 +16,6 @@ export function createChatScreens(deps) {
     state,
     updateURL
   } = deps;
-
-  // [LOG: 20260425_2022] 디자인 통일성을 위한 히스토리 및 자동포커스 유틸리티
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
 
   // [LOG: 20260429_0531] Fail closed when stale serviceData cannot be serialized,
   // so chat entry does not crash on leftover circular restore state.

@@ -1,3 +1,5 @@
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
+
 export function createChatCommandHandler(deps) {
   const {
     ansiToHTML,
@@ -167,7 +169,9 @@ export function createChatCommandHandler(deps) {
         const ansiResult = buildChatRoomAnsi(state._chatRoom, state._chatMessages || [], nick);
         const rendered = ansiToHTML(ansiResult?.text || ansiResult);
         screenEl.innerHTML = `<div class="ansi-screen">${rendered.html}</div>`;
-        cmdInput.focus();
+        if (shouldAutoFocusCommandInput()) {
+          cmdInput.focus();
+        }
         return true;
       }
     }

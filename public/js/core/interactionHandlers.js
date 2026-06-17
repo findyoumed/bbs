@@ -4,8 +4,13 @@
  * Contains unified interaction handlers for DOM elements.
  */
 
-import { isMobileDevice } from './uiUtils.js';
-import { trackCommandPending } from './commandPendingUi.js';
+import {
+  beginCommandExecution,
+  isCommandExecutionLocked as isExecutionLocked,
+  trackCommandExecution
+} from './commandExecutionState.js';
+import { isMobileDevice, shouldAutoFocusCommandInput } from './uiUtils.js';
+import { isCommandPending, trackCommandPending } from './commandPendingUi.js';
 
 export function createInteractionHandlers(deps) {
   const {
@@ -17,15 +22,10 @@ export function createInteractionHandlers(deps) {
     setSuggestions
   } = deps;
 
-  const desktopPointerQuery = '(hover: hover) and (pointer: fine)';
-
   /**
    * Decide whether to autofocus the command input.
+   * [LOG: 20260617_1540] Moved to uiUtils.js.
    */
-  function shouldAutoFocusCommandInput() {
-    if (isMobileDevice()) return false;
-    return window.matchMedia(desktopPointerQuery).matches;
-  }
 
   function showPendingCommandInput(value) {
     const text = String(value || '').trim();
@@ -34,7 +34,11 @@ export function createInteractionHandlers(deps) {
     }
 
     cmdInput.value = text;
-    cmdInput.focus();
+    // [LOG: 20260617_1545] Only focus the input if we should auto-focus (e.g. on desktop).
+    // Forcing focus on mobile causes the virtual keyboard to pop up and cover the screen when tapping buttons.
+    if (shouldAutoFocusCommandInput()) {
+      cmdInput.focus();
+    }
     if (typeof moveCaretToEnd === 'function') {
       moveCaretToEnd();
     }
@@ -67,7 +71,16 @@ export function createInteractionHandlers(deps) {
     Promise.resolve(result).finally(() => clearPendingCommandInput(value));
   }
 
+  function isCommandExecutionLocked() {
+    return isCommandPending() || isExecutionLocked(state);
+  }
+
   function executeCommand(value, options = {}) {
+    if (isCommandExecutionLocked()) {
+      // [LOG: 20260617_1035] Do not let another clickable command replace a pending submitted line.
+      return true;
+    }
+
     const text = String(value || '').trim();
     if (!text || typeof handleCmd !== 'function') {
       return false;
@@ -78,11 +91,19 @@ export function createInteractionHandlers(deps) {
     if (options.showPending !== false) {
       showPendingCommandInput(text);
     }
-    clearPendingWhenSettled(handleCmd(text), text);
+    const token = beginCommandExecution(state);
+    const result = handleCmd(text);
+    trackCommandExecution(state, result, token);
+    clearPendingWhenSettled(result, text);
     return true;
   }
 
   function executeSignupChoice(value) {
+    if (isCommandExecutionLocked()) {
+      // [LOG: 20260617_1035] Signup choices share the same immutable pending command rule.
+      return true;
+    }
+
     const text = String(value || '').trim().toLowerCase();
     if (!text) {
       return false;
@@ -90,11 +111,17 @@ export function createInteractionHandlers(deps) {
 
     showPendingCommandInput(text);
     if (typeof state._signupEnterHandler === 'function') {
+      const token = beginCommandExecution(state);
       const result = state._signupEnterHandler(text);
       if (result) {
+        trackCommandExecution(state, result, token);
         clearPendingWhenSettled(result, text);
         return true;
       }
+      state._commandInFlight = false;
+      delete state._commandInFlightToken;
+      delete state._commandAbortController;
+      delete state._commandScreenBeforeInFlight;
     }
 
     return executeCommand(text);

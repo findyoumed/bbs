@@ -1,4 +1,5 @@
 import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createWeatherScreens(deps) {
   const {
@@ -20,10 +21,6 @@ export function createWeatherScreens(deps) {
     createHotspotButton,
     renderScreenSequential
   } = deps;
-
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
 
   function pushHistory() {
     state.history.push({

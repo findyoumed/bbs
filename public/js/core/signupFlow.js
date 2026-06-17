@@ -3,6 +3,7 @@ import { createSignupFlowConfig } from './signupFlowConfig.js';
 import { createSignupFlowEmailHandler } from './signupFlowEmail.js';
 import { createSignupFlowState } from './signupFlowState.js';
 import { createSignupFlowUi } from './signupFlowUi.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createSignupFlow(deps) {
   const {
@@ -222,7 +223,7 @@ export function createSignupFlow(deps) {
         void handleSignupMethodChoice(choice);
         return true;
       };
-      cmdInput.focus();
+      if (shouldAutoFocusCommandInput()) cmdInput.focus();
     };
 
     if (state._signupFlow === 'email') {

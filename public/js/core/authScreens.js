@@ -17,6 +17,7 @@ export function createAuthScreens(deps) {
     setFooterVisibility,
     setHint,
     setPrompt,
+    setReady,
     showBoardSelect,
     state,
     updateURL
@@ -59,6 +60,8 @@ export function createAuthScreens(deps) {
       `</div>` +
       `</div>`
     );
+    // [LOG: 20260617_1005] Auth entry screens render directly and must clear loading state.
+    setReady?.(true);
   }
 
   function renderAuthField() {

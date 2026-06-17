@@ -1,3 +1,5 @@
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
+
 const STEP_CONFIG = [
   {
     fieldId: 'signup-userid',
@@ -302,7 +304,7 @@ export function createSignupEmailHandler(deps) {
       return;
     }
 
-    cmdInput.focus();
+    if (shouldAutoFocusCommandInput()) cmdInput.focus();
     if (typeof cmdInput.setSelectionRange !== 'function') {
       return;
     }

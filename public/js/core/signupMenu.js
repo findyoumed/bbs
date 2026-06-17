@@ -1,3 +1,5 @@
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
+
 export function createSignupMenuHandler(deps) {
   // [LOG: 20260610_1548] 중복 선언 방지를 위해 setHint, setPrompt 구조 분해 할당 제거
   const {
@@ -16,10 +18,6 @@ export function createSignupMenuHandler(deps) {
     state,
     updateURL
   } = deps;
-
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
 
   function attachSignupMenuEvents(handlers) {
     const { attachAgreementEvents, attachEmailEvents } = handlers;

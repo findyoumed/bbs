@@ -4,7 +4,13 @@
  * [LOG: 20260428_1635] Evolution Mode 16/500: Extracted InteractionHandlers to separate module.
  */
 import { bindCommandInputEvents } from './appEventsCommandInput.js';
-import { trackCommandPending } from './commandPendingUi.js';
+import {
+  beginCommandExecution,
+  cancelCommandExecution,
+  isCommandExecutionLocked as isExecutionLocked,
+  trackCommandExecution
+} from './commandExecutionState.js';
+import { cancelCommandPending, isCommandPending, trackCommandPending } from './commandPendingUi.js';
 
 export function bindAppEvents(deps) {
   const {
@@ -12,6 +18,8 @@ export function bindAppEvents(deps) {
     handleCmd,
     state,
     interruptRendering,
+    setPrompt,
+    setReady,
     setGhostText,
     setSuggestions,
     interactionHandlers // New dependency
@@ -59,7 +67,16 @@ export function bindAppEvents(deps) {
     Promise.resolve(result).finally(() => clearPendingCommandInput(value));
   }
 
+  function isCommandExecutionLocked() {
+    return isCommandPending() || isExecutionLocked(state);
+  }
+
   function executeCommandFromClick(action) {
+    if (isCommandExecutionLocked()) {
+      // [LOG: 20260617_1035] Swallow command clicks while a submitted line is waiting.
+      return true;
+    }
+
     const text = String(action?.value || '').trim();
     if (!text) {
       return false;
@@ -73,7 +90,11 @@ export function bindAppEvents(deps) {
     }
     if (cmdInput) {
       cmdInput.value = text;
-      cmdInput.focus();
+      // [LOG: 20260617_1550] Only focus if auto-focus is enabled (e.g. desktop).
+      // On mobile, this prevents the keyboard from popping up and covering the UI when clicking buttons.
+      if (shouldAutoFocusCommandInput()) {
+        cmdInput.focus();
+      }
       moveCaretToEnd();
     }
     if (typeof setGhostText === 'function') {
@@ -84,18 +105,27 @@ export function bindAppEvents(deps) {
     }
 
     if (action.kind === 'signup-choice' && typeof state?._signupEnterHandler === 'function') {
+      const token = beginCommandExecution(state);
       const result = state._signupEnterHandler(text);
       if (result) {
+        trackCommandExecution(state, result, token);
         clearPendingWhenSettled(result, text);
         return true;
       }
+      state._commandInFlight = false;
+      delete state._commandInFlightToken;
+      delete state._commandAbortController;
+      delete state._commandScreenBeforeInFlight;
     }
 
     if (typeof handleCmd !== 'function') {
       return false;
     }
 
-    clearPendingWhenSettled(handleCmd(text), text);
+    const token = beginCommandExecution(state);
+    const result = handleCmd(text);
+    trackCommandExecution(state, result, token);
+    clearPendingWhenSettled(result, text);
     return true;
   }
 
@@ -114,7 +144,16 @@ export function bindAppEvents(deps) {
         helper.classList.remove('is-visible');
         e.preventDefault();
         e.stopPropagation(); // Prevent ESC from triggering other actions when helper is open
+        return;
       }
+    }
+
+    if (e.key === 'Escape' && isCommandExecutionLocked()) {
+      // [LOG: 20260617_1035] Let ESC cancel the PC-style wait cursor even when the prompt lost focus.
+      cancelCommandExecution(state, { cmdInput, interruptRendering, setGhostText, setPrompt, setReady, setSuggestions });
+      cancelCommandPending();
+      e.preventDefault();
+      e.stopPropagation();
     }
   }, { capture: true });
 
@@ -149,8 +188,10 @@ export function bindAppEvents(deps) {
 
     // Redirect printable characters and backspace
     if (e.key.length === 1 || e.key === 'Backspace') {
-      cmdInput.focus();
-      moveCaretToEnd();
+      if (shouldAutoFocusCommandInput()) {
+        cmdInput.focus();
+        moveCaretToEnd();
+      }
     }
   });
 
@@ -188,7 +229,8 @@ export function bindAppEvents(deps) {
   const terminalFooter = document.getElementById('terminal-footer');
   if (terminalFooter) {
     terminalFooter.addEventListener('click', (event) => {
-      if (shouldAutoFocusCommandInput()) return;
+      // [LOG: 20260617_1605] Only auto-focus on desktop. On mobile, this prevents accidental keyboard popups.
+      if (!shouldAutoFocusCommandInput()) return;
       if (event.target.closest('input, textarea, select, button, a, [data-cmd], [data-cmd-fill], [data-cmd-execute], [data-external-url], [data-signup-choice]')) return;
       if (document.querySelector('#terminal-screen input, #terminal-screen textarea, #terminal-screen select')) return;
 

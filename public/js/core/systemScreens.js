@@ -1,6 +1,8 @@
 /**
  * [LOG: 20260426_0210] 시스템 관련 화면 처리 (Who is online 등)
  */
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
+
 export function createSystemScreens(deps) {
   const {
     apiFetch,
@@ -17,10 +19,6 @@ export function createSystemScreens(deps) {
     cmdInput,
     state
   } = deps;
-
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
 
   async function showActiveUsers(fromHistory = false) {
     state.screen = 'active-users';

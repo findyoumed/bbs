@@ -2,6 +2,7 @@ import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
 import { CMD_META } from './commandService.js';
 import { UI_TEXT } from './i18n.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 /**
  * helpScreens.js
@@ -28,10 +29,6 @@ export function createHelpScreens(deps) {
     fitCell,
     truncateDisplayText
   } = createAnsiBuilderUtils({ displayWidth, isWideChar });
-
-  function shouldAutoFocusCommandInput() {
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  }
 
   const CAT_LABELS = {
     NAV: UI_TEXT.CAT_NAV,

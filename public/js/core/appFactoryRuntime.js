@@ -223,6 +223,8 @@ export function initializeAppFactoryRuntime(deps) {
     state,
     setSuggestions: services.terminalUiCore.setSuggestions,
     setGhostText: services.terminalUiCore.setGhostText,
+    setPrompt: services.terminalUiCore.setPrompt,
+    setReady: services.terminalUiCore.setReady,
     interruptRendering: services.terminalUiCore.interruptRendering,
     saveHistory: services.settingsService.saveHistory,
     jumpToContent: screens.jumpToContent,

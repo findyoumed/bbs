@@ -2,23 +2,65 @@ import { displayWidth } from './ansiRenderUtils.js';
 
 let commandPendingTimer = 0;
 let commandPendingToken = 0;
+let commandPendingActive = false;
+let commandPendingValue = '';
 
 function setCommandPending(active) {
   const container = document.getElementById('terminal-container');
+  const cmdInput = document.getElementById('cmd-input');
   if (!container) {
     return;
   }
 
-  container.classList.toggle('is-command-pending', Boolean(active));
+  commandPendingActive = Boolean(active);
+  container.classList.toggle('is-command-pending', commandPendingActive);
 
-  if (active) {
-    const cmdInput = document.getElementById('cmd-input');
+  if (commandPendingActive) {
     const commandLength = Math.max(1, displayWidth(cmdInput?.value));
     // [LOG: 20260613_1248] Size the pending input so the underscore sits immediately after the submitted text.
     container.style.setProperty('--pending-command-length', String(commandLength));
+    if (cmdInput) {
+      // [LOG: 20260617_1035] Lock submitted command text during pending so number commands cannot morph mid-load.
+      cmdInput.readOnly = true;
+      cmdInput.dataset.commandPending = '1';
+    }
   } else {
     container.style.removeProperty('--pending-command-length');
+    if (cmdInput?.dataset.commandPending === '1') {
+      cmdInput.readOnly = false;
+      delete cmdInput.dataset.commandPending;
+    }
   }
+}
+
+export function isCommandPending() {
+  return commandPendingActive || commandPendingTimer !== 0;
+}
+
+export function getPendingCommandValue() {
+  return commandPendingValue;
+}
+
+export function cancelCommandPending(options = {}) {
+  if (commandPendingTimer) {
+    window.clearTimeout(commandPendingTimer);
+    commandPendingTimer = 0;
+  }
+
+  commandPendingToken += 1;
+  const canceledValue = commandPendingValue;
+  commandPendingValue = '';
+  setCommandPending(false);
+
+  const cmdInput = document.getElementById('cmd-input');
+  if (cmdInput && (options.clearInput !== false || cmdInput.value === canceledValue)) {
+    cmdInput.value = '';
+    if (typeof CustomEvent === 'function') {
+      cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
+    }
+  }
+
+  return canceledValue;
 }
 
 export function trackCommandPending(result, options = {}) {
@@ -31,6 +73,7 @@ export function trackCommandPending(result, options = {}) {
   const clearOnSettled = options.clearOnSettled === true;
   const token = commandPendingToken + 1;
   commandPendingToken = token;
+  commandPendingValue = pendingValue;
 
   if (commandPendingTimer) {
     window.clearTimeout(commandPendingTimer);
@@ -65,16 +108,17 @@ export function trackCommandPending(result, options = {}) {
         commandPendingTimer = 0;
       }
 
-        setCommandPending(false);
-        if (clearOnSettled && pendingValue) {
-          const cmdInput = document.getElementById('cmd-input');
-          if (cmdInput?.value === pendingValue) {
-            cmdInput.value = '';
-            if (typeof CustomEvent === 'function') {
-              cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
-            }
+      commandPendingValue = '';
+      setCommandPending(false);
+      if (clearOnSettled && pendingValue) {
+        const cmdInput = document.getElementById('cmd-input');
+        if (cmdInput?.value === pendingValue) {
+          cmdInput.value = '';
+          if (typeof CustomEvent === 'function') {
+            cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
           }
         }
-      })
-      .catch(() => {});
+      }
+    })
+    .catch(() => {});
 }
