@@ -1,3 +1,15 @@
+## [2026-06-17 09:50] 뉴스 기사 페이지 이동 시 캐시 오염에 따른 다른 기사 매칭 버그 수정
+
+**LOG_ID: 20260617_0950**
+목표: 9페이지 등의 후행 페이지에 위치한 기사(예: 125번 기사)를 선택했을 때 엉뚱하게 1페이지의 기사가 로드되거나 fabricated 기사(껍데기 기사)가 되어 엉뚱한 정보가 상세 페이지에 표시되는 매칭 오류를 수정한다.
+변경 파일: public/js/core/newsScreens.js, scratch/test_diagnose_125.js
+수행 작업: 1) `newsScreens.js` 내의 `topicCache` 인메모리 캐시 관리 시, 페이지 번호(`pageNo`) 정보가 배제되어 임의의 페이지 목록을 조회하더라도 기존 1페이지 목록 캐시를 무조건 돌려주던 문제를 해결하기 위해 캐시 키를 `${topicDoor}:${pageNo}`로 구분하여 격리 캐싱하도록 개선. 2) `showNewsArticle` 내에서 `loadNewsTopicState(topicDoor)`를 인자 없이 호출하여 항상 1페이지 기준으로 대조하던 부분을 `loadNewsTopicState(topicDoor, requestedPageNo)`로 수정해 올바른 페이지 데이터셋을 기반으로 `findNewsArticle`이 수행되도록 변경. 3) `hover pre-fetching` 로직에 대응하여 `board.door:1`로 첫 페이지 프리패치 판단 키를 보정.
+실행: `npm run smoke:vercel-ready` 및 `node scratch/test_diagnose_125.js`
+기대: 9페이지의 125번 기사를 클릭했을 때 1페이지나 엉뚱한 기사가 로드되지 않고 본래의 125번 기사 내용이 화면에 완벽하게 렌더링된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-17 09:40] 속보 및 단신 기사 수용을 위한 본문 길이 최소 임계값 완화 (80자 -> 30자)
 
 **LOG_ID: 20260617_0940**

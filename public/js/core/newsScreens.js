@@ -45,9 +45,11 @@ export function createNewsScreens(deps) {
       const btn = createHotspotButton(board?.door || '', board.name || '', bounds);
 
       // [LOG: 20260610_2005] Hover pre-fetching for snappy terminal feel
+      // [LOG: 20260617_0945] Pre-fetch hover checks key with page 1 index
       btn.addEventListener('mouseover', () => {
-        if (!topicCache.has(String(board.door))) {
-          void loadNewsTopicState(board.door);
+        const prefetchKey = `${board.door}:1`;
+        if (!topicCache.has(prefetchKey)) {
+          void loadNewsTopicState(board.door, 1);
         }
       });
 
@@ -384,9 +386,11 @@ export function createNewsScreens(deps) {
   // [LOG: 20260610_1935] Module-level cache for instant news topic switching
   const topicCache = new Map();
 
+  // [LOG: 20260617_0945] Support pageNo in topicCache to isolate page datasets
   async function loadNewsTopicState(topicDoor, pageNo = 1) {
     const topics = getNewsTopics(state.serviceData);
-    const cached = topicCache.get(String(topicDoor));
+    const cacheKey = `${topicDoor}:${pageNo}`;
+    const cached = topicCache.get(cacheKey);
 
     if (cached && cached.items.length > 0) {
       return cached;
@@ -394,10 +398,11 @@ export function createNewsScreens(deps) {
 
     const currentTopicDoor = String(state.serviceData?.topicDoor || '').trim();
     const currentItems = Array.isArray(state.serviceData?.items) ? state.serviceData.items : [];
+    const currentPageNo = Number(state.serviceData?.pageNo || 1);
 
-    if (currentTopicDoor === String(topicDoor) && currentItems.length > 0) {
+    if (currentTopicDoor === String(topicDoor) && currentItems.length > 0 && currentPageNo === Number(pageNo)) {
       const result = { topics, topicTitle: String(state.serviceData?.topicTitle || '').trim(), items: currentItems };
-      topicCache.set(String(topicDoor), result);
+      topicCache.set(cacheKey, result);
       return result;
     }
 
@@ -407,7 +412,7 @@ export function createNewsScreens(deps) {
     const topicTitle = String(articles?.topic?.title || articles?.category?.title || topic?.title || topic?.name || '').trim();
     const result = { topics, topicTitle, items: articles?.items || [] };
     
-    topicCache.set(String(topicDoor), result);
+    topicCache.set(cacheKey, result);
     return result;
   }
 
@@ -486,7 +491,8 @@ export function createNewsScreens(deps) {
       && (!requestedArticleKey || String(state.serviceData?.articleKey || '').trim() === requestedArticleKey);
     state.screen = 'news-view';
     // [LOG: 20260610_1453] Skip loading overlay when navigating to article view since it is fast and waitable.
-    const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor);
+    // [LOG: 20260617_0945] Pass requestedPageNo to loadNewsTopicState to load the correct page article metadata
+    const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor, requestedPageNo);
     const article = findNewsArticle(items, articleNo, options);
     const articleIndex = items.findIndex((item) => item === article);
 
