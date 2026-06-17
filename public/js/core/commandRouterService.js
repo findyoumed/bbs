@@ -182,14 +182,20 @@ export function createServiceCommandHandler(deps) {
       if (cmd === 'A') {
         const prevArticle = currentIndex > 0 ? articles[currentIndex - 1] : null;
         if (prevArticle && state.serviceData?.topicDoor) {
-          await showNewsArticle(state.serviceData.topicDoor, prevArticle.no || String(currentIndex), getNewsArticleOptions(prevArticle));
+          // [LOG: 20260617_0946] Pass pageNo in showNewsArticle options to prevent redirection to page 1
+          await showNewsArticle(state.serviceData.topicDoor, prevArticle.no || String(currentIndex), getNewsArticleOptions(prevArticle, {
+            pageNo: state.serviceData?.listPageNo || pageNo
+          }));
         }
         return true;
       }
       if (cmd === 'N') {
         const nextArticle = currentIndex >= 0 ? articles[currentIndex + 1] : null;
         if (nextArticle && state.serviceData?.topicDoor) {
-          await showNewsArticle(state.serviceData.topicDoor, nextArticle.no || String(currentIndex + 2), getNewsArticleOptions(nextArticle));
+          // [LOG: 20260617_0946] Pass pageNo in showNewsArticle options to prevent redirection to page 1
+          await showNewsArticle(state.serviceData.topicDoor, nextArticle.no || String(currentIndex + 2), getNewsArticleOptions(nextArticle, {
+            pageNo: state.serviceData?.listPageNo || pageNo
+          }));
         }
         return true;
       }
