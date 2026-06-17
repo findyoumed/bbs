@@ -106,8 +106,9 @@ async function resolveTopic(service, parseNewsMenuXml, topicDoor) {
 }
 
 function getTopicFeedCacheKey(topicDoor) {
-  return `news:topicfeed:v13:${String(topicDoor || '').trim()}`;
+  return `news:topicfeed:v15:${String(topicDoor || '').trim()}`;
 }
+
 
 function getFreshNewsCutoffTime(days = 90) {
   const cutoff = new Date();
@@ -276,7 +277,6 @@ function mergeDuplicateNewsItem(existing, incoming) {
 
 function dedupeNewsItems(service, items) {
   const cleanItems = (items || []).filter((item) => item !== null && item !== undefined);
-  console.log("[DEBUG_DEDUPE] Input items count:", items ? items.length : 0, "cleanItems count:", cleanItems.length);
   const uniqueItems = [];
   const keyToIndex = new Map();
 
@@ -285,8 +285,6 @@ function dedupeNewsItems(service, items) {
     const existingIndex = keys
       .map((key) => keyToIndex.get(key))
       .find((index) => Number.isInteger(index));
-
-    console.log("[DEBUG_DEDUPE] Item title:", item.title, "keys:", keys, "existingIndex:", existingIndex);
 
     if (!Number.isInteger(existingIndex)) {
       const nextIndex = uniqueItems.length;
@@ -302,7 +300,6 @@ function dedupeNewsItems(service, items) {
     }
   }
 
-  console.log("[DEBUG_DEDUPE] Unique items count:", uniqueItems.length);
   return uniqueItems.filter(Boolean);
 }
 
@@ -393,11 +390,13 @@ async function setCachedTopicFeed(service, cacheKey, value) {
   await service._setPersistentCacheEntry(`rss:feed:${cacheKey}`, entryWithValue, extendedTtl);
 }
 
+// [LOG: 20260617_1643] Fix typo parseFeedXml -> parseNewsFeedXml
 async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
   const results = await Promise.all(topic.sources.map(async (source) => ({
     source,
-    feed: await service._fetchCached(`newsfeed:v5:${source.newspaperDoor}:${source.categoryDoor}`, source.rss, parseNewsFeedXml)
+    feed: await service._fetchCached(`newsfeed:v6:${source.newspaperDoor}:${source.categoryDoor}`, source.rss, parseNewsFeedXml)
   })));
+
   const unavailable = results.filter((result) => result.feed.unavailable);
   const cutoffTime = getFreshNewsCutoffTime();
   const nowStr = new Date().toISOString();
@@ -429,8 +428,13 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
     enrichTargets = tempItems.filter(item => !String(item.date || '').trim()).slice(0, 100);
   }
 
+  // [LOG: 20260617_1220] Perform date enrichment in background to prevent blocking client requests on slow network fetches
   if (enrichTargets.length > 0) {
-    await enrichMissingNewsDates(service, enrichTargets, enrichTargets.length);
+    if (page === 0) {
+      await enrichMissingNewsDates(service, enrichTargets, enrichTargets.length);
+    } else {
+      enrichMissingNewsDates(service, enrichTargets, enrichTargets.length).catch(() => {});
+    }
   }
 
   // [LOG: 20260610_1800] Optimization: Fallback to current time if date is still missing
@@ -453,7 +457,6 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
 
   // [LOG: 20260613_1153] 뉴스 수집 한도를 300개에서 1000개로 대폭 확장하여 오늘 뉴스 전부가 누락 없이 노출되도록 개선
   const finalItems = applyThreeDayFilter(service, datedItems).slice(0, 1000);
-  console.log("[LOG_DEBUG] finalItems length in helper:", finalItems.length);
 
   const allFail = unavailable.length === results.length;
   const message = unavailable.length > 0 ? `실패: ${unavailable.map((result) => result.source.newspaperTitle).join(', ')}` : '';
@@ -477,7 +480,7 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
     items: finalItems.map((item, index) => ({
       ...item,
       no: index + 1,
-      articleKey: item.articleKey || buildNewsArticleKey(service, item)
+      articleKey: buildNewsArticleKey(service, item)
     }))
   };
 }
@@ -628,3 +631,4 @@ module.exports = {
   setCachedTopicFeed,
   warmTopicFeeds
 };
+

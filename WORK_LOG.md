@@ -1,3 +1,87 @@
+## [2026-06-17 16:50] 뉴스 기사 크롤링 실패 시 짤린 요약본 노출 차단 및 404 강제 리다이렉트
+
+**LOG_ID: 20260617_1650**
+목표: 상세 기사 본문을 긁어오지 못해 피드 요약본(description)으로 대체될 때, 말줄임표(...) 등으로 끝나는 불완전한 기사를 정상 기사인 것처럼 보여주지 않고 에러(404 Not Found)를 던져 뉴스 목록으로 즉시 튕겨나가도록 조치한다.
+변경 파일: src/server/RssNewsService.js
+수행 작업: 1) `RssNewsService.js` 내에서 피드 요약본을 본문으로 채택할 때, 텍스트 끝에 말줄임표(`...` 또는 `…`)가 존재하면 `detailFetched = false`로 판정하도록 수정. 2) 최종적으로 `detailFetched`가 `false` 인 기사의 상세 조회 요청 시 `throw this._notFoundError`를 발생시켜 기사 조회를 차단하고 클라이언트로 하여금 뉴스 목록으로 복구하도록 유도.
+실행: `node scratch/test_diagnose_yna_mismatch.js` 실행 시 크롤링 실패 상황에서 404 Not Found 에러가 정상 검출됨을 확인.
+기대: 사용자가 크롤링에 실패하여 중간에 짤린 불완전한 기사를 보지 않게 되며, 완벽하게 기사를 불러오거나 혹은 불러오지 못했을 경우에는 즉시 목록 화면으로 돌아가는 일관적인 UX를 제공한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-17 20:10] 뉴스 기사 키 불일치(Key Mismatch) 강제 허용 및 진입 보장
+
+**LOG_ID: 20260617_2010**
+목표: URL 정규화 로직의 과도기적 차이로 인해 발생하는 "뉴스 기사 키 불일치" 404 에러를 완전히 제거하여 사용자의 뉴스 열람권을 최우선으로 보장한다.
+변경 파일: src/server/RssNewsService.js
+수행 작업: 1) `RssNewsService.js`에서 키 불일치 시 에러를 던지던(`throw 404`) 로직을 제거하고, 경고 로그만 남긴 채 본문 진입을 허용하도록 수정. 2) 실시간 피드 갱신으로 인해 클라이언트의 키와 서버의 키가 일시적으로 다르더라도, 링크(`Link`)나 번호(`No`)로 기사가 특정되면 무조건 로드함.
+실행: `node --check`, 브라우저에서 기존에 실패하던 기사 재접속 테스트
+기대: 사용자가 어떠한 상황(새로고침 전 구형 키 보유, 피드 급변 등)에서도 404 에러 없이 뉴스 본문을 안정적으로 읽을 수 있는 "Fail-safe" 환경이 구축됨.
+결과: ✅ 완료
+
+---
+
+## [2026-06-17 19:59] 뉴스 기사 키 불일치(Key Mismatch) 근본 해결 및 캐시 v15 상향
+
+**LOG_ID: 20260617_1959**
+목표: URL 정규화 규칙 변경 시 기존 캐시에 저장된 `articleKey`가 갱신되지 않아 발생하던 404 에러를 근본적으로 해결한다.
+변경 파일: src/server/RssNewsTopicFeedHelpers.js, src/server/RssNewsService.js
+수행 작업: 1) `RssNewsTopicFeedHelpers.js` 내의 `normalizeTopicFeedItems` 및 `buildTopicFeed` 함수에서 `articleKey`를 기존 값을 재사용하지 않고 항상 `buildNewsArticleKey`를 통해 강제 재계산하도록 수정. 이를 통해 정규화 로직 변경 시 모든 키가 즉시 동기화됨. 2) 토픽 피드 캐시 버전을 `v15`로 상향하여 전체 데이터 강제 갱신. 3) `RssNewsService.js`에서 링크가 일치할 경우 키 불일치를 허용하는 방어 로직 유지.
+실행: `node --check`, 라이브 API 호출 검증 (성공 확인)
+기대: 뉴스 리스트와 상세 페이지 간의 키 불일치 문제가 완전히 사라지며, 실시간 피드 갱신 상황에서도 끊김 없는 뉴스 읽기 경험을 제공한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-17 19:55] 뉴스 기사 키 불일치(Key Mismatch) 에러 해결 및 캐시 전체 동기화
+
+**LOG_ID: 20260617_1955**
+목표: URL 정규화 로직 변경으로 인해 발생한 "뉴스 기사 키 불일치" 404 에러를 해결하고, 서버와 클라이언트 간의 데이터 정합성을 확보한다.
+변경 파일: src/server/RssNewsTopicFeedHelpers.js, src/server/RssNewsService.js
+수행 작업: 1) `RssNewsTopicFeedHelpers.js`의 토픽 피드 캐시 버전을 `v13`에서 `v14`로 상향하여, 모든 뉴스 리스트의 `articleKey`가 새로운 정규화 규칙으로 즉시 재계산되도록 강제함. 2) `RssNewsService.js`에서 키 불일치 검사 시, 링크(`Link`)가 정확히 일치할 경우 키(`Key`)가 다르더라도 허용하도록 예외 로직 추가. 이는 캐시 갱신 주기 동안 발생할 수 있는 과도기적 에러를 방지함.
+실행: `node --check`, 브라우저 새로고침 후 뉴스 기사 진입 테스트
+기대: 사용자가 뉴스 리스트에서 기사를 클릭하거나 `n`(다음) 명령으로 이동할 때, 더 이상 "뉴스 기사 키 불일치" 404 에러가 발생하지 않으며 모든 기사가 안정적으로 로드된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-17 19:45] 뉴스 본문 진입 차단 결함 수정 (UX 유연성 강화)
+
+**LOG_ID: 20260617_1945**
+목표: "Failed web crawl" 메시지와 함께 특정 기사 진입이 강제로 차단되어 리스트로 튕기는 UX 불편 사항을 해결한다. 크롤링 결과가 빈약하더라도 사용자가 기사를 확인할 수 있도록 허용한다.
+변경 파일: public/js/core/newsScreens.js, src/server/RssNewsService.js
+수행 작업: 1) `newsScreens.js`에서 `detailFetched === false`일 때 리스트로 강제 이동시키던 차단 로직 제거. 이제 크롤링이 완벽하지 않아도 경고만 남기고 본문 화면 진입을 허용함. 2) `RssNewsService.js`에서 `detailFetched` 판정 기준 완화. 제목이 존재하고 본문이 1자라도 있으면 일단 "fetched"로 간주하여 프론트엔드 차단을 방지함. 3) 매일경제(MK) 등 속보성 기사(본문 없이 사진만 있는 경우)에 대한 대응력 강화.
+실행: `node --check`, 브라우저 콘솔 로그 확인 (기존 Blocked 워닝이 경고로 변경됨 확인)
+기대: 본문이 짧거나 크롤링이 어려운 기사라도 리스트로 튕기지 않고 본문 화면에 진입할 수 있으며, 사용자는 최소한 제목과 출처 링크를 확인할 수 있는 유연한 환경을 제공함.
+결과: ✅ 완료
+
+---
+
+## [2026-06-17 19:15] 뉴스 기사 내용 뒤바뀜(Mismatched Content) 및 캐시 오염 해결
+
+**LOG_ID: 20260617_1915**
+목표: 특정 뉴스 기사 선택 시 엉뚱한 기사 내용이 나오거나(예: '올다르크' 선택 시 '허영만' 출력), 리스트 번호가 밀리면서 엉뚱한 기사가 로드되는 심각한 UX 결함을 해결한다.
+변경 파일: src/server/RssNewsArticleSanitizer.js, src/server/RssNewsService.js
+수행 작업: 1) `normalizeUrl` 함수가 URL의 쿼리 스트링(`?` 이후)을 무조건 제거하던 버그 수정. SBS 등 일부 언론사는 `news_id`를 쿼리 스트링으로 식별하므로, 이를 제거할 경우 모든 기사가 동일한 해시(캐시 키)를 공유하게 되어 캐시가 오염되는 현상을 차단함. 이제 `news_id` 등 식별자는 보존하고 `utm_` 등 추적 파라미터만 선별적으로 제거함. 2) `_resolveNewsArticle` 로직 개선. 실시간으로 밀리는 리스트 번호(`no`)보다 변하지 않는 고유 식별자(`link`, `articleKey`)를 최우선으로 하여 기사를 찾도록 우선순위 조정. 3) 이미 오염된 캐시 데이터를 무효화하기 위해 기사 상세 캐시 버전을 `v27`에서 `v28`로 일괄 상향.
+실행: `node --check`, `node -e "verification script"` (SBS 기사 2종 교차 검증)
+기대: 뉴스 리스트가 갱신되어 번호가 바뀌더라도 클릭한 기사의 고유 링크를 통해 정확한 본문을 찾아내며, 캐시 충돌 없이 기사별로 정확한 제목과 본문이 출력된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-17 18:15] 모바일 가상 키보드 자동 팝업 방지 및 UI 가림 해결 (UX 최적화)
+
+**LOG_ID: 20260617_1815**
+목표: 모바일에서 화면의 클릭 가능한 메뉴나 명령어를 터치했을 때, 의도치 않게 가상 키보드가 팝업되어 화면 절반을 가리는 불편함을 해결한다. 사용자가 명시적으로 입력창을 터치했을 때만 키보드가 나타나도록 포커스 정책을 전면 개선한다.
+변경 파일: public/js/core/uiUtils.js, public/js/core/interactionHandlers.js, public/js/core/appEvents.js, public/js/core/menuNavigation.js, public/js/core/postListView.js, public/js/core/postViewView.js, public/js/core/terminalUiCore.js, public/js/core/terminalHintFooter.js, public/js/core/helpScreens.js, public/js/core/profileScreens.js, public/js/core/systemScreens.js, public/js/core/chatScreens.js, public/js/core/newsScreens.js, public/js/core/weatherScreens.js, public/js/core/memoScreens.js, public/js/core/myInfoRenderer.js, public/js/core/commandPalette.js, public/js/core/commandExecutionState.js, public/js/core/commandRouterChat.js, public/js/core/signupEmailForm.js, public/js/core/signupFlow.js, public/js/core/signupMenu.js, public/js/core/navigationCore.js, public/js/core/menuNavigationActions.js
+수행 작업: 1) `uiUtils.js`에 `shouldAutoFocusCommandInput` 중앙 유틸리티 추가 (터치 디바이스 여부 및 포인터 정밀도 검사). 2) `interactionHandlers.js` 및 `appEvents.js` 등 모든 핵심 인터랙션 지점에서 `cmdInput.focus()` 호출 전 해당 유틸리티로 체크하도록 수정. 3) 20여 개 이상의 모든 화면/렌더러 모듈 내부에 흩어져 있던 무조건적인 `focus()` 호출 및 개별 `matchMedia` 체크 로직을 중앙 유틸리티 사용으로 일원화 및 표준화. 4) 특히 모바일에서 터미널 푸터 클릭 시 발생하던 강제 포커스(Inverted Logic) 결함 수정.
+실행: `node --check [각 수정 파일]`, `npm run smoke:vercel-ready`
+기대: 모바일 기기에서 메뉴 번호나 이동 명령([1], T, P 등)을 터치할 때 가상 키보드가 더 이상 자동으로 올라오지 않아 UI가 가려지지 않는다. 오직 하단 명령어 입력란을 직접 터치했을 때만 키보드가 활성화되어 쾌적한 모바일 사용 환경을 제공한다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-17 11:59] 로딩 상태 시 하단 구분선 및 깜빡이는 점(.) 잔상 제거
 
 **LOG_ID: 20260617_1159**
@@ -18,6 +102,18 @@
 수행 작업: 1) `terminalUiCore.js` 내 `setLoading` 함수에서 로딩 시작 시 하단 힌트바 영역(`hintEl.innerHTML`)에 로딩 메시지를 강제로 대입하던 코드를 삭제하고 빈 값(`''`)으로 청소하도록 개선. 2) 이로써 로딩 구조선과 틀은 유지되지만 하단 문구 중복 노출은 완벽히 제거되어 중앙 메시지에만 포커스가 가도록 함.
 실행: `npm run smoke:vercel-ready`
 기대: 로딩 시 화면 중앙에만 "연결하는 중입니다."가 출력되고, 하단 힌트 영역에는 문구가 중복되지 않고 깔끔한 빈 공백 상태를 유지한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-17 17:50] 뉴스 기사 로딩 속도 개선 및 중복 API 요청 방지 (성능 최적화)
+
+**LOG_ID: 20260617_1750**
+목표: 뉴스 기사 열람 및 네비게이션 시 발생하는 심각한 지연과 타임아웃 현상을 해결하고, 불필요한 서버 부하를 줄여 체감 성능을 향상시킨다.
+변경 파일: public/js/app.js, public/js/core/newsScreens.js
+수행 작업: 1) `app.js`의 `onpopstate` 핸들러에 네비게이션 취소 로직을 통합. 뒤로가기/앞으로가기를 빠르게 연타할 경우 이전의 느린 API 요청(뉴스 크롤링 등)을 `AbortController`로 즉시 중단하고 최신 요청에 집중하도록 개선. 2) `newsScreens.js`에 클라이언트 사이드 기사 상세 캐시(`articleCache`)와 요청 재사용 로직(`articlePendingRequests`)을 도입. 한 번 읽은 기사로 다시 돌아갈 때 서버 요청 없이 즉시 화면을 렌더링하도록 최적화. 3) 여러 네비게이션 요청이 동시에 처리되면서 발생하는 중복 렌더링 및 API 경합 현상 제거.
+실행: `npm run smoke:vercel-ready`, 뉴스 기사 여러 개를 읽은 후 뒤로가기 버튼 연타 테스트
+기대: 뒤로가기/앞으로가기 시 화면 전환이 즉각적으로 이루어지며, 동일한 기사를 다시 볼 때 지연 시간이 0에 가깝게 단축된다. 서버측 크롤링 부하가 줄어들어 전체적인 시스템 응답성이 크게 향상된다.
 결과: ✅ 완료
 
 ---

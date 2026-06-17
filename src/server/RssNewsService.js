@@ -81,7 +81,8 @@ class RssNewsService extends RssServiceBase {
     // [LOG: 20260616_0937] Extend cache TTL to 5 minutes to balance live updates with speed
     this.cacheTtlMs = 5 * 60 * 1000;
     this.newsMenuPath = options.newsMenuPath || '';
-    this.prefetchNewsTopicsOnMenu = options.prefetchNewsTopicsOnMenu !== false;
+    // [LOG: 20260617_1132] Keep /service/news menu entry fast; topic feeds load only after explicit selection.
+    this.prefetchNewsTopicsOnMenu = options.prefetchNewsTopicsOnMenu === true;
     this.topicFeedInflight = new Map();
     this.topicFeedWarmPromise = null;
   }
@@ -100,7 +101,7 @@ class RssNewsService extends RssServiceBase {
     if (!paper) throw this._notFoundError(`신문사 없음: ${newspaperDoor}`);
     const cat = paper.categories.find(c => c.door === String(categoryDoor));
     if (!cat) throw this._notFoundError(`카테고리 없음: ${categoryDoor}`);
-    const feed = await this._fetchCached(`newsfeed:v5:${paper.door}:${cat.door}`, cat.rss, parseNewsFeedXml);
+    const feed = await this._fetchCached(`newsfeed:v6:${paper.door}:${cat.door}`, cat.rss, parseNewsFeedXml);
     return { kind: 'news', title: `뉴스 / ${paper.name} / ${cat.name}`, level: 'articles', newspaper: { door: paper.door, title: paper.name }, category: { door: cat.door, title: cat.name }, sourceUrl: cat.rss, fetchedAt: new Date().toISOString(), unavailable: !!feed.unavailable, message: feed.message || '', items: feed.items };
   }
 
@@ -144,8 +145,8 @@ class RssNewsService extends RssServiceBase {
 
     if (requestedKey || requestedLink) {
       const hash = requestedKey || this._hashUrl(requestedLink);
-      // Scan active versions of detail cache. We support v27 primarily.
-      const cacheKey = `news:article:v27:${hash}`;
+      // Scan active versions of detail cache. We support v28 primarily.
+      const cacheKey = `news:article:v28:${hash}`;
       const storeKey = `rss:feed:${cacheKey}`;
       try {
         cachedDetail = await this._getPersistentCacheEntry(storeKey);
@@ -208,8 +209,12 @@ class RssNewsService extends RssServiceBase {
     }
 
     const actualKey = this._buildNewsArticleKey(article);
+    // [LOG: 20260617_2010] UX Priority: Disable strict key mismatch blocking.
+    // Feed shifting and URL normalization changes often cause keys to mismatch
+    // between the list view and detail view. We now allow entry as long as 
+    // the article exists in the feed (via link or no).
     if (requestedKey && actualKey !== requestedKey && !recoveredFromCache) {
-      throw this._notFoundError(`뉴스 기사 키 불일치: ${articleNo}`);
+      console.warn(`[News] Key mismatch for #${articleNo}: Req=${requestedKey.substring(0,8)}, Actual=${actualKey.substring(0,8)}. Allowing entry.`);
     }
 
     const resolvedArticle = {
@@ -228,17 +233,17 @@ class RssNewsService extends RssServiceBase {
         const detailBody = this._sanitizeArticleText(detail.body, resolvedArticle.title || detail.title);
 
         // [LOG: 20260616_1250] Unify quality rules: treat all domains identically. Only accept body if it has sufficient length, high score, zero penalty keywords, and passes noise check.
-        // [LOG: 20260617_0940] Lower minimum article body length to 30 and score threshold to 300 for short breaking/flash news
+        // [LOG: 20260617_1935] Further lower thresholds to support extremely short breaking news (e.g. MK).
         let acceptDetail = false;
 
-        if (detailBody && detailBody.length >= 30) {
+        if (detailBody && detailBody.length >= 15) {
           const score = scoreArticleText(detailBody, 'body');
           const hasPenaltyWords = /(기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|본문으로\s*바로가기|전체메뉴)/.test(detailBody);
           
           if (!hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
             if (detailBody.length >= 80 && score >= 600) {
               acceptDetail = true;
-            } else if (detailBody.length >= 30 && score >= 300) {
+            } else if (detailBody.length >= 15 && score >= 150) {
               acceptDetail = true;
             }
           }
@@ -265,10 +270,10 @@ class RssNewsService extends RssServiceBase {
           resolvedArticle.imageUrl = this._normalize(detail.imageUrl);
         }
 
-        // [LOG: 20260616_1715] Set detailFetched based on detail crawl success or feed fallback validity
-        // [LOG: 20260617_0940] Lower minimum threshold to 30 for detailFetched check
+        // [LOG: 20260617_1647] Check for truncation indicators (e.g. ..., …) and mark detailFetched=false to reject partial content
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '', resolvedArticle.title);
-        if (acceptDetail || (finalBody && finalBody.length >= 30)) {
+        const isTruncated = /[.]{2,}$|…$/.test(finalBody.trim());
+        if (acceptDetail || (finalBody && finalBody.length >= 30 && !isTruncated)) {
           resolvedArticle.detailFetched = true;
         } else {
           resolvedArticle.detailFetched = false;
@@ -276,8 +281,10 @@ class RssNewsService extends RssServiceBase {
       } else {
         // [LOG: 20260616_1715] Fallback check if the original feed text itself is long enough to show
         // [LOG: 20260617_0940] Lower minimum threshold to 30 for detailFetched fallback check
+        // [LOG: 20260617_1647] Check for truncation indicators (e.g. ..., …) and mark detailFetched=false to reject partial content
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || originalFeedBody || originalFeedDescription || '', resolvedArticle.title);
-        if (finalBody && finalBody.length >= 30) {
+        const isTruncated = /[.]{2,}$|…$/.test(finalBody.trim());
+        if (finalBody && finalBody.length >= 30 && !isTruncated) {
           resolvedArticle.detailFetched = true;
         } else {
           resolvedArticle.detailFetched = false;
@@ -293,6 +300,11 @@ class RssNewsService extends RssServiceBase {
       this._sanitizeArticleText(resolvedArticle.body, resolvedArticle.title),
       resolvedArticle.description
     ]);
+
+    // [LOG: 20260617_1647] UX Rule: Throw 404 for articles that are truncated or failed to fetch fully
+    if (resolvedArticle.detailFetched === false) {
+      throw this._notFoundError(`뉴스 기사 본문 수집 실패: ${articleNo}`);
+    }
 
     return {
       kind: 'news',
@@ -313,7 +325,9 @@ class RssNewsService extends RssServiceBase {
     return buildNewsArticleKey(this, article);
   }
 
-  // [LOG: 20260615_1740] URL key-no mismatch conflict resolution (prefer manual no query)
+  // [LOG: 20260617_1840] Prefer stable identifiers (link, key) over unstable indices (no)
+  // This solves the bug where a shifting feed causes the wrong article to be displayed
+  // if the feed refreshes between the list view and the detail view request.
   _resolveNewsArticle(items, targetNo, options = {}) {
     const list = Array.isArray(items) ? items : [];
     const expectedKey = this._normalize(options.articleKey || options.key || '');
@@ -332,12 +346,12 @@ class RssNewsService extends RssServiceBase {
 
     const byNo = target ? list.find((item, index) => String(item?.no || (index + 1)) === target) : null;
 
-    // Detect user manual URL update conflict (different key vs no)
-    const keyConflict = byKey && byNo && byKey !== byNo;
-    const linkConflict = byLink && byNo && byLink !== byNo;
-
-    if (keyConflict || linkConflict) {
-      return byNo;
+    if (options.articleKey || options.link) {
+      const dbgKey = expectedKey.substring(0, 8);
+      const dbgLink = expectedLink.substring(0, 30);
+      console.log(`[DEBUG: Resolve] Target: ${target}, ReqKey: ${dbgKey}, ReqLink: ${dbgLink}`);
+      console.log(`  Matches: ByLink: ${!!byLink}, ByKey: ${!!byKey}, ByNo: ${!!byNo} (Title: ${byNo?.title?.substring(0, 15)})`);
+      if (byLink && byLink !== byNo) console.log(`  Link Match Shifting detected! Feed No: ${byLink.no} vs Requested: ${target}`);
     }
 
     if (byLink) return byLink;
@@ -419,7 +433,7 @@ class RssNewsService extends RssServiceBase {
       return { unavailable: true, message: '피드 오류: 기사 링크 없음', items: [] };
     }
 
-    const cacheKey = `news:article:v27:${this._hashUrl(normalizedLink)}`;
+    const cacheKey = `news:article:v28:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
     // [LOG: 20260615_1754] Ignore cached error results and retry fetch if body is empty or unavailable
     // [LOG: 20260617_0940] Lower minimum threshold to 30 for memory cache validation
