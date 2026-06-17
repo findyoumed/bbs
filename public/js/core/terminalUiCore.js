@@ -4,12 +4,8 @@ import { createTerminalFeedback } from './terminalFeedback.js';
 import { createTerminalHintFooter } from './terminalHintFooter.js';
 import { createTerminalInputUi } from './terminalInputUi.js';
 import { createTerminalSequentialRenderer } from './terminalSequentialRenderer.js';
-
-/**
- * terminalUiCore.js
- * [LOG: 20260426_0615] Evolve Mode: Integrated scanline/shimmer effects and command echo.
- * [LOG: 20260426_2130] Evolution Mode: Integrated i18n for all UI strings.
- */
+import { createTerminalViewportMetrics } from './terminalViewportMetrics.js';
+import { buildLoadingScreenMarkup, normalizeLoadingMessage } from './terminalLoadingUi.js';
 
 export function createTerminalUiCore(deps) {
   const {
@@ -28,48 +24,8 @@ export function createTerminalUiCore(deps) {
     performanceService
   } = deps;
   let outputListener = null;
-  let mobileKeyboardVisible = false;
   const terminalFooter = document.getElementById('terminal-footer');
-
-  function syncVisualViewportMetrics() {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-
-    const root = document.documentElement;
-    const body = document.body;
-    const vv = window.visualViewport;
-    const fallbackHeight = Math.max(window.innerHeight || 0, document.documentElement?.clientHeight || 0, 0);
-    const viewportHeight = vv ? vv.height : fallbackHeight;
-    const viewportTop = vv ? vv.offsetTop : 0;
-    const viewportWidth = vv ? vv.width : (window.innerWidth || document.documentElement?.clientWidth || 0);
-    const layoutHeight = Math.max(window.innerHeight || 0, document.documentElement?.clientHeight || 0, viewportHeight);
-    const keyboardInset = vv
-      ? Math.max(0, Math.round(layoutHeight - (vv.height + vv.offsetTop)))
-      : 0;
-    const keyboardVisible = keyboardInset >= 96;
-    const keyboardJustClosed = mobileKeyboardVisible && !keyboardVisible;
-
-    root.style.setProperty('--mobile-visual-viewport-height', `${Math.round(viewportHeight)}px`);
-    root.style.setProperty('--mobile-visual-viewport-width', `${Math.round(viewportWidth)}px`);
-    root.style.setProperty('--mobile-visual-viewport-top', `${Math.round(viewportTop)}px`);
-    root.style.setProperty('--mobile-keyboard-inset', `${keyboardInset}px`);
-    root.style.setProperty('--mobile-keyboard-visible', keyboardVisible ? '1' : '0');
-
-    if (body) {
-      body.dataset.mobileKeyboard = keyboardVisible ? 'visible' : 'hidden';
-    }
-
-    if (keyboardJustClosed && screenEl) {
-      const resetScrollPosition = () => {
-        screenEl.scrollTop = 0;
-      };
-      window.requestAnimationFrame(() => {
-        resetScrollPosition();
-        window.setTimeout(resetScrollPosition, 120);
-      });
-    }
-
-    mobileKeyboardVisible = keyboardVisible;
-  }
+  const { syncVisualViewportMetrics } = createTerminalViewportMetrics({ screenEl });
 
   function setOutputListener(callback) {
     outputListener = callback;
@@ -145,23 +101,6 @@ export function createTerminalUiCore(deps) {
     echoLine.scrollIntoView({ behavior: 'auto', block: 'end' });
   }
 
-  function buildLoadingScreenMarkup(message) {
-    const lines = [];
-
-    if (message) {
-      lines.push(`<div class="loading"><span class="bbs-loading-text">${esc(message)}</span></div>`);
-    }
-
-    return lines.join('');
-  }
-
-  function normalizeLoadingMessage(message) {
-    // [LOG: 20260615_1538] Keep loading copy static and let CSS render the single blinking dot.
-    return String(message || '연결하는 중입니다')
-      .trim()
-      .replace(/[.．。]+$/u, '');
-  }
-
   const {
     adjustZoom,
     autoAdjustZoom,
@@ -216,7 +155,6 @@ export function createTerminalUiCore(deps) {
     setFooterVisibility,
     esc,
     toggleHintExpansion,
-
     setReady: (isReady) => {
       if (!screenEl) return;
       if (core._loadingTimer) {
@@ -240,7 +178,8 @@ export function createTerminalUiCore(deps) {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         setBusy(true);
-        setFooterVisibility(false);
+        // [LOG: 20260617_1650] Keep footer visible even in non-ready states to maintain UI structure.
+        setFooterVisibility(true);
       }
     },
     setLoading: (message) => {
@@ -251,26 +190,21 @@ export function createTerminalUiCore(deps) {
         core._progressTimer = null;
       }
 
-      // [LOG: 20260610_2020] Pure static terminal feel: no animations, instant response.
       setBusy(true);
       if (cmdInput) cmdInput.disabled = true;
-
       const staticMessage = normalizeLoadingMessage(message);
-      
-      // Show static text in footer immediately
       if (hintEl) {
-        hintEl.innerHTML = `<span class="bbs-loading-text">${esc(staticMessage)}</span>`;
+        // [LOG: 20260617_1156] Clear footer hint text to prevent duplicate "connecting" messages on screen and footer.
+        hintEl.innerHTML = '';
         setFooterVisibility(true);
       }
-
-      // [LOG: 20260611_1330] Avoid flickering by waiting 200ms before showing the full loading overlay.
       core._loadingTimer = setTimeout(() => {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
-        // [LOG: 20260613_1134] Hide footer to prevent duplicate loading message display
-        setFooterVisibility(false);
-      }, 200);
+        // [LOG: 20260617_1635] Keep footer visible to avoid "disappearing hint bar" regression during navigation.
+        setFooterVisibility(true);
+      }, 400);
     },
     buildLoadingScreenMarkup,
     setBusy,

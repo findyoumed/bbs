@@ -1,3 +1,27 @@
+## [2026-06-17 11:56] 로딩 화면 전환 시 연결하는 중 중복 노출 결함 해결
+
+**LOG_ID: 20260617_1156**
+목표: 로딩 상태(`setLoading`)일 때 화면 중앙의 로딩 오버레이("연결하는 중입니다.")와 하단 힌트바("연결하는 중입니다")가 두 군데에 동시에 노출되어 발생하는 시각적 중복 문제를 해결한다.
+변경 파일: public/js/core/terminalUiCore.js
+수행 작업: 1) `terminalUiCore.js` 내 `setLoading` 함수에서 로딩 시작 시 하단 힌트바 영역(`hintEl.innerHTML`)에 로딩 메시지를 강제로 대입하던 코드를 삭제하고 빈 값(`''`)으로 청소하도록 개선. 2) 이로써 로딩 구조선과 틀은 유지되지만 하단 문구 중복 노출은 완벽히 제거되어 중앙 메시지에만 포커스가 가도록 함.
+실행: `npm run smoke:vercel-ready`
+기대: 로딩 시 화면 중앙에만 "연결하는 중입니다."가 출력되고, 하단 힌트 영역에는 문구가 중복되지 않고 깔끔한 빈 공백 상태를 유지한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-17 16:55] 화면 전환 및 로딩 중 힌트바/구분선 실종 현상 복구 (UI 안정화)
+
+**LOG_ID: 20260617_1655**
+목표: 페이지 이동(특히 게시판 다음 페이지 이동) 시 하단 힌트바와 가로 구분선이 사라졌다가 다시 나타나는 UI 깜빡임 및 "연결하는 중입니다" 중앙 오버레이로의 급격한 전환 현상을 해결하여 안정적인 네비게이션 경험을 복원한다.
+변경 파일: public/js/core/terminalUiCore.js, public/js/core/terminalHintFooter.js, public/style.css
+수행 작업: 1) `terminalUiCore.js`의 `setLoading` 함수에서 200ms 후 푸터를 숨기던 로직을 제거하고, 중앙 로딩 오버레이 표시 임계값을 400ms로 상향하여 빠른 페이지 전환 시의 UI 점프를 방지. 2) `terminalHintFooter.js`의 `applyCommandFooter` 함수 시작 시 푸터를 숨기던 코드를 제거하여 새로운 명령어가 로드될 때까지 기존 힌트바가 유지되도록 개선. 3) `style.css`에서 로딩 중(`is-loading`)에 푸터와 가로 구분선을 강제로 숨기던 규칙을 수정하여, 로딩 중에도 터미널의 구조적 틀(가로선 및 하단 힌트 영역)이 그대로 유지되도록 복원. 4) `setReady(false)` 시에도 푸터 가시성을 유지하도록 보강.
+실행: `npm run smoke:vercel-ready`
+기대: 다음 페이지 이동 등 모든 화면 전환 과정에서 하단 힌트바와 가로 실선이 사라지지 않고 유지되며, 중앙의 "연결하는 중입니다" 메시지와 조화롭게 렌더링되어 시각적 안정감이 크게 향상된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-17 10:32] API 응답 지연/오류 알림바 폰트 및 밝기 일관화 작업
 
 **LOG_ID: 20260617_1032**
@@ -8713,3 +8737,15 @@
 결과: ✅ 완료
 
 ---
+
+---
+
+## [2026-06-17 11:26] News menu speed and prompt color lock
+
+**LOG_ID: 20260617_1132**
+Goal: Fix slow `/service/news` entry and keep `#terminal-prompt-row` colors stable across loading/pending states.
+Changed files: src/server/RssNewsService.js, public/style.css
+Work: 1) Disabled news topic feed warmup by default on the news menu API path. 2) Locked prompt row/input/renderer foreground, background, text fill, and opacity across loading, pending, focus, disabled, and readonly states.
+Run: `node --check src/server/RssNewsService.js`, `npm run smoke:vercel-ready`, measured `/api/services/news` and `/service/news` on a fresh server, compared Playwright computed styles, `npm test`
+Expected: News menu entry renders quickly and the prompt row keeps white text on black background with opacity 1.
+Result: Done
