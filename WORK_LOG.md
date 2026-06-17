@@ -1,3 +1,15 @@
+## [2026-06-17 21:55] 뉴스 상세 페이지 Clean URL 및 sessionStorage 메타데이터 연동 적용
+
+**LOG_ID: 20260617_2155**
+목표: 기사 고유 키(key)와 원본 링크(link)가 주소창 뒤에 복잡하게 붙지 않게 하면서도, 기사 시프트를 완벽하게 방지하는 정확성을 유지한다.
+변경 파일: public/js/core/routingUrlBuilder.js, public/js/core/routingStateRestorer.js
+수행 작업: 1) `routingUrlBuilder.js`에서 뉴스 상세 페이지 URL을 빌드할 때 `key`와 `link` 파라미터를 쿼리 스트링에 붙이지 않고 `sessionStorage`에 임시 보존하도록 변경. 2) `routingStateRestorer.js`에서 URL로부터 상태를 복원할 때, 파라미터가 비어있으면 `sessionStorage`에서 `key`와 `link`를 로드하여 복구 및 API 연동되도록 수정.
+실행: `npm run smoke:vercel-ready` 성공 통과.
+기대: 주소창에는 깔끔하게 `/service/news/1?article=35`만 노출되며, 새로고침 및 네비게이션 시에도 sessionStorage의 기사 정보 추적이 온전하게 이루어짐.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-17 21:45] 오염된 캐시 및 크롤링 본문 품질 검사 강화 및 404 Not Found 강제 조치
 
 **LOG_ID: 20260617_2145**
