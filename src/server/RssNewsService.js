@@ -222,8 +222,9 @@ class RssNewsService extends RssServiceBase {
       }
 
       if (!detail?.unavailable) {
-        const feedBody = this._sanitizeArticleText(originalFeedBody || originalFeedDescription);
-        const detailBody = this._sanitizeArticleText(detail.body);
+        // [LOG: 20260617_0930] Pass resolved title to sanitizeArticleText to strip repeating lead title headers
+        const feedBody = this._sanitizeArticleText(originalFeedBody || originalFeedDescription, resolvedArticle.title);
+        const detailBody = this._sanitizeArticleText(detail.body, resolvedArticle.title || detail.title);
 
         // [LOG: 20260616_1250] Unify quality rules: treat all domains identically. Only accept body if it has sufficient length, high score, zero penalty keywords, and passes noise check.
         let acceptDetail = false;
@@ -243,7 +244,7 @@ class RssNewsService extends RssServiceBase {
           resolvedArticle.body = bestBody;
         }
         if (!resolvedArticle.description && detail.description) {
-          resolvedArticle.description = this._sanitizeArticleText(detail.description);
+          resolvedArticle.description = this._sanitizeArticleText(detail.description, resolvedArticle.title || detail.title);
         }
         if (!resolvedArticle.title && detail.title) {
           resolvedArticle.title = this._normalize(detail.title);
@@ -259,7 +260,7 @@ class RssNewsService extends RssServiceBase {
         }
 
         // [LOG: 20260616_1715] Set detailFetched based on detail crawl success or feed fallback validity
-        const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '');
+        const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '', resolvedArticle.title);
         if (acceptDetail || (finalBody && finalBody.length >= 80)) {
           resolvedArticle.detailFetched = true;
         } else {
@@ -267,7 +268,7 @@ class RssNewsService extends RssServiceBase {
         }
       } else {
         // [LOG: 20260616_1715] Fallback check if the original feed text itself is long enough to show
-        const finalBody = this._sanitizeArticleText(resolvedArticle.body || originalFeedBody || originalFeedDescription || '');
+        const finalBody = this._sanitizeArticleText(resolvedArticle.body || originalFeedBody || originalFeedDescription || '', resolvedArticle.title);
         if (finalBody && finalBody.length >= 80) {
           resolvedArticle.detailFetched = true;
         } else {
@@ -279,9 +280,9 @@ class RssNewsService extends RssServiceBase {
       resolvedArticle.detailFetched = false;
     }
 
-    resolvedArticle.description = this._sanitizeArticleText(resolvedArticle.description);
+    resolvedArticle.description = this._sanitizeArticleText(resolvedArticle.description, resolvedArticle.title);
     resolvedArticle.body = this._pickArticleBody([
-      this._sanitizeArticleText(resolvedArticle.body),
+      this._sanitizeArticleText(resolvedArticle.body, resolvedArticle.title),
       resolvedArticle.description
     ]);
 
@@ -499,8 +500,8 @@ class RssNewsService extends RssServiceBase {
   _pickArticleBody(values) {
     return pickArticleBody(values);
   }
-  _sanitizeArticleText(value) {
-    return sanitizeArticleText(value);
+  _sanitizeArticleText(value, title) {
+    return sanitizeArticleText(value, title);
   }
   _isLikelyNoisyBody(value) {
     return isLikelyNoisyBody(value);

@@ -1,3 +1,15 @@
+## [2026-06-17 09:30] 뉴스 기사 상세 내비게이션 노이즈 및 반복 제목 제거 로직 보강
+
+**LOG_ID: 20260617_0930**
+목표: 뉴스 기사 본문 파싱 시 발생하는 불필요한 UI 보일러플레이트(이전/다음 기사보기, 기사스크랩하기, 글씨 크기 조절 등)를 정규식으로 차단하고, 기사 본문 첫 부분에 기사 제목이 중복해서 들어오는 현상을 감지해 제거한다.
+변경 파일: src/server/RssNewsArticleSanitizer.js, src/server/RssNewsService.js, scratch/test_diagnose_3cd.js
+수행 작업: 1) `RssNewsArticleSanitizer.js`에 보일러플레이트 패턴(이전/다음 기사보기, 기사스크랩하기, 글씨 조절 등) 정규식을 보강하고, 본문과 기사 제목을 비교하여 첫 단락에 제목이 반복 노출될 경우 이를 제거해 주는 `sanitizeArticleText` 내 제목 중복 제거 로직을 구현. 2) `RssNewsService.js`에서 `sanitizeArticleText`를 호출하는 모든 지점에 기사 제목(`article.title`, `resolvedArticle.title` 등)을 전달하여 중복 제거가 활성화되도록 연동. 3) 실제 캐시 데이터를 진단 및 검증하기 위한 `scratch/test_diagnose_3cd.js` 도구를 생성해 정화 효과를 입증.
+실행: `npm run smoke:vercel-ready` 및 `node scratch/test_diagnose_3cd.js`
+기대: 뉴스 기사 본문 파싱 시 이전/다음 기사보기 등의 UI 텍스트 및 제목 중복 라인이 깨끗하게 제거된 상태로 가독성 있게 렌더링된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-16 17:15] 기사 속성 백업 변수 동기화 누락 수정 및 detailFetched 판정 버그 해결
 
 **LOG_ID: 20260616_1715**

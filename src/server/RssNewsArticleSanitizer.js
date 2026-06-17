@@ -55,7 +55,8 @@ function pickArticleBody(values) {
     .sort((left, right) => right.length - left.length)[0] || '';
 }
 
-function sanitizeArticleText(value) {
+// [LOG: 20260617_0930] Support optional title parameter to prune identical lead headings
+function sanitizeArticleText(value, title = '') {
   const normalized = decodeHtmlEntities(String(value || ''))
     .replace(/&nbsp;/gi, ' ')
     .replace(/\u00a0/g, ' ')
@@ -80,8 +81,30 @@ function sanitizeArticleText(value) {
   const dedupedLead = dedupeLeadingTeaserLines(inlineTrimmed);
   const dedupedAdjacent = dedupeConsecutiveLines(dedupedLead);
   
+  // [LOG: 20260617_0930] Strip title duplicates from the start of final text block
+  let finalLines = dedupedAdjacent.split('\n');
+  if (title && finalLines.length > 0) {
+    const coreTitle = String(title).split(/\s+[-|]\s+/)[0].trim();
+    if (coreTitle) {
+      const cleanCore = coreTitle.replace(/\s+/g, '').toLowerCase();
+      let firstLineIndex = -1;
+      for (let i = 0; i < finalLines.length; i++) {
+        if (finalLines[i].trim()) {
+          firstLineIndex = i;
+          break;
+        }
+      }
+      if (firstLineIndex !== -1) {
+        const firstLineClean = finalLines[firstLineIndex].replace(/\s+/g, '').toLowerCase();
+        if (firstLineClean === cleanCore || (firstLineClean.length >= 10 && (cleanCore.includes(firstLineClean) || firstLineClean.includes(cleanCore)))) {
+          finalLines[firstLineIndex] = '';
+        }
+      }
+    }
+  }
+
   // [LOG: 20260505_2325] Filter out meaningless placeholders like "(" or ")".
-  const final = dedupedAdjacent
+  const final = finalLines.join('\n')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -217,6 +240,14 @@ function stripKnownArticleBoilerplateLines(value) {
   ];
 
   const boilerplatePatterns = [
+    // [LOG: 20260617_0930] General UI navigation, share, scrap and scroll templates
+    /^(이전|다음)\s*기사보기$/i,
+    /^기사\s*스크랩(?:하기)?$/i,
+    /^다른\s*공유\s*찾기$/i,
+    /^본문\s*글씨\s*(키우기|줄이기)$/i,
+    /^스크롤\s*이동\s*상태바$/i,
+    /^[^\n]{1,30}기자$/i,
+    /^저작권자\s*(?:[ⓒ©]|&copy;).*$/i,
     /RSS\s*피드는\s*개인\s*리더\s*이용\s*목적으로\s*허용/i,
     /피드를\s*이용한\s*게시\s*등의\s*무단\s*복제/i,
     /(?:▶\s*)?SBS\s*뉴스\s*앱\s*다운로드/i,
@@ -604,8 +635,8 @@ function isLikelyNoisyBody(value) {
   if (!source) {
     return false;
   }
-  // [LOG: 20260616_1220] 기사 읽기, 재생 중이에요, 왼쪽으로, 오른쪽으로, 펼치기/접기, 요약, 구글 검색 선호 매체 등 UI 노이즈가 과반 포함된 텍스트 본문 감지
-  return /(\\u[0-9a-fA-F]{4}|\$\(document\)\.ready|spinTopParams|_spinTop|\uC624\uB298\uC758 \uCD94\uCC9C\uC601\uC0C1|\uC9C0\uAE08 \uB728\uB294 \uB274\uC2A4|\uC88B\uC544\uC694|\uCF54\uBA58\uD2B8|\uB313\uAE00|\uACF5\uC720\uD558\uAE30|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC \uC77D\uC5B4\uC8FC\uAE30|기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|\uC0AC\uC9C4\s*\uD655\uB300|\uC774\uBBF8\uC9C0\s*\uD655\uB300|\uD070\uC0AC\uC9C4\uBCF4\uAE30|\uAD00\uB828\uC0AC\uC9C4\uBCF4\uAE30|\uCE74\uCE74\uC624\uD1A1|\uD398\uC774\uC2A4\uBD81\uBA54\uC2E0\uC800|\uBCF5\uC0AC|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|\uC7AC\uD310\uB9E4\s*(?:\uBC0F\s*DB)?\uAE08\uC9C0|video\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|\uC624\uB514\uC624\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|^[\(\)\[\]\s]+$)/.test(source);
+  // [LOG: 20260617_0930] Add generic UI buttons, resize elements, scrap triggers, and navigation blocks
+  return /(\\u[0-9a-fA-F]{4}|\$\(document\)\.ready|spinTopParams|_spinTop|\uC624\uB298\uC758 \uCD94\uCC9C\uC601\uC0C1|\uC9C0\uAE08 \uB728\uB294 \uB274\uC2A4|\uC88B\uC544\uC694|\uCF54\uBA58\uD2B8|\uB313\uAE00|\uACF5\uC720\uD558\uAE30|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC \uC77D\uC5B4\uC8FC\uAE30|기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|이전\s*기사보기|다음\s*기사보기|기사\s*스크랩(?:하기)?|다른\s*공유\s*찾기|본문\s*글씨\s*(?:키우기|줄이기)|스크롤\s*이동\s*상태바|\uC0AC\uC9C4\s*\uD655\uB300|\uC774\uBBF8\uC9C0\s*\uD655\uB300|\uD070\uC0AC\uC9C4\uBCF4\uAE30|\uAD00\uB828\uC0AC\uC9C4\uBCF4\uAE30|\uCE74\uCE74\uC624\uD1A1|\uD398\uC774\uC2A4\uBD81\uBA54\uC2E0\uC800|\uBCF5\uC0AC|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|\uC7AC\uD310\uB9E4\s*(?:\uBC0F\s*DB)?\uAE08\uC9C0|video\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|\uC624\uB514\uC624\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|^[\(\)\[\]\s]+$)/.test(source);
 }
 
 module.exports = {
