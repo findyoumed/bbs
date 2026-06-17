@@ -233,10 +233,19 @@ body.theme-blue .write-field textarea {
     width: 100%;
 }
 
-/* [LOG: 20260610_1720] 로딩 상태 가로줄 및 푸터 완전 박멸 */
-#terminal-container.is-loading #terminal-footer::before {
-    display: none !important;
-    content: none !important;
+/* [LOG: 20260617_1642] Restore footer separator during loading to maintain UI structure. */
+#terminal-container.is-loading #terminal-footer:not([data-footer-state="hidden"])::before {
+    content: '────────────────────────────────────────────────────────────────────────────────';
+    display: block;
+    color: var(--hr-color, #fff);
+    margin: 0 0 6px;
+    padding: 0;
+    font-family: 'DungGeunMo', 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace;
+    font-size: 17px;
+    line-height: 1.4;
+    white-space: pre;
+    text-align: left;
+    width: 100%;
 }
 
 #cmd-hint {
@@ -2123,8 +2132,19 @@ body[data-screen="news-view"] #terminal-screen {
         line-height: inherit !important;
     }
 
-    #terminal-footer[data-footer-state="hidden"] {
+    #terminal-footer[data-footer-state="hidden"],
+    #terminal-container.is-loading #terminal-footer,
+    #terminal-screen.is-loading ~ #terminal-footer {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }
+
+    #terminal-container.is-loading #terminal-footer::before,
+    #terminal-screen.is-loading ~ #terminal-footer::before {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }
 
     #terminal-footer,
@@ -2196,13 +2216,16 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     box-sizing: border-box;
 }
 
-/* [LOG: 20260613_1155] Hide footer and cmd-hint completely when loading to prevent duplicate messages. */
+/* [LOG: 20260617_1158] Completely hide footer, boundary line, and cmd-hint during loading to avoid visual artifacts and dot leakage */
 #terminal-container.is-loading #terminal-footer,
 #terminal-screen.is-loading ~ #terminal-footer,
+#terminal-container.is-loading #terminal-footer::before,
+#terminal-screen.is-loading ~ #terminal-footer::before,
 #terminal-container.is-loading #cmd-hint,
 #terminal-screen.is-loading ~ #terminal-footer #cmd-hint {
     display: none !important;
     visibility: hidden !important;
+    opacity: 0 !important;
 }
 
 #terminal-container.is-loading .bbs-loading-text::after {
@@ -2334,6 +2357,36 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     -webkit-font-smoothing: none !important;
     -moz-osx-font-smoothing: none !important;
     -webkit-text-size-adjust: 100% !important;
+}
+
+/* [LOG: 20260617_1132] Keep the command prompt row colors stable across loading, pending, focus, and disabled states. */
+#terminal-footer,
+#terminal-prompt-row,
+#cmd-input-wrapper,
+#cmd-prompt,
+#cmd-prompt-renderer,
+#cmd-input,
+#cmd-input:focus,
+#cmd-input:disabled,
+#cmd-input[readonly],
+#terminal-container.is-loading #cmd-input,
+#terminal-container.is-loading #cmd-prompt-renderer,
+#terminal-container.is-loading #cmd-input-wrapper,
+#terminal-container.is-loading #terminal-prompt-row,
+#terminal-container.is-command-pending #terminal-prompt-row,
+#terminal-container.is-command-pending #cmd-input {
+    background: var(--bgcolor, #000000) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+#cmd-input {
+    caret-color: #ffffff !important;
+}
+
+#terminal-container.is-command-pending #cmd-input {
+    caret-color: transparent !important;
 }
 
 @media (max-width: 768px) {
