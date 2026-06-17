@@ -149,7 +149,8 @@ class RssNewsService extends RssServiceBase {
       const storeKey = `rss:feed:${cacheKey}`;
       try {
         cachedDetail = await this._getPersistentCacheEntry(storeKey);
-        if (cachedDetail && !cachedDetail.unavailable && cachedDetail.body && cachedDetail.body.length >= 80) {
+        // [LOG: 20260617_0940] Lower minimum article body length to 30 to support short breaking/flash news
+        if (cachedDetail && !cachedDetail.unavailable && cachedDetail.body && cachedDetail.body.length >= 30) {
           recoveredFromCache = true;
         }
       } catch (err) {
@@ -227,14 +228,19 @@ class RssNewsService extends RssServiceBase {
         const detailBody = this._sanitizeArticleText(detail.body, resolvedArticle.title || detail.title);
 
         // [LOG: 20260616_1250] Unify quality rules: treat all domains identically. Only accept body if it has sufficient length, high score, zero penalty keywords, and passes noise check.
+        // [LOG: 20260617_0940] Lower minimum article body length to 30 and score threshold to 300 for short breaking/flash news
         let acceptDetail = false;
 
-        if (detailBody && detailBody.length >= 80) {
+        if (detailBody && detailBody.length >= 30) {
           const score = scoreArticleText(detailBody, 'body');
           const hasPenaltyWords = /(기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|본문으로\s*바로가기|전체메뉴)/.test(detailBody);
           
-          if (score >= 600 && !hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
-            acceptDetail = true;
+          if (!hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
+            if (detailBody.length >= 80 && score >= 600) {
+              acceptDetail = true;
+            } else if (detailBody.length >= 30 && score >= 300) {
+              acceptDetail = true;
+            }
           }
         }
 
@@ -260,16 +266,18 @@ class RssNewsService extends RssServiceBase {
         }
 
         // [LOG: 20260616_1715] Set detailFetched based on detail crawl success or feed fallback validity
+        // [LOG: 20260617_0940] Lower minimum threshold to 30 for detailFetched check
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '', resolvedArticle.title);
-        if (acceptDetail || (finalBody && finalBody.length >= 80)) {
+        if (acceptDetail || (finalBody && finalBody.length >= 30)) {
           resolvedArticle.detailFetched = true;
         } else {
           resolvedArticle.detailFetched = false;
         }
       } else {
         // [LOG: 20260616_1715] Fallback check if the original feed text itself is long enough to show
+        // [LOG: 20260617_0940] Lower minimum threshold to 30 for detailFetched fallback check
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || originalFeedBody || originalFeedDescription || '', resolvedArticle.title);
-        if (finalBody && finalBody.length >= 80) {
+        if (finalBody && finalBody.length >= 30) {
           resolvedArticle.detailFetched = true;
         } else {
           resolvedArticle.detailFetched = false;
@@ -414,13 +422,15 @@ class RssNewsService extends RssServiceBase {
     const cacheKey = `news:article:v27:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
     // [LOG: 20260615_1754] Ignore cached error results and retry fetch if body is empty or unavailable
-    if (memory && !memory.unavailable && memory.body && memory.body.length >= 80) {
+    // [LOG: 20260617_0940] Lower minimum threshold to 30 for memory cache validation
+    if (memory && !memory.unavailable && memory.body && memory.body.length >= 30) {
       return memory;
     }
 
     const storeKey = `rss:feed:${cacheKey}`;
     const persistent = await this._getPersistentCacheEntry(storeKey);
-    if (persistent && !persistent.unavailable && persistent.body && persistent.body.length >= 80) {
+    // [LOG: 20260617_0940] Lower minimum threshold to 30 for persistent cache validation
+    if (persistent && !persistent.unavailable && persistent.body && persistent.body.length >= 30) {
       this._setMemoryCacheEntry(this.feedCache, cacheKey, persistent, this.cacheTtlMs);
       return persistent;
     }
