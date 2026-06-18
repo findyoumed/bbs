@@ -1,3 +1,18 @@
+## [2026-06-18 17:10] 프로젝트 전체 에러 감사 및 3건 버그 수정
+
+**LOG_ID: 20260618_1710**
+목표: BBS 프로젝트 전체(서버 80개, 클라이언트 129개 파일)를 대상으로 잠재적 에러를 탐색하고, 발견된 실질적 버그 3건을 수정한다.
+변경 파일: src/server/requestErrorResponder.js, src/server/BbsResponse.js, src/server/httpUtils.js
+수행 작업:
+1) `requestErrorResponder.js`에 `res.headersSent` 가드를 추가하여, 파일 스트리밍(`streamFile`) 도중 에러 발생 시 `ERR_HTTP_HEADERS_SENT` 서버 크래시를 방지.
+2) `BbsResponse.js`의 `send()` 메서드에도 동일한 `res.headersSent` 가드를 추가하여 이중 헤더 전송 방어를 이중으로 보장.
+3) `httpUtils.js`의 `buildCorsHeaders`에서 `Access-Control-Allow-Headers`에 `X-Article-Key`, `X-Article-Link`, `X-BBS-User-Id`, `X-BBS-Nick-Name`, `X-BBS-Level`, `X-BBS-Admin` 커스텀 헤더를 등록하여 크로스 오리진 환경에서의 API 호출 실패를 사전 방지.
+실행: `node --check`, `npm test`, `node scripts/smoke-rss-services.js`, `npm run smoke:vercel-ready` 모두 성공 통과.
+기대: 파일 다운로드 중 네트워크 에러 시에도 서버가 크래시하지 않으며, 크로스 오리진 배포 환경에서 커스텀 헤더가 정상적으로 CORS를 통과한다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-18 09:20] 매일경제(MK) 등 짧은 속보 기사 404 에러 방지 및 본문 검증 완화
 
 **LOG_ID: 20260618_0920**

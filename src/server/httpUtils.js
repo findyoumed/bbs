@@ -235,7 +235,7 @@ function buildCorsHeaders(origin, allowedOrigins) {
   const headers = {
     'Access-Control-Allow-Origin': originHeader,
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Article-Key, X-Article-Link, X-BBS-User-Id, X-BBS-Nick-Name, X-BBS-Level, X-BBS-Admin',
     'Access-Control-Max-Age': '86400'
   };
   if (hasAllowlist) {

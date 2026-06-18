@@ -48,6 +48,12 @@ class BbsResponse {
   }
 
   send() {
+    // [LOG: 20260618_1710] Prevent ERR_HTTP_HEADERS_SENT crash if response was already started
+    if (this.res.headersSent) {
+      this.res.end();
+      return;
+    }
+
     const payload = {
       success: this._success,
       status: this._statusCode,

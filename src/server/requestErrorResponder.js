@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const { toClientErrorMessage } = require('./errorDetailPolicy');
 const { sendApiError } = require('./httpUtils');
@@ -37,6 +37,12 @@ async function respondWithRequestError(error, requestState) {
       method: req.method,
       url: req.url
     });
+  }
+
+  // [LOG: 20260618_1710] Prevent ERR_HTTP_HEADERS_SENT crash when headers were already sent (e.g. during file streaming)
+  if (res.headersSent) {
+    res.end();
+    return;
   }
 
   const clientMessage = toClientErrorMessage(error, status, env || process.env);
