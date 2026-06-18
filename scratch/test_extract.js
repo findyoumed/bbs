@@ -11,13 +11,12 @@ const {
   extractBodyHtml
 } = require('../src/server/RssNewsArticleParserExtractors');
 
+const fs = require('fs');
+const path = require('path');
+
 async function run() {
-  const url = 'https://www.pressian.com/pages/articles/2026061010173839184&ref=rss';
-  console.log('Fetching', url);
-  const response = await fetch(url, {
-    headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' }
-  });
-  const html = await response.text();
+  const htmlPath = path.join(__dirname, 'mk_12077080.html');
+  const html = fs.readFileSync(htmlPath, 'utf-8');
 
   const source = String(html || '');
   const candidates = [
