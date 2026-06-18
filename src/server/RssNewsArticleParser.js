@@ -47,15 +47,15 @@ function parseNewsArticleHtml(html) {
     || extractMetaContent(source, 'name', 'twitter:description')
   );
   const primaryCandidates = [
-    ...extractJsonLdBodies(source).map((text) => ({ text: refineArticleText(text), source: 'jsonld' })),
+    ...extractJsonLdBodies(source).map((text) => ({ text: refineArticleText(text, title), source: 'jsonld' })),
     // [LOG: 20260505_2212] Parse preloaded script data so structured bodies beat truncated RSS teasers.
-    ...extractScriptDataBodies(source).map((text) => ({ text: refineArticleText(text), source: 'script' })),
-    ...extractStructuredContentElementBodies(source).map((text) => ({ text: refineArticleText(text), source: 'structured' })),
-    ...extractArticleContainerBodies(source).map((text) => ({ text: refineArticleText(text), source: 'container' })),
-    { text: refineArticleText(normalizeHtmlBlock(extractTagHtml(source, 'article'))), source: 'article' }
+    ...extractScriptDataBodies(source).map((text) => ({ text: refineArticleText(text, title), source: 'script' })),
+    ...extractStructuredContentElementBodies(source).map((text) => ({ text: refineArticleText(text, title), source: 'structured' })),
+    ...extractArticleContainerBodies(source).map((text) => ({ text: refineArticleText(text, title), source: 'container' })),
+    { text: refineArticleText(normalizeHtmlBlock(extractTagHtml(source, 'article')), title), source: 'article' }
   ].filter((entry) => entry.text);
   const fallbackCandidates = [
-    { text: refineArticleText(normalizeHtmlBlock(extractBodyHtml(source))), source: 'body' }
+    { text: refineArticleText(normalizeHtmlBlock(extractBodyHtml(source)), title), source: 'body' }
   ].filter((entry) => entry.text);
   const candidates = primaryCandidates.length > 0 ? primaryCandidates : fallbackCandidates;
 
@@ -70,7 +70,7 @@ function parseNewsArticleHtml(html) {
       || extractMetaContent(source, 'property', 'twitter:image')
       || extractMetaContent(source, 'name', 'thumbnail')
     ),
-    body: chooseBestArticleBody(candidates)
+    body: chooseBestArticleBody(candidates, title)
   };
 }
 

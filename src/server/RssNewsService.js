@@ -150,8 +150,8 @@ class RssNewsService extends RssServiceBase {
       const storeKey = `rss:feed:${cacheKey}`;
       try {
         cachedDetail = await this._getPersistentCacheEntry(storeKey);
-        // [LOG: 20260617_0940] Lower minimum article body length to 30 to support short breaking/flash news
-        if (cachedDetail && !cachedDetail.unavailable && cachedDetail.body && cachedDetail.body.length >= 30) {
+        // [LOG: 20260618_0910] Support cached short articles by validating detailFetched with unavailability check
+        if (cachedDetail && !cachedDetail.unavailable) {
           recoveredFromCache = true;
         }
       } catch (err) {
@@ -165,10 +165,11 @@ class RssNewsService extends RssServiceBase {
       const isShifted = resolvedKey && requestedKey && resolvedKey !== requestedKey;
 
       // [LOG: 20260617_2145] Subject cached articles to the same quality check to reject polluted cache entries
+      // [LOG: 20260618_0910] Support cached short articles by validating detailFetched with unavailability check
       const cachedBody = cachedDetail.body || '';
       const trimmed = cachedBody.trim();
       const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed) || /[며고나면지를을은는이가와과의로]$/.test(trimmed.slice(-1));
-      const detailFetched = cachedBody && cachedBody.length >= 30 && !isTruncated;
+      const detailFetched = !cachedDetail.unavailable || (cachedBody && cachedBody.length >= 30 && !isTruncated);
 
       article = {
         no: parseInt(target, 10) || 0,
@@ -239,7 +240,8 @@ class RssNewsService extends RssServiceBase {
         let acceptDetail = false;
 
         if (detailBody && detailBody.length >= 15) {
-          const score = scoreArticleText(detailBody, 'body');
+          // [LOG: 20260618_0920] Pass full title string to scoreArticleText
+          const score = scoreArticleText(detailBody, 'body', resolvedArticle.title || detail.title);
           const hasPenaltyWords = /(기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|본문으로\s*바로가기|전체메뉴)/.test(detailBody);
           
           if (!hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
@@ -273,10 +275,11 @@ class RssNewsService extends RssServiceBase {
         }
 
         // [LOG: 20260617_2145] Enhanced check for ellipsis, trailing punctuation, and incomplete Korean endings
-        const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '', resolvedArticle.title);
+        // [LOG: 20260618_0910] If detail page fetched successfully, we accept it as complete (even if short or empty) to prevent 404 loops.
+        const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '', resolvedArticle.title || detail.title);
         const trimmed = (finalBody || '').trim();
         const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed) || /[며고나면지를을은는이가와과의로]$/.test(trimmed.slice(-1));
-        if (acceptDetail || (finalBody && finalBody.length >= 30 && !isTruncated)) {
+        if (!detail.unavailable || acceptDetail || (finalBody && finalBody.length >= 30 && !isTruncated)) {
           resolvedArticle.detailFetched = true;
         } else {
           resolvedArticle.detailFetched = false;
@@ -349,7 +352,22 @@ class RssNewsService extends RssServiceBase {
       byKey = list.find((item) => this._buildNewsArticleKey(item) === expectedKey) || null;
     }
 
-    const byNo = target ? list.find((item, index) => String(item?.no || (index + 1)) === target) : null;
+    let byNo = target ? list.find((item, index) => String(item?.no || (index + 1)) === target) : null;
+    if (byNo) {
+      // [LOG: 20260618_0935] If both key and link mismatch, reject to prevent showing wrong article
+      const actualKey = this._buildNewsArticleKey(byNo);
+      const actualLink = this._normalize(byNo?.link || '');
+      if (expectedKey && actualKey && actualKey !== expectedKey) {
+        if (!expectedLink || actualLink !== expectedLink) {
+          byNo = null;
+        }
+      }
+      if (byNo && expectedLink && actualLink && actualLink !== expectedLink) {
+        if (!expectedKey || actualKey !== expectedKey) {
+          byNo = null;
+        }
+      }
+    }
 
     if (byLink) return byLink;
     if (byKey) return byKey;
@@ -432,16 +450,15 @@ class RssNewsService extends RssServiceBase {
 
     const cacheKey = `news:article:v28:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
-    // [LOG: 20260615_1754] Ignore cached error results and retry fetch if body is empty or unavailable
-    // [LOG: 20260617_0940] Lower minimum threshold to 30 for memory cache validation
-    if (memory && !memory.unavailable && memory.body && memory.body.length >= 30) {
+    // [LOG: 20260618_0915] Accept cached entries if they are not unavailable to prevent re-crawling short articles
+    if (memory && !memory.unavailable) {
       return memory;
     }
 
     const storeKey = `rss:feed:${cacheKey}`;
     const persistent = await this._getPersistentCacheEntry(storeKey);
-    // [LOG: 20260617_0940] Lower minimum threshold to 30 for persistent cache validation
-    if (persistent && !persistent.unavailable && persistent.body && persistent.body.length >= 30) {
+    // [LOG: 20260618_0915] Accept cached entries if they are not unavailable to prevent re-crawling short articles
+    if (persistent && !persistent.unavailable) {
       this._setMemoryCacheEntry(this.feedCache, cacheKey, persistent, this.cacheTtlMs);
       return persistent;
     }

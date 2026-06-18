@@ -5,7 +5,8 @@ const {
   normalizePlainText
 } = require('./RssNewsArticleParserText');
 
-function refineArticleText(value) {
+// [LOG: 20260618_0910] Support article title in refineArticleText to check for breaking news keywords
+function refineArticleText(value, title = '') {
   const rawSource = String(value || '');
   let source = normalizePlainText(rawSource);
   if (!source) {
@@ -18,7 +19,7 @@ function refineArticleText(value) {
   source = stripEmbeddedWidgetNoise(source);
   source = normalizePlainText(source);
 
-  if (!source || looksLikeWidgetNoise(rawSource, source) || looksLikeListNoise(source)) {
+  if (!source || looksLikeWidgetNoise(rawSource, source) || looksLikeListNoise(source, title)) {
     return '';
   }
 
@@ -90,7 +91,7 @@ function trimArticleLeadByMetadata(source) {
 
 function isArticleLeadMetadataLine(line) {
   const text = String(line || '').trim();
-  return /^(?:\uAE30\uC0AC\s*)?(?:\uC785\uB825|\uC218\uC815|\uCD5C\uC885\uC218\uC815|\uB4F1\uB85D|\uC1A1\uACE0|\uC2B9\uC778)\s*[:：]?\s*\d{4}[.-]\d{1,2}[.-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?/i.test(text)
+  return /^(?:\uAE30\uC0AC\s*)?(?:\uC785\uB825|\uC218\uC815|\uCD94\uCD5C\uC885\uC218\uC815|\uB4F1\uB85D|\uC1A1\uACE0|\uC2B9\uC778)\s*[:：]?\s*\d{4}[.-]\d{1,2}[.-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?/i.test(text)
     || /^\d{4}[.-]\d{1,2}[.-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?$/.test(text);
 }
 
@@ -126,6 +127,7 @@ function isShortStandaloneAuthorLine(line, nextLine) {
   return /^[\uAC00-\uD7A3]{2,6}$/.test(text) && /^\uAE30\uC790\s*\uAD6C\uB3C5\uD558\uAE30$/i.test(next);
 }
 
+// [LOG: 20260618_0920] Protect against early false positive matches in headers/menus by requiring match to be at least 250 chars or 30% into the text
 function trimArticleTail(source) {
   const text = String(source || '').trim();
   const patterns = [
@@ -133,7 +135,7 @@ function trimArticleTail(source) {
     /\n{1,2}\s*\uBB34\uB2E8 \uC804\uC7AC[\s\S]*$/i,
     /\n{1,2}\s*\uC7AC\uBC30\uD3EC \uBC0F AI\uD559\uC2B5 \uC774\uC6A9 \uAE08\uC9C0[\s\S]*$/i,
     /\n{1,2}\s*\uACF5\uC720\uD558\uAE30[\s\S]*$/i,
-    /\n{1,2}\s*(\uC5F0\uC608 \uB7AD\uD0B9|\uD574\uC678 \uD1A0\uD53D|\uC5F0\uC608\uB274\uC2A4\uB294 \uAD00\uC2EC\uC788\uAC8C \uBCF8 \uAE30\uC0AC)[\s\S]*$/i,
+    /\n{1,2}\s*(\uC5F0\uC608 \uB7AD\uD0B9|\uD574\uC678 \uD1A0\uD53D|\uC5F0\uC608\uB274\uC2A4\uB294 \uAD00\uC2EC\uC815\uBCF4|\uC5F0\uC608\uB274\uC2A4\uB294 \uAD00\uC2EC\uC788\uAC8C \uBCF8 \uAE30\uC0AC)[\s\S]*$/i,
     /\n{1,2}\s*\/?[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}[\s\S]*$/i,
     /\n{1,2}\s*[^\n]{0,40}\uAE30\uC790\s+[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}[\s\S]*$/i,
     /\n{1,2}\s*◎\s*공감언론\s*뉴시스[\s\S]*$/i,
@@ -165,7 +167,9 @@ function trimArticleTail(source) {
   patterns.forEach((pattern) => {
     const match = text.match(pattern);
     if (match && typeof match.index === 'number') {
-      cutIndex = Math.min(cutIndex, match.index);
+      if (match.index > 250 || match.index > text.length * 0.3) {
+        cutIndex = Math.min(cutIndex, match.index);
+      }
     }
   });
 
@@ -211,7 +215,8 @@ function stripEmbeddedWidgetNoise(source) {
 }
 
 // [LOG: 20260616_1145] 뉴스 목록 카드/추천 칼럼 영역에서 추출된 텍스트 노이즈를 식별하여 걸러내는 헬퍼 함수
-function looksLikeListNoise(text) {
+// [LOG: 20260618_0910] Support checking the article title for breaking news keywords to prevent false positives in looksLikeListNoise
+function looksLikeListNoise(text, title = '') {
   const normalized = String(text || '').trim();
   if (!normalized) {
     return false;
@@ -226,7 +231,9 @@ function looksLikeListNoise(text) {
   // 단, [속보]나 [Breaking] 등의 키워드가 포함된 경우는 실제 짧은 속보 기사일 수 있으므로 제외
   const length = normalized.length;
   const sentenceCount = (normalized.match(/[.!?]/g) || []).length;
-  const hasBreakingNewsKeyword = /\[\s*(속보|Breaking|포토)\s*\]/i.test(normalized);
+  const hasBreakingNewsKeyword = /\[\s*(속보|Breaking|포토|단독)\s*\]/i.test(normalized)
+    || /속보|Breaking|포토|단독/i.test(normalized)
+    || (title && (/\[\s*(속보|Breaking|포토|단독)\s*\]/i.test(title) || /속보|Breaking|포토|단독/i.test(title)));
 
   if (length < 150 && !hasBreakingNewsKeyword) {
     const lines = normalized.split('\n').filter(Boolean);
@@ -240,23 +247,25 @@ function looksLikeListNoise(text) {
   return false;
 }
 
-function chooseBestArticleBody(candidates) {
+// [LOG: 20260618_0910] Pass title to scoreArticleText and chooseBestArticleBody
+function chooseBestArticleBody(candidates, title = '') {
   const scored = candidates
-    .map((entry) => ({ ...entry, score: scoreArticleText(entry.text, entry.source) }))
+    .map((entry) => ({ ...entry, score: scoreArticleText(entry.text, entry.source, title) }))
     .filter((entry) => entry.text && entry.score > 0)
     .sort((left, right) => right.score - left.score);
 
   return scored[0]?.text || '';
 }
 
-function scoreArticleText(text, sourceType = 'body') {
+// [LOG: 20260618_0910] Accept title as a parameter in scoreArticleText to bypass sentence count penalty for breaking news
+function scoreArticleText(text, sourceType = 'body', title = '') {
   const source = normalizePlainText(text);
   if (!source) {
     return 0;
   }
 
   // [LOG: 20260616_1145] 위젯 노이즈나 뉴스 카드 목록 노이즈인 경우 점수를 0점으로 즉시 기각함
-  if (looksLikeWidgetNoise(text, source) || looksLikeListNoise(source)) {
+  if (looksLikeWidgetNoise(text, source) || looksLikeListNoise(source, title)) {
     return 0;
   }
 
@@ -282,7 +291,9 @@ function scoreArticleText(text, sourceType = 'body') {
             : 0;
 
   // [LOG: 20260616_1145] 속보 키워드가 포함된 경우에는 마침표/종결부호 미비 페널티를 면제함
-  const hasBreakingNewsKeyword = /\[\s*(속보|Breaking|포토)\s*\]/i.test(source);
+  const hasBreakingNewsKeyword = /\[\s*(속보|Breaking|포토|단독)\s*\]/i.test(source)
+    || /속보|Breaking|포토|단독/i.test(source)
+    || (title && (/\[\s*(속보|Breaking|포토|단독)\s*\]/i.test(title) || /속보|Breaking|포토|단독/i.test(title)));
   const sentenceCount = (source.match(/[.!?]/g) || []).length;
   const sentencePenalty = (sentenceCount === 0 && !hasBreakingNewsKeyword) ? 1500 : 0;
 

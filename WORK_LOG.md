@@ -1,3 +1,20 @@
+## [2026-06-18 09:20] 매일경제(MK) 등 짧은 속보 기사 404 에러 방지 및 본문 검증 완화
+
+**LOG_ID: 20260618_0920**
+목표: 매일경제(MK) 속보 등 극히 짧고 정상적인 속보 뉴스가 불완전한 기사로 분류되어 404 에러(목록으로 튕김)를 유발하는 현상을 해결한다.
+변경 파일: src/server/RssNewsService.js, src/server/RssNewsArticleParserScoring.js, src/server/RssNewsArticleParser.js
+수행 작업:
+1) `RssNewsService.js`에서 캐시 복원 판단 시 짧은 속보 기사도 허용하도록 최소 길이 제한을 완화하고 `!unavailable` 조건으로 복원하도록 개선.
+2) `RssNewsService.js`의 `getNewsArticle`에서 성공적으로 상세 본문을 크롤링해왔다면 본문 내용이 짧더라도 `detailFetched = true`로 세팅하여 불완전 뉴스 필터링에서 예외 처리.
+3) `RssNewsArticleParserScoring.js`의 `looksLikeListNoise` 및 `scoreArticleText`에 기사 제목(`title`)을 전달하여 속보(속보, Breaking, 포토, 단독) 관련 기사인 경우 마침표/종결부호 누락 감점 및 노이즈 기각 페널티를 면제.
+4) `RssNewsArticleParserScoring.js`의 `trimArticleTail`이 너무 짧은 본문 영역(헤더/메뉴 등)에서 오동작하지 않도록 250글자 이후 혹은 전체 30% 이후에서만 꼬리 자르기가 작동하도록 제어.
+5) `RssNewsService.js`의 `_resolveNewsArticle`에서 키 불일치 검사 시, 키가 일치하지 않고 링크도 제공되지 않았을 때만 404 기각하도록 조정하여 UX 개선과 Smoke Test 검증 만족을 동시에 해결.
+실행: `node scripts/smoke-rss-services.js` 및 `npm run smoke:vercel-ready`, `npm test` 모두 성공적으로 패스.
+기대: 짧은 속보성 뉴스 기사도 404 리다이렉트 에러 발생 없이 원활하게 본문 렌더링이 이루어진다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-17 21:59] 뉴스 본문 삼각형 단락 및 저작권자 꼬리말 보일러플레이트 차단 필터 개선
 
 **LOG_ID: 20260617_2159**
