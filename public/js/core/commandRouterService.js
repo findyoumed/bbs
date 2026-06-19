@@ -180,22 +180,42 @@ export function createServiceCommandHandler(deps) {
         return true;
       }
       if (cmd === 'A') {
-        const prevArticle = currentIndex > 0 ? articles[currentIndex - 1] : null;
-        if (prevArticle && state.serviceData?.topicDoor) {
-          // [LOG: 20260617_0946] Pass pageNo in showNewsArticle options to prevent redirection to page 1
-          await showNewsArticle(state.serviceData.topicDoor, prevArticle.no || String(currentIndex), getNewsArticleOptions(prevArticle, {
-            pageNo: state.serviceData?.listPageNo || pageNo
-          }));
+        // [LOG: 20260619_1900] 불완전 기사(404)는 최대 5개까지 자동 스킵하며 이전 기사로 이동
+        // [LOG: 20260619_2140] 본문 페이지(pageNo)는 새 글에서 1로 리셋. 목록 위치만 listPageNo로 유지.
+        let skipIdx = currentIndex - 1;
+        while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
+          const prevArticle = articles[skipIdx];
+          if (!prevArticle || !state.serviceData?.topicDoor) break;
+          try {
+            await showNewsArticle(state.serviceData.topicDoor, prevArticle.no || String(skipIdx + 1), getNewsArticleOptions(prevArticle, {
+              listPageNo: state.serviceData?.listPageNo || 1,
+              skipOnIncomplete: true
+            }));
+            break;
+          } catch (err) {
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx--; continue; }
+            break;
+          }
         }
         return true;
       }
       if (cmd === 'N') {
-        const nextArticle = currentIndex >= 0 ? articles[currentIndex + 1] : null;
-        if (nextArticle && state.serviceData?.topicDoor) {
-          // [LOG: 20260617_0946] Pass pageNo in showNewsArticle options to prevent redirection to page 1
-          await showNewsArticle(state.serviceData.topicDoor, nextArticle.no || String(currentIndex + 2), getNewsArticleOptions(nextArticle, {
-            pageNo: state.serviceData?.listPageNo || pageNo
-          }));
+        // [LOG: 20260619_1900] 불완전 기사(404)는 최대 5개까지 자동 스킵하며 다음 기사로 이동
+        // [LOG: 20260619_2140] 본문 페이지(pageNo)는 새 글에서 1로 리셋. 목록 위치만 listPageNo로 유지.
+        let skipIdx = currentIndex + 1;
+        while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
+          const nextArticle = articles[skipIdx];
+          if (!nextArticle || !state.serviceData?.topicDoor) break;
+          try {
+            await showNewsArticle(state.serviceData.topicDoor, nextArticle.no || String(skipIdx + 1), getNewsArticleOptions(nextArticle, {
+              listPageNo: state.serviceData?.listPageNo || 1,
+              skipOnIncomplete: true
+            }));
+            break;
+          } catch (err) {
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx++; continue; }
+            break;
+          }
         }
         return true;
       }

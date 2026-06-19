@@ -2132,16 +2132,7 @@ body[data-screen="news-view"] #terminal-screen {
         line-height: inherit !important;
     }
 
-    #terminal-footer[data-footer-state="hidden"],
-    #terminal-container.is-loading #terminal-footer,
-    #terminal-screen.is-loading ~ #terminal-footer {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-    }
-
-    #terminal-container.is-loading #terminal-footer::before,
-    #terminal-screen.is-loading ~ #terminal-footer::before {
+    #terminal-footer[data-footer-state="hidden"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -2216,9 +2207,7 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     box-sizing: border-box;
 }
 
-/* [LOG: 20260617_1158] Completely hide footer, boundary line, and cmd-hint during loading to avoid visual artifacts and dot leakage */
-#terminal-container.is-loading #terminal-footer,
-#terminal-screen.is-loading ~ #terminal-footer,
+/* [LOG: 20260619_1735] Hide cmd-hint and footer boundary line during loading, keeping prompt-row visible */
 #terminal-container.is-loading #terminal-footer::before,
 #terminal-screen.is-loading ~ #terminal-footer::before,
 #terminal-container.is-loading #cmd-hint,
@@ -2244,9 +2233,13 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
 }
 
 #terminal-container.is-loading #terminal-prompt-row {
-    display: none !important;
-    visibility: hidden !important;
     pointer-events: none !important;
+}
+
+/* [LOG: 20260619_2010] 초기 부팅/로딩 중에는 네이티브 캐럿을 숨겨, 화면 렌더 전 빈 입력창에 캐럿만 깜빡이는 회귀를 방지.
+   입력 텍스트 자체는 그대로 보이며, is-command-pending의 별도 wait 캐럿(::after)에는 영향 없음. */
+#terminal-container.is-loading:not(.is-command-pending) #cmd-input {
+    caret-color: transparent !important;
 }
 
 #terminal-container.is-command-pending #terminal-footer {

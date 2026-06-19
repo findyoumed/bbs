@@ -279,21 +279,30 @@ export function bindCommandInputEvents(deps) {
 
     const raw = cmdInput.value;
     const cmd = raw.trim();
-    cmdInput.value = '';
-    if (typeof CustomEvent === 'function') {
-      cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
+    
+    // [LOG: 20260619_1732] Keep the text on Enter to prevent "disappear-then-reappear" flicker.
+    // Clear immediately only for sensitive/masked inputs to preserve security.
+    const sensitiveInput = isSensitiveCommandInput();
+    if (sensitiveInput) {
+      cmdInput.value = '';
+      if (typeof CustomEvent === 'function') {
+        cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
+      }
     }
     clearSuggestions();
     lastMatchIndex = -1;
 
     if (dispatchRawTerminalInput(raw)) {
+      cmdInput.value = '';
+      if (typeof CustomEvent === 'function') {
+        cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
+      }
       state.cmdHistoryIndex = -1;
       state.cmdHistoryTemp = '';
       if (!state._maskCommandInput && cmdInput.type !== 'text') cmdInput.type = 'text';
       return;
     }
 
-    const sensitiveInput = isSensitiveCommandInput();
     if (cmd && !sensitiveInput) {
       if (typeof saveHistory === 'function') {
         saveHistory(cmd, state.screen);

@@ -32,7 +32,6 @@ const {
 const {
   buildAuthor,
   isLikelyNoisyBody,
-  normalize,
   normalizeUrl,
   pickArticleBody,
   pickPreferredArticleBody,
@@ -101,7 +100,8 @@ class RssNewsService extends RssServiceBase {
     if (!paper) throw this._notFoundError(`신문사 없음: ${newspaperDoor}`);
     const cat = paper.categories.find(c => c.door === String(categoryDoor));
     if (!cat) throw this._notFoundError(`카테고리 없음: ${categoryDoor}`);
-    const feed = await this._fetchCached(`newsfeed:v6:${paper.door}:${cat.door}`, cat.rss, parseNewsFeedXml);
+    // [LOG: 20260619_1800] v6 -> v7: buildTopicFeed와 동일한 캐시 버전 적용 (HTML 엔티티 파서 수정)
+    const feed = await this._fetchCached(`newsfeed:v7:${paper.door}:${cat.door}`, cat.rss, parseNewsFeedXml);
     return { kind: 'news', title: `뉴스 / ${paper.name} / ${cat.name}`, level: 'articles', newspaper: { door: paper.door, title: paper.name }, category: { door: cat.door, title: cat.name }, sourceUrl: cat.rss, fetchedAt: new Date().toISOString(), unavailable: !!feed.unavailable, message: feed.message || '', items: feed.items };
   }
 
@@ -164,19 +164,18 @@ class RssNewsService extends RssServiceBase {
       const resolvedKey = article ? this._buildNewsArticleKey(article) : '';
       const isShifted = resolvedKey && requestedKey && resolvedKey !== requestedKey;
 
-      // [LOG: 20260617_2145] Subject cached articles to the same quality check to reject polluted cache entries
-      // [LOG: 20260618_0910] Support cached short articles by validating detailFetched with unavailability check
+      // [LOG: 20260619_1920] 캐시된 기사는 크롤/RSS 구분 불가 — 30자 이상이면 허용 (말줄임표 검사 제거)
       const cachedBody = cachedDetail.body || '';
-      const trimmed = cachedBody.trim();
-      const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed) || /[며고나면지를을은는이가와과의로]$/.test(trimmed.slice(-1));
-      const detailFetched = !cachedDetail.unavailable || (cachedBody && cachedBody.length >= 30 && !isTruncated);
+      const trimmedCached = cachedBody.trim();
+      const detailFetched = !cachedDetail.unavailable && trimmedCached.length >= 30;
 
       article = {
         no: parseInt(target, 10) || 0,
         title: cachedDetail.title || (article?.title || ''),
         link: cachedDetail.link || requestedLink || (article?.link || ''),
         description: cachedDetail.description || (article?.description || ''),
-        body: cachedDetail.body,
+        // [LOG: 20260619_1930] 캐시 body가 비어있으면 RSS 피드 원본 body로 폴백
+        body: cachedDetail.body || (article?.body || ''),
         date: cachedDetail.date || (article?.date || ''),
         dateTime: cachedDetail.dateTime || (article?.dateTime || ''),
         imageUrl: cachedDetail.imageUrl || (article?.imageUrl || ''),
@@ -187,9 +186,9 @@ class RssNewsService extends RssServiceBase {
         categoryTitle: isShifted ? '' : (article?.categoryTitle || ''),
         detailFetched: !!detailFetched
       };
-      // [LOG: 20260616_1715] Update mutable backup variables to keep them in sync with the recovered article
-      originalFeedDescription = article.description || '';
-      originalFeedBody = article.body || '';
+      // [LOG: 20260619_1930] non-empty 값만 덮어써서 RSS 원본 description/body를 잃지 않도록 보호
+      if (article.description) originalFeedDescription = article.description;
+      if (article.body) originalFeedBody = article.body;
     } else if (requestedLink && (!article || this._buildNewsArticleKey(article) !== requestedKey)) {
       // [LOG: 20260616_1110] Fabricate clean target container using requestedLink. Do NOT inherit mismatched article's metadata.
       article = {
@@ -242,9 +241,16 @@ class RssNewsService extends RssServiceBase {
         if (detailBody && detailBody.length >= 15) {
           // [LOG: 20260618_0920] Pass full title string to scoreArticleText
           const score = scoreArticleText(detailBody, 'body', resolvedArticle.title || detail.title);
-          const hasPenaltyWords = /(기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|본문으로\s*바로가기|전체메뉴)/.test(detailBody);
+          // [LOG: 20260619_2030] 단독 '요약'은 본문 정상어(예: 경제전망요약)를 오탐하므로 버튼 형태(요약봇/AI 요약)만 패널티 처리
+          const hasPenaltyWords = /(기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약봇|AI\s*요약|구글\s*검색\s*선호\s*매체로\s*추가|본문으로\s*바로가기|전체메뉴)/.test(detailBody);
           
-          if (!hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
+          // [LOG: 20260619_2050] 충분히 길고 점수 높은 본문은 단일 키워드 오탐(예: 본문 속 '댓글','요약')을 무시하고 신뢰.
+          // 노이즈 덩어리는 score가 낮게 나오므로 길이+점수 동시 충족 시에만 우회 허용.
+          const isHighQualityLong = detailBody.length >= 400 && score >= 1000;
+
+          if (isHighQualityLong) {
+            acceptDetail = true;
+          } else if (!hasPenaltyWords && !isLikelyNoisyBody(detailBody)) {
             if (detailBody.length >= 80 && score >= 600) {
               acceptDetail = true;
             } else if (detailBody.length >= 15 && score >= 150) {
@@ -274,28 +280,33 @@ class RssNewsService extends RssServiceBase {
           resolvedArticle.imageUrl = this._normalize(detail.imageUrl);
         }
 
-        // [LOG: 20260617_2145] Enhanced check for ellipsis, trailing punctuation, and incomplete Korean endings
-        // [LOG: 20260618_0910] If detail page fetched successfully, we accept it as complete (even if short or empty) to prevent 404 loops.
+        // [LOG: 20260619_1920] 크롤 성공 시 품질 검사: acceptDetail=true이면 크롤 본문에 엄격한 기준 적용,
+        // RSS 폴백(acceptDetail=false)이면 말줄임표 검사 없이 30자 이상만 확인.
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '', resolvedArticle.title || detail.title);
         const trimmed = (finalBody || '').trim();
-        const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed) || /[며고나면지를을은는이가와과의로]$/.test(trimmed.slice(-1));
-        if (!detail.unavailable || acceptDetail || (finalBody && finalBody.length >= 30 && !isTruncated)) {
-          resolvedArticle.detailFetched = true;
+
+        if (acceptDetail) {
+          const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed)
+            || /[며고나면지를을은는이가와과의로]/.test(trimmed.slice(-3));
+          const hasBreakingNewsKeyword = /\[\s*(속보|단독|긴급|Breaking)\s*\]/i.test(resolvedArticle.title || detail.title)
+            || /속보|단독|긴급|breaking/i.test(resolvedArticle.title || detail.title)
+            || /속보|단독|긴급|breaking/i.test(trimmed);
+          const isTooShort = hasBreakingNewsKeyword ? (trimmed.length < 15) : (trimmed.length < 80);
+          resolvedArticle.detailFetched = !isTruncated && !isTooShort;
         } else {
-          resolvedArticle.detailFetched = false;
+          // [LOG: 20260619_2110] RSS 요약 폴백 — 짤린 요약(말줄임표/연결어미 종결)은 거부.
+          // "완벽하게 보여주든지 아예 없든지" 정책: 불완전한 본문은 표시하지 않고 404 처리한다.
+          const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed)
+            || /[며고나면지를을은는이가와과의로]/.test(trimmed.slice(-3));
+          resolvedArticle.detailFetched = !isTruncated && trimmed.length >= 40;
         }
       } else {
-        // [LOG: 20260616_1715] Fallback check if the original feed text itself is long enough to show
-        // [LOG: 20260617_0940] Lower minimum threshold to 30 for detailFetched fallback check
-        // [LOG: 20260617_2145] Enhanced check for ellipsis, trailing punctuation, and incomplete Korean endings
+        // [LOG: 20260619_2110] 크롤링 실패 — RSS 요약 폴백. 짤린 요약은 거부하여 불완전 본문 표시를 차단.
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || originalFeedBody || originalFeedDescription || '', resolvedArticle.title);
         const trimmed = (finalBody || '').trim();
-        const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed) || /[며고나면지를을은는이가와과의로]$/.test(trimmed.slice(-1));
-        if (finalBody && finalBody.length >= 30 && !isTruncated) {
-          resolvedArticle.detailFetched = true;
-        } else {
-          resolvedArticle.detailFetched = false;
-        }
+        const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed)
+          || /[며고나면지를을은는이가와과의로]/.test(trimmed.slice(-3));
+        resolvedArticle.detailFetched = !!finalBody && !isTruncated && trimmed.length >= 40;
       }
     } else {
       // [LOG: 20260616_1715] Default fallback for articles with missing links
@@ -308,8 +319,8 @@ class RssNewsService extends RssServiceBase {
       resolvedArticle.description
     ]);
 
-    // [LOG: 20260617_2145] Strictly throw 404 Not Found error on articles failing quality/integrity checks
-    // This blocks navigation to truncated or partial news fragments and forces list redirection.
+    // [LOG: 20260619_2110] "완벽하게 보여주든지 아예 없든지" — 불완전(짤린/너무 짧은) 기사는 404로 차단.
+    // 클라이언트는 404 시 자동으로 다음 기사로 스킵하거나 목록으로 복귀하므로 짤린 본문이 화면에 노출되지 않는다.
     if (resolvedArticle.detailFetched === false) {
       throw this._notFoundError(`불완전한 뉴스 기사입니다: ${articleNo}`);
     }

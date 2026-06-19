@@ -260,12 +260,14 @@ function collectJsonLdDate(node, out) {
 }
 
 function extractArticleContainerBodies(source) {
+  // [LOG: 20260619_1700] Support articletxt/articlebody without delimiters for Hankyung
+  // [-_]? allows matching class/id names that omit separator characters (e.g. articletxt, articlebody, storybody)
   const preferredMatchers = [
-    /(?:id|class)=["'][^"']*(article[-_]body|article[-_]word|article[-_]txt|articleText|article[-_]view[-_]content|article[-_]view[-_]content[-_]div|story[-_]news|storynews|news[-_]view|news[-_]body|news[-_]body[-_]area|newsct[-_]article|news[-_]end|news[-_]article|content[-_]body|view[-_]content|articleWrap|article[-_]wrap|news[-_]cnt[-_]detail[-_]wrap|news[-_]cnt[-_]detail|art[-_]txt|article[-_]txt|art[-_]body|article[-_]body[-_]wrap|news[-_]detail[-_]wrap|news[-_]detail[-_]area|news[-_]text|detail[-_]body|view[-_]txt|cont[-_]newstext|cont[-_]news[-_]text)[^"']*["']/i
+    /(?:id|class)=["'][^"']*(article[-_]?body|article[-_]?word|article[-_]?txt|articleText|article[-_]?view[-_]?content|article[-_]?view[-_]?content[-_]?div|story[-_]?news|storynews|news[-_]?view|news[-_]?body|news[-_]?body[-_]?area|newsct[-_]?article|news[-_]?end|news[-_]?article|content[-_]?body|view[-_]?content|articleWrap|article[-_]?wrap|news[-_]?cnt[-_]?detail[-_]?wrap|news[-_]?cnt[-_]?detail|art[-_]?txt|article[-_]?txt|art[-_]?body|article[-_]?body[-_]?wrap|news[-_]?detail[-_]?wrap|news[-_]?detail[-_]?area|news[-_]?text|detail[-_]?body|view[-_]?txt|cont[-_]?newstext|cont[-_]?news[-_]?text)[^"']*["']/i
   ];
   const fallbackMatchers = [
     /itemprop=["']articleBody["']/i,
-    /(?:id|class)=["'][^"']*(articleBody|article[-_]content|post[-_]content|entry[-_]content|news[-_]content|story[-_]body|article[-_]body[-_]wrap|article[-_]body|article[-_]view|article[-_]view)[^"']*["']/i
+    /(?:id|class)=["'][^"']*(articleBody|article[-_]?content|post[-_]?content|entry[-_]?content|news[-_]?content|story[-_]?body|storybody|article[-_]?body[-_]?wrap|article[-_]?body|articlebody|article[-_]?view)[^"']*["']/i
   ];
 
   const bodies = [

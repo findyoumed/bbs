@@ -311,8 +311,9 @@ function decodeXmlEntities(value) {
     result = next;
   }
 
-  // [LOG: 20260504_2010] 일부 RSS가 &를 제거한 채 quot;/hellip; 형태로 내려주는 제목을 보정한다.
-  return result.replace(/\b(lt|gt|amp|quot|apos|nbsp|middot|hellip|lsquo|rsquo|ldquo|rdquo|ndash|mdash);/gi, (match, name) => {
+  // [LOG: 20260619_1420] 일부 RSS가 &를 제거한 채 quot;/hellip; 형태로 내려주는 제목을 보정한다.
+  // \b 대신 (?<![a-zA-Z]) 사용: 숫자 뒤 엔티티(6middot;)도 매칭되도록 수정
+  return result.replace(/(?<![a-zA-Z])(lt|gt|amp|quot|apos|nbsp|middot|hellip|lsquo|rsquo|ldquo|rdquo|ndash|mdash);/gi, (match, name) => {
     return named[String(name || '').toLowerCase()] ?? match;
   });
 }

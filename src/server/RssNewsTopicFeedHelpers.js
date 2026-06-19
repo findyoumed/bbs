@@ -105,8 +105,9 @@ async function resolveTopic(service, parseNewsMenuXml, topicDoor) {
   return buildNewsTopics(service, menu).find((topic) => topic.door === String(topicDoor)) || null;
 }
 
+// [LOG: 20260619_1945] v16 -> v17: 빈 본문 항목 목록 제외 필터 추가 후 캐시 무효화
 function getTopicFeedCacheKey(topicDoor) {
-  return `news:topicfeed:v15:${String(topicDoor || '').trim()}`;
+  return `news:topicfeed:v17:${String(topicDoor || '').trim()}`;
 }
 
 
@@ -219,8 +220,9 @@ function normalizeNewsDedupeTitle(service, item) {
   let clean = normalizeNewsDedupeText(title);
 
   // 6. Strip all whitespace and punctuation symbols to handle spacing and quotes mismatch
-  clean = clean.replace(/[\s\Q!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~…“”’‘『』「」〈〉\E]/g, '');
-
+  // 6. Strip all whitespace and punctuation symbols to handle spacing and quotes mismatch
+  // NOTE: Q and E are not special in JS regex — replaced with explicit character list to avoid accidentally removing 'Q' and 'E' from titles
+  clean = clean.replace(/[\s!"#$%&'()*+,\-./:;<=>?@[\]^_{|}~]/g, '').replace(/[`\u2026\u201C\u201D\u2018\u2019\u300E\u300F\u300A\u300B\u3008\u3009]/g, '');
   return clean;
 }
 
@@ -394,7 +396,8 @@ async function setCachedTopicFeed(service, cacheKey, value) {
 async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
   const results = await Promise.all(topic.sources.map(async (source) => ({
     source,
-    feed: await service._fetchCached(`newsfeed:v6:${source.newspaperDoor}:${source.categoryDoor}`, source.rss, parseNewsFeedXml)
+    // [LOG: 20260619_1420] v6 -> v7: HTML 엔티티 파서 수정 후 캐시 무효화
+    feed: await service._fetchCached(`newsfeed:v7:${source.newspaperDoor}:${source.categoryDoor}`, source.rss, parseNewsFeedXml)
   })));
 
   const unavailable = results.filter((result) => result.feed.unavailable);
@@ -402,6 +405,8 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
   const nowStr = new Date().toISOString();
   const items = results.flatMap((result) => (result.feed.items || [])
     .filter((item) => isFreshNewsItem(item, cutoffTime))
+    // [LOG: 20260619_1945] RSS 본문(description/body)이 둘 다 빈 항목은 목록에서 제외 — 클릭 시 최소 요약을 보장하여 빈 기사 진입을 원천 차단
+    .filter((item) => Boolean((item?.description || item?.body || '').trim()))
     .map((item) => ({
       ...item,
       sourceTitle: service._normalize(result.source.newspaperTitle),

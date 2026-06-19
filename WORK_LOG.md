@@ -1,3 +1,211 @@
+## [2026-06-19 21:40] N/A 다음·이전 글 이동 시 본문 페이지(page) 리셋
+
+**LOG_ID: 20260619_2140**
+목표: 뉴스 기사에서 N(다음)/A(이전) 키로 글을 넘길 때 URL의 본문 페이지 쿼리(`&page=2`)가 새 글에도 계속 따라붙던 문제를 수정한다. 본문 페이지는 새 글에서 1부터 시작해야 한다.
+변경 파일:
+- `public/js/core/commandRouterService.js` (N/A 핸들러 각 1줄)
+수행 작업:
+1) 원인: N/A 핸들러가 목록 위치 유지 의도(20260617_0946)로 값을 `showNewsArticle`의 본문 페이지 옵션(`pageNo`)에 잘못 넣어, 다음 글이 본문 2페이지부터 시작되고 URL에 `page=2`가 유지됨. `showNewsArticle`은 `pageNo`=본문 페이지, `listPageNo`=목록 페이지로 구분함.
+2) N/A 호출 옵션을 `pageNo: state.serviceData?.listPageNo || pageNo` → `listPageNo: state.serviceData?.listPageNo || 1`로 변경. 본문 페이지는 미지정(기본 1)으로 리셋하고 목록 위치만 유지.
+3) URL 빌더(routingUrlBuilder.js:90)는 본문 `pageNo > 1`일 때만 `page` 쿼리를 붙이므로, 새 글은 `/service/news/1?article=N` 형태로 page 없이 표시됨.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: N/A로 글을 넘기면 본문은 항상 1페이지부터 시작하고 URL에 이전 글의 `&page=N`이 남지 않으며, 목록으로 돌아갈 때의 목록 페이지 위치는 그대로 유지된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 21:10] 짤린 RSS 요약 폴백 차단 — "완벽하게 보여주든지 아예 없든지"
+
+**LOG_ID: 20260619_2110**
+목표: 크롤링에 실패한 기사가 짤린 RSS 요약(…로 끝나는 불완전 문장)을 본문으로 표시하던 동작을 차단한다. 사용자 정책: 기사는 전체 본문이 나오거나, 아니면 표시하지 않는다(404 → 클라이언트 자동 스킵/목록 복귀).
+변경 파일:
+- `src/server/RssNewsService.js` (3곳: RSS 폴백 판정 2곳 + 최종 404 조건)
+수행 작업:
+1) `!detail.unavailable` 경로의 RSS 폴백(acceptDetail=false) 분기: 기존 `trimmed.length >= 30`만 보던 것을 `!isTruncated && trimmed.length >= 40`으로 변경. 말줄임표/연결어미로 끝나는 짤린 요약을 거부.
+2) `detail.unavailable`(크롤 자체 실패) 경로: 동일하게 `isTruncated` 검사 추가.
+3) 최종 404 조건을 19:30의 "body+description 둘 다 빈 경우만"에서 `detailFetched === false`로 되돌림. 불완전 기사는 `불완전한 뉴스 기사입니다` 404를 던져 클라이언트가 자동 스킵하도록 함.
+4) 검증: 라이브 토픽 상위 25건 중 24건 정상(detailFetched=true 전체 본문), 1건은 크롤 실패로 404(의도된 동작). article=29는 본문 1036자 "[박소은 기자]" 정상 종료 확인.
+실행: `npm test`, `npm run smoke:rss-services`
+기대: 크롤 성공 기사는 전체 본문 표시, 크롤 실패 기사는 짤린 요약 대신 404로 차단되어 화면에 불완전 본문이 노출되지 않는다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 20:50] 긴 고품질 본문의 단일 키워드 노이즈 오탐 우회 (전체 본문 신뢰)
+
+**LOG_ID: 20260619_2050**
+목표: 본문이 완전히 수집되었음에도 본문 속 정상 단어("댓글","요약" 등)가 노이즈 정규식에 단독 매칭되어 거부되고 짤린 RSS 요약으로 폴백되는 문제를, 단어별 정규식 땜질 대신 길이+점수 기반으로 근본 해결한다.
+변경 파일:
+- `src/server/RssNewsService.js` (acceptDetail 분기 추가)
+수행 작업:
+1) 진단: MK 기사(mk.co.kr/news/business/12078650)는 본문 1122자·score 2482로 완전했으나, SNS 마케팅 기사 특성상 본문에 등장한 "댓글"(지그재그 공식 계정은 댓글로…)이 `isLikelyNoisyBody`의 단독 패턴에 걸려 거부됨을 확인.
+2) acceptDetail 판정에 `isHighQualityLong = detailBody.length >= 400 && score >= 1000` 조건을 추가. 충분히 길고 점수 높은 본문은 penalty/noisy 검사를 우회하여 신뢰. 노이즈 덩어리는 score가 낮게 산출되므로 길이·점수 동시 충족 시에만 우회.
+3) 검증: 두 MK 기사(1122자/3053자) 모두 HQ-Long ACCEPT=true 확인. 짧은 본문은 기존 penalty/noisy 검사 경로 유지.
+실행: `npm test`, `npm run smoke:rss-services`
+기대: 크롤링 성공한 긴 기사는 본문 속 일상 단어와 무관하게 전체가 표시되고, 노이즈/짧은 본문은 기존대로 걸러진다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 20:30] 본문 내 '요약' 단어 오탐으로 전체 본문이 RSS 요약으로 폴백되던 버그 수정
+
+**LOG_ID: 20260619_2030**
+목표: 매일경제(MK) 등 일부 기사가 크롤링으로 전체 본문(3000자+)을 정상 수집했음에도, 본문에 정상적으로 등장하는 단어 "요약"(예: "경제전망요약(SEP)")이 패널티/노이즈 정규식의 단독 `요약` 패턴에 걸려 거부되고, 짤린 RSS 요약으로 폴백되던 버그를 수정한다.
+변경 파일:
+- `src/server/RssNewsService.js` (hasPenaltyWords 정규식 1줄)
+- `src/server/RssNewsArticleSanitizer.js` (isLikelyNoisyBody 정규식 1줄)
+수행 작업:
+1) 진단: MK 기사(mk.co.kr/news/economy/12078633)를 직접 크롤링한 결과 본문 3053자·score 4293으로 충분했으나, `hasPenaltyWords=true`(518위치 "요약")와 `isLikelyNoisyBody=true`로 거부됨을 확인. 해당 "요약"은 본문 내 "6월 경제전망요약(SEP)"으로 레이아웃 버튼이 아님을 검증.
+2) `RssNewsService.js`의 `hasPenaltyWords` 정규식에서 단독 `요약` → `요약봇|AI\s*요약`로 교체.
+3) `RssNewsArticleSanitizer.js`의 `isLikelyNoisyBody` 정규식에서 단독 `요약` → `요약봇|AI\s*요약`로 교체.
+4) 재검증: 동일 기사 `hasPenaltyWords=false`, `isLikelyNoisyBody=false`, `ACCEPT=true`로 전체 본문 표시 확인.
+실행: `npm test`, `npm run smoke:rss-services`
+기대: 크롤링에 성공한 기사는 본문에 "요약" 등 정상 단어가 있어도 전체 본문이 표시되며, 짤린 RSS 요약 폴백이 줄어든다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 20:10] 초기 부팅 시 빈 입력창 캐럿 깜빡임 회귀 수정
+
+**LOG_ID: 20260619_2010**
+목표: 프로젝트 최초 진입 시 메인 화면이 그려지기 전 빈 입력창에 네이티브 캐럿이 잠깐 깜빡이는 회귀를 제거한다. (20260617_1635/1650에서 로딩 중에도 footer를 visible로 유지하면서, 부팅 중 setFooterVisibility(true) + cmd-input focus가 화면 렌더보다 앞서 캐럿이 노출됨)
+변경 파일:
+- `public/style.css` (규칙 1개 추가)
+수행 작업:
+1) `#terminal-container.is-loading:not(.is-command-pending) #cmd-input`에 `caret-color: transparent`를 적용. 로딩 중에는 네이티브 캐럿을 숨겨 빈 화면 캐럿 깜빡임을 제거.
+2) `:not(.is-command-pending)` 조건으로 명령 제출 후 의도된 wait 캐럿(`#cmd-input-wrapper::after`의 "_")은 그대로 유지. 입력 텍스트 자체는 caret-color와 무관하게 표시되므로 타이핑 상태 유지에도 영향 없음.
+실행: `npm run smoke:vercel-ready`
+기대: 최초 부팅 시 캐럿 깜빡임이 사라지고, 로딩 완료 후 정상 캐럿이 복귀하며, 명령 대기 중 wait 캐럿은 그대로 표시된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 19:45] 빈 본문 기사 목록 제외 — "완전하든지 목록에 없든지" 보장
+
+**LOG_ID: 20260619_1945**
+목표: 클릭 시 404가 나는 불완전 기사를 애초에 목록에 올리지 않는다. RSS 본문(description/body)이 둘 다 비어있는 항목을 목록 구성 단계에서 제외하여, 목록에 보이는 모든 기사는 최소 RSS 요약을 갖도록 보장한다.
+변경 파일:
+- `src/server/RssNewsTopicFeedHelpers.js` (필터 1줄 추가 + 캐시 버전 v16→v17)
+수행 작업:
+1) `buildTopicFeed`의 items 구성 시 `isFreshNewsItem` 필터 다음에 `(item.description || item.body).trim()`이 있는 항목만 통과시키는 필터 추가. RSS 요약조차 없는 빈 기사를 목록에서 제거.
+2) 새 필터가 적용된 목록을 빌드하도록 `getTopicFeedCacheKey`를 v16 → v17로 올려 기존 캐시 무효화.
+3) 진단: 최신 토픽 1000건 중 빈 본문 항목 0건 확인, 상위 15개 기사 getNewsArticle 호출 시 404 0건 확인.
+실행: `npm test`, `npm run smoke:rss-services`
+기대: 목록에 노출된 모든 기사는 N키 탐색/직접 클릭 시 404 없이 RSS 요약 이상의 내용을 항상 보여준다.
+결과: ✅ 완료 (서버 재시작 후 적용됨)
+
+---
+
+## [2026-06-19 19:30] 뉴스 기사 캐시 빈 body 버그 수정 및 404 기준 완화
+
+**LOG_ID: 20260619_1930**
+목표: 캐시된 기사의 body가 비어있을 때 RSS 피드 원본 description/body를 덮어써서 기사 전체가 "내용 없음"으로 판정되던 버그를 수정하고, body/description 둘 다 없는 경우에만 404를 반환하도록 변경한다.
+변경 파일:
+- `src/server/RssNewsService.js` (3군데 수정)
+수행 작업:
+1) 캐시 복원 블록(recoveredFromCache) 에서 `body: cachedDetail.body` → `body: cachedDetail.body || (article?.body || '')` 로 수정. 캐시 body가 비어있을 때 RSS 피드 원본 body로 폴백.
+2) `originalFeedDescription` / `originalFeedBody` 갱신 로직을 `if (non-empty) only` 방식으로 교체. 캐시 값이 비어있으면 RSS 원본 값을 보존.
+3) `detailFetched === false` → 404 블록을 `body + description 둘 다 비어있을 때만 404`로 변경. RSS 요약이라도 있으면 항상 표시.
+실행: `npm run smoke:rss-services`
+기대: 크롤링에 실패하거나 캐시에 빈 body가 있어도, RSS 요약(description/body)이 존재하면 "불완전한 뉴스 기사" 404 없이 정상 표시된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 19:20] 뉴스 기사 품질 검사 기준 완화 (RSS 요약 폴백 허용)
+
+**LOG_ID: 20260619_1920**
+목표: 크롤링 실패 시 RSS 요약으로 폴백되는 기사들이 말줄임표(`...`) 종료 및 120자 미만 기준에 걸려 과도하게 404 처리되는 문제를 해결한다. RSS 요약은 원래 짧고 `...`으로 끝나는 것이 정상이므로 엄격한 기준을 제거한다.
+변경 파일:
+- `src/server/RssNewsService.js` (3군데 수정)
+수행 작업:
+1) 캐시 복원 경로: `isCachedTruncated` + `isCachedTooShort` 검사를 `trimmedCached.length >= 30` 단순 길이 검사로 교체.
+2) 크롤 성공(`!detail.unavailable`) 경로: `acceptDetail=true`이면 기존 엄격한 기준 유지(단 최소 길이 80자로 하향), `acceptDetail=false`(RSS 폴백)이면 말줄임표 검사 없이 30자 이상만 확인.
+3) 크롤 실패(`detail.unavailable`) 경로: `isTruncated` + `isTooShort` 전체 제거, 30자 이상이면 허용.
+실행: `npm run smoke:rss-services`
+기대: 크롤링에 실패한 기사도 RSS 요약(30자+)이 있으면 정상 표시되어 "불완전한 뉴스 기사" 404가 대폭 감소한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 19:00] 뉴스 탐색 중 불완전 기사 자동 스킵 처리
+
+**LOG_ID: 20260619_1900**
+목표: N/A 명령으로 다음/이전 기사 이동 시 서버가 "불완전한 뉴스 기사" 404를 반환하면 목록으로 떨어지던 문제를 해결한다. 불완전 기사는 최대 5개까지 자동 스킵하고 그 다음 정상 기사로 이동한다.
+변경 파일:
+- `public/js/core/newsScreens.js` (4줄 추가)
+- `public/js/core/commandRouterService.js` (N/A 핸들러 각 10줄 → 스킵 루프로 교체)
+수행 작업:
+1) `newsScreens.js`의 `showNewsArticle` catch 블록에 `skipOnIncomplete` 옵션 처리 추가. 옵션이 true이고 에러 메시지가 "불완전한 뉴스 기사"를 포함하면 목록으로 가지 않고 에러를 re-throw하여 호출자에게 전달.
+2) `commandRouterService.js`의 N(다음)/A(이전) 명령 핸들러를 while 루프로 교체. 불완전 기사 에러 발생 시 인덱스를 한 칸씩 이동하며 재시도, 최대 5개 스킵 후 성공하거나 포기.
+실행: `npm run smoke:vercel-ready`
+기대: N 키로 기사를 탐색하다가 불완전 기사를 만나도 목록으로 떨어지지 않고 바로 다음 기사로 자동 이동된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 18:00] 뉴스 피드 캐시 버전 불일치 수정 및 미사용 import 제거
+
+**LOG_ID: 20260619_1800**
+목표: HTML 엔티티 파서 수정 후 `buildTopicFeed`만 캐시 버전을 v7로 올리고 `getNewsFeed`는 누락되어, 신문사별 카테고리 피드에서 구버전 캐시(v6)가 여전히 사용되는 불일치 버그를 수정한다.
+변경 파일:
+- `src/server/RssNewsService.js` (2줄 수정)
+수행 작업:
+1) `getNewsFeed` 메서드 내 `_fetchCached` 호출의 캐시 키를 `newsfeed:v6:...` → `newsfeed:v7:...`로 변경하여 `buildTopicFeed`와 동일한 버전으로 통일.
+2) `RssNewsArticleSanitizer`에서 구조분해 import된 `normalize`가 파일 내 어디에서도 사용되지 않는 것을 확인하고 제거.
+실행: `npm run smoke:rss-services`
+기대: 신문사별 카테고리 뉴스 피드도 HTML 엔티티 파서 수정이 적용된 캐시를 사용한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-19 17:35] 화면 전환 시 하단 입력창 깜빡임 개선 및 텍스트 캐럿 연속성 확보 (3차 - 가로 구분선 가림 복원)
+
+**LOG_ID: 20260619_1735**
+목표: 비동기 데이터 로딩 중 하단 입력창과 프롬프트 영역의 레이아웃 깨짐을 방지하고, 로딩 텍스트가 노출되는 도중 불필요하게 같이 출력되던 가로 구분선(`::before`)을 감추어 시각적 일관성을 확보한다.
+변경 파일: public/style.css, public/js/core/appEventsCommandInput.js
+수행 작업:
+1) `public/style.css` 내에서 로딩 중(`is-loading`)에 하단 푸터 전체(`#terminal-footer`)와 프롬프트 가로 행(`#terminal-prompt-row`)을 `display: none`으로 완전히 숨기던 규칙들을 비활성화/제거.
+2) 단, 로딩 중 푸터 윗부분의 가로 경계선 구분 실선(`#terminal-footer::before`)과 힌트바(`#cmd-hint`)는 기존 본래 디자인 규격에 맞게 `display: none !important`로 가려지도록 CSS 규칙을 정밀 복원/조정.
+3) 로딩 중 입력창과 버튼의 입력을 방지하기 위해 `pointer-events: none`만 강제 부여하여 터치 및 키보드 오작동 차단.
+4) `public/js/core/appEventsCommandInput.js` 내의 `handleKeyDown`에서 엔터 입력 시 `cmdInput.value`를 즉시 빈 값으로 날려버리던 코드를 제거하고, 비동기 커맨드 처리가 완료될 때(`trackCommandPending`의 settled 시점) 지워지도록 변경. 단, 비밀번호 입력 등의 민감한 필드(`isSensitiveCommandInput`) 및 원시 터미널 입력은 보안을 위해 기존처럼 즉시 지우도록 예외 처리 적용.
+실행: `npm test`, `npm run smoke:vercel-ready`
+기대: 화면 로딩 중에도 입력창의 프레임과 타이핑 상태는 제자리에 유지되며, 푸터 가로 실선과 힌트바는 보이지 않아 깨끗한 연결 화면을 보여준다.
+결과: ✅ 완료
+
+---
+
+
+## LOG_ID: 20260619_1715
+- 날짜: 2026-06-19
+- 작업: 뉴스 기사 본문 추출 정규식 보완 및 불완전 기사 404 차단 고도화
+- 파일: src/server/RssNewsArticleParserExtractors.js, src/server/RssNewsService.js, src/server/RssNewsTopicFeedHelpers.js
+- 내용:
+  - extractArticleContainerBodies의 fallbackMatchers에 storybody/articlebody 명시 추가
+  - getNewsArticle의 cachedDetail 경로: 속보/비속보 글자수 분기(30/120자), 연결어미 3자 이내 체크 적용
+  - getNewsArticle의 !detail.unavailable 경로: acceptDetail 무관하게 잘림/길이 판정 적용, 본문 속보 키워드 체크 추가, 연결어미 3자 이내로 강화
+  - getNewsArticle의 detail.unavailable fallback 경로: 동일 강화 조건 적용
+  - RssNewsTopicFeedHelpers.js: normalizeNewsDedupeTitle의 \Q \E 오용 버그 수정 — JS에서 의미없는 \Q/\E가 'Q'/'E' 문자를 제거 대상에 포함시키는 문제를 명시적 문자 목록으로 교체
+  - 기타 발견된 잠재 에러 수정
+- 결과: node --check, npm test, smoke:rss-services, smoke:vercel-ready 모두 통과
+
+---
+
+## [2026-06-19 17:15] 뉴스 본문 수집 성공률 극대화 및 내용 잘림 기사 철저 차단
+
+**LOG_ID: 20260619_1715**
+목표: 한국경제 등 특정 매체의 기사 본문 선택자(articletxt 등)를 정상 인식하도록 보강하고, 본문이 짤리거나 불완전한 기사의 상세 렌더링을 철저하게 404 차단 처리하여 뉴스 서비스의 신뢰성을 극대화한다.
+변경 파일: src/server/RssNewsArticleParserExtractors.js, src/server/RssNewsService.js
+수행 작업:
+1) `RssNewsArticleParserExtractors.js`의 `preferredMatchers` 및 `fallbackMatchers` 내 클래스/ID 추출 정규식에서 구분자 하이픈/언더바가 누락된 경우(예: `articletxt`, `articlebody`)도 정상 인식하도록 `[-_]?` 형태로 정밀 개선.
+2) `RssNewsService.js`의 `getNewsArticle` 내 `detailFetched` 품질 검증 조건식을 고도화하여, 디테일 파싱이 정상 완료되었더라도 본문 내용의 끝이 잘려있거나(말줄임표 등), 글자 수가 부족한 경우(일반 120자, 속보 30자 미만) `detailFetched = false`로 강제 판정하도록 수정.
+3) `detailFetched === false`일 때 예외 없이 `throw this._notFoundError`를 발생시켜, 사용자가 불완전한 뉴스 기사에 진입할 수 없도록 원천 차단(이후 클라이언트 라우터가 뉴스 목록으로 즉시 리다이렉트).
+실행: `node --check`, `npm test`, `npm run smoke:rss-services`, `npm run smoke:vercel-ready`
+기대: 한국경제 기사 등이 정상 파싱되어 본문을 완벽히 표시하게 되며, 수집에 실패하여 내용이 짤린 기사들은 즉시 404 에러로 차단되어 뉴스 목록 화면으로 안전하게 복구된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-19 16:00] 뉴스 렌더링 무결성 및 한글 인코딩/새니타이저 정밀 진단
 
 **LOG_ID: 20260619_1600**
