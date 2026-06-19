@@ -310,20 +310,21 @@ function applyThreeDayFilter(service, items) {
   const cleanItems = (items || []).filter((item) => item !== null && item !== undefined);
   const sortedItems = [...cleanItems];
   sortedItems.sort((left, right) => {
-    const rightTime = Date.parse(right.dateTime || right.date || 0) || 0;
-    const leftTime = Date.parse(left.dateTime || left.date || 0) || 0;
+    // [LOG: 20260619_2210] Date.parse(0)은 2000년으로 파싱되는 함정 → '' 폴백으로 NaN→0 보장
+    const rightTime = Date.parse(right.dateTime || right.date || '') || 0;
+    const leftTime = Date.parse(left.dateTime || left.date || '') || 0;
     return rightTime - leftTime;
   });
 
   if (sortedItems.length === 0) return sortedItems;
 
-  const latestTime = Date.parse(sortedItems[0].dateTime || sortedItems[0].date || 0) || 0;
+  const latestTime = Date.parse(sortedItems[0].dateTime || sortedItems[0].date || '') || 0;
   if (latestTime <= 0) return sortedItems;
 
   const cutoffTime = latestTime - 3 * 24 * 60 * 60 * 1000; // 3 days ago from the latest article
   return sortedItems.filter((item) => {
     if (!item) return false;
-    const itemTime = Date.parse(item.dateTime || item.date || 0) || 0;
+    const itemTime = Date.parse(item.dateTime || item.date || '') || 0;
     return itemTime >= cutoffTime;
   });
 }
@@ -455,8 +456,9 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
   
   // [LOG: 20260610_1800] Optimization: Sort and clip to top 150 items to reduce client-side JSON parsing load.
   datedItems.sort((left, right) => {
-    const rightTime = Date.parse(right.dateTime || right.date || 0) || 0;
-    const leftTime = Date.parse(left.dateTime || left.date || 0) || 0;
+    // [LOG: 20260619_2210] Date.parse(0)은 2000년으로 파싱되는 함정 → '' 폴백으로 NaN→0 보장
+    const rightTime = Date.parse(right.dateTime || right.date || '') || 0;
+    const leftTime = Date.parse(left.dateTime || left.date || '') || 0;
     return rightTime - leftTime;
   });
 

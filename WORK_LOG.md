@@ -1,3 +1,20 @@
+## [2026-06-19 22:10] Date.parse(0) 함정 수정 — 날짜 없는 뉴스 항목 누락/인덱스 시프트 방지
+
+**LOG_ID: 20260619_2210**
+목표: 에이전트 코드 리뷰로 발견한 잠재 버그를 수정한다. `Date.parse(item.dateTime || item.date || 0)`에서 날짜가 둘 다 빈 문자열이면 `Date.parse(0)`이 호출되는데, 이는 NaN이 아니라 숫자 0을 "0"으로 변환해 2000-01-01로 파싱된다. 그 결과 날짜 없는 항목이 3일 cutoff 필터 밖으로 밀려 조용히 제거되고 no가 재부여되어 목록/상세 인덱스가 어긋날 수 있다.
+변경 파일:
+- `src/server/RssNewsTopicFeedHelpers.js` (6곳)
+수행 작업:
+1) 실측 확인: `Date.parse(0)` = 946652400000(2000년), `Date.parse('')` = NaN.
+2) `applyThreeDayFilter`(정렬 313-314, latestTime 320, itemTime 326)와 `buildTopicFeed` 정렬(458-459)의 `Date.parse(... || 0)`를 `Date.parse(... || '')`로 교체. 빈 문자열은 `Date.parse('')`=NaN → 바깥 `|| 0`으로 0이 되어 의도대로 동작.
+3) 검증: grep으로 잔여 `|| 0)` 패턴 0건, node --check, npm test, smoke:rss-services 통과.
+참고: 에이전트가 함께 보고한 #2(본문 잘림 판정 공격성)는 사용자 요청 정책("완벽하게 보여주든지 아예 없든지")의 의도된 동작이고, #3(chatServiceRoutes 파라미터 이름)은 위치상 정상 작동하는 가독성 이슈라 수정하지 않음.
+실행: `node --check`, `npm test`, `npm run smoke:rss-services`
+기대: 날짜가 비어 캐시 보정 경로로 들어온 항목이 2000년 타임스탬프로 잘못 필터링되지 않고, 인덱스 시프트가 발생하지 않는다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-19 21:40] N/A 다음·이전 글 이동 시 본문 페이지(page) 리셋
 
 **LOG_ID: 20260619_2140**
