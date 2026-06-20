@@ -488,11 +488,12 @@ class RssNewsService extends RssServiceBase {
       }
 
       const fetchTarget = rawResolvedSourceLink || link;
-      // [LOG: 20260610_1500] Add 3 second timeout to avoid hanging on slow servers
+      // [LOG: 20260620_1200] 3초→6초: SBS 등 느린 매체의 간헐적 타임아웃으로 본문 크롤이 실패해
+      // "불완전한 기사" 404가 빈발하던 문제 완화. 성공률을 높여 사용자가 클릭한 기사가 열리도록 한다.
       const response = await this.fetchImpl(fetchTarget, {
         headers: CHROME_HEADERS,
         redirect: 'follow',
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(6000)
       });
       if (!response?.ok) {
         throw new Error(`upstream failed${response?.status ? ` (${response.status})` : ''}`);

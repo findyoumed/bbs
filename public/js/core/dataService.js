@@ -35,8 +35,11 @@ export function createDataService(deps) {
     if (articleKey) headers['X-Article-Key'] = articleKey;
     if (link) headers['X-Article-Link'] = encodeURIComponent(link);
 
+    // [LOG: 20260620_1200] 기사 로드 실패(불완전 기사 404 등)는 showNewsArticle이 잡아 목록으로 복귀시키는
+    // 예상된 흐름이므로 silent로 호출해 콘솔/로거 노이즈를 내지 않는다. (에러는 throwOnError 기본값으로 전파)
     return await apiFetch(`/api/services/news/${encodeURIComponent(topicId)}/${encodeURIComponent(articleNo)}`, {
-      headers
+      headers,
+      silent: true
     });
   }
 

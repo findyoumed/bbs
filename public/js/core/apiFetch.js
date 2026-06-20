@@ -41,12 +41,18 @@ function reportError(error, context) {
     error.message = translateErrorMessage(error);
   }
   state.lastApiError = error;
-  console.error('API 오류:', path, error.message);
 
+  // [LOG: 20260620_1200] silent 요청 시 콘솔/로거/전역 알림을 모두 억제한다.
+  // 호출자가 직접 처리하는 예상된 에러(예: 불완전 뉴스 기사 404)의 노이즈를 없앤다.
+  if (silent) {
+    return;
+  }
+
+  console.error('API 오류:', path, error.message);
   if (logger) {
     logger.error(`${logPrefix}: ${method} ${path}`, error.toJSON());
   }
-  if (!silent && onGlobalError) {
+  if (onGlobalError) {
     onGlobalError(error);
   }
 }

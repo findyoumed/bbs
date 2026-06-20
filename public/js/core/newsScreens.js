@@ -599,7 +599,8 @@ export function createNewsScreens(deps) {
         if (options.skipOnIncomplete && /불완전한 뉴스 기사/.test(error?.message || '')) {
           throw error;
         }
-        console.error('뉴스 본문 상세 로드 실패:', error.message);
+        // [LOG: 20260620_1200] 불완전 기사 등 예상된 로드 실패는 조용히 목록으로 복귀한다(콘솔 노이즈 억제).
+        console.debug('뉴스 본문 상세 로드 실패, 목록으로 복귀:', error.message);
         await showNewsList(topicDoor, {
           fromHistory: true,
           pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))

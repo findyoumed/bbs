@@ -1,3 +1,24 @@
+## [2026-06-20 12:00] 불완전 뉴스 기사 404 노이즈 제거 (타임아웃↑ + 콘솔 silent)
+
+**LOG_ID: 20260620_1200**
+목표: 목록 기사 클릭/선택 시 "불완전한 뉴스 기사입니다" 404가 콘솔에 에러 무더기로 찍히던 문제를 줄인다. 근본 원인은 느린 매체의 간헐적 크롤 타임아웃과, 예상된 404를 콘솔 에러로 노출하는 클라이언트 처리.
+변경 파일:
+- `src/server/RssNewsService.js` (크롤 타임아웃 3s→6s)
+- `public/js/core/apiFetch.js` (silent 시 콘솔/로거/전역알림 모두 억제)
+- `public/js/core/dataService.js` (loadNewsArticle를 silent 호출)
+- `public/js/core/newsScreens.js` (catch의 console.error → console.debug)
+수행 작업:
+1) 진단: 사용자가 본 article=6 404는 라이브 피드의 그 시점 크롤 실패(SBS endPage.do 등 느린 매체가 3초 타임아웃 초과)였고, 재진단 시 동일 6번은 정상(body 898자)으로 간헐적 실패임을 확인.
+2) `_fetchNewsArticleDetail` 타임아웃 3000→6000ms로 상향 → 느린 매체 크롤 성공률↑, "불완전 기사" 404 빈도 대폭 감소.
+3) `reportError`가 silent와 무관하게 console.error/logger.error를 찍던 반쪽 구현을 수정: silent면 즉시 return해 콘솔·로거·전역알림 모두 억제. 기존 silent:true 호출처(auth/chat/myInfo)도 의도대로 조용해짐.
+4) `loadNewsArticle`을 silent:true로 호출(실패는 showNewsArticle catch가 목록 복귀로 처리하는 예상된 흐름). catch의 console.error를 console.debug로 완화.
+5) 검증: node --check 4파일, smoke:rss-services·full-traversal 통과. 브라우저 E2E로 기사 6→7→8→9 순회 및 article=99999(목록 밖) 진입 시 콘솔 에러 0 확인.
+실행: `npm run smoke:rss-services`, `npm run smoke:full-traversal`, Playwright E2E
+기대: 긴 스택 트레이스의 JS 콘솔 에러(API 오류/API Error/로드 실패) 5종이 사라지고, 타임아웃 상향으로 404 발생 자체가 드물어진다.
+결과: ✅ 완료 (JS 콘솔 에러 제거 + 404 빈도 감소). 단, 실제 404 발생 시 브라우저 내장 네트워크 로그(`GET ... 404`) 1줄은 fetch 특성상 JS로 억제 불가 — 완전 제거는 서버가 404 대신 200을 반환해야 하므로 정책 결정 필요.
+
+---
+
 ## [2026-06-20 11:30] 브라우저 E2E 검증 (Playwright) — 핵심 수정 실화면 확인
 
 **LOG_ID: 20260620_1130**
