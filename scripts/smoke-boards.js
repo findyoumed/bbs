@@ -12,9 +12,15 @@ const { createBoardRepositoryFromEnv } = require('../src/server/BoardRepository'
 const createRequestHandler = require('../src/server/createRequestHandler');
 
 async function request(base, pathname, options = {}) {
+  // [LOG: 20260620_0950] ensureAuthenticated 미들웨어는 body 없이 컨텍스트를 빌드하므로
+  // manual 신원(body.userId)이 무시된다. body.userId를 x-bbs-user-id 헤더로 미러링해 인증한다.
+  // (HTTP 헤더는 Latin-1만 허용하므로 한글 nickName은 헤더로 보내지 않고 body로만 전달한다.)
+  const authHeaders = options.body?.userId
+    ? { 'x-bbs-user-id': String(options.body.userId) }
+    : {};
   const response = await fetch(base + pathname, {
     method: options.method || 'GET',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: { 'Content-Type': 'application/json', ...authHeaders, ...(options.headers || {}) },
     body: options.body ? JSON.stringify(options.body) : undefined
   });
 
@@ -39,6 +45,10 @@ async function request(base, pathname, options = {}) {
 }
 
 const { assert } = require('./lib/scriptUtils');
+
+// [LOG: 20260620_0950] 게시판 글쓰기/답글/추천/수정/삭제는 ensureAuthenticated가 필요하므로
+// 비-게스트 작성자 ID로 호출한다. (loopback + 비-production 환경에서 body.userId로 신원 주입)
+const WRITER_ID = 'smoke_writer';
 
 async function main() {
   process.env.BOARD_REPOSITORY_DRIVER = 'memory';
@@ -84,7 +94,7 @@ async function main() {
     const noticeBoard = boards.find((board) => board.boardId === 'notice') || {};
     const created = await request(base, '/api/boards/plaza/posts', {
       method: 'POST',
-      body: { title: 'Smoke board post', content: 'board smoke test body', userId: 'guest', nickName: '손님' }
+      body: { title: 'Smoke board post', content: 'board smoke test body', userId: WRITER_ID, nickName: '손님' }
     });
     const uploadedAttachment = await request(base, `/api/boards/plaza/posts/${created.post.id}/attachments`, {
       method: 'POST',
@@ -92,7 +102,7 @@ async function main() {
         name: 'smoke.txt',
         mimeType: 'text/plain',
         contentBase64: Buffer.from('attachment smoke', 'utf-8').toString('base64'),
-        userId: 'guest',
+        userId: WRITER_ID,
         nickName: '손님'
       }
     });
@@ -100,23 +110,23 @@ async function main() {
     const downloadedAttachment = await fetch(`${base}/api/boards/plaza/posts/${created.post.id}/attachments/${uploadedAttachment.id}/download`).then((response) => response.text());
     const replied = await request(base, `/api/boards/plaza/posts/${created.post.id}/reply`, {
       method: 'POST',
-      body: { title: 'Smoke board reply', content: 'reply body', userId: 'guest', nickName: '손님' }
+      body: { title: 'Smoke board reply', content: 'reply body', userId: WRITER_ID, nickName: '손님' }
     });
     const updated = await request(base, `/api/boards/plaza/posts/${created.post.id}`, {
       method: 'PATCH',
-      body: { title: 'Smoke board post updated', content: 'board smoke test update', userId: 'guest', nickName: '손님' }
+      body: { title: 'Smoke board post updated', content: 'board smoke test update', userId: WRITER_ID, nickName: '손님' }
     });
     const recommended = await request(base, `/api/boards/plaza/posts/${firstPostId}/recommend`, {
       method: 'POST',
-      body: { userId: 'guest', nickName: '손님' }
+      body: { userId: WRITER_ID, nickName: '손님' }
     });
     const deleted = await request(base, `/api/boards/plaza/posts/${replied.post.id}`, {
       method: 'DELETE',
-      body: { userId: 'guest', nickName: '손님' }
+      body: { userId: WRITER_ID, nickName: '손님' }
     });
     const deletedAttachment = await request(base, `/api/boards/plaza/posts/${created.post.id}/attachments/${uploadedAttachment.id}`, {
       method: 'DELETE',
-      body: { userId: 'guest', nickName: '손님' }
+      body: { userId: WRITER_ID, nickName: '손님' }
     });
     const attachmentListAfterDelete = await request(base, `/api/boards/plaza/posts/${created.post.id}/attachments`);
     const routedHtml = await fetch(`${base}/board/plaza`).then((response) => response.text());
@@ -161,7 +171,9 @@ async function main() {
       routedHtmlOk: true
     }, null, 2));
   } finally {
-    server.close();
+    // [LOG: 20260620_0950] 에러 경로의 process.exit가 닫히는 중인 소켓 핸들을 강제 종료하면
+    // Windows libuv가 UV_HANDLE_CLOSING assertion으로 죽으므로, 서버가 완전히 닫힌 뒤 진행한다.
+    await new Promise((resolve) => server.close(resolve));
     try {
       fs.rmSync(attachmentBaseDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     } catch (error) {

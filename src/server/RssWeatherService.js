@@ -98,10 +98,10 @@ class RssWeatherService extends RssServiceBase {
             const suffix = offset === 0 ? ' 오늘' : offset === 1 ? ' 내일' : offset === 2 ? ' 모레' : '';
             return {
               day: `${mm}/${dd}(${dayName})${suffix}`,
-              weather: WMO_WEATHER[d.weather_code[i]] || '알 수 없음',
-              high: d.temperature_2m_max[i] != null ? String(Math.round(d.temperature_2m_max[i])) : '',
-              low: d.temperature_2m_min[i] != null ? String(Math.round(d.temperature_2m_min[i])) : '',
-              rainProbability: d.precipitation_probability_max[i] != null ? `${d.precipitation_probability_max[i]}%` : ''
+              weather: WMO_WEATHER[d.weather_code?.[i]] || '알 수 없음',
+              high: d.temperature_2m_max?.[i] != null ? String(Math.round(d.temperature_2m_max[i])) : '',
+              low: d.temperature_2m_min?.[i] != null ? String(Math.round(d.temperature_2m_min[i])) : '',
+              rainProbability: d.precipitation_probability_max?.[i] != null ? `${d.precipitation_probability_max[i]}%` : ''
             };
           })
         };
@@ -164,10 +164,10 @@ class RssWeatherService extends RssServiceBase {
         const suffix = offset === 0 ? ' 오늘' : offset === 1 ? ' 내일' : '';
         return {
           day: `${mm}/${dd}(${dayName})${suffix}`,
-          weather: WMO_WEATHER[d.weather_code[i]] || '알 수 없음',
-          high: d.temperature_2m_max[i] != null ? String(Math.round(d.temperature_2m_max[i])) : '',
-          low: d.temperature_2m_min[i] != null ? String(Math.round(d.temperature_2m_min[i])) : '',
-          rainProbability: d.precipitation_probability_max[i] != null ? `${d.precipitation_probability_max[i]}%` : ''
+          weather: WMO_WEATHER[d.weather_code?.[i]] || '알 수 없음',
+          high: d.temperature_2m_max?.[i] != null ? String(Math.round(d.temperature_2m_max[i])) : '',
+          low: d.temperature_2m_min?.[i] != null ? String(Math.round(d.temperature_2m_min[i])) : '',
+          rainProbability: d.precipitation_probability_max?.[i] != null ? `${d.precipitation_probability_max[i]}%` : ''
         };
       });
       const result = {

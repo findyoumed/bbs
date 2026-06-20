@@ -5,7 +5,9 @@ const path = require('path');
 const { assert } = require('./lib/scriptUtils');
 
 function readProjectFile(relativePath) {
-  return fs.readFileSync(path.join(__dirname, '..', relativePath), 'utf8');
+  // [LOG: 20260620_1025] 멀티라인 fragment 검증은 줄바꿈 형식에 무관해야 한다.
+  // Windows에서 CSS가 CRLF로 저장되면 LF 기준 패턴이 false negative를 내므로 LF로 정규화한다.
+  return fs.readFileSync(path.join(__dirname, '..', relativePath), 'utf8').replace(/\r\n/g, '\n');
 }
 
 function assertIncludes(content, fragment, message) {
@@ -19,7 +21,7 @@ function assertNotIncludes(content, fragment, message) {
 function main() {
   const retroCss = readProjectFile('public/styles/retro-terminal.css');
   const layoutCss = readProjectFile('public/style.css');
-  const terminalUiCore = readProjectFile('public/js/core/terminalUiCore.js');
+  const terminalInputUi = readProjectFile('public/js/core/terminalInputUi.js');
 
   assertIncludes(layoutCss, '@media (max-width: 768px) and (orientation: portrait)', 'mobile portrait layout rules should exist');
   assertIncludes(layoutCss, '@media (max-height: 480px) and (orientation: landscape)', 'mobile landscape layout rules should exist');
@@ -34,10 +36,10 @@ function main() {
   assertIncludes(retroCss, '@media (max-width: 768px) {\n    :root {\n        --terminal-scale: 1;', 'mobile portrait should disable transform auto scaling');
   assertIncludes(retroCss, '@media (max-height: 540px) and (orientation: landscape) {\n    :root {\n        --terminal-scale: 1;', 'mobile landscape should disable transform auto scaling');
 
-  assertIncludes(terminalUiCore, "window.getComputedStyle(document.documentElement).getPropertyValue('--terminal-scale')", 'auto zoom should preserve the configured CSS scale');
-  assertIncludes(terminalUiCore, 'setZoom(cssScale);', 'auto zoom should apply the CSS-managed scale');
-  assertNotIncludes(terminalUiCore, 'const wrapperWidth = terminalWrapper?.clientWidth || window.innerWidth || 800;', 'auto zoom should not dynamically shrink by wrapper width');
-  assertNotIncludes(terminalUiCore, 'const isMobilePortrait = viewportWidth <= 768 && viewportHeight > viewportWidth;', 'auto zoom should not branch into separate mobile transform logic');
+  assertIncludes(terminalInputUi, "window.getComputedStyle(document.documentElement).getPropertyValue('--terminal-scale')", 'auto zoom should preserve the configured CSS scale');
+  assertIncludes(terminalInputUi, 'setZoom(cssScale);', 'auto zoom should apply the CSS-managed scale');
+  assertNotIncludes(terminalInputUi, 'const wrapperWidth = terminalWrapper?.clientWidth || window.innerWidth || 800;', 'auto zoom should not dynamically shrink by wrapper width');
+  assertNotIncludes(terminalInputUi, 'const isMobilePortrait = viewportWidth <= 768 && viewportHeight > viewportWidth;', 'auto zoom should not branch into separate mobile transform logic');
 
   console.log(JSON.stringify({
     ok: true,

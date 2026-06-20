@@ -380,7 +380,6 @@ async function main() {
     'src/server/MenuResolver.js',
     'src/server/createRequestHandler.js',
     'src/server/RssCacheStore.js',
-    'public/js/core/AuthBridge.js',
     'supabase/migrations/0001_initial_schema.sql',
     'supabase/migrations/0002_attachment_storage_columns.sql',
     'supabase/migrations/0003_memo_schema_alignment.sql',

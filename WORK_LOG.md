@@ -1,3 +1,122 @@
+## [2026-06-20 11:30] 브라우저 E2E 검증 (Playwright) — 핵심 수정 실화면 확인
+
+**LOG_ID: 20260620_1130**
+목표: Playwright로 실제 브라우저에서 주요 사용자 플로우를 순회하며, 그간 수정한 핵심 버그가 실화면에서 동작하는지와 콘솔 에러 부재를 확인한다.
+변경 파일: 없음 (검증 전용)
+수행 작업:
+1) 메인 화면(/) 렌더링 정상, 콘솔 에러 0.
+2) 뉴스: NEWS → 토픽 11개("최신" 포함) → 토픽1 기사목록 15개 → 기사1 진입. 본문이 날씨예보 전문으로 완전 표시("...23~29도" 정상 종료), 짤림 없음(20260619_2110 수정 검증).
+3) 본문 페이지 리셋 버그(20260619_2140) 실검증: 기사1에서 F(다음쪽) → URL `?article=1&page=2` 정상 부착 → N(다음글) → URL `?article=2`로 전환되며 `&page=2`가 정확히 사라짐(page 리셋 확인).
+4) 날씨: WEATHER → 경기도(door 2) → 10일 일별 예보 전체 표시(날씨/최고/최저/강수확률 모두 정상). 옵셔널 체이닝 수정(20260620_1050)이 정상 데이터를 막지 않음 확인.
+5) 전체 세션 누적 콘솔 메시지 18건, 에러/경고 0건.
+실행: Playwright MCP (기존 dev 서버 localhost:3000)
+기대: 핵심 수정 사항이 실제 브라우저에서 회귀 없이 동작하고 콘솔 에러가 없다.
+결과: ✅ 완료 (콘솔 에러 0, 모든 플로우 정상)
+
+---
+
+## [2026-06-20 11:20] Supabase 라이브 검증 통과 — check 거짓 실패 + supabase-live 인증 수정
+
+**LOG_ID: 20260620_1120**
+목표: 실제 Supabase 연결로 `npm run check`와 라이브 스모크 5종을 모두 통과시킨다.
+변경 파일:
+- `scripts/check-supabase-ready.js` (존재하지 않는 파일 검증 항목 제거)
+- `scripts/smoke-supabase-live.js` (게스트 userId → 비-게스트 작성자)
+수행 작업:
+1) `npm run check` 거짓 실패 진단: Supabase 연결·라이브 프로브가 전부 정상(liveReady:true)인데도 `ok:false`. 원인은 검증 파일 목록(라인 383)의 `public/js/core/AuthBridge.js`가 존재한 적 없는 파일이라 `files.every(present)`가 항상 false. 클라이언트 인증은 authClient.js/authService.js/authServiceBootstrap.js로 동작하며 아무도 AuthBridge.js를 import하지 않음 확인 후 검증 항목 제거 → check ok:true (라이브 프로브 boards/members/memos/attachments/chatRooms/rssCache 전부 통과).
+2) `smoke:supabase-live` 401 실패 진단: `userId: 'guest'`로 repository.createPost 직접 호출 → BoardRepositoryAccess.js:50의 게스트 차단(401)에 걸림. 통과하던 supabase-auth-write는 실제 auth 사용자 ID 사용. boards 스모크와 동일한 "처음부터 잘못된 테스트". `userId`를 `smoke_live_writer`로 변경 → 실제 Supabase 글 생성(263)/답글(264)/수정/삭제 후 복원 검증(restoredCount:true) 통과, 라이브 DB 정리 확인.
+3) 라이브 검증 결과: check + supabase-live/auth-write/realtime/chat-rooms-supabase/chat-members-supabase 6종 전부 PASS.
+실행: `npm run check`, `npm run smoke:supabase-*`, `npm run smoke:chat-*-supabase`
+기대: 실제 Supabase 환경에서 배포 준비 확인과 라이브 CRUD/realtime/chat 검증이 모두 통과한다.
+결과: ✅ 완료 (라이브 6종 전부 PASS)
+
+---
+
+## [2026-06-20 10:50] 날씨 서비스 외부 API 부분 응답 방어 (옵셔널 체이닝)
+
+**LOG_ID: 20260620_1050**
+목표: 코드베이스 전반(모듈 로딩/정규식/JSON.parse/문서 일치성)을 점검하고, open-meteo 응답에서 `time` 배열만 검증한 채 나머지 일별 배열을 인덱스 접근하던 RssWeatherService의 방어 부족을 보완한다.
+변경 파일:
+- `src/server/RssWeatherService.js` (_fetchDailyForecast, getLocalWeather 배열 접근)
+수행 작업:
+1) 광범위 점검 결과 견고 확인: 전체 src 모듈 require 정상 로딩, server.js 부팅 정상, module-level /g 정규식(HTML_ESCAPE/MULTILINE_CONTROL)은 .replace 전용이라 lastIndex 토글 버그 없음, 모든 JSON.parse(Attachment/GoogleNewsUrl/httpUtils)는 try 보호, CLAUDE.md·AGENTS.md 참조 npm 명령 전부 실재.
+2) RssWeatherService: `if (!d?.time)`만 확인 후 `d.weather_code[i]`, `d.temperature_2m_max[i]`, `d.temperature_2m_min[i]`, `d.precipitation_probability_max[i]`를 직접 접근. open-meteo가 특정 조건(과거 날짜/위치)에서 precipitation 등 일부 배열을 누락하면 TypeError가 나고 catch가 날씨 전체를 버림. 조건부 접근을 `?.[i]`로 변경해 부분 응답에도 가용한 데이터는 표시하도록 방어.
+3) 검증: node --check, 잔여 미적용 0건, smoke:rss-services(weather 포함) 통과.
+실행: `node --check`, `npm run smoke:rss-services`
+기대: 외부 날씨 API가 일부 배열을 누락해도 크래시 없이 가용 항목을 표시한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-20 10:25] smoke:ui-geometry 회귀 2건 수정 (CRLF + 이동된 zoom 로직)
+
+**LOG_ID: 20260620_1025**
+목표: `npm run smoke:ui-geometry`가 두 가지 원인으로 실패하던 것을 수정한다. (1) CSS 파일이 CRLF 줄바꿈이라 LF 기준 멀티라인 패턴이 매칭 실패, (2) auto zoom 검증이 옛 파일(terminalUiCore.js)을 보는데 해당 로직이 terminalInputUi.js로 이동함.
+변경 파일:
+- `scripts/smoke-ui-geometry.js` (readProjectFile 줄바꿈 정규화 + 검증 대상 파일 경로 수정)
+수행 작업:
+1) 원인1: `retro-terminal.css`가 CRLF로 저장되어 있어 라인 34의 `@media (max-width: 768px) {\n :root {\n --terminal-scale: 1;` LF 패턴이 false negative. `readProjectFile`에서 `.replace(/\r\n/g, '\n')`로 줄바꿈 정규화 → CRLF/LF 무관하게 견고. CSS 규칙 자체는 정확히 존재함(retro-terminal.css:145-147) 확인.
+2) 원인2: auto zoom 로직(`getComputedStyle...getPropertyValue('--terminal-scale')`, `setZoom(cssScale)`)이 terminalUiCore.js → terminalInputUi.js로 이동했고 동적 wrapper 계산(`wrapperWidth`/`isMobilePortrait`)은 제거됨(올바른 리팩토링). 테스트만 옛 파일을 봐서 실패. 변수·경로 `terminalUiCore` → `terminalInputUi` 일괄 교체.
+3) 검증: terminalInputUi.js에 기대 문자열 4개(37~40) 정확히 존재, 제거 대상 부재 확인 후 적용.
+실행: `npm run smoke:ui-geometry`
+기대: CRLF 환경에서도 CSS·zoom 검증이 정확히 동작하여 ui-geometry 스모크가 통과한다.
+결과: ✅ 완료 (전체 로컬 스모크 12종 + npm test 전부 PASS)
+
+---
+
+## [2026-06-20 10:10] 실행 불가능한 죽은 스모크 npm 명령 2개 제거
+
+**LOG_ID: 20260620_1010**
+목표: `smoke:printable-view`, `smoke:chat-realtime` 두 npm 명령이 존재하지 않는 모듈 `public/js/core/BbsStateBootstrap`을 require하여 호출 즉시 "Cannot find module"로 죽는 문제를 정리한다.
+변경 파일:
+- `package.json` (scripts에서 2개 명령 제거)
+수행 작업:
+1) 진단: 두 스크립트는 addb51d(2026-05-09)에서 추가됐으나 참조 모듈 `BbsStateBootstrap`은 git 히스토리에 한 번도 존재한 적 없음. 사용 함수(`buildPrintablePayload`, `renderPrintableHtml`)도 코드베이스 어디에도 정의되지 않았고, 인쇄 뷰 기능은 앱 UI에도 없음. qa:final·vercel-ready 등 어떤 통합 명령도 이들을 호출하지 않는 고아 스텁으로 확인.
+2) 사용자 확인 결과 "package.json 명령만 제거" 선택. 깨진 npm 명령만 제거하고 스크립트 파일은 향후 기능 구현 시 스펙 참고용으로 보존.
+3) 검증: package.json JSON 유효성 확인, printable-view·chat-realtime 잔여 참조 0건, 스크립트 파일 보존 확인.
+참고: 향후 인쇄 기능 구현 시 scripts/smoke-printable-view.js(58줄)가 기대하는 BbsStateBootstrap API 스펙을 그대로 사용 가능.
+실행: `node -e JSON.parse`, 등록 스모크 전수 점검
+기대: 깨진 npm 명령이 사라져 호출 시 에러가 발생하지 않으며, 실제 chat 기능은 smoke:chat-counts/chat-rooms/chat-members-supabase가 계속 커버한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-20 09:50] smoke:boards 인증 회귀 + libuv assertion 수정
+
+**LOG_ID: 20260620_0950**
+목표: `npm run smoke:boards`가 createPost 단계에서 401(로그인 필요)로 실패하고, 그 에러 경로의 process.exit가 Windows libuv `UV_HANDLE_CLOSING` assertion으로 죽던 문제를 해결한다.
+변경 파일:
+- `scripts/smoke-boards.js` (request 헬퍼 인증 헤더 미러링, WRITER_ID 도입, server.close await)
+수행 작업:
+1) 진단: 글쓰기/답글/추천 라우트는 `ensureAuthenticated` 미들웨어를 요구(의도된 보안)하는데, 테스트는 `userId: 'guest'`로 호출 → `isGuest` 판정으로 401. git 추적 결과 addb51d(2026-05-09)에서 라우트·테스트가 함께 추가될 때부터 모순된 채 커밋되어 처음부터 깨진 테스트로 확인.
+2) 근본 원인: `ensureAuthenticatedContext`가 `getRouterContext(router)`를 body 없이(`includeBody=false`) 호출하므로 manual 신원(body.userId)이 무시되고, manual 인증은 `x-bbs-user-id` 헤더로만 가능(smoke-full-traversal.js의 표준 패턴과 동일).
+3) `request` 헬퍼가 `body.userId`를 `x-bbs-user-id` 헤더로 미러링하도록 수정. HTTP 헤더는 Latin-1만 허용하므로 한글 nickName은 헤더로 보내지 않고 body로만 전달(인증은 userId만 필요).
+4) 글쓰기/수정/삭제/첨부가 동일 작성자가 되도록 body.userId를 `WRITER_ID='smoke_writer'`로 통일.
+5) libuv assertion 회피: finally의 `server.close()`를 `await new Promise(resolve => server.close(resolve))`로 변경해 닫히는 중 핸들이 process.exit에 강제 종료되지 않도록 함.
+실행: `npm run smoke:boards`, `npm test`
+기대: 게시판 전체 CRUD(작성/첨부/답글/수정/추천/삭제) 스모크가 통과하고 assertion 없이 정상 종료한다.
+결과: ✅ 완료 (ok: true, 모든 단계 정상)
+
+---
+
+## [2026-06-20 09:30] auth-bridge 스모크 스크립트 + findAuthUser 한도 경고 회귀 복원
+
+**LOG_ID: 20260620_0930**
+목표: Ralph 루프 점검 중 `npm run smoke:auth-bridge`가 "Cannot find module"로 깨져 있고(package.json·CLAUDE.md는 여전히 참조), 동시에 `AuthBridgeSync.findAuthUser`의 페이지 한도 소진 경고가 사라진 회귀를 함께 복원한다.
+변경 파일:
+- `scripts/smoke-auth-bridge.js` (커밋 1d42347에서 복원, 205줄)
+- `src/server/AuthBridgeSync.js` (maxPages 상수 + 한도 도달 경고 복원)
+수행 작업:
+1) 진단: package.json의 모든 smoke 스크립트 파일 존재 여부를 점검해 `scripts/smoke-auth-bridge.js`만 누락 확인. git 추적 결과 커밋 1d42347에서 추가됐다가 이후 "update" 커밋에서 테스트 파일과 findAuthUser 경고 로직이 함께 사라진 회귀로 판명.
+2) 복원 파일이 import하는 심볼(extractAuthMemberUserId, findAuthUser, resolveAuthUser, syncMemberAuthProfile, throwAdminError, createBridgeError, normalizeAuthEmail)이 모두 현재 코드베이스에 존재함을 확인 후 복원.
+3) `findAuthUser`에 `const maxPages = 50` 상수와, 50페이지(최대 10000명) 소진 시 `한도 도달` console.warn을 복원. 사용자 수가 한도를 넘으면 매칭 실패가 조용히 묻히던 문제를 가시화.
+4) 검증: smoke:auth-bridge 32개 체크 전부 통과, npm test 전체 통과.
+실행: `npm run smoke:auth-bridge`, `npm test`
+기대: 문서화된 auth-bridge 스모크가 정상 동작하고, Auth 사용자 한도 소진이 경고로 노출된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-19 22:10] Date.parse(0) 함정 수정 — 날짜 없는 뉴스 항목 누락/인덱스 시프트 방지
 
 **LOG_ID: 20260619_2210**

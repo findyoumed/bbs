@@ -123,7 +123,8 @@ async function findAuthUser(bridge, predicate) {
   }
 
   const perPage = 200;
-  for (let page = 1; page <= 50; page += 1) {
+  const maxPages = 50;
+  for (let page = 1; page <= maxPages; page += 1) {
     const { data, error } = await bridge.client.auth.admin.listUsers({ page, perPage });
     if (error) {
       throwAdminError('Supabase Auth 사용자 목록 조회', error);
@@ -151,6 +152,9 @@ async function findAuthUser(bridge, predicate) {
     }
   }
 
+  // [LOG: 20260620_0930] 페이지 한도(50 x 200 = 10000명) 소진. 더 많은 사용자가 존재할 수 있으나
+  // 탐색을 중단하고 null을 반환하므로, 조용히 누락되지 않도록 경고를 남긴다. (스모크 회귀 방지)
+  console.warn(`[AuthBridgeSync] findAuthUser: ${maxPages} 페이지(최대 ${maxPages * perPage}명) 한도 도달, 매칭 사용자를 찾지 못했습니다. 사용자 수가 한도를 초과했을 수 있습니다.`);
   return null;
 }
 

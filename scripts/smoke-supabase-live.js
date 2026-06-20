@@ -15,7 +15,9 @@ async function main() {
   }
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const userId = 'guest';
+  // [LOG: 20260620_1120] 게시판 글쓰기는 BoardRepositoryAccess가 게스트(userId==='guest')를 401로 차단한다.
+  // 라이브 쓰기 검증이므로 비-게스트 작성자 ID를 사용한다. (생성한 글은 finally에서 정리)
+  const userId = 'smoke_live_writer';
   const payload = {
     title: `[smoke] ${stamp}`,
     content: `live smoke body ${stamp}`,
