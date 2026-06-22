@@ -294,19 +294,13 @@ class RssNewsService extends RssServiceBase {
           const isTooShort = hasBreakingNewsKeyword ? (trimmed.length < 15) : (trimmed.length < 80);
           resolvedArticle.detailFetched = !isTruncated && !isTooShort;
         } else {
-          // [LOG: 20260619_2110] RSS 요약 폴백 — 짤린 요약(말줄임표/연결어미 종결)은 거부.
-          // "완벽하게 보여주든지 아예 없든지" 정책: 불완전한 본문은 표시하지 않고 404 처리한다.
-          const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed)
-            || /[며고나면지를을은는이가와과의로]/.test(trimmed.slice(-3));
-          resolvedArticle.detailFetched = !isTruncated && trimmed.length >= 40;
+          // [LOG: 20260621_1000] RSS 요약은 기사의 일부분(문장은 완결이어도 본문은 미완)이므로 표시하지 않는다.
+          // "완벽하게 보여주든지 아예 없든지" 정책: 크롤 완전 본문(acceptDetail)만 허용하고 RSS 폴백은 404.
+          resolvedArticle.detailFetched = false;
         }
       } else {
-        // [LOG: 20260619_2110] 크롤링 실패 — RSS 요약 폴백. 짤린 요약은 거부하여 불완전 본문 표시를 차단.
-        const finalBody = this._sanitizeArticleText(resolvedArticle.body || originalFeedBody || originalFeedDescription || '', resolvedArticle.title);
-        const trimmed = (finalBody || '').trim();
-        const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed)
-          || /[며고나면지를을은는이가와과의로]/.test(trimmed.slice(-3));
-        resolvedArticle.detailFetched = !!finalBody && !isTruncated && trimmed.length >= 40;
+        // [LOG: 20260621_1000] 크롤 실패 시 RSS 요약 폴백을 표시하지 않는다(부분 본문 차단). 완전 본문만 허용 → 404.
+        resolvedArticle.detailFetched = false;
       }
     } else {
       // [LOG: 20260616_1715] Default fallback for articles with missing links
@@ -488,12 +482,12 @@ class RssNewsService extends RssServiceBase {
       }
 
       const fetchTarget = rawResolvedSourceLink || link;
-      // [LOG: 20260620_1200] 3초→6초: SBS 등 느린 매체의 간헐적 타임아웃으로 본문 크롤이 실패해
-      // "불완전한 기사" 404가 빈발하던 문제 완화. 성공률을 높여 사용자가 클릭한 기사가 열리도록 한다.
+      // [LOG: 20260621_1000] 6초→8초: 연합뉴스 등 일부 매체가 6~8초 소요되어 크롤 실패→RSS 폴백되던 문제 완화.
+      // RSS 폴백은 더 이상 표시하지 않으므로(완전 본문만 허용), 크롤 성공률을 최대한 끌어올린다.
       const response = await this.fetchImpl(fetchTarget, {
         headers: CHROME_HEADERS,
         redirect: 'follow',
-        signal: AbortSignal.timeout(6000)
+        signal: AbortSignal.timeout(8000)
       });
       if (!response?.ok) {
         throw new Error(`upstream failed${response?.status ? ` (${response.status})` : ''}`);

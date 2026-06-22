@@ -1,3 +1,36 @@
+## [2026-06-21 11:00] 상단바 로고 클릭 시 입력창에 'T'가 잠깐 보이던 버그 수정
+
+**LOG_ID: 20260621_1100**
+목표: 상단바 로고(retro-topbar-row1 > a, 초기화면 이동) 클릭 시 입력창에 'T'가 잠시 노출되는 현상 제거.
+변경 파일:
+- `public/js/core/interactionHandlers.js` (executeCommand의 pending value 전달 조건)
+수행 작업:
+1) 진단: menu-path 핸들러는 상단바(.retro-topbar--ansi) 클릭 시 `showPending=false`로 `showPendingCommandInput`을 건너뛰지만, executeCommand가 마지막에 항상 `clearPendingWhenSettled(result, text)`를 호출 → `trackCommandPending(result, {value:'T'})`로 이어짐. trackCommandPending은 80ms 후 `cmdInput.value='T'`(wait caret)를 설정하므로, showMain이 80ms 이상 걸리면 'T'가 잠깐 노출됨. [LOG:20260505_2245]가 의도했으나 trackCommandPending 경로를 못 막은 미완성 버그.
+2) `executeCommand`에서 `showPending`을 변수로 추출하고, `clearPendingWhenSettled(result, showPending ? text : '')`로 변경. showPending=false면 pending value를 빈 문자열로 넘겨 trackCommandPending이 입력창에 텍스트를 넣지 않도록 함(라인 86 `if (pendingValue)` false). 로딩 상태(setCommandPending)는 그대로 유지.
+3) 함께 확인: 앞서 한 뉴스 수정(타임아웃 8초, RSS 폴백 제거 3곳)이 working tree에 모두 살아있음을 검증(사용자가 되돌렸다고 했으나 실제로는 유지됨, RssNewsService.js만 uncommitted).
+실행: `node --check`, `npm run smoke:rss-services`, `npm test`
+기대: 상단바 로고 클릭 시 'T'가 입력창에 노출되지 않고 곧바로 초기화면으로 전환된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-21 10:00] RSS 요약 폴백 완전 제거 — 크롤 완전 본문만 표시 (연합뉴스 짤림 해결)
+
+**LOG_ID: 20260621_1000**
+목표: 연합뉴스 등에서 본문이 중간에 짤려 표시되던 문제 해결. 원인은 크롤 타임아웃 시 RSS 요약(문장은 완결이나 기사로는 일부분)으로 폴백되고, 그 요약이 isTruncated 검사를 통과해 짤린 채 표시된 것.
+변경 파일:
+- `src/server/RssNewsService.js` (크롤 타임아웃 6s→8s, RSS 폴백 경로 2곳 detailFetched=false)
+수행 작업:
+1) 진단: 사용자가 본 연합뉴스 기사(yna.co.kr/.../AKR20260621036752082)를 8초 타임아웃으로 직접 크롤 시 본문 2280자·score 4520 완전 수집 확인. 즉 6초 타임아웃으로 크롤 실패→RSS 요약("...협상을 시작했") 폴백된 것이 원인.
+2) RSS 폴백은 기사의 일부분이므로 "완벽하게 보여주든지 아예 없든지" 정책에 따라 표시하지 않도록 변경: acceptDetail=false 경로와 detail.unavailable(크롤 실패) 경로의 detailFetched를 모두 false로(→404). 크롤 완전 본문(acceptDetail=true + 품질검사)만 표시.
+3) 크롤 성공률을 높이기 위해 타임아웃 6s→8s(연합뉴스가 6~8초 소요). 상위 20개 측정 시 17/20(85%) 크롤 성공·표시, 나머지는 404로 차단(자동 스킵/목록복귀).
+4) 검증: 직접 크롤은 되는데 API 404였던 조선일보 건은 라이브 피드 변동+간헐적 타임아웃이며 `_fetchNewsArticleDetail` 자체는 정상(1676자 크롤 확인). 본문 캐시(news:article:v28)가 채워지면 재방문 시 성공.
+실행: `npm run smoke:rss-services`, `npm test`
+기대: 크롤에 성공한 기사는 완전 본문만 표시되고, 크롤 실패 기사는 짤린 RSS 요약 대신 404로 차단되어 화면에 부분 본문이 절대 노출되지 않는다.
+결과: ✅ 완료 (RSS 폴백 제거, 짤린 본문 미표시)
+
+---
+
 ## [2026-06-20 12:00] 불완전 뉴스 기사 404 노이즈 제거 (타임아웃↑ + 콘솔 silent)
 
 **LOG_ID: 20260620_1200**

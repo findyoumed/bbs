@@ -88,13 +88,16 @@ export function createInteractionHandlers(deps) {
 
     // [LOG: 20260505_2231] Show the clicked command/number in the input line
     // while executing, without dispatching `input` and opening autocomplete.
-    if (options.showPending !== false) {
+    const showPending = options.showPending !== false;
+    if (showPending) {
       showPendingCommandInput(text);
     }
     const token = beginCommandExecution(state);
     const result = handleCmd(text);
     trackCommandExecution(state, result, token);
-    clearPendingWhenSettled(result, text);
+    // [LOG: 20260621_1100] showPending=false(상단바 로고 클릭 등)면 입력창에 명령을 표시하지 않으므로
+    // 대기 caret(trackCommandPending)에도 명령 텍스트를 넘기지 않는다. 80ms 후 'T'가 잠깐 노출되던 버그 차단.
+    clearPendingWhenSettled(result, showPending ? text : '');
     return true;
   }
 
