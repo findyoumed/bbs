@@ -24,34 +24,51 @@ export function createTerminalHintLayout(deps) {
     }
   }
 
-  function createOverflowEntry(hiddenEntries) {
-    const hiddenTokenSummary = [...hiddenEntries]
+  // [LOG: 20260622_1900] 사용자 선택: 넘칠 때 '+N' 토큰 대신 숨긴 명령을 도움말(H) 토큰 tooltip에 모은다.
+  const HELP_TOKEN_SELECTOR = '.cmd-token[data-cmd="H"], .cmd-token[data-cmd="HELP"], .cmd-token[data-cmd="?"]';
+
+  function findHelpToken() {
+    return hintEl ? hintEl.querySelector(HELP_TOKEN_SELECTOR) : null;
+  }
+
+  // 숨겨진 엔트리 목록을 도움말(H) 토큰 tooltip에 노출한다. 비어 있으면 원래 tooltip으로 복원.
+  function applyHiddenCommandsToHelpToken(hiddenEntries) {
+    const helpToken = findHelpToken();
+    if (!helpToken) {
+      return;
+    }
+    if (helpToken.dataset.defaultTip === undefined) {
+      helpToken.dataset.defaultTip = helpToken.dataset.tip || '';
+    }
+
+    if (!hiddenEntries.length) {
+      helpToken.dataset.tip = helpToken.dataset.defaultTip;
+      helpToken.title = helpToken.dataset.defaultTip;
+      return;
+    }
+
+    const summary = [...hiddenEntries]
       .sort((left, right) => Number(left.dataset.entryIndex || '0') - Number(right.dataset.entryIndex || '0'))
       .map((entry) => entry.dataset.tokenText)
       .filter(Boolean)
       .join(', ');
 
-    const entry = document.createElement('span');
-    entry.className = 'cmd-entry cmd-entry-overflow';
-    entry.dataset.priority = '999';
-    entry.dataset.tokenText = `+${hiddenEntries.length}`;
+    const tip = summary ? `이 화면의 다른 명령 — ${summary}` : helpToken.dataset.defaultTip;
+    helpToken.dataset.tip = tip;
+    helpToken.title = tip;
+  }
 
-    const sep = document.createElement('span');
-    sep.className = 'cmd-sep';
-    sep.textContent = ',';
-
-    const token = document.createElement('span');
-    token.className = 'cmd-token cmd-token-overflow cmd-clickable';
-    token.textContent = `+${hiddenEntries.length}`;
-    token.dataset.cmd = '+';
-    token.dataset.tip = hiddenTokenSummary
-      ? `숨김 명령 ${hiddenEntries.length}개: ${hiddenTokenSummary}`
-      : '숨겨진 명령 펼치기';
-    token.title = token.dataset.tip;
-
-    entry.appendChild(token);
-    entry.appendChild(sep);
-    return entry;
+  // [LOG: 20260622_1900] 힌트 토큰 목록은 inline-flex; flex-wrap:wrap 이라 넘치면 가로가 아니라 "다음 줄"로
+  // 줄바꿈된다. 따라서 scrollWidth>clientWidth(가로 overflow)로는 넘침을 감지할 수 없다.
+  // 보이는 엔트리들이 2줄 이상으로 퍼졌는지(= 첫 줄보다 아래에 있는 엔트리 존재)로 한 줄 초과를 판정한다.
+  function listOverflowsLine(listEl) {
+    const visible = Array.from(listEl.children)
+      .filter((entry) => entry.classList.contains('cmd-entry') && !entry.hidden);
+    if (visible.length < 2) {
+      return false;
+    }
+    const firstTop = Math.round(visible[0].getBoundingClientRect().top);
+    return visible.some((entry) => Math.round(entry.getBoundingClientRect().top) > firstTop + 2);
   }
 
   function trimHintEntriesToFit() {
@@ -60,13 +77,9 @@ export function createTerminalHintLayout(deps) {
     }
 
     let hasOverflow = false;
+    const hiddenEntries = [];
     const lists = Array.from(hintEl.querySelectorAll('.cmd-entry-list'));
     lists.forEach((listEl) => {
-      const overflowEntry = listEl.querySelector('.cmd-entry-overflow');
-      if (overflowEntry) {
-        overflowEntry.remove();
-      }
-
       const entries = Array.from(listEl.children).filter((entry) => entry.classList.contains('cmd-entry'));
       entries.forEach((entry, index) => {
         entry.hidden = false;
@@ -74,38 +87,28 @@ export function createTerminalHintLayout(deps) {
       });
       syncHintEntrySeparators(listEl);
 
-      if (hintExpanded || hintEl.clientWidth <= 0 || hintEl.scrollWidth <= hintEl.clientWidth) {
+      if (hintExpanded || hintEl.clientWidth <= 0 || !listOverflowsLine(listEl)) {
         return;
       }
 
+      // 도움말(H) 토큰이 든 엔트리는 숨기지 않는다 — 숨긴 명령 tooltip의 진입점이므로 항상 보이게 유지.
       const hideCandidates = entries
-        .map((entry, index) => ({ entry, index, priority: Number(entry.dataset.priority || '50') }))
+        .filter((entry) => !entry.querySelector(HELP_TOKEN_SELECTOR))
+        .map((entry) => ({ entry, index: Number(entry.dataset.entryIndex || '0'), priority: Number(entry.dataset.priority || '50') }))
         .sort((left, right) => left.priority - right.priority || right.index - left.index);
 
-      const hiddenEntries = [];
       for (const candidate of hideCandidates) {
-        if (entries.filter((entry) => !entry.hidden).length <= 0) {
+        if (!listOverflowsLine(listEl)) {
           break;
         }
-
         candidate.entry.hidden = true;
         hiddenEntries.push(candidate.entry);
         hasOverflow = true;
-
-        const existingOverflow = listEl.querySelector('.cmd-entry-overflow');
-        if (existingOverflow) {
-          existingOverflow.remove();
-        }
-
-        listEl.appendChild(createOverflowEntry(hiddenEntries));
         syncHintEntrySeparators(listEl);
-
-        if (hintEl.scrollWidth <= hintEl.clientWidth) {
-          break;
-        }
       }
     });
 
+    applyHiddenCommandsToHelpToken(hiddenEntries);
     hintEl.dataset.hintExpandable = hasOverflow ? 'true' : 'false';
   }
 
@@ -129,16 +132,14 @@ export function createTerminalHintLayout(deps) {
     hintEl.classList.add('is-expanded');
     const lists = Array.from(hintEl.querySelectorAll('.cmd-entry-list'));
     lists.forEach((listEl) => {
-      const overflowEntry = listEl.querySelector('.cmd-entry-overflow');
-      if (overflowEntry) {
-        overflowEntry.remove();
-      }
       const entries = Array.from(listEl.children).filter((entry) => entry.classList.contains('cmd-entry'));
       entries.forEach((entry) => {
         entry.hidden = false;
       });
       syncHintEntrySeparators(listEl);
     });
+    // 전부 펼쳤으니 도움말(H) tooltip은 원래 설명으로 복원.
+    applyHiddenCommandsToHelpToken([]);
     return true;
   }
 

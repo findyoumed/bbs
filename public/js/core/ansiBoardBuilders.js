@@ -18,6 +18,7 @@ export function createBoardAnsiBuilders(deps) {
     fitCell,
     formatLongDate,
     formatShortDate,
+    highlightText,
     wrapAnsiText
   } = createAnsiBuilderUtils(deps);
 

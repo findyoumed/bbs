@@ -52,7 +52,10 @@ export function createEntryCommandHandler(deps) {
         await handleLoginSubmit();
         return true;
       }
-      if (isBackCommand(cmd)) {
+      // [LOG: 20260622_1700] 상단바 로고(초기화면으로 이동) 클릭은 전역 'T' 명령으로 들어온다.
+      // 기존엔 isBackCommand(P/M/B)만 처리해 'T'가 그대로 삼켜져 로그인 화면에서 로고 클릭이 먹통이었다.
+      // 회원가입 화면(s==='signup')과 동일하게 'T'도 초기화면으로 이동시킨다.
+      if (cmd === 'T' || isBackCommand(cmd)) {
         await showMain();
         return true;
       }

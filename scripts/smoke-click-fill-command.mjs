@@ -255,7 +255,7 @@ const hintMarkup = createTerminalHintMarkup({
     .replace(/'/g, '&#39;')
 });
 const renderedFooterMarkup = hintMarkup.renderHintMarkup('번호/명령(P:취소,T,GO,H)');
-assert(renderedFooterMarkup.includes('취소[P]'), 'footer markup did not render command label text');
+assert(renderedFooterMarkup.includes('취소(P)'), 'footer markup did not render command label text');
 assert(renderedFooterMarkup.includes('data-cmd='), 'footer markup should expose clickable data-cmd attributes');
 assert(!renderedFooterMarkup.includes('data-cmd-fill='), 'footer markup should not expose clickable data-cmd-fill attributes');
 assert(renderedFooterMarkup.includes('cmd-clickable'), 'footer markup should render clickable command tokens');

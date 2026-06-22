@@ -152,7 +152,8 @@ export function createAuthScreens(deps) {
       bodyClass: 'entry-screen--login',
       content:
         `<div class="entry-auth-head">'PC통신동호회 01410'에 오신 것을 환영합니다!!<br>ID가 없는 분은 '손님' 혹은 'GUEST'를 입력하십시오.</div>` +
-        `<div class="entry-divider">────────────────────────────────────────</div>` +
+        // [LOG: 20260622_1600] 풋터(terminal-footer)가 이미 프롬프트 위 가로 구분선을 그리므로, 본문 entry-divider는
+        // 빈 transcript 위에서 풋터 선과 겹쳐 "가로줄 2개"로 보였다. 중복 제거 — 비밀번호 재설정 화면과 동일하게 풋터 선만 사용.
         `<div id="login-transcript" class="entry-login-transcript"></div>` +
         renderAuthField({
           id: 'l-id',
@@ -218,13 +219,13 @@ export function createAuthScreens(deps) {
       loginSession.step = 'id';
       loginSession.password = '';
       state._maskCommandInput = false;
-      setPrompt('?뚯썝 ID >>');
+      setPrompt('회원 ID >>');
     };
     const showLoginPasswordPrompt = () => {
       loginSession.step = 'password';
       loginSession.password = '';
       state._maskCommandInput = true;
-      setPrompt('鍮꾨?踰덊샇 >>');
+      setPrompt('비밀번호 >>');
     };
     const resetPasswordStep = () => {
       if (loginPasswordEl) loginPasswordEl.value = '';
@@ -407,7 +408,7 @@ export function createAuthScreens(deps) {
       }
       const normalizedId = currentId.toLowerCase();
       loginSession.userId = currentId;
-      if (normalizedId === 'guest' || currentId === '?먮떂') {
+      if (normalizedId === 'guest' || currentId === '손님') {
         await submitLogin();
         return true;
       }
@@ -428,7 +429,7 @@ export function createAuthScreens(deps) {
       if (message) {
         const failure = recordLoginFailure();
         if (failure.reachedLimit) {
-          await leaveLoginToAuthMenu('濡쒓렇???ㅽ뙣媛 5???꾩쟻?섏뼱 ?뚯썝媛??/ 濡쒓렇??硫붾돱濡??뚯븘媛묐땲??');
+          await leaveLoginToAuthMenu('로그인 실패가 5회 누적되어 회원가입 / 로그인 메뉴로 돌아갑니다.');
           return true;
         }
         appendCommittedIdLine(currentId);
@@ -443,6 +444,11 @@ export function createAuthScreens(deps) {
     setAuthTerminalHandler(loginInputHandler);
     if (typeof setFooterVisibility === 'function') {
       setFooterVisibility(true);
+    }
+    // [LOG: 20260622_1720] 로그인 화면은 명령 힌트바를 띄우지 않는다. showLogin은 applyCommandFooter/setHint를
+    // 호출하지 않아, 직전 화면(예: /log 인증메뉴 'P,T,GO,H')의 힌트가 그대로 남는 누수가 있었다. 명시적으로 비운다.
+    if (typeof setHint === 'function') {
+      setHint('');
     }
     showLoginIdPrompt();
   }

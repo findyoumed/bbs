@@ -25,9 +25,10 @@ export function createTerminalHintMarkup(deps) {
     const dataAttr = meta.fill
       ? `data-cmd-fill="${esc(meta.fill)}"`
       : `data-cmd="${esc(normalizedCmd)}"`;
+    // [LOG: 20260622_1900] 푸터 토큰 표기는 '라벨(CMD)' 괄호 형식으로 통일(기존 대다수 화면의 표기와 동일).
     const tokenText = normalizedCmd === label.toUpperCase()
       ? esc(label)
-      : `${esc(label)}[${esc(normalizedCmd)}]`;
+      : `${esc(label)}(${esc(normalizedCmd)})`;
     return `<span class="cmd-token cmd-clickable" data-tip="${esc(tip)}" ${dataAttr}>${tokenText}</span>`;
   }
 
@@ -52,7 +53,7 @@ export function createTerminalHintMarkup(deps) {
     const label = resolveCommandLabel(normalizedCmd, labelOverride);
     return normalizedCmd === label.toUpperCase()
       ? label
-      : `${label}[${normalizedCmd}]`;
+      : `${label}(${normalizedCmd})`;
   }
 
   function getCommandPriority(cmd) {

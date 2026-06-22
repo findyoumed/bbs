@@ -154,6 +154,14 @@ export function bindAppEvents(deps) {
       cancelCommandPending();
       e.preventDefault();
       e.stopPropagation();
+      return;
+    }
+
+    // [LOG: 20260622_1820] ESC로 도움말 화면 닫기(상위로 복귀). 명령 실행 중이 아닐 때만.
+    if (e.key === 'Escape' && state?.screen === 'help' && typeof handleCmd === 'function') {
+      e.preventDefault();
+      e.stopPropagation();
+      void handleCmd('P');
     }
   }, { capture: true });
 
@@ -223,6 +231,17 @@ export function bindAppEvents(deps) {
         }
     }
     handleGlobalClick(event, interruptRendering);
+  });
+
+  // [LOG: 20260622_1820] 도움말 화면은 본문(명령/링크/풋터 외) 클릭으로도 닫는다(상위로 복귀).
+  // 명령 토큰·상단바·풋터 클릭과 텍스트 선택(복사)은 닫기에서 제외한다.
+  document.addEventListener('click', (event) => {
+    if (state?.screen !== 'help' || typeof handleCmd !== 'function') return;
+    if (event.defaultPrevented) return;
+    if (event.target.closest('#terminal-footer, [data-cmd], [data-cmd-fill], [data-cmd-execute], [data-menu-path], [data-board-id], [data-node-key], [data-external-url], a, button, input, textarea, select')) return;
+    const selection = window.getSelection?.();
+    if (selection && selection.toString().length > 0) return;
+    void handleCmd('P');
   });
 
   // Global click-to-focus for terminal feel

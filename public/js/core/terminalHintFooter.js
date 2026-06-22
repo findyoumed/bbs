@@ -218,7 +218,10 @@ export function createTerminalHintFooter(deps) {
       // [LOG: 20260507_1738] Use a real password field as a fallback if no-echo CSS is stale.
       cmdInput.type = useMaskedInput ? 'password' : 'text';
       cmdInput.dataset.masked = useMaskedInput ? 'true' : 'false';
-      cmdInput.autocomplete = useMaskedInput ? 'off' : 'on';
+      // [LOG: 20260622_1620] 커맨드/로그인 입력창은 브라우저 자동완성을 항상 꺼둔다.
+      // 과거 비마스킹 입력에 'on'을 줘서, 로그인 ' 회원 ID >>' 프롬프트('회원'=membership)에서
+      // 크롬이 '포인트 카드 관리' 같은 멤버십/적립카드 자동완성 팝업을 띄우던 버그를 차단한다.
+      cmdInput.autocomplete = 'off';
       cmdInput.spellcheck = false;
       if (typeof CustomEvent === 'function') {
         cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
@@ -284,6 +287,20 @@ export function createTerminalHintFooter(deps) {
       setFooterVisibility(true);
       footerLoadPending = false;
     }
+  }
+
+  // [LOG: 20260622_1900] 창 너비가 바뀌면 힌트바를 다시 측정해 들어가는 만큼 노출/숨김을 갱신한다.
+  if (typeof window !== 'undefined') {
+    let resizeTrimTimer = 0;
+    window.addEventListener('resize', () => {
+      if (resizeTrimTimer) {
+        window.clearTimeout(resizeTrimTimer);
+      }
+      resizeTrimTimer = window.setTimeout(() => {
+        resizeTrimTimer = 0;
+        scheduleHintTrim();
+      }, 120);
+    });
   }
 
   return {

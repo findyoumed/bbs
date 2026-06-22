@@ -1,3 +1,194 @@
+## [2026-06-22 19:00] 힌트바 동적 너비 맞춤 — 들어가는 만큼 전부 노출, 넘치면 도움말(H) tooltip에 수집
+
+**LOG_ID: 20260622_1900**
+목표: "안 넘치면 그냥 다 넣어라" — 화면별로 일부러 줄이지 말고, 창 너비에 맞춰 들어가는 만큼 명령을 다 보여주고 넘치는 것만 숨겨 도움말(H) tooltip에 모은다.
+변경 파일:
+- `public/js/core/commandFooterText.js` (CMD_ORDER 전체 복원, formatCommandFooter를 '번호/명령(...)' 디렉티브로, newsList 하드코딩/SCREEN_EXTRA 제거)
+- `public/js/core/terminalHintLayout.js` (줄바꿈 기반 넘침 감지 + 넘친 명령을 H 토큰 tooltip에 수집)
+- `public/js/core/terminalHintFooter.js` (정적 H-tooltip 주입 제거, resize 시 재트림 리스너 추가)
+- `public/js/core/terminalHintMarkup.js` (푸터 토큰 표기를 '라벨(CMD)' 괄호로 통일)
+- `scripts/smoke-ui-layout.js`, `scripts/smoke-click-fill-command.mjs` (어서션 갱신)
+수행 작업:
+1) 진단: 정적 축소(17:45)는 창 너비에 따라 fit이 달라져 근본적으로 틀림(809px에선 7토큰이 한 줄에 들어가는데도 4개로 줄였음). 이미 trim 시스템이 있으나 ① JS 푸터가 plain 포맷이라 trim 구조(.cmd-entry-list)를 안 거쳤고 ② trim의 넘침 감지가 scrollWidth>clientWidth(가로)인데 hint 리스트는 flex-wrap:wrap이라 넘치면 줄바꿈돼 가로 overflow가 안 생겨 감지 실패.
+2) 해결: CMD_ORDER 전체 복원 + formatCommandFooter가 '번호/명령(...)' 디렉티브를 emit → renderHintMarkup이 우선순위 포함 .cmd-entry-list로 변환(shouldShowFooterToken로 상황상 불필요한 토큰(1페이지의 B, 게스트의 글쓰기 등) 자동 필터, sortFooterTokens 정렬). trim의 넘침 감지를 줄바꿈 기반(listOverflowsLine: 보이는 엔트리가 2줄 이상)으로 교체. 넘치면 우선순위 낮은 순으로 숨기되 H 토큰은 항상 유지하고, 숨긴 명령을 H 토큰 data-tip("이 화면의 다른 명령 — …")에 수집(사용자 선택: +N 토큰 대신 H tooltip). 창 resize 시 재트림. 토큰 표기는 기존 다수 화면과 동일한 '라벨(CMD)' 괄호로 통일.
+3) 검증: 임시 서버(PORT=3100)+Playwright 다중 너비 — 1280/809px: 게시판 목록 7토큰 전부 한 줄 노출·숨김 없음(이전 숨겼던 첫장/제목검색/ID검색/초기화면/이동 복원), 380px: H만 남고 6개가 H tooltip에 수집("이 화면의 다른 명령 — 첫장(L), 상위(P), …"). 뉴스 목록도 들어가는 만큼 전부 노출. `npm test` 전체 통과, `smoke:ui-layout`·`renderer-ui`·`command-parity`·`rss-services` 모두 ok.
+실행: 임시 서버+Playwright(너비 1280/809/600/380), `npm test`, `npm run smoke:ui-layout`, `smoke:renderer-ui`, `smoke:command-parity`
+기대: 힌트바가 창 너비에 맞춰 들어가는 만큼 명령을 모두 노출하고, 좁아서 넘칠 때만 우선순위 낮은 명령을 숨겨 도움말(H)에 마우스를 올리면 보이게 된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 18:20] 도움말 ESC/마우스 닫기 + 도움말(H) 토큰 tooltip에 그밖의 명령 노출
+
+**LOG_ID: 20260622_1820**
+목표: ① 도움말(H) 화면을 ESC/마우스로 닫기, ② 힌트바 도움말(H) 토큰에 마우스 올리면 그 화면에서 쓸 수 있는 그밖의 명령을 tooltip으로 보여주기.
+변경 파일:
+- `public/js/core/commandFooterText.js` (SCREEN_EXTRA_COMMANDS 맵 + getScreenExtraCommandsTip export)
+- `public/js/core/terminalHintFooter.js` (setHint에서 H 토큰 data-tip 주입; commandFooterText import)
+- `public/js/core/appEvents.js` (help 화면 ESC·본문 클릭 닫기)
+수행 작업:
+1) #2 tooltip: 힌트바엔 핵심 명령만 노출(직전 17:45 작업)하므로, 화면별로 빠진(그러나 사용 가능한) 명령을 `SCREEN_EXTRA_COMMANDS`에 정의하고 `getScreenExtraCommandsTip(screen)`로 "이 화면의 다른 명령 — 첫장(L), 제목검색(LT), …" 문자열 생성. `setHint` 렌더 직후 `.cmd-token[data-cmd="H"]`의 data-tip/title을 이 문자열로 설정. 기존 #cmd-tooltip(터미널 커스텀 tooltip)이 data-tip을 hover로 표시하므로 도움말(H)에 마우스만 올려도 그밖의 명령이 보임. (post-list/post-view/news-list/news-view/memo-view/system-log 대상)
+2) #1 닫기: appEvents.js keydown 핸들러에 `screen==='help' && ESC → handleCmd('P')`(상위 복귀) 추가. 또 help 화면에서 본문(명령 토큰/상단바/풋터/링크/입력 외) 클릭 시 handleCmd('P')로 닫는 click 리스너 추가 — 텍스트 선택 중(복사)·명령 클릭(defaultPrevented)·풋터는 제외해 정상 사용을 막지 않음. (help는 HISTORY_BACK_SCREENS라 P가 handleHistoryBack으로 직전 화면 복귀)
+3) terminalHintMarkup.js는 건드리지 않아(commandFooterText import는 terminalHintFooter에만 추가) data:URL 기반 스모크 영향 없음. 순환 import 없음(commandFooterText는 terminalHintFooter를 import하지 않음).
+4) 검증: 임시 서버(PORT=3100)+Playwright — post-list H 토큰 data-tip="이 화면의 다른 명령 — 첫장(L), 제목검색(LT), ID검색(LI), 초기화면(T), 이동(GO)" 확인. 게시판→H로 도움말 진입 후 ESC→/board/plaza 복귀, 재진입 후 본문 클릭→복귀 확인. `npm run smoke:renderer-ui`·`smoke:command-parity`·`smoke:ui-layout` 모두 ok.
+실행: 임시 서버+Playwright 검증, `npm run smoke:renderer-ui`, `npm run smoke:command-parity`, `npm run smoke:ui-layout`
+기대: 도움말을 ESC나 본문 클릭으로 닫을 수 있고, 힌트바 도움말(H)에 마우스를 올리면 해당 화면의 그밖의 사용 가능 명령이 tooltip으로 보인다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 17:45] 명령 힌트바 넘침 정리 — 화면별 핵심 명령만 노출, 나머지는 도움말(H)
+
+**LOG_ID: 20260622_1745**
+목표: 게시판 글목록 등에서 힌트바 명령이 너무 많아(예: postList 10개) 한 화면에 다 안 나오던 문제 해결. 사용자 선택에 따라 "화면별 핵심 명령만 노출 + 나머지는 도움말(H)" 방식 적용.
+변경 파일:
+- `public/js/core/commandFooterText.js` (CMD_ORDER 정리 + newsList 하드코딩 문구 정리)
+수행 작업:
+1) 진단: `formatCommandFooter`가 생성하는 푸터("label(CMD), ...")는 기존 +N 접기 트림 시스템(`trimHintEntriesToFit`, `.cmd-entry-list` 구조)을 안 거치고 맨 토큰으로 렌더돼, 명령이 많으면 전부 노출되어 넘침. 사용자는 +N 방식 대신 "핵심만 노출 + 나머지는 H"를 선택. 도움말(H) 화면(`buildHelpAnsi`)이 `CMD_META` 전체를 카테고리별(NAV/POST/AUTH/MEMO/CHAT/UI)로 자동 나열하므로, 힌트바에서 뺀 명령도 H에서 확인 가능(확인 완료).
+2) 해결: 넘치는 화면(≥7토큰)의 CMD_ORDER를 핵심 명령으로 축소.
+   - postList 10→5: [F,B,W:글쓰기,P,H], pdsList 9→5: [F,B,W:쓰기,P,H]
+   - postView 13→5: [L:목록,N,A,RE:답장,H]
+   - serviceArticle 7→5: [N,A,P,PR:복사,H] (PR:복사는 SYS라 H에 없어 푸터 유지)
+   - memoView 7→4: [L:목록,RE:답장,P,H], systemLog 7→4: [R:새로고침,C:지우기,P,H]
+   - newsList(하드코딩) 6→4: "다음쪽(F), 이전쪽(B), 상위(P), 도움말(H)"
+   - 4~6토큰 화면은 데스크톱에서 들어가므로 유지. 제거 명령(검색 LT/LI, 첫장 L, 수정 E, 삭제 D, 추천 V 등)은 모두 CMD_META에 있어 H에 표시됨.
+3) 검증: 임시 서버(PORT=3100)+Playwright로 /board/plaza 푸터가 5토큰("다음쪽(F), 이전쪽(B), 글쓰기(W), 상위(P), 도움말(H)")으로 한 줄에 맞음(scrollW==clientW) 확인. 도움말 화면에 글쓰기/제목검색/ID검색/첫장/수정/삭제 설명문 모두 존재 확인. `npm run smoke:command-parity`·`smoke:ui-layout`·`smoke:renderer-ui` 모두 ok. (참고: 독립 스크립트 smoke-click-fill-command.mjs는 Node24의 data:URL 상대 import 미지원으로 실패하나 이번 변경과 무관·테스트 스위트 외.)
+실행: 임시 서버+Playwright 검증, `npm run smoke:command-parity`, `npm run smoke:ui-layout`, `npm run smoke:renderer-ui`
+기대: 힌트바가 화면별 핵심 명령만 한 줄로 노출되고, 상세 명령은 도움말(H)에서 확인된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 17:20] 로그인 화면에 이전 화면 명령 힌트바가 남던 누수 수정
+
+**LOG_ID: 20260622_1720**
+목표: 로그인 화면에 '상위(P), 초기화면(T), 이동(GO), 도움말(H)' 같은 명령 힌트바가 남아 보이던 문제 수정(원래 로그인 화면엔 힌트바 없음).
+변경 파일:
+- `public/js/core/authScreens.js` (showLogin 끝부분)
+수행 작업:
+1) 진단: 그 문구는 `CMD_ORDER`의 `['P','T','GO','H']`(authMenu/main 등) 푸터로, login 카테고리(`['P','LOGIN','H']`)와 다름 → 로그인 자신의 푸터가 아니라 직전 화면(예: `/log` 인증메뉴=board-select 'log' → authMenu) 힌트가 남은 누수. 원인: showLogin은 다른 화면들과 달리 `applyCommandFooter`/`setHint`를 호출하지 않아 cmd-hint가 이전 값 그대로 유지됨. `setFooterVisibility(true)`는 힌트 내용을 건드리지 않음(가시성/입력 활성화만). signup 화면은 진입 시 `hintEl.innerHTML=''`로 비우는 패턴이 이미 있음.
+2) 해결: showLogin에서 `setFooterVisibility(true)` 직후 `setHint('')`를 호출해 명령 힌트바를 명시적으로 비움. 로그인 화면은 '회원 ID >>' 프롬프트만 노출.
+3) 검증: 임시 서버(PORT=3100)+Playwright로 `/log`(힌트 '상위(P), 초기화면(T), 이동(GO), 도움말(H)' 확인)→LOGIN 명령으로 로그인 SPA 진입 → cmd-hint 빈 문자열, 프롬프트 '회원 ID >>' 정상 확인. `npm run smoke:renderer-ui` ok. (password-reset도 동일 누수 가능성 있으나 자체 푸터 정책이 있어 보류, 보고된 login만 수정)
+실행: 임시 서버+Playwright 누수 재현/해소 검증, `npm run smoke:renderer-ui`
+기대: 로그인 화면 진입 시 직전 화면의 명령 힌트바가 사라지고 깨끗한 프롬프트만 보인다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 17:00] 로그인 화면 상단바 로고 클릭 시 초기화면 이동 안 되던 버그 수정
+
+**LOG_ID: 20260622_1700**
+목표: 로그인 화면에서 상단바 로고(`.retro-topbar--ansi .retro-topbar-row1 > a`, '초기화면으로 이동') 클릭이 먹통이던 문제 수정.
+변경 파일:
+- `public/js/core/commandRouterEntry.js` (handleEntryCommand의 login 분기)
+수행 작업:
+1) 진단: 상단바 로고 클릭은 `data-menu-path="top"` → `handleGlobalClick`('menu-path' 핸들러) → `executeCommand('T') → handleCmd('T')`로 전역 'T' 명령을 실행(키보드 Enter의 dispatchRawTerminalInput=로그인 핸들러 경로를 우회). 디스패처 파이프라인에서 login 화면은 `handleEntryCommand`가 처리하는데, `cmd==='LOGIN'`과 `isBackCommand`(P/M/B)만 분기하고 'T'는 누락 → 마지막 `return true`로 조용히 삼켜져 아무 동작도 안 함. (회원가입 화면 s==='signup'은 이미 `cmd==='T'`를 처리 중이라 로그인만 누락된 불일치)
+2) 해결: login 분기의 back 조건을 `if (cmd === 'T' || isBackCommand(cmd)) { await showMain(); return true; }`로 확장. 'T'(초기화면)도 메인으로 이동. (password-reset/post-write도 동일 패턴으로 'T' 누락이나, post-write는 'T' 이탈 시 작성 내용 유실 위험이 있어 의도적으로 보류; 보고된 login만 수정)
+3) 검증: `node --check` 통과. 임시 서버(PORT=3100)+Playwright로 로그인 진입 후 상단바 로고 클릭 → URL `/log/login`→`/`, 화면이 TOP(초기화면) 메뉴로 전환, 로그인 프롬프트 사라짐 확인. `npm run smoke:command-parity` ok.
+실행: `node --check public/js/core/commandRouterEntry.js`, 임시 서버+Playwright 클릭 검증, `npm run smoke:command-parity`
+기대: 로그인 화면에서 상단바 로고 클릭 시 초기화면으로 정상 이동한다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 16:40] 크롬 '포인트 카드' 자동완성 강력 차단 — 라벨 연결 해제 + 중립 aria-label
+
+**LOG_ID: 20260622_1640**
+목표: 16:20 수정(autocomplete='off' 고정) 후에도 크롬이 `autocomplete="off"`를 무시하고 라벨 텍스트 '회원 ID'를 보고 멤버십/포인트카드 필드로 분류해 '포인트 카드 관리' 팝업(클릭 시 wallet.google.com/wallet?p=loyalty)을 계속 띄우던 문제를 근본 차단.
+변경 파일:
+- `public/index.html` (#cmd-prompt 라벨, #cmd-input 속성)
+수행 작업:
+1) 진단: 크롬 자동완성은 필드 분류 시 `<label for>` 연결 라벨 텍스트/aria 이름을 핵심 신호로 사용. `#cmd-prompt`(시각적으로는 clip 처리, 실제 보이는 프롬프트는 #cmd-prompt-renderer)가 `for="cmd-input"`으로 입력창에 연결돼 '회원 ID' 텍스트가 입력창 라벨로 읽혔고, '회원'(membership)→적립/포인트카드로 오분류됨. autocomplete=off만으로는 이 카테고리에서 크롬이 무시.
+2) 해결: `<label id="cmd-prompt">`의 `for="cmd-input"` 제거(라벨↔입력창 연결 해제)하고, `#cmd-input`에 중립 `aria-label="명령어 입력"` 부여 + `autocapitalize="off" autocorrect="off"` 추가. 이제 크롬이 인식하는 입력창 접근성 이름이 '명령어 입력'이라 '회원' 등 트리거 단어를 읽지 못함. 시각적 프롬프트('회원 ID >>')는 #cmd-prompt-renderer가 그대로 표시하므로 UI 변화 없음. JS는 cmd-prompt를 클래스/textContent로만 사용해 영향 없음(확인).
+3) 검증: 임시 서버(PORT=3100)+Playwright로 로그인 진입 후 측정 → `cmd-input.autocomplete='off'`, `aria-label='명령어 입력'`, `label[for]=null`, 계산된 접근성 이름='명령어 입력', 시각 프롬프트 'ID >>' 정상 표시. `npm run smoke:ui-layout`·`smoke:renderer-ui` 모두 ok. (실제 크롬 적립카드 팝업은 자동화 클린 프로필에서 재현 불가하여 분류 신호값으로 검증)
+실행: 임시 서버+Playwright 속성/시각 검증, `npm run smoke:ui-layout`, `npm run smoke:renderer-ui`
+기대: 로그인/명령 입력창에서 크롬이 멤버십·포인트카드 필드로 오분류하지 않아 '포인트 카드 관리' 자동완성 팝업이 더 이상 뜨지 않는다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 16:20] 로그인 입력창에 크롬 '포인트 카드' 자동완성 팝업 뜨던 버그 수정
+
+**LOG_ID: 20260622_1620**
+목표: 로그인 화면에서 '회원 ID >>' 프롬프트에 텍스트 입력 시 크롬 자동완성 팝업('포인트 카드 관리...')이 뜨던 문제 차단.
+변경 파일:
+- `public/js/core/terminalHintFooter.js` (setPrompt의 cmdInput.autocomplete 설정)
+수행 작업:
+1) 진단: `index.html`의 `#cmd-input`은 `autocomplete="off"`지만, `setPrompt()`가 매 호출마다 `cmdInput.autocomplete = useMaskedInput ? 'off' : 'on'`로 덮어써, 비마스킹 입력(로그인 ID 단계 등)에서 'on'으로 강제됨. 로그인 프롬프트 라벨이 '회원 ID >>'(`회원`=membership)라 크롬이 멤버십/적립카드 필드로 추론 → '포인트 카드 관리' 자동완성 팝업을 노출. (form 래핑은 없음)
+2) 해결: 터미널 커맨드/로그인 입력창은 자동완성이 항상 꺼져야 하므로 `cmdInput.autocomplete = 'off'`로 고정. 다른 곳에서 'on'으로 켜는 코드 없음 확인.
+3) 검증: `node --check` 통과. 임시 서버(PORT=3100)+Playwright로 로그인 진입 후 `#cmd-input` 속성 확인 → `autocomplete` 프로퍼티/어트리뷰트 모두 `off`(이전 'on'). form 미래핑 + off이므로 크롬이 off를 존중해 팝업 차단.
+실행: `node --check public/js/core/terminalHintFooter.js`, 임시 서버+Playwright 속성 검증
+기대: 로그인/명령 입력창에서 브라우저 자동완성(포인트 카드 등) 팝업이 더 이상 뜨지 않는다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 16:00] 로그인 화면 한글 깨짐 4곳 및 중복 가로줄 수정
+
+**LOG_ID: 20260622_1600**
+목표: 로그인 화면에서 프롬프트/메시지 한글이 깨져 보이고("?뚯썝 ID >>" 등), 환영문구 아래 가로줄이 2개로 겹쳐 보이던 문제 수정.
+변경 파일:
+- `public/js/core/authScreens.js`
+수행 작업:
+1) 한글 깨짐(mojibake) 4곳 복구: `setPrompt('?뚯썝 ID >>')`→`'회원 ID >>'`(221행), `setPrompt('鍮꾨?踰덊샇 >>')`→`'비밀번호 >>'`(227행), `currentId === '?먮떂'`→`'손님'`(410행), 로그인 5회 실패 안내 메시지(`'濡쒓렇???ㅽ뙣媛...'`→`'로그인 실패가 5회 누적되어 회원가입 / 로그인 메뉴로 돌아갑니다.'`, 431행). 손상 바이트가 Edit 정확매칭이 안 돼 Node 줄 단위 치환(CRLF·들여쓰기 보존)으로 복구. 전체 JS를 CJK 한자 혼입·`?`-한글 인접 패턴으로 정밀 스캔해 추가 깨짐 없음 확인.
+2) 중복 가로줄 제거: 로그인 본문의 `entry-divider`(짧은 40자 줄)가 풋터 공통 구분선(`terminal-footer::before`, 80자 전체폭)과 빈 transcript를 사이에 두고 붙어 "가로줄 2개"로 보였음. 풋터가 이미 프롬프트 위 구분선을 그리므로 본문 divider를 삭제(비밀번호 재설정 화면과 동일 패턴). 이제 헤더 구분선+풋터 구분선의 표준 프레임만 남음.
+3) 검증: `node --check public/js/core/authScreens.js` 통과. 임시 서버(PORT=3100)+Playwright로 로그인 화면 캡처 → 한글 정상("회원 ID >>"·"손님"·"GUEST"), entry-divider 0개, 환영문구 아래 중복 줄 사라짐 확인.
+실행: `node --check public/js/core/authScreens.js`, 임시 서버+Playwright 시각 검증
+기대: 로그인 화면 한글이 정상 출력되고, 환영문구 아래 가로줄이 풋터 구분선 하나로 정리된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 15:45] 게시판 글목록 진입 시 `highlightText is not defined` 에러 수정
+
+**LOG_ID: 20260622_1545**
+목표: `/board/plaza` 등 게시판 글목록/글보기 진입 시 `ReferenceError: highlightText is not defined`로 렌더링이 실패하던 버그 수정.
+변경 파일:
+- `public/js/core/ansiBoardBuilders.js` (createAnsiBuilderUtils 구조분해에 highlightText 추가)
+수행 작업:
+1) 진단: 검색어 하이라이트(`searchParams.lt`) 기능에서 `highlightText(...)`를 글목록(85·102행)·글보기(147·156행)에서 호출하지만, 정의처인 `createAnsiBuilderUtils(deps)` 반환 객체에서 `highlightText`를 구조분해하지 않아 모듈 스코프에 없는 상태였음. 함수 자체는 `ansiBuilderUtils.js`에 정의·export되어 있었음(누락은 소비 측). 검색어 없이 일반 진입해도 `postLine` 호출 시 함수 참조에서 즉시 ReferenceError 발생.
+2) 해결: `ansiBoardBuilders.js` 상단 구조분해 목록에 `highlightText`를 추가. 한 번 추가로 네 호출처(글목록 모바일/데스크톱, 글보기 제목/본문) 모두 정상화.
+3) 검증: `node --check public/js/core/ansiBoardBuilders.js` 통과, `npm run smoke:boards`·`npm run smoke:renderer-ui` 모두 ok.
+실행: `node --check public/js/core/ansiBoardBuilders.js`, `npm run smoke:boards`, `npm run smoke:renderer-ui`
+기대: 게시판 글목록/글보기가 에러 없이 렌더링되고, 검색어가 있으면 제목/본문에 하이라이트가 적용된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 15:30] 기사 보기 화면에서 기사 번호 입력 시 이동 안 되던 문제 해결
+
+**LOG_ID: 20260622_1530**
+목표: 뉴스 기사 보기(news-view) 화면에서 다른 기사 번호(예: 999, 998)를 입력해도 아무 동작이 없던("왜 작동을 안해") 문제 해결.
+변경 파일:
+- `public/js/core/commandRouterService.js` (news-view 숫자 명령 처리부)
+수행 작업:
+1) 진단: news-view 화면에서 숫자는 "본문 페이지 번호"로만 해석되며 조건이 `1 <= n <= pageCount`(본문 페이지 수, 보통 1~몇 페이지). 따라서 999 같은 큰 기사 번호는 범위를 벗어나 무시됨. 기사 화면의 기사 이동은 푸터상 N(다음)/A(이전) 전용이라 번호 입력은 미동작이 설계였으나, 사용자 기대(번호=기사 선택)와 어긋남.
+2) 해결: 본문 페이지 범위를 벗어난 숫자는 "다른 기사 번호"로 간주. news-view에도 현재 목록(`state.serviceData.items`, 진입한 기사 페이지 슬라이스)이 보존되므로, 그 목록 안에 있는 기사면 해당 항목의 key/link로 안정 이동(라이브 피드 어긋남으로 엉뚱한 기사가 열리는 것 방지). 불완전 기사는 `skipOnIncomplete`로 받아 안내 토스트 표시. 목록에 없는 번호는 "P(목록) 또는 N/A로 이동" 안내 토스트.
+3) 검증: `node --check public/js/core/commandRouterService.js` 구문 통과, `npm run smoke:rss-services` ok.
+실행: `node --check public/js/core/commandRouterService.js`, `npm run smoke:rss-services`
+기대: 기사 보기 화면에서 같은 목록 페이지의 기사 번호를 입력하면 해당 기사로 이동하고, 범위 밖 번호는 명확한 안내가 뜬다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 15:00] 불완전 뉴스 기사 404 콘솔 에러 제거 — 200+available:false 전환 및 목록 직접 클릭 안내
+
+**LOG_ID: 20260622_1500**
+목표: 뉴스 목록에서 직접 클릭한 기사가 본문 짤림/크롤 실패로 차단될 때 브라우저 콘솔에 빨간 `GET /api/services/news/.. 404` 에러가 찍히고, 클릭해도 조용히 목록으로 되돌아가 "아무 동작 없음"처럼 보이던 문제 해결.
+변경 파일:
+- `src/server/RssNewsService.js` (불완전 기사 응답을 404 throw → 200 + available:false)
+- `public/js/core/newsScreens.js` (`loadNewsArticleState`에서 available:false를 기존 불완전 기사 에러 흐름으로 변환, 캐시 제외)
+- `public/js/core/commandRouterService.js` (news-list 직접 클릭 시 skipOnIncomplete로 받아 안내 토스트 표시)
+수행 작업:
+1) 진단: 목록 포함 기준(description/body 중 하나라도 있으면 표시, 최대 1000개)과 상세 통과 기준(크롤 완전 본문만 허용)이 불일치 → 목록엔 보이지만 클릭하면 404. 게다가 "정상적인 정책 차단"을 HTTP 404로 표현해 브라우저가 콘솔에 빨간 에러를 남김(`silent` 옵션으로도 네이티브 fetch 404 로그는 억제 불가).
+2) 해결: 기사 자체는 피드에 존재하므로(리소스 없음 아님) 불완전 기사는 404 대신 `200 + { available:false, reason:'incomplete' }`로 응답. 클라이언트 `loadNewsArticleState`가 available:false를 동일 메시지(`불완전한 뉴스 기사입니다`) 에러로 변환해 기존 자동 스킵(N/A)·목록 복귀 로직을 그대로 유지하고, 불완전 기사는 캐시하지 않음. 목록 직접 클릭은 `skipOnIncomplete:true`로 에러를 받아 "본문 전체를 불러올 수 없는 기사입니다" 토스트로 명확히 안내. "뉴스 기사 없음/주제 없음/키 불일치" 404는 정당한 리소스 부재이므로 그대로 유지.
+3) 검증: 임시 서버(PORT=3100)에 새 코드로 띄워 최신 토픽 40개 기사 상세를 프로브 → HTTP 404 0건, 완전 기사 34개 available:true, 불완전 기사 6개 available:false 확인. 키 불일치/없는 주제는 여전히 404 응답 확인. `npm run smoke:rss-services`, `npm run smoke:vercel-ready` 모두 ok.
+실행: `npm run smoke:rss-services`, `npm run smoke:vercel-ready`, 임시 서버 라이브 프로브
+기대: 불완전 뉴스 기사를 목록에서 클릭해도 콘솔 빨간 404 에러 없이 안내 토스트가 뜨고, 다음/이전(N/A) 탐색은 자동 스킵으로 완전한 기사만 노출된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-22 11:35] 뉴스 상세 본문 짤림 및 URL 복원 시 기사 번호 꼬임 버그 수정
 
 **LOG_ID: 20260622_1114**

@@ -38,7 +38,8 @@ function main() {
   assertIncludes(terminalHintFooter, 'scheduleHintTrim', 'hint footer module should reschedule trimming after render');
   assertIncludes(terminalHintLayout, 'function trimHintEntriesToFit()', 'hint trimming logic should exist');
   assertIncludes(terminalHintLayout, 'function toggleHintExpansion()', 'hint expansion logic should exist');
-  assertIncludes(terminalHintLayout, '숨김 명령 ${hiddenEntries.length}개:', 'overflow hint tooltip should describe hidden commands');
+  assertIncludes(terminalHintLayout, 'applyHiddenCommandsToHelpToken', 'overflow should route hidden commands to the help(H) token tooltip');
+  assertIncludes(terminalHintLayout, '이 화면의 다른 명령', 'overflow hint tooltip should describe hidden commands');
   assert(!terminalHintLayout.includes(".filter((e) => e.hidden = false)"), 'hint expansion should not contain assignment bug');
 
   assertIncludes(appFactory, "createAppFactoryServices({", 'appFactory should compose the services module');

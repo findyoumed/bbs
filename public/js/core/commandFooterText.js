@@ -1,5 +1,3 @@
-import { CMD_META } from './commandService.js';
-
 /**
  * commandFooterText.js
  * [LOG: 20260428_2002] Standardized command footer categories and screen mappings.
@@ -14,6 +12,9 @@ export const CMD_ORDER = {
   newsMenu: ['P', 'T', 'GO', 'LOGIN', 'H'],
   weatherMenu: ['P', 'T', 'GO', 'H'],
   weatherView: ['F', 'B', 'P', 'T', 'GO', 'H'],
+  // [LOG: 20260622_1900] 힌트바는 동적 너비 기반(trimHintEntriesToFit)으로 자동 맞춤한다.
+  // 전체 명령을 나열해도 화면에 들어가는 만큼만 표시되고, 넘치면 우선순위 낮은 순으로 숨겨 도움말(H)
+  // 토큰 tooltip에 모인다. (안 넘치면 전부 노출 — 일부러 줄이지 않음)
   pdsList: ['F', 'B', 'P', 'T', 'GO', 'W:쓰기', 'LT:제목검색', 'LI:ID검색', 'H'],
   postList: ['F', 'B', 'L', 'P', 'T', 'GO', 'W:글쓰기', 'LT:제목검색', 'LI:ID검색', 'H'],
   postView: ['L:목록', 'N', 'A', 'P', 'T', 'GO', 'RE:답장', 'E:수정', 'D:삭제', 'V:추천', 'U:첨부', 'LT:제목검색', 'LI:ID검색', 'H'],
@@ -34,7 +35,7 @@ export const CMD_ORDER = {
   systemLog: ['P', 'T', 'GO', 'R:새로고침', 'C:지우기', 'CP:복사', 'H'],
   attachmentList: ['P', 'T', 'GO', 'H'],
   newsList: ['F', 'B', 'P', 'T', 'GO', 'H'],
-  serviceArticle: ['F', 'B', 'N', 'A', 'P', 'T', 'PR:복사']
+  serviceArticle: ['F', 'B', 'N', 'A', 'P', 'T', 'PR:복사', 'H']
 };
 
 const SCREEN_TO_CATEGORY = {
@@ -71,33 +72,17 @@ export function createCommandFooterTextUtils(deps) {
   // [LOG: 20260611_1524] Store prompts without trailing spaces; CSS owns the one-cell prompt gap.
   const DEFAULT_COMMAND_PROMPT = '선택 >>';
 
-  function formatCommandToken(token) {
-    const [cmdPart, labelPart = ''] = String(token || '').split(':');
-    const cmd = String(cmdPart || '').trim().toUpperCase();
-    if (!cmd) return '';
-
-    if (String(labelPart || '').trim() === '!') {
-      return cmd;
-    }
-
-    const label = String(labelPart || CMD_META[cmd]?.label || cmd).trim();
-    return label && label.toUpperCase() !== cmd
-      ? `${label}(${cmd})`
-      : cmd;
-  }
-
+  // [LOG: 20260622_1900] 푸터를 '번호/명령(...)' 디렉티브로 emit한다. renderHintMarkup이 이를 .cmd-entry-list +
+  // 우선순위(.cmd-entry[data-priority])로 변환하므로, 너비 기반 동적 트림(trimHintEntriesToFit)이 작동한다.
+  // 토큰은 'CMD' 또는 'CMD:라벨'(공백 구분). 안 넘치면 전부 노출, 넘치면 우선순위 낮은 순으로 숨겨 H tooltip에 모음.
   function formatCommandFooter(order) {
     const tokens = (Array.isArray(order) ? order : [])
-      .map(formatCommandToken)
+      .map((token) => String(token || '').trim())
       .filter(Boolean);
-    return tokens.length ? `${tokens.join(', ')}\n${DEFAULT_COMMAND_PROMPT}` : '';
+    return tokens.length ? `번호/명령(${tokens.join(' ')})\n${DEFAULT_COMMAND_PROMPT}` : '';
   }
 
   function getCommandFooterText(category) {
-    if (category === 'newsList') {
-      return '상위(P), 초기메뉴(T), 다음쪽(F), 이전쪽(B), 직접이동(GO), 명령어안내(H)\n선택 >>';
-    }
-
     const order = Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category] : [];
     return formatCommandFooter(order);
   }

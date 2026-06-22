@@ -456,6 +456,14 @@ export function createNewsScreens(deps) {
 
     const request = (async () => {
       const detail = await loadNewsArticle(topicDoor, articleNo, requestOptions);
+      // [LOG: 20260622_1500] 서버가 불완전 기사를 404 대신 200+available:false 로 알리므로,
+      // 기존 404 기반 흐름(자동 스킵/목록 복귀)과 동일하게 동작하도록 동일 메시지 에러로 변환한다.
+      // 불완전 기사는 캐시하지 않아 피드 갱신 후 재시도가 가능하도록 한다.
+      if (detail && detail.available === false) {
+        const incompleteError = new Error(detail.message || `불완전한 뉴스 기사입니다: ${articleNo}`);
+        incompleteError.type = 'incomplete';
+        throw incompleteError;
+      }
       if (detail?.article) {
         articleCache.set(cacheKey, detail);
       }

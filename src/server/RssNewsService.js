@@ -313,10 +313,23 @@ class RssNewsService extends RssServiceBase {
       resolvedArticle.description
     ]);
 
-    // [LOG: 20260619_2110] "완벽하게 보여주든지 아예 없든지" — 불완전(짤린/너무 짧은) 기사는 404로 차단.
-    // 클라이언트는 404 시 자동으로 다음 기사로 스킵하거나 목록으로 복귀하므로 짤린 본문이 화면에 노출되지 않는다.
+    // [LOG: 20260622_1500] "완벽하게 보여주든지 아예 없든지" — 불완전(짤린/너무 짧은) 기사는 차단한다.
+    // 단, 기사 자체는 피드에 존재하므로(리소스 없음 아님) HTTP 404가 아니라 200 + available:false 로 알린다.
+    // 404 상태는 브라우저가 콘솔에 빨간 에러로 남겨 "버그"처럼 보이므로, 정상적인 정책 차단은 200으로 응답하고
+    // 클라이언트가 available:false 를 보고 조용히 목록 복귀/자동 스킵하도록 한다. ("뉴스 기사 없음" 404는 그대로 유지)
     if (resolvedArticle.detailFetched === false) {
-      throw this._notFoundError(`불완전한 뉴스 기사입니다: ${articleNo}`);
+      return {
+        kind: 'news',
+        title: `뉴스 / ${feed.topic?.title || ''}`,
+        level: 'article',
+        topic: feed.topic,
+        articleNo: target,
+        totalCount: Array.isArray(feed.items) ? feed.items.length : 0,
+        available: false,
+        reason: 'incomplete',
+        message: `불완전한 뉴스 기사입니다: ${articleNo}`,
+        article: resolvedArticle
+      };
     }
 
     return {
@@ -326,6 +339,7 @@ class RssNewsService extends RssServiceBase {
       topic: feed.topic,
       articleNo: target,
       totalCount: Array.isArray(feed.items) ? feed.items.length : 0,
+      available: true,
       article: resolvedArticle
     };
   }

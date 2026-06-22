@@ -114,9 +114,13 @@
                     <!-- <div id="cmd-suggestion-box" class="suggestion-box"></div> -->
                     <div id="cmd-hint"></div>
                     <div id="terminal-prompt-row">
-                        <label id="cmd-prompt" for="cmd-input"></label>
+                        <!-- [LOG: 20260622_1640] 크롬 자동완성이 라벨 텍스트('회원 ID')를 멤버십/포인트카드 필드로 오인해
+                             '포인트 카드 관리' 팝업(→Google Wallet loyalty)을 띄우던 문제 차단. for 연결을 끊고
+                             입력창에는 중립 aria-label만 부여해 크롬이 '회원' 등 트리거 단어를 읽지 못하게 한다.
+                             시각적 프롬프트는 #cmd-prompt-renderer가 그대로 표시한다. -->
+                        <label id="cmd-prompt"></label>
                         <input id="cmd-prompt-renderer" type="text" readonly tabindex="-1" aria-hidden="true">
-                        <input id="cmd-input" type="text" autocomplete="off" maxlength="40" spellcheck="false">
+                        <input id="cmd-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="명령어 입력" maxlength="40" spellcheck="false">
                     </div>
                     <!-- [LOG: 20260613_1205] 별도 알림 영역 추가 (단축키 힌트 가림 방지) -->
                     <div id="terminal-notification" class="terminal-notification-row" style="display: none;"></div>

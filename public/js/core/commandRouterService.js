@@ -143,7 +143,21 @@ export function createServiceCommandHandler(deps) {
       const articles = state.serviceData?.items || [];
       const article = articles.find((item, index) => String(item?.no || (index + 1)) === rawCmd);
       if (article && typeof showNewsArticle === 'function') {
-        await showNewsArticle(state.serviceData?.topicDoor, article.no || rawCmd, getNewsArticleOptions(article, { listPageNo: pageNo }));
+        // [LOG: 20260622_1500] 목록에서 직접 클릭한 기사가 불완전(본문 짤림/크롤 실패)이면 조용히 목록으로
+        // 되돌아가 "아무 일도 안 일어난" 것처럼 보였다. skipOnIncomplete 로 에러를 받아 안내 토스트를 띄운다.
+        try {
+          await showNewsArticle(state.serviceData?.topicDoor, article.no || rawCmd, getNewsArticleOptions(article, { listPageNo: pageNo, skipOnIncomplete: true }));
+        } catch (err) {
+          if (/불완전한 뉴스 기사/.test(err?.message || '')) {
+            if (typeof showToast === 'function') {
+              showToast('본문 전체를 불러올 수 없는 기사입니다. 다른 기사를 선택해 주세요.', 3000, 'info');
+            } else {
+              setHint('본문 전체를 불러올 수 없는 기사입니다.');
+            }
+          } else {
+            throw err;
+          }
+        }
         return true;
       }
       return false;
@@ -272,6 +286,39 @@ export function createServiceCommandHandler(deps) {
           articleKey: state.serviceData?.articleKey,
           pageNo: n
         }));
+        return true;
+      }
+
+      // [LOG: 20260622_1530] 기사 보기 화면에서 본문 페이지 범위를 벗어난 숫자는 "다른 기사 번호"로 간주해 그 기사로 이동.
+      // 기존에는 무시되어(아무 동작 없음) "왜 안 되냐"는 혼란을 줬다. 라이브 피드 어긋남으로 엉뚱한 기사가
+      // 열리는 것을 막기 위해, 현재 로드된 목록(items) 안에 있는 기사만 key/link 기반으로 안정 이동한다.
+      if (!isNaN(n) && n >= 1) {
+        const targetArticle = articles.find((item, index) => String(item?.no || (index + 1)) === rawCmd);
+        if (targetArticle && state.serviceData?.topicDoor) {
+          try {
+            await showNewsArticle(state.serviceData.topicDoor, targetArticle.no || rawCmd, getNewsArticleOptions(targetArticle, {
+              listPageNo: state.serviceData?.listPageNo || 1,
+              skipOnIncomplete: true
+            }));
+          } catch (err) {
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) {
+              if (typeof showToast === 'function') {
+                showToast('본문 전체를 불러올 수 없는 기사입니다. 다른 기사를 선택해 주세요.', 3000, 'info');
+              } else {
+                setHint('본문 전체를 불러올 수 없는 기사입니다.');
+              }
+            } else {
+              throw err;
+            }
+          }
+          return true;
+        }
+        // 현재 목록에 없는 번호는 직접 이동 불가 → 목록으로 돌아가 선택하거나 N/A로 이동하도록 안내
+        if (typeof showToast === 'function') {
+          showToast('현재 목록에 없는 기사 번호입니다. P로 목록에 돌아가거나 N/A로 이동하세요.', 3000, 'info');
+        } else {
+          setHint('현재 목록에 없는 기사 번호입니다. P(목록) 또는 N/A로 이동하세요.');
+        }
         return true;
       }
 
