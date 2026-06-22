@@ -19,13 +19,14 @@ export function createMenuService(deps) {
     };
   }
 
-  function createEntryMenuNode() {
+  // [LOG: 20260622_1030] 원래 mnu 파일에 설정된 door 키 매핑을 받아와 반영하도록 개선
+  function createEntryMenuNode(doorVal = '1') {
     if (!isGuestMenuState()) {
       return {
         type: 'myinfo',
         go: 'myinfo',
         id: 'myinfo',
-        door: '1',
+        door: doorVal,
         text: '',
         showCode: true,
         accessLevel: 1,
@@ -44,7 +45,8 @@ export function createMenuService(deps) {
       { type: 'password-reset', go: 'password', id: 'password', door: '5', name: '비밀번호 찾기', children: [] }
     ];
     return {
-      type: 'menu', go: 'log', id: 'log', door: '1', text: '', showCode: true, accessLevel: 1,
+      type: 'menu', go: 'log', id: 'log', door: doorVal,
+      text: '', showCode: true, accessLevel: 1,
       name: '회원가입 / 로그인', header: '', footer: 'txt/cmd_menu_footer.txt',
       children
     };
@@ -62,15 +64,26 @@ export function createMenuService(deps) {
     return nextNode;
   }
 
+  // [LOG: 20260622_1030] 원래 로드된 signup/log 메뉴 노드의 door 단축키 설정을 추출하여 전달하도록 보완
   function applyRuntimeMenuOverrides(tree) {
     if (!tree || typeof tree !== 'object') return tree;
     const clonedTree = applyMenuNodeOverrides(tree);
     if (getMenuNodeKey(clonedTree) !== 'top') return clonedTree;
+
+    let originalDoor = '1';
+    const origNode = (clonedTree.children || []).find(c => {
+      const k = getMenuNodeKey(c).toLowerCase();
+      return k === 'signup' || k === 'entry' || k === 'log';
+    });
+    if (origNode && origNode.door) {
+      originalDoor = String(origNode.door).trim();
+    }
+
     const preserved = (clonedTree.children || []).filter(c => {
       const k = getMenuNodeKey(c).toLowerCase();
       return k !== 'signup' && k !== 'entry' && k !== 'log';
     });
-    clonedTree.children = [createEntryMenuNode(), ...preserved];
+    clonedTree.children = [createEntryMenuNode(originalDoor), ...preserved];
     return clonedTree;
   }
 

@@ -1,3 +1,35 @@
+## [2026-06-22 11:15] 메인 메뉴 단축키 중복 노출 및 회원가입/로그인 단축키 비작동 버그 수정
+
+**LOG_ID: 20260622_1030**
+목표: `legacy/hanulso.mnu`에서 회원가입/로그인 메뉴(`id="signup"`)의 `door` 번호를 `1`에서 `7`로 변경하였으나, 런타임 웹 UI에서 단축키가 계속 `1`로 고정 중복되고 `7` 단축키는 작동하지 않던 하드코딩 오류 수정.
+변경 파일:
+- `public/js/core/menuService.js`
+수행 작업:
+1) 원인: `menuService.js` 내 `createEntryMenuNode`에서 로그인 노드의 `door` 속성이 `'1'`로 하드코딩되어, 백엔드 XML 파일의 단축키 변경을 무시함.
+2) 해결: `createEntryMenuNode`가 `doorVal`을 인자로 받도록 수정하고, `applyRuntimeMenuOverrides`에서 트리 파싱 시점에 원래의 `signup`/`log` 노드 단축키(`door` 값)를 찾아 전달하도록 매핑을 개선함.
+3) 검증: `node --check public/js/core/menuService.js` 문법 검증 통과 및 브라우저 에이전트를 통한 단축키 테스트(1: 뉴스, 7: 로그인 라우팅)를 통해 중복 제거와 키보드 단축키 작동을 최종 확인.
+실행: `node --check public/js/core/menuService.js`
+기대: 메인 화면에서 중복 단축키가 사라지고, 키보드로 '7'을 누르면 로그인 화면으로 정상 라우팅된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-22 09:50] 뉴스 본문 내 불필요한 '바로가기' 및 '복사하기' 텍스트 제거
+
+**LOG_ID: 20260622_0950**
+목표: 뉴스 기사 본문 정제 시 standalone "바로가기", "복사하기" 텍스트 라인을 제거하여 불필요한 UI 문구 노출 차단.
+변경 파일:
+- `src/server/RssNewsArticleSanitizer.js` (boilerplatePatterns에 정규식 패턴 추가)
+수행 작업:
+1) 진단: 일부 뉴스 상세 페이지 크롤링 시 본문에 단독으로 남는 "바로가기", "복사하기" 등의 UI 문구가 걸러지지 않고 본문에 그대로 노출되는 문제를 확인.
+2) 해결: `RssNewsArticleSanitizer.js` 내의 `boilerplatePatterns` 배열에 단독행 매칭 패턴인 `/^(?:바로가기|복사하기)$/i` 를 추가하여, 이 문구들이 본문 가독성에 방해되지 않도록 완벽히 거름.
+3) 검증: `scratch/test_issue_22.js`에서 "바로가기" 및 "복사하기"가 포함된 더미 본문으로 정제 결과를 확인하여 정상 필터링을 검증하고, `npm run smoke:rss-services`가 문제없이 통과함을 확인.
+실행: `node scratch/test_issue_22.js`, `npm run smoke:rss-services`
+기대: 뉴스 기사 본문 내 단독 라인인 "바로가기"와 "복사하기" 텍스트가 깨끗이 제거된 상태로 가독성 있게 렌더링된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-21 11:00] 상단바 로고 클릭 시 입력창에 'T'가 잠깐 보이던 버그 수정
 
 **LOG_ID: 20260621_1100**

@@ -332,6 +332,8 @@ function stripKnownArticleBoilerplateLines(value) {
     /^유튜브로\s*보기$/i,
     // [LOG: 20260616_1220] 펼치기/접기, 요약, 구글 검색 선호 매체로 추가 제거패턴 추가
     /^(?:펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)$/i,
+    // [LOG: 20260622_0950] Strip standalone '바로가기' and '복사하기' buttons
+    /^(?:바로가기|복사하기)$/i,
     // [LOG: 20260617_2159] Avoid deleting complete paragraphs starting with ▲/△. Restrict to short captions (<60 chars) with no sentence terminators.
     /^[▲△]\s*(?![^.!?]*[.!?])[^\n]{1,60}$/,
     /^\([가-힣]{2,5}=\uC5F0\uD569\uB274\uC2A4\)\$/,
