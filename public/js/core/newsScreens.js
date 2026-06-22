@@ -534,6 +534,7 @@ export function createNewsScreens(deps) {
     }
   }
 
+  // [LOG: 20260622_1114] Fix truncated news article body by prioritizing API details first and dynamically guessing targetListPageNo from actual article number
   async function showNewsArticle(topicDoor, articleNo, options = {}) {
     const requestedPageNo = Math.max(1, Number.parseInt(options?.pageNo, 10) || 1);
     const fromHistory = Boolean(options?.fromHistory);
@@ -543,54 +544,51 @@ export function createNewsScreens(deps) {
       && String(state.serviceData?.articleNo || '') === String(articleNo)
       && Number(state.serviceData?.pageNo || 1) === requestedPageNo
       && (!requestedArticleKey || String(state.serviceData?.articleKey || '').trim() === requestedArticleKey);
+    
     state.screen = 'news-view';
-    const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor, requestedPageNo);
-    const article = findNewsArticle(items, articleNo, options);
-    const articleIndex = items.findIndex((item) => item === article);
 
-    if (!article) {
-      await showNewsList(topicDoor, {
-        fromHistory, pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
-      });
-      return;
+    // Get metadata details from options or sessionStorage
+    let articleKey = requestedArticleKey;
+    let link = String(options?.link || '').trim();
+
+    if (!articleKey && !link) {
+      const sessionKey = `news:metadata:${topicDoor}:${articleNo}`;
+      try {
+        const sessionData = sessionStorage.getItem(sessionKey);
+        if (sessionData) {
+          const parsed = JSON.parse(sessionData);
+          articleKey = parsed.key || '';
+          link = parsed.link || '';
+        }
+      } catch (e) {
+        console.error('Failed to load news metadata from sessionStorage', e);
+      }
     }
 
-    let resolvedTopicTitle = topicTitle;
-    let resolvedArticle = article;
+    const requestOptions = { articleKey, link };
+
+    // Check if we can reuse the current article state
     const canReuseCurrentArticle = !forceReload
       && String(state.serviceData?.topicDoor || '') === String(topicDoor)
-      && String(state.serviceData?.articleNo || '') === String(article?.no || articleNo)
-      && (!requestedArticleKey || String(state.serviceData?.articleKey || '').trim() === requestedArticleKey)
+      && String(state.serviceData?.articleNo || '') === String(articleNo)
+      && (!articleKey || String(state.serviceData?.articleKey || '').trim() === articleKey)
       && state.serviceData?.article;
 
-    if (canReuseCurrentArticle) {
-      resolvedArticle = { ...article, ...state.serviceData.article };
-      resolvedTopicTitle = String(state.serviceData?.topicTitle || topicTitle).trim() || topicTitle;
+    let detail = null;
+    let resolvedArticle = null;
+    let resolvedTopicTitle = '';
 
+    if (canReuseCurrentArticle) {
+      resolvedArticle = { ...state.serviceData.article };
+      resolvedTopicTitle = String(state.serviceData?.topicTitle || '').trim();
       if (resolvedArticle.detailFetched === false) {
         console.warn('Article detail not fully fetched, but allowing entry as fallback');
       }
     } else {
       try {
-        const requestOptions = getNewsArticleRequestOptions(article, options);
-        // [LOG: 20260617_1735] Use loadNewsArticleState with client-side caching to avoid redundant slow crawls
-        const detail = await loadNewsArticleState(topicDoor, article?.no || articleNo, requestOptions);
-        const targetValidationOptions = getNewsArticleRequestOptions(article, {});
-
-        if (detail?.article?.detailFetched === false) {
-          console.warn('Article detail crawl failed or content too short, but allowing entry');
-        }
-
-        if (detail?.article && isExpectedNewsArticle(detail.article, targetValidationOptions)) {
-          resolvedArticle = {
-            ...article,
-            ...detail.article,
-            title: detail.article.title || article?.title || '',
-            description: detail.article.description || article?.description || '',
-            body: detail.article.body || detail.article.description || article?.body || article?.description || ''
-          };
-        }
-        if (detail?.topic?.title) resolvedTopicTitle = String(detail.topic.title).trim() || topicTitle;
+        console.log('[DEBUG_NEWS] Fetching article detail from API with options:', requestOptions);
+        detail = await loadNewsArticleState(topicDoor, articleNo, requestOptions);
+        console.log('[DEBUG_NEWS] detail payload received:', detail);
       } catch (error) {
         if (error?.type === 'cancelled') {
           return;
@@ -609,6 +607,60 @@ export function createNewsScreens(deps) {
       }
     }
 
+    const fetchedArticle = canReuseCurrentArticle ? resolvedArticle : detail?.article;
+    if (!fetchedArticle) {
+      console.warn('[DEBUG_NEWS] fetchedArticle is missing, redirecting to list');
+      await showNewsList(topicDoor, {
+        fromHistory,
+        pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
+      });
+      return;
+    }
+
+    // Determine the list page we should load to pre-load adjacent article contexts
+    const pageSize = 15;
+    const guessedListPageNo = fetchedArticle.no ? Math.ceil(fetchedArticle.no / pageSize) : 1;
+    const targetListPageNo = Math.max(
+      1,
+      Number(options?.listPageNo || state.serviceData?.listPageNo || guessedListPageNo || 1)
+    );
+
+    let topics = [];
+    let topicTitle = '';
+    let items = [];
+    try {
+      const topicResult = await loadNewsTopicState(topicDoor, targetListPageNo);
+      topics = topicResult.topics;
+      topicTitle = topicResult.topicTitle;
+      items = topicResult.items;
+    } catch (e) {
+      console.warn('Failed to load topic state for list page preloading:', e.message);
+    }
+
+    // Match the article within the newly loaded list context
+    const matchedListArticle = findNewsArticle(items, articleNo, requestOptions);
+    const articleIndex = items.findIndex((item) => item === matchedListArticle);
+
+    if (!canReuseCurrentArticle) {
+      // Merge: server fetched article detail is source of truth, list article is fallback
+      resolvedArticle = {
+        ...(matchedListArticle || {}),
+        ...fetchedArticle,
+        title: fetchedArticle.title || matchedListArticle?.title || '',
+        description: fetchedArticle.description || matchedListArticle?.description || '',
+        body: fetchedArticle.body || fetchedArticle.description || matchedListArticle?.body || matchedListArticle?.description || ''
+      };
+      resolvedTopicTitle = String(detail?.topic?.title || topicTitle || '').trim();
+      console.log('[DEBUG_NEWS] Merged resolvedArticle body length:', resolvedArticle.body.length);
+    } else {
+      if (matchedListArticle) {
+        resolvedArticle = {
+          ...matchedListArticle,
+          ...resolvedArticle
+        };
+      }
+    }
+
     const articleView = buildNewsArticleAnsi(resolvedTopicTitle, resolvedArticle, requestedPageNo);
     const currentListPageSize = Math.max(1, Number(state.serviceData?.listPageSize || 15));
     const resolvedListPageNo = Math.max(
@@ -620,9 +672,8 @@ export function createNewsScreens(deps) {
 
     state.serviceData = {
       topics, topicDoor, topicTitle: resolvedTopicTitle,
-      articleNo: String(article?.no || articleNo),
+      articleNo: String(resolvedArticle?.no || articleNo),
       articleKey: getNewsArticleKey(resolvedArticle),
-      // [LOG: 20260617_1651] Store article link separately so URL building keeps a stable restore handle.
       articleLink: getNewsArticleLink(resolvedArticle),
       article: resolvedArticle, items,
       pageCount: articleView.pageCount, pageNo: articleView.pageNo,
