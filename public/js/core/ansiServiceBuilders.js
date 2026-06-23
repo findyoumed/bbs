@@ -3,6 +3,7 @@ import { createNewsAnsiBuilders } from './newsAnsiBuilders.js';
 import { createChatAnsiBuilders } from './chatAnsiBuilders.js';
 import { createMemoAnsiBuilders } from './memoAnsiBuilders.js';
 import { createSystemAnsiBuilders } from './systemAnsiBuilders.js';
+import { createAmusementAnsiBuilders } from './amusementAnsiBuilders.js';
 
 export function createServiceAnsiBuilders(deps) {
   return {
@@ -10,6 +11,7 @@ export function createServiceAnsiBuilders(deps) {
     ...createNewsAnsiBuilders(deps),
     ...createChatAnsiBuilders(deps),
     ...createMemoAnsiBuilders(deps),
-    ...createSystemAnsiBuilders(deps)
+    ...createSystemAnsiBuilders(deps),
+    ...createAmusementAnsiBuilders(deps)
   };
 }

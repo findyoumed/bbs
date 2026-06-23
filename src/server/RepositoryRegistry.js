@@ -13,6 +13,8 @@ const { AttachmentRepository: LocalAttachmentRepository } = require('./Attachmen
 const { SupabaseAttachmentRepository } = require('./AttachmentRepositorySupabase');
 const { createActivityRepository } = require('./ActivityRepository');
 const ActivityRepositorySupabase = require('./ActivityRepositorySupabase');
+// [LOG: 20260623_0013] origin/main에서 vote 시스템 포팅
+const { createVoteRepositoryFromEnv } = require('./VoteRepository');
 const { resolveLegacyPaths } = require('./projectPaths');
 
 /**
@@ -125,6 +127,9 @@ class RepositoryRegistry {
     } else {
       this.register('activity', createActivityRepository(options.activityOptions));
     }
+
+    // 7. Vote Repository [LOG: 20260623_0013] env 기반 Supabase/Memory 분기 (origin/main 포팅)
+    this.register('vote', createVoteRepositoryFromEnv(this.env));
 
     return this.repositories;
   }

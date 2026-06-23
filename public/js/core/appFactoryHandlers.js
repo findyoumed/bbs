@@ -1,3 +1,7 @@
+// [LOG: 20260623_0013] origin/main에서 vote/ranking command handler 포팅 (self-contained import)
+import { createVoteCommandHandler } from './commandRouterVote.js';
+import { createRankingCommandHandler } from './commandRouterRanking.js';
+
 export function createAppFactoryHandlers(deps) {
   const {
     createBrowseCommandHandler,
@@ -27,6 +31,7 @@ export function createAppFactoryHandlers(deps) {
   const handleServiceCommand = createServiceCommandHandler({
     ...handlerDeps,
     ...screens.serviceScreens,
+    ...screens.amusementScreens,
     showToast: services.terminalUiCore.showToast
   });
   const handleEntryCommand = createEntryCommandHandler({
@@ -86,6 +91,16 @@ export function createAppFactoryHandlers(deps) {
     downloadAttachment: services.postService.downloadAttachment
   });
 
+  // [LOG: 20260623_0013] vote/ranking command handler (origin/main 포팅)
+  const handleVoteCommand = createVoteCommandHandler({
+    ...handlerDeps,
+    ...screens.voteScreens
+  });
+  const handleRankingCommand = createRankingCommandHandler({
+    ...handlerDeps,
+    ...screens.rankingScreens
+  });
+
   const handleCmdRef = (...args) => {
     if (typeof refs.handleCmd === 'function') {
       return refs.handleCmd(...args);
@@ -143,6 +158,9 @@ export function createAppFactoryHandlers(deps) {
     handleMyInfoCommand,
     handlePostViewCommand,
     handleServiceCommand,
-    handleVfsCommand: createVfsCommandHandler(globalCommandHandlerDeps)
+    handleVfsCommand: createVfsCommandHandler(globalCommandHandlerDeps),
+    // [LOG: 20260623_0013] vote/ranking command handler 리턴 (origin/main 포팅)
+    handleVoteCommand,
+    handleRankingCommand
   };
 }

@@ -31,7 +31,19 @@ export function createRoutingStateRestorer(deps) {
     showUnifiedPdsPost,
     showWeatherMenu,
     showWeatherView,
-    isUnifiedPdsBoardId
+    isUnifiedPdsBoardId,
+    // [LOG: 20260623_0013] vote/ranking 스크린 복구 액션 (origin/main 포팅)
+    showVoteList,
+    showVoteDetail,
+    showVoteCreate,
+    showRanking,
+    showRankingDetail,
+    showBiorhythm,
+    showBiorhythmResult,
+    showFortune,
+    showFortuneResult,
+    showMbti,
+    showMbtiDetail
   } = deps;
 
   // [LOG: 20260429_0206] Restore board write/edit URLs into the actual post-write
@@ -244,6 +256,38 @@ export function createRoutingStateRestorer(deps) {
         return await showMemoView(decodeURIComponent(segments[1]), true);
       }
       await showMemoList(true);
+    },
+    // [LOG: 20260623_0013] game(vote/ranking) 라우트 복구 핸들러 (origin/main 포팅)
+    async game(segments) {
+      const [, sub, param] = segments;
+      // [LOG_ID: 20260623_1630] Restore local GAME utility routes that share /game/* with vote/ranking.
+      if (sub === 'bio' || sub === 'biorhythm') {
+        if (typeof showBiorhythm === 'function') return await showBiorhythm(true);
+      }
+      if (sub === 'fortune') {
+        if (typeof showFortune === 'function') return await showFortune(true);
+      }
+      if (sub === 'mbti') {
+        if (param && typeof showMbtiDetail === 'function') {
+          return await showMbtiDetail(decodeURIComponent(param), true);
+        }
+        if (typeof showMbti === 'function') return await showMbti(true);
+      }
+      if (sub === 'vote') {
+        if (param === 'create') {
+          if (typeof showVoteCreate === 'function') return await showVoteCreate(true);
+        } else if (param) {
+          if (typeof showVoteDetail === 'function') return await showVoteDetail(Number(param), true);
+        }
+        if (typeof showVoteList === 'function') return await showVoteList(true);
+      }
+      if (sub === 'ranking') {
+        if (param) {
+          if (typeof showRankingDetail === 'function') return await showRankingDetail(param, true);
+        }
+        if (typeof showRanking === 'function') return await showRanking(true);
+      }
+      await showMain(true);
     }
   };
 
@@ -299,6 +343,9 @@ export function createRoutingStateRestorer(deps) {
         if (routeNode.type === 'password-reset' && remainingSegments.length === 0) {
           return await showPasswordReset(true);
         }
+        if (routeNode.type === 'biorhythm' && typeof showBiorhythm === 'function') return await showBiorhythm(true);
+        if (routeNode.type === 'fortune' && typeof showFortune === 'function') return await showFortune(true);
+        if (routeNode.type === 'mbti' && typeof showMbti === 'function') return remainingSegments[0] && typeof showMbtiDetail === 'function' ? await showMbtiDetail(remainingSegments[0], true) : await showMbti(true);
       }
 
       const menuNode = getMenuNodeByKey(segments[0] || '');

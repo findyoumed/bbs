@@ -8,6 +8,12 @@ export function createServiceCommandHandler(deps) {
     showWeatherView,
     showNewsMenu,
     showNewsList,
+    showBiorhythm,
+    showBiorhythmResult,
+    showFortune,
+    showFortuneResult,
+    showMbti,
+    showMbtiDetail,
     state,
     showToast
   } = deps;
@@ -21,6 +27,13 @@ export function createServiceCommandHandler(deps) {
   }
 
   return async function handleServiceCommand({ s, cmd, rawCmd, context }) {
+    // [LOG_ID: 20260623_1300] Restore GAME input handling.
+    const goGame = async () => { await showBoardSelect('game'); return true; };
+    if (s === 'bio-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showBiorhythmResult(rawCmd); return true; } return false; }
+    if (s === 'bio-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showBiorhythm(); return true; } if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showBiorhythmResult(rawCmd); return true; } return false; }
+    if (s === 'fortune-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{4}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
+    if (s === 'fortune-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showFortune(); return true; } if (/^\d{4}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
+    if (s === 'mbti-list' || s === 'mbti-detail') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (s === 'mbti-detail' && cmd === 'L') { await showMbti(); return true; } if (/^(1[0-6]|[1-9]|[EI][SN][TF][JP])$/.test(cmd)) { await showMbtiDetail(cmd); return true; } return false; }
     if (s === 'weather-menu') {
       if (cmd === 'T') {
         await showMain();

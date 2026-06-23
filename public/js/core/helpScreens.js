@@ -109,12 +109,13 @@ export function createHelpScreens(deps) {
         categories[cat].forEach((row) => {
           helpLines.push(buildHelpLineAdaptive(row.command, row.description));
         });
-        helpLines.push(''); // 카테고리 간 빈 줄
+        // [LOG: 20260623_1236] 카테고리 간 빈 줄 제거 → 세로 스크롤바 방지
       }
     });
 
-    // 3. 페이징 계산 (제목 제외 본문은 약 20줄씩 끊음)
-    const linesPerPage = 20;
+    // 3. 페이징 계산 (제목 제외 본문은 약 19줄씩 끊음)
+    // [LOG: 20260623_1236] 20→19줄로 축소하여 세로 스크롤바 방지
+    const linesPerPage = 19;
     const totalPages = Math.max(1, Math.ceil(helpLines.length / linesPerPage));
     const finalPage = Math.max(1, Math.min(requestedPage, totalPages));
 
@@ -125,9 +126,10 @@ export function createHelpScreens(deps) {
       ...pageSlice
     ];
 
-    while (parts.length < 24) parts.push('');
+    // [LOG: 20260623_1236] 24→23줄로 축소하여 세로 스크롤바 방지
+    while (parts.length < 23) parts.push('');
     return {
-      text: parts.slice(0, 24).join('\n'),
+      text: parts.slice(0, 23).join('\n'),
       page: finalPage,
       totalPages
     };

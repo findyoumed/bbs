@@ -130,5 +130,41 @@
 			<footer>txt/cmd_chat_footer.txt</footer>
 		</item>
 
+		<!-- 08. 오락실 -->
+		<item type="menu" go="game" door="8">
+			<name>오락실 (GAME)</name>
+			<footer>txt/cmd_menu_footer.txt</footer>
+
+			<item type="biorhythm" go="bio" id="game_bio" door="1" access_level="1">
+				<name>바이오리듬</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="fortune" go="fortune" id="game_fortune" door="2" access_level="1">
+				<name>오늘의 운세</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="mbti" go="mbti" id="game_mbti" door="3" access_level="1">
+				<name>MBTI 성격유형</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="vote" go="vote" id="game_vote" door="4" access_level="1">
+				<name>설문조사/투표</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="ranking" go="ranking" id="game_ranking" door="5" access_level="1">
+				<name>게시판 랭킹</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+		</item>
+
 	</item>
 </hanulso>

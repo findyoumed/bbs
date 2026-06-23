@@ -69,7 +69,9 @@ export function createCommandDispatcherExecution(deps) {
       handleMyInfoCommand,
       handlePostViewCommand,
       handleVfsCommand,
-      handleLogCommand
+      handleLogCommand,
+      handleVoteCommand,
+      handleRankingCommand
     },
     screens: {
       showMain,
@@ -134,6 +136,9 @@ export function createCommandDispatcherExecution(deps) {
       // over global command handling so page navigation does not leak into menu navigation.
       async () => await handleBrowseCommand({ s: screen, input, cmd, rawCmd: normalized, context }),
       async () => await handleServiceCommand({ s: screen, cmd, rawCmd: normalized, context }),
+      // [LOG: 20260623_0013] vote/ranking 화면 명령 라우팅 (origin/main 포팅)
+      async () => await handleVoteCommand({ s: screen, cmd, rawCmd: normalized, context }),
+      async () => await handleRankingCommand({ s: screen, cmd, rawCmd: normalized, context }),
       async () => input && await handleGlobalCommand({ cmd, rawCmd: normalized, context }),
       async () => input && await handleVfsCommand({ cmd, rawCmd: normalized, context }),
       async () => await handleEntryCommand({ s: screen, cmd, context }),

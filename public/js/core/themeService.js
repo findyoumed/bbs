@@ -11,7 +11,8 @@ export function createThemeService(deps) {
     const isBlue = state.theme === 'blue';
     const root = document.documentElement;
     const bgColor = isBlue ? '#0000aa' : '#000000';
-    const textShadow = isBlue ? '0 0 2px rgba(255, 255, 255, 0.4)' : 'none';
+    // [LOG_ID: 20260623_1129] 파란 테마 전환 시에도 텍스트 글로우를 다시 주입하지 않는다.
+    const textShadow = 'none';
 
     root.setAttribute('data-theme', isBlue ? 'blue' : 'dark');
     document.body.classList.toggle('theme-blue', isBlue);

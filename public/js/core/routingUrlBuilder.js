@@ -110,8 +110,27 @@ export function createRoutingUrlBuilder(deps) {
       case 'chat-lobby':
         return '/chat';
 
+      case 'bio-input':
+      case 'bio-result': return getMenuNodeRoutePath('bio');
+      case 'fortune-input':
+      case 'fortune-result': return getMenuNodeRoutePath('fortune');
+      case 'mbti-list': return getMenuNodeRoutePath('mbti');
+      case 'mbti-detail': return `${getMenuNodeRoutePath('mbti')}/${encodeURIComponent(state._mbtiCode || '')}`;
+
       case 'chat-room':
         return `/chat/${encodeURIComponent(_chatRoomId || '')}`;
+
+      // [LOG: 20260623_0013] vote/ranking URL (origin/main 포팅)
+      case 'vote-list':
+        return '/game/vote';
+      case 'vote-detail':
+        return `/game/vote/${encodeURIComponent(serviceData?.voteId || '')}`;
+      case 'vote-create':
+        return '/game/vote/create';
+      case 'ranking-summary':
+        return '/game/ranking';
+      case 'ranking-detail':
+        return `/game/ranking/${encodeURIComponent(serviceData?.category || '')}`;
 
       case 'help': {
         // [LOG: 20260429_0355] Keep later help pages addressable so reload/history

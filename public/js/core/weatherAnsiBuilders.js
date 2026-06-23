@@ -2,7 +2,6 @@ import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 
 export function createWeatherAnsiBuilders(deps) {
   const {
-    ANSI_BOLD,
     ANSI_RESET,
     ansiColor,
     buildPageLabel,
@@ -127,7 +126,8 @@ export function createWeatherAnsiBuilders(deps) {
       const group = dayGroups[info.groupIdx];
       if (group) {
         const subLabel = info.totalSubPages > 1 ? ` (${info.dayOffset + 1}/${info.totalSubPages})` : '';
-        parts.push(`  ${ansiColor(11)}${ANSI_BOLD}── ${group.day}${subLabel} ──${ANSI_RESET}`);
+        // [LOG_ID: 20260623_1141] 시간별 상세 제목도 본문과 동일한 글자 굵기로 렌더링한다.
+        parts.push(`  ${ansiColor(11)}── ${group.day}${subLabel} ──${ANSI_RESET}`);
 
         if (isMobile) {
           parts.push(

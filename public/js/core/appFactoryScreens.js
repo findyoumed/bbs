@@ -1,3 +1,8 @@
+// [LOG: 20260623_0013] origin/main에서 vote/ranking 스크린 포팅 (self-contained import)
+import { createVoteScreens } from './voteScreens.js';
+import { createRankingScreens } from './rankingScreens.js';
+import { createAmusementScreens } from './amusementScreens.js';
+
 export function createAppFactoryScreens(deps) {
   const {
     SIGNUP_PRIVACY_TEXT,
@@ -41,7 +46,9 @@ export function createAppFactoryScreens(deps) {
     screenEl,
     serviceAnsiBuilders,
     systemAnsiBuilders,
-    terminalUiCore
+    terminalUiCore,
+    voteAnsiBuilders,
+    rankingAnsiBuilders
   } = services;
 
   const screenDeps = {
@@ -172,6 +179,34 @@ export function createAppFactoryScreens(deps) {
     showMain
   });
 
+  // [LOG: 20260623_0013] vote/ranking 스크린 (origin/main 포팅, apiFetch는 로컬 screenDeps에 없어 명시 전달)
+  const voteScreens = createVoteScreens({
+    ...screenDeps,
+    apiFetch,
+    buildVoteListAnsi: voteAnsiBuilders.buildVoteListAnsi,
+    buildVoteDetailAnsi: voteAnsiBuilders.buildVoteDetailAnsi,
+    buildVoteCreateAnsi: voteAnsiBuilders.buildVoteCreateAnsi,
+    getMenuNodeByKey: menuService.getMenuNodeByKey
+  });
+  const rankingScreens = createRankingScreens({
+    ...screenDeps,
+    apiFetch,
+    buildRankingSummaryAnsi: rankingAnsiBuilders.buildRankingSummaryAnsi,
+    buildRankingDetailAnsi: rankingAnsiBuilders.buildRankingDetailAnsi,
+    getMenuNodeByKey: menuService.getMenuNodeByKey
+  });
+  const amusementScreens = createAmusementScreens({
+    ...screenDeps,
+    buildBiorhythmIntroAnsi: serviceAnsiBuilders.buildBiorhythmIntroAnsi,
+    buildBiorhythmAnsi: serviceAnsiBuilders.buildBiorhythmAnsi,
+    buildFortuneIntroAnsi: serviceAnsiBuilders.buildFortuneIntroAnsi,
+    buildFortuneAnsi: serviceAnsiBuilders.buildFortuneAnsi,
+    buildMbtiListAnsi: serviceAnsiBuilders.buildMbtiListAnsi,
+    buildMbtiDetailAnsi: serviceAnsiBuilders.buildMbtiDetailAnsi,
+    findMbtiType: serviceAnsiBuilders.findMbtiType,
+    getMenuNodeByKey: menuService.getMenuNodeByKey
+  });
+
   return {
     authScreens,
     chatScreens,
@@ -186,6 +221,9 @@ export function createAppFactoryScreens(deps) {
     profileScreens,
     screenDeps,
     serviceScreens,
+    voteScreens,
+    rankingScreens,
+    amusementScreens,
     showBoardSelect,
     showMain,
     signupModule,

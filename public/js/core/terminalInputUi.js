@@ -19,8 +19,9 @@ export function createTerminalInputUi(deps) {
   let selectedSuggestionIndex = -1;
   let cursorStateObserver = null;
   let fontCursorSyncRegistered = false;
-  // [LOG: 20260611_1610] Use the browser caret again; the absolute overlay cursor drifts outside text flow.
-  const useCustomCursor = false;
+  // [LOG_ID: 20260623_1330] Normal input uses the PC-communication block cursor.
+  // Loading and command-pending states keep their own dot/underscore indicators.
+  const useCustomCursor = true;
   // [LOG: 20260506_1315] Command suggestion UI disabled due to frequent misfires.
   // const suggestionBoxEl = document.getElementById('cmd-suggestion-box');
   const suggestionBoxEl = null;
@@ -72,15 +73,15 @@ export function createTerminalInputUi(deps) {
     });
   }
 
-  // [LOG: 20260611_1454] Update cursor position from the input's measured text width, not estimated ch units.
+  // [LOG_ID: 20260623_1345] The terminal input and password-star overlay use fixed cells.
+  // Position the block cursor in the same cell unit, not canvas glyph pixels.
   function updateCursorPosition() {
     if (!cmdInput || !cursorEl) {
       return;
     }
 
     const textBeforeCaret = cmdInput.value.substring(0, cmdInput.selectionStart || 0);
-    const measuredWidth = measureInputTextWidth(textBeforeCaret);
-    cursorEl.style.left = `${measuredWidth}px`;
+    cursorEl.style.left = `${displayWidth(textBeforeCaret)}ch`;
   }
 
   function getCursorMeasureContext() {

@@ -155,6 +155,7 @@ export function createAuthScreens(deps) {
         // [LOG: 20260622_1600] 풋터(terminal-footer)가 이미 프롬프트 위 가로 구분선을 그리므로, 본문 entry-divider는
         // 빈 transcript 위에서 풋터 선과 겹쳐 "가로줄 2개"로 보였다. 중복 제거 — 비밀번호 재설정 화면과 동일하게 풋터 선만 사용.
         `<div id="login-transcript" class="entry-login-transcript"></div>` +
+        `<div id="login-prompt-host" class="entry-login-prompt-host" data-login-prompt-host></div>` +
         renderAuthField({
           id: 'l-id',
           label: '회원 ID',
@@ -178,6 +179,16 @@ export function createAuthScreens(deps) {
     const loginPasswordEl = document.getElementById('l-pw');
     const loginPasswordRow = loginPasswordEl?.closest('.entry-auth-row') || null;
     const loginTranscriptEl = document.getElementById('login-transcript');
+    const loginPromptHost = document.getElementById('login-prompt-host');
+    const setLoginPromptVisible = (isVisible) => {
+      const promptRow = document.getElementById('terminal-prompt-row');
+      if (!promptRow) return;
+      // [LOG_ID: 20260623_1525] Keep the prompt row in layout while async login
+      // validation runs. display:none removes the row height and makes the next
+      // prompt jump vertically when ID validation switches to password input.
+      promptRow.style.display = '';
+      promptRow.style.visibility = isVisible ? '' : 'hidden';
+    };
     const loginSession = {
       step: 'id',
       userId: '',
@@ -200,6 +211,11 @@ export function createAuthScreens(deps) {
       resetLoginFailures();
       state._maskCommandInput = false;
       clearAuthTerminalHandler(loginInputHandler);
+      restorePromptRow?.();
+      // [LOG_ID: 20260623_1707] Five-failure exit can happen while the inline login
+      // prompt is hidden during async validation; clear that inline visibility state
+      // after returning the shared prompt row to the footer.
+      setLoginPromptVisible(true);
       if (typeof setFooterVisibility === 'function') {
         setFooterVisibility(true);
       }
@@ -219,12 +235,16 @@ export function createAuthScreens(deps) {
       loginSession.step = 'id';
       loginSession.password = '';
       state._maskCommandInput = false;
+      mountPromptRow?.(loginPromptHost);
+      setLoginPromptVisible(true);
       setPrompt('회원 ID >>');
     };
     const showLoginPasswordPrompt = () => {
       loginSession.step = 'password';
       loginSession.password = '';
       state._maskCommandInput = true;
+      mountPromptRow?.(loginPromptHost);
+      setLoginPromptVisible(true);
       setPrompt('비밀번호 >>');
     };
     const resetPasswordStep = () => {
@@ -250,28 +270,18 @@ export function createAuthScreens(deps) {
     const appendCommittedIdLine = (userId) => {
       const text = String(userId || '').trim();
       if (!text || !loginTranscriptEl) return;
-      const row = document.createElement('div');
-      row.className = 'entry-auth-row entry-login-committed-row';
-      row.innerHTML =
-        `<span class="entry-auth-label">회원 ID</span>` +
-        `<span class="entry-auth-colon">:</span>` +
-        `<span class="entry-auth-field"><span class="entry-login-committed-value"></span></span>`;
-      const valueEl = row.querySelector('.entry-login-committed-value');
-      if (valueEl) valueEl.textContent = text;
-      loginTranscriptEl.appendChild(row);
+      const line = document.createElement('div');
+      line.className = 'entry-login-message entry-login-committed-row';
+      line.textContent = `회원 ID >> ${text}`;
+      loginTranscriptEl.appendChild(line);
     };
     const appendCommittedPasswordLine = (password) => {
       const text = String(password || '');
       if (!text || !loginTranscriptEl) return;
-      const row = document.createElement('div');
-      row.className = 'entry-auth-row entry-login-committed-row';
-      row.innerHTML =
-        `<span class="entry-auth-label">비밀번호</span>` +
-        `<span class="entry-auth-colon">:</span>` +
-        `<span class="entry-auth-field"><span class="entry-login-committed-value"></span></span>`;
-      const valueEl = row.querySelector('.entry-login-committed-value');
-      if (valueEl) valueEl.textContent = '*'.repeat(Array.from(text).length);
-      loginTranscriptEl.appendChild(row);
+      const line = document.createElement('div');
+      line.className = 'entry-login-message entry-login-committed-row';
+      line.textContent = `비밀번호 >> ${'*'.repeat(Array.from(text).length)}`;
+      loginTranscriptEl.appendChild(line);
     };
     const appendLoginBlankLine = () => {
       // [LOG: 20260509] 로그인 실패 시 추가되는 빈 줄 제거 요청
@@ -283,6 +293,10 @@ export function createAuthScreens(deps) {
       return message;
     };
     const submitLogin = async () => {
+      if (loginSession.password) {
+        appendCommittedPasswordLine(loginSession.password);
+      }
+      setLoginPromptVisible(false);
       try {
         clearLoginError();
         await withHiddenAuthInputs({
@@ -299,20 +313,23 @@ export function createAuthScreens(deps) {
             await leaveLoginToAuthMenu('로그인 실패가 5회 누적되어 회원가입 / 로그인 메뉴로 돌아갑니다.');
             return;
           }
-          const failedPassword = loginSession.password || loginPasswordEl?.value || '';
-          if (failedPassword) {
-            appendCommittedPasswordLine(failedPassword);
-            appendLoginBlankLine();
-          }
           appendLoginMessage(message);
           if (loginPasswordEl) loginPasswordEl.value = '';
           if (loginPasswordRow) loginPasswordRow.classList.remove('is-login-step-hidden');
           if (loginPasswordEl) loginPasswordEl.focus();
           showLoginPasswordPrompt();
         } else {
+          // [LOG_ID: 20260623_1500] Login success has already rendered main;
+          // return the detached inline prompt to the shared footer.
           resetLoginFailures();
           state._maskCommandInput = false;
           clearAuthTerminalHandler(loginInputHandler);
+          restorePromptRow?.();
+          setLoginPromptVisible(true);
+          if (typeof setFooterVisibility === 'function') {
+            setFooterVisibility(true);
+          }
+          setPrompt('>>');
         }
       }
     };
@@ -417,11 +434,14 @@ export function createAuthScreens(deps) {
         showLoginIdPrompt();
         return true;
       }
+      // [LOG_ID: 20260623_1440] Freeze the submitted line synchronously before
+      // async validation so the text never disappears then reappears.
+      appendCommittedIdLine(currentId);
+      setLoginPromptVisible(false);
       const idAccepted = typeof handleLoginIdSubmit === 'function'
         ? await withHiddenAuthInputs({ 'l-id': currentId }, () => handleLoginIdSubmit(currentId))
         : true;
       if (idAccepted) {
-        appendCommittedIdLine(currentId);
         showLoginPasswordPrompt();
         return true;
       }
@@ -432,7 +452,6 @@ export function createAuthScreens(deps) {
           await leaveLoginToAuthMenu('로그인 실패가 5회 누적되어 회원가입 / 로그인 메뉴로 돌아갑니다.');
           return true;
         }
-        appendCommittedIdLine(currentId);
         appendLoginBlankLine();
         appendLoginMessage(message);
       }
@@ -448,7 +467,9 @@ export function createAuthScreens(deps) {
     // [LOG: 20260622_1720] 로그인 화면은 명령 힌트바를 띄우지 않는다. showLogin은 applyCommandFooter/setHint를
     // 호출하지 않아, 직전 화면(예: /log 인증메뉴 'P,T,GO,H')의 힌트가 그대로 남는 누수가 있었다. 명시적으로 비운다.
     if (typeof setHint === 'function') {
-      setHint('');
+      // [LOG_ID: 20260623_1330] A blank hint sets the terminal back to loading;
+      // use one spacer so the completed login prompt can show its block cursor.
+      setHint(' ');
     }
     showLoginIdPrompt();
   }

@@ -69,6 +69,7 @@ function createAppServices(rootDir, env = process.env) {
   const chatRoomRepository = registry.get('chatRooms');
   const attachmentRepository = registry.get('attachment');
   const activityRepository = registry.get('activity');
+  const voteRepository = registry.get('vote'); // [LOG: 20260623_0013] origin/main 포팅
 
   const repositoryDiagnostics = applyRuntimeRepositoryMeta(preflightDiagnostics, {
     board: boardRepository,
@@ -96,6 +97,7 @@ function createAppServices(rootDir, env = process.env) {
     memoRepository,
     memberRepository,
     activityRepository,
+    voteRepository,
     menuResolver: new MenuResolver(legacyPaths.menuFilePath),
     rssService: new RssService({
       newsMenuPath: legacyPaths.newsMenuPath,

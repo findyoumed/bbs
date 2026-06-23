@@ -4,7 +4,7 @@ const STEP_CONFIG = [
   {
     fieldId: 'signup-userid',
     key: 'userId',
-    prompt: '>>',
+    prompt: '>> ',
     masked: false,
     guideLines: [
       '1. 회원ID를 입력해주세요. (최소 영문 5자~40자 가능)'
@@ -13,7 +13,7 @@ const STEP_CONFIG = [
   {
     fieldId: 'signup-password',
     key: 'password',
-    prompt: '>>',
+    prompt: '>> ',
     masked: true,
     guideLines: [
       '2. 비밀번호를 입력해주세요. (6자 이상, 특수문자 1자 이상 포함)'
@@ -31,7 +31,7 @@ const STEP_CONFIG = [
   {
     fieldId: 'signup-nickname',
     key: 'nickName',
-    prompt: '>>',
+    prompt: '>> ',
     masked: false,
     guideLines: [
       '4. 닉네임을 입력하세요. (영문 40자, 한글 20자 가능)'
@@ -40,7 +40,7 @@ const STEP_CONFIG = [
   {
     fieldId: 'signup-email',
     key: 'email',
-    prompt: '>>',
+    prompt: '>> ',
     masked: false,
     guideLines: [
       '5. 이메일 주소를 입력하세요.',
@@ -91,7 +91,9 @@ function maskValue(value) {
 function formatInputLine(fieldId, value) {
   const step = getStepConfig(fieldId);
   const text = step.masked ? maskValue(value) : String(value || '');
-  return `${step.prompt} ${text}`.trimEnd();
+  // [LOG_ID: 20260623_1355] The active prompt trims its own trailing space and
+  // uses CSS for one cell of separation; submitted text must use that same gap.
+  return `${String(step.prompt || '').trimEnd()} ${text}`.trimEnd();
 }
 
 function isEnglishKeyboardStage(fieldId) {
@@ -533,7 +535,7 @@ export function createSignupEmailHandler(deps) {
 
   async function completeDraft(handlers, values) {
     appendGuideForStage(CONFIRM_STAGE_ID, ['가입 정보를 확인하고 있습니다.']);
-    
+
     const promptRow = document.getElementById('terminal-prompt-row');
     if (promptRow) promptRow.style.display = 'none';
 
@@ -557,7 +559,7 @@ export function createSignupEmailHandler(deps) {
       handlers.attachAgreementEvents();
     } catch (error) {
       if (promptRow) promptRow.style.display = '';
-      
+
       const fieldId = error.fieldId || FIELD_ID_BY_PRECHECK_FIELD[error.field] || 'signup-userid';
       const nextDraft = pruneDraftForField(fieldId, values);
       moveToStage(fieldId, nextDraft, [error.message || '가입 정보를 확인하지 못했습니다.']);

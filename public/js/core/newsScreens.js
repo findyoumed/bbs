@@ -594,9 +594,7 @@ export function createNewsScreens(deps) {
       }
     } else {
       try {
-        console.log('[DEBUG_NEWS] Fetching article detail from API with options:', requestOptions);
         detail = await loadNewsArticleState(topicDoor, articleNo, requestOptions);
-        console.log('[DEBUG_NEWS] detail payload received:', detail);
       } catch (error) {
         if (error?.type === 'cancelled') {
           return;
@@ -617,7 +615,6 @@ export function createNewsScreens(deps) {
 
     const fetchedArticle = canReuseCurrentArticle ? resolvedArticle : detail?.article;
     if (!fetchedArticle) {
-      console.warn('[DEBUG_NEWS] fetchedArticle is missing, redirecting to list');
       await showNewsList(topicDoor, {
         fromHistory,
         pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
@@ -659,7 +656,6 @@ export function createNewsScreens(deps) {
         body: fetchedArticle.body || fetchedArticle.description || matchedListArticle?.body || matchedListArticle?.description || ''
       };
       resolvedTopicTitle = String(detail?.topic?.title || topicTitle || '').trim();
-      console.log('[DEBUG_NEWS] Merged resolvedArticle body length:', resolvedArticle.body.length);
     } else {
       if (matchedListArticle) {
         resolvedArticle = {

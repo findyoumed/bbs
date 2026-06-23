@@ -1,3 +1,113 @@
+## [2026-06-23 15:11] 비PC통신 UI 점검 및 둥근 모서리 제거(레트로 통일)
+
+**LOG_ID: 20260623_1511**
+목표: 툴팁/마우스 호버(의도된 기능)를 제외하고, PC통신 터미널 룩에 어긋나는 "모던 웹 UI" 요소를 점검·수정한다.
+점검 방법:
+1) 주요 화면(메인/vote/ranking/로그인/회원가입/이메일가입/종료 다이얼로그/모바일) Playwright 스크린샷 육안 검수.
+2) CSS 7개 파일 비레트로 패턴(border-radius·box-shadow·gradient·모던 애니메이션·비고정폭 폰트·이모지) 전수 감사.
+3) 후보 셀렉터의 실제 DOM 가시성 검증 → 숨겨진/죽은 CSS 배제.
+판정: 그라데이션·이모지·비고정폭 폰트 없음. 단축키 모달/스크롤버튼은 `display:none`(사용자 요청 숨김), 카드형 회원가입·타이틀바 control-dot·커맨드 팔레트는 미렌더(죽은 CSS)라 시각 영향 없음 → 제외. **실제로 보이는 비PC통신 요소는 둥근 모서리 5곳뿐**으로 확인.
+변경 파일:
+- public/style.css (4곳)
+- public/styles/retro-terminal.css (1곳)
+- public/index.html (CSS 캐시버전 갱신)
+수행 작업:
+1) `.cmd-token`(입력 명령어 토큰 하이라이트) border-radius 2px→0.
+2) 모바일 `#terminal-prompt-row`(입력박스) 4px→0 — 상단 헤더 박스와 동일한 각진 룩으로 통일.
+3) 모바일 `.write-field input/textarea`(글쓰기 입력) 4px→0.
+4) 데스크톱 `::-webkit-scrollbar-thumb` 5px→0, 터미널 `#terminal-screen::-webkit-scrollbar-thumb` 3px→0.
+5) index.html의 retro-terminal.css·style.css 캐시버전 `20260623_1425`→`20260623_1511`로 갱신(기존 사용자 캐시 무효화).
+실행: Playwright 스크린샷 재검증(둥근모서리 제거 육안+computed 0px 확인), `npm test`(전체 통과), 콘솔/페이지 에러 0건, `npm run smoke:renderer-ui`(ok:true).
+기대: 데스크톱/모바일 모두 입력박스·토큰·스크롤바가 각진 PC통신 룩으로 통일되고, 툴팁/호버 등 의도된 기능은 그대로 유지된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-23 13:06] 회원가입 프롬프트 공백 및 캐시 무효화 보강
+
+**LOG_ID: 20260623_1306**
+목표: style.css의 margin-right: 0px !important로 인해 `#cmd-prompt` 우측 공백이 사라지던 현상을 덮어쓰기 방지 선택자(#terminal-prompt-row #cmd-prompt)로 차단하고, html 파일 캐시 갱신 처리.
+변경 파일:
+- public/styles/retro-terminal.css
+- public/index.html
+수행 작업:
+1) retro-terminal.css: `#terminal-prompt-row #cmd-prompt` 및 inline prompt label 선택자에 `margin-right: 1ch !important;`를 줘서 style.css의 margin-right: 0px 지정을 덮어쓰도록 강제화.
+2) index.html: retro-terminal.css 및 style.css 버전을 `20260623_1306`으로 올려 브라우저 캐시 갱신 유도.
+실행: 로컬 서버 및 스크린샷 렌더링 검증
+기대: 회원가입 단계 및 모든 프롬프트 우측에 1글자 너비의 공백이 완벽하게 렌더링된다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-23 13:01] 회원가입 프롬프트 뒤 공백 추가
+
+**LOG_ID: 20260623_1301**
+목표: 회원가입 단계(signup/email) 등에서 '>>' 프롬프트 바로 뒤에 한 칸의 공백(margin-right)을 주어 입력 커서와 떨어지도록 수정.
+변경 파일: public/styles/retro-terminal.css
+수행 작업:
+1) retro-terminal.css 파일 279~288라인의 `#cmd-prompt-renderer` 선택자 규칙에 `#cmd-prompt` 선택자를 병합 추가.
+2) 공백 확보: `margin: 0 1ch 0 0;` 속성이 `#cmd-prompt` (기존 라벨 기반 프롬프트)에도 동작하도록 개선.
+3) 결과: 인풋 렌더러가 활성화되지 않는 구버전이나 vercel 배포 환경에서도 프롬프트 뒤 한 칸 공백이 정상 표현됨.
+실행: 브라우저 테스트 및 로컬 서버 검증
+기대: 회원가입 단계 및 모든 프롬프트의 '>>' 뒤에 1ch(한 칸) 공백이 들어가서 입력 내용과 붙지 않는다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-23 12:36] 도움말 화면 세로 스크롤바 제거
+
+**LOG_ID: 20260623_1236**
+목표: 도움말(H) 화면이 상하로 길어 터미널 영역을 초과하여 세로 스크롤바가 나오던 문제 해결.
+변경 파일: public/js/core/helpScreens.js
+수행 작업:
+1) 카테고리 간 빈 줄(`helpLines.push('')`) 제거 → 전체 줄 수 감소.
+2) 페이지당 줄 수 20→19줄로 축소.
+3) 화면 총 줄 수 24→23줄로 축소하여 터미널 영역에 딱 맞게 조정.
+4) 결과: 3페이지 → 2페이지로 압축, 세로 스크롤바 완전 제거.
+실행: `node --check public/js/core/helpScreens.js`
+기대: 도움말 화면에 세로 스크롤바가 없고 내용이 잘 보인다.
+결과: ✅ 완료
+
+---
+
+## [2026-06-23 10:45] origin/main의 vote(설문조사)/ranking(랭킹) 시스템을 로컬 main에 포팅
+
+**LOG_ID: 20260623_1045**
+목표: 로컬 main과 origin/main이 공통 조상 없는 별개 히스토리(unrelated histories, 충돌 451파일)로 갈라져 있어, 원격에만 있는 신규 기능(귓속말/vote/ranking/EventBus 등)이 로컬에 없었다. 사용자 결정에 따라 **vote(설문조사)+ranking(게시판 랭킹)**을 로컬에 수동 포팅한다(귓속말은 제외 — chat 6파일 전부 충돌로 난이도 높음).
+배경: 원격 `f1354b0 feat: voting/ranking` 커밋. 자동 merge/rebase는 unrelated+451충돌+원격의 이질적 구조(OpenSourceCommunity TS 프로젝트 포함)로 불가 → 기능 단위 수동 포팅 채택. 참조용 worktree(`d:/work/bbs/_origin_ref` = origin/main) 두고 진행.
+변경 파일:
+- 신규 14개(origin/main에서 `git checkout`): `EventBus.js`, `VoteRepository.js`(+Memory/Supabase), `routeHandlers/voteRoutes.js`, `routeHandlers/rankingRoutes.js`, `listeners/auditLogListener.js`, `voteScreens.js`, `voteAnsiBuilders.js`, `commandRouterVote.js`, `rankingScreens.js`, `rankingAnsiBuilders.js`, `commandRouterRanking.js`, `supabase/migrations/0018_vote_system.sql`
+- 서버 wiring: `RepositoryRegistry.js`(vote 등록), `createAppServices.js`(voteRepository 추출/반환), `requestHandlerRuntime.js`(runtime+routeContext에 voteRepository), `apiRequestRouter.js`(voteRoutes/rankingRoutes 등록), `createAppRuntime.js`
+- 클라이언트 wiring: `appFactoryServices.js`(voteAnsiBuilders/ansiBuilderUtils), `appFactoryScreens.js`(voteScreens/rankingScreens, apiFetch는 로컬 screenDeps에 없어 명시 전달), `appFactoryHandlers.js`(handleVote/RankingCommand), `appFactoryRuntime.js`(refs/routing/dispatcher 연결), `commandDispatcherExecution.js`(pipeline에 vote/ranking 라우팅 — 로컬 실제 라우터는 commandRouter.js가 아닌 dispatcher), `routingUrlBuilder.js`(vote/ranking URL)
+- 진입점: `menuNavigationActions.js`(node.type vote/ranking), `routingStateRestorer.js`(/game/vote URL 복원 game 핸들러), `legacy/hanulso.mnu`(오락실(GAME) door=8 메뉴 + vote/ranking 항목)
+- 테스트 갱신: `archive/dev-only/tests/unit/httpUtils.test.js`(라우트 핸들러 6→8, vote/ranking mock 추가)
+수행 작업:
+1) 의존성 분석: vote 신규파일은 BaseRepository/BaseRouter(로컬有)에 의존, voteRoutes/auditLogListener만 EventBus(순수 싱글톤, import 0) 필요. 클라이언트는 ansiTopbarScreen만. voteScreens는 apiFetch 추가 필요(로컬 screenDeps엔 없음).
+2) 로컬 vs 원격 구조 차이 흡수: 로컬 명령 라우팅은 `commandDispatcherExecution`(`handleServiceCommand({s:screen,...})`)이고 원격이 쓴 `commandRouter.js`는 로컬 미사용 레거시였음 → dispatcher pipeline에 직접 추가. 각 sub-factory는 vote 모듈을 self-contained import(appFactory.js 조립부 무수정).
+3) 검증: 메모리 모드 서버로 `GET /api/votes`(샘플 설문 반환)·`/api/ranking`(레벨/게시글 랭킹) 200 확인. Playwright로 ① 앱 정상 부팅(pageError 0), ② /game/vote→설문목록·1번 상세·/game/ranking 렌더, ③ 메인→오락실(메뉴 트리 렌더)→설문조사 진입, ④ 뉴스 회귀 정상. `npm test` 전부 통과(라우트 핸들러 테스트 6→8 갱신), `smoke:vercel-ready`(vote health ok)·`ui-layout`·`renderer-ui`·`command-parity` 모두 ok.
+4) 함정: Git Bash `pkill`이 Windows node 프로세스를 못 죽여 옛 서버가 옛 메뉴(game 없음)를 서빙 → 메뉴 진입 실패로 오인. 깨끗한 포트 재기동으로 메뉴에 game/vote/ranking 정상 반영 확인. (메인 화면은 top.txt 배경 + 메뉴 트리 항목 동시 렌더라 top.txt 수정 불필요)
+실행: 메모리 모드 서버 + curl API 프로브, Playwright(부팅/URL/메뉴 진입), `npm test`, `smoke:vercel-ready`·`ui-layout`·`renderer-ui`·`command-parity`
+기대: 설문조사(투표)와 게시판 랭킹을 메인 메뉴 '오락실(GAME)' 또는 URL(/game/vote·/game/ranking)로 이용할 수 있고, 기존 기능은 영향 없다. (Supabase 모드 사용 시 `0018_vote_system.sql` 마이그레이션 적용 필요)
+결과: ✅ 완료 (귓속말은 사용자 요청으로 제외)
+
+---
+
+## [2026-06-23 00:13] 신규 기능 동작 검증 + 뉴스 화면 디버그 콘솔 로그 제거
+
+**LOG_ID: 20260623_0013**
+목표: 최근 추가/수정 기능(불완전 뉴스 기사 200+available:false 차단, 불완전 기사 클릭 시 토스트 안내, 힌트바 동적 너비 트림, 로그인 화면 힌트바 누수 제거)이 실제로 작동하는지 검증하고 잔존 에러를 찾아 정리.
+변경 파일:
+- `public/js/core/newsScreens.js` (showNewsArticle의 `[DEBUG_NEWS]` 콘솔 로그 4줄 제거)
+수행 작업:
+1) 검증: `npm test`·`smoke:ui-layout`·`smoke:renderer-ui`·`smoke:command-parity`·`smoke:rss-services` 전부 통과. 임시 서버(PORT=3100)+API 직접 호출로 door=1 기사 15건 순회 → 불완전 기사(no=6,7,8)가 HTTP 404가 아니라 **200 + available:false + reason:incomplete** 로 응답됨(이번 정책 변경의 핵심) 확인, 정상 기사는 available:true. Playwright 통합 검증으로 ① news-list 힌트바·기사 핫스팟(15개) 렌더, ② 정상 기사 진입, ③ 불완전 기사 클릭 시 `#terminal-notification` 토스트("본문 전체를 불러올 수 없는 기사입니다. 다른 기사를 선택해 주세요.")+목록 유지(불완전 기사는 라이브 피드라 번호를 동적 탐색해 확정 검증), ④ 힌트바 동적 트림(1280px 7토큰 전부 노출 → 380px 1토큰만 남고 6개가 H tooltip "이 화면의 다른 명령 —"에 수집), ⑤ 로그인 화면 힌트바 누수 없음(cmd-hint 빈 문자열) 모두 확인.
+2) 발견·수정: `newsScreens.js`에 디버그용 `console.log('[DEBUG_NEWS] ...')` 4줄이 프로덕션에 잔존. 그중 한 줄은 직전 커밋(URL에서 articleKey/link를 숨겨 헤더로 전달)의 의도와 모순되게 `requestOptions`(articleKey, link)를 콘솔에 그대로 노출하고 있었음. detail payload 덤프·body length 덤프·redirect 경고 포함 4줄 모두 제거. (`[DEBUG_NEWS]` 아닌 의도된 로깅(sessionStorage 파싱 실패 console.error, console.debug 목록 복귀 등)은 유지.)
+3) 재검증: 제거 후 `npm test` 통과, Playwright 콘솔 수집에서 `[DEBUG_NEWS]` count=0 확인, pageerror 없음. `npm run smoke:vercel-ready` 자산 계약 검증 ok(리포지토리 health 전부 ok). 임시 검증 스크립트(scratch/verify_*.mjs)·백그라운드 서버 정리.
+실행: `npm test`, 임시 서버+API 순회, Playwright 통합/토스트 검증, `npm run smoke:ui-layout`·`smoke:renderer-ui`·`smoke:command-parity`·`smoke:rss-services`·`smoke:vercel-ready`
+기대: 신규 기능이 의도대로 동작하며, 뉴스 기사 진입 시 콘솔에 디버그 로그/메타데이터가 더 이상 노출되지 않는다.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-22 19:00] 힌트바 동적 너비 맞춤 — 들어가는 만큼 전부 노출, 넘치면 도움말(H) tooltip에 수집
 
 **LOG_ID: 20260622_1900**
@@ -9603,5 +9713,213 @@ Result: Done
 실행: `node --check src/server/RssNewsService.js`, `node --check public/js/core/routingUrlBuilder.js`, `node --check public/js/core/routingStateRestorer.js`, `node --check public/js/core/newsScreens.js`, 동일 뉴스 API 재현 검증, `npm run smoke:vercel-ready`
 기대: `/api/services/news/{topic}/{article}?key=...&link=...` 요청이 키/본문 상태 때문에 404로 실패하지 않고, 새로고침 후에도 원문 링크로 같은 기사를 우선 복원한다.
 결과: ✅ 완료
+
+---
+## [2026-06-23 11:29] 전역 텍스트·UI 글로우 제거
+
+**LOG_ID: 20260623_1129**
+목표: `/service/weather/1?page=2`를 포함한 모든 화면에서 테마 전환 또는 UI 상태가 글로우 효과를 만들지 않게 한다.
+변경 파일: `public/index.html`, `public/js/core/themeService.js`, `public/styles/retro-terminal.css`
+수행 작업: 1) 초기 로드와 테마 전환의 `text-shadow` 값을 항상 `none`으로 고정 2) 터미널 CSS의 글로우 변수와 텍스트·입력·선택 상태 및 데이터 표시등의 광원형 그림자 제거 3) 수정된 터미널 CSS의 캐시 버전을 갱신 4) 기존 전역 폰트, 크기, 색상 값은 변경하지 않음.
+실행: `node --check public/js/core/themeService.js`, `rg -n -i "text-shadow: 0|glow-color|box-shadow: (inset )?0 0" public`
+기대: 기본/파란 테마와 화면 상태에 관계없이 글로우가 표시되지 않는다.
+결과: ✅ 완료 — `node --check public/js/core/themeService.js`, `node --check public/js/core/weatherScreens.js`, `git diff --check`, `npm run smoke:vercel-ready` 통과. 전역 검색에서 광원형 텍스트/컬러 그림자(`glow-color`, `text-shadow: 0 …`, `box-shadow: 0 0 …`)는 제거됐으며, 회원가입 자동완성 배경 보정과 검정 오버레이의 비광원형 그림자만 유지.
+
+---
+
+## [2026-06-23 11:41] 날씨 시간별 제목 글자 굵기 통일
+
+## [2026-06-23 12:31] Board post-list hover outline removal
+
+## [2026-06-23 13:00] Restore GAME biorhythm, fortune, and MBTI
+
+## [2026-06-23 13:30] Login block caret restoration and state separation
+
+## [2026-06-23 13:45] Signup input and block-cursor cell alignment
+
+## [2026-06-23 13:55] Signup submitted-input horizontal shift removal
+
+## [2026-06-23 14:05] Main prompt extra gap removal
+
+## [2026-06-23 14:15] Main prompt one-cell gap restoration
+
+## [2026-06-23 14:25] Block cursor CSS cache refresh
+
+**LOG_ID: 20260623_1425**
+Goal: Ensure already-open browsers load the restored block-cursor CSS on `/log/login`.
+Changed files: `public/index.html`, `WORK_LOG.md`
+Work: Bumped `retro-terminal.css` and `style.css` cache versions after restoring the block cursor.
+Run: Playwright `/log/login` DOM and computed-style inspection.
+Expected: Browsers no longer reuse the old CSS rule that hid `.terminal-cursor`.
+Result: Done
+
+## [2026-06-23 14:40] Login transcript prompt continuity
+
+## [2026-06-23 14:50] Login pending-prompt duplication removal
+
+## [2026-06-23 15:00] Login success footer prompt restoration
+
+**LOG_ID: 20260623_1500**
+Goal: Restore the main-screen footer hint and input row after successful login.
+Changed files: `public/js/core/authScreens.js`, `WORK_LOG.md`
+Work: Restore the detached inline login prompt row, reopen the footer, and reset the main prompt after the successful-login branch returns from main-screen rendering.
+Run: `node --check public/js/core/authScreens.js`, `git diff --check`
+Expected: `로그인되었습니다.` is followed by the normal main hint bar and input row.
+Result: Done
+
+**LOG_ID: 20260623_1450**
+Goal: Prevent a blank duplicate login prompt from appearing between a committed line and its validation result.
+Changed files: `public/js/core/authScreens.js`, `WORK_LOG.md`
+Work: Hide the inline prompt immediately after submission and reveal it only after the next prompt state is ready.
+Run: `node --check public/js/core/authScreens.js`, Playwright fresh-server invalid-ID flow, `git diff --check`
+Expected: The validation interval shows only the committed line, then the result, then one next prompt.
+Result: Done — transcript has one committed line and error; exactly one visible inline prompt follows it.
+
+**LOG_ID: 20260623_1440**
+Goal: Keep login input, submitted lines, errors, and the next prompt in one PC-communication-style transcript without erase-and-redraw flicker.
+Changed files: `public/js/core/authScreens.js`, `WORK_LOG.md`
+Work: Moved the shared prompt row into the login transcript, froze submitted ID/password lines synchronously before asynchronous validation, and formatted committed lines as `회원 ID >> value` / `비밀번호 >> ****`.
+Run: `node --check public/js/core/authScreens.js`, Playwright fresh-server invalid-ID flow, `git diff --check`
+Expected: The next prompt stays directly below the committed line and error message.
+Result: Done — transcript was `회원 ID >> post`, error message, then an inline `회원 ID >>` prompt without page errors.
+
+**LOG_ID: 20260623_1415**
+Goal: Restore exactly one blank terminal cell after `선택 >>`.
+Changed files: `public/style.css`, `public/styles/retro-terminal.css`, `WORK_LOG.md`
+Work: Restored `margin-right: 1ch` in both prompt-renderer CSS layers.
+Run: Playwright fresh-server computed-style check, `git diff --check`
+Expected: The prompt has one-cell right margin before the input cursor.
+Result: Done — computed margin-right is 8.5px (1ch).
+
+**LOG_ID: 20260623_1405**
+Goal: Reduce the visual gap after `선택 >>` from two cells to the block cursor's single input cell.
+Changed files: `public/style.css`, `public/styles/retro-terminal.css`, `WORK_LOG.md`
+Work: Removed the duplicated prompt-renderer right margin from both CSS layers; the block cursor now begins directly in the first input cell.
+Run: Playwright fresh-server main-screen geometry check, `git diff --check`
+Expected: No extra CSS gap exists between the prompt and the input cell.
+Result: Done — measured prompt-to-input gap is 0px; the visible block cursor occupies the next terminal cell.
+
+**LOG_ID: 20260623_1355**
+Goal: Prevent signup text from moving one cell right after Enter.
+Changed files: `public/js/core/signupEmailForm.js`, `WORK_LOG.md`
+Work: Normalized the submitted transcript prompt before appending exactly one separator space, matching the active prompt's CSS-managed one-cell gap.
+Run: `node --check public/js/core/signupEmailForm.js`, Playwright fresh-server signup submission check, `git diff --check`
+Expected: Active input and submitted transcript begin at the same text cell.
+Result: Done — transcript contained `>> abcde` and did not contain `>>  abcde`.
+
+**LOG_ID: 20260623_1345**
+Goal: Align the signup ID/password input rendering and block cursor, including the password `*` overlay.
+Changed files: `public/js/core/terminalInputUi.js`, `public/styles/retro-terminal.css`, `WORK_LOG.md`
+Work: Replaced canvas glyph-pixel cursor positioning with terminal cell (`ch`) positioning and aligned the block cursor vertically with the input glyph baseline.
+Run: `node --check public/js/core/terminalInputUi.js`, Playwright fresh-server signup ID/password typing check, `git diff --check`
+Expected: The block cursor ends at the same position as the typed ID text and the rendered password stars.
+Result: Done — eight password stars and the block cursor had a 0px horizontal delta.
+
+**LOG_ID: 20260623_1330**
+Goal: Restore the PC-communication block cursor on normal input, while keeping `.` for the "connecting" spinner and `_` for command-pending/news wait states.
+Changed files: `public/js/core/terminalInputUi.js`, `public/js/core/authScreens.js`, `public/style.css`, `WORK_LOG.md`
+Work: Re-enabled the positioned 1-cell block cursor, hid the browser line caret, and changed login's empty hint reset to a spacer so it cannot leave the terminal in loading state.
+Run: `node --check public/js/core/terminalInputUi.js`, `node --check public/js/core/authScreens.js`, Playwright fresh-server `/log/login` inspection, `git diff --check`
+Expected: Login is no longer loading after render and has a focused block cursor; `_` is emitted only by `.is-command-pending`.
+Result: Done
+
+**LOG_ID: 20260623_1300**
+Goal: Restore the three omitted GAME submenu features from `origin/main`: biorhythm, daily fortune, and MBTI.
+Changed files: `legacy/hanulso.mnu`, `public/js/core/amusementAnsiBuilders.js`, `public/js/core/amusementScreens.js`, and existing client routing, command, factory, footer, and ANSI wiring files.
+Work: Restored menu doors 1–3 and renumbered vote/ranking to 4–5. Restored the local deterministic calculation screens, command input handling, and clean-URL state handling.
+Run: `node --check` on all changed JavaScript modules; Playwright with a fresh local server confirmed GAME menu items 1–5 and biorhythm input transitions to `bio-result`; `git diff --check`.
+Expected: Each GAME entry opens and accepts its required input without server-side dependencies.
+Result: Done
+
+**LOG_ID: 20260623_1231**
+Goal: Remove the white outline shown when hovering the full-width post-row click target on `/board/plaza`.
+Changed files: `public/style.css`, `WORK_LOG.md`
+Work: Kept the shared `.ansi-hotspot` hover background and disabled only the hover outline for `.post-hotspot`. Keyboard `:focus-visible` remains unchanged.
+Run: `node --check public/js/core/postListView.js`, Playwright hover verification on `/board/plaza`, `git diff --check`
+Expected: A post row uses background emphasis only; no white outline appears on mouse hover.
+Result: Done — Playwright confirmed the post-row hover background remains `rgba(255, 255, 255, 0.14)` and the outline style is `none`; no page errors occurred.
+
+**LOG_ID: 20260623_1141**
+목표: `/service/weather/1?page=2`의 `06/23(화) 오늘` 제목을 일반 본문과 같은 글자 굵기로 표시한다.
+변경 파일: `public/js/core/weatherAnsiBuilders.js`
+수행 작업: 시간별 상세 제목에만 적용되던 `ANSI_BOLD`를 제거하고, 사용하지 않는 `ANSI_BOLD` 의존성도 제거했다.
+실행: `node --check public/js/core/weatherAnsiBuilders.js`
+기대: ANSI 렌더러가 해당 제목에 `ansi-bold` 클래스를 생성하지 않아, 일반 본문과 동일한 웨이트로 표시된다.
+결과: ✅ 완료 — `node --check public/js/core/weatherAnsiBuilders.js`, `git diff --check` 통과. 날씨 시간별 제목에서 `ansi-bold` 생성 경로가 없다.
+## [2026-06-23 15:12] Continue verification and temporary screenshot cleanup
+
+**LOG_ID: 20260623_1512**
+Goal: Continue the pending work by checking the current broad feature/UI changes and removing local temporary Playwright screenshot artifacts.
+Changed files: `WORK_LOG.md`
+Work: 1) Verified staged and unstaged JavaScript syntax, including untracked amusement modules. 2) Removed local-only `tmp_shots*.js`, `tmp_vis.js`, `tmp_verify_fix.js`, `tmp_console.js`, and `tmp_shots/` screenshots after confirming their resolved paths were inside the workspace. 3) Re-ran unit, deployment-readiness, command, and UI smoke checks.
+Run: `node --check` on changed JavaScript files, `node --check public/js/core/amusementAnsiBuilders.js`, `node --check public/js/core/amusementScreens.js`, `git diff --check`, `npm test`, `npm run smoke:command-parity`, `npm run smoke:vercel-ready`, `npm run smoke:ui-layout`, `npm run smoke:renderer-ui`
+Expected: No temporary screenshot artifacts remain and the current changed workspace still passes core verification.
+Result: Done
+
+---
+## [2026-06-23 15:25] Login prompt restore and vertical jitter fix
+
+**LOG_ID: 20260623_1525**
+Goal: Restore the shared command input row after login succeeds and prevent the prompt row from jumping vertically while ID/password validation is running.
+Changed files: `public/js/core/authScreens.js`, `WORK_LOG.md`
+Work: 1) Changed login prompt hiding from `display:none` to `visibility:hidden` so the prompt row keeps its layout height during async validation. 2) Reordered the login success cleanup so `_maskCommandInput` is cleared before restoring the shared footer prompt and calling `setPrompt('>>')`. 3) Verified the prompt row returns to `#terminal-footer`, remains visible, is enabled, uses text input mode, and receives focus after the login flow.
+Run: `node --check public/js/core/authScreens.js`, `git diff --check`, `npm test`, Playwright `/log/login` prompt-row DOM inspection, `npm run smoke:renderer-ui`, `npm run smoke:ui-layout`, `npm run smoke:command-parity`
+Expected: After login, the command input row is visible and usable. During ID-to-password transition, the prompt row does not collapse and re-expand vertically.
+Result: Done
+
+---
+## [2026-06-23 16:30] GAME utility route restore
+
+**LOG_ID: 20260623_1630**
+Goal: Make the restored local GAME utility URLs (`/game/bio`, `/game/fortune`, `/game/mbti`, `/game/mbti/{type}`) reload into their screens instead of falling through to main.
+Changed files: `public/js/core/routingStateRestorer.js`, `WORK_LOG.md`
+Work: Added bio/fortune/mbti handling to the existing `/game/*` route handler before the vote/ranking branches.
+Run: `node --check public/js/core/routingStateRestorer.js`, `git diff --check`, Playwright direct URL restore check for `/game/bio`, `/game/fortune`, `/game/mbti/INFP`, `npm test`, `npm run smoke:command-parity`
+Expected: Direct URL restore works for GAME utility screens while vote/ranking routes remain unchanged.
+Result: Done
+
+---
+## [2026-06-23 17:02] Login prompt vertical alignment lock
+
+**LOG_ID: 20260623_1702**
+Goal: Stop the live `회원 ID >>` login prompt from visually dropping when Enter converts it into a committed transcript line.
+Changed files: `public/styles/entry-auth.css`, `public/index.html`, `WORK_LOG.md`
+Work: Matched the login prompt host, prompt row, prompt renderer, and command input to the same `1.65em` line box used by committed login transcript rows. Bumped the `entry-auth.css` cache version.
+Run: `git diff --check`, `node --check public/js/core/authScreens.js`, Playwright `/log/login` Enter-before/after geometry check, `npm test`, `npm run smoke:renderer-ui`
+Expected: The prompt text keeps the same vertical position before and after Enter.
+Result: Done — before Enter the live prompt and after Enter the committed `회원 ID >> post` line both measured top `165.484375px` and height `28.046875px`.
+
+---
+## [2026-06-23 17:07] Login five-failure prompt restore
+
+**LOG_ID: 20260623_1707**
+Goal: Restore the hint bar and command input after five failed login attempts return the user to the signup/login menu.
+Changed files: `public/js/core/authScreens.js`, `WORK_LOG.md`
+Work: Clear the inline login prompt row's hidden visibility state immediately after restoring it to the shared footer in the login failure-limit exit path.
+Run: `node --check public/js/core/authScreens.js`, `git diff --check`, Playwright five-failed-login restore check, `npm test`, `npm run smoke:renderer-ui`
+Expected: After the fifth failed ID/password attempt, the auth menu remains usable with a visible hint bar and input row.
+Result: Done — after five failed login attempts, `#cmd-hint` and `#terminal-prompt-row` were visible in the footer, `#cmd-input` was enabled/focused, and no page errors occurred.
+
+---
+## [2026-06-23 17:11] Login block cursor vertical alignment
+
+**LOG_ID: 20260623_1711**
+Goal: Keep the block cursor beside `회원 ID >>` vertically aligned after the login prompt line box was matched to transcript rows.
+Changed files: `public/styles/entry-auth.css`, `public/index.html`, `WORK_LOG.md`
+Work: Scoped the login prompt host's `.terminal-cursor` to the same `1.65em` cell height as the live login prompt line and bumped the `entry-auth.css` cache version.
+Run: `node --check public/js/core/authScreens.js`, `git diff --check`, Playwright login cursor geometry check, `npm test`, `npm run smoke:renderer-ui`
+Expected: The block cursor next to the login prompt is no longer visually raised, and other prompt rows remain unchanged.
+Result: Done — on `/log/login`, the prompt row, prompt renderer, command input, and `.terminal-cursor` all measured top `165.484px` and height `28.047px`.
+
+---
+## [2026-06-23 17:50] Vote/ranking staged whitespace cleanup and verification
+
+**LOG_ID: 20260623_1750**
+Goal: Continue the pending workspace cleanup by making the staged vote/ranking changes pass whitespace and smoke validation.
+Changed files: `public/js/core/voteAnsiBuilders.js`, `public/js/core/voteScreens.js`, `src/server/VoteRepositoryMemory.js`, `src/server/routeHandlers/rankingRoutes.js`, `src/server/routeHandlers/voteRoutes.js`, `supabase/migrations/0018_vote_system.sql`, `WORK_LOG.md`
+Work: 1) Removed trailing whitespace from staged vote/ranking files and the vote migration. 2) Re-ran syntax, diff, unit, deployment-readiness, command, renderer, and layout smoke checks.
+Run: changed-file `node --check`, `git diff --check`, `git diff --cached --check`, `npm test`, `npm run smoke:vercel-ready`, `npm run smoke:command-parity`, `npm run smoke:renderer-ui`, `npm run smoke:ui-layout`
+Expected: The staged vote/ranking feature set remains behaviorally unchanged and passes repository validation.
+Result: Done - all listed checks passed.
 
 ---

@@ -19,6 +19,9 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.serviceScreens,
     ...screens.chatScreens,
     ...screens.authScreens,
+    ...screens.voteScreens,
+    ...screens.rankingScreens,
+    ...screens.amusementScreens,
     showSignup: screens.signupModule.showSignup,
     showMain: screens.showMain,
     showBoardSelect: screens.showBoardSelect,
@@ -141,6 +144,9 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.chatScreens,
     ...screens.authScreens,
     ...screens.memoScreens,
+    ...screens.voteScreens,
+    ...screens.rankingScreens,
+    ...screens.amusementScreens,
     getAuthLeafRoutePath: services.menuService.getAuthLeafRoutePath,
     getMenuNodeByKey: services.menuService.getMenuNodeByKey,
     getMenuNodeKey: services.menuService.getMenuNodeKey,
@@ -179,7 +185,10 @@ export function initializeAppFactoryRuntime(deps) {
       handleMyInfoCommand: handlers.handleMyInfoCommand,
       handlePostViewCommand: handlers.handlePostViewCommand,
       handleVfsCommand: handlers.handleVfsCommand,
-      handleLogCommand: screens.systemLogScreens.handleLogCommand
+      handleLogCommand: screens.systemLogScreens.handleLogCommand,
+      // [LOG: 20260623_0013] vote/ranking command handler 연결 (origin/main 포팅)
+      handleVoteCommand: handlers.handleVoteCommand,
+      handleRankingCommand: handlers.handleRankingCommand
     },
     screens: {
       showMain: screens.showMain,

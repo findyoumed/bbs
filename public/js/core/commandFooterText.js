@@ -35,7 +35,9 @@ export const CMD_ORDER = {
   systemLog: ['P', 'T', 'GO', 'R:새로고침', 'C:지우기', 'CP:복사', 'H'],
   attachmentList: ['P', 'T', 'GO', 'H'],
   newsList: ['F', 'B', 'P', 'T', 'GO', 'H'],
-  serviceArticle: ['F', 'B', 'N', 'A', 'P', 'T', 'PR:복사', 'H']
+  serviceArticle: ['F', 'B', 'N', 'A', 'P', 'T', 'PR:복사', 'H'],
+  amusementInput: ['P', 'T', 'GO', 'H'],
+  amusementView: ['L:처음', 'P', 'T', 'GO', 'H']
 };
 
 const SCREEN_TO_CATEGORY = {
@@ -63,6 +65,9 @@ const SCREEN_TO_CATEGORY = {
   'system-diagnostics': 'systemInfo',
   'system-log': 'systemLog',
   'attachment-list': 'attachmentList',
+  'bio-input': 'amusementInput', 'bio-result': 'amusementView',
+  'fortune-input': 'amusementInput', 'fortune-result': 'amusementView',
+  'mbti-list': 'amusementInput', 'mbti-detail': 'amusementView',
   login: 'login',
   signup: 'authMenu'
 };

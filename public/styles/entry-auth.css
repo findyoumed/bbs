@@ -316,6 +316,53 @@
     gap: 0;
 }
 
+.entry-screen--login .entry-login-prompt-host {
+    /* [LOG_ID: 20260623_1702] Keep the live login prompt on the same line box as committed transcript rows. */
+    display: block;
+    line-height: inherit;
+    min-height: 1.65em;
+}
+
+.entry-screen--login .entry-login-prompt-host #terminal-prompt-row {
+    align-items: baseline;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    line-height: inherit !important;
+    min-height: 1.65em;
+    padding: 0;
+}
+
+.entry-screen--login .entry-login-prompt-host #cmd-prompt-renderer {
+    background: transparent !important;
+    height: 1.65em;
+    line-height: inherit !important;
+    max-height: none;
+    min-height: 0;
+}
+
+.entry-screen--login .entry-login-prompt-host #cmd-input-wrapper {
+    align-items: baseline;
+    line-height: inherit !important;
+    min-height: 1.65em;
+}
+
+.entry-screen--login .entry-login-prompt-host #cmd-input {
+    background: transparent !important;
+    height: 1.65em;
+    line-height: inherit !important;
+    max-height: none;
+    min-height: 0;
+    transform: none !important;
+}
+
+.entry-screen--login .entry-login-prompt-host .terminal-cursor {
+    /* [LOG_ID: 20260623_1711] The login prompt uses a taller transcript line box,
+       so the block cursor must use that same cell height instead of the default footer cell. */
+    height: 1.65em;
+    top: 0;
+}
+
 .entry-screen--login .entry-auth-row {
     gap: 0;
 }

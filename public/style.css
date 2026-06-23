@@ -1170,6 +1170,11 @@ body[data-screen="news-view"] #terminal-screen {
     outline-offset: 0;
 }
 
+/* [LOG_ID: 20260623_1231] Post rows use a full-width click target, so hover has no outline. */
+.post-hotspot:hover {
+    outline: none;
+}
+
 /* ?�?� 명령???�트 tooltip ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
 .cmd-token {
     cursor: default;
@@ -1180,7 +1185,8 @@ body[data-screen="news-view"] #terminal-screen {
     line-height: inherit;
     white-space: nowrap;
     padding: 0 1px;
-    border-radius: 2px;
+    /* [LOG: 20260623_1511] 레트로: 명령 토큰 하이라이트 각진 모서리(PC통신 룩) */
+    border-radius: 0;
     outline: 1px solid transparent;
     transition: background 0.15s ease, outline-color 0.15s ease;
 }
@@ -1453,7 +1459,8 @@ body[data-screen="news-view"] #terminal-screen {
         row-gap: 0 !important;
         padding: 3px 6px;
         border: 1px solid rgba(255, 255, 255, 0.38);
-        border-radius: 4px;
+        /* [LOG: 20260623_1511] 레트로: 모바일 입력박스 각진 모서리(PC통신 룩) */
+        border-radius: 0;
         background: rgba(255, 255, 255, 0.06);
     }
 
@@ -1647,7 +1654,8 @@ body[data-screen="news-view"] #terminal-screen {
 
     ::-webkit-scrollbar-thumb {
         background: #555;
-        border-radius: 5px;
+        /* [LOG: 20260623_1511] 레트로: 스크롤바 각진 모서리(PC통신 룩) */
+        border-radius: 0;
     }
 
     ::-webkit-scrollbar-thumb:hover {
@@ -1762,7 +1770,8 @@ body[data-screen="news-view"] #terminal-screen {
     .write-field input,
     .write-field textarea {
         padding: 8px 12px;
-        border-radius: 4px;
+        /* [LOG: 20260623_1511] 레트로: 모바일 글쓰기 입력 각진 모서리(PC통신 룩) */
+        border-radius: 0;
     }
 
     /* [LOG: Mobile Portrait] Ensure select inputs do not zoom automatically on iOS by setting minimum font size to 16px */
@@ -2193,9 +2202,10 @@ body[data-screen="news-view"] #terminal-screen {
     outline: none !important;
 }
 
-.terminal-cursor {
-    /* [LOG: 20260611_1610] Prevent the old absolute overlay cursor from competing with the native caret. */
-    display: none !important;
+/* [LOG_ID: 20260623_1330] The visible normal cursor is the positioned block cursor.
+   Loading uses '.', and command-pending uses its separate '_' pseudo-element. */
+#cmd-input {
+    caret-color: transparent !important;
 }
 
 /* [LOG: 20260611_1413] Keep news article loading padding aligned with the completed compact article body. */
@@ -2379,6 +2389,11 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
 }
 
 #terminal-container.is-command-pending #cmd-input {
+    caret-color: transparent !important;
+}
+
+/* [LOG_ID: 20260623_1330] Keep the browser line caret hidden behind the block cursor. */
+#terminal-container:not(.is-command-pending) #cmd-input {
     caret-color: transparent !important;
 }
 

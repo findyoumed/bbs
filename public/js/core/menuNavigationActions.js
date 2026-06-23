@@ -108,6 +108,23 @@ export function createMenuNavigationActions(deps) {
       await refs.showWeatherMenu();
       return true;
     }
+    // [LOG: 20260623_0013] vote/ranking 메뉴 타입 진입 (origin/main 포팅)
+    if (node.type === 'vote' && typeof refs.showVoteList === 'function') {
+      state.boardMenuPath = contextMenuPath;
+      state.boardMenuTitle = contextMenuTitle;
+      await refs.showVoteList();
+      return true;
+    }
+    if (node.type === 'ranking' && typeof refs.showRanking === 'function') {
+      state.boardMenuPath = contextMenuPath;
+      state.boardMenuTitle = contextMenuTitle;
+      await refs.showRanking();
+      return true;
+    }
+    // [LOG_ID: 20260623_1300] Restore GAME utilities from origin/main.
+    if (node.type === 'biorhythm' && typeof refs.showBiorhythm === 'function') { await refs.showBiorhythm(); return true; }
+    if (node.type === 'fortune' && typeof refs.showFortune === 'function') { await refs.showFortune(); return true; }
+    if (node.type === 'mbti' && typeof refs.showMbti === 'function') { await refs.showMbti(); return true; }
     if (node.type === 'chatt' && typeof refs.showChatLobby === 'function') {
       await refs.showChatLobby();
       return true;

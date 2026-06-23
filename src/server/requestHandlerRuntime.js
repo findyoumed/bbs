@@ -4,6 +4,8 @@ const { createActivityRepository } = require('./ActivityRepository');
 const { createChatRoomRepository } = require('./ChatRoomRepository');
 const { createMemoRepositoryFromEnv } = require('./MemoRepository');
 const { createMemberRepositoryFromEnv } = require('./MemberRepository');
+// [LOG: 20260623_0013] origin/main에서 vote 시스템 포팅 — route 핸들러에 voteRepository 노출
+const { createVoteRepositoryFromEnv } = require('./VoteRepository');
 
 const logger = require('./logger');
 
@@ -38,6 +40,7 @@ function createRequestHandlerRuntime(options = {}) {
     registry: options.registry || null,
     repositoryDiagnostics: options.repositoryDiagnostics || null,
     activityRepository: options.activityRepository || createActivityRepository(),
+    voteRepository: options.voteRepository || createVoteRepositoryFromEnv(env),
     menuResolver: options.menuResolver,
     rssService: options.rssService,
     authBridge: options.authBridge,
@@ -62,6 +65,7 @@ function createRouteContext(runtime, req, res, requestUrl, requestId) {
     memoRepository: runtime.memoRepository,
     memberRepository: runtime.memberRepository,
     activityRepository: runtime.activityRepository,
+    voteRepository: runtime.voteRepository,
     registry: runtime.registry,
     menuResolver: runtime.menuResolver,
     rssService: runtime.rssService,

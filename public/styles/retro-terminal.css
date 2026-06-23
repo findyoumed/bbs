@@ -276,6 +276,8 @@ a {
     -webkit-text-size-adjust: 100%;
 }
 
+/* [LOG_ID: 20260623_1415] Keep exactly one terminal-cell gap after the prompt. */
+#cmd-prompt,
 #cmd-prompt-renderer {
     flex: 0 0 auto;
     min-width: 1ch;
@@ -307,8 +309,9 @@ a {
 
 .terminal-cursor {
     position: absolute;
+    top: 1px;
     width: 1ch;
-    height: 1.2em;
+    height: 1.1em;
     background-color: var(--color);
     mix-blend-mode: difference;
     z-index: 3;
@@ -1310,7 +1313,8 @@ a {
 
 #terminal-screen::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2) !important;
-    border-radius: 3px !important;
+    /* [LOG: 20260623_1511] 레트로: 터미널 스크롤바 각진 모서리(PC통신 룩) */
+    border-radius: 0 !important;
 }
 
 #terminal-screen::-webkit-scrollbar-thumb:hover {
@@ -1421,4 +1425,10 @@ body.theme-blue .terminal-titlebar {
         font-size: var(--cmd-font-size, 12px) !important;
         line-height: 1.1 !important;
     }
+}
+
+/* [LOG: 20260623_1306] style.css의 margin-right: 0px !important 덮어쓰기를 방지하여 #cmd-prompt 우측 공백 1ch 유지 */
+#terminal-prompt-row #cmd-prompt,
+#terminal-prompt-row.terminal-prompt-row--inline #cmd-prompt {
+    margin-right: 1ch !important;
 }
