@@ -357,10 +357,9 @@
 }
 
 .entry-screen--login .entry-login-prompt-host .terminal-cursor {
-    /* [LOG_ID: 20260623_1711] The login prompt uses a taller transcript line box,
-       so the block cursor must use that same cell height instead of the default footer cell. */
-    height: 1.65em;
-    top: 0;
+    /* [LOG_ID: 20260624_0918] 로그인 프롬프트의 커서가 세로로 길어지는 현상을 방지하고 일반 크기(1.1em)로 유지. 위치 조정. */
+    height: 1.1em;
+    top: 0.25em;
 }
 
 .entry-screen--login .entry-auth-row {

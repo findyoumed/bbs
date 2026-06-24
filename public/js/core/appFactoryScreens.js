@@ -64,6 +64,7 @@ export function createAppFactoryScreens(deps) {
     setPrompt: terminalUiCore.setPrompt,
     setReady: terminalUiCore.setReady,
     setLoading: terminalUiCore.setLoading,
+    showToast: terminalUiCore.showToast,
     buildLoadingScreenMarkup: terminalUiCore.buildLoadingScreenMarkup,
     esc: terminalUiCore.esc,
     renderScreenSequential: terminalUiCore.renderScreenSequential,

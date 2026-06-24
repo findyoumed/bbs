@@ -351,6 +351,8 @@ body.theme-blue .write-field textarea {
     inset: 0;
     white-space: pre;
     z-index: 1;
+    /* [LOG_ID: 20260624_0937] 별표(*) 폰트 글리프가 상단에 치우쳐 있어 시각적 중앙을 맞추기 위해 아래로 내림 */
+    transform: translateY(0.2em);
 }
 
 #cmd-mask-text[hidden] {
@@ -380,6 +382,8 @@ body.theme-blue .write-field textarea {
 #cmd-prompt-renderer,
 #cmd-input,
 #cmd-mask-text,
+.entry-login-committed-row input,
+.retro-cmd-mask,
 #terminal-container.is-command-pending #cmd-input-wrapper::after {
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
     font-size: var(--cmd-font-size, 17px) !important;
@@ -465,11 +469,11 @@ body.theme-blue .write-field textarea {
 
 #cmd-input[data-masked="true"] {
     /* [LOG: 20260507_1757] Hide the real password field and let #cmd-mask-text show visible stars. */
-    -webkit-text-fill-color: transparent;
-    -webkit-text-security: none;
-    background: transparent;
-    color: transparent;
-    caret-color: #ffffff;
+    -webkit-text-fill-color: transparent !important;
+    -webkit-text-security: none !important;
+    background: transparent !important;
+    color: transparent !important;
+    caret-color: #ffffff !important;
 }
 
 /* ?�?� BBS ?�면 공통 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */

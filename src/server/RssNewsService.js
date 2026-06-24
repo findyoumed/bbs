@@ -285,26 +285,23 @@ class RssNewsService extends RssServiceBase {
         const finalBody = this._sanitizeArticleText(resolvedArticle.body || resolvedArticle.description || '', resolvedArticle.title || detail.title);
         const trimmed = (finalBody || '').trim();
 
-        if (acceptDetail) {
-          const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed)
-            || /[며고나면지를을은는이가와과의로]/.test(trimmed.slice(-3));
-          const hasBreakingNewsKeyword = /\[\s*(속보|단독|긴급|Breaking)\s*\]/i.test(resolvedArticle.title || detail.title)
-            || /속보|단독|긴급|breaking/i.test(resolvedArticle.title || detail.title)
-            || /속보|단독|긴급|breaking/i.test(trimmed);
-          const isTooShort = hasBreakingNewsKeyword ? (trimmed.length < 15) : (trimmed.length < 80);
-          resolvedArticle.detailFetched = !isTruncated && !isTooShort;
-        } else {
-          // [LOG: 20260621_1000] RSS 요약은 기사의 일부분(문장은 완결이어도 본문은 미완)이므로 표시하지 않는다.
-          // "완벽하게 보여주든지 아예 없든지" 정책: 크롤 완전 본문(acceptDetail)만 허용하고 RSS 폴백은 404.
-          resolvedArticle.detailFetched = false;
-        }
+        const isTruncated = /[.]{2,}$|[…,\-:/]$/.test(trimmed)
+          || /[며고나면지를을은는이가와과의로]/.test(trimmed.slice(-3));
+        const hasBreakingNewsKeyword = /\[\s*(속보|단독|긴급|Breaking)\s*\]/i.test(resolvedArticle.title || detail.title)
+          || /속보|단독|긴급|breaking/i.test(resolvedArticle.title || detail.title)
+          || /속보|단독|긴급|breaking/i.test(trimmed);
+
+        // [LOG: 20260624_1215] 회원님 요청("이런 기사는 차라리 나오던지")에 따라 기사 차단 정책 완전 폐기.
+        // 불완전한 기사(문장 잘림, 짧은 내용)라도 무조건 본문을 보여주도록 허용.
+        resolvedArticle.detailFetched = true;
       } else {
-        // [LOG: 20260621_1000] 크롤 실패 시 RSS 요약 폴백을 표시하지 않는다(부분 본문 차단). 완전 본문만 허용 → 404.
-        resolvedArticle.detailFetched = false;
+        // [LOG: 20260624_1215] 크롤 실패 시 RSS 요약 폴백 표시도 무조건 허용.
+        resolvedArticle.detailFetched = true;
       }
     } else {
       // [LOG: 20260616_1715] Default fallback for articles with missing links
-      resolvedArticle.detailFetched = false;
+      // [LOG: 20260624_1215] 무조건 열람 허용 (불완전 기사 차단 폐기)
+      resolvedArticle.detailFetched = true;
     }
 
     resolvedArticle.description = this._sanitizeArticleText(resolvedArticle.description, resolvedArticle.title);

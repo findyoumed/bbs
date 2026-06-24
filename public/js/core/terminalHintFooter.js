@@ -215,9 +215,24 @@ export function createTerminalHintFooter(deps) {
 
     if (cmdInput) {
       const useMaskedInput = Boolean(state._maskCommandInput);
-      // [LOG: 20260507_1738] Use a real password field as a fallback if no-echo CSS is stale.
-      cmdInput.type = useMaskedInput ? 'password' : 'text';
+      // [LOG_ID: 20260624_0925] type="password"를 사용하면 일부 브라우저에서 투명색 처리를 무시하고
+      // 기본 동그라미(bullet)를 강제로 그려서 커스텀 별(*) 모양과 겹쳐 보이는 현상이 발생함.
+      // 텍스트 보안은 JS의 * 렌더링 및 CSS(color: transparent)로 처리하므로 type="text"로 고정함.
+      cmdInput.type = 'text';
       cmdInput.dataset.masked = useMaskedInput ? 'true' : 'false';
+      
+      // [LOG_ID: 20260624_0935] CSS 캐시 문제로 글자 숨김이 실패하는 것을 방지하기 위해 인라인 스타일로 투명도를 강제 적용함.
+      if (useMaskedInput) {
+        cmdInput.style.setProperty('color', 'transparent', 'important');
+        cmdInput.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
+        cmdInput.style.setProperty('text-shadow', 'none', 'important');
+        cmdInput.style.setProperty('opacity', '0', 'important');
+      } else {
+        cmdInput.style.removeProperty('color');
+        cmdInput.style.removeProperty('-webkit-text-fill-color');
+        cmdInput.style.removeProperty('text-shadow');
+        cmdInput.style.removeProperty('opacity');
+      }
       // [LOG: 20260622_1620] 커맨드/로그인 입력창은 브라우저 자동완성을 항상 꺼둔다.
       // 과거 비마스킹 입력에 'on'을 줘서, 로그인 ' 회원 ID >>' 프롬프트('회원'=membership)에서
       // 크롬이 '포인트 카드 관리' 같은 멤버십/적립카드 자동완성 팝업을 띄우던 버그를 차단한다.

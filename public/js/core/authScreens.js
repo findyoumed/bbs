@@ -19,6 +19,7 @@ export function createAuthScreens(deps) {
     setPrompt,
     setReady,
     showBoardSelect,
+    showToast,
     state,
     updateURL
   } = deps;
@@ -222,10 +223,11 @@ export function createAuthScreens(deps) {
       if (typeof showBoardSelect === 'function') {
         await showBoardSelect('log', getBoardSelectTitle('log'));
       }
-      if (message) {
-        setHint(message);
+      // [LOG_ID: 20260624_0921] 메시지가 있을 때 기존에는 hint/prompt를 덮어씌워 힌트바가
+      // 잘리는 문제가 있었음. 메시지는 토스트로 띄우고 메뉴의 기본 힌트바를 보존.
+      if (message && typeof showToast === 'function') {
+        showToast(message, 3000, 'info');
       }
-      setPrompt('>>');
     };
     const clearLoginError = () => {
       const errEl = document.getElementById('l-error');
@@ -272,7 +274,17 @@ export function createAuthScreens(deps) {
       if (!text || !loginTranscriptEl) return;
       const line = document.createElement('div');
       line.className = 'entry-login-message entry-login-committed-row';
-      line.textContent = `회원 ID >> ${text}`;
+      // [LOG_ID: 20260624_0946] Live prompt와 동일한 <input> + wrapper 구조를 사용하여 서브픽셀 렌더링 오차 완벽 해결
+      line.style.display = 'flex';
+      line.style.alignItems = 'baseline';
+      line.style.minHeight = '1.65em';
+      
+      line.innerHTML = `
+        <input readonly tabindex="-1" class="retro-cmd-input" style="background:transparent; border:none; outline:none; padding:0; margin:0 1ch 0 0; color:inherit; -webkit-text-fill-color:inherit; opacity:1; font:inherit; height:1.65em; width:10ch;" value="회원 ID &gt;&gt;">
+        <div style="position:relative; display:flex; align-items:baseline; min-height:1.65em; flex:1; column-gap:0;">
+          <input readonly tabindex="-1" class="retro-cmd-input" style="background:transparent; border:none; outline:none; padding:0; margin:0; color:inherit; -webkit-text-fill-color:inherit; opacity:1; font:inherit; height:1.65em; flex:1; transform:none;" value="${esc(text)}">
+        </div>
+      `;
       loginTranscriptEl.appendChild(line);
     };
     const appendCommittedPasswordLine = (password) => {
@@ -280,7 +292,18 @@ export function createAuthScreens(deps) {
       if (!text || !loginTranscriptEl) return;
       const line = document.createElement('div');
       line.className = 'entry-login-message entry-login-committed-row';
-      line.textContent = `비밀번호 >> ${'*'.repeat(Array.from(text).length)}`;
+      line.style.display = 'flex';
+      line.style.alignItems = 'baseline';
+      line.style.minHeight = '1.65em';
+      
+      const stars = '*'.repeat(Array.from(text).length);
+      line.innerHTML = `
+        <input readonly tabindex="-1" class="retro-cmd-input" style="background:transparent; border:none; outline:none; padding:0; margin:0 1ch 0 0; color:inherit; -webkit-text-fill-color:inherit; opacity:1; font:inherit; height:1.65em; width:11ch;" value="비밀번호 &gt;&gt;">
+        <div style="position:relative; display:flex; align-items:baseline; min-height:1.65em; flex:1; column-gap:0;">
+          <input readonly tabindex="-1" class="retro-cmd-input" style="background:transparent; border:none; outline:none; padding:0; margin:0; color:transparent; -webkit-text-fill-color:transparent; opacity:0; text-shadow:none; font:inherit; height:1.65em; flex:1; transform:none;" value="${esc(text)}">
+          <div class="retro-cmd-mask" style="position:absolute; inset:0; color:inherit; -webkit-text-fill-color:inherit; opacity:1; transform:translateY(0.2em); pointer-events:none; white-space:pre;">${stars}</div>
+        </div>
+      `;
       loginTranscriptEl.appendChild(line);
     };
     const appendLoginBlankLine = () => {

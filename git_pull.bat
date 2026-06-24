@@ -8,7 +8,7 @@ echo.
 :: Check if .git folder exists to decide clone or pull
 if not exist ".git" (
     echo [Info] Repository not initialized here. Cloning from GitHub...
-    git clone https://github.com/findyoumed/stocktrade.git .
+    git clone https://github.com/findyoumed/bbs.git .
 ) else (
     echo [Step 1] Fetching updates from remote...
     git fetch origin
