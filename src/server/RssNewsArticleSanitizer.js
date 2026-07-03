@@ -334,6 +334,10 @@ function stripKnownArticleBoilerplateLines(value) {
     /^(?:펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)$/i,
     // [LOG: 20260622_0950] Strip standalone '바로가기' and '복사하기' buttons
     /^(?:바로가기|복사하기)$/i,
+    // [LOG: 20260703_1730] 연합뉴스TV 등 기사 읽어주기 안내문 + SNS 공유 위젯 라벨 + 글자크기 위젯('가') 제거
+    /^기사\s*읽어주기\s*서비스는[^\n]*$/i,
+    /^(?:카카오톡|카카오스토리|페이스북(?:\s*메신저)?|페이스북메신저|트위터|X|네이버\s*블로그|네이버블로그|네이버\s*밴드|네이버밴드|밴드|텔레그램|라인|URL\s*복사|링크\s*복사|복사)$/i,
+    /^가$/,
     // [LOG: 20260617_2159] Avoid deleting complete paragraphs starting with ▲/△. Restrict to short captions (<60 chars) with no sentence terminators.
     /^[▲△]\s*(?![^.!?]*[.!?])[^\n]{1,60}$/,
     /^\([가-힣]{2,5}=\uC5F0\uD569\uB274\uC2A4\)\$/,

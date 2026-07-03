@@ -1,3 +1,21 @@
+## [2026-07-03 17:25] PC통신 E2E 실사 검증 — 대화실 /Q 먹통 및 뉴스 공유위젯 노이즈 수정
+
+**LOG_ID: 20260703_1725**
+목표: (Ralph Loop iter 2) 실제 브라우저(Playwright)로 PC통신 UX 전 화면을 구동 검증하고 발견된 결함 수정.
+변경 파일:
+- `public/js/core/commandRouterGlobalNavigation.js` (대화실 슬래시 명령 가드 6줄 추가)
+- `src/server/RssNewsArticleSanitizer.js` (보일러플레이트 패턴 4줄 추가)
+수행 작업:
+1) [E2E 검증] 서버 기동 후 실브라우저로 전 화면 순회: 초기화면(80컬럼/메뉴 8종) → 게시판 메뉴 → 열린광장 목록(스레딩·페이지) → 글읽기 → p/t 내비게이션 → 뉴스 토픽 11종·기사 열람 → 날씨 10일 예보 → 대화실 입장·메시지 송수신 → 자료실 → 오락실(운세 게임 동작) → 도움말. URL 동기화(clean URL) 전 구간 정상, 콘솔 에러/경고 0건.
+2) [버그 #1: 대화실 /Q 먹통] 화면 안내는 "종료: /Q"인데 /q, /Q 입력이 무반응. 원인: 디스패처 파이프라인(commandDispatcherExecution.js:142)에서 전역 핸들러가 chat 핸들러(147행)보다 먼저 실행되고, commandRouterGlobalNavigation.js의 '/' 검색 기능이 슬래시 입력을 전부 가로챔 → /Q, /QUIT, /ST, /AL 및 방 개설 중 /M 취소 전멸. 수정: 검색 블록 진입부에 chat-room(및 개설 단계 chat-lobby) 화면 가드 추가하여 chat 핸들러로 통과시킴. 브라우저 재검증: /q 입장→즉시 로비 퇴장 확인.
+3) [버그 #2: 뉴스 본문 노이즈] 연합뉴스TV 기사 본문 상단에 "기사 읽어주기 서비스는...", 카카오톡/페이스북메신저/X/네이버블로그/네이버밴드/복사/가(글자크기 위젯) 등 공유 위젯 라벨이 그대로 노출. RssNewsArticleSanitizer.js의 boilerplatePatterns에 읽어주기 안내문·SNS 라벨·단독 '가' 제거 패턴 추가. 브라우저 재검증: 본문이 [앵커]부터 깨끗하게 시작.
+4) [회귀 검증] npm test, smoke:command-parity, smoke:rss-services, smoke:renderer-ui, smoke:vercel-ready 전부 통과.
+실행: `PORT=3013 node server.js` + Playwright E2E, `npm test`, 도메인 스모크 4종
+기대: 대화실에서 /Q 계열 명령 정상 동작, 뉴스 기사 본문이 노이즈 없이 렌더링.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-03 17:05] 완결성 보강 — ARCHIVE 인코딩 오염 복구 및 ws 보안 패치
 
 **LOG_ID: 20260703_1705**

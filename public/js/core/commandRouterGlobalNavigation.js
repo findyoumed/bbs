@@ -46,6 +46,12 @@ export function createGlobalNavigationCommandHandler(deps) {
     }
 
     if (cmd.startsWith('/') || cmd.startsWith('FIND ')) {
+      // [LOG: 20260703_1720] 대화실에서는 '/' 입력이 채팅 명령(/Q, /QUIT, /ST, /AL 등)이고
+      // 일반 텍스트는 메시지이므로, 전역 검색이 가로채지 않고 chat 핸들러(commandRouterChat)로 넘긴다.
+      // 대화방 개설 단계(chat-lobby + _chatRoomCreateStage)의 '/M' 취소 입력도 동일하게 보호한다.
+      if (state.screen === 'chat-room' || (state.screen === 'chat-lobby' && state._chatRoomCreateStage)) {
+        return false;
+      }
       const query = cmd.startsWith('/') ? rawCmd.slice(1).trim() : rawCmd.slice(5).trim();
       if (!query) {
         setHint('검색어를 입력해 주세요. (예: /안녕 또는 FIND 안녕)');
