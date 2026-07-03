@@ -1,3 +1,21 @@
+## [2026-07-03 17:05] 완결성 보강 — ARCHIVE 인코딩 오염 복구 및 ws 보안 패치
+
+**LOG_ID: 20260703_1705**
+목표: (Ralph Loop iter 1) 프로젝트 완결성 심화 점검에서 발견된 데이터 오염과 보안 취약점 해결.
+변경 파일:
+- `WORK_LOG_ARCHIVE.md` (11.4KB 오염 구간 복구 — NUL 344개 제거)
+- `package-lock.json` (ws 8.19.0 → 8.21.0)
+수행 작업:
+1) [데이터 복구] WORK_LOG_ARCHIVE.md에서 grep이 파일을 binary로 오인하는 원인 조사 → 과거(2026-04-10 무렵) PowerShell 리다이렉션 사고로 UTF-16LE 청크가 UTF-8 파일에 섞인 것 확인(NUL 344개, `L·O·G·_·I·D` 패턴). 세그먼트 분석 스크립트로 UTF-16LE 구간을 디코딩→UTF-8 재인코딩하여 대부분 항목(01410 브랜드 통일, Ralph 사이클 로그, AI Loop 기록 등) 완전 복구. 이중 인코딩으로 영구 손상된 2개 항목(20260410_2035/2037)에는 손상 주석 명시. 결과: NUL 0개, 헤더 900→902개(손상 헤더 2개 복원), grep 텍스트 인식 정상화. 원본 백업은 스크래치패드에 보존.
+2) [보안] `npm audit`에서 ws 8.19.0 high 취약점 2건(GHSA-58qx-3vcg-4xpx 메모리 노출, GHSA-96hv-2xvq-fx4p DoS) 발견 → `npm audit fix`로 8.21.0 패치(@supabase/realtime-js 전이 의존성, semver 호환). audit 0건 확인.
+3) [검증] ws가 실사용되는 경로 포함 라이브 스모크 전부 통과: supabase-realtime(SUBSCRIBED ok), supabase-live, supabase-auth-write, chat-rooms-supabase, chat-members-supabase + npm test 재통과.
+4) [잔여 점검] src/·public/js/ TODO/FIXME 0건, vercel.json↔api/index.js 계약 정상 확인.
+실행: `npm audit fix`, `npm run smoke:supabase-realtime`, `npm test`, NUL 검사 스크립트
+기대: ARCHIVE가 순수 UTF-8 텍스트로 복원되어 검색 도구 정상 동작, 의존성 취약점 0건 유지.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-03 16:56] WORK_LOG 아카이빙 — 6월 이전 항목 303개를 ARCHIVE로 이동
 
 **LOG_ID: 20260703_1656**
