@@ -39,7 +39,7 @@ function loadEnvFile(envPath, env = process.env) {
 function resolvePublishableKey(rootDir, env = process.env) {
   const direct = String(env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || '').trim();
   if (direct) return direct;
-  const notePath = path.join(rootDir, 'supabase mcp.txt');
+  const notePath = path.join(rootDir, 'supabase_mcp.txt'); // [LOG: 20260703_1655] 실제 파일명(밑줄)과 불일치했던 죽은 fallback 수정
   if (!fs.existsSync(notePath)) return '';
   const match = fs.readFileSync(notePath, 'utf-8').match(/sb_publishable_[A-Za-z0-9_-]+/);
   return match ? match[0] : '';

@@ -1,3 +1,58 @@
+## [2026-07-03 16:55] 프로젝트 전체 점검 — 저장소 무결성 수정 3건
+
+**LOG_ID: 20260703_1655**
+목표: 프로젝트 전체 상태 점검(전 검증 게이트 + 정적 분석) 후 발견된 저장소 무결성 문제 해결.
+변경 파일:
+- `.gitignore` (5줄 수정 — archive/dev-only/tests 재포함 패턴)
+- `src/server/createAppServices.js` (1줄 수정 — fallback 파일명)
+- `public/js/core/signupFlow.refactor.js` (삭제 — 미사용 leftover)
+- `archive/dev-only/tests/unit/*.test.js` (9개 파일 git 추적 시작)
+수행 작업:
+1) 전 검증 게이트 실행: npm test(유닛 9개 파일), smoke:vercel-ready, qa:final, 도메인 스모크 10종, smoke:full-traversal, npm run check(Supabase live), node --check 277개 파일 문법 스윕 — 전부 통과 확인.
+2) [중요] `.gitignore`의 `archive` 항목이 npm test 대상인 `archive/dev-only/tests/unit/*.test.js`까지 무시하여 git에 테스트가 전혀 추적되지 않던 문제 발견. 새 클론에서 npm test가 "Unit test directory not found"로 즉시 실패하는 상태였음. gitignore에 단계적 부정 패턴(`archive/*` → `!archive/dev-only/` → `archive/dev-only/*` → `!archive/dev-only/tests/`)을 추가하고 테스트 9개 파일을 스테이징.
+3) [버그] `createAppServices.js`의 `resolvePublishableKey`가 `'supabase mcp.txt'`(공백)를 읽지만 실제 파일은 `supabase_mcp.txt`(밑줄)여서 fallback이 영원히 동작하지 않던 죽은 코드를 파일명 수정으로 복구.
+4) [정리] 어디서도 import되지 않는 `public/js/core/signupFlow.refactor.js` 삭제 (grep으로 무참조 확인).
+실행: `npm test`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`, `node --check src/server/createAppServices.js`, `git check-ignore -v`(exit 1 = 무시 안 됨 확인)
+기대: 새 클론에서도 npm test 즉시 동작, publishable key fallback 정상 작동, 미사용 파일 제거로 혼란 방지.
+결과: ✅ 완료 (전 검증 재실행 통과)
+
+---
+
+## [2026-07-03 16:39] CLAUDE.md 개선 (/init) — 부정확한 정보 수정 및 아키텍처 참조 보강
+
+**LOG_ID: 20260703_1639**
+목표: `/init` 실행으로 CLAUDE.md를 실제 코드베이스와 대조 검증하고, 부정확·누락된 내용을 수정하여 향후 Claude Code 세션의 생산성 향상.
+변경 파일:
+- `CLAUDE.md` (약 30줄 수정/추가)
+- `docs/README.md` (5줄 수정 — stale 파일명 교정)
+수행 작업:
+1) `server.js`, `package.json`, `scripts/run-unit-tests.js`, `public/js/app.js`, `src/server/createAppRuntime.js` 등을 읽어 문서와 실제 코드의 불일치 확인.
+2) §2.1: 로컬 서버 포트를 3000 → 3002로 수정 (server.js 기본값 기준, PORT 환경변수로 override 가능 명시), `node --check` 문법 검사 명령 추가.
+3) §2.2 신설: 단일 테스트 실행법 문서화 — 러너가 `archive/dev-only/tests/unit/*.test.js` 전체를 필터 없이 실행하므로, 단일 실행은 `node archive/dev-only/tests/unit/<name>.test.js` 직접 호출.
+4) §4 교체: 기존 4줄 요약을 실제 파일 구조 기반 참조로 확장 — 브라우저 진입점은 `public/js/app.js`(main.js 아님), `commandDispatcher* → commandRouter*` 입력 파이프라인, `*Screens.js`/`*AnsiBuilders.js` 네이밍 컨벤션, 서버 부팅 체인(`createAppRuntime` → `createAppServices` → `RepositoryRegistry`), Repository 4-파일 dual-mode 컨벤션 기록.
+5) docs/README.md의 stale 파일명 교정: §2-1 시스템 구조에서 `main.js` → `app.js`, `TerminalRenderer.js` → `ansiEngine.js`+`terminalUiCore.js`로 수정. §3 Lookup Table에서 프런트 진입(`main.js` → `app.js`), 상태 관리(존재하지 않는 `BbsStateManager.js` → `app.js`의 `state` 객체 + `routingModule.js` + `commandRouter*.js`), 렌더링(존재하지 않는 `public/js/ui/TerminalRenderer.js` → `core/ansiEngine.js` 등)으로 교정. index.html이 실제로 `/js/app.js`를 로드함을 확인 후 반영.
+실행: 문서 변경이므로 코드 검증 불필요 (파일 구조 대조로 검증 완료).
+기대: 향후 Claude Code 세션이 잘못된 포트/파일명으로 헤매지 않고, 단일 테스트 실행법을 즉시 알 수 있음.
+결과: ✅ 완료
+
+---
+
+## [2026-07-03 16:34] Claude CLI 실행 불가 오류 진단 및 조치 가이드 제공
+
+**LOG_ID: 20260703_1634**
+목표: PowerShell에서 `claude` 명령 실행 시 'ObjectNotFound' 및 'CommandNotFoundException' 에러가 발생하는 문제 해결.
+변경 파일: 없음 (시스템 환경 진단 및 사용자 가이드 제공)
+수행 작업:
+1) `npm list -g --depth=0` 명령을 실행하여 현재 설치된 글로벌 npm 패키지 목록을 조회함.
+2) 확인 결과, Claude Code CLI 패키지인 `@anthropic-ai/claude-code`가 글로벌 패키지 목록에 설치되어 있지 않음을 발견.
+3) 이로 인해 Windows PowerShell 환경에서 `claude` 명령을 인식하지 못하는 근본 원인을 특정함.
+4) 사용자에게 글로벌 설치 명령(`npm install -g @anthropic-ai/claude-code`)과 일회성 실행 명령(`npx @anthropic-ai/claude-code`)을 안내하여 해결을 유도함.
+실행: `npm list -g --depth=0`
+기대: `@anthropic-ai/claude-code`가 설치되어 있지 않음을 확인하고, 사용자에게 해결 방법을 안내하여 문제를 해결할 수 있게 함.
+결과: ✅ 완료
+
+---
+
 ## [2026-06-24 11:51] 속보(단독) 뉴스 기사 본문 차단(열람 불가) 현상 수정
 
 **LOG_ID: 20260624_1151**

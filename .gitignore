@@ -15,7 +15,11 @@ npm-debug.log*
 data/tmp/
 STATUS.txt
 prd.json
-archive
+# archive는 무시하되, npm test가 사용하는 유닛 테스트는 추적한다 [LOG: 20260703_1655]
+archive/*
+!archive/dev-only/
+archive/dev-only/*
+!archive/dev-only/tests/
 
 # AI Loop 응답 파일
 loop_system/response_cycle_*.txt
