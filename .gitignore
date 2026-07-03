@@ -24,3 +24,6 @@ archive/dev-only/*
 # AI Loop 응답 파일
 loop_system/response_cycle_*.txt
 1204/
+
+# Ralph Loop 세션 상태 (로컬 전용)
+.claude/ralph-loop.local.md
