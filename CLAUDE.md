@@ -25,13 +25,22 @@ This file provides guidance to Claude Code (claude.ai/code) and its subagents wh
 
 ### 2.1 Essential Commands
 ```bash
-npm run dev                    # Start local server (http://localhost:3000)
-npm run smoke:vercel-ready     # Full pre-deployment verification
+npm run dev                    # Start local server (default http://localhost:3002, override with PORT)
+npm run smoke:vercel-ready     # Full pre-deployment verification (also the `build` script)
 npm test                       # Run all unit tests
 npm run qa:final               # Final QA report
+node --check <file.js>         # JS syntax check — run after every edit
 ```
 
-### 2.2 Domain-Specific Smoke Tests
+### 2.2 Running a Single Test
+The `npm test` runner (`scripts/run-unit-tests.js`) executes **every** `*.test.js` in
+`archive/dev-only/tests/unit/` with no filter flag. Test files are plain CommonJS, so to run
+just one, invoke it directly:
+```bash
+node archive/dev-only/tests/unit/<name>.test.js
+```
+
+### 2.3 Domain-Specific Smoke Tests
 If modifying specific modules, run the relevant test:
 - `npm run smoke:boards`       # Board API
 - `npm run smoke:auth-bridge`   # Auth/Supabase Bridge
@@ -50,9 +59,21 @@ If modifying specific modules, run the relevant test:
 ---
 
 ## 4. Architecture Quick Reference
-(Refer to [AGENTS.md](file:///d:/work/bbs/www-bbs/AGENTS.md) for full details)
+(Refer to [AGENTS.md](file:///d:/work/bbs/www-bbs/AGENTS.md) for full rules. Paths below are
+verified against the working tree.)
 
-- **UI**: Modular Factory Pattern in `public/js/core/`.
-- **Server**: Repository Pattern with Memory/Supabase dual mode.
-- **Terminal**: 80x24 ANSI grid with interactive overlay.
-- **State**: `state.screen` driven routing.
+### Browser (`public/js/`)
+- Entry: `app.js` (ES modules) → `initApp()` in `core/appFactory.js` builds the app.
+- State: a plain `state` object in `app.js`, keyed by `state.screen` (routing driver). No class store.
+- ~140 modules in `core/`, split by feature via naming convention:
+  - `command*` — input pipeline: `commandDispatcher*` → `commandRouter*` (one router per domain: Chat, Memo, Vote, Vfs, Ranking, PostView…).
+  - `*Screens.js` / `*AnsiBuilders.js` — render a screen vs. build its ANSI text.
+  - `ansiEngine.js`, `terminalUiCore.js`, `terminal*` — 80x24 grid renderer + interactive overlay.
+  - `signup*` — multi-step signup flow.
+
+### Server (`src/server/`)
+- Boot: `server.js` → `createAppRuntime` → `createAppServices` (wires repositories via `RepositoryRegistry`) + `createRequestHandler`.
+- Routing: `routeHandlers/*Routes.js` extend `BaseRouter` (boardRoutes, authRoutes, chatServiceRoutes…).
+- Repository dual-mode (Memory vs Supabase, chosen from env), naming convention:
+  `XRepository.js` (base/facade) + `XRepositoryMemory.js` + `XRepositorySupabase.js` + `XRepositoryShared.js`.
+- Shared server/tool utils in `src/core/`: `AssetManager.js`, `TemplateEngine.js`.

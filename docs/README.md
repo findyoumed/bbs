@@ -20,7 +20,7 @@
 ## 2. 핵심 아키텍처 및 UI 원칙
 
 ### 2-1. 시스템 구조
-- **Browser**: `public/index.html` 진입점. `public/js/main.js`를 통해 모듈 로드. `TerminalRenderer.js`가 DOM 기반 터미널 화면을 그림.
+- **Browser**: `public/index.html` 진입점. `public/js/app.js`를 통해 모듈 로드 (`core/appFactory.js`의 `initApp()`이 앱 조립). `core/ansiEngine.js` + `core/terminalUiCore.js`가 DOM 기반 터미널 화면을 그림.
 - **Server**: `server.js` 진입점. `src/server/createAppRuntime.js`에서 런타임 조립. `routeHandlers/*`에서 API 처리.
 - **Data**: Supabase를 주 저장소로 사용하며, 설정이 없을 경우 메모리 저장소로 동작하는 fallback 구조를 가짐.
 
@@ -45,9 +45,9 @@
 | **서버 진입** | `server.js`, `src/server/createAppRuntime.js` | 서버 기동 및 환경 설정 |
 | **API 처리** | `src/server/createRequestHandler.js`, `routeHandlers/` | HTTP 요청 디스패치 및 도메인 로직 |
 | **저장소(DB)** | `src/server/*Repository.js`, `*RepositorySupabase.js` | 게시판, 회원, 메모, 채팅 등 데이터 처리 |
-| **프런트 진입** | `public/index.html`, `public/js/main.js` | 브라우저 렌더링 시작점 |
-| **상태 관리** | `public/js/core/BbsStateManager.js`, `BbsState*.js` | 브라우저 측 상태 및 명령 라우팅 |
-| **렌더링** | `public/js/ui/TerminalRenderer.js` | DOM 기반 터미널 화면 렌더링 |
+| **프런트 진입** | `public/index.html`, `public/js/app.js` | 브라우저 렌더링 시작점 |
+| **상태 관리** | `public/js/app.js`의 `state` 객체, `core/routingModule.js`, `core/commandRouter*.js` | 브라우저 측 상태(`state.screen`) 및 명령 라우팅 |
+| **렌더링** | `public/js/core/ansiEngine.js`, `core/terminalUiCore.js`, `core/terminal*.js` | DOM 기반 터미널 화면 렌더링 |
 | **레거시 자산** | `legacy/*.mnu`, `legacy/txt/*` | 메뉴 및 텍스트 원본 자산 |
 
 ---
