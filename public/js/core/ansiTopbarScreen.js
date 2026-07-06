@@ -160,10 +160,21 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
   }
   const bodyContainer = screenEl?.querySelector('.ansi-screen-body');
 
-  // 2. Render Body instantly (Sequential disabled globally per user request to avoid footer jitter)
+  // 2. Render Body sequentially — reveal-in-place 방식.
+  // [LOG: 20260706_2230] 모뎀 스트리밍 재활성화. 과거 footer jitter로 비활성화됐었으나(20260509),
+  // 전체 레이아웃을 먼저 확정하고 줄 단위로 visibility만 해제하는 방식이라 footer가 밀리지 않는다.
   if (bodyContainer) {
-    bodyContainer.innerHTML = bodyRendered.html;
-    await new Promise(resolve => setTimeout(resolve, 0));
+    if (typeof renderScreenSequential === 'function') {
+      await renderScreenSequential(bodyRendered.html, {
+        container: bodyContainer,
+        clear: false,
+        revealInPlace: true,
+        scrollIntoView: true
+      });
+    } else {
+      bodyContainer.innerHTML = bodyRendered.html;
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
   }
 
   return {

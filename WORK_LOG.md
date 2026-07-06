@@ -1,3 +1,128 @@
+## [2026-07-06 23:15] 터미널 감성 6차 — 로딩 종료 시 hintbar 한 칸 내려앉음(layout shift) 근절
+
+**LOG_ID: 20260706_2247**
+목표: 사용자 리포트 "/service/news 로딩이 끝나면 hintbar가 한 칸 내려간다 — PC통신 UI 같지 않다" 원인 규명·수정.
+변경 파일:
+- `public/style.css` (3개 지점: #cmd-hint min-height 예약, is-loading hint/구분선 display:none 규칙 제거, :has(.loading) 프롬프트행 display:none→visibility:hidden)
+수행 작업:
+1) [계측 재현] Playwright 시계열 진단 스크립트(80ms 샘플링)로 각 요소(hint/prompt/divider/footer)의 top/height를 추적. 하단 프레임이 로딩 중 72px→36px로 붕괴했다가 로딩 종료 시 복원되며 프롬프트가 내려앉는 3중 원인 특정:
+   - 원인 A: `#cmd-hint`가 빈 상태에서 높이 0으로 붕괴 (has-cmd-tokens일 때만 min-height 18px).
+   - 원인 B: `[LOG 20260619_1735]` 규칙이 is-loading 중 footer 구분선(::before)+#cmd-hint를 display:none — 이틀 전 규칙(20260617_1642 "로딩 중 구분선 유지")을 !important로 도로 무력화한 규칙 충돌. 부수적으로 '로딩 중 깜빡이는 점'(20260615_1538) 규칙을 영구 사장시킴.
+   - 원인 C: `#terminal-container:has(.loading) #terminal-prompt-row { display:none }` (20260611_1655) — 로딩 화면 존재 시 프롬프트 행 통째 제거.
+2) [수정 — PC통신 원칙: 하단 상태줄([구분선][힌트][프롬프트])은 어떤 상태에서도 구조·높이 고정]
+   - A: `#cmd-hint`에 `min-height: calc(var(--cmd-font-size,17px)*1.1)` — 빈 상태에도 채워진 높이와 동일한 한 줄 예약(모바일은 자체 --cmd-font-size 12px로 자동 축소, 기존 min-height:0 오버라이드 존중).
+   - B: display:none 규칙 삭제 → 구분선 로딩 중 유지(20260617 의도 복원), JS가 힌트를 비우면 :empty::after 깜빡이는 점이 로딩 표시로 자연 발동(죽었던 규칙 부활).
+   - C: display:none → visibility:hidden — "로딩 중 입력줄 비표시" 원래 의도 유지(히트테스트도 차단), 행 자리는 예약.
+3) [정량 검증] 동일 인앱 흐름(메인→뉴스 메뉴→토픽 목록) 재계측: footerH 72px·promptH 19·dividerH 24·hintH 19 전 구간 상수(±1px 서브픽셀 반올림뿐). 로딩 전후 하단 프레임 이동 0. 남은 이동은 화면 전체 교체(정당한 redraw)뿐.
+4) [회귀] smoke:ui-geometry·ui-layout·renderer-ui·vercel-ready 전부 ok, npm test 전체 통과.
+실행: Playwright 시계열 진단(diagnose-hintbar-shift.js), 스모크 4종, `npm test`
+기대: 로딩 시작·종료 어느 순간에도 하단 상태줄이 단 1px도 오르내리지 않음(고정 프레임). 로딩 중엔 힌트 자리에 깜빡이는 점.
+결과: ✅ 완료
+
+---
+
+## [2026-07-06 22:30] 터미널 감성 5차 — 모뎀 스트리밍 재활성화 (reveal-in-place, footer jitter 0px)
+
+**LOG_ID: 20260706_2230**
+목표: (사용자 승인) 과거 footer jitter로 전역 비활성화됐던 줄단위 순차 렌더링(모뎀 스트리밍)을 jitter 근본 해결과 함께 재활성화.
+변경 파일:
+- `public/js/core/terminalSequentialRenderer.js` (`revealInPlace` 옵션 추가)
+- `public/js/core/ansiTopbarScreen.js` (`renderAnsiScreenWithTopbarSequential` body 스트리밍 복원)
+- `public/styles/retro-terminal.css` (`.ansi-line--pending { visibility: hidden }` 추가)
+수행 작업:
+1) [원인 분석] jitter의 근본 원인: `#terminal-screen`이 `flex: 0 1 auto`(내용 높이)라 footer가 내용 바로 아래에 붙는 의도적 설계(LOG 20260428_1030) → 줄 append마다 콘텐츠가 자라며 footer가 아래로 밀림. 레이아웃 재설계는 기존 설계 훼손이라 배제.
+2) [설계: reveal-in-place] 전체 콘텐츠를 첫 프레임에 통째로 삽입하되 모든 `.ansi-line`에 `--pending`(visibility:hidden) 부여 → 높이가 즉시 확정되어 footer는 즉시 렌더와 동일하게 한 번만 이동. 이후 줄단위(20ms+jitter)로 visibility만 해제 → 시각적으로 모뎀 스트리밍과 동일하지만 layout shift 0. 기존 append 모드는 opt-in 옵션으로 무변경 보존(CLS 등).
+3) [안전장치] finally에서 잔여 pending 전부 해제 — 중단(interruptRendering: 키입력/클릭/명령취소에 이미 연동됨)·예외 등 어떤 종료 경로에서도 반쯤 숨겨진 화면이 남지 않음. 스킵(Enter/Space/Esc)은 남은 줄 즉시 공개. reveal 모드 scrollIntoView는 `block:'nearest'`로 이미 보이는 줄엔 스크롤하지 않음(짧은 화면 뷰포트 안정), 긴 본문에서만 터미널처럼 따라 내려감.
+4) [적용 범위] `renderAnsiScreenWithTopbarSequential` 사용처 자동 적용: 메뉴 이동, 뉴스 목록/기사, 게시물 목록/본문, 날씨. 즉시 렌더가 맞는 화면(대화실 라이브 메시지, 도움말 등 비Sequential 변형)은 그대로 즉시.
+5) [정량 검증] Playwright로 '1'(뉴스 메뉴) 이동 직후 30ms 간격 샘플링: pending 진행 `0→10→6→4→1→0`(11줄 순차 공개 실증), 스트리밍 중 footer Y좌표 단일값 `[373]`(**jitter 0px**), 잔여 pending 0, 콘솔 에러 0. 중간 스크린샷: 탑바+첫 줄만 보이고 나머지는 예약된 검은 공간, footer 최종 위치 고정 — 정통 모뎀 화면.
+6) [회귀] npm test 전체 통과, smoke:renderer-ui ok, smoke:vercel-ready ok.
+실행: Playwright 정량 jitter 테스트(verify-streaming-jitter.js), `npm test`, 스모크 2종
+기대: 모든 주요 화면 전환에서 줄단위 모뎀 스트리밍 + footer 밀림 0 + Enter/Space/Esc 스킵.
+결과: ✅ 완료
+
+---
+
+## [2026-07-06 22:17] 터미널 감성 4차 — 가입/로그인 CSS 사각지대 감사 및 JS 인라인 모션 전수 확인
+
+**LOG_ID: 20260706_2217**
+목표: 1~3차 감사에서 빠졌던 CSS 4개(entry-signup-shell/inline/theme, entry-auth)와 /signup·/login 경로, JS 인라인 스타일 모션을 마저 감사.
+변경 파일:
+- `public/styles/entry-signup-shell.css` (hover 배경 페이드 2곳 제거)
+수행 작업:
+1) [사각지대 발견] index.html이 로드하는 CSS 6개 중 2개만 감사했던 것을 확인 → 나머지 4개 전수 grep. 위반 2건: `.entry-signup-method`(가입 방법 선택지)와 `.signup-confirm-input` hover `transition: background 0.2s` → 제거(즉시 반영). 81행 주석의 "다른 clickable과 일관성" 근거는 이미 다른 요소들 페이드가 전부 제거되어 오히려 제거가 일관성 회복.
+2) [의도적 보존] `entry-signup-theme.css`의 `transition: background-color 5000s` 2건은 크롬 autofill 노란 배경 억제용 표준 핵(시각 모션 아님, 제거 시 autofill 노란 플래시 발생) → 유지.
+3) [JS 인라인 모션 전수] `style.transition/transform/opacity/animation`, `.animate()` grep → 애니메이션 조작 0건(검출된 opacity는 비밀번호 마스킹·입력 토글용 정적 값).
+4) [실브라우저 검증] Playwright로 /signup·/login 순회: 두 화면 모두 computed transition 0건, 비허용 animation 0건, 콘솔 에러 0건. 가입 화면 스크린샷 정상(탑바+3개 가입 방법+명령 footer, 80컬럼 터미널 룩 유지).
+5) [스모크] smoke:renderer-ui ok, smoke:vercel-ready ok.
+실행: grep 전수, Playwright DOM 모션 감사(ROUTES=signup,login), `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready`
+기대: 가입/로그인 플로우까지 포함해 전 화면에서 부드러운 전환 0건 — 감사 커버리지 100%.
+결과: ✅ 완료
+
+---
+
+## [2026-07-06 22:10] 터미널 감성 3차 — 실브라우저 런타임 검증 및 순차 렌더링 현황 조사
+
+**LOG_ID: 20260706_2210**
+목표: 1·2차의 CSS 정적 수정을 실제 브라우저에서 실증 검증하고, 화면 렌더링/전환 "UI 흐름" 차원의 비터미널 요소를 조사.
+변경 파일: (코드 변경 없음 — 검증 및 조사 iteration)
+수행 작업:
+1) [순차 렌더링 현황 조사] `terminalSequentialRenderer.js`의 스트리밍 엔진(줄당 20ms+jitter, 진행바, Enter/Space/Esc 스킵)은 잘 설계돼 있으나, 실제 콘텐츠 스트리밍엔 **전혀 미사용**임을 확인. 유일 호출부(`commandRouterGlobalNavigation.js:196`)는 `CLS/CLEAR` 화면 지우기 전용. 모든 화면은 `renderAnsiScreenWithTopbar`(즉시 dump) 또는 `renderAnsiScreenWithTopbarSequential`(이름과 달리 body를 즉시 dump, `ansiTopbarScreen.js:163` 주석 "Sequential disabled globally per user request to avoid footer jitter")로 렌더. → 모뎀 스트리밍 효과가 이전 사용자 요청으로 전역 비활성 상태.
+2) [판단] 즉시 redraw는 빠른 연결의 터미널과 일관되며(비터미널 위반 아님), 스트리밍 재활성화는 "위반 수정"이 아닌 "기능 추가"인 데다 이전 사용자가 footer jitter 때문에 명시적으로 끈 것 → 임의 변경 보류, 사용자 결정 사항으로 상신(추측 금지 원칙).
+3) [실브라우저 실증 검증] `PORT=3021` 서버 기동 후 Playwright(chromium)로 5개 화면(초기/게시판/대화실/뉴스/도움말) 순회. 각 화면에서 **모든 DOM 요소의 computed `transitionDuration`/`animationName`을 전수 조사** → 결과: 전 화면 transition 0건, 비허용 animation 0건. 남은 애니메이션은 화이트리스트 3종(cursor-blink, hud-memo-blink, terminal-flash)뿐. 정적 grep이 아닌 런타임 computed style로 1·2차 수정의 실효성 확정.
+4) [시각 확인] 초기화면 스크린샷: 탑바(브랜드+실시간 시계)·8메뉴·하단 명령 footer가 흑백 모노스페이스 80컬럼으로 정상 렌더, transition 제거로 인한 레이아웃 손상 없음.
+5) [부수 관찰] `/board/1` 404(임의 선택한 board id가 연결된 Supabase에 없음) — 본 작업과 무관한 테스트 데이터 이슈.
+실행: `PORT=3021 node server.js`(백그라운드) + Playwright DOM 모션 감사 스크립트, 스크린샷
+기대: 1·2차 수정이 런타임에서도 100% 반영되어 부드러운 전환/애니메이션 0건.
+결과: ✅ 검증 완료 (스트리밍 재활성화 여부는 사용자 결정 대기)
+
+---
+
+## [2026-07-06 21:35] 터미널 감성 복원 2차 — 잔여 비터미널 전환/애니메이션 전수 제거
+
+**LOG_ID: 20260706_2135**
+목표: 1차(20260706_2052) 후속. 사용자 "모두" 지시 → CSS 두 파일의 남은 부드러운 전환/튀는 애니메이션을 전수 제거하고, 죽은 CSS의 비터미널 모션도 정리.
+변경 파일:
+- `public/styles/retro-terminal.css` (죽은 모션 6종 + 라이브 오프렌더 7종 제거)
+- `public/style.css` (hover 색상 페이드 8곳 제거)
+수행 작업:
+1) [죽은 CSS 모션 제거] JS 참조 0건으로 확인된 스타일의 애니메이션 삭제: `.bbs-notification` 바운스 슬라이드-인/아웃 + 키프레임 2종, 오버레이 다이얼로그(`.terminal-dialog-overlay/box`)의 fade/spring 팝 + 키프레임 4종. (구조 스타일은 보존, 모션만 제거.)
+2) [1차 스캔 누락분 발견·수정] `grep` head 제한으로 놓쳤던 retro-terminal.css 700~1114 구간 전수 재조사. 라이브 오프렌더 처리:
+   - `.shortcut-helper`(단축키 도움말 모달): `scale(0.9→1)` **spring 팝**(cubic-bezier bounce) → 즉시 표시.
+   - `.scroll-bottom-indicator`('맨 아래로' 버튼): `bounce-y 1s infinite alternate` **무한 상하 튕김** → 정적(이미 반전색이라 정적으로도 눈에 띔) + 키프레임 삭제.
+   - `.suggestion-quick-hint`(명령 제안 힌트): `hint-fade-in`(translateY+opacity) **슬라이드+페이드** → 즉시 갱신 + 키프레임 삭제.
+   - `.palette-close-btn`/`.palette-item`(커맨드 팔레트) hover 페이드, `.modal-close-btn` hover 트랜지션, `.render-progress-container` opacity 페이드 → 즉시 반영.
+3) [style.css hover 페이드 8곳] `.bbs-menu-item`, `.post-row`, `.bbs-btn`, `.myinfo-menu-item`(기본+PC 미디어쿼리), `.ansi-hotspot`, `.cmd-token`, `.cmd-clickable`의 배경/색상 `transition` 제거 → hover 하이라이트 즉시 반영(reverse video 감성).
+4) [검증] 전수 스캔 결과 `transition:` 0건, 남은 `animation:`은 의도한 3종뿐: `cursor-blink`(하드 커서 블링크, step-end), `terminal-flash`(비주얼 벨), `hud-memo-blink`(쪽지 하드 블링크). `@keyframes` 정의↔사용 대조로 고아 키프레임 0건 확인. `smoke:renderer-ui` ok(shortcut helper/overlay 스타일 포함), `smoke:vercel-ready` ok.
+실행: `grep` 전수 스캔, `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready`
+기대: 화면 어디에서도 부드러운 페이드/슬라이드/스프링/무한 튕김이 없고, 딱딱 끊기는 PC통신 터미널 감성.
+결과: ✅ 완료
+
+---
+
+## [2026-07-06 20:52] 터미널 감성 복원 — 비터미널 애니메이션/전환 제거 (shake·smooth·pulse·zoom)
+
+**LOG_ID: 20260706_2052**
+목표: PC통신/터미널 감성을 해치는 "갑작스러운 동작"과 부드러운 전환(웹앱 감성)을 찾아 하드엣지 터미널 동작으로 교체. xterm.js 대신 기존 Vanilla JS 유지.
+변경 파일:
+- `public/styles/retro-terminal.css` (6개 지점: #terminal-container 스케일 트랜지션, terminal-shake 키프레임+.is-shaking, .bbs-btn/.ws-tab `transition: all`, .hud-memo pulse-red, #data-indicator 트랜지션)
+- `public/style.css` (PC `scroll-behavior: smooth` → `auto`)
+- `public/js/core/terminalFeedback.js` (에러 피드백 2곳 'shake' → 'flash-terminal')
+- `public/js/core/terminalSequentialRenderer.js` ('맨 아래로' 버튼 smooth → auto)
+수행 작업:
+1) [조사] 렌더링 파이프라인(ansiEngine/terminalUiCore/terminalSequentialRenderer)과 CSS 2종을 훑어 애니메이션/전환/스크롤 트리거 전수 조사. JS 스크롤은 대부분 이미 `behavior:'auto'`(터미널다움)로 되어 있었고, 위반은 CSS의 부드러운/튀는 전환에 집중됨을 확인.
+2) [에러 흔들림 제거] 명령/초기화 에러 시 화면·입력창이 회전하며 흔들리던 `is-shaking`(terminal-shake) 제거. 실제 터미널의 에러 신호인 비주얼 벨(terminal-flash, 이미 존재)+비프(soundService.playError)로 대체. 호출부(terminalFeedback) 2곳을 'flash-terminal'로 전환, 죽은 키프레임 삭제.
+3) [부드러운 줌 제거] `#terminal-container`의 `transition: transform 0.2s`가 브레이크포인트 리사이즈 시 화면 전체를 부드럽게 확대/축소 → 제거하여 즉시 스냅(터미널 리플로우).
+4) [스크롤] PC용 `scroll-behavior: smooth` → `auto`(줄 단위 즉시 점프), sequential renderer의 유일한 smooth scrollIntoView도 auto로 통일.
+5) [펄스→하드 블링크] HUD 새 쪽지 알림 `.hud-memo`의 부드러운 pulse-red 페이드를 ANSI blink(SGR 5) 스타일의 `step-end` 하드 블링크로 교체(이전에 제거한 busy-pulse와 같은 계열 정리).
+6) [즉시 반전] `.bbs-btn`/`.ws-tab`의 `transition: all 0.2s`, `#data-indicator`의 배경/글로우 트랜지션 제거 → hover·상태 변화를 즉시 반영(reverse video 감성).
+7) [스코프 판단] 바운스 슬라이드 `.bbs-notification`과 spring pop 오버레이 다이얼로그(`.terminal-dialog-overlay/box` + 4개 키프레임)는 JS 참조 0건인 **죽은 CSS**(라이브 알림은 display 토글식 `terminal-notification-row`, 다이얼로그는 하단 커맨드라인 프롬프트로 대체됨)로 확인 → 화면에 안 보이므로 미수정, 사용자에게 정리 옵션으로만 보고.
+8) [검증] terminalFeedback/terminalSequentialRenderer/uiUtils ESM 문법 OK, `smoke:renderer-ui` ok, `smoke:vercel-ready` ok(전 항목 ok, 레포 헬스 정상).
+실행: `node --check`(ESM), `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready`
+기대: 화면 흔들림·부드러운 줌/스크롤·펄스 페이드 없이 딱딱 끊기는 터미널 감성. 에러는 벨 플래시+비프로 알림.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-03 17:25] PC통신 E2E 실사 검증 — 대화실 /Q 먹통 및 뉴스 공유위젯 노이즈 수정
 
 **LOG_ID: 20260703_1725**

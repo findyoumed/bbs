@@ -33,7 +33,10 @@ export function createTerminalSequentialRenderer(deps) {
       onComplete,
       clear = true,
       scrollIntoView = false,
-      container = screenEl
+      container = screenEl,
+      // [LOG: 20260706_2230] reveal-in-place 모드: 전체를 먼저 삽입(레이아웃 확정) 후
+      // 줄 단위로 visibility만 해제. footer가 줄마다 밀리는 jitter가 원천적으로 없다.
+      revealInPlace = false
     } = options;
 
     if (clear) {
@@ -52,6 +55,18 @@ export function createTerminalSequentialRenderer(deps) {
       return;
     }
 
+    if (revealInPlace) {
+      // 모든 줄을 pending(숨김)으로 표시한 뒤 통째로 삽입 → 첫 프레임에 최종 높이 확보.
+      for (const line of lines) {
+        line.classList.add('ansi-line--pending');
+      }
+      const fragment = document.createDocumentFragment();
+      while (tempDiv.firstChild) {
+        fragment.appendChild(tempDiv.firstChild);
+      }
+      container.appendChild(fragment);
+    }
+
     const progressContainer = document.getElementById('render-progress');
     const progressBar = progressContainer?.querySelector('.render-progress-bar');
     const scrollBottomBtn = document.getElementById('scroll-bottom-btn');
@@ -64,7 +79,8 @@ export function createTerminalSequentialRenderer(deps) {
       scrollBottomBtn.onclick = () => {
         controller.userScrolledUp = false;
         scrollBottomBtn.classList.remove('is-visible');
-        container.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        // [LOG: 20260706] 다른 모든 스크롤과 동일하게 즉시 점프(터미널 감성). smooth 제거.
+        container.lastElementChild?.scrollIntoView({ behavior: 'auto', block: 'end' });
       };
     }
 
@@ -111,19 +127,33 @@ export function createTerminalSequentialRenderer(deps) {
         }
 
         if (controller.skip) {
-          const fragment = document.createDocumentFragment();
-          for (let remaining = index; remaining < lines.length; remaining += 1) {
-            fragment.appendChild(lines[remaining]);
+          if (revealInPlace) {
+            // 남은 줄 전부 즉시 공개 (레이아웃은 이미 확정 → 스크롤 점프만 최종 위치로)
+            for (let remaining = index; remaining < lines.length; remaining += 1) {
+              lines[remaining].classList.remove('ansi-line--pending');
+            }
+            lines[lines.length - 1]?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+          } else {
+            const fragment = document.createDocumentFragment();
+            for (let remaining = index; remaining < lines.length; remaining += 1) {
+              fragment.appendChild(lines[remaining]);
+            }
+            container.appendChild(fragment);
+            container.scrollTop = container.scrollHeight;
           }
-          container.appendChild(fragment);
-          container.scrollTop = container.scrollHeight;
           break;
         }
 
-        container.appendChild(lines[index]);
+        if (revealInPlace) {
+          lines[index].classList.remove('ansi-line--pending');
+        } else {
+          container.appendChild(lines[index]);
+        }
 
         if (scrollIntoView && !controller.userScrolledUp) {
-          lines[index].scrollIntoView({ behavior: 'auto', block: 'end' });
+          // [LOG: 20260706_2230] reveal 모드는 'nearest': 이미 보이는 줄엔 스크롤 안 함(뷰포트 안정),
+          // 화면을 넘어가는 긴 본문에서만 터미널처럼 아래로 따라 내려간다.
+          lines[index].scrollIntoView({ behavior: 'auto', block: revealInPlace ? 'nearest' : 'end' });
         }
 
         if (delay > 0) {
@@ -136,6 +166,13 @@ export function createTerminalSequentialRenderer(deps) {
       container.innerHTML = htmlContent;
       showNotification(UI_TEXT.RENDER_ERROR, 3000, 'warn');
     } finally {
+      if (revealInPlace) {
+        // [LOG: 20260706_2230] 중단(abort)·예외 등 어떤 경로로 끝나도 숨은 줄이 남지 않게 보장.
+        // (반쯤 안 보이는 화면은 터미널 메타포가 아니라 깨진 상태다.)
+        for (const line of lines) {
+          line.classList.remove('ansi-line--pending');
+        }
+      }
       window.removeEventListener('keydown', skipHandler, { capture: true });
       container.removeEventListener('scroll', onScroll);
       if (progressContainer) {

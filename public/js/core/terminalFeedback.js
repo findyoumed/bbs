@@ -100,7 +100,8 @@ export function createTerminalFeedback(deps) {
       deps.setReady(true);
     }
 
-    triggerVisualFeedback(document.body, 'shake');
+    // [LOG: 20260706] 화면 흔들림 대신 터미널 비주얼 벨(화면 플래시)로 에러 표시.
+    triggerVisualFeedback(document.body, 'flash-terminal');
     soundService.playError();
   }
 
@@ -113,7 +114,8 @@ export function createTerminalFeedback(deps) {
       hintEl.classList.remove('has-cmd-tokens');
     }
 
-    triggerVisualFeedback(cmdInput?.parentElement, 'shake');
+    // [LOG: 20260706] 입력 흔들림 대신 터미널 비주얼 벨(화면 플래시)로 에러 표시.
+    triggerVisualFeedback(cmdInput?.parentElement, 'flash-terminal');
     soundService.playError();
   }
 

@@ -257,6 +257,10 @@ body.theme-blue .write-field textarea {
     font-size: inherit;
     line-height: inherit;
     font-weight: inherit;
+    /* [LOG: 20260706_2247] 힌트가 비어 있어도 항상 정확히 한 줄(채워진 높이와 동일)을 예약.
+       로딩 중 힌트를 비웠다가 완료 후 채울 때 프롬프트 줄이 한 칸 내려앉던 layout shift 제거.
+       PC통신 하단 상태줄은 내용과 무관하게 고정 높이다. (모바일은 기존 min-height:0 오버라이드 유지) */
+    min-height: calc(var(--cmd-font-size, 17px) * 1.1);
 }
 
 #cmd-hint.has-cmd-tokens {
@@ -523,7 +527,7 @@ body.theme-blue .write-field textarea {
     color: #fff;
     cursor: pointer;
     font-size: inherit;
-    transition: background 0.15s ease, color 0.15s ease;
+    /* [LOG: 20260706] hover 하이라이트 즉시 반영(reverse video). 색상 페이드 트랜지션 제거. */
 }
 
 .bbs-menu-item:hover {
@@ -547,7 +551,7 @@ body.theme-blue .write-field textarea {
 
 .post-row {
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    /* [LOG: 20260706] 게시물 행 hover 즉시 반영. 색상 페이드 트랜지션 제거. */
 }
 
 .post-row:hover {
@@ -637,7 +641,7 @@ body.theme-blue .write-field textarea {
     cursor: pointer;
     font-family: inherit;
     font-size: 13px;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    /* [LOG: 20260706] 버튼 hover 즉시 반영. 색상/테두리 페이드 트랜지션 제거. */
 }
 
 .bbs-btn:hover {
@@ -828,7 +832,7 @@ body.theme-blue .write-field textarea {
     padding: 0 4px;
     margin-left: -4px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    /* [LOG: 20260706] 내 정보 메뉴 hover 즉시 반영. 배경 페이드 트랜지션 제거. */
 }
 
 .myinfo-menu-item:hover {
@@ -1162,9 +1166,7 @@ body[data-screen="news-view"] #terminal-screen {
     -webkit-user-select: none;
 }
 
-.ansi-hotspot {
-    transition: background 0.15s ease;
-}
+/* [LOG: 20260706] .ansi-hotspot hover 하이라이트 즉시 반영(reverse video). 배경 페이드 트랜지션 제거. */
 
 .ansi-hotspot:hover,
 .ansi-hotspot:focus-visible,
@@ -1192,7 +1194,7 @@ body[data-screen="news-view"] #terminal-screen {
     /* [LOG: 20260623_1511] 레트로: 명령 토큰 하이라이트 각진 모서리(PC통신 룩) */
     border-radius: 0;
     outline: 1px solid transparent;
-    transition: background 0.15s ease, outline-color 0.15s ease;
+    /* [LOG: 20260706] 명령 토큰 hover/focus 하이라이트 즉시 반영. 페이드 트랜지션 제거. */
 }
 
 .cmd-token-overflow {
@@ -1209,7 +1211,7 @@ body[data-screen="news-view"] #terminal-screen {
 .cmd-clickable {
     cursor: pointer;
     text-decoration: none;
-    transition: background 0.2s;
+    /* [LOG: 20260706] 클릭 가능한 명령어 hover 즉시 반영. 배경 페이드 트랜지션 제거. */
 }
 
 .cmd-clickable:hover {
@@ -1614,9 +1616,9 @@ body[data-screen="news-view"] #terminal-screen {
 /* PC Screen Fixes */
 @media (min-width: 769px) {
 
-    /* [LOG: PC screen] Add smooth scroll behavior to html for better navigation on large monitors */
+    /* [LOG: 20260706] 터미널 감성: 부드러운 스크롤 제거. 터미널은 줄 단위로 즉시 점프한다. */
     html {
-        scroll-behavior: smooth;
+        scroll-behavior: auto;
     }
 
     /* [LOG: PC screen] Enhance focus states for accessible keyboard navigation on PC */
@@ -1689,10 +1691,7 @@ body[data-screen="news-view"] #terminal-screen {
         -moz-osx-font-smoothing: grayscale;
     }
 
-    /* [LOG: PC screen] Add transition to myinfo-menu-item for smoother hover feedback */
-    .myinfo-menu-item {
-        transition: background-color 0.2s ease;
-    }
+    /* [LOG: 20260706] PC용 myinfo-menu-item 배경 페이드 트랜지션 제거(터미널 감성: hover 즉시 반영). */
 
     /* [LOG: PC screen] Make myinfo-menu-item background change on hover for PC interaction */
     .myinfo-menu-item:hover {
@@ -2221,15 +2220,12 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     box-sizing: border-box;
 }
 
-/* [LOG: 20260619_1735] Hide cmd-hint and footer boundary line during loading, keeping prompt-row visible */
-#terminal-container.is-loading #terminal-footer::before,
-#terminal-screen.is-loading ~ #terminal-footer::before,
-#terminal-container.is-loading #cmd-hint,
-#terminal-screen.is-loading ~ #terminal-footer #cmd-hint {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-}
+/* [LOG: 20260706_2247] 로딩 중 하단 프레임 붕괴 제거.
+   과거 규칙(20260619_1735)이 로딩 중 구분선(::before)과 #cmd-hint를 display:none으로 제거해
+   로딩 종료 시 두 줄이 되살아나며 프롬프트가 아래로 내려앉는 layout shift를 만들었다.
+   PC통신 하단 상태줄([구분선][힌트][프롬프트])은 로딩 여부와 무관하게 구조·높이가 고정이어야 한다.
+   → 구분선 유지(20260617_1642 의도 복원), 힌트는 min-height로 자리 예약 + JS가 비우면
+   아래 :empty::after 규칙(20260615_1538)의 깜빡이는 점이 로딩 표시로 자연 발동한다. */
 
 #terminal-container.is-loading .bbs-loading-text::after {
     /* [LOG: 20260615_1538] Use a single blinking dot as the loading indicator. */
@@ -2314,7 +2310,10 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
 
 #terminal-container:has(.loading) #terminal-prompt-row {
     /* [LOG: 20260611_1655] A loading screen may coexist with the footer hint, but not with the command input row. */
-    display: none !important;
+    /* [LOG: 20260706_2247] display:none → visibility:hidden. 입력줄을 로딩 중 보이지 않게 하는
+       원래 의도는 유지하되 행 자리는 예약 → 로딩 종료 시 하단 프레임이 한 칸 내려앉던 layout shift 제거.
+       (visibility:hidden은 히트테스트도 차단하므로 클릭 억제 효과 동일) */
+    visibility: hidden !important;
 }
 
 /* [LOG: 20260617_1032] Align terminal notification font and brightness with main terminal themes */

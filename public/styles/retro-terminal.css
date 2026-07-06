@@ -131,7 +131,7 @@ body,
 #terminal-container {
     transform: scale(var(--terminal-scale));
     transform-origin: top center;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* [LOG: 20260706] 터미널 감성: 스케일은 즉시 스냅(리사이즈 시 부드러운 줌 제거). 실제 터미널은 즉시 리플로우한다. */
     width: 100%;
     height: 100%;
 }
@@ -326,56 +326,9 @@ a {
     }
 }
 
-/* [LOG: 20260426_0500] Visual feedback for errors (Evolution Mode) */
-@keyframes terminal-shake {
-    0% {
-        transform: translate(1px, 1px) rotate(0deg);
-    }
-
-    10% {
-        transform: translate(-1px, -2px) rotate(-1deg);
-    }
-
-    20% {
-        transform: translate(-3px, 0px) rotate(1deg);
-    }
-
-    30% {
-        transform: translate(3px, 2px) rotate(0deg);
-    }
-
-    40% {
-        transform: translate(1px, -1px) rotate(1deg);
-    }
-
-    50% {
-        transform: translate(-1px, 2px) rotate(-1deg);
-    }
-
-    60% {
-        transform: translate(-3px, 1px) rotate(0deg);
-    }
-
-    70% {
-        transform: translate(3px, 1px) rotate(-1deg);
-    }
-
-    80% {
-        transform: translate(-1px, -1px) rotate(1deg);
-    }
-
-    90% {
-        transform: translate(1px, 2px) rotate(0deg);
-    }
-
-    100% {
-        transform: translate(1px, -2px) rotate(-1deg);
-    }
-}
-
-.is-shaking {
-    animation: terminal-shake 0.3s;
-}
+/* [LOG: 20260706] 에러 피드백에서 화면 흔들림(shake) 제거.
+   실제 터미널은 물리적으로 흔들리지 않으며, 에러는 비주얼 벨(아래 terminal-flash)과
+   비프음(soundService.playError)으로 알린다. terminalFeedback의 호출부는 'flash-terminal'로 전환됨. */
 
 @keyframes terminal-flash {
     0% {
@@ -429,7 +382,7 @@ a {
     border: 1px solid var(--hr-color) !important;
     padding: 4px 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    /* [LOG: 20260706] hover 시 즉시 반전(reverse video). 부드러운 페이드 트랜지션 제거. */
 }
 
 .bbs-btn:hover {
@@ -475,7 +428,7 @@ a {
     font-size: 0.75rem;
     padding: 0 2px;
     border: 1px solid transparent;
-    transition: all 0.2s;
+    /* [LOG: 20260706] 워크스페이스 탭 hover/활성 전환 즉시 반영. 트랜지션 제거. */
 }
 
 .ws-tab:hover {
@@ -544,20 +497,18 @@ a {
 .hud-memo {
     color: var(--ansi-red);
     font-weight: bold;
-    animation: pulse-red 1.5s infinite;
+    /* [LOG: 20260706] 부드러운 페이드 펄스 → 하드 블링크(step-end).
+       ANSI blink 속성(SGR 5)처럼 딱딱 켜지고 꺼진다. 새 쪽지 알림의 PC통신 감성. */
+    animation: hud-memo-blink 1s step-end infinite;
 }
 
-@keyframes pulse-red {
-    0% {
-        opacity: 0.5;
-    }
-
-    50% {
+@keyframes hud-memo-blink {
+    0%, 50% {
         opacity: 1;
     }
 
-    100% {
-        opacity: 0.5;
+    50.01%, 100% {
+        opacity: 0.25;
     }
 }
 
@@ -566,7 +517,7 @@ a {
     height: 8px;
     border-radius: 50%;
     background: #333;
-    transition: background 0.2s, box-shadow 0.2s;
+    /* [LOG: 20260706] 데이터 LED는 즉시 점멸(스냅). 서서히 켜지는 트랜지션 제거. */
     margin-right: 4px;
 }
 
@@ -619,6 +570,12 @@ a {
 
 /* [LOG: 20260427_0945] Busy state pulse animations removed per user demand */
 
+/* [LOG: 20260706_2230] Reveal-in-place 스트리밍: 전체 레이아웃을 선확정(공간 차지)하고
+   줄 단위로 visibility만 해제 → 모뎀 스트리밍 감성 + footer 밀림(jitter) 원천 차단. */
+.ansi-line--pending {
+    visibility: hidden;
+}
+
 /* [LOG: 20260427_0115] Command Echo Styling (Evolution Mode 5/500) */
 .command-echo {
     padding: 2px 0;
@@ -646,7 +603,7 @@ a {
     overflow-wrap: anywhere;
     z-index: 2000;
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
-    animation: notification-slide-in 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    /* [LOG: 20260706] 죽은 스타일(JS 참조 0건, 실제 알림은 terminal-notification-row). 바운스 슬라이드 인 제거. */
 }
 
 .bbs-notification.level-error {
@@ -664,33 +621,7 @@ a {
     border-color: #55ffff;
 }
 
-@keyframes notification-slide-in {
-    0% {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-
-    100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-.bbs-notification.is-fading {
-    animation: notification-slide-out 0.3s forwards;
-}
-
-@keyframes notification-slide-out {
-    0% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-
-    100% {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-}
+/* [LOG: 20260706] notification-slide-in/out 키프레임 + .is-fading 제거(죽은 스타일, 터미널 감성상 슬라이드 불필요). */
 
 /* [LOG: 20260426_0910] Terminal Dialog Styles (Evolution Mode 16/100) */
 .terminal-dialog-overlay {
@@ -701,11 +632,7 @@ a {
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    animation: dialog-overlay-in 0.2s ease-out;
-}
-
-.terminal-dialog-overlay.is-closing {
-    animation: dialog-overlay-out 0.2s ease-in forwards;
+    /* [LOG: 20260706] 죽은 스타일(다이얼로그는 하단 커맨드라인 프롬프트로 대체). fade-in 및 .is-closing 애니메이션 제거. */
 }
 
 .terminal-dialog-box {
@@ -717,7 +644,7 @@ a {
     max-height: calc(100vh - 32px);
     overflow: auto;
     box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.5);
-    animation: dialog-box-in 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    /* [LOG: 20260706] 죽은 스타일. 스케일+이동 spring 팝 제거. */
 }
 
 .terminal-dialog-box--large {
@@ -752,9 +679,7 @@ a {
     box-shadow: inset 0 0 10px var(--glow-color);
 }
 
-.terminal-dialog-overlay.is-closing .terminal-dialog-box {
-    animation: dialog-box-out 0.2s ease-in forwards;
-}
+/* [LOG: 20260706] .is-closing 다이얼로그 박스 아웃 애니메이션 제거(죽은 스타일). */
 
 .terminal-dialog-content {
     margin-bottom: 24px;
@@ -784,49 +709,7 @@ a {
     gap: 16px;
 }
 
-@keyframes dialog-overlay-in {
-    0% {
-        opacity: 0;
-    }
-
-    100% {
-        opacity: 1;
-    }
-}
-
-@keyframes dialog-overlay-out {
-    0% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 0;
-    }
-}
-
-@keyframes dialog-box-in {
-    0% {
-        transform: scale(0.9) translateY(20px);
-        opacity: 0;
-    }
-
-    100% {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes dialog-box-out {
-    0% {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(0.9) translateY(20px);
-        opacity: 0;
-    }
-}
+/* [LOG: 20260706] dialog-overlay-in/out, dialog-box-in/out 키프레임 4종 제거(죽은 스타일, spring/fade 팝 불필요). */
 
 /* [LOG: 20260427_1000] Command Palette Styles (Evolution Mode) */
 /* [LOG: 20260427_1115] Evolution: Categorized view, close button, and highlighting */
@@ -864,7 +747,7 @@ a {
     cursor: pointer;
     padding: 0 4px;
     margin-left: 8px;
-    transition: opacity 0.2s;
+    /* [LOG: 20260706] 팔레트 닫기 버튼 hover 즉시 반영. opacity 페이드 제거. */
 }
 
 .palette-close-btn:hover {
@@ -923,7 +806,7 @@ a {
     flex-direction: column;
     gap: 2px;
     border-left: 4px solid transparent;
-    transition: background 0.1s;
+    /* [LOG: 20260706] 팔레트 항목 hover/선택 하이라이트 즉시 반영. 배경 페이드 제거. */
 }
 
 .palette-item:hover {
@@ -1008,7 +891,7 @@ a {
     pointer-events: none;
     visibility: hidden;
     opacity: 0;
-    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    /* [LOG: 20260706] 단축키 도움말 모달의 스케일 spring 팝 제거 → 즉시 표시(터미널은 박스를 즉시 그린다). */
     box-shadow: 0 0 100px rgba(0, 0, 0, 0.9);
 }
 
@@ -1035,7 +918,7 @@ a {
     justify-content: center;
     font-family: 'Sam3KRFont', monospace;
     z-index: 10000;
-    transition: all 0.2s;
+    /* [LOG: 20260706] 모달 닫기 버튼 hover 즉시 반전. 트랜지션 제거. */
 }
 
 .modal-close-btn:hover {
@@ -1155,21 +1038,12 @@ a {
     z-index: 1500;
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
     display: none;
-    animation: bounce-y 1s infinite alternate;
+    /* [LOG: 20260706] '맨 아래로' 버튼의 무한 상하 튕김(bounce-y) 제거.
+       버튼은 이미 반전색(bg↔fg)이라 정적으로도 눈에 띈다. 터미널은 UI가 계속 움직이지 않는다. */
 }
 
 .scroll-bottom-indicator.is-visible {
     display: block;
-}
-
-@keyframes bounce-y {
-    from {
-        transform: translateY(0);
-    }
-
-    to {
-        transform: translateY(-5px);
-    }
 }
 
 .render-progress-container {
@@ -1181,7 +1055,7 @@ a {
     background: transparent;
     z-index: 1500;
     opacity: 0;
-    transition: opacity 0.3s;
+    /* [LOG: 20260706] 렌더 진행바 페이드 제거 → 즉시 표시/숨김. */
     pointer-events: none;
 }
 
@@ -1234,19 +1108,7 @@ a {
     gap: 12px;
     flex: 1;
     min-width: 0;
-    animation: hint-fade-in 0.2s ease-out;
-}
-
-@keyframes hint-fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    /* [LOG: 20260706] 명령 제안 힌트의 슬라이드+페이드 인 제거 → 즉시 갱신(입력마다 움직이지 않게). */
 }
 
 .suggestion-quick-hint .hint-label {

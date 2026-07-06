@@ -78,7 +78,7 @@
     align-items: flex-start;
     gap: 8px;
     cursor: pointer;
-    transition: background 0.2s; /* [LOG: 20260610_1650] 다른 clickable 요소와 호버 피드백 일관성 유지 */
+    /* [LOG: 20260706] hover 즉시 반영(터미널 감성). 다른 clickable 요소들도 전부 페이드 제거됨 — 일관성 유지. */
 }
 
 .entry-signup-method:hover,
@@ -303,7 +303,7 @@
     caret-color: #fff;
     vertical-align: middle;
     cursor: text;
-    transition: background 0.2s;
+    /* [LOG: 20260706] 입력 hover/focus 즉시 반영(터미널 감성). 배경 페이드 제거. */
 }
 
 .signup-confirm-input:hover,

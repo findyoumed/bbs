@@ -64,16 +64,20 @@ verified against the working tree.)
 
 ### Browser (`public/js/`)
 - Entry: `app.js` (ES modules) → `initApp()` in `core/appFactory.js` builds the app.
+  (AGENTS.md §3.2 still says `main.js` — that is stale; the real entry is `app.js`.)
 - State: a plain `state` object in `app.js`, keyed by `state.screen` (routing driver). No class store.
-- ~140 modules in `core/`, split by feature via naming convention:
+- ~136 modules in `core/`, split by feature via naming convention:
   - `command*` — input pipeline: `commandDispatcher*` → `commandRouter*` (one router per domain: Chat, Memo, Vote, Vfs, Ranking, PostView…).
   - `*Screens.js` / `*AnsiBuilders.js` — render a screen vs. build its ANSI text.
   - `ansiEngine.js`, `terminalUiCore.js`, `terminal*` — 80x24 grid renderer + interactive overlay.
   - `signup*` — multi-step signup flow.
 
 ### Server (`src/server/`)
-- Boot: `server.js` → `createAppRuntime` → `createAppServices` (wires repositories via `RepositoryRegistry`) + `createRequestHandler`.
+- **Two entry points, one runtime.** Both build the app via `createAppRuntime`:
+  - Local dev: `server.js` (`node server.js`, `PORT` default **3002**) → raw `http.createServer`.
+  - Vercel prod: `api/index.js` → `src/server/api_handler.js` (serverless function; all `/api/*` routes rewrite here per `vercel.json`, which also serves `public/` statically and SPA-rewrites clean URLs to `index.html`).
+- Boot chain: `createAppRuntime` → `createAppServices` (wires repositories via `RepositoryRegistry`) + `createRequestHandler`.
 - Routing: `routeHandlers/*Routes.js` extend `BaseRouter` (boardRoutes, authRoutes, chatServiceRoutes…).
-- Repository dual-mode (Memory vs Supabase, chosen from env), naming convention:
+- Repository **dual-mode**, chosen at boot by `RepositoryRegistry`: uses **Supabase** when both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set, otherwise falls back to in-memory/local. Naming convention:
   `XRepository.js` (base/facade) + `XRepositoryMemory.js` + `XRepositorySupabase.js` + `XRepositoryShared.js`.
 - Shared server/tool utils in `src/core/`: `AssetManager.js`, `TemplateEngine.js`.
