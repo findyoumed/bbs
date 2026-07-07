@@ -168,15 +168,25 @@ export function createTerminalInputUi(deps) {
       && useCustomCursor
       && !cmdInput.disabled
       && !hasLoadingScreen
+      // [LOG: 20260707_1750] CSS(retro-terminal.css .fonts-loading .terminal-cursor)와 판단 기준을 일치시킨다.
+      // JS가 fonts-loading을 무시하고 visible로 판단하면 재시도가 종료된 채 CSS만 숨겨 커서가 사라진 상태로 고착됐다.
+      && !document.documentElement.classList.contains('fonts-loading')
       && !container?.classList.contains('is-loading')
       && !container?.classList.contains('is-busy')
       && !container?.classList.contains('is-data-busy')
     );
   }
 
+  let cursorRetryTimer = 0;
+
   function syncCursorVisibility() {
     if (!cursorEl) {
       return;
+    }
+
+    // [LOG: 20260707_1750] 프롬프트 행 DOM 재구성 등으로 커서 요소가 분리되면 자가 복구한다.
+    if (!cursorEl.isConnected && cmdInput?.parentElement) {
+      cmdInput.parentElement.appendChild(cursorEl);
     }
 
     const visible = shouldRenderCursor();
@@ -188,8 +198,25 @@ export function createTerminalInputUi(deps) {
     cursorEl.style.setProperty('animation', visible && active ? '' : 'none');
 
     if (visible) {
+      if (cursorRetryTimer) {
+        window.clearTimeout(cursorRetryTimer);
+        cursorRetryTimer = 0;
+      }
       updateCursorPosition();
+      return;
     }
+
+    // [LOG: 20260707_1750] 로딩류 차단 조건(is-loading/.loading/is-busy/disabled)으로 숨긴 경우,
+    // 조건 해제가 이벤트 없이 끝나는 경로에서는 재동기화가 일어나지 않아 커서가 꺼진 채
+    // 고착됐다(news/weather 진입 시 로드마다 커서 유무가 달라져 프롬프트 공백이 달라 보이던 원인).
+    // 숨김 상태 동안에는 조건과 무관하게 짧은 재시도를 걸어 최종 상태에 수렴시킨다.
+    if (cursorRetryTimer) {
+      window.clearTimeout(cursorRetryTimer);
+    }
+    cursorRetryTimer = window.setTimeout(() => {
+      cursorRetryTimer = 0;
+      syncCursorVisibility();
+    }, 200);
   }
 
   function syncMaskedInputDisplay() {
@@ -296,6 +323,13 @@ export function createTerminalInputUi(deps) {
         attributeFilter: ['class']
       });
     }
+
+    // [LOG: 20260707_1750] fonts-loading 클래스는 <html>에 붙으므로 함께 감시해야
+    // 폰트 로드 완료 시 커서 표시 상태가 즉시 재동기화된다.
+    cursorStateObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
 
     if (screenEl) {
       // [LOG: 20260429_0955] Hide the prompt cursor while loading text is rendered on screen.

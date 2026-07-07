@@ -2258,19 +2258,10 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     animation: cursor-blink 1s step-end infinite;
 }
 
-#terminal-container.is-loading #cmd-hint:empty::after {
-    /* [LOG: 20260707_1735] 힌트가 빈 로딩 상태에서 점(".")만 덜렁 보이던 것을 로딩 문구로 교체.
-       (기존 20260615_1538 규칙은 점만 표시해 사용자에게 "."/".."로 보였다) */
-    content: "연결하는 중입니다.";
-    display: inline-block;
-    animation: none;
-}
-
-#terminal-container.is-loading:has(.bbs-loading-text) #cmd-hint:empty::after {
-    /* [LOG: 20260707_1735] 본문에 이미 "연결하는 중입니다" 로딩 문구가 있으면 힌트줄에는 중복 표시하지 않는다.
-       (본문 점 + 힌트 점이 동시에 보여 점이 두 개로 보이던 문제 차단) */
-    content: "";
-}
+/* [LOG: 20260707_1750] 로딩 문구는 본문 로딩 화면(.bbs-loading-text)만 담당한다.
+   힌트줄에 점(".")을 깜빡이던 20260615_1538 규칙과, 이를 문구로 바꿨던 20260707_1735 규칙 모두 제거 —
+   점만 덜렁 보이거나 "연결하는 중입니다."가 화면 아래(힌트줄)에 나타나는 문제의 원인이었다.
+   로딩 중 힌트줄은 아무것도 표시하지 않는다. */
 
 #terminal-container.is-loading #terminal-prompt-row {
     pointer-events: none !important;
