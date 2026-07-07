@@ -1,5 +1,3 @@
-import { displayWidth } from './ansiRenderUtils.js';
-
 let commandPendingTimer = 0;
 let commandPendingToken = 0;
 let commandPendingActive = false;
@@ -16,13 +14,16 @@ function setCommandPending(active) {
   container.classList.toggle('is-command-pending', commandPendingActive);
 
   if (commandPendingActive) {
-    const commandLength = Math.max(1, displayWidth(cmdInput?.value));
-    // [LOG: 20260613_1248] Size the pending input so the underscore sits immediately after the submitted text.
-    container.style.setProperty('--pending-command-length', String(commandLength));
+    // [LOG_ID: 20260707_1645] Keep the submitted command visible during pending, but lock the footer width to the command text.
+    const pendingLength = Math.max(1, String(commandPendingValue || cmdInput?.value || '').length);
+    container.style.setProperty('--pending-command-length', String(pendingLength));
     if (cmdInput) {
       // [LOG: 20260617_1035] Lock submitted command text during pending so number commands cannot morph mid-load.
       cmdInput.readOnly = true;
       cmdInput.dataset.commandPending = '1';
+      if (typeof CustomEvent === 'function') {
+        cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
+      }
     }
   } else {
     container.style.removeProperty('--pending-command-length');
@@ -82,17 +83,7 @@ export function trackCommandPending(result, options = {}) {
 
   commandPendingTimer = window.setTimeout(() => {
     if (commandPendingToken === token) {
-      // [LOG: 20260611_1735] Show the underscore wait caret for keyboard and mouse command submissions.
-      if (pendingValue) {
-        const cmdInput = document.getElementById('cmd-input');
-        if (cmdInput) {
-          // [LOG: 20260611_1805] Keep the submitted command visible so the wait caret appears as "1_".
-          cmdInput.value = pendingValue;
-          if (typeof CustomEvent === 'function') {
-            cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
-          }
-        }
-      }
+      // [LOG: 20260611_1735] Show the wait caret for keyboard and mouse command submissions.
       setCommandPending(true);
     }
   }, delayMs);
@@ -112,7 +103,7 @@ export function trackCommandPending(result, options = {}) {
       setCommandPending(false);
       if (clearOnSettled && pendingValue) {
         const cmdInput = document.getElementById('cmd-input');
-        if (cmdInput?.value === pendingValue) {
+        if (cmdInput) {
           cmdInput.value = '';
           if (typeof CustomEvent === 'function') {
             cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));

@@ -178,8 +178,8 @@ export function createTerminalUiCore(deps) {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         setBusy(true);
-        // [LOG: 20260617_1650] Keep footer visible even in non-ready states to maintain UI structure.
-        setFooterVisibility(true);
+        // [LOG: 20260707_1815] Keep the footer hidden until the next screen/footer content is fully ready.
+        setFooterVisibility(false);
       }
     },
     setLoading: (message) => {
@@ -196,14 +196,15 @@ export function createTerminalUiCore(deps) {
       if (hintEl) {
         // [LOG: 20260617_1156] Clear footer hint text to prevent duplicate "connecting" messages on screen and footer.
         hintEl.innerHTML = '';
-        setFooterVisibility(true);
+        // [LOG_ID: 20260707_1815] Keep the footer hidden while the next screen is still loading.
+        setFooterVisibility(false);
       }
       core._loadingTimer = setTimeout(() => {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
-        // [LOG: 20260617_1635] Keep footer visible to avoid "disappearing hint bar" regression during navigation.
-        setFooterVisibility(true);
+        // [LOG: 20260707_1815] Reveal the footer only after the destination screen and footer content are ready.
+        setFooterVisibility(false);
       }, 400);
     },
     buildLoadingScreenMarkup,

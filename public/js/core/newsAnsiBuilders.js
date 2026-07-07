@@ -18,6 +18,20 @@ export function createNewsAnsiBuilders(deps) {
   const NEWS_LIST_PAGE_SIZE = 15;
   const HEADLINE_TRUNCATION_SUFFIX = '..';
   const DATE_COLUMN_GUARD_COLS = 1;
+  // [LOG: 20260707_1528] 뉴스 화면은 웹 topbar와 footer까지 한 터미널 프레임 안에 들어가야 한다.
+  // 24줄 패딩은 PC 화면에서 #terminal-screen의 세로 overflow를 만들었으므로 본문은 23줄로 고정한다.
+  const NEWS_SCREEN_TOTAL_LINES = 23;
+
+  function padPartsToScreenHeight(parts) {
+    let lineCount = parts.reduce((sum, part) => sum + String(part).split('\n').length, 0);
+    while (lineCount < NEWS_SCREEN_TOTAL_LINES) {
+      // 렌더러(renderAnsiScreenWithTopbar*)가 본문 꼬리를 trimEnd()로 잘라내므로,
+      // 공백이 아닌 ANSI 리셋 시퀀스로 채워 빈 줄이 살아남게 한다. (화면에는 빈 줄로 렌더)
+      parts.push(ANSI_RESET);
+      lineCount += 1;
+    }
+    return parts;
+  }
 
   function writeDisplayText(cells, startCol, text) {
     const source = String(text || '');
@@ -169,7 +183,7 @@ export function createNewsAnsiBuilders(deps) {
       pageCount,
       pageNo: currentPage,
       pageSize: NEWS_LIST_PAGE_SIZE,
-      text: parts.join('\n')
+      text: padPartsToScreenHeight(parts).join('\n')
     };
   }
 
@@ -276,7 +290,7 @@ export function createNewsAnsiBuilders(deps) {
     return {
       pageCount,
       pageNo: currentPage,
-      text: parts.join('\n')
+      text: padPartsToScreenHeight(parts).join('\n')
     };
   }
 

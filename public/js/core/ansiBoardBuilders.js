@@ -65,9 +65,11 @@ export function createBoardAnsiBuilders(deps) {
     const startIndex = posts.length ? ((page - 1) * 15) + 1 : 0;
     const endIndex = posts.length ? startIndex + posts.length - 1 : 0;
     const pageLabel = buildPageLabel(page, totalPages);
+    // [LOG: 20260707_1500] 건수가 없을 때 "1/1 page" 폴백은 상단바 페이지 라벨 (01/01)과
+    // 중복 표기라 제거 — 빈 줄로 레이아웃(줄 수)만 유지한다.
     const countLine = totalCount
       ? `${startIndex}-${endIndex}/${totalCount} ( 총 ${totalCount}건 )`
-      : `${page}/${totalPages} page`;
+      : '';
 
     const highlightTerm = String(searchParams.lt || '').trim();
 

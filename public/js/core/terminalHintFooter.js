@@ -20,6 +20,8 @@ export function createTerminalHintFooter(deps) {
 
   let hintTrimFrame = 0;
   let footerLoadPending = false;
+  let footerContentUpdateDepth = 0;
+  let promptLayoutFrame = 0;
   // [LOG: 20260611_1524] Store prompts without trailing spaces; CSS owns the one-cell prompt gap.
   const DEFAULT_COMMAND_PROMPT = '선택 >>';
   const terminalFooter = document.getElementById('terminal-footer');
@@ -64,6 +66,47 @@ export function createTerminalHintFooter(deps) {
       ) {
         scheduleHintTrim(attempt + 1);
       }
+    });
+  }
+
+  // [LOG_ID: 20260707_1815] Batch footer content writes so prompt/pending state lands before hint repaint.
+  function beginFooterContentUpdate() {
+    footerContentUpdateDepth += 1;
+  }
+
+  function endFooterContentUpdate() {
+    footerContentUpdateDepth = Math.max(0, footerContentUpdateDepth - 1);
+  }
+
+  function syncPromptRendererWidth() {
+    if (!cmdPromptRendererEl) {
+      return;
+    }
+
+    // [LOG_ID: 20260707_1652] Re-sync prompt width after font loading and the next paint so the first render matches the focused state.
+    const trimmed = String(cmdPromptRendererEl.value || '').trimEnd();
+    cmdPromptRendererEl.style.width = `${Math.max(1, displayWidth(trimmed || ''))}ch`;
+  }
+
+  function schedulePromptLayoutSync() {
+    if (typeof window === 'undefined' || !cmdPromptRendererEl) {
+      return;
+    }
+
+    if (promptLayoutFrame) {
+      window.cancelAnimationFrame(promptLayoutFrame);
+    }
+
+    promptLayoutFrame = window.requestAnimationFrame(() => {
+      promptLayoutFrame = 0;
+      syncPromptRendererWidth();
+
+      window.setTimeout(() => {
+        syncPromptRendererWidth();
+        if (!footerLoadPending) {
+          setFooterVisibility(true);
+        }
+      }, 50);
     });
   }
 
@@ -188,7 +231,18 @@ export function createTerminalHintFooter(deps) {
       trimHintEntriesToFit();
       scheduleHintTrim();
 
-      if (text && terminalFooter?.dataset.footerState === 'hidden' && !footerLoadPending) {
+      const isLoadingScreen = Boolean(
+        screenEl?.parentElement?.classList.contains('is-loading')
+        || screenEl?.classList.contains('is-loading')
+      );
+
+      if (
+        text
+        && terminalFooter?.dataset.footerState === 'hidden'
+        && !footerLoadPending
+        && footerContentUpdateDepth === 0
+        && !isLoadingScreen
+      ) {
         setFooterVisibility(true);
       }
     }
@@ -250,7 +304,7 @@ export function createTerminalHintFooter(deps) {
       if (cmdPromptRendererEl) {
         // [LOG: 20260615_1621] Render the normal prompt through an input control so it matches #cmd-input rasterization.
         cmdPromptRendererEl.value = trimmed || '';
-        cmdPromptRendererEl.style.width = `${Math.max(1, displayWidth(trimmed || ''))}ch`;
+        schedulePromptLayoutSync();
       }
     }
   }
@@ -258,6 +312,7 @@ export function createTerminalHintFooter(deps) {
   async function applyCommandFooter(assetPath, fallbackText = '', fallbackAssetPath = '') {
     syncScreenContext();
     footerLoadPending = true;
+    beginFooterContentUpdate();
     // [LOG: 20260617_1638] Do not hide footer while loading assets to maintain UI stability.
     if (screenEl?.parentElement) {
       screenEl.parentElement.classList.add('is-loading');
@@ -267,8 +322,8 @@ export function createTerminalHintFooter(deps) {
       const supportedHint = getSupportedFooterText(state);
       if (supportedHint) {
         const parsedSupported = parseCommandFooter(supportedHint, supportedHint);
-        setHint(parsedSupported.hint);
         setPrompt(parsedSupported.prompt);
+        setHint(parsedSupported.hint);
       }
 
       let rawText = '';
@@ -288,19 +343,20 @@ export function createTerminalHintFooter(deps) {
 
       const parsed = parseCommandFooter(rawText, supportedHint || fallbackText);
       const supportedParsed = supportedHint ? parseCommandFooter(supportedHint, supportedHint) : null;
-      setHint(supportedParsed?.hint || parsed.hint);
       setPrompt(supportedParsed?.prompt || parsed.prompt);
+      setHint(supportedParsed?.hint || parsed.hint);
     } catch (error) {
       console.error('[Terminal] Error applying command footer:', error);
-      setHint(fallbackText);
       setPrompt(DEFAULT_COMMAND_PROMPT);
+      setHint(fallbackText);
     } finally {
       if (screenEl) {
         screenEl.parentElement?.classList.remove('is-loading');
         screenEl.classList.remove('is-loading');
       }
-      setFooterVisibility(true);
       footerLoadPending = false;
+      schedulePromptLayoutSync();
+      endFooterContentUpdate();
     }
   }
 
@@ -314,8 +370,19 @@ export function createTerminalHintFooter(deps) {
       resizeTrimTimer = window.setTimeout(() => {
         resizeTrimTimer = 0;
         scheduleHintTrim();
+        schedulePromptLayoutSync();
       }, 120);
     });
+  }
+
+  if (typeof document !== 'undefined' && document.fonts) {
+    document.fonts.ready
+      .then(schedulePromptLayoutSync)
+      .catch(() => {});
+
+    if (typeof document.fonts.addEventListener === 'function') {
+      document.fonts.addEventListener('loadingdone', schedulePromptLayoutSync);
+    }
   }
 
   return {

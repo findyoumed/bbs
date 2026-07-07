@@ -173,11 +173,14 @@ body.theme-blue .write-field textarea {
 }
 
 /* ?면 ?역 (?크?가?? */
-/* [LOG: 20260428_1030] 힌트바가 내용 바로 아래에 붙도록 가변 레이아웃 적용 */
+/* [LOG: 20260707_1735] PC통신 터미널 순서 고정: 본문 영역이 항상 24행(24 × line-height 1.4 = 33.6em)을
+   차지해 힌트바·입력창이 언제나 화면 맨 아래(마지막 순서)에 온다. 로딩 중이거나 본문이 짧아도
+   푸터가 위로 올라붙지 않는다. em 기준이라 데스크톱(17px)/모바일(12px) 폰트에 자동 대응.
+   (기존 20260428_1030 "내용 바로 아래" 정책을 사용자 요구로 대체) */
 #terminal-screen {
     flex: 0 1 auto !important;
     height: auto !important;
-    min-height: 0 !important;
+    min-height: 33.6em !important;
     max-height: 100%;
     overflow-y: auto !important;
     padding: 0;
@@ -248,6 +251,12 @@ body.theme-blue .write-field textarea {
     width: 100%;
 }
 
+/* [LOG: 20260707_1538] 로딩 문구 아래에는 가로 구분선을 표시하지 않는다.
+   separator 공간은 유지해 로딩 종료 시 footer 위치 흔들림만 막는다. */
+#terminal-container.is-loading #terminal-footer:not([data-footer-state="hidden"])::before {
+    visibility: hidden !important;
+}
+
 #cmd-hint {
     color: #fff;
     overflow: hidden;
@@ -297,14 +306,15 @@ body.theme-blue .write-field textarea {
 #terminal-prompt-row {
     display: flex;
     align-items: center;
-    column-gap: 0 !important;
+    /* [LOG_ID: 20260707_1630] Keep a fixed one-cell gap between the rendered prompt and the input cell. */
+    column-gap: 1ch !important;
     row-gap: 0 !important;
     min-height: 18px;
     width: 100%;
 }
 
 #terminal-prompt-row.terminal-prompt-row--inline {
-    column-gap: 0 !important;
+    column-gap: 1ch !important;
     row-gap: 0 !important;
     min-height: 0;
 }
@@ -409,8 +419,11 @@ body.theme-blue .write-field textarea {
     border: 0 !important;
     outline: none;
     color: #ffffff;
-    /* [LOG: 20260611_1610] Browser caret stays in the real input flow; the custom overlay cursor is disabled. */
-    caret-color: #ffffff !important;
+    /* [LOG: 20260707_1500] 캐럿 단일화: 20260623_1330에서 커스텀 블록 커서(.terminal-cursor)가 재도입된 뒤에도
+       이 규칙(20260611_1610)이 네이티브 캐럿을 켜두어 두 캐럿이 겹쳐 그려졌다.
+       클릭 전(프로그램 포커스)과 클릭 후(사용자 제스처)의 네이티브 캐럿 표시 차이로
+       캐럿 위치/공백이 바뀌어 보이던 문제 — 네이티브 캐럿을 끄고 블록 커서만 사용한다. */
+    caret-color: transparent !important;
     display: block;
     flex: 1;
     position: relative;
@@ -448,7 +461,9 @@ body.theme-blue .write-field textarea {
     min-width: 1ch;
     max-height: 1.1em;
     height: 1.1em;
-    margin: 0 1ch 0 0;
+    /* [LOG: 20260707_1715] The prompt text already includes its own terminal spacing.
+       Keep the cursor cell directly adjacent so the footer does not look like it has an extra blank column. */
+    margin: 0;
     padding: 0 !important;
     box-sizing: content-box;
     border-radius: 0;
@@ -1137,8 +1152,16 @@ body[data-screen="news-view"] .ansi-screen[data-layout-mode="compact"] .news-art
 }
 
 /* [LOG: 20260615_1706] 영상 뉴스 페이지 이동 시 터미널 상자 높이 흔들림 방지 */
+body[data-screen="news-list"] #terminal-screen,
 body[data-screen="news-view"] #terminal-screen {
-    min-height: 570px !important;
+    /* [LOG: 20260707_1528] 뉴스 목록/기사 화면은 PC통신 터미널 한 프레임 안에서 페이지 단위로 이동한다.
+       #terminal-screen이 자체 스크롤 영역이 되면 오른쪽 세로 스크롤바가 생겨 터미널 UI가 깨진다. */
+    overflow-y: hidden !important;
+}
+
+body[data-screen="news-view"] #terminal-screen {
+    /* [LOG: 20260707_1528] 기존 570px 최소 높이는 작은 PC 뷰포트에서 footer와 충돌해 스크롤을 만들었다. */
+    min-height: 0 !important;
 }
 
 /* [LOG: 20260416_2241] 로딩 중일 ?�만 25번째 �??�태�??? ?��? */
@@ -2236,10 +2259,17 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
 }
 
 #terminal-container.is-loading #cmd-hint:empty::after {
-    /* [LOG: 20260615_1538] Some route loaders only set is-loading; show the blinking dot even when hint text is empty. */
-    content: ".";
+    /* [LOG: 20260707_1735] 힌트가 빈 로딩 상태에서 점(".")만 덜렁 보이던 것을 로딩 문구로 교체.
+       (기존 20260615_1538 규칙은 점만 표시해 사용자에게 "."/".."로 보였다) */
+    content: "연결하는 중입니다.";
     display: inline-block;
-    animation: cursor-blink 1s step-end infinite;
+    animation: none;
+}
+
+#terminal-container.is-loading:has(.bbs-loading-text) #cmd-hint:empty::after {
+    /* [LOG: 20260707_1735] 본문에 이미 "연결하는 중입니다" 로딩 문구가 있으면 힌트줄에는 중복 표시하지 않는다.
+       (본문 점 + 힌트 점이 동시에 보여 점이 두 개로 보이던 문제 차단) */
+    content: "";
 }
 
 #terminal-container.is-loading #terminal-prompt-row {

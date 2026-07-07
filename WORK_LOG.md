@@ -1,3 +1,144 @@
+## [2026-07-07 17:35] 커서 잔상·로딩 점 표기·푸터 하단 고정 — 터미널 순서 3종 수정
+
+**LOG_ID: 20260707_1735**
+목표: 사용자 리포트 3건 — ① news/weather 캐럿 왼쪽 공백이 다르고 weather는 포커스 후에만 정상, ② 로딩 중 "."/".."만 표시, ③ 힌트바·입력창은 항상 화면 맨 아래(마지막 순서)여야 함.
+변경 파일:
+- `public/js/core/terminalInputUi.js` (bbs:mask-state-change에서 커서 위치 재계산)
+- `public/style.css` (로딩 힌트 문구화 + :has 중복 가드, #terminal-screen min-height 33.6em)
+- `public/index.html` (style.css 캐시버스터 20260707_1735)
+수행 작업:
+1) [① 원인] 커서가 비포커스에도 항상 표시되도록 바뀐 뒤(20260707_1700), `bbs:mask-state-change` 리스너가 `syncMaskedInputDisplay`만 호출하고 커서 위치 재계산을 하지 않아 명령 제출→화면 전환 후 이전 명령 길이만큼 오른쪽으로 밀린 커서 잔상이 남았음(날씨는 `2` 입력 진입이라 1칸 밀림, 포커스하면 focus 리스너가 재계산해 정상 복귀 — 증상과 일치). 리스너에 `syncCursorVisibility` 추가. setPrompt/settle 등 모든 클리어 경로가 이 이벤트를 쏘므로 화면 전환마다 커서가 재정렬된다.
+2) [②] `is-loading #cmd-hint:empty::after`의 점(".")을 "연결하는 중입니다." 문구로 교체(애니메이션 제거). 본문에 `.bbs-loading-text`가 이미 있으면 `:has` 가드로 힌트줄 중복 표시 차단 — 점이 하나/두 개로 덜렁 보이던 문제 해소.
+3) [③] `#terminal-screen`에 `min-height: 33.6em`(24행 × line-height 1.4) 적용 — 로딩 중이든 본문이 짧든 힌트바·입력창이 항상 24행 아래(맨 마지막)에 위치. em 기준이라 데스크톱 17px/모바일 12px 폰트에 자동 대응. (기존 20260428_1030 "내용 바로 아래" 정책을 사용자 요구로 대체)
+4) [검증] Playwright: 초기화면·날씨 지역 메뉴에서 푸터가 프레임 하단 고정 확인, `2` 입력 진입 후 커서가 `>> ▮` 첫 칸 정위치(잔상 없음) 확인, 뉴스 목록 스크롤바 없음 유지. npm test 전체, smoke:ui-layout, smoke:renderer-ui 통과.
+실행: `npm test`, smoke 2종, Playwright 스크린샷 검증
+기대: 어떤 화면·어떤 진입 경로든 캐럿은 프롬프트 다음 첫 칸, 로딩 중엔 "연결하는 중입니다." 표기, 하단 상태줄은 항상 마지막.
+결과: ✅ 완료
+
+---
+
+## [2026-07-07 16:52] Footer prompt width resync after initial paint
+
+**LOG_ID: 20260707_1652**
+Goal: Make the `/service/weather` prompt spacing match before and after click by re-syncing the rendered prompt width after fonts and the next paint settle.
+Changed files: `public/js/core/terminalHintFooter.js`, `WORK_LOG.md`
+Work: 1) Added a prompt-width resync helper that re-applies the computed width on the next animation frame and after a short timeout. 2) Hooked the resync to `document.fonts.ready`, `loadingdone`, and resize so the first render does not stay on an early font metric snapshot.
+Run: pending
+Expected: The weather footer no longer looks different before the input is clicked versus after focus changes.
+Result: In progress
+
+## [2026-07-07 16:48] Raw-enter footer text retention
+
+**LOG_ID: 20260707_1648**
+Goal: Stop raw-enter inputs such as weather page selection from being blanked immediately on Enter.
+Changed files: `public/js/core/appEventsCommandInput.js`, `WORK_LOG.md`
+Work: 1) Removed the unconditional `cmdInput.value = ''` from the raw terminal-input branch so raw-enter handlers can keep the submitted text visible until they decide to clear it. 2) Left raw handlers that already clear their own inputs unchanged.
+Run: `node --check public/js/core/appEventsCommandInput.js`, `node --check public/js/core/commandPendingUi.js`, `npm test`, Playwright Enter-state check on `http://localhost:3000/service/weather`
+Expected: Enter on weather/raw-input screens no longer erases the typed command immediately.
+Result: Done
+
+## [2026-07-07 16:45] Pending command text visibility restore
+
+**LOG_ID: 20260707_1645**
+Goal: Keep the command text visible after Enter while the footer is in pending state, instead of collapsing the input cell to a blank line.
+Changed files: `public/js/core/commandPendingUi.js`, `WORK_LOG.md`
+Work: 1) Stopped clearing `cmdInput.value` as soon as pending begins. 2) Set `--pending-command-length` from the submitted command width so the locked footer keeps the entered text visible. 3) Left the final settle-time clear in place so the text still disappears once the command completes.
+Run: pending
+Expected: Pressing Enter no longer makes the typed command vanish immediately; the pending footer keeps the command visible until completion.
+Result: In progress
+
+## [2026-07-07 16:30] Weather footer one-cell gap restore
+
+**LOG_ID: 20260707_1630**
+Goal: Restore the fixed one-cell gap between the footer prompt and command input while keeping the footer hidden until loading completes.
+Changed files: `public/js/core/terminalHintFooter.js`, `public/js/core/terminalUiCore.js`, `public/style.css`, `public/index.html`, `WORK_LOG.md`
+Work: 1) Reverted the prompt renderer width logic back to terminal-cell counting and moved spacing to a fixed `column-gap: 1ch` on the prompt row. 2) Kept the loading footer hidden until ready so the hint bar/input do not appear mid-load. 3) Bumped the stylesheet cache-buster version.
+Run: `node --check public/js/core/terminalHintFooter.js`, `node --check public/js/core/terminalUiCore.js`, `npm run smoke:ui-layout`, Playwright DOM/geometry check on `http://localhost:3000/service/weather`
+Expected: The weather footer shows a stable one-cell gap, and the hint/input appear only after the screen is ready.
+Result: Done
+
+## [2026-07-07 16:28] Weather footer spacing and loading-order fix
+
+**LOG_ID: 20260707_1628**
+Goal: Remove the weather-page prompt gap mismatch and keep the hint bar/input hidden until the destination screen finishes loading.
+Changed files: `public/js/core/terminalHintFooter.js`, `public/js/core/terminalUiCore.js`, `public/styles/retro-terminal.css`, `public/index.html`, `WORK_LOG.md`
+Work: 1) Replaced the prompt renderer's `ch`-based width with measured pixel width so Hangul prompts like `선택 >>` no longer drift on `/service/weather`. 2) Hid the footer during loading by making `setLoading()` and non-ready states keep `#terminal-footer` hidden until `applyCommandFooter()` finishes. 3) Kept footer content writes batched so the prompt lands before the hint repaint.
+Run: `node --check public/js/core/terminalHintFooter.js`, `node --check public/js/core/terminalUiCore.js`, `npm test`, `npm run smoke:ui-layout`, Playwright DOM/geometry check on `http://localhost:3000/service/weather`
+Expected: Weather no longer has a wider-looking prompt gap than other screens, and the hint bar/input only appear after the screen footer is ready.
+Result: Done
+
+## [2026-07-07 18:15] Footer prompt gap and render-order stabilization
+
+**LOG_ID: 20260707_1815**
+Goal: Remove the fluctuating one/two-cell prompt gap and make the footer hint/input update in a single terminal-like render order.
+Changed files: `public/js/core/terminalHintFooter.js`, `public/styles/retro-terminal.css`, `public/index.html`, `WORK_LOG.md`
+Work: 1) Removed the legacy `#cmd-prompt-renderer` right margin from `retro-terminal.css` so the prompt gap is owned by the current footer layout only. 2) Batched footer content updates in `terminalHintFooter.js` so prompt text is written before hint text during command-footer refreshes, reducing intermediate frames where the hint appears first. 3) Bumped the stylesheet cache-buster version in `index.html`.
+Run: pending
+Expected: Prompt spacing stays at a single stable cell, and the hint bar/input row no longer flash in the wrong order during footer refresh.
+Result: In progress
+
+## [2026-07-07 15:38] 로딩 화면 하단 가로줄 제거
+
+**LOG_ID: 20260707_1538**
+목표: "연결하는 중입니다" 로딩 화면 아래에 보이는 가로 구분선을 숨겨 로딩 상태에서도 PC통신 터미널 UI가 깔끔하게 유지되도록 한다.
+변경 파일: `public/style.css`, `public/index.html`, `WORK_LOG.md`
+수행 작업: 1) 로딩 상태의 footer separator `::before`를 `visibility:hidden`으로 숨김. 2) `style.css` 캐시 버전을 갱신해 기존 브라우저에도 새 규칙이 반영되도록 함. 3) 로딩 상태와 완료 상태에서 pseudo-element visibility를 Playwright로 확인함.
+실행: `npm run smoke:renderer-ui`, Playwright 로딩 지연 확인, `git diff --check`
+기대: 로딩 중에는 구분선이 보이지 않고, 로딩이 끝나면 기존 footer UI가 그대로 복원된다.
+결과: ✅ 완료
+
+---
+## [2026-07-07 17:10] Command pending afterimage removal
+
+**LOG_ID: 20260707_1710**
+Goal: Remove the footer afterimage that kept the submitted command visible after pressing Enter, and keep the command input line as the last visible line.
+Changed files: `public/js/core/commandPendingUi.js`, `public/js/core/terminalInputUi.js`, `WORK_LOG.md`
+Work: 1) Stopped writing the submitted command back into the footer while a command is pending. 2) Kept the pending cursor behavior but forced the footer input to stay empty so the next screen does not inherit a stale command echo. 3) Verified the weather flow still renders with the command line last and no lingering submitted text.
+Run: `node --check public/js/core/commandPendingUi.js`, Playwright submit/settle check on `http://localhost:3000/service/weather`, `npm test`, `npm run smoke:renderer-ui`, `npm run smoke:ui-layout`, `git diff --check`
+Expected: After Enter, the footer shows a clean pending/ready prompt instead of the submitted command lingering as a ghost.
+Result: Done
+
+---
+## [2026-07-07 17:15] Footer prompt gap tightening
+
+**LOG_ID: 20260707_1715**
+Goal: Remove the extra blank cell that made the footer prompt feel wider than a PC terminal prompt.
+Changed files: `public/style.css`, `WORK_LOG.md`
+Work: Removed the `1ch` right margin from `#cmd-prompt-renderer` so the prompt text and cursor sit directly adjacent, matching the tight terminal spacing users expect.
+Run: `node --check public/js/core/commandPendingUi.js`, Playwright before/after-enter visual check on `http://localhost:3000/service/weather`, `npm run smoke:ui-layout`, `git diff --check`
+Expected: The command input line no longer looks like it has an extra blank column before the cursor.
+Result: Done
+
+---
+## [2026-07-07 17:00] Weather prompt cursor spacing stabilization
+
+**LOG_ID: 20260707_1700**
+Goal: Keep the `/service/weather` footer prompt visually stable so the cursor does not appear to add/remove a terminal cell when the input gains or loses focus.
+Changed files: `public/js/core/terminalInputUi.js`, `WORK_LOG.md`
+Work: 1) Kept the custom block cursor rendered even when the command input is not focused, instead of removing it with `display:none`. 2) Disabled the cursor blink animation only while unfocused so the same 1-cell block remains visible and the prompt width perception does not jump on click.
+Run: `node --check public/js/core/terminalInputUi.js`, Playwright measurement on `http://localhost:3000/service/weather`, `npm test`, `git diff --check`
+Expected: Focus changes no longer make the weather prompt appear to expand or collapse by one cell.
+Result: Done
+## [2026-07-07 15:00] 게시판 빈 카운트 라벨 제거와 커서 단일화
+
+**LOG_ID: 20260707_1500**
+목표: 빈 게시판 목록에서 중복 페이지 라벨을 없애고, 커맨드 입력 커서를 단일화한다.
+변경 파일: `public/js/core/ansiBoardBuilders.js`, `public/style.css`, `WORK_LOG.md`
+수행 작업: 1) 게시판 목록에서 `totalCount`가 0일 때 `1/1 page` 보조 라벨을 비워 상단바 페이지 표기와 중복되지 않도록 조정. 2) `#cmd-input`의 네이티브 캐럿을 끄고 블록 커서만 남기도록 CSS를 정리.
+실행: `node --check public/js/core/ansiBoardBuilders.js`, `npm test`, `npm run smoke:renderer-ui`, `npm run smoke:ui-layout`, `npm run smoke:vercel-ready`
+기대: 빈 게시판 목록은 레이아웃만 유지하고, 입력창에는 캐럿이 중복 표시되지 않는다.
+결과: ✅ 완료
+## [2026-07-07 15:28] 뉴스 화면 세로 스크롤바 제거 및 터미널 프레임 고정
+
+**LOG_ID: 20260707_1528**
+목표: `/service/news/1` 및 뉴스 하위 화면에서 오른쪽 세로 스크롤바가 생기지 않고 모든 화면이 PC통신 터미널 UI 한 프레임 안에 유지되도록 한다.
+변경 파일: `public/js/core/newsAnsiBuilders.js`, `public/style.css`, `public/index.html`, `WORK_LOG.md`
+수행 작업: 1) 뉴스 ANSI 화면 패딩 기준을 24줄에서 23줄로 조정해 topbar/footer 포함 높이가 PC 프레임을 넘지 않게 함. 2) 뉴스 목록/기사 화면의 `#terminal-screen` 세로 overflow를 숨겨 페이지 단위 이동 UI를 유지함. 3) 기존 뉴스 상세 최소 높이 570px을 제거해 작은 PC 뷰포트에서 footer와 충돌하지 않게 함. 4) `style.css` 캐시 버전을 갱신함.
+실행: `node --check public/js/core/newsAnsiBuilders.js`, Playwright `/service/news/1` 및 `/service/news/1?article=1` geometry 확인, `git diff --check`, `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready`
+기대: 뉴스 목록과 기사 화면에서 `#terminal-screen`의 `scrollHeight`와 `clientHeight`가 같고 세로 스크롤바가 표시되지 않는다.
+결과: ✅ 완료
+
+---
 ## [2026-07-07 14:30] UI 전면 스크린샷 감사 — /game 딥링크 복원 누락·도움말 컬럼 잘림 수정
 
 **LOG_ID: 20260707_1430**
@@ -4575,4 +4716,3 @@ Expected: The staged vote/ranking feature set remains behaviorally unchanged and
 Result: Done - all listed checks passed.
 
 ---
-

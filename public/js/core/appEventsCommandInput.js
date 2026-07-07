@@ -293,10 +293,7 @@ export function bindCommandInputEvents(deps) {
     lastMatchIndex = -1;
 
     if (dispatchRawTerminalInput(raw)) {
-      cmdInput.value = '';
-      if (typeof CustomEvent === 'function') {
-        cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
-      }
+      // [LOG_ID: 20260707_1648] Raw-enter handlers own their own clearing/echo behavior; do not blank the footer here.
       state.cmdHistoryIndex = -1;
       state.cmdHistoryTemp = '';
       if (!state._maskCommandInput && cmdInput.type !== 'text') cmdInput.type = 'text';

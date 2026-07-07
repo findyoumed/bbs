@@ -158,7 +158,7 @@ export function createTerminalInputUi(deps) {
     return document.getElementById('terminal-container');
   }
 
-  function shouldShowCursor() {
+  function shouldRenderCursor() {
     const container = getTerminalContainer();
     const hasLoadingScreen = Boolean(screenEl?.querySelector('.loading'));
 
@@ -166,7 +166,6 @@ export function createTerminalInputUi(deps) {
       cmdInput
       && cursorEl
       && useCustomCursor
-      && document.activeElement === cmdInput
       && !cmdInput.disabled
       && !hasLoadingScreen
       && !container?.classList.contains('is-loading')
@@ -180,9 +179,13 @@ export function createTerminalInputUi(deps) {
       return;
     }
 
-    const visible = shouldShowCursor();
-    // [LOG: 20260611_1510] Do not use inline !important; loading CSS must hide stale cursor synchronously.
+    const visible = shouldRenderCursor();
+    const active = visible && document.activeElement === cmdInput;
+    // [LOG: 20260707_1700] Keep the cursor cell reserved even when the input is not focused.
+    // Hiding it with display:none made the prompt appear to gain/lose one terminal cell on click.
     cursorEl.style.setProperty('display', visible ? 'inline-block' : 'none');
+    cursorEl.style.setProperty('opacity', active ? '1' : '0.35');
+    cursorEl.style.setProperty('animation', visible && active ? '' : 'none');
 
     if (visible) {
       updateCursorPosition();
@@ -266,7 +269,14 @@ export function createTerminalInputUi(deps) {
       syncMaskedInputDisplay();
       syncCursorVisibility();
     }, 0));
-    cmdInput.addEventListener('bbs:mask-state-change', syncMaskedInputDisplay);
+    cmdInput.addEventListener('bbs:mask-state-change', () => {
+      // [LOG: 20260707_1735] 값 클리어/프롬프트 교체 시 커서 위치도 재계산한다.
+      // 커서가 비포커스에도 항상 표시되도록 바뀐 뒤(20260707_1700), 명령 제출 직후 화면 전환에서
+      // 이전 명령 길이만큼 오른쪽으로 밀린 커서 잔상이 남아 news/weather 간 캐럿 왼쪽 공백이
+      // 다르게 보이던 문제(포커스를 줘야만 정상 복귀)의 원인이었다.
+      syncMaskedInputDisplay();
+      syncCursorVisibility();
+    });
     document.addEventListener('selectionchange', () => {
       if (document.activeElement === cmdInput) {
         syncCursorVisibility();
