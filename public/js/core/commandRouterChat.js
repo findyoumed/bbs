@@ -94,6 +94,14 @@ export function createChatCommandHandler(deps) {
     }
 
     if (state.screen === 'chat-room') {
+      // [LOG: 20260707_1224] 상단바 로고 등 클릭으로 들어온 'T'는 메시지가 아니라 초기화면 이동 의도다.
+      // (기존에는 "T"라는 메시지가 대화방에 전송되는 결함이 있었다. /T와 동일하게 처리한다.)
+      if (context?.source === 'click' && cmd === 'T') {
+        if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+        await showMain();
+        return true;
+      }
+
       // [LOG: 20260411_2345] 대화방 내 명령어는 반드시 '/'로 시작해야 함
       if (input.startsWith('/')) {
         const slashCmd = cmd.substring(1); // '/' 제외한 명령

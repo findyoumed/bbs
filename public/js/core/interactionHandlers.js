@@ -93,7 +93,9 @@ export function createInteractionHandlers(deps) {
       showPendingCommandInput(text);
     }
     const token = beginCommandExecution(state);
-    const result = handleCmd(text);
+    // [LOG: 20260707_1224] 클릭 출처를 디스패처에 알린다. 대화실 등 raw-text 화면에서
+    // 타이핑 입력은 메시지로, 클릭 명령(상단바 로고 'T' 등)은 내비게이션으로 구분하기 위함.
+    const result = handleCmd(text, { source: 'click' });
     trackCommandExecution(state, result, token);
     // [LOG: 20260621_1100] showPending=false(상단바 로고 클릭 등)면 입력창에 명령을 표시하지 않으므로
     // 대기 caret(trackCommandPending)에도 명령 텍스트를 넘기지 않는다. 80ms 후 'T'가 잠깐 노출되던 버그 차단.

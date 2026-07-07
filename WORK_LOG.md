@@ -1,3 +1,23 @@
+## [2026-07-07 12:24] 대화실/내정보 raw-text 입력 전역 명령 하이재킹 근절 (Ralph Loop 3차)
+
+**LOG_ID: 20260707_1224**
+목표: 직전 /Q 수정(20260703_1720)과 같은 부류의 결함 전수 점검 — 디스패처 파이프라인에서 전역 핸들러(142행)가 chat(147)/myinfo(149)보다 먼저 실행되어 raw-text 입력을 가로채는 문제.
+변경 파일:
+- `public/js/core/commandDispatcherExecution.js` (raw-text 컨텍스트 도메인 우선 디스패치)
+- `public/js/core/interactionHandlers.js` (`executeCommand` → `handleCmd(text, { source: 'click' })`)
+- `public/js/core/commandRouterChat.js` (chat-room 클릭 'T' → 초기화면 이동)
+- `archive/dev-only/tests/unit/chatRawTextDispatch.test.js` (신규 회귀 테스트 6케이스)
+수행 작업:
+1) [진단] 정적 추적으로 확증: ① 대화실에서 "hi"(내정보), "help"(도움말 화면 이탈), "q"/"x"/"bye"(종료 다이얼로그), "w"/"user"(접속자), "cls", "hist", "z", "+" 등 한 단어 메시지가 전역 명령에 하이재킹되어 전송 불가. ② 대화방 개설 중 제목/환영메시지 입력도 동일. ③ 내정보 비밀번호/별명 입력에서 "hist" 입력 시 히스토리 화면으로 이탈. ④ 대화실에서 상단바 로고 클릭('T')이 "T"라는 메시지로 방에 전송되는 기존 결함(단독 'T'는 GO 전용 executeGoCommand가 처리 안 함 → chat 핸들러까지 낙하).
+2) [수정 설계] 클릭 디스패치에 `context.source='click'` 표시를 추가하고, 디스패처에 raw-text 컨텍스트 판정(`chat-room` / `chat-lobby`+개설단계 / `myinfo` 편집모드)을 도입. 타이핑 입력은 chat/myinfo 도메인 핸들러가 전역·VFS보다 먼저 소비하고, 클릭 명령은 내비게이션 의도이므로 기존 전역 우선 순서 유지. chat-room 클릭 'T'는 /T와 동일하게 폴링 정리 후 초기화면 이동.
+3) [브라우저 검증] Playwright(포트 3014): 대화실에서 "hi"/"help"/"q" 모두 메시지로 정상 전송([guest] hi 등), /st 정상, /q 퇴장 정상(기존 수정 회귀 없음), 개설 단계에서 제목 "help" 정상 수용→환영메시지 단계 진행→/M 취소 정상. 콘솔 에러/경고 0건.
+4) [회귀] 신규 유닛 테스트 6케이스(도메인 우선 순서 4 + 실핸들러 클릭/타이핑 T 분기 2) 작성·통과. npm test 전체(10파일), smoke:command-parity, smoke:renderer-ui, smoke:chat-rooms, smoke:vercel-ready, smoke:full-traversal 전부 통과.
+실행: `npm test`, 스모크 5종, Playwright 실사
+기대: 대화실에서 어떤 한 단어 메시지도 화면 이탈 없이 전송, 내정보 편집 입력 보호, 로고 클릭은 어디서나 초기화면 이동.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-06 23:15] 터미널 감성 6차 — 로딩 종료 시 hintbar 한 칸 내려앉음(layout shift) 근절
 
 **LOG_ID: 20260706_2247**

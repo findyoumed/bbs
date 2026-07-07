@@ -90,6 +90,16 @@ export function createCommandDispatcherExecution(deps) {
     const cmd = normalized.toUpperCase();
     const screen = state.screen;
 
+    // [LOG: 20260707_1224] raw-text 입력 컨텍스트: 대화실 메시지, 대화방 개설 단계, 내정보 편집 단계.
+    // 이 컨텍스트에서 타이핑한 텍스트("hi", "help", "q", "cls" 등)는 명령이 아니라 입력값이므로
+    // 전역/VFS 핸들러가 가로채기 전에 도메인 핸들러(chat/myinfo)가 먼저 소비해야 한다.
+    // 클릭으로 들어온 명령(context.source === 'click', 상단바 로고 등)은 내비게이션 의도이므로 기존 순서를 따른다.
+    const isClickSource = context?.source === 'click';
+    const rawTextEntryScreen = screen === 'chat-room'
+      || (screen === 'chat-lobby' && state._chatRoomCreateStage)
+      || (screen === 'myinfo' && String(state._myInfoMode || 'view').trim().toLowerCase() !== 'view');
+    const domainTextFirst = rawTextEntryScreen && !isClickSource;
+
     if (logger && input) {
       const logInput = sensitiveInput ? '[REDACTED]' : input;
       const logExpandedInput = sensitiveInput ? '[REDACTED]' : expandedInput;
@@ -132,6 +142,12 @@ export function createCommandDispatcherExecution(deps) {
           || (await handleServiceCommand({ s: screen, cmd, rawCmd: normalized, context }))
           || (await handleGlobalCommand({ s: screen, cmd, rawCmd: normalized, context }));
       },
+      // [LOG: 20260707_1224] raw-text 컨텍스트의 타이핑 입력은 도메인 핸들러가 최우선으로 소비한다.
+      // (chat: 대화실 메시지·슬래시 명령·개설 단계 입력 / myinfo: 별명·이메일·비밀번호·탈퇴 단계 입력)
+      async () => domainTextFirst && !!input && (screen === 'chat-room' || screen === 'chat-lobby')
+        && await handleChatCommand({ input, rawCmd: normalized, cmd, context }),
+      async () => domainTextFirst && !!input && screen === 'myinfo'
+        && await handleMyInfoCommand({ input, rawCmd: normalized, cmd, context }),
       // [LOG: 20260506_1315] Screen-local navigation commands like B/F must win
       // over global command handling so page navigation does not leak into menu navigation.
       async () => await handleBrowseCommand({ s: screen, input, cmd, rawCmd: normalized, context }),
