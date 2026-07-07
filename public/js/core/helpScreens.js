@@ -93,10 +93,13 @@ export function createHelpScreens(deps) {
     // 2. 전체 줄(Lines) 구성
     const helpLines = [];
     const buildHelpLineAdaptive = (cmd, desc) => {
-      const cmdWidth = isMobile ? 12 : 22;
+      // [LOG: 20260707_1430] "Q, X, EXIT, BYE, LOGOUT"(23자)이 폭 22에서 공백 없이 잘려
+      // "LOGOU로그아웃하고"처럼 설명과 붙던 문제: 폭을 24로 늘리고, 명령이 폭을 넘치면
+      // 폭-1로 잘라 컬럼 사이 최소 1칸 간격을 보장한다.
+      const cmdWidth = isMobile ? 12 : 24;
       return [
         ansiColor(14),
-        fitCell(cmd, cmdWidth),
+        fitCell(truncateDisplayText(cmd, cmdWidth - 1), cmdWidth),
         ansiColor(15),
         truncateDisplayText(desc, targetCols - cmdWidth),
         ANSI_RESET

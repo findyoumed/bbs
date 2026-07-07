@@ -287,6 +287,12 @@ export function createRoutingStateRestorer(deps) {
         }
         if (typeof showRanking === 'function') return await showRanking(true);
       }
+      // [LOG: 20260707_1430] /game 단독 딥링크(새로고침)가 초기화면으로 폴백하던 문제 수정.
+      // 이 핸들러가 rootSegment 'game'을 선점해 범용 메뉴 복원(showBoardSelect)에 도달하지
+      // 못하므로, 하위 경로가 없으면 오락실 메뉴를 직접 복원한다.
+      if (!sub) {
+        return await showBoardSelect('game', '', true);
+      }
       await showMain(true);
     }
   };
