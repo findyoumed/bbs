@@ -1,3 +1,23 @@
+## [2026-07-07 14:24] 대화실 화면 완전 깨짐 수정 — chat 빌더 상단바 헤더 누락 (사용자 리포트)
+
+**LOG_ID: 20260707_1424**
+목표: 사용자 리포트 "ui가 완전히 이상한 부분도 있는데" — 스크린샷 순회로 원인 화면 특정·수정.
+변경 파일:
+- `public/js/core/chatAnsiBuilders.js` (buildTopHeader 4줄 헤더 추가, 대화방 메시지 슬롯 18→16)
+- `public/js/core/commandRouterChat.js` (낙관적 렌더를 표준 renderAnsiScreenWithTopbar로 교체)
+- `archive/dev-only/tests/unit/chatRawTextDispatch.test.js` (스텁 보강: querySelector/document, 명시적 exit)
+수행 작업:
+1) [증상] 대화실 로비: 로고 박스에 "번호 아이디 닉네임 현재위치"(접속자 컬럼 헤더)가 박히고, 접속자 목록이 통째로 사라지고, 화면 중간에 반토막 구분선이 떠 있음. 대화방: 첫 메시지("[guest] hi")가 로고로 표시. 메시지 전송 직후에는 상단바(로고/시계)가 아예 소실.
+2) [원인] `renderAnsiScreenWithTopbar`는 ansiText 앞 4줄(브랜드+시각/라벨행/구분선/공백)을 상단바 모델로 파싱한 뒤 `stripLeadingAnsiLines(4)`로 제거하는 계약. 모든 빌더가 `buildTopHeader()`를 앞에 붙이는데 **chat 빌더 둘만 누락**(grep 전수 확인) — 본문 1행이 로고로 오인되고 본문 앞 4줄이 잘려나감. 추가로 `commandRouterChat.js`의 메시지 전송 낙관적 갱신은 `screenEl.innerHTML` 직접 조립이라 상단바 자체가 없었음.
+3) [수정] ① 로비: `buildTopHeader({leftLabel:'CHAT', centerLabel:'대화실 대기실'})` 추가. ② 대화방: 동일 헤더 + 헤더를 18줄 패딩 계산과 분리(반환 시 결합), 슬롯 18→16으로 화면 예산 재조정(헤더 추가로 하단 상태줄 잘림/스크롤바 발생했던 것 해결). ③ 낙관적 갱신을 표준 렌더러로 교체.
+4) [검증] Playwright 스크린샷 전후 비교: 로비(로고/CHAT/대기실 라벨/접속자 테이블/방 목록 정상), 대화방(광장(PLAZA) 라벨, 메시지, 하단 상태줄 온전, 스크롤바 없음), 메시지 전송 직후에도 상단바 유지. 메인/게시판 화면은 원래 정상임을 재확인.
+5) [회귀] chatRawTextDispatch 테스트가 새 렌더 경로(ansiTopbarScreen import)로 인해 실패/행 → screenEl.querySelector·document 스텁 추가, 시계 setInterval로 인한 프로세스 잔류를 명시적 exit로 차단. npm test 전체, smoke:renderer-ui, smoke:chat-rooms 통과.
+실행: Playwright 스크린샷 6장 전후 비교, `npm test`, 스모크 2종
+기대: 대화실 로비/대화방이 다른 화면과 동일한 정통 상단바 프레임으로 렌더링.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-07 12:24] 대화실/내정보 raw-text 입력 전역 명령 하이재킹 근절 (Ralph Loop 3차)
 
 **LOG_ID: 20260707_1224**

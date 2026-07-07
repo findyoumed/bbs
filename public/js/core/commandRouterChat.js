@@ -1,3 +1,4 @@
+import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createChatCommandHandler(deps) {
@@ -175,8 +176,9 @@ export function createChatCommandHandler(deps) {
 
         const nick = state.user?.nickName || '나';
         const ansiResult = buildChatRoomAnsi(state._chatRoom, state._chatMessages || [], nick);
-        const rendered = ansiToHTML(ansiResult?.text || ansiResult);
-        screenEl.innerHTML = `<div class="ansi-screen">${rendered.html}</div>`;
+        // [LOG: 20260707_1424] 낙관적 갱신도 표준 상단바 렌더러를 사용한다.
+        // 기존의 screenEl.innerHTML 직접 조립은 상단바 없이 그려져 메시지 전송 직후 로고/시계가 사라졌다.
+        renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });
         if (shouldAutoFocusCommandInput()) {
           cmdInput.focus();
         }

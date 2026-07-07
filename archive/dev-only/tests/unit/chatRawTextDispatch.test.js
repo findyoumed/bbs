@@ -23,6 +23,10 @@ function assert(cond, message) {
 if (typeof global.window === 'undefined') {
   global.window = {};
 }
+// [LOG: 20260707_1424] ansiTopbarScreen.js의 모듈 레벨 시계 setInterval이 document를 참조하므로 스텁 필요
+if (typeof global.document === 'undefined') {
+  global.document = { querySelectorAll: () => [] };
+}
 
 function createDispatcherHarness(createCommandDispatcherExecution, { state, overrides = {} }) {
   const calls = [];
@@ -138,7 +142,7 @@ async function run() {
       cmdInput: { focus: () => {} },
       openChatRoomCreate: async () => {},
       restoreStateFromURL: async () => {},
-      screenEl: { innerHTML: '' },
+      screenEl: { innerHTML: '', querySelector: () => null },
       setHint: () => {},
       setPrompt: () => {},
       showChatLobby: async () => {},
@@ -158,6 +162,8 @@ async function run() {
   }
 
   console.log('chatRawTextDispatch tests passed!');
+  // [LOG: 20260707_1424] ansiTopbarScreen.js의 시계 setInterval이 이벤트 루프를 붙잡으므로 명시적으로 종료한다.
+  process.exit(0);
 }
 
 run().catch((error) => {
