@@ -61,14 +61,17 @@ export function createPostViewView(deps) {
     const isGuest = !state.user || state.user.isGuest;
     
     // [LOG: 20260426_1455] Evolve Mode: Sequential rendering for post view
+    // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     await renderAnsiScreenWithTopbarSequential({
       ansiText: buildPostViewAnsi(state.board, state.post, state.totalCount, canEdit, isGuest, state.searchParams || {}),
       ansiToHTML,
       screenEl,
-      renderScreenSequential
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter('txt/cmd_article_footer.txt', getSupportedFooterText(state) || getCommandFooterText('postView'));
+      }
     });
-    
-    await applyCommandFooter('txt/cmd_article_footer.txt', getSupportedFooterText(state) || getCommandFooterText('postView'));
+
     // [LOG: 20260424_2020] 모바일에서 게시물 보기 진입 시 키보드 자동 팝업 방지
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();

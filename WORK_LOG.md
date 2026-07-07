@@ -1,3 +1,111 @@
+## [2026-07-07 23:45] 뉴스 목록 진입 시 "연결하는 중입니다"와 새 화면 footer 힌트가 동시에 보이던 결함 수정
+
+**LOG_ID: 20260707_2345**
+목표: 사용자 리포트 — "연결하는 중입니다 / 다음쪽(F),상위(P),초기화면(T),이동(GO),도움말(H) 이렇게 나오는 화면은 이상해. 연결하는 중인데 힌트바가 왜 나와." 본문은 로딩 중 문구를 보여주는데 하단 힌트는 이미 완성된 화면의(다음 페이지가 있는 뉴스 목록의) 내용을 보여주는 모순된 상태.
+변경 파일: `public/js/core/newsScreens.js` (`setReady` deps 추가, `showNewsList`에서 데이터 로드 성공 직후 `setReady(true)` 호출 추가)
+수행 작업:
+1) [원인 규명] `showNewsList`는 데이터 요청이 80ms 넘게 걸리면 `showNewsLoading()`→`setLoading()`을 호출해 "연결하는 중입니다" 로딩 표시를 예약한다. `setLoading()`은 내부적으로 자체 400ms 지연 타이머(`core._loadingTimer`)를 걸어 그 시점에도 응답이 없으면 화면 전체를 로딩 문구로 덮어쓴다. 그런데 `showNewsList`는 데이터가 도착하면 바깥의 80ms "로딩을 보여줄지" 타이머(`loadingTimer`, 지역 변수)만 `clearTimeout`했을 뿐, `setLoading()` 내부에 걸린 이 400ms 타이머(`core._loadingTimer`)는 **한 번도 취소한 적이 없었다** — `postListView.js`/`postViewView.js`/`menuNavigation.js`는 전부 데이터 도착 직후 `setReady(true)`를 호출해 이 내부 타이머를 취소하는데, `newsScreens.js`만 이 호출이 빠져 있었다. 그 결과: 80~400ms 사이에 실제 뉴스 데이터가 도착해 새 화면(본문+footer)이 이미 다 그려지고 난 "후"에도, 살아남은 내부 400ms 타이머가 뒤늦게 발동해 방금 그린 본문을 "연결하는 중입니다" 문구로 덮어써 버렸다 — 이때 footer는 이미 새로 갱신되어 있었으므로(직전 20260707_2330 수정으로 스트리밍 완료 후에만 갱신·노출됨), "본문=로딩 중, footer=다음 화면 내용"이라는 모순된 화면이 보였다.
+2) [해결책] `showNewsList`에서 데이터 로드 성공 직후(`clearTimeout(loadingTimer)` 다음 줄) `setReady(true)`를 호출해 살아있는 내부 타이머를 확실히 취소 — 다른 3개 화면과 동일한 패턴으로 통일. `showNewsMenu`/`showNewsArticle`은 애초에 `setLoading()`을 호출하지 않아 이 결함의 대상이 아니었다.
+3) [검증] Playwright로 네트워크를 인위적으로 느리게(250ms 지연) 만들어 80~500ms 구간에 데이터가 도착하는 경우를 재현 — 20ms 간격으로 "본문에 로딩 문구가 있으면서 동시에 힌트가 채워져 보이는" 상태를 검사한 결과 0건. 스로틀 없는 정상 흐름에서는 뉴스 목록이 19줄 렌더링되고 힌트가 정확히 "다음쪽(F),상위(P),초기화면(T),이동(GO),도움말(H)"로 채워짐을 확인(사용자가 보고한 것과 동일한 문구 — 화면 식별 일치).
+실행: `node --check`, `npm run smoke:ui-geometry`, `npm run smoke:ui-layout`, `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready`, `npm run smoke:rss-services` — 전부 ok.
+기대: 뉴스 목록 진입/페이지 이동 시, 데이터가 늦게 도착하더라도 화면이 다 그려진 뒤에 로딩 문구가 뒤늦게 튀어나와 덮어쓰는 일이 없다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-07 23:30] 화면 전체(하단 힌트/입력줄 포함)가 위→아래로 이어서 나오는 reveal-in-place 완성
+
+**LOG_ID: 20260707_2330**
+목표: 사용자 리포트 — "아직도 입력창에서 입력을 하면 윗부분이 렌더링될 때 아랫부분 힌트바와 입력창이 눈에 보여. 위에서부터 순서대로 보이는 효과를 줘야해. 화면 윗부분만 변하는게 아니라 화면 전체가 터미널처럼 보여야해." 즉, 본문(상단)이 스트리밍되는 "동안" 하단 힌트/입력줄이 이미(구 화면 내용으로) 떠 있는 것 자체가 문제 — 하단도 본문 마지막 줄처럼 스트리밍 시퀀스의 일부여야 한다.
+변경 파일:
+- `public/js/core/ansiTopbarScreen.js` (`renderAnsiScreenWithTopbarSequential`에 `afterBodyRender` 콜백 파라미터 추가 + 본문 스트리밍 시작 전 `#cmd-hint`/`#terminal-prompt-row`를 `visibility:hidden !important`로 숨기고, 본문+새 footer 내용이 모두 준비된 뒤 `finally`에서 드러내는 로직 추가)
+- `public/js/core/weatherScreens.js`, `amusementScreens.js`, `rankingScreens.js`, `voteScreens.js`, `helpScreens.js`, `newsScreens.js`, `menuNavigation.js`, `postListView.js`, `postViewView.js` — 이 렌더러를 쓰는 13개 호출부 전부에서, 렌더 직후 별도로 실행하던 `applyCommandFooter(...)`(+일부 `setPrompt`) 호출을 `afterBodyRender` 콜백으로 이동
+수행 작업:
+1) [설계] 본문 줄들이 `.ansi-line--pending`(visibility:hidden → 줄단위 해제)로 스트리밍되는 것과 동일한 "reveal-in-place" 원리를 하단 힌트/입력줄에도 적용 — 마치 그 둘이 본문의 "마지막 줄"인 것처럼, 본문이 다 드러나고 footer 콘텐츠가 새 값으로 채워진 "직후"에만 visibility를 해제한다. 레이아웃 높이는 항상 그대로(visibility만 제어)라 20260706_2247의 "하단 프레임 고정" 원칙과 상충하지 않는다.
+2) [발견된 충돌] 최초 구현(인라인 `style.visibility='hidden'`, `!important` 없음)으로 테스트한 결과, 명령 제출 후 약 80ms 뒤 `is-command-pending`(대기 커서 표시) 클래스가 켜지면서 CSS의 `#terminal-container.is-command-pending #cmd-hint/#terminal-prompt-row { visibility: visible !important; }` 규칙이 본문이 아직 스트리밍 중인데도(pending 7/8) 하단을 강제로 다시 보이게 만들어, 이전 화면의 낡은 힌트가 잠깐 노출됐다(Playwright로 실측: pending=7일 때 hintVisibility가 hidden→visible로 되돌아감).
+3) [해결] 인라인 스타일도 `setProperty('visibility', 'hidden', 'important')`로 지정해 CSS `!important`보다 우선하도록 함(인라인 `!important` > 스타일시트 `!important`). 드러낼 때는 `removeProperty('visibility')`로 완전히 제거해, 이후에는 기존 CSS 규칙(is-loading/is-command-pending 등)이 정상적으로 다시 적용되게 함. `is-command-pending`이 화면 전환과 무관한(렌더러를 타지 않는) 명령에서 여전히 대기 커서를 보여주는 본래 동작은 그대로 유지됨을 별도 확인.
+4) [범위] `renderAnsiScreenWithTopbarSequential`를 사용하는 모든 화면(메인메뉴/게시판목록 트리, 뉴스 메뉴·목록·기사, 게시판 목록/게시물 보기, 날씨 메뉴·내위치·지역별, 게임 4종, 랭킹, 설문, 도움말/히스토리)에 일괄 적용 — hotspot 렌더링(핫스팟 버튼 부착)은 footer 상태와 무관하므로 순서를 그대로 두어도 무방해 손대지 않음.
+5) [검증] Playwright로 메인→날씨, 메인→뉴스 전환을 각각 추적: 본문이 스트리밍되는 내내(pending N→0) 힌트/입력줄의 `visibility`가 `hidden`으로 유지되고(`hintText` 표시 없음), 스트리밍이 끝나고 20~40ms 후에야 `visible`로 전환되며 이미 올바른 새 내용을 담고 있음을 확인(중간에 낡은 내용이나 빈 상태가 전혀 보이지 않음). `footerH`는 전 구간 72px로 불변. `is-command-pending`을 인위적으로 토글해도(우리 메커니즘이 관여하지 않는 시나리오) 여전히 강제 visible이 적용됨을 별도 확인해 기존 대기 커서 기능이 살아있음을 검증.
+실행: `node --check`(수정 파일 10개 전체), `npm run smoke:ui-geometry`, `npm run smoke:ui-layout`, `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready` — 전부 ok.
+기대: 어떤 화면 전환에서도 상단바→본문→하단 힌트/입력줄이 하나의 흐름처럼 위에서 아래로 순서대로 나타나며, 전환 도중 화면의 어느 부분도(상단이든 하단이든) 낡은 이전 화면 내용을 보여주지 않는다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-07 22:30] 20260707_2200의 힌트 선 비우기(setHint('')) 되돌림 — "갑자기 사라진다"는 것 자체가 비터미널적
+
+**LOG_ID: 20260707_2230**
+목표: 사용자 리포트 — "선택>> 입력해서 엔터치면 갑자기 힌트바가 없어지는데. 전반적으로 터미널 같지 않아. 터미널 형식이어야 해." 직전(20260707_2200) 수정이 의도와 달리 새로운 비-터미널 증상을 만들었다는 지적.
+변경 파일: `public/js/core/weatherScreens.js`, `public/js/core/amusementScreens.js`, `public/js/core/rankingScreens.js`, `public/js/core/voteScreens.js`, `public/js/core/helpScreens.js`, `public/js/core/newsScreens.js`
+수행 작업:
+1) [재평가] 20260707_2200에서 "footer가 스트리밍 완료 후 갱신되는" 순서를 더 뚜렷하게 보여주려고 렌더 시작 전 `setHint('')`으로 힌트를 강제로 비웠었다. 그런데 몸통이 위→아래로 스트리밍되는 데 걸리는 최소 시간(줄당 20ms+지터, 예: 8줄 ≈ 200ms 이상)만큼 **항상, 매번** 하단이 텅 빈 채로 보이게 되어 있었다 — 느린 네트워크일 때만 보이는 게 아니라 캐시 히트로 즉시 응답되는 경우에도 100% 재현되는 현상이었다. 사용자는 이걸 "갑자기 없어진다"는 결함으로 인지했다.
+2) [핵심 재인식] 애초 사용자의 최초 요청("footer가 맨 마지막에 뜨어야 한다")은 **순서**에 대한 것이었지, "전환 도중 하단을 텅 비워 놓아라"는 뜻이 아니었다. `applyCommandFooter`는 이미 `renderAnsiScreenWithTopbarSequential` 완료 "후"에만 호출되므로, `setHint('')`을 추가하지 않아도 순서 자체는 이미 올발랐다(20260707_2130에서 이미 달성). `setHint('')` 추가는 불필요한 과잉 수정이었고, 오히려 "실제 터미널에는 없는, 인위적으로 화면을 비우는 연출"을 만들어 "터미널 같지 않다"는 새 불만을 낳았다. 실제 PC통신 단말은 새 프롬프트가 준비되기 전까지 이전 컨텍스트를 굳이 지우지 않는다.
+3) [해결책] 6개 파일에서 20260707_2200이 추가한 `setHint('')` 호출과 그에 따른 `setHint`/`renderScreenSequential` deps 추가를 전부 되돌림(`newsScreens.js`는 원본과 100% 동일하게 복원). 20260706_2230(스트리밍 재활성화)과 20260707_2130(즉시 렌더 화면들의 스트리밍 전환 + footer 전체 사라짐 버그 수정)의 변경은 그대로 유지.
+4) [검증] 동일 Playwright 계측 재실행 — 힌트 텍스트가 본문 스트리밍 내내(`pending: 7→0`) 이전 화면 값("이동(GO),바탕색(C)...")을 그대로 유지하다가, 스트리밍이 끝나는 즉시(빈 상태를 거치지 않고) 새 값("상위(P),초기화면(T)...")으로 직접 전환됨을 확인. `footerH`는 여전히 72px로 불변. 날씨/게임/도움말/랭킹/설문 5개 화면 스트리밍 동작 및 콘솔 에러 0건 재확인.
+실행: `node --check`(수정 파일 전체), `npm run smoke:ui-geometry`, `npm run smoke:ui-layout`, `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready` — 전부 ok.
+기대: 화면 전환 시 하단 힌트가 순간적으로도 비어 보이지 않고, 이전 값에서 새 값으로 (스트리밍 완료 시점에) 곧바로 전환되어 "갑자기 사라짐" 없이 자연스럽게 마지막에 갱신된다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-07 22:00] "footer가 진짜 마지막에 뜨는" 효과 완성 — 스트리밍 중 이전 화면 힌트 잔존 제거
+
+**LOG_ID: 20260707_2200**
+목표: 사용자 리포트 — "아직도 #terminal-footer 하단 부분이 맨 마지막에 뜨는 터미널 같은 효과가 안 나온다." (직전 20260707_2130에서 본문 스트리밍 순서와 footer 전체 사라짐 버그는 고쳤지만, 이 리포트로 봤을 때 여전히 부족함이 남아 있었다.)
+변경 파일:
+- `public/js/core/weatherScreens.js`(`setHint` deps 추가, `showWeatherMenu`/`showWeatherView` 시작 지점에 `setHint('')` 추가)
+- `public/js/core/amusementScreens.js`, `public/js/core/rankingScreens.js`, `public/js/core/voteScreens.js`(공용 `render()` 헬퍼 시작에 `setHint('')` 추가)
+- `public/js/core/helpScreens.js`(`setHint` deps 추가, `showHelp`/`showHistory` 시작에 `setHint('')` 추가)
+- `public/js/core/newsScreens.js`(`showNewsMenu`/`showNewsList`/`showNewsArticle` 시작에 `setHint('')` 추가 — 캐시 히트 등으로 로딩 지연이 없을 때도 커버)
+수행 작업:
+1) [원인 재규명] 직전 라운드(20260707_2130)에서 본문은 위→아래로 스트리밍되고 `applyCommandFooter`가 스트리밍 "완료 후"에 호출되도록 순서 자체는 맞았지만, 스트리밍이 진행되는 동안 `#cmd-hint`에는 **이전 화면의 명령 목록이 그대로 남아있었다**. Playwright로 메인 메뉴→날씨 메뉴 전환을 추적한 결과: 본문이 8줄 스트리밍되는 내내(`pending: 7→0`) 힌트는 "이동(GO),바탕색(C),로그인(LOGIN)..."(이전 화면 것)을 계속 표시하다가, 스트리밍이 끝난 직후에야 "상위(P),초기화면(T)..."(날씨 메뉴 것)로 바뀜. 순서는 맞았지만 도중에 "낡은 정보가 남아있는 상태"가 보여 "footer가 마지막에 뜬다"는 느낌을 주지 못했다.
+2) [해결책] `menuNavigation.js`의 `showMain`/`showBoardSelect`가 이미 쓰고 있던 패턴(렌더 시작 전 `setHint('')`으로 힌트를 비움 → 스트리밍 동안은 하단이 완전히 비어 있음 → `applyCommandFooter`가 스트리밍 완료 후 새 힌트를 채움)을 날씨/게임/랭킹/설문/도움말·히스토리/뉴스 전체로 확장 적용. `postListView.js`/`postViewView.js`는 이미 무조건 `setLoading(...)`을 먼저 호출해 같은 효과를 내고 있어 변경하지 않음.
+3) [검증] 동일 계측 재실행 — 힌트가 스트리밍 시작 전 즉시 빈 문자열로 바뀌고(`hintText: ""`), 본문이 8줄 스트리밍되는 내내(`pending: 7→...→0`) 계속 비어 있다가, 스트리밍 완료 36ms 후에야 새 화면의 힌트가 나타남을 확인. `footerH`는 전 구간 72px로 불변(붕괴 없음). 날씨/게임/도움말/랭킹/설문 5개 화면 모두 스트리밍 동작 및 콘솔 에러 0건 재확인.
+실행: `node --check`(수정 파일 전체), `npm run smoke:ui-geometry`, `npm run smoke:ui-layout`, `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready` — 전부 ok.
+기대: 어떤 화면 전환에서도 본문이 위→아래로 다 그려질 때까지 하단 상태줄(힌트)은 비어 있고, 본문이 완성된 직후에만 새 힌트/명령이 나타나 "PC통신 단말에서 하단 상태줄이 가장 마지막에 갱신되는" 효과가 완성된다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-07 21:30] 서비스 화면 위→아래 스트리밍 통일 + 로딩 중 footer 전체 사라짐 버그 근절
+
+**LOG_ID: 20260707_2130**
+목표: 사용자 리포트 2건 — ① "모든 UI는 PC통신처럼 위에서부터 아래로 나오고, 맨 아래 입력줄(#cmd-prompt-renderer)이 가장 나중에 보여야 한다. 모든 화면이 다 마찬가지."(날씨 등 일부 화면이 즉시 렌더로 남아 있던 문제) ② "#cmd-input에 입력하면 잠시 힌트바가 사라지는 것이 보인다."
+변경 파일:
+- `public/js/core/weatherScreens.js` (메뉴/내 위치/지역별 날씨 3개 렌더 경로를 즉시 렌더 → `renderAnsiScreenWithTopbarSequential`로 전환, `sequential` 플래그 분기 제거)
+- `public/js/core/amusementScreens.js`, `public/js/core/rankingScreens.js`, `public/js/core/voteScreens.js`, `public/js/core/helpScreens.js` (공용 `render()`/`showHelp`/`showHistory`를 동일하게 시퀀셜 스트리밍으로 전환)
+- `public/js/core/terminalUiCore.js` (`setReady(false)`와 `setLoading()`에서 `setFooterVisibility(false)` 호출 제거)
+수행 작업:
+1) [①: 즉시 렌더 잔존 화면 통일] 20260706_2230 라운드에서 뉴스/게시판/메뉴 등은 reveal-in-place 스트리밍으로 전환됐지만, 날씨/게임(바이오리듬·운세·MBTI)/랭킹/설문/도움말·히스토리 화면은 "즉시 렌더가 맞는 화면"으로 남겨졌었다(20260706_2230 로그 5번 참고). 이번 사용자 지시("모든 화면이 다 마찬가지")로 그 결정을 뒤집고, 해당 화면들도 전부 `renderAnsiScreenWithTopbarSequential` 경로로 통일 — 본문이 위→아래로 줄단위 공개된 뒤 하단 입력줄이 마지막에 자리한다. Playwright로 `/service/weather`, `/game`, `/help`, `/ranking`, `/vote` 5개 화면 모두 `.ansi-line--pending` 진행(streamed=true) 및 콘솔 에러 0건 확인.
+2) [②: 원인 규명] Playwright로 화면 전환(T 등) 시 `#terminal-footer`의 `display` 값을 매 프레임 추적한 결과, 전환 시작 직후 짧은 구간(약 80ms) 동안 `footerDisplay: "none"`(전체 footer 소멸, `footerH: 0`)이 실측됨. 원인은 `terminalUiCore.js`의 `setReady(false)`와 `setLoading()`이 `setFooterVisibility(false)`를 호출해 `#terminal-footer[data-footer-state="hidden"] { display:none !important }`를 매 로딩마다 발동시키는 것 — LOG_ID 20260707_1815에서 "footer 콘텐츠가 준비될 때까지 숨긴다"는 취지로 도입됐으나, 이는 20260706_2247에서 이미 고쳤던 "로딩 중 하단 프레임 붕괴" 버그를 JS 경로로 재도입한 회귀였다.
+3) [②: 해결책] `setReady(false)`와 `setLoading()`에서 `setFooterVisibility(false)` 호출을 제거. 힌트 텍스트는 여전히 비워지지만(높이는 `#cmd-hint`의 `min-height`로 이미 예약됨) `#terminal-footer` 자체는 `display:flex` 상태를 유지 — PC통신 하단 상태줄은 로딩 여부와 무관하게 항상 같은 자리에 있어야 한다는 원칙 재적용. 최초 부팅 시의 `setFooterVisibility(false)`(모듈 초기화 1회, index.html의 `data-footer-state="hidden"` 초기값과 짝) 및 auth 비밀번호 재설정 프롬프트 전용 숨김(`authScreens.js`)은 성격이 달라 그대로 유지.
+4) [검증] 동일 Playwright 계측을 수정 후 서버에 재실행 — `footerDisplay`가 전 구간 `"flex"`, `footerH` 72px 상수로 고정됨을 확인(더 이상 0으로 붕괴하지 않음). `hintEl` 텍스트는 로딩 중 잠시 비지만 높이(19px)는 유지.
+실행: `node --check`(전체 수정 파일), `npm run smoke:ui-geometry`, `npm run smoke:ui-layout`, `npm run smoke:renderer-ui`, `npm run smoke:vercel-ready` — 전부 ok. `npm test`는 기존에도 실패하던 ESM 테스트 파일(`chatRawTextDispatch.test.js`가 `commandDispatcherExecution.js`를 CJS로 로드 시도) 때문에 실패 — 수정 전 stash 상태에서도 동일하게 실패함을 확인해 이번 변경과 무관함을 검증.
+기대: 날씨/게임/랭킹/설문/도움말 화면이 뉴스·게시판과 동일하게 위→아래로 스트리밍되고, 어떤 화면 전환에서도 하단 상태줄(구분선+힌트+입력줄)이 통째로 사라지지 않는다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-07 20:30] 날씨 화면 및 전체 화면 비포커스/로딩 시 커서 공백 튐 버그 수정
+
+**LOG_ID: 20260707_2030**
+목표: 사용자 리포트 — 날씨 화면(/service/weather)에서 포커스가 있을 때와 없을 때 `#cmd-input` 왼쪽 공백이 다른 현상 해결.
+변경 파일:
+- `public/js/core/weatherScreens.js` (deps 구조분해할당에 `setLoading` 누락된 버그 수정)
+- `public/styles/retro-terminal.css` (.terminal-cursor 및 로딩 시 숨김 스타일을 `display: none` 대신 `visibility: hidden`으로 교체)
+- `public/js/core/terminalInputUi.js` (syncCursorVisibility에서 `display: none` 대신 `visibility: hidden`을 제어하도록 수정)
+수행 작업:
+1) [원인 규명] 날씨 화면 등 순차 렌더링이 비동기적으로 끝난 후 `is-busy` 나 `is-loading` 해제 이벤트가 발생하는 시점에, 커서의 표시 상태가 제대로 켜지지 않고 꺼진 채로 고착될 수 있음. 커서가 꺼지면 `display: none`이 되어 1ch 너비가 통째로 빠져, 입력창이 프롬프트(`선택 >>`) 뒤로 바짝 달라붙게 됨. 사용자가 포커스를 주는 순간 focus 이벤트 리스너가 강제로 `syncCursorVisibility`를 부르며 커서가 `display: inline-block`이 되어 다시 1ch 밀리면서, 포커스 여부에 따라 여백이 튀는 착시/버그가 발생함.
+2) [해결책] 커서를 숨길 때 layout에서 영역을 아예 제외시키는 `display: none` 대신, 영역은 유지하되 렌더링만 가리는 `visibility: hidden`을 사용함.
+3) [스타일 수정] `retro-terminal.css`에서 `.terminal-cursor`에 `display: inline-block; visibility: hidden;`을 기본값으로 주고, 로딩/바쁜 상태의 숨김 처리를 `visibility: hidden !important;`로 변경함.
+4) [스크립트 수정] `terminalInputUi.js`에서 커서 가시성을 토글할 때 `display` 대신 `visibility` 속성을 토글하도록 변경. 이를 통해 어떤 조건에서도 1ch 너비가 일정하게 보존됨.
+5) [누락 수정] `weatherScreens.js`에서 `deps`로부터 `setLoading`을 디스트럭처링하여 날씨 화면 로딩 동작이 정상 가동되도록 함.
+실행: `node --check`, `npm test`
+기대: 날씨 및 모든 화면에서 포커스 유무와 상관없이 `#cmd-input` 왼쪽 여백이 1ch로 상시 보존됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-07 18:10] 로딩 문구 하단 표시 롤백 + 커서 표시 고착(fonts-loading 불일치) 근절
 
 **LOG_ID: 20260707_1810**

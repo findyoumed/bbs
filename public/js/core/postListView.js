@@ -80,20 +80,23 @@ export function createPostListView(deps) {
     if (searchParams.li) displayTitle += ` [작성자검색: ${searchParams.li}]`;
     
     // [LOG: 20260426_1450] Evolve Mode: Sequential rendering for post list
+    // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
+    const footerAssetPath = String(state.board?.footerFile || '').trim();
     const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: buildPostListAnsi(state.board, state.posts, state.page, state.totalPages, state.totalCount, displayTitle, searchParams),
       ansiToHTML,
       screenEl,
-      renderScreenSequential
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(
+          footerAssetPath,
+          getSupportedFooterText(state) || getCommandFooterText('postList'),
+          footerAssetPath ? 'txt/cmd_board_footer.txt' : ''
+        );
+      }
     });
-    
+
     renderPostHotspots(rendered.screenNode, state.posts);
-    const footerAssetPath = String(state.board?.footerFile || '').trim();
-    await applyCommandFooter(
-      footerAssetPath,
-      getSupportedFooterText(state) || getCommandFooterText('postList'),
-      footerAssetPath ? 'txt/cmd_board_footer.txt' : ''
-    );
     // [LOG: 20260424_2020] 모바일에서 게시판 목록 진입 시 키보드 자동 팝업 방지
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();

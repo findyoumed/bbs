@@ -1,5 +1,5 @@
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
-import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 import { CMD_META } from './commandService.js';
 import { UI_TEXT } from './i18n.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
@@ -17,6 +17,7 @@ export function createHelpScreens(deps) {
     displayWidth,
     getCommandFooterText,
     isWideChar,
+    renderScreenSequential,
     screenEl,
     state,
     updateURL
@@ -213,12 +214,17 @@ export function createHelpScreens(deps) {
       updateURL();
     }
 
-    renderAnsiScreenWithTopbar({
+    // [LOG_ID: 20260707_2300] PC통신: 화면 전체(본문+하단 힌트/입력줄)가 위→아래로 이어서 나온다 —
+    // afterBodyRender에서 footer 내용을 채운 뒤에야 하단이 드러난다.
+    await renderAnsiScreenWithTopbarSequential({
       ansiText: helpView.text,
       ansiToHTML,
-      screenEl
+      screenEl,
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter('txt/cmd_menu_footer.txt', getCommandFooterText('help'));
+      }
     });
-    await applyCommandFooter('txt/cmd_menu_footer.txt', getCommandFooterText('help'));
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
     }
@@ -228,12 +234,16 @@ export function createHelpScreens(deps) {
     state.screen = 'history';
     updateURL();
 
-    renderAnsiScreenWithTopbar({
+    // [LOG_ID: 20260707_2300] PC통신: 화면 전체(본문+하단 힌트/입력줄)가 위→아래로 이어서 나온다.
+    await renderAnsiScreenWithTopbarSequential({
       ansiText: buildHistoryAnsi(),
       ansiToHTML,
-      screenEl
+      screenEl,
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter('txt/cmd_menu_footer.txt', getCommandFooterText('history'));
+      }
     });
-    await applyCommandFooter('txt/cmd_menu_footer.txt', getCommandFooterText('history'));
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
     }

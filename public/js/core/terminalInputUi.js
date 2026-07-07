@@ -190,12 +190,19 @@ export function createTerminalInputUi(deps) {
     }
 
     const visible = shouldRenderCursor();
-    const active = visible && document.activeElement === cmdInput;
     // [LOG: 20260707_1700] Keep the cursor cell reserved even when the input is not focused.
     // Hiding it with display:none made the prompt appear to gain/lose one terminal cell on click.
-    cursorEl.style.setProperty('display', visible ? 'inline-block' : 'none');
-    cursorEl.style.setProperty('opacity', active ? '1' : '0.35');
-    cursorEl.style.setProperty('animation', visible && active ? '' : 'none');
+    // [LOG_ID: 20260707_1930] 실제 PC통신 단말에는 브라우저의 focus/blur 개념이 없다 — 커서는 항상 같은 방식으로
+    // 깜빡인다. document.activeElement 기준으로 밝기(1 vs 0.35)를 바꾸던 예전 로직은, 클릭 한 번으로 잠깐
+    // blur된 순간마다 커서가 흐릿한 반투명 덩어리로 보여 "포커스 여부에 따라 프롬프트 뒤 여백이 달라 보인다"는
+    // 착시를 만들었다. 이 앱은 모든 입력을 #cmd-input 하나로만 받으므로(터미널 다이얼로그도 동일 입력 재사용)
+    // 논리적으로 이 입력창은 항상 "활성" 상태다 — 브라우저 DOM 포커스 여부와 무관하게 항상 동일하게 그린다.
+    // [LOG_ID: 20260707_2030] display: none 대신 visibility: hidden을 사용하여
+    // 커서가 숨겨진 상태(로딩/블러)에서도 1ch 너비의 레이아웃 영역을 보존함으로써
+    // 포커스 여부에 따라 입력 필드 왼쪽 공백이 튀는 현상을 완전히 방지한다.
+    cursorEl.style.setProperty('visibility', visible ? 'visible' : 'hidden');
+    cursorEl.style.removeProperty('opacity');
+    cursorEl.style.removeProperty('animation');
 
     if (visible) {
       if (cursorRetryTimer) {

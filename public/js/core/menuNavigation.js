@@ -126,11 +126,19 @@ export function createMenuNavigation(deps) {
     state.boardMenuEntries = getMenuChildren(menuTree);
 
     const menuEntries = getMenuEntries(state.boardMenuEntries);
+    if (!fromHistory && window.location.pathname !== '/') {
+      void updateURL();
+    }
+
+    // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: buildMainMenuAnsi(state.boardMenuTitle, menuEntries, stats),
       ansiToHTML,
       screenEl,
-      renderScreenSequential
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(menuTree.footer, getCommandFooterText('top'));
+      }
     });
 
     if (screenEl) {
@@ -140,11 +148,6 @@ export function createMenuNavigation(deps) {
       );
     }
 
-    if (!fromHistory && window.location.pathname !== '/') {
-      void updateURL();
-    }
-
-    await applyCommandFooter(menuTree.footer, getCommandFooterText('top'));
     // [LOG: 20260424_2020] 모바일에서 메뉴 진입 시 키보드 자동 팝업 방지
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
@@ -190,11 +193,15 @@ export function createMenuNavigation(deps) {
     state.boardMenuEntries = getMenuChildren(menuNode);
 
     const menuEntries = getMenuEntries(state.boardMenuEntries);
+    // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: buildBoardSelectAnsi(menuEntries, state.boardMenuTitle),
       ansiToHTML,
       screenEl,
-      renderScreenSequential
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(menuNode.footer, getSupportedFooterText(state) || getCommandFooterText('menu'));
+      }
     });
 
     if (screenEl) {
@@ -204,7 +211,6 @@ export function createMenuNavigation(deps) {
       );
     }
 
-    await applyCommandFooter(menuNode.footer, getSupportedFooterText(state) || getCommandFooterText('menu'));
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
     }

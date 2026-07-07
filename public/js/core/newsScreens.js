@@ -19,6 +19,7 @@ export function createNewsScreens(deps) {
     setFooterVisibility,
     setHint,
     setLoading,
+    setReady,
     state,
     updateURL,
     measureServiceLineBounds,
@@ -492,15 +493,18 @@ export function createNewsScreens(deps) {
       door: topic.door, name: topic.title || topic.name,
       id: `news-${topic.door}`, boardId: `news-${topic.door}`
     }));
+    // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: buildBoardSelectAnsi(items, { titlePath: ['뉴스/인물'] }),
       ansiToHTML,
       screenEl,
-      renderScreenSequential
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('newsMenu'));
+      }
     });
 
     renderBoardSelectHotspots(rendered.screenNode, items);
-    await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('newsMenu'));
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
 
@@ -517,6 +521,14 @@ export function createNewsScreens(deps) {
     try {
       const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor, requestedPageNo);
       clearTimeout(loadingTimer);
+      // [LOG_ID: 20260707_2345] loadingTimer(위)는 "80ms 후 로딩 화면을 보여줄지" 결정하는 바깥 타이머일
+      // 뿐이다. 이미 그 80ms가 지나 showNewsLoading()→setLoading()이 실행됐다면, setLoading 내부에서
+      // 스스로 건 400ms 지연 타이머(본문을 "연결하는 중입니다"로 통째로 덮어쓰는 타이머)는 이 clearTimeout으로
+      // 취소되지 않는다 — setReady(true)가 그 내부 타이머를 취소하는 유일한 방법이다. 이걸 빠뜨리면,
+      // 데이터가 늦게 도착했을 때 새 화면이 다 그려지고 footer까지 새로 갱신된 "후"에 내부 타이머가 뒤늦게
+      // 발동해 방금 그린 본문을 로딩 문구로 덮어써 버려서, "연결하는 중입니다" 문구와 새 화면의 footer 힌트가
+      // 동시에 보이는 것처럼 어긋나 보였다.
+      setReady(true);
 
       const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo);
 
@@ -526,15 +538,18 @@ export function createNewsScreens(deps) {
         listPageNo: newsListView.pageNo, listPageSize: newsListView.pageSize
       };
       if (!fromHistory) { updateURL(); pushHistory(); }
+      // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
       const rendered = await renderAnsiScreenWithTopbarSequential({
         ansiText: newsListView.text,
         ansiToHTML,
         screenEl,
-        renderScreenSequential
+        renderScreenSequential,
+        afterBodyRender: async () => {
+          await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('newsList'));
+        }
       });
       renderNewsArticleHotspots(rendered.screenNode, newsListView.items, 2);
 
-      await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('newsList'));
       if (shouldAutoFocusCommandInput()) cmdInput.focus();
     } catch (error) {
       clearTimeout(loadingTimer);
@@ -685,16 +700,19 @@ export function createNewsScreens(deps) {
     };
     if (!fromHistory && !sameView) { updateURL(); pushHistory(); }
 
+    // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: articleView.text,
       ansiToHTML,
       screenEl,
-      renderScreenSequential
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('serviceArticle'));
+      }
     });
     renderNewsArticleImage(rendered.screenNode, state.serviceData.article, articleView.pageNo);
     renderNewsSourceLinkHotspots(rendered.screenNode, state.serviceData.article);
 
-    await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('serviceArticle'));
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
 

@@ -1,4 +1,4 @@
-import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 
 // [LOG: 20260622_2301] rankingScreens 구현 — 랭킹 스크린 모듈
 export function createRankingScreens(deps) {
@@ -34,10 +34,16 @@ export function createRankingScreens(deps) {
     });
   }
 
+  // [LOG_ID: 20260707_2300] PC통신: 화면 전체(본문+하단 힌트/입력줄)가 위→아래로 이어서 나온다 —
+  // afterBodyRender에서 footer 내용을 채운 뒤에야 하단이 드러난다.
   async function render(ansiText, footerCategory, prompt) {
-    await renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl, renderScreenSequential });
-    await applyCommandFooter(getMenuNodeByKey('game')?.footer, getCommandFooterText(footerCategory));
-    if (prompt && typeof setPrompt === 'function') setPrompt(prompt);
+    await renderAnsiScreenWithTopbarSequential({
+      ansiText, ansiToHTML, screenEl, renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(getMenuNodeByKey('game')?.footer, getCommandFooterText(footerCategory));
+        if (prompt && typeof setPrompt === 'function') setPrompt(prompt);
+      }
+    });
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
 

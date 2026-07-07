@@ -178,8 +178,12 @@ export function createTerminalUiCore(deps) {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         setBusy(true);
-        // [LOG: 20260707_1815] Keep the footer hidden until the next screen/footer content is fully ready.
-        setFooterVisibility(false);
+        // [LOG_ID: 20260707_2015] 20260707_1815에서 도입된 setFooterVisibility(false) 호출을 제거한다.
+        // 이 호출은 매 화면 전환마다 #terminal-footer 전체를 display:none으로 지웠다가 되살려,
+        // "타이핑/명령 입력 후 힌트바가 잠깐 사라진다"는 회귀를 만들었다 — 20260706_2247에서 고쳤던
+        // "로딩 중 하단 프레임 붕괴" 버그를 CSS가 아닌 이 JS 경로로 재도입한 것.
+        // PC통신 하단 상태줄은 로딩 여부와 무관하게 항상 같은 자리에 있어야 한다:
+        // 힌트 텍스트만 비우고(높이는 min-height로 이미 예약됨), footer 자체는 숨기지 않는다.
       }
     },
     setLoading: (message) => {
@@ -196,15 +200,13 @@ export function createTerminalUiCore(deps) {
       if (hintEl) {
         // [LOG: 20260617_1156] Clear footer hint text to prevent duplicate "connecting" messages on screen and footer.
         hintEl.innerHTML = '';
-        // [LOG_ID: 20260707_1815] Keep the footer hidden while the next screen is still loading.
-        setFooterVisibility(false);
+        // [LOG_ID: 20260707_2015] footer 전체를 숨기지 않는다 (위 setReady 주석 참고).
       }
       core._loadingTimer = setTimeout(() => {
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
-        // [LOG: 20260707_1815] Reveal the footer only after the destination screen and footer content are ready.
-        setFooterVisibility(false);
+        // [LOG_ID: 20260707_2015] footer 전체를 숨기지 않는다 (위 setReady 주석 참고).
       }, 400);
     },
     buildLoadingScreenMarkup,

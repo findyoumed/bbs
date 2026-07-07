@@ -316,7 +316,10 @@ a {
     mix-blend-mode: difference;
     z-index: 3;
     pointer-events: none;
-    display: none;
+    /* [LOG_ID: 20260707_2030] display: none 대신 visibility: hidden을 사용하여 
+       비포커스/로딩 시에도 1ch 너비의 영역을 유지하여 레이아웃 튐(여백 차이)을 제거 */
+    display: inline-block;
+    visibility: hidden;
     animation: cursor-blink 1s step-end infinite;
 }
 
@@ -366,11 +369,11 @@ a {
     display: none;
 }
 
-/* [LOG: 20260427_2205] 로딩 중 커서 숨김 처리 (화면 렌더링 전 깜빡임 방지) */
+/* [LOG_ID: 20260707_2030] 로딩/바쁨 중 커서 숨김을 visibility: hidden !important 로 변경하여 1ch 공간 보존 */
 .fonts-loading .terminal-cursor,
 #terminal-container.is-loading .terminal-cursor,
 #terminal-container.is-busy .terminal-cursor {
-    display: none !important;
+    visibility: hidden !important;
 }
 
 

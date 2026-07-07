@@ -1,4 +1,4 @@
-import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createWeatherScreens(deps) {
@@ -15,6 +15,8 @@ export function createWeatherScreens(deps) {
     loadWeatherFeed,
     loadWeatherRegions,
     screenEl,
+    // [LOG_ID: 20260707_2030] setLoading 주입 누락 수정
+    setLoading,
     state,
     updateURL,
     createHotspotLayer,
@@ -76,23 +78,19 @@ export function createWeatherScreens(deps) {
     if (layer.childElementCount > 0) screenNode.appendChild(layer);
   }
 
-  async function renderWeatherMenuScreen(items, sequential = false) {
+  async function renderWeatherMenuScreen(items) {
     const result = buildWeatherMenuAnsi(items);
-    let rendered;
-    if (sequential) {
-      rendered = await renderAnsiScreenWithTopbarSequential({
-        ansiText: result.text,
-        ansiToHTML,
-        screenEl,
-        renderScreenSequential
-      });
-    } else {
-      rendered = renderAnsiScreenWithTopbar({
-        ansiText: result.text,
-        ansiToHTML,
-        screenEl
-      });
-    }
+    // [LOG_ID: 20260707_2300] footer(힌트/입력줄)는 본문 스트리밍이 끝나고 새 내용이 준비된
+    // 뒤에야 드러난다 — afterBodyRender에서 applyCommandFooter를 실행해 순서를 보장한다.
+    const rendered = await renderAnsiScreenWithTopbarSequential({
+      ansiText: result.text,
+      ansiToHTML,
+      screenEl,
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(getMenuNodeByKey('weather')?.footer, getCommandFooterText('weatherMenu'));
+      }
+    });
     // [LOG: 20260428_1018] Header is 4 lines, so items start at (regionStartLine - 4) in the body container
     const bodyOffset = result.regionStartLine - 4;
     renderWeatherRegionHotspots(rendered.screenNode, items, bodyOffset, result.half);
@@ -123,8 +121,10 @@ export function createWeatherScreens(deps) {
     ];
     state.serviceData.menuItems = items;
 
-    await renderWeatherMenuScreen(items, false);
-    await applyCommandFooter(getMenuNodeByKey('weather')?.footer, getCommandFooterText('weatherMenu'));
+    // [LOG_ID: 20260707_1900] PC통신은 화면 아래(입력줄)가 가장 마지막에 나타나야 한다.
+    // 이 화면만 즉시 렌더(sequential=false)로 남아 있어 다른 서비스 메뉴와 달리 본문이
+    // 한 번에 툭 튀어나오던 문제를 없앤다 — 뉴스/게시판과 같은 위→아래 스트리밍으로 통일.
+    await renderWeatherMenuScreen(items);
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
 
@@ -170,14 +170,18 @@ export function createWeatherScreens(deps) {
 
       if (!fromHistory) { updateURL(); pushHistory(); }
 
-      await renderAnsiScreenWithTopbar({
+      // [LOG_ID: 20260707_2300] 본문도 위→아래 스트리밍으로 통일하고, footer는 본문+새 내용이
+      // 모두 준비된 뒤에만 드러낸다(afterBodyRender).
+      await renderAnsiScreenWithTopbarSequential({
         ansiText: localResult.text,
         ansiToHTML,
         screenEl,
-        renderScreenSequential
+        renderScreenSequential,
+        afterBodyRender: async () => {
+          await applyCommandFooter(getMenuNodeByKey('weather')?.footer, getCommandFooterText('weatherView'));
+        }
       });
 
-      await applyCommandFooter(getMenuNodeByKey('weather')?.footer, getCommandFooterText('weatherView'));
       if (shouldAutoFocusCommandInput()) cmdInput.focus();
       return;
     }
@@ -205,14 +209,17 @@ export function createWeatherScreens(deps) {
 
     if (!fromHistory) { updateURL(); pushHistory(); }
 
-    await renderAnsiScreenWithTopbar({
+    // [LOG_ID: 20260707_2300] 본문도 위→아래 스트리밍으로 통일 (weather-menu/local과 동일 규칙).
+    await renderAnsiScreenWithTopbarSequential({
       ansiText: weatherResult.text,
       ansiToHTML,
       screenEl,
-      renderScreenSequential
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(getMenuNodeByKey('weather')?.footer, getCommandFooterText('weatherView'));
+      }
     });
 
-    await applyCommandFooter(getMenuNodeByKey('weather')?.footer, getCommandFooterText('weatherView'));
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
 
