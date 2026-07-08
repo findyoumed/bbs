@@ -305,14 +305,22 @@ body.theme-blue .write-field textarea {
     display: flex;
     align-items: center;
     /* [LOG_ID: 20260707_1630] Keep a fixed one-cell gap between the rendered prompt and the input cell. */
-    column-gap: 1ch !important;
+    /* [LOG_ID: 20260708_1710] 1ch는 "현재 적용된 폰트의 숫자 0 글자 폭"으로 정의되어, 로딩 중인
+       폴백 폰트와 로딩 완료된 커스텀 픽셀 폰트(BbsPrimaryFont)의 값이 서로 다르다(실측: 폴백 9px vs
+       로드 후 8.5px). CDN에서 폰트를 받아오는 실제 네트워크 환경(로컬 개발 서버보다 느림)에서는 이
+       전환에 1초 가까이 걸려, 그 사이 프롬프트와 입력 캐럿 사이 간격이 눈에 띄게 넓어 보였다가 폰트
+       로딩이 끝나는 순간 저절로 좁아지는 것처럼 보였다("포커스를 줘야/키를 눌러야 고쳐진다"는 것은
+       착각이었고, 실제로는 그 순간과 폰트 로딩 완료 시점이 우연히 겹친 것). em은 글자 크기에만
+       비례하고 어떤 폰트가 적용됐는지와 무관하므로(17px 기준 0.5em=8.5px, 로드된 실제 폰트의 1ch와
+       정확히 같은 값), 폰트 전환 여부와 무관하게 간격이 항상 고정된다. */
+    column-gap: 0.5em !important;
     row-gap: 0 !important;
     min-height: 18px;
     width: 100%;
 }
 
 #terminal-prompt-row.terminal-prompt-row--inline {
-    column-gap: 1ch !important;
+    column-gap: 0.5em !important;
     row-gap: 0 !important;
     min-height: 0;
 }
