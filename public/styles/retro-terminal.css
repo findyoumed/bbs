@@ -1,6 +1,6 @@
 @font-face {
     font-family: 'DungGeunMo';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    src: url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
     font-style: normal;
     font-display: block;
@@ -45,7 +45,7 @@
 
 @font-face {
     font-family: 'DungGeunMo';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    src: url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
     font-style: normal;
     font-display: block;
@@ -372,7 +372,9 @@ a {
 }
 
 /* [LOG_ID: 20260707_2030] 로딩/바쁨 중 커서 숨김을 visibility: hidden !important 로 변경하여 1ch 공간 보존 */
+/* [LOG_ID: 20260708_1901] 폰트 로딩 중 프롬프트 행도 숨겨 간격 불일치 방지 */
 .fonts-loading .terminal-cursor,
+.fonts-loading #terminal-prompt-row,
 #terminal-container.is-loading .terminal-cursor,
 #terminal-container.is-busy .terminal-cursor {
     visibility: hidden !important;

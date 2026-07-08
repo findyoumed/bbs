@@ -12,7 +12,7 @@
 /* ?�?� ?�트 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
 @font-face {
     font-family: 'Sam3KRFont';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/Sam3KRFont.woff') format('woff');
+    src: url('/fonts/Sam3KRFont.woff') format('woff');
     font-weight: normal;
     font-style: normal;
     font-display: block;
@@ -20,7 +20,7 @@
 
 @font-face {
     font-family: 'BbsHybridFont';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    src: url('/fonts/DungGeunMo.woff') format('woff');
     unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F;
     font-weight: normal;
     font-style: normal;
@@ -29,7 +29,7 @@
 
 @font-face {
     font-family: 'BbsPrimaryFont';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    src: url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
     font-style: normal;
     font-display: block;
@@ -37,7 +37,7 @@
 
 @font-face {
     font-family: 'BbsHintFont';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    src: url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
     font-style: normal;
     font-display: block;
