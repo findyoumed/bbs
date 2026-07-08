@@ -311,6 +311,22 @@ export function createTerminalInputUi(deps) {
       syncMaskedInputDisplay();
       syncCursorVisibility();
     });
+    // [LOG_ID: 20260708_1650] 커서가 숨겨진 상태(is-busy/is-loading 등)에서 벗어나는 걸 감지하려고
+    // syncCursorVisibility() 안에서 200ms 간격 setTimeout 재시도(cursorRetryTimer)로 폴링하는데,
+    // 브라우저는 탭이 백그라운드(비활성)로 가면 이 setTimeout을 강하게 스로틀링한다(수 초까지 지연 가능) —
+    // 스크린샷 도구 등으로 잠깐 다른 창에 포커스를 뺏기는 사이 재시도가 멈춰, 실제로는 이미 로딩이 끝났는데도
+    // 커서만 계속 숨겨진 채(그 자리가 빈 여백처럼 보임) 고착됐다가, 탭이 다시 보이자마자(또는 아무 키 입력으로
+    // 스로틀링이 풀리자마자) 뒤늦게 정상화되는 것처럼 보였다. visibilitychange는 스로틀링 없이 탭이 다시
+    // 보이는 즉시 발동하므로, 여기서 직접 재동기화해 setTimeout 폴링이 풀릴 때까지 기다리지 않게 한다.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        syncCursorVisibility();
+      }
+    });
+    window.addEventListener('focus', () => {
+      syncCursorVisibility();
+    });
+
     document.addEventListener('selectionchange', () => {
       if (document.activeElement === cmdInput) {
         syncCursorVisibility();
@@ -340,9 +356,17 @@ export function createTerminalInputUi(deps) {
 
     if (screenEl) {
       // [LOG: 20260429_0955] Hide the prompt cursor while loading text is rendered on screen.
+      // [LOG_ID: 20260708_1650] subtree: false였을 때는 screenEl의 "직계 자식"이 바뀔 때만 감지했다.
+      // 20260708_1520에서 로딩 placeholder(.loading)를 screenEl 전체 교체 대신 .ansi-screen-body
+      // 내부(screenEl의 손자)에 넣도록 바꾼 뒤로, 이 감시가 로딩 시작/종료를 더 이상 감지하지 못하게 됐다 —
+      // shouldRenderCursor()의 hasLoadingScreen 판정 자체는 여전히 정확하지만(querySelector는 하위 전체를
+      // 훑음), 그 변화를 알아채 재동기화를 트리거하는 통로가 사라져 커서가 숨겨진 채(200ms setTimeout
+      // 재시도에만 의존) 고착되기 쉬워졌다 — 탭이 백그라운드로 가면 그 setTimeout이 스로틀링돼 수 초씩
+      // 갇혀, "포커스를 줘야만(또는 탭이 다시 보여야만) 정상화된다"는 여백 문제의 근본 원인이었다.
+      // subtree: true로 손자 이하 변화까지 확실히 감지한다.
       cursorStateObserver.observe(screenEl, {
         childList: true,
-        subtree: false
+        subtree: true
       });
     }
 

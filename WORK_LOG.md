@@ -1,3 +1,21 @@
+## [2026-07-08 16:50] 입력창 왼쪽 캐럿 공백이 가끔 커 보이는 문제 — 커서 재동기화 MutationObserver가 로딩 종료를 놓치던 회귀 수정
+
+**LOG_ID: 20260708_1650**
+목표: 사용자 재보고 — "//*[@id=\"cmd-input\"] 이 부분의 왼쪽 여백이 맞지 않는 것은 반복해서 발생하는데... 포커스가 있으면 정상인데, 포커스가 없을 때 커지잖아. news, bbs 메뉴 모두 그런데." 이후 "그냥 화면이 로딩되었을 때 inputbox 왼편 공백 크기를 말하는거야"로 명확화. 사용자가 제공한 스크린샷 2장(`space1.png`: 키 입력 시 정상 상태, `space2.png`: "화면 캡처 키를 누르는 순간 정상 상태로 캐럿이 이동" — 즉 아무 키 입력이든 정상화를 유발)이 결정적 단서가 됨.
+변경 파일: `public/js/core/terminalInputUi.js`
+수행 작업:
+1) [진단] "화면 캡처 키를 누르면 즉시 정상화된다"는 단서로부터, 문제가 순수 CSS/레이아웃이 아니라 **타이밍/이벤트** 문제임을 특정. 코드에서 커스텀 블록 커서(`.terminal-cursor`)의 표시 여부(`shouldRenderCursor()`)가 바뀔 때마다 `MutationObserver`(container class, `<html>` class, `screenEl` 자식 변화, cmd-input 속성 변화 감시)로 즉시 재동기화되는 구조를 확인. 다만 커서가 숨김 상태(`is-loading` 등)로 남아있는 동안에는 이 감시망이 못 잡는 경우를 대비해 `cursorRetryTimer`라는 **200ms 간격 setTimeout 폴링**이 안전망으로 걸려있었다(20260707_1750, 바로 이 "news/weather 캐럿 공백이 다르게 보이는" 문제를 겨냥해 이미 한 번 도입된 것).
+2) [근본 원인] Chrome 등 브라우저는 탭이 백그라운드(비활성, 다른 창에 포커스를 뺏김)로 가면 `setTimeout`을 강하게 스로틀링한다(수백 ms~수 초까지 지연). 화면 캡처 도구를 실행하면 브라우저 탭이 순간적으로 백그라운드가 되므로, 이 `cursorRetryTimer`가 스로틀링돼 실제로는 로딩이 끝났는데도 커서가 계속 숨겨진 채(그 자리가 빈 여백처럼 보임) 고착됐다가, 탭이 다시 보이는 순간(또는 브라우저가 실제 keydown을 받는 순간) 재시도가 풀려 뒤늦게 정상화된다.
+   더 근본적으로, `cursorStateObserver.observe(screenEl, { childList: true, subtree: false })`가 `screenEl`의 **직계 자식** 변화만 감지하도록 되어 있었는데, 직전 커밋(LOG_ID 20260708_1520, "로딩 화면 상단바 유지" 수정)에서 로딩 placeholder(`.loading`)를 `screenEl.innerHTML` 전체 교체 대신 `.ansi-screen-body` 내부(`screenEl`의 **손자**)에 넣도록 바꾼 뒤로, 이 MutationObserver가 로딩 시작/종료를 아예 감지하지 못하는 상태가 됐다 — `shouldRenderCursor()`의 `hasLoadingScreen` 판정 자체(`querySelector`, 하위 전체 검색)는 여전히 정확했지만, 그 변화를 감지해 재동기화를 "즉시" 트리거할 통로가 없어져 오직 스로틀링에 취약한 `cursorRetryTimer`에만 의존하게 된 것 — 이게 지난 수정이 만든 자기회귀였다.
+3) [수정] (a) `cursorStateObserver.observe(screenEl, {...})`의 `subtree`를 `false`→`true`로 변경해 손자 이하 DOM 변화(로딩 placeholder 포함)도 확실히 감지하도록 복구. (b) `document.addEventListener('visibilitychange', ...)`와 `window.addEventListener('focus', ...)`를 추가해, 탭이 다시 보이거나 창이 다시 활성화되는 즉시(스로틀링된 setTimeout을 기다리지 않고) `syncCursorVisibility()`를 강제 재실행하도록 이중 안전망을 마련.
+4) [검증] API 응답을 900ms 지연시켜 로딩 placeholder가 실제로 뜨고 사라지는 것을 강제로 재현 — `.loading` 제거와 커서 `visible` 전환 사이 지연이 10ms로 확인(기존 최대 200ms+스로틀링 대비 대폭 개선, 사실상 즉시 반응). 기존 4패턴 종합 회귀(구분선/힌트/프롬프트 3자 동기화 + hint-blank-while-prompt-shown) 6시나리오×4라운드=24회 재확인 — 전부 통과.
+5) [회귀] `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:vercel-ready` 전부 통과.
+실행: API 지연 기반 로딩 placeholder 등장/소멸 시 커서 반응 속도 측정, 4패턴 종합 회귀(24회), `npm test`, smoke 2종
+기대: 화면 로딩이 끝나면 탭이 백그라운드였다가 돌아오는 경우를 포함해 언제나 즉시 커서가 정상 위치("선택 >>" 바로 뒤)로 복귀한다 — "포커스를 줘야만/화면을 다시 봐야만 여백이 정상화되는" 지연이 사라진다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 16:05] "연결하는 중입니다" 로딩 화면에서 "_" 대기 캐럿이 함께 뜨는 이중 표시 제거
 
 **LOG_ID: 20260708_1605**
