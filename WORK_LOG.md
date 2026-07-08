@@ -1,3 +1,19 @@
+## [2026-07-08 11:30] 하단 구분선이 본문 스트리밍보다 먼저 나타나던 순서 역행 수정
+
+**LOG_ID: 20260708_1130**
+목표: 사용자 리포트 — "힌트바 바로 위에 있는 화면 마지막 가로 선이 위→아래로 오는 터미널 UI와 다르게, 위 내용보다 먼저 나오는 경우가 많다."
+변경 파일: `public/js/core/ansiTopbarScreen.js`, `public/style.css`
+수행 작업:
+1) [원인] `renderAnsiScreenWithTopbarSequential`(모뎀 스트리밍 렌더러, 20260706_2230)은 본문이 줄 단위로 다 드러나고 footer 콘텐츠가 준비될 때까지 `#cmd-hint`/`#terminal-prompt-row`만 `visibility:hidden`으로 숨겼다. 그런데 힌트 바로 위 구분선은 `#terminal-footer`의 `::before` 가상 요소로, hint/prompt row와 별개 생명주기(`data-footer-state`/`is-loading` 클래스에만 연동)를 가진다 — 스트리밍 시작 시점에 함께 숨겨지지 않아, 이전 화면의 구분선이 새 본문이 위에서부터 채워지는 내내 이미 떠 있었다. 결과적으로 화면의 논리적 "맨 마지막 줄"인 구분선이 본문보다 먼저 보이는 역행이 발생.
+2) [수정] 스트리밍 시작 시 `#terminal-footer`에 `is-divider-pending` 클래스를 추가하고(가상 요소는 인라인 스타일로 직접 제어 불가하므로 클래스+CSS 사용), 본문 스트리밍과 footer 콘텐츠 준비가 모두 끝나는 `finally` 블록에서 hint/prompt row의 visibility 복원과 **동시에** 제거하도록 `ansiTopbarScreen.js` 수정. `style.css`에 `#terminal-footer.is-divider-pending::before { visibility: hidden !important; }` 규칙 추가.
+3) [검증] Playwright 스크립트(playwright 모듈 직접 구동, 5ms 간격 샘플링)로 뉴스 목록→기사 전환을 계측: 수정 전에는 구분선이 스트리밍 전 구간(226ms~590ms) 내내 `visible=true`로 고정이었을 상황을, 수정 후 정확히 같은 구간 동안 `visible=false`로 유지되다 마지막 본문 줄이 드러난 직후(t=590ms pending 0/19 → t=606ms divider=true)에만 나타남을 확인 — 위→아래 순서 완전 회복.
+4) [회귀] `npm test`, smoke:ui-layout, smoke:renderer-ui, smoke:full-traversal 전부 통과.
+실행: Playwright 타이밍 계측 스크립트, `npm test`, smoke 3종
+기대: 어떤 화면 전환에서도 하단 구분선이 본문의 마지막 줄이 드러난 뒤에만 나타나, PC통신 특유의 위→아래 순차 렌더링이 끝까지 지켜진다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 10:30] 상단바 없는 화면 전수 감사 — WHO/ACT/SYSINFO/쪽지/첨부/프로필/글쓰기/SYSLOG 정통 프레임 통일
 
 **LOG_ID: 20260708_1030**

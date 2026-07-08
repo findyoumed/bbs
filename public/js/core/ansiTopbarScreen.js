@@ -189,12 +189,19 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
   // 본문의 마지막 줄이 드러나는 순간과 같은 타이밍에 하단이 "다음 줄"처럼 자연스럽게 이어서 나타난다.
   const hintEl = typeof document !== 'undefined' ? document.getElementById('cmd-hint') : null;
   const promptRowEl = typeof document !== 'undefined' ? document.getElementById('terminal-prompt-row') : null;
+  const footerEl = typeof document !== 'undefined' ? document.getElementById('terminal-footer') : null;
   // [LOG_ID: 20260707_2330] is-command-pending(제출 직후 대기 커서 표시)이
   // #cmd-hint/#terminal-prompt-row에 visibility:visible !important를 강제하고 있어, 인라인 스타일도
   // !important로 지정해야 이 숨김이 실제로 유지된다. important 없이는 스트리밍 도중(제출 ~80ms 후)
   // is-command-pending이 켜지는 순간 하단이 도로 보이며 이전 화면의 낡은 내용이 잠깐 노출됐다.
   if (hintEl) hintEl.style.setProperty('visibility', 'hidden', 'important');
   if (promptRowEl) promptRowEl.style.setProperty('visibility', 'hidden', 'important');
+  // [LOG_ID: 20260708_1130] #terminal-footer의 ::before 구분선(힌트 바로 위 마지막 가로줄)은
+  // hintEl/promptRowEl과 별개로 footer 자신에 그려지는 요소라, 위 두 줄만 숨겨서는 화면 전환 때마다
+  // 이 구분선이 본문 스트리밍이 시작되기도 전부터 이미 떠 있었다 — 위→아래 순서로 나와야 할 PC통신
+  // 화면에서 맨 마지막 줄(구분선)이 맨 먼저 보이는 역행이 발생. 가상 요소는 인라인 스타일로 직접
+  // 제어할 수 없으므로 클래스를 토글해 CSS(::before)로 숨긴다.
+  footerEl?.classList.add('is-divider-pending');
 
   // 1. Render Topbar immediately
   const topbarHtml = buildTopbarHtml(model);
@@ -231,6 +238,7 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
     // 영영 숨겨진 채로 고착되지 않도록 finally에서 보장한다.
     if (hintEl) hintEl.style.removeProperty('visibility');
     if (promptRowEl) promptRowEl.style.removeProperty('visibility');
+    footerEl?.classList.remove('is-divider-pending');
   }
 
   return {

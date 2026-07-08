@@ -236,6 +236,15 @@ body.theme-blue .write-field textarea {
     width: 100%;
 }
 
+/* [LOG_ID: 20260708_1130] 본문이 위→아래로 스트리밍되는 동안 힌트 바로 위 구분선(::before)을 숨긴다.
+   ansiTopbarScreen.js가 스트리밍 시작 시 #terminal-footer에 is-divider-pending을 붙이고,
+   본문+힌트/프롬프트 콘텐츠가 모두 준비된 뒤(hintEl/promptRowEl visibility 복원과 동시에) 제거한다.
+   이게 없으면 이전 화면의 구분선이 새 본문 스트리밍 내내 이미 떠 있어, 화면의 맨 마지막 줄(구분선)이
+   맨 먼저 보이는 역순이 됐다. */
+#terminal-footer.is-divider-pending::before {
+    visibility: hidden !important;
+}
+
 /* [LOG: 20260617_1642] Restore footer separator during loading to maintain UI structure. */
 #terminal-container.is-loading #terminal-footer:not([data-footer-state="hidden"])::before {
     content: '────────────────────────────────────────────────────────────────────────────────';
