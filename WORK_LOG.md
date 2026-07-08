@@ -1,3 +1,20 @@
+## [2026-07-08 14:20] "선택 >>"는 남아있는데 힌트바만 사라지는 불일치 — setLoading()의 즉시 hint 텍스트 비움을 400ms 폴백 시점으로 이동
+
+**LOG_ID: 20260708_1420**
+목표: 사용자 재보고 — "아직도 선택 >> 에서 엔터를 치면 선택 >> 는 화면에 남아있음에도 불구하고, 힌트바가 없어지는 이상한 현상이 있어." (20260708_1345로 divider/hint 동기화는 고쳤으나, 이번엔 hint와 promptRow("선택 >>") 사이의 또 다른 비동기화가 남아있었음)
+변경 파일: `public/js/core/terminalUiCore.js`
+수행 작업:
+1) [진단] 20260708_1345와 동일한 MutationObserver 트레이스 기법을 hint 텍스트 내용(CSS visibility가 아니라 `textContent`) 기준으로 재적용. 화면 전환 시나리오(main→news, main→board select 등)는 재현이 안 됐는데, 이는 `showMain()` 같은 핸들러가 `setLoading()`과 `setHint('')`+`setPrompt('')`를 항상 함께 호출해 우연히 동기화돼 있었기 때문. 반면 `postListView.js`의 `showPostList`, `postViewView.js`의 `showPostView` 등은 `setLoading('연결하는 중입니다..')`만 부르고 `setHint`/`setPrompt`는 따로 부르지 않는다 — "게시판 선택 → 게시글 목록"으로 정확히 재현: `t=11.6ms`에 힌트 텍스트가 즉시 `""`로 비워지는데 `promptLabel="선택 >>"`는 그대로, `promptVisible=true`인 상태가 `t=715.6ms`(렌더러 자신의 인라인 숨김이 실제로 시작되는 시점)까지 약 700ms 동안 지속됨.
+2) [근본 원인] `terminalUiCore.js`의 `setLoading()`이 호출 즉시(어떤 await 전에) `hintEl.innerHTML = ''`로 힌트 텍스트를 비웠다(20260617_1156, 원래 목적은 "로딩 중..." 화면 문구와 낡은 힌트 목록이 동시에 보이는 중복 방지). 하지만 `setLoading()`은 화면 전환마다 호출되고 대부분 400ms 미만으로 빨리 끝나는데, `promptRow`("선택 >>")는 이 즉시-비움에 전혀 반응하지 않는다 — 프롬프트 행은 오직 렌더러(`renderAnsiScreenWithTopbarSequential`) 자신이 시작될 때만 인라인으로 숨겨지므로, `setLoading()` 호출 시점과 렌더러 시작 시점 사이(데이터 fetch 등 남은 await 구간)에 "힌트만 먼저 비워지고 프롬프트는 그대로"인 창이 항상 생겼다.
+3) [수정] `hintEl.innerHTML = ''`를 `setLoading()` 진입 즉시가 아니라, 400ms 폴백 타이머(`core._loadingTimer`)가 실제로 화면을 로딩 placeholder로 교체하는 콜백 안으로 옮겼다. 이제 빠른 전환(대다수, 400ms 미만)에서는 힌트가 이전 내용을 유지하다가 `applyCommandFooter`의 `setHint()`가 새 내용으로 자연스럽게 교체해 깜빡임이 없고, 프롬프트 행과도 완전히 동기화된다. 느린 전환(400ms 이상, placeholder가 실제로 뜨는 드문 경우)에서만 힌트가 로딩 화면과 함께 비워진다 — 원래 의도(중복 문구 방지)도 그대로 유지.
+4) [검증] MutationObserver 트레이스로 "게시판 선택→게시글 목록" 24회, "게시글 목록→게시글 보기" 등 포함 총 44회 연속 재실행 — 위반 0건. 추가로 20260708_1345의 4패턴 종합 회귀 스크립트(구분선/힌트/프롬프트 3자 동기화 + 이번 hint-blank-while-prompt-shown 패턴)를 6시나리오×4라운드=24회로 재확인 — 전부 통과.
+5) [회귀] `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:vercel-ready` 전부 통과.
+실행: MutationObserver 기반 hint 텍스트 vs promptRow 동기화 트레이스, 4패턴 종합 회귀(24회), `npm test`, smoke 2종
+기대: 힌트바와 프롬프트 행("선택 >>")이 어떤 화면 전환에서도 서로 독립적으로 비워지지 않고 항상 함께 바뀐다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 13:45] 힌트바는 보이는데 구분선만 사라지는 불일치 — is-loading이 독자적으로 구분선만 숨기던 CSS 경로 제거
 
 **LOG_ID: 20260708_1345**

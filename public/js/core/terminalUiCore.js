@@ -209,12 +209,16 @@ export function createTerminalUiCore(deps) {
       setBusy(true);
       if (cmdInput) cmdInput.disabled = true;
       const staticMessage = normalizeLoadingMessage(message);
-      if (hintEl) {
-        // [LOG: 20260617_1156] Clear footer hint text to prevent duplicate "connecting" messages on screen and footer.
-        hintEl.innerHTML = '';
-        // [LOG_ID: 20260707_2015] footer 전체를 숨기지 않는다 (위 setReady 주석 참고).
-      }
+      // [LOG_ID: 20260708_1420] 20260617_1156이 여기서 즉시 hintEl.innerHTML = ''로 힌트 텍스트를 비우던 것을
+      // 제거한다. setLoading()은 화면 전환마다(대부분 400ms 미만으로 빨리 끝남) 호출되는데, 즉시-비움은
+      // 프롬프트 행("선택 >>", 제출한 명령을 계속 보여주는 의도된 동작)은 그대로 둔 채 힌트만 먼저
+      // 사라지는 새 불일치를 만들었다 — "선택 >>는 남아있는데 힌트바가 없어진다"는 재보고의 원인.
+      // 원래 목적("연결하는 중..." 로딩 화면 문구와 낡은 힌트 목록이 동시에 보이는 중복 방지)은 아래
+      // 400ms 폴백 타이머가 실제로 화면을 로딩 placeholder로 교체하는 시점에만 힌트를 비워도 충분하다 —
+      // 그 전까지는 힌트가 이전 내용을 유지하다가 applyCommandFooter의 setHint()가 새 내용으로 자연스럽게
+      // 교체하므로, 빠른 전환(대다수)에서는 깜빡임 없이 프롬프트 행과 완전히 동기화된다.
       core._loadingTimer = setTimeout(() => {
+        if (hintEl) hintEl.innerHTML = '';
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
         screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
