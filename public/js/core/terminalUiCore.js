@@ -218,10 +218,26 @@ export function createTerminalUiCore(deps) {
       // 그 전까지는 힌트가 이전 내용을 유지하다가 applyCommandFooter의 setHint()가 새 내용으로 자연스럽게
       // 교체하므로, 빠른 전환(대다수)에서는 깜빡임 없이 프롬프트 행과 완전히 동기화된다.
       core._loadingTimer = setTimeout(() => {
-        if (hintEl) hintEl.innerHTML = '';
         screenEl.parentElement?.classList.add('is-loading');
         screenEl.classList.add('is-loading');
-        screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
+        // [LOG_ID: 20260708_1520] screenEl.innerHTML 전체를 로딩 문구로 갈아엎지 않는다. 상단바(로고+시계+
+        // 메뉴명)까지 함께 지워지면, footer(구분선/힌트/프롬프트, 로딩 여부와 무관하게 항상 같은 자리를
+        // 지킨다는 20260707_2015 원칙에 따라 그대로 남아있음)만 그대로 남고 화면 위쪽만 사라져, 위/아래가
+        // 서로 다른 화면처럼 분리되어 보였다("연결하는 중입니다" 밑에 이전 화면의 구분선/힌트가 뜬금없이
+        // 붙어있는 것처럼 보이는 문제). 이미 렌더된 상단바 구조(.ansi-screen-body)가 있으면 본문 영역만
+        // 교체해 상단바는 그대로 유지한다 — 상단바가 아직 없는 극초반 부팅 등에서만 기존처럼 전체를 교체.
+        // [LOG_ID: 20260708_1545] 여기서 hintEl.innerHTML = ''로 힌트만 비우던 것을 제거한다. 이 타이머는
+        // renderAnsiScreenWithTopbarSequential이 아직 시작되지 않은(이전 화면이 그대로 떠 있는) 시점에도
+        // 발동할 수 있는데, 그 경우 divider/promptRow는 이전 화면 그대로인 채 힌트 텍스트만 갑자기 비어
+        // "입력창(선택 >>)은 남아있는데 힌트바만 없어진다"는 것과 동일한 패턴의 새 불일치를 만들었다.
+        // 본문을 로딩 문구로 바꾸는 것과 별개로 footer는 아무것도 건드리지 않아야, 어떤 시점에 이 타이머가
+        // 발동하든 footer 3요소(구분선/힌트/프롬프트) 사이의 불일치가 구조적으로 생기지 않는다.
+        const bodyContainer = screenEl.querySelector('.ansi-screen-body');
+        if (bodyContainer) {
+          bodyContainer.innerHTML = buildLoadingScreenMarkup(staticMessage);
+        } else {
+          screenEl.innerHTML = buildLoadingScreenMarkup(staticMessage);
+        }
         // [LOG_ID: 20260707_2015] footer 전체를 숨기지 않는다 (위 setReady 주석 참고).
       }, 400);
     },

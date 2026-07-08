@@ -2233,7 +2233,9 @@ body[data-screen="news-view"] #terminal-screen {
 }
 
 /* [LOG: 20260611_1413] Keep news article loading padding aligned with the completed compact article body. */
-body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > .loading {
+/* [LOG_ID: 20260708_1520] 20260708_1520에서 로딩 placeholder를 #terminal-screen의 직계 자식이 아니라
+   .ansi-screen-body 내부에 넣도록 바꿔, 직계 자식(>) 선택자가 더 이상 매치되지 않는다 — 후손 선택자로 변경. */
+body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .loading {
     width: 100%;
     max-width: 44ch;
     margin: 0 auto;
@@ -2327,13 +2329,13 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen > 
     display: none !important;
 }
 
-#terminal-container:has(.loading) #terminal-prompt-row {
-    /* [LOG: 20260611_1655] A loading screen may coexist with the footer hint, but not with the command input row. */
-    /* [LOG: 20260706_2247] display:none → visibility:hidden. 입력줄을 로딩 중 보이지 않게 하는
-       원래 의도는 유지하되 행 자리는 예약 → 로딩 종료 시 하단 프레임이 한 칸 내려앉던 layout shift 제거.
-       (visibility:hidden은 히트테스트도 차단하므로 클릭 억제 효과 동일) */
-    visibility: hidden !important;
-}
+/* [LOG_ID: 20260708_1520] 20260611_1655/20260706_2247이 여기서 "로딩 화면은 힌트와는 공존해도 되지만
+   입력 행과는 안 된다"며 #terminal-prompt-row만 독자적으로 숨기던 규칙을 제거한다. 이는 구분선/힌트/
+   프롬프트 행이 항상 함께 나타나고 함께 사라져야 한다는 원칙(이 세션에서 반복 확인된 요구사항)을
+   위배하는 제3의 독립적 가시성 트리거였다 — "연결하는 중입니다" 로딩 화면에서 구분선+힌트는 보이는데
+   입력 행만 사라져, 위(로딩 문구)와 아래(footer)가 서로 다른 화면처럼 분리되어 보이는 원인이었다.
+   로딩 중 실제 입력을 막는 것은 이미 setLoading()의 cmdInput.disabled = true로 충분히 보장되므로,
+   visibility까지 별도로 숨길 필요가 없다. */
 
 /* [LOG: 20260617_1032] Align terminal notification font and brightness with main terminal themes */
 .terminal-notification-row {
