@@ -1,3 +1,20 @@
+## [2026-07-08 13:45] 힌트바는 보이는데 구분선만 사라지는 불일치 — is-loading이 독자적으로 구분선만 숨기던 CSS 경로 제거
+
+**LOG_ID: 20260708_1345**
+목표: 사용자 재보고 — "힌트바는 화면에 있는 경우에도 가로줄이 없어지는 현상이 발생하고 있어. 터미널에서는 힌트바가 있으면 가로줄도 있어야지. 나타나는 순서는 가로줄, 힌트바 이렇게 되고. 힌트바와 입력창이 없어질 때는 가로 줄도 같이 없어지고." (20260708_1300으로도 30~40% 확률로 비결정적 재현되던 잔여 문제)
+변경 파일: `public/style.css`
+수행 작업:
+1) [진단] 이전 세션의 폴링 기반 Playwright 진단은 "코드 읽기상 구분선이 먼저 보여야 하는데 실측은 힌트가 먼저 보인다"는 모순에 막혀 있었다. 이번엔 추측 대신 `#terminal-footer`/`#cmd-hint`/`#terminal-prompt-row`/`#terminal-container`에 MutationObserver를 걸어 class/style/data-footer-state 변화를 `performance.now()`와 함께 실시간 기록하는 방식으로 전환 — 첫 실행에서 즉시 재현.
+2) [근본 원인 확정] 트레이스: `t=412.8ms`에 `#terminal-container`에 `is-loading` 클래스가 추가되는 순간 `divider=false, hint=true, prompt=false` — 아직 `renderAnsiScreenWithTopbarSequential` 자신의 동기 숨김 로직(`is-divider-pending` 추가 + 힌트/프롬프트 인라인 숨김)은 시작 전(그건 41ms 뒤인 `t=453.8ms`에야 시작됨). 원인은 `core.setLoading()`의 400ms 폴백 타이머(화면 전환이 오래 걸리면 로딩 placeholder로 교체하는 안전장치)가 렌더러 자신의 숨김보다 먼저 발동하면, `style.css`의 `#terminal-container.is-loading #terminal-footer:not(...)::before { visibility: hidden !important; }` 규칙이 구분선만 즉시 숨겼다는 것. `#cmd-hint`/`#terminal-prompt-row`는 애초에 `is-loading`에 전혀 반응하지 않도록 설계돼 있어(20260707_2015: "하단 상태줄은 로딩 여부와 무관하게 항상 같은 자리") 이 41ms 창 동안 구분선만 유일하게, 힌트/프롬프트와 동기화되지 않은 별도 경로로 사라졌다.
+3) [수정] `style.css`에서 `is-loading` 상태일 때 구분선을 숨기던 두 규칙(20260617_1642 콘텐츠 복원용 중복 규칙, 20260707_1538 강제 숨김 규칙)을 완전히 제거. 이제 구분선은 hint/promptRow와 동일하게 오직 `is-divider-pending`(본문 스트리밍 시작~footer 콘텐츠 준비 완료까지 렌더러가 동기적으로 켜고 끄는 단일 신호)에만 반응한다 — 세 요소를 서로 다른 3개 메커니즘이 아니라 사실상 하나의 타이밍 신호로 통일해 구조적으로 동기화.
+4) [검증] MutationObserver 트레이스 기반 스크립트로 "board select -> post list" 시나리오 30회 연속(15회 × 2배치) 재실행 — 수정 전 첫 시도 즉시 재현되던 위반이 수정 후 0/30으로 완전히 사라짐. 추가로 6개 화면 전환 시나리오(main↔news, main→board select→post list→post view→main) × 4라운드 = 24회에 걸쳐 이번 위반 패턴뿐 아니라 기존 Phase 2/4에서 잡았던 두 위반 패턴("본문 스트리밍 중 구분선 노출", "구분선+힌트는 숨었는데 프롬프트 행은 남음")까지 함께 재확인 — 전부 통과, 회귀 없음.
+5) [회귀] `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:vercel-ready` 전부 통과.
+실행: MutationObserver 기반 정밀 타이밍 트레이스(신규 기법), 6시나리오×4라운드 종합 회귀 검증, `npm test`, smoke 2종
+기대: 구분선의 가시성이 항상 힌트/프롬프트 가시성의 상위집합이 된다 — 힌트가 보이는데 구분선이 안 보이는 상태는 이제 CSS 구조상 발생할 수 없다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 13:00] 구분선/힌트가 프롬프트 행보다 먼저 사라지던 새 불일치 — setLoading 즉시숨김 되돌리고 진짜 원인 2곳 직접 수정
 
 **LOG_ID: 20260708_1300**
