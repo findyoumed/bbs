@@ -1,4 +1,5 @@
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
+import { renderAnsiScreenWithTopbar, renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
 
 export function createMemoScreens(deps) {
     const {
@@ -29,7 +30,16 @@ export function createMemoScreens(deps) {
     function renderMemoStatus(message) {
         clearMemoWriteFlow();
         const safeMessage = String(message || '쪽지 화면을 불러오지 못했습니다.').trim();
-        screenEl.innerHTML = `<div class="bbs-box"><div class="bbs-error">${esc(safeMessage)}</div></div>`;
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        // [LOG_ID: 20260708_1030] 게스트 차단/오류 안내도 다른 화면과 동일한 정통 상단바를 갖춘다.
+        // (기존엔 상단바 없는 .bbs-box만 표시되어 이 화면만 로고·시계가 사라진 것처럼 보였다.)
+        renderRawHtmlScreenWithTopbar({
+            leftLabel: 'MEMO',
+            centerLabel: '쪽지함',
+            bodyHtml: `<div class="ansi-line ansi-red">${esc(safeMessage)}</div>`,
+            screenEl,
+            isMobile
+        });
         setHint(safeMessage);
         setPrompt('>>');
         // [LOG: 20260617_1005] Guest/direct memo status screens finish without applyCommandFooter.
@@ -67,8 +77,7 @@ export function createMemoScreens(deps) {
             state._memos = memos || [];
 
             const ansiText = buildMemoListAnsi(state._memos);
-            const rendered = ansiToHTML(ansiText);
-            screenEl.innerHTML = `<div class="ansi-screen">${rendered.html}</div>`;
+            renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
 
             await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
             focusCommandInput();
@@ -110,12 +119,14 @@ export function createMemoScreens(deps) {
             }
 
             const ansiText = buildMemoViewAnsi(hydratedMemo);
-            const rendered = ansiToHTML(ansiText);
+            const rendered = renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
             const deleteConfirm = state._memoDeleteConfirm;
             const deleteConfirmHtml = deleteConfirm && String(deleteConfirm.memoId || '') === String(state._currentMemoId || '')
                 ? '<div class="ansi-line ansi-yellow">[안내] 이 쪽지를 삭제하시겠습니까? (y/n)</div>'
                 : '';
-            screenEl.innerHTML = `<div class="ansi-screen">${rendered.html}${deleteConfirmHtml}</div>`;
+            if (deleteConfirmHtml) {
+                rendered.screenNode?.querySelector('.ansi-screen-body')?.insertAdjacentHTML('beforeend', deleteConfirmHtml);
+            }
 
             await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
             if (deleteConfirmHtml) {
@@ -182,11 +193,16 @@ export function createMemoScreens(deps) {
             })
             .join('');
 
-        screenEl.innerHTML = `
-      <div class="ansi-screen memo-write-screen">
-        <div class="ansi-line ansi-yellow">▣ 쪽지 보내기 ▣</div>
-        ${transcriptHtml}
-      </div>`;
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        // [LOG_ID: 20260708_1030] 다른 화면과 동일한 정통 상단바로 렌더링한다.
+        // (기존엔 "▣ 쪽지 보내기 ▣"라는 자체 제목 줄만 있고 로고 박스·실시간 시계가 없었다.)
+        renderRawHtmlScreenWithTopbar({
+            leftLabel: 'MEMO',
+            centerLabel: '쪽지 보내기',
+            bodyHtml: transcriptHtml,
+            screenEl,
+            isMobile
+        });
 
         setHint('전송(/s 또는 SEND), 취소(/q, P, M, B)');
         setPrompt(flow.stage === 'target' ? '받는 사람 >>' : '내용 >>');

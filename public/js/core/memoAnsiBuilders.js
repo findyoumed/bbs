@@ -2,24 +2,17 @@ import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 
 export function createMemoAnsiBuilders(deps) {
   const {
-    ANSI_BOLD,
     ANSI_RESET,
     ansiColor,
     ansiHLine,
-    displayWidth,
-    fitCell
+    buildTopHeader,
+    fitCell,
+    formatLongDate
   } = createAnsiBuilderUtils(deps);
 
   function buildMemoListAnsi(memos) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
-
-    function headerBar() {
-      const label = isMobile ? ' ▣ 쪽 지 함 ▣ ' : ' ▣ 쪽 지 함 (MEMO) ▣ ';
-      const count = ` 총 ${memos.length}통 `;
-      const dashes = '─'.repeat(Math.max(0, targetCols - displayWidth(label) - displayWidth(count) - 2));
-      return ansiColor(14) + '─' + label + dashes + count + '─' + ANSI_RESET;
-    }
 
     function colHeader() {
       if (isMobile) {
@@ -63,14 +56,23 @@ export function createMemoAnsiBuilders(deps) {
         ANSI_RESET;
     }
 
-    const parts = [headerBar(), colHeader(), ansiHLine(targetCols, 4)];
+    // [LOG_ID: 20260708_1030] 다른 목록 화면들과 동일하게 buildTopHeader로 정통 상단바(로고 박스+실시간
+    // 시계)를 갖춘다. 기존엔 "▣ 쪽 지 함 (MEMO) ▣" 자체 박스 헤더를 쓰면서 화면 전체가
+    // renderAnsiScreenWithTopbar가 아닌 맨 ansiToHTML로만 그려져, 상단바가 통째로 빠진 채 렌더링됐다.
+    const parts = [
+      buildTopHeader({ leftLabel: 'MEMO', centerLabel: '쪽지함' }, `(총 ${memos.length}통)`, targetCols),
+      colHeader(),
+      ansiHLine(targetCols, 8)
+    ];
     if (!memos.length) {
       parts.push(ansiColor(8) + '   도착한 쪽지가 없습니다.' + ANSI_RESET);
     } else {
       memos.slice(0, 16).forEach((memo, index) => parts.push(memoLine(memo, index)));
     }
 
-    while (parts.length < 20) {
+    // buildTopHeader의 4줄은 renderAnsiScreenWithTopbar가 본문에서 떼어내므로,
+    // 총 24줄(80x24 PC통신 프레임) 예산에 맞춰 나머지를 빈 줄로 채운다.
+    while (parts.length < 24) {
       parts.push('');
     }
 
@@ -82,12 +84,13 @@ export function createMemoAnsiBuilders(deps) {
     const targetCols = isMobile ? 44 : 80;
     const innerWidth = targetCols - 4;
 
-    const parts = [];
+    // [LOG_ID: 20260708_1030] 바깥 제목 줄("쪽지 보기")을 buildTopHeader의 정통 상단바로 옮기고,
+    // 내용 박스는 그대로 유지한다 — 다른 화면들과 마찬가지로 renderAnsiScreenWithTopbar로 렌더링해야
+    // 로고 박스+실시간 시계가 보인다(기존엔 자체 박스 헤더뿐이라 상단바가 통째로 빠져 있었다).
+    const parts = [buildTopHeader({ leftLabel: 'MEMO', centerLabel: '쪽지 보기' }, '', targetCols)];
     parts.push(ansiColor(14) + '┌' + '─'.repeat(targetCols - 2) + '┐' + ANSI_RESET);
-    parts.push(ansiColor(14) + '│ ' + ansiColor(15) + ANSI_BOLD + fitCell('쪽지 보기', innerWidth, 'center') + ANSI_RESET + ansiColor(14) + ' │' + ANSI_RESET);
-    parts.push(ansiColor(14) + '├' + '─'.repeat(targetCols - 2) + '┤' + ANSI_RESET);
     parts.push(ansiColor(14) + '│ ' + ansiColor(11) + fitCell('보낸이: ', 8) + ansiColor(15) + fitCell(memo.senderUserId || '', innerWidth - 8) + ansiColor(14) + ' │' + ANSI_RESET);
-    parts.push(ansiColor(14) + '│ ' + ansiColor(11) + fitCell('받은날: ', 8) + ansiColor(15) + fitCell(memo.createdAt || '', innerWidth - 8) + ansiColor(14) + ' │' + ANSI_RESET);
+    parts.push(ansiColor(14) + '│ ' + ansiColor(11) + fitCell('받은날: ', 8) + ansiColor(15) + fitCell(formatLongDate(memo.createdAt) || memo.createdAt || '', innerWidth - 8) + ansiColor(14) + ' │' + ANSI_RESET);
     parts.push(ansiColor(14) + '├' + '─'.repeat(targetCols - 2) + '┤' + ANSI_RESET);
 
     const contentLines = String(memo.content || '').split('\n');
@@ -95,7 +98,7 @@ export function createMemoAnsiBuilders(deps) {
       parts.push(ansiColor(14) + '│ ' + ansiColor(15) + fitCell(line, innerWidth) + ansiColor(14) + ' │' + ANSI_RESET);
     });
 
-    while (parts.length < 18) {
+    while (parts.length < 17) {
       parts.push(ansiColor(14) + '│ ' + ' '.repeat(innerWidth) + ' │' + ANSI_RESET);
     }
     parts.push(ansiColor(14) + '└' + '─'.repeat(targetCols - 2) + '┘' + ANSI_RESET);

@@ -113,6 +113,35 @@ function buildTopbarHtml(model) {
 
 export { buildTopbarHtml };
 
+// [LOG_ID: 20260708_1030] ANSI 텍스트가 아니라 이미 완성된 HTML 본문(줄 단위로 색을 입혀 누적되는
+// 실시간 트랜스크립트 화면 — 쪽지 쓰기, 글쓰기 라인 에디터 등)을 렌더링할 때 쓰는 상단바 래퍼.
+// renderAnsiScreenWithTopbar와 동일한 DOM 구조(.ansi-screen > 상단바 + .ansi-screen-body)를 만들지만,
+// 첫 4줄을 ANSI 텍스트에서 파싱하는 대신 모델(leftLabel/centerLabel 등)을 직접 받는다.
+// 이 두 화면이 여태 상단바(로고 박스+실시간 시계) 없이 렌더링되어 다른 모든 화면과 이질적으로 보였다.
+export function renderRawHtmlScreenWithTopbar({ leftLabel = '', centerLabel = '', rightLabel = '', bodyHtml = '', screenEl, isMobile = false }) {
+  const layoutMode = isMobile ? 'compact' : 'full';
+  const layoutCols = layoutMode === 'compact' ? '44' : '80';
+  const model = {
+    siteLabel: 'PC통신동호회 01410',
+    timestamp: formatCurrentTime(),
+    layoutMode,
+    leftLabel,
+    centerLabel,
+    rightLabel
+  };
+
+  const html = `<div class="ansi-screen" data-layout-mode="${layoutMode}" data-layout-cols="${layoutCols}">${buildTopbarHtml(model)}<div class="ansi-screen-body">${bodyHtml}</div></div>`;
+
+  if (screenEl) {
+    screenEl.innerHTML = html;
+  }
+
+  return {
+    html,
+    screenNode: screenEl?.querySelector('.ansi-screen')
+  };
+}
+
 export function renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl }) {
   const fullRendered = ansiToHTML(ansiText);
   const model = extractTopbarModel(fullRendered.rows);

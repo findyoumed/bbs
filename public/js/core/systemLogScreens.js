@@ -2,6 +2,7 @@
  * systemLogScreens.js
  * [LOG: 20260428_0930] Evolution Mode 14: System log viewer screen.
  */
+import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
 
 export function createSystemLogScreens(deps) {
   const {
@@ -14,8 +15,7 @@ export function createSystemLogScreens(deps) {
     setHint,
     setPrompt,
     updateURL,
-    showToast,
-    esc
+    showToast
   } = deps;
 
   async function showSystemLog(fromHistory = false) {
@@ -31,8 +31,10 @@ export function createSystemLogScreens(deps) {
   function renderLogs() {
     const logs = logger.getLogs();
     const ansiText = buildSystemLogAnsi(logs);
-    const rendered = ansiToHTML(ansiText);
-    screenEl.innerHTML = `<div class="ansi-screen">${rendered.html}</div>`;
+    // [LOG_ID: 20260708_1030] 다른 화면과 동일한 정통 상단바(로고 박스+실시간 시계)로 렌더링한다.
+    // (기존엔 ansiToHTML 결과를 맨 div로만 감싸 buildSystemLogAnsi의 buildTopHeader 4줄이
+    // 평범한 본문 텍스트 줄로만 섞여 나오고, 로고는 클릭 불가·시계는 멈춰 있었다.)
+    renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
   }
 
   async function handleLogCommand(cmd) {

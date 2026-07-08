@@ -11,8 +11,46 @@ export function createSystemAnsiBuilders(deps) {
     fitCell,
     ansiHLine,
     buildTopHeader,
+    formatLongDate,
     truncateDisplayText
   } = createAnsiBuilderUtils({ displayWidth, isWideChar });
+
+  // [LOG_ID: 20260708_1030] 사용자 프로필(WHO/PF) 화면. 기존엔 .bbs-box 원시 HTML로만 그려져
+  // 상단바(로고 박스+실시간 시계)가 아예 없었고, 가입일도 ISO 원문(2026-03-23T11:56:33.619804+00:00)이
+  // 그대로 노출됐다 — 다른 화면과 동일한 buildTopHeader + formatLongDate로 통일한다.
+  function buildProfileAnsi(member, options = {}) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    const labelWidth = isMobile ? 8 : 10;
+
+    const parts = [
+      buildTopHeader({ leftLabel: 'WHO', centerLabel: '사용자 정보 (PROFILE)' }, '', targetCols)
+    ];
+
+    if (options.notFound) {
+      parts.push('');
+      parts.push(`  ${ansiColor(12)}회원 정보를 찾을 수 없습니다.${ANSI_RESET}`);
+      parts.push(`  ${ansiColor(8)}대상 ID : ${ansiColor(15)}${options.userId || '정보 없음'}${ANSI_RESET}`);
+      return parts.join('\n');
+    }
+
+    if (options.error) {
+      parts.push('');
+      parts.push(`  ${ansiColor(12)}프로필 정보를 불러오지 못했습니다.${ANSI_RESET}`);
+      return parts.join('\n');
+    }
+
+    const row = (label, value) => `  ${ansiColor(11)}${fitCell(label, labelWidth)}${ANSI_RESET}: ${ansiColor(15)}${value}${ANSI_RESET}`;
+
+    parts.push('');
+    parts.push(row('아이디', member.userId || '정보 없음'));
+    parts.push(row('닉네임', member.nickName || '정보 없음'));
+    parts.push(row('회원등급', `${member.level || 1} (${member.isAdmin ? '운영자' : '일반회원'})`));
+    parts.push(row('가입일', formatLongDate(member.registrationDateTime) || '정보 없음'));
+    parts.push(ansiHLine(targetCols, 8));
+
+    return parts.join('\n');
+  }
 
   function buildActiveUsersAnsi(users) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -84,32 +122,44 @@ export function createSystemAnsiBuilders(deps) {
     parts.push(`  메모리: ${ansiColor(15)}${memUsedMB}MB / ${memTotalMB}MB (${memUsage}%)${ANSI_RESET}`);
     parts.push(ansiHLine(targetCols, 8));
 
+    // [LOG_ID: 20260708_1030] 저장소 상태(Health)와 메트릭(Metrics)을 저장소당 한 줄로 합쳐
+    // 동일한 7개 저장소를 두 번 나열하던 것을 제거했다. 80x24 한 프레임에 다 들어가지 않아
+    // #terminal-screen에 세로 스크롤바가 생기던 문제(정통 PC통신 화면은 스크롤 없이 페이지 단위로만
+    // 넘어간다)의 근본 원인이었다.
     parts.push(`${ansiColor(11)}[ 저장소 상태 (Repository Health) ]${ANSI_RESET}`);
-    if (info.repositoryHealth) {
-      Object.entries(info.repositoryHealth).forEach(([name, status]) => {
-        const nameLabel = fitCell(name.toUpperCase(), isMobile ? 8 : 12);
-        const statusText = status.status === 'ok' ? `${ansiColor(10)}정상 (OK)` : `${ansiColor(12)}오류 (${status.status})`;
-        const driver = ansiColor(8) + (status.driver || 'unknown') + ANSI_RESET;
-        parts.push(`  ${ansiColor(14)}${nameLabel}${ANSI_RESET}: ${statusText}  ${driver}`);
-      });
-    }
-    parts.push(ansiHLine(targetCols, 8));
-
-    // Metrics are usually too wide for mobile, simplify or skip
-    if (!isMobile) {
-      parts.push(`${ansiColor(11)}[ 저장소 메트릭 (Metrics) ]${ANSI_RESET}`);
-      parts.push(`${ansiColor(8)}  명칭         호출수   에러     평균속도   드라이버${ANSI_RESET}`);
-      if (info.repositoryMetrics) {
-        Object.entries(info.repositoryMetrics).forEach(([name, meta]) => {
-          const n = fitCell(name.toUpperCase(), 12);
-          const calls = fitCell(meta.metrics?.calls || 0, 8, 'right');
-          const errs = fitCell(meta.metrics?.errors || 0, 8, 'right');
-          const avg = fitCell((meta.metrics?.avgDurationMs || 0) + 'ms', 10, 'right');
-          const driver = fitCell(meta.driver || '', 12);
-          parts.push(`  ${ansiColor(15)}${n}${ansiColor(7)} ${calls} ${ansiColor(12)}${errs}${ansiColor(14)} ${avg}   ${ansiColor(8)}${driver}${ANSI_RESET}`);
+    if (isMobile) {
+      if (info.repositoryHealth) {
+        Object.entries(info.repositoryHealth).forEach(([name, status]) => {
+          const nameLabel = fitCell(name.toUpperCase(), 10);
+          const statusText = status.status === 'ok' ? `${ansiColor(10)}정상` : `${ansiColor(12)}오류`;
+          const driver = ansiColor(8) + (status.driver || 'unknown') + ANSI_RESET;
+          parts.push(`  ${ansiColor(14)}${nameLabel}${ANSI_RESET} ${statusText} ${driver}`);
+        });
+      }
+    } else {
+      const metricsByName = info.repositoryMetrics || {};
+      parts.push(
+        `${ansiColor(8)}  ${fitCell('명칭', 12)} ${fitCell('상태', 14)}${fitCell('드라이버', 12)} ${fitCell('호출', 6, 'right')} ${fitCell('에러', 6, 'right')} ${fitCell('평균', 8, 'right')}${ANSI_RESET}`
+      );
+      if (info.repositoryHealth) {
+        Object.entries(info.repositoryHealth).forEach(([name, status]) => {
+          const meta = metricsByName[name] || {};
+          // [LOG_ID: 20260708_1030] fitCell은 표시폭을 문자 단위로 세므로, ANSI 색 코드를 먼저 섞은
+          // 문자열을 넘기면 이스케이프 문자까지 폭으로 계산돼 정렬이 깨진다. 먼저 순수 텍스트를
+          // 셀 폭에 맞게 자르고, 그 다음에 색을 입힌다.
+          const nameLabel = fitCell(name.toUpperCase(), 12);
+          const isOk = status.status === 'ok';
+          const statusPlain = fitCell(isOk ? '정상 (OK)' : `오류 (${status.status})`, 14);
+          const statusColor = isOk ? 10 : 12;
+          const driver = fitCell(status.driver || meta.driver || 'unknown', 12);
+          const calls = fitCell(meta.metrics?.calls || 0, 6, 'right');
+          const errs = fitCell(meta.metrics?.errors || 0, 6, 'right');
+          const avg = fitCell(`${meta.metrics?.avgDurationMs || 0}ms`, 8, 'right');
+          parts.push(`  ${ansiColor(14)}${nameLabel}${ANSI_RESET} ${ansiColor(statusColor)}${statusPlain}${ANSI_RESET}${ansiColor(8)}${driver}${ansiColor(7)} ${calls} ${ansiColor(12)}${errs}${ansiColor(14)} ${avg}${ANSI_RESET}`);
         });
       }
     }
+    parts.push(ansiHLine(targetCols, 8));
 
     return parts.join('\n');
   }
@@ -136,7 +186,9 @@ export function createSystemAnsiBuilders(deps) {
     }
 
     parts.push('\n' + ansiHLine(targetCols, 8));
-    parts.push(`  ${ansiColor(8)}기준 시각: ${data.timestamp}${ANSI_RESET}`);
+    // [LOG_ID: 20260708_1030] API가 ISO 8601 원문(2026-07-08T01:14:16.141Z)을 그대로 내려보내
+    // 디버그 로그처럼 보이던 것을 다른 화면과 동일한 formatLongDate로 표시한다.
+    parts.push(`  ${ansiColor(8)}기준 시각: ${formatLongDate(data.timestamp) || data.timestamp}${ANSI_RESET}`);
 
     return parts.join('\n');
   }
@@ -178,5 +230,5 @@ export function createSystemAnsiBuilders(deps) {
     return parts.join('\n');
   }
 
-  return { buildActiveUsersAnsi, buildSystemDiagnosticsAnsi, buildActivitySummaryAnsi, buildSystemLogAnsi };
+  return { buildActiveUsersAnsi, buildSystemDiagnosticsAnsi, buildActivitySummaryAnsi, buildSystemLogAnsi, buildProfileAnsi };
 }

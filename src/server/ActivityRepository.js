@@ -2,6 +2,7 @@
 
 const BaseRepository = require('./BaseRepository');
 const { normalizeText } = require('./httpUtils');
+const { describeAction } = require('./activityActionLabels');
 
 /**
  * [LOG: 20260426_2350] ActivityRepository Evolution
@@ -130,7 +131,7 @@ class ActivityRepository extends BaseRepository {
       const recentActions = all
         .filter(e => e.action || e.description)
         .slice(0, limit)
-        .map(e => `${e.nickName}님이 ${e.description || e.action || '활동 중'}입니다.`);
+        .map(e => `${e.nickName}님이 ${e.description || describeAction(e.action)}입니다.`);
 
       return {
         summary: `${stats.activeMembers}명의 회원과 ${stats.activeGuests}명의 손님이 접속 중입니다.`,

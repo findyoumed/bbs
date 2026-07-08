@@ -170,7 +170,7 @@ export function createAppFactoryScreens(deps) {
     doSignup: authService.doSignup
   });
   const helpScreens = createHelpScreens({ ...screenDeps });
-  const profileScreens = createProfileScreens({ ...screenDeps, apiFetch });
+  const profileScreens = createProfileScreens({ ...screenDeps, apiFetch, buildProfileAnsi: systemAnsiBuilders.buildProfileAnsi });
   const myInfoScreens = createMyInfoScreens({
     ...screenDeps,
     apiFetch,

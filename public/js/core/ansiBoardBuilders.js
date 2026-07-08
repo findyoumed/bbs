@@ -8,7 +8,6 @@ export function createBoardAnsiBuilders(deps) {
     getBoardDoor
   } = deps;
   const {
-    ANSI_BOLD,
     ANSI_RESET,
     ansiColor,
     buildPageLabel,
@@ -216,23 +215,29 @@ export function createBoardAnsiBuilders(deps) {
   }
 
   function buildAttachmentListAnsi(attachments) {
-    const parts = [];
-    parts.push(ansiColor(14) + '┌────────────────────────────────────────────────────────────────────────────┐' + ANSI_RESET);
-    parts.push(ansiColor(14) + '│ ' + ansiColor(15) + ANSI_BOLD + fitCell('첨부 파일 목록 (PDS LIST)', 74, 'center') + ANSI_RESET + ansiColor(14) + ' │' + ANSI_RESET);
-    parts.push(ansiColor(14) + '├────────────────────────────────────────────────────────────────────────────┤' + ANSI_RESET);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    const innerWidth = targetCols - 4;
+
+    // [LOG_ID: 20260708_1030] 다른 화면과 동일하게 buildTopHeader로 정통 상단바(로고 박스+실시간 시계)를
+    // 갖춘다. 자체 박스 제목 줄만 쓰던 기존 방식은 renderAnsiScreenWithTopbar가 아닌 맨 ansiToHTML로만
+    // 그려져 상단바가 통째로 빠진 채 렌더링됐다.
+    const parts = [buildTopHeader({ leftLabel: 'PDS', centerLabel: '첨부 파일 목록' }, '', targetCols)];
+    parts.push(ansiColor(14) + '┌' + '─'.repeat(targetCols - 2) + '┐' + ANSI_RESET);
 
     if (!attachments || attachments.length === 0) {
-      parts.push(ansiColor(14) + '│ ' + ansiColor(8) + fitCell('첨부된 파일이 없습니다.', 74, 'center') + ansiColor(14) + ' │' + ANSI_RESET);
+      parts.push(ansiColor(14) + '│ ' + ansiColor(8) + fitCell('첨부된 파일이 없습니다.', innerWidth, 'center') + ansiColor(14) + ' │' + ANSI_RESET);
     } else {
       attachments.forEach((file, idx) => {
         const num = String(idx + 1).padStart(2);
-        const name = fitCell(file.originalFilename || file.filename || '', 40);
+        const nameWidth = innerWidth - 2 - 2 - 1 - 10;
+        const name = fitCell(file.originalFilename || file.filename || '', nameWidth);
         const size = fitCell(`${Math.round(file.fileSize / 1024)} KB`, 10, 'right');
-        parts.push(ansiColor(14) + '│ ' + ansiColor(11) + num + '. ' + ansiColor(15) + name + ' ' + ansiColor(8) + size + ' '.repeat(19) + ansiColor(14) + ' │' + ANSI_RESET);
+        parts.push(ansiColor(14) + '│ ' + ansiColor(11) + num + '. ' + ansiColor(15) + name + ' ' + ansiColor(8) + size + ansiColor(14) + ' │' + ANSI_RESET);
       });
     }
 
-    parts.push(ansiColor(14) + '└────────────────────────────────────────────────────────────────────────────┘' + ANSI_RESET);
+    parts.push(ansiColor(14) + '└' + '─'.repeat(targetCols - 2) + '┘' + ANSI_RESET);
     return parts.join('\n');
   }
 

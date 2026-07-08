@@ -1,4 +1,5 @@
 import { UI_TEXT } from './i18n.js';
+import { renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
 
 export function createPostWriteView(deps) {
   const {
@@ -71,12 +72,20 @@ export function createPostWriteView(deps) {
 
   function renderLineEditor(editor) {
     if (!editor) return;
-    const transcript = editor.transcript.map((line) => esc(line)).join('\n');
-    screenEl.innerHTML = `
-      <div class="bbs-box">
-        <div class="bbs-title">${esc(editor.modeLabel)}</div>
-        <pre class="ansi-screen">${transcript}</pre>
-      </div>`;
+    const transcriptHtml = editor.transcript
+      .map((line) => `<div class="ansi-line">${esc(line)}</div>`)
+      .join('');
+    const boardCode = String(state.board?.id || state.board?.boardId || 'BBS').toUpperCase();
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    // [LOG_ID: 20260708_1030] 다른 화면과 동일한 정통 상단바로 렌더링한다.
+    // (기존엔 상단바 없이 .bbs-box 제목 줄만 있어 글쓰기 화면만 로고 박스·실시간 시계가 빠져 있었다.)
+    renderRawHtmlScreenWithTopbar({
+      leftLabel: boardCode,
+      centerLabel: editor.modeLabel,
+      bodyHtml: transcriptHtml,
+      screenEl,
+      isMobile
+    });
     setPrompt(getWritePrompt(editor));
   }
 

@@ -1,3 +1,22 @@
+## [2026-07-08 10:30] 상단바 없는 화면 전수 감사 — WHO/ACT/SYSINFO/쪽지/첨부/프로필/글쓰기/SYSLOG 정통 프레임 통일
+
+**LOG_ID: 20260708_1030**
+목표: "또 pc통신 ui같지 않은 곳을 찾아서 수정해줘. 철저한 프로그래머처럼 해줘" — 코드 전수 감사로 정통 상단바(로고 박스+실시간 시계) 계약을 어기는 화면을 모두 찾아 수정.
+변경 파일: `public/js/core/{ansiBoardBuilders,ansiTopbarScreen,appFactoryScreens,memoAnsiBuilders,memoScreens,postScreens,postWriteView,profileScreens,systemAnsiBuilders,systemLogScreens,systemScreens}.js`, `src/server/{ActivityRepository,ActivityRepositorySupabase}.js`, `src/server/activityActionLabels.js`(신규)
+수행 작업:
+1) [감사 방법] `screenEl.innerHTML =` 직접 대입 지점 전수 grep → 각 화면의 ANSI 빌더가 `buildTopHeader()`를 쓰는지, 렌더 함수가 `renderAnsiScreenWithTopbar`(정식 상단바 DOM)를 쓰는지 대조. `┌─┐`/`▣...▣` 자체 박스 헤더를 쓰는 빌더(`memoAnsiBuilders.js` 2곳, `ansiBoardBuilders.js`의 `buildAttachmentListAnsi`)와, `buildTopHeader`는 있지만 맨 `ansiToHTML`+div로만 그려 상단바가 평범한 텍스트 줄로 뭉개지는 화면(`systemScreens.js` 3곳, `systemLogScreens.js`)을 모두 찾음.
+2) [치명 버그] `systemScreens.js`(WHO/ACT/SYSINFO)는 `setLoading()`만 걸고 `setReady(true)`를 한 번도 안 불러, 내부 400ms 로딩 타이머가 취소되지 않고 뒤늦게 발동 — 화면이 정상 렌더된 뒤에도 "연결하는 중입니다"로 **영구 고착**됨(라이브 재현으로 확인). `postScreens.js`의 `showAttachmentList`도 동일 결함. `applyCommandFooter`(setReady를 finally에서 호출)로 통일해 해결.
+3) [상단바 부재] `memoScreens.js`(목록/보기/게스트차단/쪽지쓰기 트랜스크립트), `postWriteView.js`(글쓰기 라인 에디터), `profileScreens.js`(WHO/PF), `ansiBoardBuilders.js`의 첨부파일 목록, `systemLogScreens.js` — 전부 상단바 없이(또는 텍스트로 뭉개져) 렌더링되던 것을, ANSI 빌더에 `buildTopHeader` 추가 + `renderAnsiScreenWithTopbar` 사용으로 통일. 트랜스크립트형(줄마다 색을 입혀 누적되는 쪽지쓰기·글쓰기) 화면을 위해 `ansiTopbarScreen.js`에 `renderRawHtmlScreenWithTopbar` 헬퍼를 신설(ANSI 텍스트 파싱 대신 모델을 직접 받아 동일한 상단바 DOM을 생성).
+4) [부수 버그 — 프로필] `profileScreens.js`는 `setHint(getSupportedFooterText(state))`를 직접 호출해 "번호/명령(...)\n선택 >>" 두 줄짜리 원시 디렉티브를 힌트 영역에 통째로 밀어넣어 프롬프트가 이중으로 보였고(힌트에 "선택 >>", 실제 프롬프트엔 맨 ">>" ), 가입일도 ISO 원문(`2026-03-23T11:56:33.619804+00:00`)이 그대로 노출됐다. `applyCommandFooter` + `formatLongDate`로 전면 재작성.
+5) [부수 버그 — SYSINFO 스크롤바] 상단바를 붙이자 `저장소 상태`+`저장소 메트릭` 두 목록(같은 7개 저장소를 중복 나열)이 24줄 예산을 넘겨 세로 스크롤바가 생김 — 저장소당 한 줄(상태+드라이버+호출/에러/평균)로 합쳐 중복 제거, 스크롤바 없이 수납. (구현 중 `fitCell`에 ANSI 색코드가 섞인 문자열을 넘겨 정렬이 깨지는 실수를 발견·수정 — `fitCell`은 이스케이프 문자까지 폭으로 세므로 순수 텍스트를 먼저 자르고 색은 나중에 입혀야 함.)
+6) [부수 버그 — ACT 화면 텍스트] "손님님이 member_activity입니다."처럼 서버 내부 액션 코드(snake_case)가 번역 없이 그대로 노출되던 것을 발견. `requestContext.js`의 `resolveActionHint()`가 만드는 액션 코드 전량을 한글 문구로 옮기는 `activityActionLabels.js`를 신설해 Memory/Supabase 두 ActivityRepository 드라이버 모두에 적용("회원 정보 열람 중" 등). ACT 화면의 "기준 시각"도 ISO 원문 대신 `formatLongDate`로 표시.
+7) [검증] Playwright로 WHO/ACT/SYSINFO/PROFILE/MEMO(게스트차단)/SYSLOG 전부 상단바 표시·클록 갱신·스크롤바 없음·자연스러운 한글 문구를 스크린샷으로 확인. 로그인 게이트가 있는 화면(쪽지 목록/보기/쓰기, 첨부파일 목록, 글쓰기)은 코드 정독으로 동일 패턴 적용을 재확인(guest 세션으로는 도달 불가 — 한계로 기록). 브라우저 module-mode 구문 스캔(`node --input-type=module --check`)으로 전체 수정 파일 재검증 — 이전 세션에서 겪었던 "함수 닫는 중괄호까지 지워 화면이 빈 페이지가 되는" 실수와 같은 종류의 문제가 없음을 확인. `npm test`, smoke:vercel-ready, smoke:full-traversal, smoke:renderer-ui, smoke:command-parity, smoke:ui-layout 전부 통과(0 콘솔 에러).
+실행: Playwright 실사 6개 화면, module-mode 구문 스캔, `npm test`, smoke 6종
+기대: 코드베이스 전 화면이 동일한 정통 PC통신 상단바(로고 박스+실시간 시계) 프레임을 갖추고, 로딩이 화면을 영구 잠식하지 않으며, 사용자에게 노출되는 문구에 내부 디버그 값(ISO 타임스탬프·snake_case 액션 코드)이 새지 않는다.
+결과: ✅ 완료 (로그인 게이트 화면은 코드 검토로만 검증 — 브라우저 실사 재확인 권장)
+
+---
+
 ## [2026-07-08 09:40] 힌트 비움 → is-loading 추론으로 커서/입력줄이 영구 고착되던 결함 근절
 
 **LOG_ID: 20260708_0940**

@@ -2,15 +2,21 @@
  * [LOG: 20260410_2315] 사용자 프로필 화면 처리 모듈
  */
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
+import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
 
 export function createProfileScreens(deps) {
-  const { apiFetch, esc, getCommandFooterText, getSupportedFooterText, screenEl, setLoading, setReady, updateURL, setHint, setPrompt, cmdInput, state } = deps;
+  const {
+    ansiToHTML, apiFetch, applyCommandFooter, buildProfileAnsi, cmdInput,
+    getCommandFooterText, getSupportedFooterText, screenEl, setLoading, state, updateURL
+  } = deps;
 
-  function applyProfileFooter() {
-    setHint(getSupportedFooterText(state) || getCommandFooterText('profile'));
-    setPrompt('>>');
-    // [LOG: 20260617_1005] Profile renders without applyCommandFooter, so clear loading here.
-    setReady?.(true);
+  async function applyProfileFooter() {
+    // [LOG_ID: 20260708_1030] setHint(getSupportedFooterText(state))를 직접 부르던 기존 코드는
+    // "번호/명령(...)\n선택 >>" 두 줄짜리 원시 디렉티브 문자열을 그대로 힌트 영역에 통째로 밀어넣어,
+    // 힌트줄 안에 엉뚱한 "선택 >>"가 덧붙어 보이고 실제 프롬프트는 (envVars.PROMPT 기본값인) 맨 ">>"만
+    // 표시되는 불일치를 냈다. applyCommandFooter를 쓰면 다른 모든 화면과 동일하게 힌트/프롬프트가
+    // 올바르게 분리되고 setReady(true)까지 자동으로 처리된다.
+    await applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('profile'));
   }
 
   function extractProfileMember(payload) {
@@ -25,17 +31,9 @@ export function createProfileScreens(deps) {
     return payload;
   }
 
-  function renderMissingProfile(userId) {
-    screenEl.innerHTML = `
-      <div class="bbs-box">
-        <div class="bbs-title">사용자 정보 (PROFILE)</div>
-        <div style="padding: 20px; color: #fff; line-height: 2;">
-          회원 정보를 찾을 수 없습니다.<br>
-          대상 ID : ${esc(userId || '정보 없음')}
-        </div>
-      </div>
-    `;
-    applyProfileFooter();
+  async function renderMissingProfile(userId) {
+    renderAnsiScreenWithTopbar({ ansiText: buildProfileAnsi(null, { notFound: true, userId }), ansiToHTML, screenEl });
+    await applyProfileFooter();
   }
 
   async function showProfile(userId, fromHistory = false) {
@@ -49,35 +47,19 @@ export function createProfileScreens(deps) {
       const response = await apiFetch(`/api/members/${encodeURIComponent(userId)}?allowMissing=1`);
       const member = extractProfileMember(response);
       if (!member) {
-        renderMissingProfile(userId);
+        await renderMissingProfile(userId);
         if (shouldAutoFocusCommandInput()) {
           cmdInput.focus();
         }
         return;
       }
 
-      screenEl.innerHTML = `
-        <div class="bbs-box">
-          <div class="bbs-title">사용자 정보 (PROFILE)</div>
-          <div style="padding: 20px; color: #fff; line-height: 2;">
-            아이디  : ${member.userId ? esc(member.userId) : '정보 없음'}<br>
-            닉네임  : ${member.nickName ? esc(member.nickName) : '정보 없음'}<br>
-            회원등급: ${member.level || 1} (${member.isAdmin ? '운영자' : '일반회원'})<br>
-            가입일  : ${member.registrationDateTime || '정보 없음'}<br>
-          </div>
-        </div>
-      `;
-      applyProfileFooter();
+      renderAnsiScreenWithTopbar({ ansiText: buildProfileAnsi(member), ansiToHTML, screenEl });
+      await applyProfileFooter();
     } catch (e) {
       console.error('프로필 조회 실패:', e.message);
-      screenEl.innerHTML = `
-        <div class="bbs-box">
-          <div class="bbs-title">오류</div>
-          <div style="padding: 20px; color: #fff; line-height: 2;">
-            프로필 정보를 불러오지 못했습니다.
-          </div>
-        </div>`;
-      applyProfileFooter();
+      renderAnsiScreenWithTopbar({ ansiText: buildProfileAnsi(null, { error: true }), ansiToHTML, screenEl });
+      await applyProfileFooter();
     }
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
