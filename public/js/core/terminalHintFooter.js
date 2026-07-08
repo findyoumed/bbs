@@ -84,8 +84,13 @@ export function createTerminalHintFooter(deps) {
     }
 
     // [LOG_ID: 20260707_1652] Re-sync prompt width after font loading and the next paint so the first render matches the focused state.
+    // [LOG_ID: 20260708_1725] ch 대신 em을 쓴다. ch는 "현재 적용된 폰트의 숫자 0 글자 폭"이라, CDN
+    // 웹폰트(BbsPrimaryFont)가 아직 로드되기 전 폴백 폰트로 렌더링되는 동안에는 이 요소의 폭 자체가
+    // 폴백 폰트 기준으로 계산됐다가 폰트 로드 완료 순간 자동으로 재계산되어 살짝 넓어졌다 좁아지는
+    // 것처럼 보였다(실측: 17px 기준 폴백 1ch=9px, BbsPrimaryFont 1ch=8.5px=0.5em). em은 폰트 크기에만
+    // 비례하고 어떤 폰트가 적용됐는지와 무관하므로, 로딩 중이든 로드 후든 폭이 항상 고정된다.
     const trimmed = String(cmdPromptRendererEl.value || '').trimEnd();
-    cmdPromptRendererEl.style.width = `${Math.max(1, displayWidth(trimmed || ''))}ch`;
+    cmdPromptRendererEl.style.width = `${Math.max(1, displayWidth(trimmed || '')) * 0.5}em`;
   }
 
   function schedulePromptLayoutSync() {

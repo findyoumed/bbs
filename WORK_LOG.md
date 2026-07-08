@@ -1,3 +1,19 @@
+## [2026-07-08 17:25] 20260708_1710으로도 여전히 재현 — 프롬프트 박스 자신의 너비(ch)도 폰트 전환에 반응하던 잔여 원인 수정
+
+**LOG_ID: 20260708_1725**
+목표: 사용자 재보고 — "아직도 마찬가지인데 space2 처럼 보였다가 1초정도 뒤에 space1으로 돌아가는데." 직전 수정(column-gap: ch→em)이 근본 원인의 일부만 해결했음을 확인.
+변경 파일: `public/js/core/terminalHintFooter.js`
+수행 작업:
+1) [재진단] `#terminal-prompt-row`의 `column-gap`은 이미 `em`으로 고정해 폰트 전환과 무관해졌음을 재확인(CDN 폰트 1.5초 지연 시뮬레이션에서 `columnGap`이 처음부터 끝까지 `8.5px`로 불변). 하지만 프롬프트 자체("선택 >>")를 렌더링하는 `#cmd-prompt-renderer`의 **너비 자체**가 여전히 `terminalHintFooter.js`의 `syncPromptRendererWidth()`에서 `${displayWidth(text)}ch`로 계산되고 있었다 — 이것도 column-gap과 완전히 같은 매커니즘(ch=현재 폰트의 "0" 글자 폭)으로 폰트 전환에 반응해, 박스 자체가 폴백 폰트 기준 폭(예: "선택 >>" 7ch × 9px=63px)에서 실제 폰트 기준 폭(7ch × 8.5px=59.5px)으로 전환되며 우측 경계가 이동 — 그 뒤에 이어지는 입력 캐럿의 절대 위치도 함께 밀렸다.
+2) [수정] `${Math.max(1, displayWidth(text))}ch` → `${Math.max(1, displayWidth(text)) * 0.5}em`으로 변경(1ch=0.5em, 17px 기준 실측 BbsPrimaryFont 값과 일치). `displayWidth()`가 이미 계산해주는 "문자 단위 폭"(한글 전각=2, 그 외=1) 로직은 그대로 유지하고, 단위만 폰트 비의존적인 em으로 교체.
+3) [검증] `#cmd-prompt-renderer`의 font-family를 스크립트로 강제로 폴백 전용("GulimChe, monospace")으로 전환했다가 원래 스택으로 복원 — 폭이 `59.5px → 59.5px → 59.5px`로 완전히 불변임을 확인(수정 전이었다면 폴백 상태에서 폭이 달라졌을 것). CDN 폰트 1.5초 지연 시뮬레이션 5회 재실행 — `column-gap`(8.5px 고정)과 `promptWidth` 모두 폰트 로딩 전/후 거의 완벽히 동일(유일한 흔들림은 `value` 설정과 `style.width` 재계산 사이의 1.7ms 렌더링 파이프라인 지연 — 사람이 인지 불가능한 수준이며 폰트 전환과 무관). 기존 4패턴 종합 회귀 6시나리오×3라운드=18회 재확인 — 전부 통과.
+4) [회귀] `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:vercel-ready` 전부 통과.
+실행: font-family 강제 전환 합성 테스트, CDN 지연 시뮬레이션 5회, 4패턴 종합 회귀(18회), `npm test`, smoke 2종
+기대: 프롬프트 박스 폭과 프롬프트-입력 간격 모두 페이지 로딩 전 구간(폰트 로딩 전/중/후)에 걸쳐 시각적으로 완전히 고정되어, "잠깐 넓어 보였다가 저절로 좁아지는" 현상이 재발하지 않는다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 17:10] 프롬프트-입력창 간격이 페이지 로딩 초반 넓게 보이다 ~1초 후 저절로 좁아지는 문제 — column-gap을 ch에서 em으로 전환
 
 **LOG_ID: 20260708_1710**
