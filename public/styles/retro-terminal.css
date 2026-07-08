@@ -277,10 +277,11 @@ a {
 }
 
 /* [LOG_ID: 20260707_1815] Keep the prompt renderer flush with the input cell; footer spacing is owned by the row layout. */
+/* [LOG_ID: 20260708_1815] min-width도 ch에서 em으로 (20260708_1725와 동일 이유 — ch는 폰트 전환에 반응). */
 #cmd-prompt,
 #cmd-prompt-renderer {
     flex: 0 0 auto;
-    min-width: 1ch;
+    min-width: 0.5em;
     margin: 0;
     caret-color: transparent !important;
     cursor: text;
@@ -310,7 +311,8 @@ a {
 .terminal-cursor {
     position: absolute;
     top: 1px;
-    width: 1ch;
+    /* [LOG_ID: 20260708_1815] ch→em (20260708_1725와 동일 이유). */
+    width: 0.5em;
     height: 1.1em;
     background-color: var(--color);
     mix-blend-mode: difference;
@@ -1293,7 +1295,9 @@ body.theme-blue .terminal-titlebar {
 }
 
 /* [LOG: 20260623_1306] style.css의 margin-right: 0px !important 덮어쓰기를 방지하여 #cmd-prompt 우측 공백 1ch 유지 */
+/* [LOG_ID: 20260708_1815] ch→em (20260708_1725와 동일 이유). #cmd-prompt 자신은 position:absolute라
+   이 margin이 형제 요소 레이아웃에 영향을 주진 않지만, 일관성 및 만일의 경우를 위해 통일한다. */
 #terminal-prompt-row #cmd-prompt,
 #terminal-prompt-row.terminal-prompt-row--inline #cmd-prompt {
-    margin-right: 1ch !important;
+    margin-right: 0.5em !important;
 }

@@ -464,7 +464,11 @@ body.theme-blue .write-field textarea {
     flex: 0 0 auto;
     position: relative;
     min-height: 1.1em;
-    min-width: 1ch;
+    /* [LOG_ID: 20260708_1740] min-width도 ch에서 em으로 통일 — 20260708_1725와 동일한 이유
+       (ch는 폰트 전환에 따라 값이 바뀜). 인라인 style.width(em)가 항상 우선하므로 평상시엔
+       영향이 없지만, 아직 style.width가 설정되기 전(부팅 극초반)의 짧은 순간에는 이 min-width가
+       실제로 적용될 수 있어 일관되게 폰트 비의존적인 단위로 맞춘다. */
+    min-width: 0.5em;
     max-height: 1.1em;
     height: 1.1em;
     /* [LOG: 20260707_1715] The prompt text already includes its own terminal spacing.
