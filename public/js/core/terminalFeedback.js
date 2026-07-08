@@ -80,6 +80,10 @@ export function createTerminalFeedback(deps) {
     }
 
     setFooterVisibility(true);
+    // [LOG_ID: 20260708_1215] 에러 화면도 내용이 확정된 이 시점에 하단 구분선을 드러낸다
+    // (setLoading()이 화면 전환 시작 시 켠 is-divider-pending을 여기서 정리 — 안 하면 다음
+    // 화면까지 구분선이 계속 숨겨진 채로 고착된다).
+    document.getElementById('terminal-footer')?.classList.remove('is-divider-pending');
 
     if (hintEl) {
       hintEl.textContent = UI_TEXT.ERROR;
@@ -108,6 +112,7 @@ export function createTerminalFeedback(deps) {
   function showError(message) {
     console.error('[BBS UI ERROR]', message);
     setFooterVisibility(true);
+    document.getElementById('terminal-footer')?.classList.remove('is-divider-pending');
 
     if (hintEl) {
       hintEl.innerHTML = `<span class="bbs-error-text">${esc(message)}</span>`;

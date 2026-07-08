@@ -44,6 +44,9 @@ export function createMemoScreens(deps) {
         setPrompt('>>');
         // [LOG: 20260617_1005] Guest/direct memo status screens finish without applyCommandFooter.
         setReady?.(true);
+        // [LOG_ID: 20260708_1215] applyCommandFooter를 거치지 않는 경로라 setLoading()이 켠
+        // is-divider-pending을 여기서 직접 정리한다 — 안 하면 다음 화면까지 구분선이 고착된다.
+        document.getElementById('terminal-footer')?.classList.remove('is-divider-pending');
         focusCommandInput();
     }
 

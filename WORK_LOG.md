@@ -1,3 +1,20 @@
+## [2026-07-08 12:15] 하단 구분선 순서 역행 재발 — 실제 근본 원인(setReady 조기 호출) 수정
+
+**LOG_ID: 20260708_1215**
+목표: 사용자 재보고 — "아직도 힌트바 바로 위 마지막 가로선이 본문보다 먼저 표시되는 경우가 많다." (20260708_1130 수정 이후에도 재현)
+변경 파일: `public/js/core/terminalUiCore.js`, `public/js/core/terminalFeedback.js`, `public/js/core/memoScreens.js`, `public/js/core/commandExecutionState.js`
+수행 작업:
+1) [재현·근본원인 재규명] 6개 시나리오(첫 로드/클라이언트 내비/페이지네이션/직접 URL 진입 등)를 4ms 간격으로 계측 — 클라이언트 내비게이션은 모두 정상이었지만 **직접 URL 진입**(`/board/plaza` 새로고침) 시나리오에서 위반 재현: `t=260ms divider=true pending=0/0`(본문 줄이 아직 DOM에 하나도 없는 상태) → `t=271ms pending=8/9`(그제서야 본문 삽입). 원인: `postListView.js`의 `showPostList`는 데이터 fetch 직후 "로딩 타이머 취소용"으로 `setReady(true)`를 **렌더 호출보다 먼저** 부르는데, 그 사이 조건부로 `await loadMenuTree()`가 끼어 있어 실제 네트워크 지연만큼 그 간극이 벌어진다. `setReady(true)`는 `setFooterVisibility(true)`를 통해 `#terminal-footer`를 보이게 만드는데, 지난 수정(20260708_1130)의 `is-divider-pending` 클래스는 `renderAnsiScreenWithTopbarSequential` 내부에서만 추가돼 이 간극 동안은 무방비 상태였다 — 같은 패턴이 `showMain`/`showBoardSelect`/`postViewView`/`newsScreens` 등 setLoading→await→(조건부 await)→setReady(true)→render 순서를 쓰는 화면 전반에 잠재.
+2) [수정] 개별 화면 함수를 일일이 고치는 대신 공통 진입점 두 곳을 수정: `setLoading()`(거의 모든 화면 전환의 첫 줄)이 호출되는 즉시(어떤 await도 끼기 전) `#terminal-footer`에 `is-divider-pending`을 건다. 이 클래스는 범용 `setReady(true)`로는 절대 풀리지 않고, 오직 `core.applyCommandFooter`의 완료 시점(힌트/프롬프트가 실제로 확정되는 순간 — 스트리밍 화면은 `afterBodyRender` 콜백으로, 비스트리밍 화면은 화면 함수가 직접 호출)에만 풀린다. 이렇게 하면 "로딩 타이머만 조기 취소하려 setReady(true)를 일찍 부르는" 기존 관례를 건드리지 않고도, 구분선은 본문+footer 콘텐츠가 실제로 준비된 시점까지 안전하게 숨겨진다.
+3) [안전망] `applyCommandFooter`를 거치지 않고 끝나는 경로들에서 `is-divider-pending`이 영구 고착되지 않도록 개별 정리 지점 추가: `terminalFeedback.js`의 `showError`/`renderInitError`(치명 에러 표시), `memoScreens.js`의 `renderMemoStatus`(게스트 차단/조회 실패), `commandExecutionState.js`의 `cancelCommandExecution`(ESC로 명령 취소).
+4) [검증] Playwright로 동일 6개 시나리오 재계측 — 전부 `violationFound=false`, 특히 이전에 위반이 있었던 시나리오도 스트리밍 전 구간 내내 `divider=false` 유지 후 본문 완료 직후에만 `true`로 전환됨을 확인. 추가로 11개 화면을 연속 이동하며 매번 최종 상태에서 구분선이 정상적으로 보이는지(`is-divider-pending` 고착 없음) 별도 스크립트로 검증.
+5) [회귀] `npm test`, smoke:ui-layout, smoke:renderer-ui, smoke:full-traversal 전부 통과.
+실행: Playwright 다중 시나리오 타이밍 계측(4ms 샘플링), 연속 11회 내비게이션 고착 여부 검증, `npm test`, smoke 3종
+기대: 클라이언트 내비게이션은 물론 직접 URL 진입·느린 네트워크 상황에서도 하단 구분선이 본문보다 먼저 보이지 않는다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 11:30] 하단 구분선이 본문 스트리밍보다 먼저 나타나던 순서 역행 수정
 
 **LOG_ID: 20260708_1130**

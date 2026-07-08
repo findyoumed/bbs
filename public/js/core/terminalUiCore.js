@@ -148,6 +148,9 @@ export function createTerminalUiCore(deps) {
         await hintFooter.applyCommandFooter(assetPath, fallbackText, fallbackAssetPath);
       } finally {
         core.setReady(true);
+        // [LOG_ID: 20260708_1215] 힌트/프롬프트 내용이 확정되는 이 시점에만 하단 구분선을 드러낸다.
+        // setLoading()이 화면 전환 시작과 동시에 켠 is-divider-pending을 여기서 끈다 (아래 setLoading 주석 참고).
+        terminalFooter?.classList.remove('is-divider-pending');
       }
     },
     mountPromptRow,
@@ -193,6 +196,16 @@ export function createTerminalUiCore(deps) {
         clearInterval(core._progressTimer);
         core._progressTimer = null;
       }
+
+      // [LOG_ID: 20260708_1215] 화면 전환 시작과 동시에(= setLoading 최초 호출 시점, 어떤 await도
+      // 끼어들기 전) 하단 구분선을 즉시 숨긴다. 일부 화면(showPostList 등)은 데이터 fetch 직후
+      // "로딩 타이머 취소" 목적으로만 setReady(true)를 render 호출보다 먼저 부르는데, 그 사이에
+      // loadMenuTree() 같은 추가 await가 끼어 있으면 이전 화면의 구분선이 새 본문이 채워지기 전에
+      // (심지어 본문 컨테이너가 아직 비어 있는 상태에서도) 잠깐 보였다 사라지는 순서 역행이 있었다.
+      // setReady(true) 자체는 이 클래스를 건드리지 않는다 — 구분선은 오직 applyCommandFooter
+      // 완료 시점(힌트/프롬프트가 실제로 확정되는 때) 또는 스트리밍 렌더러의 자체 완료 시점에만
+      // 다시 드러난다(ansiTopbarScreen.js, core.applyCommandFooter 참고).
+      terminalFooter?.classList.add('is-divider-pending');
 
       setBusy(true);
       if (cmdInput) cmdInput.disabled = true;

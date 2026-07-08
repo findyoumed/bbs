@@ -84,6 +84,11 @@ export function cancelCommandExecution(state, options = {}) {
   if (typeof setPrompt === 'function') {
     setPrompt('선택 >>');
   }
+  // [LOG_ID: 20260708_1215] ESC로 명령을 취소하면 진행 중이던 렌더가 applyCommandFooter까지
+  // 도달하지 못해 setLoading()이 켠 is-divider-pending이 정리되지 않을 수 있다 — 취소 시점에 직접 정리.
+  if (typeof document !== 'undefined') {
+    document.getElementById('terminal-footer')?.classList.remove('is-divider-pending');
+  }
   if (cmdInput) {
     cmdInput.disabled = false;
     cmdInput.readOnly = false;
