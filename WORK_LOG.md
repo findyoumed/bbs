@@ -1,3 +1,22 @@
+## [2026-07-08 20:15] "space2/space1" 진짜 근본 원인 확정 — shouldRenderCursor()의 `!cmdInput.disabled` 조건이 로딩 구간 동안 커서만 숨겼던 것
+
+**LOG_ID: 20260708_2015**
+목표: 20260708_1850 수정(프롬프트 텍스트가 빈 문자열로 노출되는 문제) 이후에도 사용자가 "여전히 space2처럼 보였다가 1초 뒤 space1으로 돌아온다"고 반복 재현을 보고. 디버거의 "Break on attribute modifications"를 걸면 재현이 안 된다는 결정적 단서(관찰자 효과)를 확보한 뒤, 화면 녹화(`space.mp4`)를 프레임 단위로 분석해 진짜 원인을 확정.
+변경 파일: `public/js/core/terminalInputUi.js`, `public/js/core/terminalHintFooter.js`(임시 계측 제거), `public/js/core/ansiTopbarScreen.js`(임시 계측 제거), `public/index.html`(임시 진단 스크립트 제거)
+수행 작업:
+1) [진단 시도 및 실패] `console.log` 기반 진단은 오버헤드로 타이밍 자체를 바꿔 레이스 컨디션을 회피시킴을 확인(디버거 브레이크포인트도 동일 효과) → `performance.mark()`(초저부하) + `PerformanceObserver({type:'mark', buffered:true})`로 전환. Layout Instability API는 `visibility` 전환을 레이아웃 이동으로 감지하지 못해 문제를 못 잡음.
+2) [결정적 증거] 사용자가 제공한 화면 녹화(`space.mp4`)를 `ffmpeg -vf fps=25`로 307프레임 추출, sharp로 프롬프트 행만 크롭 후 연속 프레임 간 픽셀 차이가 가장 큰 지점을 자동 탐지 → **"선택 >>" 텍스트는 그대로인데 커스텀 블록 커서(`.terminal-cursor`)만 로딩 구간 동안 사라졌다가 되돌아옴**을 시각적으로 직접 확인.
+3) [근본 원인] `terminalInputUi.js`의 `shouldRenderCursor()`가 `!cmdInput.disabled` 조건을 포함하고 있었다. `setLoading()`이 데이터 로딩(예: `showMain()`의 `await Promise.all(...)`) 시작과 동시에 `cmdInput.disabled=true`를 설정하는데, 이 시점엔 아직 `renderAnsiScreenWithTopbarSequential`이 시작 전이라 화면(프롬프트 텍스트 포함)은 이전 화면 그대로 남아있다 — 오직 커서만 이 조건 때문에 사라져, "프롬프트 텍스트는 있는데 캐럿만 없는" 비일관성이 로딩 시간(수백 ms)만큼 노출됐다. 실제 입력 차단은 `disabled` 속성 자체로 이미 충분히 보장되므로 커서까지 시각적으로 숨길 필요가 없었다.
+4) [수정] `shouldRenderCursor()`에서 `!cmdInput.disabled` 조건 제거.
+5) [검증] Playwright로 `cmdInput.disabled=true`를 강제 설정한 뒤 커서가 계속 `visible` 상태를 유지함을 확인. 기존 4패턴 종합 회귀(구분선/힌트/프롬프트 3자 동기화 등, 6시나리오×3라운드=18회) 전부 통과.
+6) [정리] 디버깅 과정에서 심은 임시 `performance.mark` 계측 코드 전부 제거 — `terminalHintFooter.js`(setPrompt 1곳, applyCommandFooter의 is-loading add/remove 2곳), `ansiTopbarScreen.js`(render:hide-start/end 2곳), `index.html`(PerformanceObserver + `window.__dumpMarks` 덤프 스크립트 블록 전체). 프로젝트 루트의 임시 검증 스크립트(`verify-cursor-fix.tmp.js`, `verify-cursor-fix2.tmp.js`, `verify-cursor-fix3.tmp.js`, `verify-full-regression.tmp.js`) 삭제.
+7) [회귀] 정리 후 `node --input-type=module --check`로 수정한 3개 JS 파일 문법 재확인, `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:vercel-ready` 전부 통과.
+실행: performance.mark 기반 정밀 계측, 화면 녹화 307프레임 분석(ffmpeg+sharp), disabled=true 강제 설정 검증(Playwright), 4패턴 종합 회귀(18회), 임시 계측/스크립트 전체 정리, `npm test`, smoke 2종
+기대: 화면 전환(데이터 로딩) 중에도 커서가 프롬프트 텍스트와 함께 계속 보여, "space2처럼 넓어 보였다가 1초 뒤 space1으로 돌아온다"는 현상(실제로는 커서만 사라졌다 나타나는 것)이 재현되지 않는다.
+결과: ✅ 완료 — 20260708_1710/1725/1815/1850의 이전 수정들은 각자 유효한 개선(ch→em 통일, 빈 프롬프트 텍스트 노출 제거)이었으나 이번이 최종 근본 원인이었다.
+
+---
+
 ## [2026-07-08 18:50] "space2/space1" 정체 최종 확정 — ch 단위가 아니라 showMain/showBoardSelect가 직접 호출하던 setHint('')/setPrompt('')로 프롬프트 텍스트 자체가 순간 비었던 것
 
 **LOG_ID: 20260708_1850**

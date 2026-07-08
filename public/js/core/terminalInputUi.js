@@ -162,11 +162,19 @@ export function createTerminalInputUi(deps) {
     const container = getTerminalContainer();
     const hasLoadingScreen = Boolean(screenEl?.querySelector('.loading'));
 
-    return Boolean(
+    // [LOG_ID: 20260708_2015] !cmdInput.disabled 조건을 제거한다. setLoading()이 데이터 로딩(예:
+    // showMain()의 await Promise.all(...)) 시작과 동시에 cmdInput.disabled=true를 걸어두는데,
+    // 이 시점엔 아직 renderAnsiScreenWithTopbarSequential이 시작 전이라 화면(프롬프트 텍스트 "선택 >>"
+    // 포함)은 이전 화면 그대로 남아있다 — 오직 커서만 이 조건 때문에 사라져, "프롬프트 텍스트는
+    // 있는데 캐럿만 없는" 비일관성이 로딩 시간(수백 ms)만큼 노출됐다("space2처럼 넓어 보였다가
+    // 저절로 좁아진다"는 재보고의 실제 정체 — 화면 녹화 프레임 분석으로 확정: 커서만 정확히 로딩
+    // 구간 동안 사라짐). 실제 입력 차단은 disabled 속성 자체로 이미 충분히 보장되므로, 커서까지
+    // 시각적으로 숨길 필요가 없다 — 이 세션에서 반복 확인된 "하단 요소는 항상 함께 변해야 한다"는
+    // 원칙에 맞춘다.
+    const result = Boolean(
       cmdInput
       && cursorEl
       && useCustomCursor
-      && !cmdInput.disabled
       && !hasLoadingScreen
       // [LOG: 20260707_1750] CSS(retro-terminal.css .fonts-loading .terminal-cursor)와 판단 기준을 일치시킨다.
       // JS가 fonts-loading을 무시하고 visible로 판단하면 재시도가 종료된 채 CSS만 숨겨 커서가 사라진 상태로 고착됐다.
@@ -175,6 +183,7 @@ export function createTerminalInputUi(deps) {
       && !container?.classList.contains('is-busy')
       && !container?.classList.contains('is-data-busy')
     );
+    return result;
   }
 
   let cursorRetryTimer = 0;

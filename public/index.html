@@ -69,38 +69,10 @@
             } catch (e) { }
         })();
     </script>
-    <!-- [LOG_ID: 20260708_2000-TEMP] 임시 진단(최종, 초저부하). console.log/setInterval 폴링은 그 자체의
-         부하가 타이밍을 바꿔 문제를 회피시킬 수 있어(디버거를 켜면 재현이 안 되던 것과 동일 원리),
-         거의 공짜인 performance.mark()만 소스 코드 곳곳에 심어두고 실시간 출력은 전혀 하지 않는다.
-         window.__dumpMarks()를 콘솔에 입력하면 그때까지 쌓인 전체 타임라인을 한 번에 보여준다.
-         원인 완전 확정 후 반드시 제거(이 스크립트 + 소스에 심은 performance.mark 호출들 전부). -->
-    <script>
-        (function () {
-            window.__marks = [];
-            try {
-                var po = new PerformanceObserver(function (list) {
-                    list.getEntries().forEach(function (e) {
-                        window.__marks.push({ t: Math.round(e.startTime * 100) / 100, name: e.name });
-                    });
-                });
-                po.observe({ type: 'mark', buffered: true });
-                window.__marksObserver = po;
-            } catch (e) { /* ignore */ }
-            window.__dumpMarks = function () {
-                console.log('[MARKS]', JSON.stringify(window.__marks));
-                return window.__marks;
-            };
-        })();
-    </script>
-    <!-- CDN 사전 연결 (DNS + TCP + TLS 준비) -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-
+    <!-- [LOG_ID: 20260708_1901] 폰트 자체 호스팅 전환 — CDN 의존성 제거 -->
     <!-- 폰트 사전 로드 (CSS 파싱 전에 다운로드 시작) -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/Sam3KRFont.woff" as="font"
-        type="font/woff" crossorigin>
-    <link rel="preload" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff" as="font"
-        type="font/woff" crossorigin>
+    <link rel="preload" href="/fonts/Sam3KRFont.woff" as="font" type="font/woff" crossorigin>
+    <link rel="preload" href="/fonts/DungGeunMo.woff" as="font" type="font/woff" crossorigin>
 
     <!-- CSS 병렬 로드 (@import 제거 → link 태그로 동시 다운로드) -->
     <link rel="stylesheet" href="/styles/retro-terminal.css?v=20260707_1815">

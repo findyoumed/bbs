@@ -272,10 +272,6 @@ export function createTerminalHintFooter(deps) {
       ? (state.envVars?.PROMPT || DEFAULT_COMMAND_PROMPT)
       : String(text);
 
-    if (typeof performance !== 'undefined' && performance.mark) {
-      try { performance.mark('setPrompt:' + JSON.stringify(promptText).slice(0, 20)); } catch (e) { /* ignore */ }
-    }
-
     if (cmdInput) {
       const useMaskedInput = Boolean(state._maskCommandInput);
       // [LOG_ID: 20260624_0925] type="password"를 사용하면 일부 브라우저에서 투명색 처리를 무시하고

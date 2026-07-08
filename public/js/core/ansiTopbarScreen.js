@@ -194,7 +194,6 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
   // #cmd-hint/#terminal-prompt-row에 visibility:visible !important를 강제하고 있어, 인라인 스타일도
   // !important로 지정해야 이 숨김이 실제로 유지된다. important 없이는 스트리밍 도중(제출 ~80ms 후)
   // is-command-pending이 켜지는 순간 하단이 도로 보이며 이전 화면의 낡은 내용이 잠깐 노출됐다.
-  if (typeof performance !== 'undefined' && performance.mark) { try { performance.mark('render:hide-start'); } catch (e) { /* ignore */ } }
   if (hintEl) hintEl.style.setProperty('visibility', 'hidden', 'important');
   if (promptRowEl) promptRowEl.style.setProperty('visibility', 'hidden', 'important');
   // [LOG_ID: 20260708_1130] #terminal-footer의 ::before 구분선(힌트 바로 위 마지막 가로줄)은
@@ -240,7 +239,6 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
     if (hintEl) hintEl.style.removeProperty('visibility');
     if (promptRowEl) promptRowEl.style.removeProperty('visibility');
     footerEl?.classList.remove('is-divider-pending');
-    if (typeof performance !== 'undefined' && performance.mark) { try { performance.mark('render:hide-end'); } catch (e) { /* ignore */ } }
   }
 
   return {
