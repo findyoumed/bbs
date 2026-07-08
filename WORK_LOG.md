@@ -1,3 +1,20 @@
+## [2026-07-08 09:40] 힌트 비움 → is-loading 추론으로 커서/입력줄이 영구 고착되던 결함 근절
+
+**LOG_ID: 20260708_0940**
+목표: 사용자 리포트 — "#cmd-input에서 엔터를 누르고 입력을 하면 상태바가 사라지는 화면이 되어버려. 터미널 같은 UI가 아냐."
+변경 파일: `public/js/core/terminalHintFooter.js`
+수행 작업:
+1) [재현] Playwright로 `/chat/1`에서 미인식 슬래시 명령(`/xyz`)을 입력 → 힌트/명령 목록은 정상인데 `선택 >>` 뒤의 블록 커서가 사라진 채 다음 화면 전환 전까지 돌아오지 않음을 픽셀 단위로 확인 (다른 채팅 메시지 전송 후에는 즉시 복구되는 것도 확인 — screenEl의 DOM 변경이 커서 재동기화를 우연히 트리거했을 뿐).
+2) [원인] `setHint(text)`에 "힌트가 비면 로딩 중이다"라는 legacy 추론이 있어, `text`가 빈 문자열이면 `state.screen==='myinfo'`이고 모드가 email/password/delete인 경우만 예외로 두고 그 외 **모든 경우**에 `#terminal-container`/`#terminal-screen`에 `is-loading`을 켰다. 이 클래스는 CSS로 커스텀 블록 커서를 `visibility:hidden`시키고 입력줄/버튼을 클릭 불가로 만드는데, 로딩 상태를 명시적으로 관리하는 `setLoading()`/`setReady()`(각자 취소 경로 보유)와 달리 이 추론에는 **해제 경로가 전혀 없어** 다음 화면의 `applyCommandFooter` 호출 전까지 무한정 고착됐다. 실제로 `setHint('')`는 대화실 미인식 명령 무음 처리, `myInfoActions.js`의 13곳(비밀번호/이메일/탈퇴 흐름 취소 포함 — `resetMyInfoState()`가 먼저 모드를 `'view'`로 되돌려 myinfo 예외조차 무력화됨) 등 **로딩과 무관한 정상 상태 전이**에서도 광범위하게 호출되고 있었다.
+3) [수정] 해당 추론 블록을 완전히 제거. 로딩 표시는 이미 `setLoading()`/`setReady()`/`setBusy()`(15초 가디언 타이머, `applyCommandFooter`의 finally 등 자체 정리 경로 보유)가 전담하므로 제거해도 정상 로딩 UX에는 영향 없음.
+4) [실수 및 재수정] 최초 편집 시 함수 닫는 중괄호까지 같이 지워 전체 페이지가 빈 화면으로 깨지는 구문 오류를 만들었다(`node --check file.js`는 통과했으나 `node --input-type=module --check < file.js`로 재검증하니 `Unexpected end of input` 확인 — 이 프로젝트의 확장자 없는 ESM 파일은 향후 `node --check`만으로 안심하지 말 것). 즉시 발견·수정, 전체 `public/js/core/*.js`를 module-mode로 재스캔해 동일 문제 없음 확인.
+5) [검증] `/chat/1`에서 `/xyz` 재현 시나리오 재실행 — 이제 커서가 정상적인 1초 blink 주기로만 사라졌다 나타남(고착 없음), 후속 메시지 전송도 정상. `npm test`, smoke:renderer-ui, smoke:ui-layout 통과.
+실행: Playwright 재현/재검증, module-mode 전수 구문 스캔, `npm test`, smoke 2종
+기대: `setHint('')`가 호출되는 어떤 화면 전이에서도 커서·입력줄이 다음 화면 렌더 전까지 죽지 않는다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-07 23:45] 뉴스 목록 진입 시 "연결하는 중입니다"와 새 화면 footer 힌트가 동시에 보이던 결함 수정
 
 **LOG_ID: 20260707_2345**

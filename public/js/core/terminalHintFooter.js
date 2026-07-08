@@ -247,19 +247,14 @@ export function createTerminalHintFooter(deps) {
       }
     }
 
-    if (!text && screenEl) {
-      const myInfoMode = String(state._myInfoMode || '').trim().toLowerCase();
-      const isMyInfoPassword = String(state.screen || '').trim() === 'myinfo'
-        && ['email', 'password', 'delete'].includes(myInfoMode);
-
-      if (isMyInfoPassword) {
-        screenEl.parentElement?.classList.remove('is-loading');
-        screenEl.classList.remove('is-loading');
-      } else {
-        screenEl.parentElement?.classList.add('is-loading');
-        screenEl.classList.add('is-loading');
-      }
-    }
+    // [LOG_ID: 20260708_0940] "힌트가 비면 로딩 중이다"라는 추론으로 #terminal-container/#terminal-screen에
+    // is-loading을 켜고 끄던 레거시 로직을 제거한다. setHint('')는 로딩 전환 이외에도 정상적인 상태 변화
+    // (대화실 미인식 슬래시 명령 무음 처리, 내정보 비밀번호/이메일/탈퇴 단계 전환 등)에서 광범위하게
+    // 호출되는데, 이 추론은 그런 호출 이후에도 is-loading이 계속 켜진 채로 남아(다음 화면 전환 전까지
+    // 해제할 방법이 없음) 커스텀 커서가 영구히 숨겨지고 입력줄이 클릭 불가 상태로 고착되는 버그를 냈다
+    // (myinfo 모드 초기화(resetMyInfoState→'view') 뒤의 setHint('') 다수, 대화실 "/xyz" 같은 미인식 명령 등).
+    // 로딩 상태는 이미 명시적 API인 setLoading()/setReady()/setBusy()가 각자 정리 경로(15초 가디언 타이머,
+    // applyCommandFooter의 finally)와 함께 전담하므로 이 추론은 불필요하며 제거해도 로딩 표시는 그대로 동작한다.
   }
 
   function setPrompt(text) {
