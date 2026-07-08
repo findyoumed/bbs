@@ -96,9 +96,13 @@ export function createMenuNavigation(deps) {
       void updateURL();
     }
 
+    // [LOG_ID: 20260708_1845] 여기서 setHint('')/setPrompt('')를 직접 호출해 즉시 비우던 것을 제거한다.
+    // renderAnsiScreenWithTopbarSequential이 시작될 때 자기 자신의 인라인 숨김으로 이전 힌트/프롬프트를
+    // 가리므로, 이 시점에 미리 비울 필요가 없다 — 오히려 데이터 로딩(아래 Promise.all)이 끝나기 전까지
+    // "선택 >>" 프롬프트가 완전히 사라진 채(footer는 그대로 visible) 노출되는 깜빡임을 만들었다
+    // ("space2처럼 넓어보였다가 좁아진다"는 재보고의 실제 원인 — 프롬프트 폭 문제가 아니라 텍스트
+    // 자체가 순간 비었다 채워지는 것이었다). 20260708_1420의 setLoading() 힌트-즉시-비움 문제와 동일 계열.
     setLoading('연결하는 중입니다..');
-    setHint('');
-    setPrompt('');
 
     // [LOG: 20260426_1110] 메뉴 로드 시 시스템 통계도 병렬로 로드
     const [, menuTree, stats] = await Promise.all([
@@ -170,9 +174,8 @@ export function createMenuNavigation(deps) {
       void updateURL();
     }
 
+    // [LOG_ID: 20260708_1845] showMain()과 동일한 이유로 setHint('')/setPrompt('') 즉시 호출 제거.
     setLoading('연결하는 중입니다..');
-    setHint('');
-    setPrompt('');
 
     await Promise.all([loadBoards(), loadMenuTree()]);
     

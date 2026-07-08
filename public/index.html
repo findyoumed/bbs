@@ -69,38 +69,6 @@
             } catch (e) { }
         })();
     </script>
-    <!-- [LOG_ID: 20260708_1750-TEMP] 임시 진단: 페이지 로드 최초 순간부터 프롬프트-입력창 간격을 기록.
-         원인 파악 후 제거 예정. 새로고침 3초 뒤 콘솔에 자동 출력됨. -->
-    <script>
-        (function () {
-            window.__diagLog = [];
-            var __diagStart = performance.now();
-            var __diagTimer = setInterval(function () {
-                var pr = document.getElementById('cmd-prompt-renderer');
-                var ci = document.getElementById('cmd-input');
-                var row = document.getElementById('terminal-prompt-row');
-                var entry = { t: Math.round(performance.now() - __diagStart) };
-                if (pr && ci) {
-                    var prRect = pr.getBoundingClientRect();
-                    var ciRect = ci.getBoundingClientRect();
-                    entry.gap = Math.round((ciRect.left - prRect.right) * 100) / 100;
-                    entry.promptWidth = Math.round(prRect.width * 100) / 100;
-                    entry.styleWidth = pr.style.width;
-                    entry.promptText = pr.value;
-                    entry.columnGap = row ? getComputedStyle(row).columnGap : null;
-                    entry.fontLoaded = (document.fonts && document.fonts.check) ? document.fonts.check('17px "BbsPrimaryFont"') : null;
-                } else {
-                    entry.promptExists = !!pr;
-                    entry.inputExists = !!ci;
-                }
-                window.__diagLog.push(entry);
-                if (performance.now() - __diagStart > 3000) {
-                    clearInterval(__diagTimer);
-                    console.log('[DIAG]', JSON.stringify(window.__diagLog));
-                }
-            }, 20);
-        })();
-    </script>
     <!-- CDN 사전 연결 (DNS + TCP + TLS 준비) -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
