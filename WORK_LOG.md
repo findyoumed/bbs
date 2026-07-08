@@ -1,3 +1,19 @@
+## [2026-07-08 16:05] "연결하는 중입니다" 로딩 화면에서 "_" 대기 캐럿이 함께 뜨는 이중 표시 제거
+
+**LOG_ID: 20260708_1605**
+목표: 사용자 재보고 — "'연결하는 중입니다' 화면에서 '_' 모양으로 캐럿이 나올 때도 있는 것 같아. 사실 '연결하는 중입니다'에서는 '_' 캐럿이 없어야 하잖아."
+변경 파일: `public/style.css`
+수행 작업:
+1) [진단] 코드 검토로 확인: 대기 표시가 원래 2개의 독립된 CSS 규칙으로 나뉘어 있었다 — (a) `is-command-pending`(명령 제출 후 80ms~) 상태의 `#cmd-input-wrapper::after { content: "_"; ... }`(입력행 옆 대기 캐럿), (b) `is-loading`(폴백 타이머로 실제 "연결하는 중입니다." 문구가 뜨는 400ms~) 상태의 `.bbs-loading-text::after { content: "."; ... }`(로딩 문구 자체의 깜빡이는 점). 두 상태는 서로를 전혀 참조하지 않아, `is-loading`이 켜져도(로딩 문구+점이 이미 대기 신호를 맡고 있어도) `is-command-pending`은 명령 프로미스가 끝날 때까지 계속 살아있으므로(400ms보다 훨씬 오래 유지되는 게 일반적) 두 표시가 동시에 깜빡이는 이중 표시가 됐다.
+2) [수정] `#terminal-container.is-loading.is-command-pending #cmd-input-wrapper::after { content: none; }` 규칙을 추가 — 클래스 2개라 기존 `is-command-pending` 단독 규칙보다 명시도가 높아 항상 우선한다. `is-loading`이 꺼지면(로딩 문구가 사라지고 아직 명령 대기만 남으면) 원래 규칙이 다시 적용돼 "_"가 정상적으로 돌아온다.
+3) [검증] 게시글목록 API 응답을 700ms 지연시켜 `is-loading`이 실제로 발동하도록 강제하고, `#cmd-input-wrapper`의 computed `::after` content를 추적: `t=78ms`(is-command-pending만 켜짐) "_" 표시 → `t=399ms`(is-loading도 켜짐) "_" 사라짐(content:none) → `t=881ms`(is-loading 꺼지고 is-command-pending만 남음) "_" 다시 표시. 의도한 대로 정확히 동작. 기존 4패턴 종합 회귀(구분선/힌트/프롬프트 3자 동기화 + hint-blank-while-prompt-shown) 6시나리오×4라운드=24회도 재확인 — 전부 통과.
+4) [회귀] `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:vercel-ready` 전부 통과.
+실행: is-loading/is-command-pending 동시 활성 상태에서 대기 캐럿 content 추적, 4패턴 종합 회귀(24회), `npm test`, smoke 2종
+기대: "연결하는 중입니다." 로딩 문구가 실제로 떠 있는 동안에는 입력행의 "_" 캐럿이 보이지 않고, 로딩 문구가 사라진 뒤 순수 명령 대기 상태에서만 "_"가 표시된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 15:20] "연결하는 중입니다" 로딩 화면에서 상단바 소실 + 힌트만 비는 불일치 근절 — 로딩 placeholder를 본문 영역에 한정하고 footer는 일체 미접촉
 
 **LOG_ID: 20260708_1545**

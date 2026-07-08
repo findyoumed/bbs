@@ -2315,6 +2315,15 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
     animation: cursor-blink 1s step-end infinite;
 }
 
+/* [LOG_ID: 20260708_1605] is-command-pending의 "_" 대기 캐럿(위)과 is-loading의 "." 대기 점(위 .bbs-loading-text::after)은
+   각자 독립적으로 반응하는 별개의 대기 표시라, "연결하는 중입니다." 로딩 화면이 실제로 뜬 뒤(400ms+)에도
+   is-command-pending이 아직 살아있으면(명령 프로미스가 안 끝났으면 거의 항상 그렇다) 둘이 동시에 깜빡여
+   "입력행의 _"과 "본문의 ." 이 이중으로 표시됐다. 로딩 문구 자신의 "."이 이미 대기 신호를 맡으므로,
+   is-loading이 되면 입력행 쪽 "_"는 숨긴다(클래스 2개라 위 규칙보다 명시도가 높아 항상 이긴다). */
+#terminal-container.is-loading.is-command-pending #cmd-input-wrapper::after {
+    content: none;
+}
+
 #terminal-container.is-loading .terminal-hud,
 #terminal-container.is-loading .scroll-bottom-indicator {
     display: none !important;
