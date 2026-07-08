@@ -1,3 +1,19 @@
+## [2026-07-09 00:00] 캐럿 좌우 위치 계산에 남아있던 마지막 ch 단위 정리 — updateCursorPosition()
+
+**LOG_ID: 20260709_0000**
+목표: "space2/space1" 근본 원인(20260708_2015) 수정 후, 사용자가 "처음 캐럿이 뜨는 위치가 문제인가?"라고 질문 — 이 세션 내내 정리해온 ch→em 스윕이 CSS 선언값만 훑었고, JS가 인라인으로 계산해 넣는 값은 놓쳤을 가능성을 재점검.
+변경 파일: `public/js/core/terminalInputUi.js`
+수행 작업:
+1) [발견] `updateCursorPosition()`이 `cursorEl.style.left`를 `${displayWidth(textBeforeCaret)}ch`로 설정하고 있었다. `.terminal-cursor`의 `width`(0.5em)나 `syncPromptRendererWidth()`의 prompt renderer `width`(`displayWidth(...) * 0.5em`)는 이미 이번 세션 초반에 ch→em으로 통일됐는데, 이 캐럿 좌표 계산만 원래의 `ch` 그대로 남아 있었다 — CSS 파일만 훑던 정리 스윕에서 빠진 것.
+2) [영향] `ch`는 폰트가 폴백→커스텀으로 전환되는 순간 자동으로 재계산되는 폰트 의존 단위라, 캐럿 앞에 이미 문자가 있는 상태(폭>0)에서 폰트가 늦게 로드되면 캐럿이 옆으로 튀어 보일 수 있는 여지가 있었다. 이 프로젝트의 나머지 폭 계산은 전부 `displayWidth(text) * 0.5em`(컬럼당 0.5em) 관례로 통일되어 있어 이 지점만 예외였다.
+3) [수정] `${displayWidth(textBeforeCaret)}ch` → `${displayWidth(textBeforeCaret) * 0.5}em`로 변경해 나머지 폭 계산과 동일한 관례로 통일.
+4) [회귀] `node --input-type=module --check`, `npm test`(유닛 10개 파일), `smoke:renderer-ui` 전부 통과.
+실행: ch 단위 잔존 재검색(JS 인라인 스타일 대상), 관례 일치 수정, 문법 검증, `npm test`, `smoke:renderer-ui`
+기대: 캐럿의 좌우 위치가 폰트 로딩 상태와 무관하게 텍스트 폭과 항상 일치한다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 20:15] "space2/space1" 진짜 근본 원인 확정 — shouldRenderCursor()의 `!cmdInput.disabled` 조건이 로딩 구간 동안 커서만 숨겼던 것
 
 **LOG_ID: 20260708_2015**

@@ -81,7 +81,10 @@ export function createTerminalInputUi(deps) {
     }
 
     const textBeforeCaret = cmdInput.value.substring(0, cmdInput.selectionStart || 0);
-    cursorEl.style.left = `${displayWidth(textBeforeCaret)}ch`;
+    // [LOG_ID: 20260709] ch→em: 이 파일 나머지 폭 계산(.terminal-cursor width, prompt renderer width 등)과
+    // 동일하게 폰트 전환에 흔들리지 않는 em 단위로 통일한다. ch는 폴백 폰트와 커스텀 폰트에서 폭이 달라
+    // 폰트 로딩 시점에 캐럿이 좌우로 튀는 원인이 될 수 있었다.
+    cursorEl.style.left = `${displayWidth(textBeforeCaret) * 0.5}em`;
   }
 
   function getCursorMeasureContext() {
