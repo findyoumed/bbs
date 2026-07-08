@@ -29,9 +29,6 @@ export function createPostViewView(deps) {
     setLoading('연결하는 중입니다..');
     const boardKey = String(boardId || '').trim();
     const data = await loadPost(boardKey, postId);
-    
-    // [LOG: 20260611_1415] Clear loading timer before rendering
-    setReady(true);
 
     state.post = data.post;
     // [LOG: 20260429_0047] Direct /board/:boardId/:postId entry must keep
@@ -53,6 +50,13 @@ export function createPostViewView(deps) {
         ? getBoardSelectTitle(resolvedMenuPath)
         : (String(state.boardMenuTitle || '').trim() || resolvedMenuPath.toUpperCase());
     }
+
+    // [LOG_ID: 20260708_1300] setReady(true)를 남은 await(loadMenuTree)가 모두 끝난 뒤로 옮긴다.
+    // 예전 위치(로딩 타이머 취소 목적)는 그 뒤에 여전히 await가 남아 있어, 그 사이 footer가 먼저
+    // 드러나며 구분선/힌트가 본문 없이(또는 이전 화면의 낡은 내용인 채) 노출되는 순서 역행을 만들었다.
+    // (아래 게시물 없음 조기 반환 경로도 커버하도록 그 분기보다 앞에 둔다.)
+    setReady(true);
+
     if (!state.post) {
       screenEl.innerHTML = '<div class="bbs-box"><div class="bbs-error">게시물을 불러올 수 없습니다.</div></div>';
       return;

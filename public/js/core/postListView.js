@@ -58,9 +58,6 @@ export function createPostListView(deps) {
     if (!fromHistory) updateURL();
     setLoading('연결하는 중입니다..');
     const data = await loadPosts(boardKey, page, searchParams);
-    
-    // [LOG: 20260611_1410] Clear loading timer before rendering
-    setReady(true);
 
     if (data.board) {
       const resolvedKey = String(getBoardKey(data.board) || boardKey).trim();
@@ -78,7 +75,13 @@ export function createPostListView(deps) {
     let displayTitle = state.boardMenuTitle;
     if (searchParams.lt) displayTitle += ` [제목검색: ${searchParams.lt}]`;
     if (searchParams.li) displayTitle += ` [작성자검색: ${searchParams.li}]`;
-    
+
+    // [LOG_ID: 20260708_1300] setReady(true)를 남은 await(loadMenuTree)가 모두 끝난 뒤,
+    // 렌더 호출 바로 직전으로 옮긴다. 예전 위치(로딩 타이머 취소 목적)는 그 뒤에 여전히
+    // await가 남아 있어, 그 사이 footer가 먼저 드러나며 구분선/힌트가 본문 없이(또는 이전 화면의
+    // 낡은 내용인 채) 노출되는 순서 역행을 만들었다.
+    setReady(true);
+
     // [LOG: 20260426_1450] Evolve Mode: Sequential rendering for post list
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const footerAssetPath = String(state.board?.footerFile || '').trim();

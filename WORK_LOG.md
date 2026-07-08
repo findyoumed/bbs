@@ -1,3 +1,20 @@
+## [2026-07-08 13:00] 구분선/힌트가 프롬프트 행보다 먼저 사라지던 새 불일치 — setLoading 즉시숨김 되돌리고 진짜 원인 2곳 직접 수정
+
+**LOG_ID: 20260708_1300**
+목표: 사용자 재보고 — "가로줄과 힌트바는 화면에서 없어졌는데, 선택 >> 와 입력된 문자는 화면에 남아있는 경우가 있어. 가로줄과 힌트바가 먼저 사라지면 안되는데." (20260708_1215 수정이 만든 새 불일치)
+변경 파일: `public/js/core/terminalUiCore.js`, `public/js/core/postListView.js`, `public/js/core/postViewView.js`
+수행 작업:
+1) [원인 재분석] 20260708_1215에서 `setLoading()` 호출 즉시(어떤 await 전에) 구분선을 숨기도록 한 것이, 프롬프트 행(제출한 명령을 계속 보여주는 20260619_1732의 의도된 동작 + `is-command-pending`의 대기 커서 표시)과 타이밍이 어긋나는 새로운 문제를 만들었다. 프롬프트 행은 렌더러가 실제로 시작될 때(스트리밍 화면은 `renderAnsiScreenWithTopbarSequential` 시작 시점)에만 숨겨지는데, 구분선+힌트는 그보다 훨씬 이른 `setLoading()` 시점에 즉시 사라져 — 두 그룹이 서로 다른 시점에 반응하며 "구분선/힌트만 먼저 없어지고 프롬프트는 남아있는" 비대칭이 생겼다.
+2) [진짜 근본 원인 재확인] 애초에 구분선이 본문보다 먼저 보이던 원래 문제(20260708_1130/1215)는 딱 2개 파일에만 있는 구체적 패턴이었다: `postListView.js`의 `showPostList`, `postViewView.js`의 `showPostView` — 둘 다 "로딩 타이머 취소" 목적으로 `setReady(true)`를 데이터 fetch 직후 부르는데, 그 **뒤에도** 조건부 `await loadMenuTree()`가 남아 있어 그 사이 footer가 먼저 드러났다. `showMain`/`showBoardSelect`(menuNavigation.js)/`showNewsList`(newsScreens.js) 및 vote/ranking/help/amusement/weather 화면들은 모두 setReady(true) 이후 남은 await가 없거나(동기 코드만 있거나), 아예 setReady를 직접 부르지 않고 `applyCommandFooter`의 finally에만 의존해 애초에 이 문제가 없었다.
+3) [수정] (a) `terminalUiCore.js`의 `setLoading()`에서 20260708_1215가 추가한 "즉시 구분선 숨김" 코드를 제거 — 구분선은 다시 렌더러 자신의 시작 시점(`renderAnsiScreenWithTopbarSequential`)에만 숨겨지며, 이는 프롬프트 행이 숨겨지는 시점과 정확히 같아 재동기화된다. (b) `postListView.js`/`postViewView.js`에서 `setReady(true)` 호출 위치를 남은 조건부 `await loadMenuTree()` **이후**, 렌더 호출 바로 직전으로 옮겨 간극 자체를 제거했다(postViewView는 "게시물 없음" 조기 반환 분기도 커버하도록 그 분기보다 앞에 배치). `applyCommandFooter` finally의 안전망 정리 코드(20260708_1215)는 그대로 유지(무해한 방어 코드).
+4) [검증] Playwright로 원래 위반이 재현됐던 시나리오(직접 URL `/board/plaza` 진입, 게시물 상세 진입)와 일반 클라이언트 내비게이션을 재계측 — "본문 스트리밍 중 구분선 노출"과 "구분선+힌트는 숨었는데 프롬프트 행은 남아있음" 두 위반 패턴 모두 3개 시나리오에서 전부 `false`. 11회 연속 내비게이션에서도 구분선/힌트/프롬프트 셋 다 매번 정상적으로 함께 나타남(고착 없음) 확인.
+5) [회귀] `npm test`, smoke:ui-layout, smoke:renderer-ui, smoke:full-traversal, smoke:boards 전부 통과.
+실행: Playwright 다중 시나리오 재계측(divider/hint/promptRow 동시 추적), 연속 11회 내비게이션 고착 여부 검증, `npm test`, smoke 4종
+기대: 하단 상태줄(구분선·힌트·프롬프트)이 어떤 화면 전환에서도 항상 같은 시점에 함께 사라지고 함께 나타난다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 12:15] 하단 구분선 순서 역행 재발 — 실제 근본 원인(setReady 조기 호출) 수정
 
 **LOG_ID: 20260708_1215**

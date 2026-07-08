@@ -197,15 +197,14 @@ export function createTerminalUiCore(deps) {
         core._progressTimer = null;
       }
 
-      // [LOG_ID: 20260708_1215] 화면 전환 시작과 동시에(= setLoading 최초 호출 시점, 어떤 await도
-      // 끼어들기 전) 하단 구분선을 즉시 숨긴다. 일부 화면(showPostList 등)은 데이터 fetch 직후
-      // "로딩 타이머 취소" 목적으로만 setReady(true)를 render 호출보다 먼저 부르는데, 그 사이에
-      // loadMenuTree() 같은 추가 await가 끼어 있으면 이전 화면의 구분선이 새 본문이 채워지기 전에
-      // (심지어 본문 컨테이너가 아직 비어 있는 상태에서도) 잠깐 보였다 사라지는 순서 역행이 있었다.
-      // setReady(true) 자체는 이 클래스를 건드리지 않는다 — 구분선은 오직 applyCommandFooter
-      // 완료 시점(힌트/프롬프트가 실제로 확정되는 때) 또는 스트리밍 렌더러의 자체 완료 시점에만
-      // 다시 드러난다(ansiTopbarScreen.js, core.applyCommandFooter 참고).
-      terminalFooter?.classList.add('is-divider-pending');
+      // [LOG_ID: 20260708_1300] 20260708_1215에서 여기 추가했던 "setLoading 시작과 동시에 구분선
+      // 즉시 숨김"을 되돌린다. 이 즉시-숨김은 구분선만 먼저 사라지고 프롬프트 행(제출된 명령+"선택 >>")은
+      // 그대로 남아있는 새로운 불일치를 만들었다(구분선/힌트는 없어지는데 프롬프트만 남는 문제) — 프롬프트
+      // 행은 원래 "제출한 명령을 계속 보여주는" 의도된 동작이라 이와 어긋나 보였다.
+      // 근본 원인(postListView/postViewView가 setReady(true)를 렌더 호출보다 먼저 불러, 그 사이 남은
+      // await 동안 footer가 먼저 드러나던 것)은 각 화면에서 setReady(true) 위치를 render 직전(남은 await
+      // 이후)으로 옮겨 직접 해결했다 — 이제 이 즉시-숨김 없이도 구분선/힌트/프롬프트가 모두 같은 시점에
+      // (렌더러가 실제로 시작될 때) 함께 바뀐다.
 
       setBusy(true);
       if (cmdInput) cmdInput.disabled = true;
