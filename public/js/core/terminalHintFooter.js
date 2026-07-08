@@ -101,11 +101,16 @@ export function createTerminalHintFooter(deps) {
       promptLayoutFrame = 0;
       syncPromptRendererWidth();
 
+      // [LOG_ID: 20260708_1450] 여기서 걸던 50ms 뒤 setFooterVisibility(true) 호출을 제거한다.
+      // 이 함수는 setPrompt() 호출마다(즉 화면 콘텐츠 준비 여부와 무관하게), 그리고 최초 부팅 시
+      // document.fonts.ready 완료 시점에도 실행되는데 — 후자는 실제 화면(상단바+본문)이 아직 렌더되기
+      // 전이라도 무조건 발동한다. 그 결과 footer만 먼저 "visible"로 뒤집혀, 빈 화면 위에 구분선+힌트+
+      // 프롬프트가 상단바/본문보다 먼저 나타나는(위→아래 순서 역행) 현상이 부팅 직후 항상 재현됐다.
+      // footer의 실제 노출은 이미 content-synchronized 경로(렌더러 자신의 인라인 숨김/해제,
+      // core.setReady(true)→setFooterVisibility(true))가 전담하므로 이 폭 재계산 헬퍼가 별도로
+      // visibility까지 강제할 필요가 없다 — 폭 재동기화만 남긴다.
       window.setTimeout(() => {
         syncPromptRendererWidth();
-        if (!footerLoadPending) {
-          setFooterVisibility(true);
-        }
       }, 50);
     });
   }

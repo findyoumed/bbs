@@ -1,3 +1,20 @@
+## [2026-07-08 14:50] 부팅 직후 화면(상단바+본문)이 나오기도 전에 구분선/힌트/프롬프트만 먼저 뜨는 역행 — fonts.ready의 무조건적 setFooterVisibility(true) 제거
+
+**LOG_ID: 20260708_1450**
+목표: 사용자 재보고 — "힌트바 바로 위에 있는 가로줄이 다른 부분보다 먼저 렌더 되어 보여지는 경우가 있는데, 그냥 위에서 부터 아래로 터미널처럼 순서대로 나와야 하는데." (20260708_1130/1215에서 화면 "전환" 시 스트리밍 순서는 고쳤으나, 이번엔 최초 "부팅" 시퀀스에서 재발)
+변경 파일: `public/js/core/terminalHintFooter.js`
+수행 작업:
+1) [진단] 지금까지의 검증은 전부 "화면 전환"(main→board select 등, 이전 화면이 이미 떠 있는 상태) 기준이었는데, 이번 재보고는 사이트를 처음 여는 "부팅" 순간에 국한된 것으로 추정하고 별도 트레이스를 작성 — `page.goto(url, {waitUntil:'commit'})` 직후부터 1ms 간격으로 `hasScreen`(상단바+본문 존재 여부)/`divider`/`footerState`를 촘촘히 샘플링. 8회 중 매번, `t≈300ms` 부근에 `hasScreen=false`(아직 상단바도 본문도 없음)인데 `footerState="visible"`로 바뀌며 구분선+힌트+프롬프트가 먼저 나타나는 구간이 `firstBodyAt`(실제 본문 등장 시점, 260~620ms)보다 최대 수백 ms 앞서 항상 재현됨을 확인.
+2) [근본 원인] `terminalHintFooter.js`의 `schedulePromptLayoutSync()`가 rAF 후 50ms 뒤에 `syncPromptRendererWidth()`(폰트 로딩 후 프롬프트 폭 재계산, 정당한 목적)와 함께 `if (!footerLoadPending) setFooterVisibility(true)`를 무조건 호출하고 있었다. 이 함수는 `document.fonts.ready.then(schedulePromptLayoutSync)`로 앱 부팅 시 한 번 등록되는데, 이는 **실제 화면 렌더링과 완전히 무관하게** 웹폰트 로딩 완료 시점에만 좌우된다. 부팅 시 첫 `showMain()`이 데이터 fetch를 끝내고 본문을 실제로 그리기 전에 이 타이머가 먼저 발동하면, footer가 content-synchronized 경로(렌더러 자신의 인라인 숨김/해제, `core.setReady(true)`)를 거치지 않고 강제로 "visible"이 되어 — 빈 화면 위에 구분선/힌트/프롬프트만 먼저 나타나는 위→아래 순서 역행이 발생했다.
+3) [수정] `schedulePromptLayoutSync()`의 50ms 지연 콜백에서 `setFooterVisibility(true)` 호출을 제거하고 `syncPromptRendererWidth()`만 남겼다. footer의 실제 노출은 이미 content-synchronized 경로가 전담하므로 폭 재계산 헬퍼가 별도로 visibility까지 강제할 필요가 없다. (같은 함수가 `setPrompt()`/`applyCommandFooter` finally/resize 핸들러에서도 호출되지만, 그 경로들은 이미 각자 content-ready 시점에 맞물려 있어 이번 제거로 인한 기능 손실 없음 — 순수 시각적 side effect 제거.)
+4) [검증] 부팅 시퀀스 15회 연속 재실행(`footerState==="visible" && divider===true && hasScreen===false` 위반 기준) — 전부 통과. 극초반(t<40ms) CSS 미적용 프레임(FOUC)은 브라우저 렌더링 특성이라 별개로 두고 판정에서 제외(빈 백지 화면에 19ms만 존재, 실질적 순서 역행 아님). 기존 4패턴 종합 회귀(구분선/힌트/프롬프트 3자 동기화 + hint-blank-while-prompt-shown)도 6시나리오×4라운드=24회 재확인 — 전부 통과, 회귀 없음.
+5) [회귀] `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:vercel-ready` 전부 통과.
+실행: 부팅 시퀀스 전용 MutationObserver/폴링 트레이스(신규), 4패턴 종합 회귀(24회), `npm test`, smoke 2종
+기대: 최초 페이지 로드 시에도 화면(상단바+본문)이 실제로 준비되기 전까지는 구분선/힌트/프롬프트가 나타나지 않는다 — 위에서 아래로의 렌더 순서가 부팅/전환 모두에서 일관되게 지켜진다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-08 14:20] "선택 >>"는 남아있는데 힌트바만 사라지는 불일치 — setLoading()의 즉시 hint 텍스트 비움을 400ms 폴백 시점으로 이동
 
 **LOG_ID: 20260708_1420**
