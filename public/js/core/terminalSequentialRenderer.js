@@ -29,7 +29,7 @@ export function createTerminalSequentialRenderer(deps) {
     renderAbortController = controller;
 
     const {
-      delay = 20,
+      delay = 0, // [LOG: 20260708_1507] 레트로 지연 효과 제거 – 즉시 렌더링
       onComplete,
       clear = true,
       scrollIntoView = false,
