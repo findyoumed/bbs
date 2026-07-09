@@ -1,3 +1,5 @@
+import { displayWidth } from './ansiRenderUtils.js';
+
 let commandPendingTimer = 0;
 let commandPendingToken = 0;
 let commandPendingActive = false;
@@ -14,8 +16,11 @@ function setCommandPending(active) {
   container.classList.toggle('is-command-pending', commandPendingActive);
 
   if (commandPendingActive) {
-    // [LOG_ID: 20260707_1645] Keep the submitted command visible during pending, but lock the footer width to the command text.
-    const pendingLength = Math.max(1, String(commandPendingValue || cmdInput?.value || '').length);
+    // [LOG_ID: 20260709_1220] 한글 자모(ㅜ)나 완성형 글자 등 Wide 문자(폭 2)가 펜딩 중인 입력 창에서 
+    // 잘리는 현상(1ch 고정폭 제한으로 오른쪽 반이 절단됨)을 수정하기 위해 문자열의 글자 수(length)가 아닌
+    // 실제 displayWidth를 계산하여 CSS 변수 --pending-command-length 로 주입한다.
+    const pendingText = String(commandPendingValue || cmdInput?.value || '');
+    const pendingLength = Math.max(1, displayWidth(pendingText));
     container.style.setProperty('--pending-command-length', String(pendingLength));
     if (cmdInput) {
       // [LOG: 20260617_1035] Lock submitted command text during pending so number commands cannot morph mid-load.
