@@ -484,11 +484,17 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
     fetchedAt: nowStr,
     unavailable: allFail,
     message: allFail ? (results[0]?.feed?.message || message) : message,
-    items: finalItems.map((item, index) => ({
-      ...item,
-      no: index + 1,
-      articleKey: buildNewsArticleKey(service, item)
-    }))
+    items: finalItems.map((item, index) => {
+      // [LOG_ID: 20260709_1045] 페이징된 목록 반환 시 기사의 no(순차번호)가 1~15로 초기화되어 
+      // 클라이언트의 이전/다음 기사 인덱스 탐색이 완전히 꼬이는 버그를 해결하기 위해,
+      // 페이지 정보에 맞춰 실제 전역 목록에서의 기사 번호 오프셋을 올바르게 누적하여 제공한다.
+      const offset = page > 0 ? (page - 1) * 15 : 0;
+      return {
+        ...item,
+        no: offset + index + 1,
+        articleKey: buildNewsArticleKey(service, item)
+      };
+    })
   };
 }
 
