@@ -223,10 +223,19 @@ export function createServiceCommandHandler(deps) {
               } catch (err) {
                 // 다음 기사도 짤린 기사 등으로 에러가 발생한 경우, 튕기지 않고 한 번 더 순차 이동 시도 (+-2)
                 const targetNo2 = String(cmd === 'A' ? currentNoNum - 2 : currentNoNum + 2);
-                await showNewsArticle(state.serviceData.topicDoor, targetNo2, {
-                  listPageNo: state.serviceData?.listPageNo || 1,
-                  skipOnIncomplete: true
-                });
+                try {
+                  await showNewsArticle(state.serviceData.topicDoor, targetNo2, {
+                    listPageNo: state.serviceData?.listPageNo || 1,
+                    skipOnIncomplete: true
+                  });
+                } catch (err2) {
+                  // [LOG_ID: 20260709_1610] +-2 기사도 없는 경우(기사 목록의 끝 경계선 도달) 목록으로 튕기지 않고 안내 문구 표시 후 현재 화면 유지
+                  if (typeof showToast === 'function') {
+                    showToast(cmd === 'A' ? '이전 기사가 없습니다.' : '다음 기사가 없습니다.', 3000, 'info');
+                  } else {
+                    setHint(cmd === 'A' ? '이전 기사가 없습니다.' : '다음 기사가 없습니다.');
+                  }
+                }
               }
             }
           }

@@ -620,7 +620,7 @@ export function createNewsScreens(deps) {
         // [LOG_ID: 20260709_1450] throw 전에 state.screen을 이전 화면으로 복원한다.
         // L571에서 미리 'news-view'로 바꿨지만, 불완전 기사이면 화면 전환이 실제로 일어나지 않으므로
         // 이전 screen 값(news-list 등)으로 되돌려야 F/B 등 단축키가 올바른 screen 기준으로 작동한다.
-        if (options.skipOnIncomplete && /불완전한 뉴스 기사/.test(error?.message || '')) {
+        if (options.skipOnIncomplete) {
           state.screen = prevScreen;
           throw error;
         }
