@@ -234,9 +234,9 @@ export function createServiceCommandHandler(deps) {
         }
       }
       if (cmd === 'A') {
-        // [LOG_ID: 20260709_1365] A(이전글)는 기사 번호가 작아지는 방향(인덱스 증가 방향)으로 전진한다.
-        let skipIdx = currentIndex + 1;
-        while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
+        // [LOG_ID: 20260709_1380] A(이전글)=번호 감소. 배열이 오름차순이므로 인덱스를 감소시켜야 번호가 작아진다.
+        let skipIdx = currentIndex - 1;
+        while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
           const prevArticle = articles[skipIdx];
           if (!prevArticle || !state.serviceData?.topicDoor) break;
           try {
@@ -246,16 +246,16 @@ export function createServiceCommandHandler(deps) {
             }));
             break;
           } catch (err) {
-            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx++; continue; }
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx--; continue; }
             break;
           }
         }
         return true;
       }
       if (cmd === 'N') {
-        // [LOG_ID: 20260709_1365] N(다음글)은 기사 번호가 커지는 방향(인덱스 감소 방향)으로 후진한다.
-        let skipIdx = currentIndex - 1;
-        while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
+        // [LOG_ID: 20260709_1380] N(다음글)=번호 증가. 배열이 오름차순이므로 인덱스를 증가시켜야 번호가 커진다.
+        let skipIdx = currentIndex + 1;
+        while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
           const nextArticle = articles[skipIdx];
           if (!nextArticle || !state.serviceData?.topicDoor) break;
           try {
@@ -265,7 +265,7 @@ export function createServiceCommandHandler(deps) {
             }));
             break;
           } catch (err) {
-            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx--; continue; }
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx++; continue; }
             break;
           }
         }
