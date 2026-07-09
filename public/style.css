@@ -469,6 +469,14 @@ body.theme-blue .write-field textarea {
        영향이 없지만, 아직 style.width가 설정되기 전(부팅 극초반)의 짧은 순간에는 이 min-width가
        실제로 적용될 수 있어 일관되게 폰트 비의존적인 단위로 맞춘다. */
     min-width: 0.5em;
+    /* [LOG_ID: 20260709_0955] JS가 인라인 style.width를 설정하기 전의 CSS 기본 폭.
+       HTML <input>의 size 기본값은 20(≒170px)이라, JS 실행 전 짧은 순간에 프롬프트 박스가
+       실제 텍스트("선택 >>", 7자=3.5em)보다 훨씬 넓어 커서가 우측으로 밀려 보이는 space2
+       현상의 근본 원인이었다. 기본 프롬프트("선택 >>")에 맞춘 3.5em을 CSS에서 미리 선언해
+       두면, JS 인라인 style.width가 도착할 때까지의 틈에도 시각적 차이가 0에 수렴한다.
+       JS가 인라인 style.width를 설정하면 이 선언보다 우선하므로, 다른 프롬프트
+       ("비밀번호 >>", "이메일/아이디 >>" 등)에서도 정상 동작한다. */
+    width: 3.5em;
     max-height: 1.1em;
     height: 1.1em;
     /* [LOG: 20260707_1715] The prompt text already includes its own terminal spacing.
