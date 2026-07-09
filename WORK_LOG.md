@@ -1,3 +1,20 @@
+## [2026-07-09 16:48] 미디어(비디오/이미지) URL 프로토콜 누락 보정 및 첫 진입 시 미노출 버그 수정
+
+**LOG_ID: 20260709_1648**
+목표: `http://localhost:3000/service/news/1?article=738`과 같이 주소창에 직접 입력하여 기사 상세 화면에 처음 진입할 때(세션스토리지 캐시가 비어있는 상태), 스키마 및 프로토콜이 생략된 호스트 형식(예: `news.kbs.co.kr/...`)의 이미지 주소가 로컬 주소와 잘못 조립되어 비디오/이미지가 엑스박스(미노출)로 렌더링되던 현상을 해결한다.
+변경 파일:
+1) `public/js/core/newsScreens.js`
+2) `src/server/RssNewsArticleParser.js`
+3) `src/server/RssServiceXmlParsers.js`
+수행 작업:
+1) [클라이언트 보정] `newsScreens.js` 내 `normalizeNewsImageUrl` 함수에 스키마리스(`//`) 및 프로토콜이 생략된 호스트 도메인 형태의 주소에 `https://` 프로토콜을 보완해주는 교정 필터를 적용.
+2) [서버 파서 보정] 백엔드의 `RssNewsArticleParser.js` 및 `RssServiceXmlParsers.js` 내 이미지 정규화 모듈(`normalizeArticleImageUrl`, `normalizeImageUrl`)에도 프로토콜이 생략된 도메인 주소에 `https://`를 보정해주도록 대응 보완.
+실행: `npm test` 및 문법 체크
+기대: 처음 진입할 때나 새로 고침할 때 모두 `https://news.kbs.co.kr/...` 과 같이 올바른 절대 URL로 이미지/비디오 주소가 가공되어 첫 진입 시에도 영상(이미지)이 즉시 노출된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-09 16:43] 단축키 및 페이지 전환 시 임시 경고성 힌트 즉시 소거 적용 (깜빡임 버그 롤백)
 
 **LOG_ID: 20260709_1643**
