@@ -203,10 +203,13 @@ export function createNewsAnsiBuilders(deps) {
     // [LOG: 20260615_1748] Render fallback guidance ONLY when there is no media content (image/video) and the body is extremely short.
     // [LOG_ID: 20260709_1320] 기사 최소 본문 제한인 30자 기준을 고려하여, 불러오기 실패 경고 출력 기준을 40자 미만으로 완화함.
     let bodyText = String(article?.body || article?.description || '').trim();
+    // [LOG_ID: 20260709_1500] 이메일 주소 제거: 뉴시스 등 일부 언론사가 본문에 삽입하는 이메일은 터미널 화면에 불필요.
+    bodyText = bodyText.replace(/\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g, '').replace(/\s{2,}/g, ' ').trim();
     if (!shouldDisplayNewsArticleImage(article) && bodyText.length < 40) {
       bodyText += '\n\n' + '[상세 본문을 불러오지 못했습니다. 하단의 \'원문\' 링크를 클릭하여 전체 기사를 확인해 주세요.]';
     }
     const bodyLines = wrapAnsiText(bodyText, targetCols);
+
 
     const source = String(article?.sourceTitle || '').trim();
     const date = formatLongDate(article?.dateTime || article?.date || '');
