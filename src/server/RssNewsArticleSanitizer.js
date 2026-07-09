@@ -309,6 +309,22 @@ function stripKnownArticleBoilerplateLines(value) {
     /^[가-힣]{2,8}\([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\)$/i,
     /^(?:한국경제|한경프리미엄9)\s*구독신청$/i,
     /^(?:구글|네이버|다음)에서\s*선호하는\s*매체로\s*추가.*$/i,
+    // [LOG_ID: 20260709_1140] 기사 본문 영역에 파싱 찌꺼기로 유출된 JS 코드 문법 라인들 정밀 소거 필터
+    /^\/\//, // 주석 제거 (예: // /news/viewLayerRemove.jsp script)
+    /^[a-zA-Z0-9_$]+\s*=\s*[a-zA-Z0-9_$]+\(.*?\);?$/, // var 없는 함수 대입 (예: newsCode = getParameterByName('ncd');)
+    /^[a-zA-Z0-9_$]+\(.*?\);?$/, // 단순 함수 호출 (예: displayReplyCount();, modPlayNewsVideo(autoTagNm);)
+    /^(?:if|for|while|switch|catch)\s*\(.*?\)\s*\{?$/, // 제어문 시작 (예: if (...) {)
+    /^(?:setTimeout|setInterval)\s*\(.*?\)\s*\{?$/, // 타이머 시작 (예: setTimeout(function () {)
+    /^[a-zA-Z0-9_$]+\s*:\s*(?:['"a-zA-Z0-9_$]|[\(\{\[]).*?,?$/, // 객체 프로퍼티 정의 (예: title: '클로징', url: '/api/auth/...')
+    /^[a-zA-Z0-9_$]+\.[a-zA-Z0-9_$]+\(.*?\);?$/, // 객체 메서드 호출 (예: el.toggleClass('on');)
+    /^return\b/, // 반환문 (예: return printHtml;)
+    /^\$\.[a-zA-Z0-9_$]+\(.*?\);?$/, // jQuery AJAX 등 호출 (예: $.ajax({)
+    /^(?:window\.|global\.)?[a-zA-Z0-9_$]+\s*=\s*(?:function|['"{\[\(]|\d+|true|false|new\b)/i,
+    /^(?:var|const|let)\s+[a-zA-Z0-9_$]+/i,
+    /^function\s*[a-zA-Z0-9_$]*\s*\(.*?\)\s*\{/i,
+    /^\}\s*(?:catch|finally)?\s*(?:else)?\s*\{?/i,
+    /^(?:\$\(|jQuery\()/i,
+    /^console\.(?:log|error|warn|info|dir)\(/i,
     /^ADVERTISEMENT$/i,
     /^AD$/i,
     /^이\s*시각\s*관심정보$/i,
