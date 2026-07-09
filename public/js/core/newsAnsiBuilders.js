@@ -201,8 +201,9 @@ export function createNewsAnsiBuilders(deps) {
     const titleLines = wrapAnsiText(articleTitle, Math.max(10, targetCols - 6));
 
     // [LOG: 20260615_1748] Render fallback guidance ONLY when there is no media content (image/video) and the body is extremely short.
+    // [LOG_ID: 20260709_1320] 기사 최소 본문 제한인 30자 기준을 고려하여, 불러오기 실패 경고 출력 기준을 40자 미만으로 완화함.
     let bodyText = String(article?.body || article?.description || '').trim();
-    if (!shouldDisplayNewsArticleImage(article) && bodyText.length < 80) {
+    if (!shouldDisplayNewsArticleImage(article) && bodyText.length < 40) {
       bodyText += '\n\n' + '[상세 본문을 불러오지 못했습니다. 하단의 \'원문\' 링크를 클릭하여 전체 기사를 확인해 주세요.]';
     }
     const bodyLines = wrapAnsiText(bodyText, targetCols);
