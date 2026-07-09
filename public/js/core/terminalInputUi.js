@@ -302,6 +302,27 @@ export function createTerminalInputUi(deps) {
       maskTextEl = maskText;
     }
 
+    // [LOG_ID: 20260709_1000] JS 코드로 cmdInput.value가 변경될 때(예: 화면 전환 시 value = '')
+    // 브라우저 네이티브 'input' 이벤트가 발생하지 않아, 커서의 left 위치가 리셋되지 않고 
+    // 이전 위치(예: 1글자 입력한 경우 0.5em 옆)에 그대로 남아있어 화면이 나타나는 첫 프레임에 
+    // 여백이 순간 넓게 보였다가 좁아지는 space2 현상의 진짜 원인을 해결한다.
+    // cmdInput의 value 프로퍼티 setter를 가로채서 값이 할당될 때 즉시 커서 위치와 마스크를 동기 업데이트한다.
+    const origValueDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    if (origValueDesc && origValueDesc.set) {
+      Object.defineProperty(cmdInput, 'value', {
+        get() {
+          return origValueDesc.get.call(this);
+        },
+        set(val) {
+          origValueDesc.set.call(this, val);
+          syncMaskedInputDisplay();
+          syncCursorVisibility();
+          updateCursorPosition();
+        },
+        configurable: true
+      });
+    }
+
     cmdInput.addEventListener('input', () => {
       syncMaskedInputDisplay();
       syncCursorVisibility();

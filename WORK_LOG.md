@@ -1,3 +1,18 @@
+## [2026-07-09 10:00] JS 코드로 cmdInput.value가 초기화될 때 커서의 동기 리셋 누락으로 인한 1글자 여백 튐 버그 해결
+
+**LOG_ID: 20260709_1000**
+목표: 화면 전환 시 커서(█)가 이전 입력 위치(예: "1"을 치고 엔터를 눌렀을 때의 1글자 옆 위치인 0.5em)에 순간 남아있다가 좁아지는(0em으로 돌아오는) space2 현상을 해결한다.
+변경 파일: `public/js/core/terminalInputUi.js`
+수행 작업:
+1) [진단 및 근본 원인 규명] 디버그 로그 스캐닝 결과, 이전 화면 전환 과정(예: 뉴스 메뉴인 "1" 입력 후 엔터)에서 `cmdInput.value = ''` 할당을 수행할 때 브라우저 네이티브 `input` 이벤트가 발생하지 않아 `updateCursorPosition()`이 즉시 트리거되지 않음을 확인했다. 이로 인해 화면 숨김 해제(`visibility: visible`)가 되는 첫 번째 렌더링 프레임에 커서 위치(`style.left`)가 이전 입력의 값(`0.5em`) 그대로 노출되어 여백이 순간 벌어졌다가, 다음 비동기 프레임에 마이크로태스크나 리플로우로 갱신되며 좁아지는 진짜 타이밍 갭 원인이었다.
+2) [수정] `terminalInputUi.js` 내 `initBlinkingCursor()` 함수 안에서 `HTMLInputElement.prototype.value` setter 프로퍼티를 가로채도록(Interception) 수정했다. 이를 통해 프로그램 내부 코드(JS)로 `cmdInput.value = ''` 값이 초기화되거나 변경되는 순간 즉시 `updateCursorPosition()` 및 `syncCursorVisibility()`가 동기적으로 실행되게 하여, 화면 숨김이 해제되기 전에 무조건 커서 위치가 정확히 0em으로 재위치하도록 완벽 보증했다.
+3) [검증] `npm test`, `smoke:renderer-ui` 및 `smoke:vercel-ready` 스모크 테스트들 정상 통과 확인.
+실행: `npm test`
+기대: 화면 전환 시 이전 입력의 흔적이 커서 위치에 남지 않고 즉시 정밀하게 초기값 0em으로 리셋되어 여백 튐 현상이 사라진다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-09 09:55] 프롬프트 입력창의 HTML size 기본값(20자 폭) 제거로 커서 여백 튐 근본 원인 해결
 
 **LOG_ID: 20260709_0955**
