@@ -234,10 +234,9 @@ export function createServiceCommandHandler(deps) {
         }
       }
       if (cmd === 'A') {
-        // [LOG: 20260619_1900] 불완전 기사(404)는 최대 5개까지 자동 스킵하며 이전 기사로 이동
-        // [LOG: 20260619_2140] 본문 페이지(pageNo)는 새 글에서 1로 리셋. 목록 위치만 listPageNo로 유지.
-        let skipIdx = currentIndex - 1;
-        while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
+        // [LOG_ID: 20260709_1330] A(이전글)는 기사 번호가 더 커지는 방향이므로, 인덱스가 증가하는 방향(skipIdx++)으로 전진해야 한다.
+        let skipIdx = currentIndex + 1;
+        while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
           const prevArticle = articles[skipIdx];
           if (!prevArticle || !state.serviceData?.topicDoor) break;
           try {
@@ -247,17 +246,16 @@ export function createServiceCommandHandler(deps) {
             }));
             break;
           } catch (err) {
-            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx--; continue; }
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx++; continue; }
             break;
           }
         }
         return true;
       }
       if (cmd === 'N') {
-        // [LOG: 20260619_1900] 불완전 기사(404)는 최대 5개까지 자동 스킵하며 다음 기사로 이동
-        // [LOG: 20260619_2140] 본문 페이지(pageNo)는 새 글에서 1로 리셋. 목록 위치만 listPageNo로 유지.
-        let skipIdx = currentIndex + 1;
-        while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
+        // [LOG_ID: 20260709_1330] N(다음글)은 기사 번호가 더 작아지는 방향이므로, 인덱스가 감소하는 방향(skipIdx--)으로 후진해야 한다.
+        let skipIdx = currentIndex - 1;
+        while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
           const nextArticle = articles[skipIdx];
           if (!nextArticle || !state.serviceData?.topicDoor) break;
           try {
@@ -267,7 +265,7 @@ export function createServiceCommandHandler(deps) {
             }));
             break;
           } catch (err) {
-            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx++; continue; }
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx--; continue; }
             break;
           }
         }
