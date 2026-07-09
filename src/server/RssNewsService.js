@@ -372,6 +372,11 @@ class RssNewsService extends RssServiceBase {
     const expectedLink = this._normalize(options.link || '');
     const target = String(targetNo || '').trim();
 
+    let byKey = null;
+    if (expectedKey) {
+      byKey = list.find((item) => this._buildNewsArticleKey(item) === expectedKey) || null;
+    }
+
     let byLink = null;
     if (expectedLink) {
       byLink = list.find((item) => this._normalize(item?.link || '') === expectedLink) || null;
@@ -382,11 +387,6 @@ class RssNewsService extends RssServiceBase {
         const superExpected = this._superNormalize(expectedLink);
         byLink = list.find((item) => this._superNormalize(item?.link || '') === superExpected) || null;
       }
-    }
-
-    let byKey = null;
-    if (expectedKey) {
-      byKey = list.find((item) => this._buildNewsArticleKey(item) === expectedKey) || null;
     }
 
     let byNo = target ? list.find((item, index) => String(item?.no || (index + 1)) === target) : null;
@@ -406,8 +406,9 @@ class RssNewsService extends RssServiceBase {
       }
     }
 
-    if (byLink) return byLink;
+    // [LOG_ID: 20260709_1720] 충돌 우려가 큰 링크 매칭 대신 가장 안정적인 고유 식별자 키(byKey)를 최우선으로 매칭하여 리턴한다.
     if (byKey) return byKey;
+    if (byLink) return byLink;
     if (byNo) return byNo;
 
     return null;
@@ -572,8 +573,29 @@ class RssNewsService extends RssServiceBase {
     if (!str) return '';
     str = str.replace(/^https?:\/\//i, '');
     str = str.replace(/^www\./i, '');
+    
+    // [LOG_ID: 20260709_1720] SBS news_id, 오마이뉴스 CNTN_CD 등 쿼리스트링 식별자를 지켜 충돌을 막는다.
+    // 단, 유입 경로별로 달라지는 plink, cooper, ref, oc 등 트래킹 파라미터만 제거하고 정렬하여 비교한다.
     const qIdx = str.indexOf('?');
-    if (qIdx !== -1) str = str.substring(0, qIdx);
+    if (qIdx !== -1) {
+      const baseUrl = str.substring(0, qIdx);
+      const queryStr = str.substring(qIdx + 1);
+      const parts = queryStr.split('&');
+      const params = [];
+      for (const part of parts) {
+        if (!part) continue;
+        const [k, v] = part.split('=');
+        const key = decodeURIComponent(k).trim().toLowerCase();
+        if (['plink', 'cooper', 'ref', 'oc', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].includes(key)) {
+          continue;
+        }
+        params.push({ k, v });
+      }
+      params.sort((a, b) => a.k.localeCompare(b.k));
+      const newQuery = params.map(p => `${p.k}=${p.v || ''}`).join('&');
+      str = baseUrl + (newQuery ? `?${newQuery}` : '');
+    }
+    
     const hIdx = str.indexOf('#');
     if (hIdx !== -1) str = str.substring(0, hIdx);
     return str.replace(/\/+$/, '').trim();

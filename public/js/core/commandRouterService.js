@@ -223,24 +223,28 @@ export function createServiceCommandHandler(deps) {
       }
       if (cmd === 'A' || cmd === 'N') {
         if (currentIndex === -1) {
-          // [LOG_ID: 20260709_1310] 현재 보고 있는 기사가 페이징 목록에 없는 경우 (페이지 경계 초과 시)
-          // 0번 인덱스(skipIdx = 0)로 오작동 점프하는 것을 방지하고 실제 번호를 기준으로 이전/다음 기사를 호출한다.
+          // [LOG_ID: 20260709_1735] 현재 보고 있는 기사가 페이징 목록에 없는 경우 (페이지 경계 초과 시)
+          // 실제 번호를 기준으로 이전/다음 기사를 호출하며, 해당 번호가 위치할 페이지 번호를 동적으로 계산해 제공한다.
           const currentNoNum = parseInt(state.serviceData?.articleNo || '0', 10);
           if (currentNoNum > 0) {
             // A(이전글)는 기사 번호가 작아지는 방향(-1), N(다음글)은 기사 번호가 커지는 방향(+1)
-            const targetNo = String(cmd === 'A' ? currentNoNum - 1 : currentNoNum + 1);
+            const targetNoNum = cmd === 'A' ? currentNoNum - 1 : currentNoNum + 1;
+            const targetNo = String(targetNoNum);
+            const targetListPageNo = Math.ceil(targetNoNum / 15);
             if (state.serviceData?.topicDoor) {
               try {
                 await showNewsArticle(state.serviceData.topicDoor, targetNo, {
-                  listPageNo: state.serviceData?.listPageNo || 1,
+                  listPageNo: targetListPageNo,
                   skipOnIncomplete: true
                 });
               } catch (err) {
                 // 다음 기사도 짤린 기사 등으로 에러가 발생한 경우, 튕기지 않고 한 번 더 순차 이동 시도 (+-2)
-                const targetNo2 = String(cmd === 'A' ? currentNoNum - 2 : currentNoNum + 2);
+                const targetNo2Num = cmd === 'A' ? currentNoNum - 2 : currentNoNum + 2;
+                const targetNo2 = String(targetNo2Num);
+                const targetListPageNo2 = Math.ceil(targetNo2Num / 15);
                 try {
                   await showNewsArticle(state.serviceData.topicDoor, targetNo2, {
-                    listPageNo: state.serviceData?.listPageNo || 1,
+                    listPageNo: targetListPageNo2,
                     skipOnIncomplete: true
                   });
                 } catch (err2) {
@@ -258,21 +262,23 @@ export function createServiceCommandHandler(deps) {
         }
       }
       if (cmd === 'A') {
-        // [LOG_ID: 20260709_1380] A(이전글)=번호 감소. 배열이 오름차순이므로 인덱스를 감소시켜야 번호가 작아진다.
+        // [LOG_ID: 20260709_1745] A(이전글)=번호 감소. 글 번호(no)와 인덱스는 오름차순(비례)이므로 인덱스를 감소시켜야 번호가 작아진다.
         let skipIdx = currentIndex - 1;
         let success = false;
         while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
           const prevArticle = articles[skipIdx];
           if (!prevArticle || !state.serviceData?.topicDoor) break;
+          const targetNoNum = prevArticle.no || (skipIdx + 1);
+          const targetListPageNo = Math.ceil(targetNoNum / 15);
           try {
-            await showNewsArticle(state.serviceData.topicDoor, prevArticle.no || String(skipIdx + 1), getNewsArticleOptions(prevArticle, {
-              listPageNo: state.serviceData?.listPageNo || 1,
+            await showNewsArticle(state.serviceData.topicDoor, String(targetNoNum), getNewsArticleOptions(prevArticle, {
+              listPageNo: targetListPageNo,
               skipOnIncomplete: true
             }));
             success = true;
             break;
           } catch (err) {
-            // [LOG_ID: 20260709_1625] 어떤 이유로 로드에 실패하든 (불완전 기사, 404, 파싱 에러 등) 다음 인덱스를 계속 탐색하도록 skipIdx를 감소시키고 continue 함.
+            // [LOG_ID: 20260709_1745] 로드 실패 시 이전 인덱스(최신 기사)를 계속 탐색하도록 skipIdx를 감소시킴.
             skipIdx--;
             continue;
           }
@@ -287,21 +293,23 @@ export function createServiceCommandHandler(deps) {
         return true;
       }
       if (cmd === 'N') {
-        // [LOG_ID: 20260709_1380] N(다음글)=번호 증가. 배열이 오름차순이므로 인덱스를 증가시켜야 번호가 커진다.
+        // [LOG_ID: 20260709_1745] N(다음글)=번호 증가. 글 번호(no)와 인덱스는 오름차순(비례)이므로 인덱스를 증가시켜야 번호가 커진다.
         let skipIdx = currentIndex + 1;
         let success = false;
         while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
           const nextArticle = articles[skipIdx];
           if (!nextArticle || !state.serviceData?.topicDoor) break;
+          const targetNoNum = nextArticle.no || (skipIdx + 1);
+          const targetListPageNo = Math.ceil(targetNoNum / 15);
           try {
-            await showNewsArticle(state.serviceData.topicDoor, nextArticle.no || String(skipIdx + 1), getNewsArticleOptions(nextArticle, {
-              listPageNo: state.serviceData?.listPageNo || 1,
+            await showNewsArticle(state.serviceData.topicDoor, String(targetNoNum), getNewsArticleOptions(nextArticle, {
+              listPageNo: targetListPageNo,
               skipOnIncomplete: true
             }));
             success = true;
             break;
           } catch (err) {
-            // [LOG_ID: 20260709_1625] 어떤 이유로 로드에 실패하든 다음 인덱스를 계속 탐색하도록 skipIdx를 증가시키고 continue 함.
+            // [LOG_ID: 20260709_1745] 로드 실패 시 다음 인덱스(과거 기사)를 계속 탐색하도록 skipIdx를 증가시킴.
             skipIdx++;
             continue;
           }
