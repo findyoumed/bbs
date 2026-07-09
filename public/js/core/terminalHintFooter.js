@@ -365,6 +365,9 @@ export function createTerminalHintFooter(deps) {
         screenEl.classList.remove('is-loading');
       }
       footerLoadPending = false;
+      // [LOG_ID: 20260709_0950] 로딩이 끝나는 그 즉시 가로 폭도 동기식으로 맞추어,
+      // is-loading 제거로 인해 발생하는 커서의 즉각적인 위치 재계산 타이밍과 싱크를 완벽히 맞춘다.
+      syncPromptRendererWidth();
       schedulePromptLayoutSync();
       endFooterContentUpdate();
     }
@@ -387,11 +390,19 @@ export function createTerminalHintFooter(deps) {
 
   if (typeof document !== 'undefined' && document.fonts) {
     document.fonts.ready
-      .then(schedulePromptLayoutSync)
+      .then(() => {
+        // [LOG_ID: 20260709_0950] 폰트 로드 완료 즉시 동기식으로 너비를 맞추어,
+        // 동일 시점에 동기식으로 동작하는 커서 폰트 동기화 스케줄러와 싱크를 맞춘다.
+        syncPromptRendererWidth();
+        schedulePromptLayoutSync();
+      })
       .catch(() => {});
 
     if (typeof document.fonts.addEventListener === 'function') {
-      document.fonts.addEventListener('loadingdone', schedulePromptLayoutSync);
+      document.fonts.addEventListener('loadingdone', () => {
+        syncPromptRendererWidth();
+        schedulePromptLayoutSync();
+      });
     }
   }
 

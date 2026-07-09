@@ -1,3 +1,18 @@
+## [2026-07-09 09:50] 폰트 로드 완료 및 API 데이터 로딩 종료 시점의 비동기 레이아웃 갭으로 인한 1글자 여백 튐 수정
+
+**LOG_ID: 20260709_0950**
+목표: 최초 진입 시 또는 새로고침 시 뉴스/날씨 화면 등에서 프롬프트와 커서 사이 여백이 순간 넓어 보였다가 좁아지는 비동기 레이아웃 경합 버그를 해결한다.
+변경 파일: `public/js/core/terminalHintFooter.js`
+수행 작업:
+1) [진단 및 추가 원인] 20260709_0945 패치 후에도 직접 접속/새로고침 시 뉴스 및 날씨 서비스 화면에서 동일한 여백 튐 현상이 재현됨을 확인. 분석 결과: (a) 폰트 로드 완료(`document.fonts.ready` resolve) 시점 및 (b) API 로드 완료로 `is-loading` 클래스가 제거되는 시점에 `terminalInputUi.js`는 커서 위치를 **동기적으로 즉시** 재계산하지만, `terminalHintFooter.js`는 여전히 비동기인 `schedulePromptLayoutSync()`에만 의존하여 1프레임 늦게 프롬프트 폭을 재계산하고 있었음. 이로 인해 두 이벤트 발생 시점마다 커서와 프롬프트 폭 사이의 어긋난 1프레임 타임 갭이 남아있었던 것을 진단함.
+2) [수정] `applyCommandFooter` 의 `finally` 블록과 최하단의 `document.fonts.ready` 및 `loadingdone` 이벤트 리스너 핸들러 내부에서, `schedulePromptLayoutSync`를 호출하기 전에 동기식 `syncPromptRendererWidth()`를 **동기적으로 즉시 직접 호출**하도록 수정하여 폰트 로드 및 로딩 소멸 찰나의 프레임에도 가로 폭이 즉시 일치하도록 보장했다.
+3) [검증] `node --check`, `npm test`, `smoke:renderer-ui` 모두 성공적으로 완료.
+실행: `node --input-type=module --check public/js/core/terminalHintFooter.js` 및 `npm test` 등
+기대: 뉴스/날씨 최초 화면 진입이나 로딩 종료 찰나에도 프롬프트와 커서의 계산 타이밍이 동기식으로 일치하여, 튐 현상 없이 즉시 정밀하게 일치한다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-09 09:45] 프롬프트 문자열 변경과 엘리먼트 가로 폭 지정 사이의 비동기 레이아웃 갭으로 인한 1글자 여백 튐 수정
 
 **LOG_ID: 20260709_0945**
