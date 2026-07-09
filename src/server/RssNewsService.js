@@ -145,8 +145,8 @@ class RssNewsService extends RssServiceBase {
 
     if (requestedKey || requestedLink) {
       const hash = requestedKey || this._hashUrl(requestedLink);
-      // Scan active versions of detail cache. We support v29 primarily.
-      const cacheKey = `news:article:v29:${hash}`;
+      // Scan active versions of detail cache. We support v30 primarily.
+      const cacheKey = `news:article:v30:${hash}`;
       const storeKey = `rss:feed:${cacheKey}`;
       try {
         cachedDetail = await this._getPersistentCacheEntry(storeKey);
@@ -291,17 +291,14 @@ class RssNewsService extends RssServiceBase {
           || /속보|단독|긴급|breaking/i.test(resolvedArticle.title || detail.title)
           || /속보|단독|긴급|breaking/i.test(trimmed);
 
-        // [LOG: 20260624_1215] 회원님 요청("이런 기사는 차라리 나오던지")에 따라 기사 차단 정책 완전 폐기.
-        // 불완전한 기사(문장 잘림, 짧은 내용)라도 무조건 본문을 보여주도록 허용.
-        resolvedArticle.detailFetched = true;
+        // [LOG_ID: 20260709_1240] 불완전/문장 짤림 기사 차단 정책 복원 (isTruncated가 true 이거나 본문이 너무 짧으면 차단)
+        const isDetailValid = !detail.unavailable && trimmed.length >= 30 && !isTruncated;
+        resolvedArticle.detailFetched = !!isDetailValid;
       } else {
-        // [LOG: 20260624_1215] 크롤 실패 시 RSS 요약 폴백 표시도 무조건 허용.
-        resolvedArticle.detailFetched = true;
+        resolvedArticle.detailFetched = false;
       }
     } else {
-      // [LOG: 20260616_1715] Default fallback for articles with missing links
-      // [LOG: 20260624_1215] 무조건 열람 허용 (불완전 기사 차단 폐기)
-      resolvedArticle.detailFetched = true;
+      resolvedArticle.detailFetched = false;
     }
 
     resolvedArticle.description = this._sanitizeArticleText(resolvedArticle.description, resolvedArticle.title);
@@ -488,7 +485,7 @@ class RssNewsService extends RssServiceBase {
       return { unavailable: true, message: '피드 오류: 기사 링크 없음', items: [] };
     }
 
-    const cacheKey = `news:article:v29:${this._hashUrl(normalizedLink)}`;
+    const cacheKey = `news:article:v30:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
     // [LOG: 20260618_0915] Accept cached entries if they are not unavailable to prevent re-crawling short articles
     if (memory && !memory.unavailable) {
