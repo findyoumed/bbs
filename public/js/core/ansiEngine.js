@@ -26,6 +26,8 @@ export function createAnsiEngine(deps) {
     }
 
     function ansiToHTML(text) {
+        // [LOG: 20260709_1040] 클라이언트단 렌더링 초입에서 NFD 자모를 NFC 결합 형태 음절로 정규화하여 자모 분리 렌더링을 방지
+        text = String(text || '').normalize('NFC');
         const COLS = 80;
         const ROWS = 25;
         const buf = Array.from({ length: ROWS }, () =>
