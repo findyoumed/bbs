@@ -205,9 +205,12 @@ export function createNewsAnsiBuilders(deps) {
     let bodyText = String(article?.body || article?.description || '').trim();
     // [LOG_ID: 20260709_1500] 이메일 주소 제거: 뉴시스 등 일부 언론사가 본문에 삽입하는 이메일 및 [email protected] 템플릿 제거.
     // [LOG_ID: 20260709_1550] 픽사베이 등 사진 출처 문구 제거.
+    // [LOG_ID: 20260709_1620] 조회수 및 영문 기사 보기 문구 제거.
     bodyText = bodyText.replace(/\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g, '')
                        .replace(/\[email&#160;protected\]|\[email\s*protected\]/gi, '')
                        .replace(/\[\s*픽사베이\s*\]|\(\s*사진\s*=\s*픽사베이\s*\)/gi, '')
+                       .replace(/조회\s*\n?\s*조회수/gi, '')
+                       .replace(/영문\s*기사\s*보기\s*\(View\s*English\s*Article\)/gi, '')
                        .replace(/\s{2,}/g, ' ')
                        .trim();
 
