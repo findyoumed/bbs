@@ -245,6 +245,7 @@ export function createServiceCommandHandler(deps) {
       if (cmd === 'A') {
         // [LOG_ID: 20260709_1380] A(이전글)=번호 감소. 배열이 오름차순이므로 인덱스를 감소시켜야 번호가 작아진다.
         let skipIdx = currentIndex - 1;
+        let success = false;
         while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
           const prevArticle = articles[skipIdx];
           if (!prevArticle || !state.serviceData?.topicDoor) break;
@@ -253,10 +254,19 @@ export function createServiceCommandHandler(deps) {
               listPageNo: state.serviceData?.listPageNo || 1,
               skipOnIncomplete: true
             }));
+            success = true;
             break;
           } catch (err) {
-            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx--; continue; }
-            break;
+            // [LOG_ID: 20260709_1625] 어떤 이유로 로드에 실패하든 (불완전 기사, 404, 파싱 에러 등) 다음 인덱스를 계속 탐색하도록 skipIdx를 감소시키고 continue 함.
+            skipIdx--;
+            continue;
+          }
+        }
+        if (!success) {
+          if (typeof showToast === 'function') {
+            showToast('이전 기사가 없습니다.', 3000, 'info');
+          } else {
+            setHint('이전 기사가 없습니다.');
           }
         }
         return true;
@@ -264,6 +274,7 @@ export function createServiceCommandHandler(deps) {
       if (cmd === 'N') {
         // [LOG_ID: 20260709_1380] N(다음글)=번호 증가. 배열이 오름차순이므로 인덱스를 증가시켜야 번호가 커진다.
         let skipIdx = currentIndex + 1;
+        let success = false;
         while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
           const nextArticle = articles[skipIdx];
           if (!nextArticle || !state.serviceData?.topicDoor) break;
@@ -272,10 +283,19 @@ export function createServiceCommandHandler(deps) {
               listPageNo: state.serviceData?.listPageNo || 1,
               skipOnIncomplete: true
             }));
+            success = true;
             break;
           } catch (err) {
-            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx++; continue; }
-            break;
+            // [LOG_ID: 20260709_1625] 어떤 이유로 로드에 실패하든 다음 인덱스를 계속 탐색하도록 skipIdx를 증가시키고 continue 함.
+            skipIdx++;
+            continue;
+          }
+        }
+        if (!success) {
+          if (typeof showToast === 'function') {
+            showToast('다음 기사가 없습니다.', 3000, 'info');
+          } else {
+            setHint('다음 기사가 없습니다.');
           }
         }
         return true;
