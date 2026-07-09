@@ -142,7 +142,7 @@ function readFirstHtmlImageUrl(values) {
 }
 
 function normalizeImageUrl(value) {
-  const source = cleanFeedText(value);
+  let source = cleanFeedText(value);
   if (!source) {
     return '';
   }
@@ -151,6 +151,10 @@ function normalizeImageUrl(value) {
   }
   if (/^https?:\/\//i.test(source)) {
     return source;
+  }
+  // [LOG_ID: 20260709_1648] 프로토콜이 생략된 호스트 도메인 주소 보정
+  if (/^[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\//.test(source)) {
+    return `https://${source}`;
   }
   return '';
 }

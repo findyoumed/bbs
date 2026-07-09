@@ -260,8 +260,16 @@ export function createNewsScreens(deps) {
   }
 
   function normalizeNewsImageUrl(value) {
-    const source = String(value || '').trim();
+    let source = String(value || '').trim();
     if (!source) return '';
+
+    // [LOG_ID: 20260709_1648] 스키마리스(//) 및 프로토콜이 생략된 호스트 주소(news.kbs.co.kr 등)에 https: 프로토콜 보정 추가
+    if (/^\/\//.test(source)) {
+      source = 'https:' + source;
+    } else if (/^[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\//.test(source) && !source.includes('://')) {
+      source = 'https://' + source;
+    }
+
     try {
       const url = new URL(source, window.location.href);
       if (url.protocol === 'http:' || url.protocol === 'https:') {
