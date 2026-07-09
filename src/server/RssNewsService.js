@@ -361,6 +361,13 @@ class RssNewsService extends RssServiceBase {
     let byLink = null;
     if (expectedLink) {
       byLink = list.find((item) => this._normalize(item?.link || '') === expectedLink) || null;
+      if (!byLink) {
+        // [LOG_ID: 20260709_1010] 리다이렉트나 캐싱 과정에서 쿼리 파라미터가 유실/순서가 변경되어 
+        // byLink 매칭이 엄격하게 이루어질 때 실패하는 문제를 완벽히 차단하기 위해,
+        // 클라이언트와 동일하게 프로토콜, www., 쿼리스트링을 전부 지운 초정규화(superNormalize) 매칭 폴백을 작동한다.
+        const superExpected = this._superNormalize(expectedLink);
+        byLink = list.find((item) => this._superNormalize(item?.link || '') === superExpected) || null;
+      }
     }
 
     let byKey = null;
@@ -546,6 +553,17 @@ class RssNewsService extends RssServiceBase {
   }
 
   _normalize(v) { return normalizeUrl(v); }
+  _superNormalize(v) {
+    let str = String(v || '').trim();
+    if (!str) return '';
+    str = str.replace(/^https?:\/\//i, '');
+    str = str.replace(/^www\./i, '');
+    const qIdx = str.indexOf('?');
+    if (qIdx !== -1) str = str.substring(0, qIdx);
+    const hIdx = str.indexOf('#');
+    if (hIdx !== -1) str = str.substring(0, hIdx);
+    return str.replace(/\/+$/, '').trim();
+  }
   _buildAuthor(src, aut) {
     return buildAuthor(src, aut);
   }

@@ -314,7 +314,7 @@ export function createNewsScreens(deps) {
 
     let byLink = null;
     if (expectedLink) {
-      byLink = list.find((item) => getNewsArticleLink(item) === expectedLink) || null;
+      byLink = list.find((item) => normalizeUrl(getNewsArticleLink(item)) === normalizeUrl(expectedLink)) || null;
     }
 
     let byKey = null;
