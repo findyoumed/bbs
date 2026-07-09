@@ -568,6 +568,8 @@ export function createNewsScreens(deps) {
       && Number(state.serviceData?.pageNo || 1) === requestedPageNo
       && (!requestedArticleKey || String(state.serviceData?.articleKey || '').trim() === requestedArticleKey);
     
+    // [LOG_ID: 20260709_1450] 화면 전환 실패 시 복원을 위해 이전 screen을 저장
+    const prevScreen = state.screen;
     state.screen = 'news-view';
 
     // Get metadata details from options or sessionStorage
@@ -615,7 +617,11 @@ export function createNewsScreens(deps) {
           return;
         }
         // [LOG: 20260619_1900] 탐색 중 불완전 기사 에러는 호출자가 스킵 처리할 수 있도록 re-throw
+        // [LOG_ID: 20260709_1450] throw 전에 state.screen을 이전 화면으로 복원한다.
+        // L571에서 미리 'news-view'로 바꿨지만, 불완전 기사이면 화면 전환이 실제로 일어나지 않으므로
+        // 이전 screen 값(news-list 등)으로 되돌려야 F/B 등 단축키가 올바른 screen 기준으로 작동한다.
         if (options.skipOnIncomplete && /불완전한 뉴스 기사/.test(error?.message || '')) {
+          state.screen = prevScreen;
           throw error;
         }
         // [LOG: 20260620_1200] 불완전 기사 등 예상된 로드 실패는 조용히 목록으로 복귀한다(콘솔 노이즈 억제).
@@ -696,6 +702,8 @@ export function createNewsScreens(deps) {
         const incompleteError = new Error(`불완전한 뉴스 기사입니다: ${articleNo}`);
         incompleteError.type = 'incomplete';
         if (options?.skipOnIncomplete) {
+          // [LOG_ID: 20260709_1450] 화면 전환 안 일어났으므로 이전 screen으로 복원
+          state.screen = prevScreen;
           throw incompleteError;
         }
         await showNewsList(topicDoor, {
