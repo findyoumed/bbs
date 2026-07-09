@@ -18,6 +18,13 @@ export function createServiceCommandHandler(deps) {
     showToast
   } = deps;
 
+  // [LOG_ID: 20260709_1643] 임시 경고 힌트의 즉각 소거와 잔상 방지를 위한 로컬 힌트 캐시
+  let lastCommandServiceHint = '';
+  function setServiceHint(text) {
+    lastCommandServiceHint = String(text || '');
+    setHint(text);
+  }
+
   function getNewsArticleOptions(article, extra = {}) {
     return {
       ...extra,
@@ -27,6 +34,14 @@ export function createServiceCommandHandler(deps) {
   }
 
   return async function handleServiceCommand({ s, cmd, rawCmd, context }) {
+    // [LOG_ID: 20260709_1643] 임시 오류/경고 힌트가 노출된 상태에서 사용자가 새 입력을 입력하면 즉시 지워 잔상을 제거한다.
+    const isWarningHint = lastCommandServiceHint.includes('불러올 수 없는')
+      || lastCommandServiceHint.includes('기사가 없습니다');
+    if (isWarningHint) {
+      setHint('');
+      lastCommandServiceHint = '';
+    }
+
     // [LOG_ID: 20260623_1300] Restore GAME input handling.
     const goGame = async () => { await showBoardSelect('game'); return true; };
     if (s === 'bio-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showBiorhythmResult(rawCmd); return true; } return false; }
@@ -165,7 +180,7 @@ export function createServiceCommandHandler(deps) {
             if (typeof showToast === 'function') {
               showToast('본문 전체를 불러올 수 없는 기사입니다. 다른 기사를 선택해 주세요.', 3000, 'info');
             } else {
-              setHint('본문 전체를 불러올 수 없는 기사입니다.');
+              setServiceHint('본문 전체를 불러올 수 없는 기사입니다.');
             }
           } else {
             throw err;
@@ -233,7 +248,7 @@ export function createServiceCommandHandler(deps) {
                   if (typeof showToast === 'function') {
                     showToast(cmd === 'A' ? '이전 기사가 없습니다.' : '다음 기사가 없습니다.', 3000, 'info');
                   } else {
-                    setHint(cmd === 'A' ? '이전 기사가 없습니다.' : '다음 기사가 없습니다.');
+                    setServiceHint(cmd === 'A' ? '이전 기사가 없습니다.' : '다음 기사가 없습니다.');
                   }
                 }
               }
@@ -266,7 +281,7 @@ export function createServiceCommandHandler(deps) {
           if (typeof showToast === 'function') {
             showToast('이전 기사가 없습니다.', 3000, 'info');
           } else {
-            setHint('이전 기사가 없습니다.');
+            setServiceHint('이전 기사가 없습니다.');
           }
         }
         return true;
@@ -295,7 +310,7 @@ export function createServiceCommandHandler(deps) {
           if (typeof showToast === 'function') {
             showToast('다음 기사가 없습니다.', 3000, 'info');
           } else {
-            setHint('다음 기사가 없습니다.');
+            setServiceHint('다음 기사가 없습니다.');
           }
         }
         return true;
