@@ -680,6 +680,28 @@ export function createNewsScreens(deps) {
       }
     }
 
+    // [LOG_ID: 20260709_1250] 클라이언트측 2차 방어 가드: 캐시 오염 등으로 인해 비정상적으로 잘린 
+    // 기사 본문이 렌더링되려는 경우, 상세 화면 그리기를 강제 차단하고 리스트로 조용히 튕겨낸다.
+    const clientTrimmed = String(resolvedArticle.body || resolvedArticle.description || '').trim();
+    const isClientTruncated = /[.]{2,}$|[…,\-:/]$/.test(clientTrimmed)
+      || /[며고나면지를을은는이가와과의로]/.test(clientTrimmed.slice(-3));
+    
+    if (isClientTruncated || clientTrimmed.length < 30) {
+      console.debug('클라이언트측 잘린 기사 감지로 차단:', articleNo);
+      // [LOG_ID: 20260709_1255] 단축키 N/A를 통한 순차 탐색 도중 잘린 기사를 만나면
+      // 에러를 던져야 이전/다음 순차 스킵 탐색기가 멈추지 않고 다음 정상 기사를 계속 탐색할 수 있다.
+      const incompleteError = new Error(`불완전한 뉴스 기사입니다: ${articleNo}`);
+      incompleteError.type = 'incomplete';
+      if (options?.skipOnIncomplete) {
+        throw incompleteError;
+      }
+      await showNewsList(topicDoor, {
+        fromHistory: true,
+        pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
+      });
+      return;
+    }
+
     const articleView = buildNewsArticleAnsi(resolvedTopicTitle, resolvedArticle, requestedPageNo);
     const currentListPageSize = Math.max(1, Number(state.serviceData?.listPageSize || 15));
     const resolvedListPageNo = Math.max(
