@@ -482,6 +482,7 @@ export function createNewsScreens(deps) {
   }
 
   async function showNewsMenu(fromHistory = false) {
+    setHint('');
     state.screen = 'news-menu';
     if (!fromHistory) { updateURL(); pushHistory(); }
 
@@ -509,6 +510,7 @@ export function createNewsScreens(deps) {
   }
 
   async function showNewsList(topicDoor, options = false) {
+    setHint('');
     const normalizedOptions = typeof options === 'boolean' ? { fromHistory: options } : (options || {});
     const fromHistory = Boolean(normalizedOptions.fromHistory);
     const requestedPageNo = Math.max(1, Number.parseInt(normalizedOptions.pageNo, 10) || 1);
@@ -559,6 +561,7 @@ export function createNewsScreens(deps) {
 
   // [LOG: 20260622_1114] Fix truncated news article body by prioritizing API details first and dynamically guessing targetListPageNo from actual article number
   async function showNewsArticle(topicDoor, articleNo, options = {}) {
+    setHint('');
     const requestedPageNo = Math.max(1, Number.parseInt(options?.pageNo, 10) || 1);
     const fromHistory = Boolean(options?.fromHistory);
     const forceReload = Boolean(options?.forceReload);
