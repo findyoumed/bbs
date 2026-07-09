@@ -74,7 +74,7 @@ class BbsResponse {
     }
 
     this.res.writeHead(this._statusCode, this._headers);
-    this.res.end(JSON.stringify(payload));
+    this.res.end(JSON.stringify(payload).normalize('NFC'));
   }
 
   static success(res, data, message = 'Success') {

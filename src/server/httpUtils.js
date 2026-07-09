@@ -210,7 +210,7 @@ function safeResolve(basePath, requestPath) {
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(payload));
+  res.end(JSON.stringify(payload).normalize('NFC'));
 }
 
 function sendApiResponse(res, statusCode, data, message = 'Success') {
