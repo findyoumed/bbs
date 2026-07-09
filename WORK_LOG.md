@@ -1,14 +1,14 @@
-## [2026-07-09 17:45] 뉴스 기사 건너뛰기(skip) 발생 시 페이징 정보(listPageNo) 불일치로 인한 오작동 수정
+## [2026-07-09 18:05] 뉴스 기사 제목 내 화살표 엔티티(rarr;) 깨짐 현상 수정
 
-**LOG_ID: 20260709_1745**
-목표: 기사가 건너뛰어지는 skip 상태(일부 파싱 에러나 불완전 본문 등으로 기사를 우회한 경우)가 발생했을 때, 대상 기사의 전역 번호에 부합하는 올바른 `listPageNo`가 아닌 이전 기사의 기존 `listPageNo`를 강제하여 페이지 인덱스가 불일치하게 되면서 이후 단축키 입력 시 수백 개의 기사 숫자가 급격히 튀거나 오작동하는 버그를 수정한다.
+**LOG_ID: 20260709_1805**
+목표: 뉴스 기사 제목 등에 `rarr;`와 같은 오른쪽 화살표 HTML 엔티티가 디코딩되지 않고 생 텍스트로 노출되던 깨짐 현상을 해결한다.
 변경 파일:
-1) `public/js/core/commandRouterService.js`
+1) `src/server/RssServiceXmlParsers.js`
 수행 작업:
-1) [페이지 동적 계산] `commandRouterService.js` 내의 일반 단축키 이동 루프(`cmd === 'A'` 및 `cmd === 'N'`)에서도 기사를 건너뛰며 탐색할 때, 매칭될 기사의 실제 전역 번호(`targetNoNum = prevArticle.no || (skipIdx + 1)`)를 기준으로 `targetListPageNo = Math.ceil(targetNoNum / 15)`를 구하여 `showNewsArticle` 옵션으로 유연하게 전달하도록 개선.
-2) [오타 수정] 수정 과정에서 발생한 오타('다음 기습니다.')를 '다음 기사가 없습니다.'로 수정.
-실행: `node --check public/js/core/commandRouterService.js` 및 `npm test`
-기대: 일부 로드 실패 기사를 건너뛴(skip) 후에도, 현재 로드된 기사의 실제 번호에 해당하는 올바른 `listPageNo`로 목록이 유지되므로 이후 단축키 `a`, `n` 입력 시 정상적으로 글 번호가 1씩 증감하며 오작동 없이 작동한다.
+1) [엔티티 매핑 추가] `RssServiceXmlParsers.js` 내의 `decodeXmlEntities` 함수에서 지원하는 HTML 엔티티 목록(`named`)에 화살표 관련 기호(`rarr`, `larr`, `uarr`, `darr`)를 추가하여 알맞은 화살표 유니코드 기호(`→`, `←`, `↑`, `↓`)로 디코딩되도록 교정.
+2) [정제 정규식 보완] `&` 기호 없이 들어오는 불완전 엔티티 정리 정규식의 매칭 대상군에도 해당 화살표 기호들을 포함하도록 교정.
+실행: `node --check src/server/RssServiceXmlParsers.js` 및 `npm test`
+기대: 뉴스 기사 제목 내에 포함된 `rarr;`가 정상적으로 화살표 기호인 `→`로 변환되어 올바르게 출력된다.
 결과: ✅ 완료
 
 ---

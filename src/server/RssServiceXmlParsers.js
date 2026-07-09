@@ -297,7 +297,11 @@ function decodeXmlEntities(value) {
     ldquo: '"',
     rdquo: '"',
     ndash: '-',
-    mdash: '-'
+    mdash: '-',
+    rarr: '→',
+    larr: '←',
+    uarr: '↑',
+    darr: '↓'
   };
   let result = String(value || '');
   for (let i = 0; i < 4; i += 1) {
@@ -318,8 +322,9 @@ function decodeXmlEntities(value) {
   }
 
   // [LOG: 20260619_1420] 일부 RSS가 &를 제거한 채 quot;/hellip; 형태로 내려주는 제목을 보정한다.
+  // [LOG_ID: 20260709_1805] rarr/larr/uarr/darr 화살표 엔티티 필터 추가
   // \b 대신 (?<![a-zA-Z]) 사용: 숫자 뒤 엔티티(6middot;)도 매칭되도록 수정
-  return result.replace(/(?<![a-zA-Z])(lt|gt|amp|quot|apos|nbsp|middot|hellip|lsquo|rsquo|ldquo|rdquo|ndash|mdash);/gi, (match, name) => {
+  return result.replace(/(?<![a-zA-Z])(lt|gt|amp|quot|apos|nbsp|middot|hellip|lsquo|rsquo|ldquo|rdquo|ndash|mdash|rarr|larr|uarr|darr);/gi, (match, name) => {
     return named[String(name || '').toLowerCase()] ?? match;
   });
 }
