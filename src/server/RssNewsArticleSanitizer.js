@@ -95,9 +95,12 @@ function sanitizeArticleText(value, title = '') {
   normalized = normalized.replace(/(?:구글|네이버|다음)에서\s*선호하는\s*매체로\s*추가(?:하기)?\.?/gi, '');
   normalized = normalized.replace(/(?:사진|이미지)\s*확대하기\.?/gi, '');
   // [LOG_ID: 20260709_1505] 이메일 주소 제거: 뉴시스 등 일부 언론사가 기사 본문에 삽입하는 기자 이메일 및 [email protected] 템플릿 제거.
+  // [LOG_ID: 20260709_1550] 픽사베이 등 사진 출처 문구 제거.
   normalized = normalized.replace(/\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g, '')
                          .replace(/\[email&#160;protected\]|\[email\s*protected\]/gi, '')
+                         .replace(/\[\s*픽사베이\s*\]|\(\s*사진\s*=\s*픽사베이\s*\)/gi, '')
                          .replace(/[ \t]{2,}/g, ' ');
+
 
 
   // [LOG: 20260613_1212] 마침표(.), 물음표(?), 느낌표(!) 바로 뒤에 공백이나 개행 없이 한글이 붙어오는 경우(예: '꺼졌다.이') 띄어쓰기를 보정해 줌.
