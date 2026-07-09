@@ -3,7 +3,9 @@
 const { decodeHtmlEntities } = require('./RssNewsArticleParserText');
 
 function normalize(value) {
-  return String(value || '').replace(/\s+/g, ' ').replace(/[/:|,-]+\s*$/g, '').trim();
+  return String(value || '')
+    .normalize('NFC') // [LOG_ID: 20260709_1020] 유니코드 NFD 한글 자소 분리 현상을 NFC 결합 형태로 자동 교정
+    .replace(/\s+/g, ' ').replace(/[/:|,-]+\s*$/g, '').trim();
 }
 
 // [LOG: 20260617_1830] Robust URL normalizer to ensure reliable article key pairing.
@@ -77,6 +79,7 @@ function pickArticleBody(values) {
 // [LOG: 20260617_0930] Support optional title parameter to prune identical lead headings
 function sanitizeArticleText(value, title = '') {
   const normalized = decodeHtmlEntities(String(value || ''))
+    .normalize('NFC') // [LOG_ID: 20260709_1020] 유니코드 NFD 한글 자소 분리 현상을 NFC 결합 형태로 자동 교정
     .replace(/&nbsp;/gi, ' ')
     .replace(/\u00a0/g, ' ')
     .replace(/\u2028/g, '\n')

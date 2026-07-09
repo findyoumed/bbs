@@ -1,3 +1,18 @@
+## [2026-07-09 10:20] 뉴스 피드 및 본문 텍스트 내 한글 자모 분리(NFD) 현상 자동 결합(NFC) 처리
+
+**LOG_ID: 20260709_1020**
+목표: 뉴스 기사 본문이나 제목에서 자소(초성, 중성, 종성)가 "르셉템버 신세계백화점" 처럼 분리되어 출력되는 현상(Unicode NFD)을 해결한다.
+변경 파일: `src/server/RssServiceXmlParsers.js`, `src/server/RssNewsArticleParserText.js`, `src/server/RssNewsArticleSanitizer.js`
+수행 작업:
+1) [진단 및 근본 원인 규명] 외부 뉴스 RSS 피드 중 일부 혹은 크롤러가 긁어온 한글 본문 텍스트 데이터가 macOS 등에서 작성되어 유니코드 NFD(자모 분리 형태) 형식으로 서버에 저장되거나 전송되고 있었음. 이로 인해 윈도우/리눅스 환경의 웹 브라우저 단말기 터미널 화면에서 한글 자모가 정상 결합되지 않고 풀어져 보이는 것을 진단함.
+2) [수정] 자바스크립트의 표준 유니코드 정규화 메소드인 `.normalize('NFC')`를 서버 텍스트 파싱 및 정제 공통 헬퍼인 `cleanFeedText`, `cleanHtmlToText`, `normalizePlainText`, `normalize`, `sanitizeArticleText` 에 각각 적용하여 피드 XML 파싱 및 HTML 크롤링 초입 단계에서 유니코드 한글 자소들을 완벽하게 NFC 결합 형태로 자동 복원하게 수정했다.
+3) [검증] `npm test`, `smoke:renderer-ui`, `smoke:vercel-ready` 전체 통과 완료.
+실행: `npm test`
+기대: 모든 뉴스 피드 및 기사 내 한글 자모 분리 현상이 완벽히 해소되어 결합된 형태의 올바른 한글이 렌더링된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-09 10:10] 뉴스 기사 탐색(이전/다음글) 시 URL 정규화(Normalize) 불일치로 인한 기사 둔갑 버그 해결
 
 **LOG_ID: 20260709_1010**

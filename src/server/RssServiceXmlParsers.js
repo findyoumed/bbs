@@ -250,6 +250,7 @@ function readAttr(source, attrName) {
 // [LOG: 20260610_0341] Strip HTML tags safely, preserving book bracket notations.
 function cleanFeedText(value) {
   return decodeXmlEntities(String(value || ''))
+    .normalize('NFC') // [LOG_ID: 20260709_1020] 유니코드 NFD 한글 자소 분리 현상을 NFC 결합 형태로 자동 교정
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/<[a-zA-Z/!][^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
@@ -258,6 +259,7 @@ function cleanFeedText(value) {
 
 function cleanHtmlToText(value) {
   return decodeXmlEntities(String(value || ''))
+    .normalize('NFC') // [LOG_ID: 20260709_1020] 유니코드 NFD 한글 자소 분리 현상을 NFC 결합 형태로 자동 교정
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
