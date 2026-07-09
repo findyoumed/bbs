@@ -145,8 +145,8 @@ class RssNewsService extends RssServiceBase {
 
     if (requestedKey || requestedLink) {
       const hash = requestedKey || this._hashUrl(requestedLink);
-      // Scan active versions of detail cache. We support v28 primarily.
-      const cacheKey = `news:article:v28:${hash}`;
+      // Scan active versions of detail cache. We support v29 primarily.
+      const cacheKey = `news:article:v29:${hash}`;
       const storeKey = `rss:feed:${cacheKey}`;
       try {
         cachedDetail = await this._getPersistentCacheEntry(storeKey);
@@ -488,7 +488,7 @@ class RssNewsService extends RssServiceBase {
       return { unavailable: true, message: '피드 오류: 기사 링크 없음', items: [] };
     }
 
-    const cacheKey = `news:article:v28:${this._hashUrl(normalizedLink)}`;
+    const cacheKey = `news:article:v29:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
     // [LOG: 20260618_0915] Accept cached entries if they are not unavailable to prevent re-crawling short articles
     if (memory && !memory.unavailable) {
