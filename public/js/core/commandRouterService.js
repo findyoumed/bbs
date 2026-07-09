@@ -206,6 +206,33 @@ export function createServiceCommandHandler(deps) {
         }
         return true;
       }
+      if (cmd === 'A' || cmd === 'N') {
+        if (currentIndex === -1) {
+          // [LOG_ID: 20260709_1310] 현재 보고 있는 기사가 페이징 목록에 없는 경우 (페이지 경계 초과 시)
+          // 0번 인덱스(skipIdx = 0)로 오작동 점프하는 것을 방지하고 실제 번호를 기준으로 이전/다음 기사를 호출한다.
+          const currentNoNum = parseInt(state.serviceData?.articleNo || '0', 10);
+          if (currentNoNum > 0) {
+            // N(다음글)은 기사 번호가 더 작은 방향(-1), A(이전글)는 기사 번호가 더 큰 방향(+1)
+            const targetNo = String(cmd === 'N' ? currentNoNum - 1 : currentNoNum + 1);
+            if (state.serviceData?.topicDoor) {
+              try {
+                await showNewsArticle(state.serviceData.topicDoor, targetNo, {
+                  listPageNo: state.serviceData?.listPageNo || 1,
+                  skipOnIncomplete: true
+                });
+              } catch (err) {
+                // 다음 기사도 짤린 기사 등으로 에러가 발생한 경우, 튕기지 않고 한 번 더 순차 이동 시도 (+-2)
+                const targetNo2 = String(cmd === 'N' ? currentNoNum - 2 : currentNoNum + 2);
+                await showNewsArticle(state.serviceData.topicDoor, targetNo2, {
+                  listPageNo: state.serviceData?.listPageNo || 1,
+                  skipOnIncomplete: true
+                });
+              }
+            }
+          }
+          return true;
+        }
+      }
       if (cmd === 'A') {
         // [LOG: 20260619_1900] 불완전 기사(404)는 최대 5개까지 자동 스킵하며 이전 기사로 이동
         // [LOG: 20260619_2140] 본문 페이지(pageNo)는 새 글에서 1로 리셋. 목록 위치만 listPageNo로 유지.
