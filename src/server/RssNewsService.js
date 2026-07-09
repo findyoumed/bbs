@@ -100,8 +100,8 @@ class RssNewsService extends RssServiceBase {
     if (!paper) throw this._notFoundError(`신문사 없음: ${newspaperDoor}`);
     const cat = paper.categories.find(c => c.door === String(categoryDoor));
     if (!cat) throw this._notFoundError(`카테고리 없음: ${categoryDoor}`);
-    // [LOG: 20260619_1800] v6 -> v7: buildTopicFeed와 동일한 캐시 버전 적용 (HTML 엔티티 파서 수정)
-    const feed = await this._fetchCached(`newsfeed:v7:${paper.door}:${cat.door}`, cat.rss, parseNewsFeedXml);
+    // [LOG: 20260619_1800] v7 -> v8: 캐시 강제 무효화 및 스크립트 필터 적용을 위한 캐시 버전업
+    const feed = await this._fetchCached(`newsfeed:v8:${paper.door}:${cat.door}`, cat.rss, parseNewsFeedXml);
     return { kind: 'news', title: `뉴스 / ${paper.name} / ${cat.name}`, level: 'articles', newspaper: { door: paper.door, title: paper.name }, category: { door: cat.door, title: cat.name }, sourceUrl: cat.rss, fetchedAt: new Date().toISOString(), unavailable: !!feed.unavailable, message: feed.message || '', items: feed.items };
   }
 
@@ -325,6 +325,23 @@ class RssNewsService extends RssServiceBase {
         available: false,
         reason: 'incomplete',
         message: `불완전한 뉴스 기사입니다: ${articleNo}`,
+        article: resolvedArticle
+      };
+    }
+
+    // [LOG_ID: 20260709_1150] 스크립트 코드 유출로 오염된 기사는 단건 조회 시에도 강제 차단
+    const { isScriptCodeDumping } = require('./RssNewsArticleSanitizer');
+    if (isScriptCodeDumping(resolvedArticle.body || resolvedArticle.description || '')) {
+      return {
+        kind: 'news',
+        title: `뉴스 / ${feed.topic?.title || ''}`,
+        level: 'article',
+        topic: feed.topic,
+        articleNo: target,
+        totalCount: Array.isArray(feed.items) ? feed.items.length : 0,
+        available: false,
+        reason: 'incomplete',
+        message: `스크립트 오류로 인해 차단된 기사입니다: ${articleNo}`,
         article: resolvedArticle
       };
     }

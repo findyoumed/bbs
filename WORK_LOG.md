@@ -1,3 +1,22 @@
+## [2026-07-09 11:50] 자바스크립트 소스 코드 덤프 기사 원천 차단 필터 추가
+
+**LOG_ID: 20260709_1150**
+목표: 본문 영역 전체가 자바스크립트 소스 코드로 오염/도배된 덤프 기사를 피드 로드/목록 조립/단건 상세 조회 단계에서 차단 및 배제하고, 기존 오염된 캐시를 강제 무효화한다.
+변경 파일: `src/server/RssNewsArticleSanitizer.js`, `src/server/RssNewsTopicFeedHelpers.js`, `src/server/RssNewsService.js`
+수행 작업:
+1) [진단 및 해결안 결정] 목록 조립 시점에 오염 기사를 걸러내더라도, 이미 로컬이나 영속 저장소에 캐시된 기사 데이터(`v7`)가 존재하거나 사용자가 단건 상세 주소(`?article=650`)로 직접 들어오는 경우에는 덤프된 본문이 노출될 수 있음을 확인했다. 이에 캐시를 무효화하고 단건 조회 시점에도 차단 가드를 적용하기로 했다.
+2) [수정] 
+   - `RssNewsArticleSanitizer.js` 에 `isScriptCodeDumping(value)` 판별 함수를 구현했다. 해당 함수는 `$.ajax(`, `postAjax(`, `</script>`, `getParameterByName`, `rptHeader +=` 등 명백한 스크립트 패턴을 검출하거나, 영문 코드 성향(대입, 세미콜론, 제어 구문, 프로퍼티 정의 등)의 라인이 본문 중 3줄 이상 등장할 때 오염된 기사로 진단한다.
+   - `RssNewsTopicFeedHelpers.js` 의 `buildTopicFeed` 목록 조립 파이프라인 `flatMap` 영역에 `.filter((item) => !isScriptCodeDumping(...))` 규칙을 장착하여 자바스크립트로 오염된 깨진 기사를 뉴스 피드 목록 구성 시점에 즉각 제외시켰다.
+   - `RssNewsService.js` 의 `getNewsArticle` API 상세 조회 부분에도 `isScriptCodeDumping`을 활용한 차단 필터를 추가하여, 스크립트 덤프 기사 상세 조회 시 `available: false`를 반환하도록 조치했다.
+   - 기존의 파싱 데이터 캐시를 무효화하여 깨끗한 상태로 재크롤링 및 목록이 갱신되도록, `RssNewsService.js` 와 `RssNewsTopicFeedHelpers.js` 의 피드 캐시 접두사 키 버전을 `newsfeed:v7`에서 `newsfeed:v8`로 전격 업그레이드했다.
+3) [검증] `npm test`, `smoke:renderer-ui` 통과 및 백엔드 프로세스 재기동 확인.
+실행: `npm test`
+기대: 본문 전체가 자바스크립트 코드로 덮인 덤프 기사들이 뉴스 목록 및 라우터 캐시에서 원천 차단되어 깨끗한 뉴스만 노출된다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-09 11:40] 뉴스 기사 본문 내 자바스크립트 소스 코드(JS boilerplate) 정밀 소거 필터 추가
 
 **LOG_ID: 20260709_1140**

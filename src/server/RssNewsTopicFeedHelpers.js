@@ -1,6 +1,7 @@
 'use strict';
 
 const { isGoogleNewsArticleUrl, normalizePublisherArticleUrl } = require('./GoogleNewsUrlResolver');
+const { isScriptCodeDumping } = require('./RssNewsArticleSanitizer');
 
 const MISSING_DATE_ENRICH_CONCURRENCY = 3;
 const NEWS_TOPIC_ORDER = [
@@ -397,8 +398,8 @@ async function setCachedTopicFeed(service, cacheKey, value) {
 async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
   const results = await Promise.all(topic.sources.map(async (source) => ({
     source,
-    // [LOG: 20260619_1420] v6 -> v7: HTML 엔티티 파서 수정 후 캐시 무효화
-    feed: await service._fetchCached(`newsfeed:v7:${source.newspaperDoor}:${source.categoryDoor}`, source.rss, parseNewsFeedXml)
+    // [LOG: 20260619_1420] v7 -> v8: 캐시 강제 무효화 및 스크립트 필터 적용을 위한 캐시 버전업
+    feed: await service._fetchCached(`newsfeed:v8:${source.newspaperDoor}:${source.categoryDoor}`, source.rss, parseNewsFeedXml)
   })));
 
   const unavailable = results.filter((result) => result.feed.unavailable);
@@ -408,6 +409,8 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
     .filter((item) => isFreshNewsItem(item, cutoffTime))
     // [LOG: 20260619_1945] RSS 본문(description/body)이 둘 다 빈 항목은 목록에서 제외 — 클릭 시 최소 요약을 보장하여 빈 기사 진입을 원천 차단
     .filter((item) => Boolean((item?.description || item?.body || '').trim()))
+    // [LOG_ID: 20260709_1150] 스크립트 코드 유출로 오염된 기사는 목록 로딩 단계에서 원천 제외
+    .filter((item) => !isScriptCodeDumping(item.description || item.body || ''))
     .map((item) => ({
       ...item,
       sourceTitle: service._normalize(result.source.newspaperTitle),
