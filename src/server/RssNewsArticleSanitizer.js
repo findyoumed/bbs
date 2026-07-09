@@ -94,8 +94,11 @@ function sanitizeArticleText(value, title = '') {
   // [LOG_ID: 20260709_1100] 본문 내 문장 중간이나 끝 등에 흩어져 섞인 포털 구독 상투구를 강제 제거하기 위한 글로벌 치환 정규식 적용.
   normalized = normalized.replace(/(?:구글|네이버|다음)에서\s*선호하는\s*매체로\s*추가(?:하기)?\.?/gi, '');
   normalized = normalized.replace(/(?:사진|이미지)\s*확대하기\.?/gi, '');
-  // [LOG_ID: 20260709_1505] 이메일 주소 제거: 뉴시스 등 일부 언론사가 기사 본문에 삽입하는 기자 이메일은 터미널 화면에 불필요.
-  normalized = normalized.replace(/\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g, '').replace(/[ \t]{2,}/g, ' ');
+  // [LOG_ID: 20260709_1505] 이메일 주소 제거: 뉴시스 등 일부 언론사가 기사 본문에 삽입하는 기자 이메일 및 [email protected] 템플릿 제거.
+  normalized = normalized.replace(/\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g, '')
+                         .replace(/\[email&#160;protected\]|\[email\s*protected\]/gi, '')
+                         .replace(/[ \t]{2,}/g, ' ');
+
 
   // [LOG: 20260613_1212] 마침표(.), 물음표(?), 느낌표(!) 바로 뒤에 공백이나 개행 없이 한글이 붙어오는 경우(예: '꺼졌다.이') 띄어쓰기를 보정해 줌.
   const spacingFixed = normalized.replace(/([.!?])([가-힣])/g, '$1 $2');
