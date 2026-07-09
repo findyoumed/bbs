@@ -309,6 +309,11 @@ export function createTerminalHintFooter(deps) {
       if (cmdPromptRendererEl) {
         // [LOG: 20260615_1621] Render the normal prompt through an input control so it matches #cmd-input rasterization.
         cmdPromptRendererEl.value = trimmed || '';
+        // [LOG_ID: 20260709_0945] 텍스트가 변경된 즉시 너비도 동기적으로 동기화한다.
+        // 비동기 schedulePromptLayoutSync()에만 의존하면, value가 바뀌는 즉시 폭이 맞춰지지 않아
+        // 이전 프롬프트 너비(예: '비밀번호 >>' 등 넓은 폭)가 일시적으로 노출되어 커서가 우측으로 멀리 밀리는
+        // space2 현상이 화면 전환 시점마다 항상 발생했다. 즉시 너비를 맞추어 갭을 완벽히 차단한다.
+        syncPromptRendererWidth();
         schedulePromptLayoutSync();
       }
     }
