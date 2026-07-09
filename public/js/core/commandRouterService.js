@@ -212,8 +212,8 @@ export function createServiceCommandHandler(deps) {
           // 0번 인덱스(skipIdx = 0)로 오작동 점프하는 것을 방지하고 실제 번호를 기준으로 이전/다음 기사를 호출한다.
           const currentNoNum = parseInt(state.serviceData?.articleNo || '0', 10);
           if (currentNoNum > 0) {
-            // N(다음글)은 기사 번호가 커지는 방향(+1), A(이전글)는 기사 번호가 작아지는 방향(-1)
-            const targetNo = String(cmd === 'N' ? currentNoNum + 1 : currentNoNum - 1);
+            // A(이전글)는 기사 번호가 작아지는 방향(-1), N(다음글)은 기사 번호가 커지는 방향(+1)
+            const targetNo = String(cmd === 'A' ? currentNoNum - 1 : currentNoNum + 1);
             if (state.serviceData?.topicDoor) {
               try {
                 await showNewsArticle(state.serviceData.topicDoor, targetNo, {
@@ -222,7 +222,7 @@ export function createServiceCommandHandler(deps) {
                 });
               } catch (err) {
                 // 다음 기사도 짤린 기사 등으로 에러가 발생한 경우, 튕기지 않고 한 번 더 순차 이동 시도 (+-2)
-                const targetNo2 = String(cmd === 'N' ? currentNoNum + 2 : currentNoNum - 2);
+                const targetNo2 = String(cmd === 'A' ? currentNoNum - 2 : currentNoNum + 2);
                 await showNewsArticle(state.serviceData.topicDoor, targetNo2, {
                   listPageNo: state.serviceData?.listPageNo || 1,
                   skipOnIncomplete: true
@@ -234,9 +234,9 @@ export function createServiceCommandHandler(deps) {
         }
       }
       if (cmd === 'A') {
-        // [LOG_ID: 20260709_1340] A(이전글)는 원래 약속된 기사 번호가 작아지는 방향(인덱스 감소 방향)으로 되돌아가야 한다.
-        let skipIdx = currentIndex - 1;
-        while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
+        // [LOG_ID: 20260709_1350] A(이전글)는 번호가 작아지는 방향이므로, 인덱스가 증가하는 방향(skipIdx++)으로 전진해야 한다.
+        let skipIdx = currentIndex + 1;
+        while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
           const prevArticle = articles[skipIdx];
           if (!prevArticle || !state.serviceData?.topicDoor) break;
           try {
@@ -246,16 +246,16 @@ export function createServiceCommandHandler(deps) {
             }));
             break;
           } catch (err) {
-            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx--; continue; }
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx++; continue; }
             break;
           }
         }
         return true;
       }
       if (cmd === 'N') {
-        // [LOG_ID: 20260709_1340] N(다음글)은 원래 약속된 기사 번호가 커지는 방향(인덱스 증가 방향)으로 전진해야 한다.
-        let skipIdx = currentIndex + 1;
-        while (skipIdx < articles.length && skipIdx <= currentIndex + 5) {
+        // [LOG_ID: 20260709_1350] N(다음글)은 번호가 커지는 방향이므로, 인덱스가 감소하는 방향(skipIdx--)으로 후진해야 한다.
+        let skipIdx = currentIndex - 1;
+        while (skipIdx >= 0 && skipIdx >= currentIndex - 5) {
           const nextArticle = articles[skipIdx];
           if (!nextArticle || !state.serviceData?.topicDoor) break;
           try {
@@ -265,7 +265,7 @@ export function createServiceCommandHandler(deps) {
             }));
             break;
           } catch (err) {
-            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx++; continue; }
+            if (/불완전한 뉴스 기사/.test(err?.message || '')) { skipIdx--; continue; }
             break;
           }
         }
