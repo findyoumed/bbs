@@ -1,3 +1,19 @@
+## [2026-07-09 09:30] 커서 가시성 복귀 시 무한 반복 blink 애니메이션의 opacity:0 구간 대기 오작동 해결 및 감시 추가
+
+**LOG_ID: 20260709_0930**
+목표: 화면 전환 시 하단 명령줄 프롬프트("선택 >>")와 커서 사이 여백이 순간 넓어 보였다가(space2) 수백 ms 후 정상화되는(space1) 간헐적 재현 증상의 근본 원인을 해결하고, MutationObserver 감시 누락 대상을 보완한다.
+변경 파일: `public/js/core/terminalInputUi.js`
+수행 작업:
+1) [진단 및 근본 원인] 커스텀 블록 커서(`.terminal-cursor`)의 1초 주기 깜빡임 애니메이션(`cursor-blink 1s step-end infinite`)이 페이지 로드 이후 백그라운드에서 계속 실행 중인 상태에서, 화면 로딩 완료로 커서가 `visibility: hidden` -> `visible`로 전환되는 타이밍이 마침 `opacity: 0` 구간(50%~100%, 약 500ms 동안)에 걸치게 되면 커서가 렌더링되지 않는다. 이로 인해 커서 자리가 텅 빈 여백으로 나타나 space2 상태로 약 수백 ms 지속되다가, 다음 애니메이션 켜짐 주기(opacity: 1)가 되는 순간 커서가 나타나며 space1로 정상화되는 착시(1초 뒤 정상화)를 유발한 것을 규명.
+2) [수정] `syncCursorVisibility()`에 `lastVisible` 상태 기억 변수를 활용하여 커서가 보이지 않다가 보이게 되는 최초 시점에 애니메이션 타임라인을 강제 리셋(`animation: none` -> 리플로우 -> 속성 삭제)하게 함으로써, 보이기 시작하는 첫 프레임에 무조건 켜진 상태(opacity: 1)로 즉시 렌더링되게 강제했다.
+3) [감시망 보완] `#terminal-prompt-row`와 연동되는 `#terminal-footer` 엘리먼트의 `data-footer-state` 및 `class` 변경이 `cursorStateObserver`의 감시망에서 누락되어 있던 것을 보완하여, 푸터 상태 변화가 즉시 커서 상태에 동기화되도록 수정했다.
+4) [검증] `node --input-type=module --check`, `npm test`, `smoke:renderer-ui`, `smoke:vercel-ready` 스모크 2종 모두 성공적으로 완료.
+실행: `node --input-type=module --check public/js/core/terminalInputUi.js` 및 `npm test` 등
+기대: 화면 로딩 완료 직후 커서가 켜진 상태로 지연 없이 즉시 나타나며, "여백이 넓어 보였다가 저절로 좁아지는" 1초 미만 주기 지연이 더 이상 재현되지 않는다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-09 00:00] 캐럿 좌우 위치 계산에 남아있던 마지막 ch 단위 정리 — updateCursorPosition()
 
 **LOG_ID: 20260709_0000**

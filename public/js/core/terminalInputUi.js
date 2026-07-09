@@ -190,6 +190,7 @@ export function createTerminalInputUi(deps) {
   }
 
   let cursorRetryTimer = 0;
+  let lastVisible = false;
 
   function syncCursorVisibility() {
     if (!cursorEl) {
@@ -215,6 +216,16 @@ export function createTerminalInputUi(deps) {
     cursorEl.style.setProperty('visibility', visible ? 'visible' : 'hidden');
     cursorEl.style.removeProperty('opacity');
     cursorEl.style.removeProperty('animation');
+
+    // [LOG_ID: 20260709_0930] 커서가 숨김 상태에서 보이는 상태로 전환될 때, 무한 반복 중인 cursor-blink 애니메이션이
+    // 마침 opacity: 0 상태(50%~100% 구간)에 걸쳐있으면 커서가 한동안(최대 500ms) 안 보여 space2처럼 공백이 넓어 보이는
+    // 착시가 생긴다. 보이는 순간 즉시 애니메이션 타임라인을 리셋하여 항상 켜진 상태(opacity: 1)로 등장하게 강제한다.
+    if (visible && !lastVisible) {
+      cursorEl.style.animation = 'none';
+      void cursorEl.offsetWidth; // 강제 리플로우
+      cursorEl.style.removeProperty('animation');
+    }
+    lastVisible = visible;
 
     if (visible) {
       if (cursorRetryTimer) {
@@ -365,6 +376,16 @@ export function createTerminalInputUi(deps) {
       attributes: true,
       attributeFilter: ['class']
     });
+
+    // [LOG_ID: 20260709_0930] #terminal-footer의 data-footer-state 변경을 감시하여
+    // 푸터 노출 여부와 커서 가시성 상태가 불일치하지 않도록 즉시 동기화한다.
+    const footerEl = document.getElementById('terminal-footer');
+    if (footerEl) {
+      cursorStateObserver.observe(footerEl, {
+        attributes: true,
+        attributeFilter: ['data-footer-state', 'class']
+      });
+    }
 
     if (screenEl) {
       // [LOG: 20260429_0955] Hide the prompt cursor while loading text is rendered on screen.
