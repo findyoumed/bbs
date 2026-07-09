@@ -78,7 +78,7 @@ function pickArticleBody(values) {
 
 // [LOG: 20260617_0930] Support optional title parameter to prune identical lead headings
 function sanitizeArticleText(value, title = '') {
-  const normalized = decodeHtmlEntities(String(value || ''))
+  let normalized = decodeHtmlEntities(String(value || ''))
     .normalize('NFC') // [LOG_ID: 20260709_1020] 유니코드 NFD 한글 자소 분리 현상을 NFC 결합 형태로 자동 교정
     .replace(/&nbsp;/gi, ' ')
     .replace(/\u00a0/g, ' ')
@@ -90,6 +90,9 @@ function sanitizeArticleText(value, title = '') {
     .replace(/\n{3,}/g, '\n\n')
     .replace(/\[%%(?:IMAGE|MEDIA)\d+%%\]/gi, '') // [LOG: 20260613_1243] 이미지 및 미디어 플레이스홀더 [%%IMAGE1%%], [%%MEDIA1%%] 등 제거
     .trim();
+
+  // [LOG_ID: 20260709_1100] 본문 내 문장 중간이나 끝 등에 흩어져 섞인 포털 구독 상투구를 강제 제거하기 위한 글로벌 치환 정규식 적용.
+  normalized = normalized.replace(/(?:구글|네이버|다음)에서\s*선호하는\s*매체로\s*추가(?:하기)?\.?/gi, '');
   // [LOG: 20260613_1212] 마침표(.), 물음표(?), 느낌표(!) 바로 뒤에 공백이나 개행 없이 한글이 붙어오는 경우(예: '꺼졌다.이') 띄어쓰기를 보정해 줌.
   const spacingFixed = normalized.replace(/([.!?])([가-힣])/g, '$1 $2');
   if (!spacingFixed) {
@@ -305,6 +308,7 @@ function stripKnownArticleBoilerplateLines(value) {
     /^연합뉴스TV\s*기사문의\s*및\s*제보\s*:/i,
     /^[가-힣]{2,8}\([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\)$/i,
     /^(?:한국경제|한경프리미엄9)\s*구독신청$/i,
+    /^(?:구글|네이버|다음)에서\s*선호하는\s*매체로\s*추가.*$/i,
     /^ADVERTISEMENT$/i,
     /^AD$/i,
     /^이\s*시각\s*관심정보$/i,
