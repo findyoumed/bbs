@@ -2232,6 +2232,19 @@ body[data-print-view="true"] .ansi-screen {
         padding-bottom: 6px !important;
     }
 
+    /* [LOG_ID: 20260710_1815] 뉴스 목록/기사 화면은 본문 줄 수가 고정이라 작은 모바일 뷰포트에서
+       화면 영역보다 세로로 길어질 수 있다. 위의 전역 hidden(터미널 한 프레임 원칙)과 news 전역
+       hidden(20260707_1528, 데스크톱 스크롤바 방지) 규칙이 이 경우 잘린 아래쪽을 볼 방법을 막았다 —
+       모바일 세로에 한해 세로 스크롤을 허용한다(키보드 표시 규칙 20260625와 동일 패턴,
+       overscroll contain으로 바운스 연쇄 차단). 스크롤 시작 위치는 렌더 완료 시 상단(원점)이다. */
+    body[data-screen="news-list"] #terminal-screen,
+    body[data-screen="news-view"] #terminal-screen {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain !important;
+    }
+
     .ansi-screen,
     .ansi-line,
     #terminal-screen .retro-topbar--ansi,
@@ -2275,8 +2288,13 @@ body[data-print-view="true"] .ansi-screen {
         opacity: 0 !important;
     }
 
+    /* [LOG_ID: 20260710_1800] .terminal-cursor를 blanket에서 제외한다. `#terminal-footer *`의
+       opacity: 1 !important는 CSS 명시도 규칙상 애니메이션 keyframe보다 우선하므로, 커서의
+       cursor-blink(opacity 0↔1) 깜빡임이 모바일 세로에서만 완전히 정지해 있었다(PC는 이 쿼리
+       밖이라 정상). 커서는 배경색 블록이라 이 blanket의 목적(풋터 글자색/크기 강제 통일)과
+       무관하다 — 커서만 빼면 나머지 요소는 기존과 동일하게 강제된다. */
     #terminal-footer,
-    #terminal-footer *,
+    #terminal-footer *:not(.terminal-cursor),
     #cmd-hint,
     #cmd-hint * {
         color: #ffffff !important;

@@ -1,3 +1,36 @@
+## [2026-07-10 18:15] 모바일 뉴스 기사 화면 상단바 잘림·세로 넘침 수정
+
+**LOG_ID: 20260710_1815**
+목표: 작은 모바일 뷰포트에서 뉴스 기사(기사 읽기) 화면의 상단바(로고/시계)가 위로 밀려 잘리고, 본문이 화면보다 길어 하단을 볼 방법이 없던 문제(실기기 vercel 배포 스크린샷 ui-mobile.jpg로 신고됨)를 수정한다.
+변경 파일:
+1) `public/js/core/ansiTopbarScreen.js` (렌더 완료 시 화면 스크롤 원점 복원)
+2) `public/style.css` (모바일 세로에서 news-list/news-view 화면에 한해 세로 스크롤 허용)
+수행 작업:
+1) [재현] iPhone 13 에뮬레이션 높이 664px에서는 콘텐츠(627px)가 들어가 정상, 높이 590px(실기기 주소창 차감 근사)에서 topbar rect.y=-37로 상단 잘림 재현.
+2) [원인] 본문 스트리밍의 scrollIntoView가 줄을 따라 내려가며 조상 스크롤러 #terminal-screen의 scrollTop(37px)을 내린 채 렌더가 끝남 — 본문(고정 줄 수)이 화면 영역보다 큰 작은 뷰포트에서만 발생. 화면 overflow가 hidden이라(뉴스 전역 20260707_1528 + 모바일 세로 전역) 사용자가 스크롤로 되돌릴 수도 없었다.
+3) [수정 A] renderAnsiScreenWithTopbarSequential의 finally에서 screenEl.scrollTop=0 복원(갈무리 모드는 창 스크롤 소관이라 제외) — 새 화면은 항상 상단바부터 표시.
+4) [수정 B] 모바일 세로 쿼리에서 body[data-screen="news-list"/"news-view"] #terminal-screen에 overflow-y:auto(+overscroll contain, touch 스크롤) 허용 — 넘친 본문 하단을 스와이프로 볼 수 있게. 기존 키보드 표시 규칙(20260625)과 동일 패턴으로 스코프 한정.
+5) [검증] 590px 뷰포트: topbar y=0(수정 전 -37), scrollTop 0 시작, 스크롤로 하단 37px 열람 가능. PC(1280px): overflow hidden 유지(스크롤바 없음), topbar 정상 — 기존 미학 회귀 없음. `smoke:renderer-ui`·`smoke:rss-services` ok.
+참고: 신고된 실기기 화면은 vercel 배포본이므로 이 수정은 배포 후 반영된다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 18:00] 모바일에서 커서 깜빡임이 정지해 있던 버그 수정
+
+**LOG_ID: 20260710_1800**
+목표: 모바일(세로)에서만 명령 프롬프트의 블록 커서가 깜빡이지 않고 항상 켜져 있던 문제를 수정해 PC와 동일하게 깜빡이게 한다.
+변경 파일:
+1) `public/style.css` (모바일 세로 blanket 규칙의 셀렉터에서 .terminal-cursor 제외, 1곳)
+수행 작업:
+1) [실측] 커서 영역 픽셀 해시 비교(250ms×6회): PC는 2종 프레임(깜빡임 O), 모바일은 1종(깜빡임 X)으로 증상 확정. computed opacity 샘플링에서도 모바일만 항상 1.
+2) [원인 추적] keyframes 정의/reduced-motion/애니메이션 재시작/WAAPI/DOM 변이/조상 사슬 probe 이진 탐색으로 범위를 좁힘: #terminal-footer 서브트리에서만 모든 애니메이션(CSS·WAAPI)이 정지 → id 교체 실험으로 CSS 원인 확정 → 의사요소·후손 셀렉터 재검토로 범인 특정: `@media (max-width:768px) and (orientation:portrait)`의 `#terminal-footer * { opacity: 1 !important }` blanket. !important 저자 선언은 CSS 명시도 규칙상 애니메이션 keyframe보다 우선하므로 cursor-blink(opacity 0↔1)가 무력화됐다(PC는 이 쿼리 밖이라 정상).
+3) [수정] blanket 셀렉터를 `#terminal-footer *:not(.terminal-cursor)`로 변경 — 커서는 배경색 블록이라 blanket의 목적(풋터 글자색/크기 강제)과 무관하며, 다른 요소에는 기존과 동일하게 적용된다.
+4) [검증] PC/iPhone 13/Galaxy S9+ 3개 환경 픽셀 해시 재실측 → 전부 2종 프레임(깜빡임 O). 모바일 풋터 스크린샷으로 힌트/구분선/프롬프트 표시 회귀 없음 확인. `npm run smoke:renderer-ui` ok.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-10 17:45] 모바일 입력줄 테두리/배경 장식 제거 (PC와 통일)
 
 **LOG_ID: 20260710_1745**
