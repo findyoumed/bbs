@@ -20,6 +20,7 @@ archive/*
 !archive/dev-only/
 archive/dev-only/*
 !archive/dev-only/tests/
+OpenSourceCommunity/
 
 # AI Loop 응답 파일
 loop_system/response_cycle_*.txt
