@@ -26,8 +26,39 @@ function refineArticleText(value, title = '') {
   return source;
 }
 
+// [LOG_ID: 20260710_1250] 언론사 페이지 상단의 공유/설정 위젯 텍스트(close, X(트위터), 글자크기 설정,
+// 기자페이지, 페이스북 등)가 본문 도입부에 그대로 딸려 들어오는 노이즈를 제거한다.
+// 본문 훼손을 막기 위해 텍스트 "맨 앞"에서 연속으로 이어지는 노이즈 줄만 걷어낸다.
+function trimLeadUiNoiseLines(source) {
+  const lines = String(source || '').split('\n');
+  let start = 0;
+  while (start < lines.length) {
+    const line = lines[start].trim();
+    if (!line || isLeadUiNoiseLine(line)) {
+      start += 1;
+      continue;
+    }
+    break;
+  }
+  return start > 0 ? lines.slice(start).join('\n').trim() : String(source || '').trim();
+}
+
+function isLeadUiNoiseLine(line) {
+  const text = String(line || '').trim();
+  const patterns = [
+    /^close$/i,
+    /^X\s*\(?\s*(트위터|twitter)\s*\)?$/i,
+    /^(트위터|페이스북|카카오톡|카카오스토리|밴드|네이버\s*블로그|라인|텔레그램|URL\s*복사|링크\s*복사)$/i,
+    /^글자\s*크기\s*(설정|조절)?$/i,
+    /^기자\s*페이지$/i,
+    /^(공유(하기)?|스크랩(하기)?|프린트(하기)?|인쇄(하기)?|메일\s*보내기|SNS\s*공유)$/i,
+    /^(가\s*)+$/i
+  ];
+  return patterns.some((pattern) => pattern.test(text));
+}
+
 function trimArticleLead(source) {
-  const text = String(source || '').trim();
+  const text = trimLeadUiNoiseLines(source);
   const metadataTrimmed = trimArticleLeadByMetadata(text);
   if (metadataTrimmed && metadataTrimmed !== text) {
     return metadataTrimmed;

@@ -1,3 +1,282 @@
+## [2026-07-10 17:45] 모바일 입력줄 테두리/배경 장식 제거 (PC와 통일)
+
+**LOG_ID: 20260710_1745**
+목표: 모바일에서만 #terminal-prompt-row에 표시되던 입력박스 테두리(흰색 반투명)와 배경을 제거해 PC와 동일한 무장식 입력줄로 통일한다.
+변경 파일:
+1) `public/style.css` (max-width 768px 블록의 border/border-radius/background 및 :focus-within 강조 제거, landscape 블록의 border-width 잔재 제거)
+수행 작업:
+1) 모바일 전용 입력박스 장식(20260623_1511)인 `border: 1px solid rgba(255,255,255,.38)`, `background: rgba(255,255,255,.06)`, `:focus-within` 강조(테두리 흰색/배경 진하게)를 제거. 터치 타깃 크기를 담당하는 min-height/padding은 유지.
+2) landscape(max-height 480px) 블록의 `border-width: 1px` 잔재 제거 — 768px 블록 border가 사라져 무의미해진 선언.
+3) [검증] Playwright 계산 스타일: PC/모바일 모두 `border: 0px none`, 배경 검정으로 일치. 풋터 스크린샷으로 모바일 "선택 >>" 입력줄이 PC와 동일한 무장식 형태임을 확인. `npm run smoke:renderer-ui` ok.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 17:30] 모바일 프롬프트-커서 공백을 PC와 동일하게 통일
+
+**LOG_ID: 20260710_1730**
+목표: 모바일에서 명령 입력줄의 프롬프트("선택 >>")와 커서 사이 공백이 PC와 다르던 문제를, 실측 기반으로 원인을 확정한 뒤 최소 변경으로 PC와 동일(터미널 한 칸 = 0.5em)하게 맞춘다.
+변경 파일:
+1) `public/style.css` (모바일 미디어쿼리 4곳의 column-gap 값만 0 → 0.5em)
+수행 작업:
+1) [실측] Playwright로 PC(1280px)/iPhone 13/Galaxy S9+ 3개 환경에서 프롬프트 글자 끝→커서 시작 간격을 px/em으로 측정: PC 0.500em vs 모바일 0.000em — 모바일만 한 칸 공백이 완전히 소실된 상태였음을 확정.
+2) [원인] 20260708_1710에서 PC 기본 규칙이 공백 방식을 label::after 스페이스 → `#terminal-prompt-row { column-gap: 0.5em }`으로 바꿨는데, 옛 설계(20260611_1600) 시절의 `column-gap: 0 !important` 오버라이드가 모바일 미디어쿼리 4곳(max-width 768px / max-width 400px / landscape max-height 480px / **768px+portrait**)에 그대로 남아 모바일에서만 공백이 제거되고 있었다. 특히 768px+portrait 블록(1990행 부근)은 소스상 가장 뒤라 앞쪽만 고치면 다시 덮어써짐 — grep 확인으로 4곳 전부 수정.
+3) [검증] 재실측: PC 0.500em / iPhone 0.500em / Galaxy 0.499em으로 3개 환경 일치. 모바일 스크린샷으로 "선택 >> █" 한 칸 공백 시각 확인. 로그인 인라인 프롬프트(모바일 0.625em)는 화면 본문 폰트 상속으로 인한 기존 별개 차이로 이번 변경과 무관하여 스코프에서 제외(회귀 없음 확인만 수행).
+실행: `npm run smoke:renderer-ui` ok, `npm run smoke:vercel-ready` ok
+기대: 모바일 세로/가로, 400px 이하 초소형 화면 모두에서 프롬프트와 커서 사이에 PC와 동일한 비율의 한 칸 공백이 표시된다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 17:12] 게시판 글쓰기/수정 E2E 검증 및 크리티컬 버그 4건 수정
+
+**LOG_ID: 20260710_1640** (로그인 크래시/마스크: 20260710_1610, 로그인 입력 잔류: 20260710_1620)
+목표: /board/plaza 글쓰기·수정 기능을 OpenSourceCommunity 포럼 기능셋과 비교 검증(글쓰기·수정·답글·삭제는 이미 구현 완료 상태 확인)하고, Playwright E2E로 실제 브라우저 흐름(로그인→W→머리말→제목→본문→S 저장→E 수정→D 삭제)을 끝까지 구동하여 발견된 크리티컬 버그를 수정한다.
+변경 파일:
+1) `public/js/core/terminalInputUi.js` (syncMaskedInputDisplay 멱등화, 약 10줄 수정)
+2) `public/js/core/authScreens.js` (로그인 단계 전환 시 공용 입력창 클리어, 약 12줄 추가)
+3) `public/js/core/postWriteView.js` (진입 즉시 렌더 + 힌트/프롬프트 분리 + 입력창 클리어 + transcript 꼬리 제한, 약 50줄 수정)
+수행 작업:
+1) [크래시(P0)] 로그인 비밀번호 단계 진입 직후 탭이 통째로 크래시하던 문제 수정. 원인: 로그인 화면은 프롬프트 행을 `screenEl` 내부(#login-prompt-host)로 mount하는데, `cursorStateObserver`가 `screenEl`을 childList+subtree로 감시 중이라 `syncMaskedInputDisplay()`의 `maskTextEl.textContent` 대입(같은 문자열이어도 텍스트 노드 교체 → childList 변이)이 옵저버 콜백을 재발동 → 재대입 → 무한 마이크로태스크 루프로 메인 스레드 영구 블로킹. 마스크 텍스트/hidden을 "변경될 때만" 쓰도록 멱등화(`terminalInputUi.js`).
+2) [보안/UX] 비밀번호 프롬프트에 방금 친 회원 ID가 마스킹 별표(*)로 잔류(그대로 Enter 시 ID가 비밀번호로 제출)하고, ID 검증 실패 후에도 틀린 입력이 입력창에 남던 문제 수정 — 로그인 단계 전환 함수(showLoginIdPrompt/showLoginPasswordPrompt)에서 공용 #cmd-input을 비움(`authScreens.js`).
+3) [UX(P1)] W(글쓰기)/E(수정) 진입 직후 화면이 목록 그대로 남고 하단 프롬프트만 바뀌어 "글쓰기가 안 되는 것처럼" 보이던 문제 수정 — `showPostWrite()` 마지막에 `renderLineEditor(editor)`를 호출해 진입 즉시 글쓰기/수정 화면(상단바+transcript)을 렌더(`postWriteView.js`).
+4) [UX] 글쓰기 힌트에 "선택 >>" 프롬프트 줄이 그대로 붙어 단계 프롬프트("머리말 번호/이름 >>" 등)와 이중 프롬프트로 보이던 문제 수정 — `getSupportedFooterText()` 원문에서 '>>' 포함 줄(프롬프트)을 제외한 힌트만 사용(parseCommandFooter와 동일 규칙).
+5) [UX] 머리말 번호('2')가 제목 프롬프트에, 마지막 본문 줄·저장 명령('S')이 다음 화면 입력창에 잔류하던 문제 수정 — 글쓰기 raw 입력 핸들러가 각 줄 처리 후 입력창을 비움(각 줄은 transcript에 즉시 echo되므로 잔류 불필요).
+6) [UX] 본문이 길어지면 지금 치는 줄이 하단 구분선 아래로 잘려 안 보이던 문제 수정 — transcript를 화면 본문 높이에 맞춰 마지막 18줄만 표시하고 앞부분은 "(... 이전 N줄 생략 ...)" 한 줄로 안내.
+7) [검증] API 레벨: plaza 글 생성/수정/삭제 + 한글 왕복 저장 + 타인 글 수정 403 차단 확인. E2E(Playwright, scratch/e2e_plaza_write_edit.js): 로그인→W→머리말 선택→제목→본문 3줄→S 저장→목록 반영→열람→E 수정(머리말 유지, 제목 변경, 본문 1줄 추가)→S→수정 반영 확인→D 삭제까지 전 구간 스크린샷(scratch/shots/)과 함께 통과. 임시 테스트 계정(claudee2e)과 테스트 글은 검증 후 모두 삭제.
+실행: `node --check` 통과, `npm run smoke:renderer-ui` ok, `npm run smoke:vercel-ready` ok
+기대: 브라우저에서 로그인(ID→비밀번호)이 크래시 없이 진행되고, /board/plaza에서 W/E 입력 즉시 글쓰기/수정 화면이 표시되며, 각 단계 입력창이 깨끗하게 비워지고, 긴 본문도 현재 입력 줄이 항상 보인다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 12:03] 뉴스 PR(복사) 갈무리 모드 레이아웃 세로 확장 버그 해결
+
+**LOG_ID: 20260710_1203**
+목표: 뉴스 기사 갈무리(PR) 모드에서 세로 높이 제한으로 기사 본문이 짤리던 현상을 해결하여, HTML 터미널 레이아웃이 본문 길이에 맞추어 세로로 길게 확장되게 하고 브라우저 전체 스크롤(scrollbar)로 읽을 수 있게 개선한다.
+변경 파일:
+1) `public/js/core/terminalHintFooter.js`
+2) `public/js/core/newsScreens.js`
+3) `public/js/core/newsAnsiBuilders.js`
+4) `public/js/core/ansiTopbarScreen.js`
+5) `public/js/core/commandRouterService.js`
+6) `public/js/core/commandNormalizer.js`
+7) `public/style.css`
+수행 작업:
+1) [속성 토글 입구 처리] `newsScreens.js`의 뉴스 화면 관련 진입점(`showNewsArticle`, `showNewsList`, `showNewsMenu`) 시작 부분에서 브라우저 렌더링 지연 및 레이스 컨디션 방지를 위해 즉시 `body`와 `html(documentElement)`에 `data-print-view` 속성을 토글(세팅 및 해제)하도록 구현. 이때 중복 정의(`Identifier 'fullView' has already been declared`) 및 잉여 중괄호(`Illegal return statement`) 오류가 발생하지 않도록 기존 792라인 부근의 `const fullView` 중복 선언과 214라인의 여분 중괄호를 완벽히 정돈.
+2) [속성 토글 보조] `syncScreenContext` 내부에서도 `news-view` 화면이면서 `_printView`가 활성화된 경우 `body` 및 `html(documentElement)`에 `data-print-view="true"` 속성을 부여하고, 아닐 때는 제거하도록 상호 보완 처리.
+3) [CSS 레이아웃 확장] `html[data-print-view="true"]` 상태일 때 `html` 에 대해 강제 높이 제한을 풀고 `overflow-y: auto !important`를 지정. `body`에는 `overflow-y: visible !important`를 부여해 이중 스크롤 영역 충돌로 인한 마우스 휠 먹통(Scroll bubbling freeze)을 해제. `retro-terminal.css` 등에서 전역적으로 숨겨진 웹킷/브라우저 스크롤바가 갈무리 모드일 때만 예외적으로 활성화되도록 스크롤바 디자인을 덮어씌워 강제 노출 처리. (선택자 공백을 제거하여 자식 노드가 아닌 `html/body` 엘리먼체 자체의 창 스크롤바가 노출되도록 올바르게 수정)
+4) [복귀 가이드 핫스팟 바인딩] `newsScreens.js`의 `renderNewsSourceLinkHotspots`를 확장해 갈무리 모드 시 `[엔터]를 누르면 페이지 보기로 돌아갑니다` 가이드 부분을 핫스팟 버튼으로 생성하고, 클릭 시 `ENTER` 명령이 실행되어 원래 화면으로 복원되도록 클릭 가능하게 처리. 이때 `◆ 기사 본문 전체가 클립보드에 복사되었습니다.` 텍스트 안내 라인은 클릭 가능한 핫스팟(원문 기사 열기 하이퍼링크) 대상에서 제외되도록 예외 필터링 조건을 추가.
+5) [스크롤 상단 초기화] 갈무리 모드 진입 시 스크롤바가 아래로 강제 추적당하는 시각적 튐 현상을 잡기 위해 `ansiTopbarScreen.js` 내 비동기 렌더러 호출 옵션에서 `scrollIntoView: false`를 적용하고, `newsScreens.js` 내 화면 그리기 전후 시점에 `window.scrollTo(0, 0)`를 강제 호출해 스크롤을 맨 상단에 고정.
+6) [복사 완료 피드백 텍스트화 및 토스트 중복 제거] 브라우저 화면 전환 시 즉시 소거되는 토스트 알림 대신, 터미널 텍스트 본문(ANSI) 자체에 `◆ 기사 본문 전체가 클립보드에 복사되었습니다.` 초록색 안내 문구를 추가하여 복사 성공 여부가 가시적으로 고정되게 개선 (`newsAnsiBuilders.js`). 이로써 중복 피드백을 제거하기 위해 기존에 `commandRouterService.js`에서 띄우던 복사 성공 토스트(Toast) 출력을 제거 (실패 시에만 권한 경고 토스트가 활성화되도록 유지).
+7) [요소 확장 및 차단 우회] `#terminal-wrapper`, `#terminal-container`, `#terminal-screen`, `.ansi-screen`의 `height: auto`, `max-height: none` 속성을 지정하고, `.ansi-screen`의 `overflow` 차단 속성을 `visible`로 해제. 또한 모바일 세로 모드(portrait)에서 레이아웃 고정을 위해 강제 부여되는 `body` 및 `.app-shell`의 `position: fixed !important; overflow: hidden !important` 스타일을 갈무리 모드일 때 우회(`position: static !important` 등)하도록 미디어 쿼리 내에 재정의.
+8) [터미널 줌 억제] 노트북 및 대화면 데스크톱 환경에서 `#terminal-container`에 부여되는 반응형 줌 효과(`transform: scale(...)`)가 세로로 길어진 레이아웃과 결합하며 상단(제목/시간 등)을 음수 좌표 영역으로 삐져나가게 해 스크롤 불가능한 상태로 만들던 현상을 방지하고자, 갈무리 모드 시 `transform: none !important; transform-origin: initial !important;`를 강제 부여.
+9) [하단 여백 확보] 끝까지 내렸을 때 마지막 입력 꼬리와 프롬프트가 바닥에 가려지지 않도록 `html[data-print-view="true"] body`에 `padding-bottom: 80px !important`를 부여.
+10) [범용 한글 오타 보정] `commandNormalizer.js`에 두벌식 한글 자판을 QWERTY 영문 자판으로 일대일 번역하는 `convertKoreanToEnglish` 함수를 내장하여, `ㅔㄱ` -> `PR`을 비롯한 모든 영문 명령어가 한글 오타 상태로 들어왔을 때 자동으로 보정되도록 보완 처리함 (채팅 메시지 등을 보존하기 위해 슬래시`/`로 시작하는 입력은 오타 변환 대상에서 제외).
+실행: `node --check` 통과, `npm test` 통과
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 11:52] 뉴스 PR(복사)을 PC통신 갈무리 스타일로 개편
+
+**LOG_ID: 20260710_1530**
+목표: 뉴스 기사 보기에서 PR(복사) 입력 시, 클립보드 복사(기존 동작 유지)에 더해 본문 전체를 페이지네이션 없이 한 화면에 출력(PC통신 갈무리)하고, [엔터]를 누르면 보던 페이지의 페이지네이션 보기로 복귀하게 한다.
+변경 파일:
+1) `public/js/core/newsAnsiBuilders.js`
+2) `public/js/core/newsScreens.js`
+3) `public/js/core/commandRouterService.js`
+4) `public/js/core/commandFooterText.js`
+수행 작업:
+1) [전체 보기 빌더] `buildNewsArticleAnsi`에 `fullView` 옵션 추가 — 페이지 분할 없이 본문 전체를 단일 출력, 페이지 라벨은 "(전체)", 말미에 원문 링크와 "[엔터]를 누르면 페이지 보기로 돌아갑니다" 안내 출력.
+2) [화면 상태] `showNewsArticle`에 `fullView` 옵션 추가 — `state.serviceData._printView` 플래그 설정, 페이지 컨텍스트(pageNo/pageCount)는 진입 당시 값으로 보존해 엔터 복귀 시 보던 페이지로 정확히 복귀.
+3) [명령 처리] PR 핸들러: 클립보드 복사(사용자 제스처 직후 실행, 기존 그대로) → 전체 보기 렌더 → 복사 완료 토스트(전환 후 표시해 토스트 소거 로직에 지워지지 않게). 갈무리 모드에서 빈 엔터/ENTER/F 입력 시 페이지 보기 복귀 — 빈 엔터는 commandNormalizer가 news-view에서 'F'로 정규화하므로(엔터=다음쪽 관례) F도 복귀로 처리(갈무리엔 페이지가 없어 무의미).
+4) [푸터] `serviceArticleFull` 카테고리 신설(['ENTER:페이지보기','N','A','P','T','H'])과 `getSupportedFooterText`의 _printView 분기 추가.
+실행: `node --check` 전체 통과, `npm test` 전체 통과, `npm run smoke:renderer-ui` ok:true, Playwright 검증(PR → 전체 본문+원문 링크+엔터 안내 출력 확인 → 엔터 → 페이지 보기(01/04) 1페이지 복귀, URL 불변)
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 11:40] 화면 전환 시 알림 토스트 잔상 제거 — topbar 렌더 경로 보완
+
+**LOG_ID: 20260710_1510**
+목표: 직전 수정(20260710_1500)이 뉴스 화면에서 효과가 없던 문제를 해결한다. 뉴스 등 topbar 화면은 `renderAnsiScreenWithTopbarSequential`이 `renderScreenSequential`을 하위 컨테이너(.ansi-screen-body) + clear:false로 호출하므로, renderScreenSequential 쪽에 넣은 소거 조건(clear && container===screenEl)이 발동하지 않았다.
+변경 파일:
+1) `public/js/core/ansiTopbarScreen.js`
+수행 작업:
+1) [소거 지점 보완] 화면이 실제로 교체되는 지점(`screenEl.innerHTML` 교체 직후)에서 `#terminal-notification` 토스트를 즉시 숨김. renderScreenSequential 쪽 소거(20260710_1500)는 topbar를 쓰지 않는 다른 전체 화면 전환용으로 유지.
+실행: `node --check` 통과, `npm run smoke:renderer-ui` ok:true, `npm test` 전체 통과, Playwright 검증(차단 기사 선택으로 토스트 발생 → 다른 기사 선택 → 새 화면에 토스트 잔상 없음 확인)
+기대: 어떤 화면 전환 경로에서든 새 화면이 그려지는 순간 이전 알림이 즉시 사라진다. (클라이언트 JS 변경 — 브라우저 새로고침 필요)
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 11:35] 화면 전환 시 알림 토스트 잔상 제거
+
+**LOG_ID: 20260710_1500**
+목표: "본문 전체를 불러올 수 없는 기사입니다" 같은 알림 토스트가 3초 타이머로만 사라지기 때문에, 그 사이에 다른 기사로 이동하면 새 화면 위에 잔상으로 남아 PC통신 터미널 UI 몰입감을 깨뜨리던 문제를 해결한다.
+변경 파일:
+1) `public/js/core/terminalSequentialRenderer.js`
+수행 작업:
+1) [토스트 즉시 소거] 모든 화면 전환의 공통 진입점인 `renderScreenSequential`에서, 전체 화면 렌더링(clear && container===screenEl) 시작 시 `#terminal-notification` 토스트를 즉시 숨김 처리. 화면 유지 중 안내(예: "다음 기사가 없습니다")는 전체 화면 전환이 아니므로 기존처럼 3초간 표시된다.
+실행: `node --check` 통과, `npm run smoke:renderer-ui` ok:true, `npm test` 전체 통과, Playwright 검증(목록→기사 전환 렌더링 정상)
+기대: 새 화면이 그려지는 순간 이전 알림이 즉시 사라져 터미널 특유의 깔끔한 화면 전환이 유지된다. (클라이언트 JS 변경 — 브라우저 새로고침 필요)
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 11:32] 꼬리 사진 캡션으로 인한 "불완전 기사" 오탐 차단 해소
+
+**LOG_ID: 20260710_1440**
+목표: 연합뉴스 등 일부 기사가 "본문 전체를 불러올 수 없는 기사입니다"로 차단되던 문제를 해결한다(예: 중랑워터파크 기사). 조사 결과 크롤은 성공했고 본문도 완전했으나, 본문 맨 끝에 붙은 사진 캡션 줄("봉수대공원 물놀이장")이 남아 잘림 판정 휴리스틱(끝 3글자의 조사 검사)이 오탐을 낸 것.
+변경 파일:
+1) `src/server/RssNewsArticleSanitizer.js`
+수행 작업:
+1) [꼬리 캡션 제거기 추가] `trimTrailingCaptionLines` 신설: 본문 맨 끝에서 문장 종결부호 없이 끝나는 40자 이하의 짧은 명사구 줄을 최대 3줄까지 제거. 안전장치로 (a) 종결부호로 끝나는 줄은 보존, (b) 바로 위 의미 있는 줄이 종결부호로 끝날 때만 제거(진짜 잘린 기사는 위 줄도 미종결이므로 건드리지 않아 차단 정책 유지).
+2) [파이프라인 연결] sanitizeArticleText에서 trimKnownArticleTailNoise 직후에 실행.
+실행: `node --check` 통과, 유닛 검증 3종(캡션 제거/정상 본문 유지/진짜 잘린 기사 비개입), `npm run smoke:rss-services` ok:true, `npm test` 전체 통과, API 검증(중랑워터파크 기사 available:true, 본문이 정상 문장으로 종결)
+기대: 꼬리 캡션 때문에 억울하게 차단되던 정상 기사들이 열리게 되고, 실제로 잘린 기사 차단은 그대로 유지된다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 11:20] 뉴스 본문 스톡 이미지 출처 캡션(pexels 등) 리드 제거
+
+**LOG_ID: 20260710_1420**
+목표: 경향신문 등 기사 본문 첫 줄에 "저렴해진 양파, ... 좋은 시기이기도 하다. pexels"처럼 무료 스톡 이미지 출처명으로 끝나는 사진 캡션이 본문처럼 노출되던 문제를 해결한다.
+변경 파일:
+1) `src/server/RssNewsArticleSanitizer.js`
+수행 작업:
+1) [출처명 확장] 기존 `shouldSkipLeadImageCreditLine`의 리드 캡션 판정 출처 목록(제공/뉴스1/연합뉴스/뉴시스/유토이미지)에 무료 스톡 이미지 사이트명 추가: pexels, unsplash, pixabay, 픽사베이, 게티이미지(뱅크), 셔터스톡, freepik. 본문 도입부(앞 4줄 이내)에서 이 출처명으로 끝나는 캡션 줄을 제거한다.
+2) 새니타이저는 요청 시점 실행이므로 캐시 버전업 불필요 — 기존 캐시 기사에도 즉시 적용.
+실행: `node --check` 통과, 유닛 검증(캡션 줄 제거·본문 보존), `npm run smoke:rss-services` ok:true, `npm test` 전체 통과, API 검증(기사 42 본문이 실제 첫 문단부터 시작)
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 11:10] 뉴스 A/N 이동 시 다른 스냅샷의 이웃 기사로 점프하는 문제 수정 (items 스냅샷 고정)
+
+**LOG_ID: 20260710_1400**
+목표: 기사 상세 진입 시 인접 기사 프리로드를 위해 state.items를 최신 피드 스냅샷으로 교체하는 바람에, N/A 이동이 "사용자가 보던 목록"이 아닌 "재구성된 새 피드"의 이웃으로 이동하던 문제(예: 20번에서 N → URL은 21로 표시되지만 실제 내용은 사용자 목록 기준 196번이던 기사)를 해결한다.
+변경 파일:
+1) `public/js/core/newsScreens.js`
+수행 작업:
+1) [원인] showNewsArticle이 인접 컨텍스트 프리로드를 위해 targetListPageNo(서버가 알려준 최신 위치 기준 페이지, 예: ceil(150/15)=10)를 loadNewsTopicState로 요청 → 클라이언트 캐시에 없는 페이지라 최신 피드를 새로 받아 state.items를 통째로 교체. 피드 재구성 시 날짜 미상 기사 재정렬로 인접 관계 자체가 바뀌므로, 새 스냅샷의 이웃은 사용자 목록 기준으로 멀리 떨어진 기사일 수 있다.
+2) [수정] items 로드 전에 현재 상태의 items(같은 topicDoor)에 대상 기사가 존재하는지 findNewsArticle로 확인하고, 존재하면 그 스냅샷을 그대로 재사용(추가 fetch도 생략). 없을 때만 기존처럼 새로 로드. 이로써 한 탭에서 목록→기사→A/N 탐색이 항상 동일 스냅샷 기준으로 이루어진다.
+실행: `node --check` 통과, `npm test` 전체 통과, Playwright 검증(20 → N → 21 → A → 20, key 왕복 일치 04fb29a7 ↔ e3f3c3a8)
+참고: 사용자가 관찰한 "URL은 21인데 내용은 196번" 현상 중 URL 번호 부분은 이전 수정(20260710_1210)으로 해결된 상태였으나 사용자 탭이 수정 전 JS를 실행 중이었고, 내용 점프 부분이 이번 수정의 대상. 반영에는 브라우저 새로고침 필요(클라이언트 JS 변경).
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 10:52] 뉴시스 속보 스텁 기사 꼬리 노이즈 제거 및 단문 속보 차단 완화
+
+**LOG_ID: 20260710_1330**
+목표: 뉴시스 속보 스텁 기사(본문이 "후속기사가 이어집니다" 한 줄)에서 크롤 시 딸려오는 추천 위젯 블록("많이 본 사진", "뉴시스Pic", "그래픽뉴스", "이시간 핫뉴스", "오늘의 헤드라인" + 섹션별 헤드라인 목록)이 본문처럼 노출되던 문제를 해결한다.
+변경 파일:
+1) `src/server/RssNewsArticleSanitizer.js`
+2) `src/server/RssNewsService.js`
+3) `public/js/core/newsScreens.js`
+4) `public/js/core/newsAnsiBuilders.js`
+수행 작업:
+1) [꼬리 절단 패턴 추가] `isKnownArticleTailStartLine`에 위젯 블록 시작 줄 패턴 추가: "많이 본 사진"(기존 뉴스|기사에 사진 확장), "뉴시스Pic", "그래픽뉴스", "이시간/이 시각 핫뉴스", "오늘의 헤드라인" — 해당 줄부터 이후 전부 절단.
+2) [서버 차단 완화] 노이즈 절단 후 본문이 11자("후속기사가 이어집니다")만 남으면 기존 30자 미만 차단 정책에 걸려 기사 자체가 막히는 부작용 발생 → 이미 계산되고 있던 `hasBreakingNewsKeyword`(제목/본문에 속보·단독·긴급)를 활용해 속보 기사는 최소 길이 기준을 10자로 완화.
+3) [클라이언트 가드 동기화] `newsScreens.js`의 30자 미만 클라이언트측 차단 가드에도 동일한 속보 예외(10자) 적용.
+4) [안내 문구 생략] `newsAnsiBuilders.js`의 "[상세 본문을 불러오지 못했습니다...]" 자동 안내는 로드 실패용이므로, 본문이 "후속기사가 이어집니다" 스텁인 정상 기사에는 붙이지 않도록 예외 처리.
+실행: `node --check` 전체 통과, 유닛 검증(노이즈 절단 후 "후속기사가 이어집니다"만 잔존), `npm run smoke:rss-services` ok:true, `npm test` 전체 통과, API+Playwright 검증(뉴시스 스텁 기사 — available:true, 본문 "후속기사가 이어집니다" 한 줄 + 원문 링크만 렌더링)
+참고: 사용자가 최초 제보한 기사(article=1, key=358fe6ad)는 검증 중 피드 재구성으로 dedupe 병합되어 피드에서 사라짐(속보 기사의 짧은 수명 특성) — 동일 유형의 다른 스텁 기사(no=102)로 검증 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 10:45] 뉴스 본문 사진 캡션 줄([사진출처 영상 캡처] 등) 제거
+
+**LOG_ID: 20260710_1310**
+목표: 매일경제 등 일부 기사 본문 상단에 "방송인 장영란이 ... 도전했다. [사진출처 영상 캡처]"처럼 사진 캡션 줄이 본문 첫 문장과 중복되어 노출되던 문제를 해결한다.
+변경 파일:
+1) `src/server/RssNewsArticleSanitizer.js`
+수행 작업:
+1) [캡션 줄 패턴 추가] `stripKnownArticleBoilerplateLines`의 라인 필터에 "줄 끝이 사진/캡처 키워드를 포함한 대괄호 출처로 끝나는 줄" 패턴(`^[^\n]{0,200}\[...(사진|캡처)...\]$`)을 추가. "[사진출처 영상 캡처]", "[사진=매경DB]" 등으로 끝나는 캡션 줄을 통째로 제거한다(캡션 문구는 통상 본문 첫 문장과 중복이라 정보 손실 없음). 일반 문장은 이런 대괄호로 끝나지 않아 오탐 위험이 낮다.
+2) 새니타이저는 요청 시점에 매번 실행되므로 캐시 버전업 불필요 — 기존 캐시된 기사에도 즉시 적용된다.
+실행: `node --check` 통과, 유닛 검증(캡션 줄만 제거되고 본문 유지), `npm run smoke:rss-services` ok:true, `npm test` 전체 통과, API 검증(기사 98 본문이 캡션 없이 실제 첫 문장부터 시작)
+기대: 대괄호 사진 출처가 붙은 캡션 줄이 모든 언론사 기사에서 제거되어 본문 중복/노이즈가 사라진다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 10:36] 뉴스 본문 공유 위젯 노이즈(close, X(트위터) 등) 제거 및 기자 바이라인 정제 회귀 수정
+
+**LOG_ID: 20260710_1250**
+목표: 경기일보 등 일부 기사 본문 상단에 "close / X (트위터) / 글자크기 설정 / close / 기자페이지" 같은 언론사 페이지 공유 위젯 UI 텍스트가 그대로 노출되던 문제를 해결한다.
+변경 파일:
+1) `src/server/RssNewsArticleSanitizer.js`
+2) `src/server/RssNewsArticleParserScoring.js`
+3) `src/server/RssNewsService.js`
+수행 작업:
+1) [보일러플레이트 패턴 추가] `stripKnownArticleBoilerplateLines`에 공유 위젯 잔재 라인 패턴 추가: `close`, `X (트위터)`, SNS명 단독 라인(트위터/페이스북/카카오톡/밴드/텔레그램/URL 복사 등), `기자페이지`. 기존 `글자크기(조절)?` 패턴은 "글자 크기 설정" 표기도 잡도록 `글자\s*크기(조절|설정)?`로 확장.
+2) [파서 리드 정리 보강] `refineArticleText`의 `trimArticleLead` 앞단에 `trimLeadUiNoiseLines` 추가 — 본문 맨 앞에서 연속되는 위젯 노이즈 줄만 안전하게 걷어냄(본문 중간은 건드리지 않음).
+3) [캐시 무효화] 기사 상세 크롤 캐시 버전 `news:article:v31` → `v32` (기존 캐시는 옛 파서로 파싱된 결과이므로).
+4) [기존 회귀 수정] smoke:rss-services가 내 변경 전부터 실패 중이었음(git stash로 확인). 원인: 어제 추가된 이메일 글로벌 제거([LOG_ID: 20260709_1505])가 `[곽재훈 기자(email)]`을 `[곽재훈 기자()]`로 만들어 기존 리드 제거 패턴이 매칭 실패. 대괄호 기자 바이라인 라인 패턴(`^\[...기자...\]$`)을 보일러플레이트 필터에 추가해 해결.
+실행: `node --check` 통과, `npm run smoke:rss-services` ok:true, `npm test` 전체 통과, API/Playwright 검증(기사 89 — 본문이 위젯 노이즈 없이 "음바페 1골 1도움 폭발…" 리드부터 시작함을 스크린샷 확인)
+기대: 언론사 공유 위젯 텍스트가 본문에서 완전히 제거되고, 기자 바이라인 정제도 이메일 제거 이후 형태까지 커버한다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 10:28] 뉴스 본문 단락 줄바꿈 소실(가독성 저하) 버그 수정
+
+**LOG_ID: 20260710_1230**
+목표: 뉴스 기사 본문이 단락 구분 없이 한 덩어리로 붙어 렌더링되어 가독성이 크게 떨어지던 문제를 해결한다.
+변경 파일:
+1) `public/js/core/newsAnsiBuilders.js`
+수행 작업:
+1) [원인] `buildNewsArticleAnsi`의 본문 노이즈 정리 체인 마지막에 있던 `.replace(/\s{2,}/g, ' ')`가 문제였다. `\s`는 줄바꿈(\n)까지 매칭하므로 서버가 보존해 내려준 단락 구분(\n\n)이 렌더링 직전에 공백 한 칸으로 전부 뭉개졌다.
+2) [수정] 가로 공백([ \t])만 축약하도록 분리: `[ \t]+\n` → `\n`(줄 끝 공백 제거), `\n{3,}` → `\n\n`(과도한 빈 줄 정리), `[ \t]{2,}` → ' '(이중 공백 축약). 줄바꿈 자체는 보존.
+실행: `node --check` 통과, Playwright 스크린샷 검증(수족구병 기사 — 수정 전 한 덩어리였던 본문이 소제목/단락별 빈 줄 구분으로 렌더링, 페이지 수 02→03 증가 확인)
+기대: 서버 파서가 추출한 단락 구조가 화면까지 그대로 전달되어 원문에 가까운 가독성을 제공한다.
+참고: 일부 기사는 서버 추출 소스 자체(JSON-LD 평문 등)에 줄바꿈이 없어 이 경우엔 단락 구분이 표시되지 않을 수 있다(서버 스코어링이 줄바꿈 있는 후보를 우선하지만 유일한 후보일 땐 불가피).
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 10:18] 뉴스 A/N 이동 시 URL 번호 점프 잔존 문제 해결 (key 기반 위치 탐색 + 순차 표시 번호)
+
+**LOG_ID: 20260710_1210**
+목표: no 오프셋 버그 수정(20260710_1145) 이후에도, 피드가 백그라운드에서 재구성되면(새 기사 유입, 날짜 미상 기사의 정렬 변동) 같은 기사의 위치 번호가 바뀌어 A/N 입력 시 URL 번호가 크게 점프하던 문제(예: article=8 → N → article=35)를 해결한다.
+변경 파일:
+1) `public/js/core/commandRouterService.js`
+2) `public/js/core/newsScreens.js`
+수행 작업:
+1) [key 기반 현재 위치 탐색] news-view의 currentIndex를 위치 번호(articleNo) 대신 불변 식별자(articleKey)로 먼저 찾도록 변경(번호 매칭은 폴백). state.articleNo(서버 스냅샷 T1)와 state.items(클라이언트 캐시 스냅샷 T0/T2)가 서로 다른 시점의 피드일 때 엉뚱한 기사를 현재 위치로 오인해 이웃 탐색이 통째로 어긋나던 것을 차단.
+2) [순차 표시 번호 전달] A/N(및 currentIndex=-1 폴백 경로) 이동 시 `displayNo`(현재 표시 번호 ± 이동 칸수)를 showNewsArticle 옵션으로 명시 전달. 서버 스냅샷의 위치 번호가 어떻게 바뀌든 URL은 사용자 기준으로 8 → 9 → 10처럼 항상 연속 표시.
+3) [우선순위 정리] showNewsArticle의 displayNo 결정 우선순위: 호출자 명시값 > 같은 기사 재렌더링 시 보존값 > 요청 번호.
+실행: `node --check` 통과, Playwright 검증(목록에서 8 진입 → N → 9 → N → 10 → A → 9, key 왕복 일관성 확인, `?article=8&key=...` URL 직접 진입 후 N → 9 확인)
+기대: 피드 재구성 타이밍과 무관하게 A/N은 사용자가 본 목록 기준의 인접 기사로 이동하고 URL 번호도 ±1로만 움직인다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-10 10:10] 뉴스 기사 번호(no) page 오프셋 오적용 버그 수정 및 URL 안정 키(key) 도입
+
+**LOG_ID: 20260710_1145**
+목표: 뉴스 목록에서 1번 기사를 클릭했는데 URL이 `?article=657`로 표시되고, 기사 상세에서 A/N(이전/다음글) 입력 시 전혀 다른 페이지의 기사로 크게 건너뛰는 문제를 해결한다.
+변경 파일:
+1) `src/server/RssNewsTopicFeedHelpers.js`
+2) `src/server/RssNewsService.js`
+3) `public/js/core/newsScreens.js`
+4) `public/js/core/routingUrlBuilder.js`
+수행 작업:
+1) [근본 원인 수정] `buildTopicFeed`가 반환하는 `items`는 page 값과 무관하게 항상 정렬된 전체 목록(최대 1000개)인데, 예전 코드가 "페이지 단위로 잘린 배열"이라 가정하고 `(page-1)*15` 오프셋을 전체 배열에 더해 no를 매기고 있었다. 이 때문에 마지막으로 어떤 page 값으로 피드가 빌드/캐시됐느냐에 따라 같은 기사의 no가 통째로 뒤바뀌었다(예: 최신 기사가 166번). 오프셋을 제거하고 `no: index + 1`(전역 절대 번호)로 통일.
+2) [캐시 무효화] no 스키마 변경에 따라 topic feed 캐시 키 버전을 `v17` → `v18`로 올려 오염된 기존 캐시를 무효화.
+3) [URL 안정 키 도입] `routingUrlBuilder.js`의 news-view URL에 `key=`(articleKey 앞 8자리) 파라미터를 추가. 세션스토리지 없이도(새 탭/링크 공유/세션 만료 후 재방문) 항상 같은 기사로 복원된다.
+4) [표시 번호 고정] `newsScreens.js`에 `displayNo` 필드를 추가해 URL의 `article=` 값이 사용자가 클릭한 시점의 번호를 유지하도록 함(같은 기사 재렌더링 시 유지, 새 기사 진입 시 갱신). A/N/B/F 내비게이션이 쓰는 내부 `articleNo`는 건드리지 않음.
+5) [prefix 키 매칭] 서버 `_resolveNewsArticle`와 클라이언트 `findNewsArticle`의 byKey 매칭을 8자리 축약 키도 허용하도록 `startsWith` 방식으로 확장(최소 6자 이상일 때만).
+실행: `node --check` 전체 통과, API 검증(page=1/page=12 요청 모두 no가 1부터 동일하게 매겨짐), Playwright 브라우저 검증(4→N→5→N→6→A→5 순차 이동 정확, 15→N→16 페이지 경계 정확, `?article=16&key=63b43fda` URL 직접 재방문 시 동일 기사 복원 확인)
+기대: 목록에서 클릭한 번호가 URL에 그대로 표시되고, A/N 이동이 항상 ±1로 정확하며, URL 공유/재방문 시에도 같은 기사가 열린다.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-09 18:05] 뉴스 기사 제목 내 화살표 엔티티(rarr;) 깨짐 현상 수정
 
 **LOG_ID: 20260709_1805**

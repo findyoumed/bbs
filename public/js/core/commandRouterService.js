@@ -193,9 +193,34 @@ export function createServiceCommandHandler(deps) {
 
     if (s === 'news-view') {
       const articles = state.serviceData?.items || [];
-      const currentIndex = articles.findIndex((item, index) => String(item?.no || (index + 1)) === String(state.serviceData?.articleNo || ''));
+      // [LOG_ID: 20260710_1210] articleNo(위치 번호)는 피드 재구성 시점에 따라 items 스냅샷과 어긋날 수
+      // 있으므로, 현재 기사 위치는 불변 식별자인 articleKey로 먼저 찾고 번호 매칭은 폴백으로만 쓴다.
+      // (번호만으로 찾으면 다른 스냅샷의 엉뚱한 기사를 "현재 위치"로 오인해 A/N이 크게 점프한다.)
+      const currentArticleKey = String(state.serviceData?.articleKey || '').trim();
+      let currentIndex = currentArticleKey
+        ? articles.findIndex((item) => String(item?.articleKey || '').trim() === currentArticleKey)
+        : -1;
+      if (currentIndex === -1) {
+        currentIndex = articles.findIndex((item, index) => String(item?.no || (index + 1)) === String(state.serviceData?.articleNo || ''));
+      }
+      // [LOG_ID: 20260710_1210] A/N 이동 시 URL에 노출할 순차 번호의 기준값.
+      const currentDisplayNo = parseInt(state.serviceData?.displayNo || state.serviceData?.articleNo || '0', 10);
       const pageNo = Math.max(1, Number(state.serviceData?.pageNo || 1));
       const pageCount = Math.max(1, Number(state.serviceData?.pageCount || 1));
+
+      // [LOG_ID: 20260710_1530] PR 갈무리(전체 보기) 모드: [엔터] 입력 시 보던 페이지의
+      // 페이지네이션 보기로 복귀한다. (다른 명령은 평소처럼 동작)
+      // 주의: 빈 엔터는 commandNormalizer가 news-view에서 'F'(다음쪽)로 정규화하므로 F도 복귀로
+      // 처리한다 — 갈무리 모드엔 페이지가 없어 F(다음쪽)가 무의미하다.
+      if (state.serviceData?._printView && (cmd === '' || cmd === 'ENTER' || cmd === 'F')) {
+        if (state.serviceData?.topicDoor && state.serviceData?.articleNo) {
+          await showNewsArticle(state.serviceData.topicDoor, state.serviceData.articleNo, getNewsArticleOptions(state.serviceData?.article, {
+            articleKey: state.serviceData?.articleKey,
+            pageNo
+          }));
+        }
+        return true;
+      }
       if (cmd === 'P' || cmd === 'M') {
         state.history.pop();
         await showNewsList(state.serviceData?.topicDoor, {
@@ -235,7 +260,9 @@ export function createServiceCommandHandler(deps) {
               try {
                 await showNewsArticle(state.serviceData.topicDoor, targetNo, {
                   listPageNo: targetListPageNo,
-                  skipOnIncomplete: true
+                  skipOnIncomplete: true,
+                  // [LOG_ID: 20260710_1210] URL 노출 번호는 사용자 기준 순차 번호로 유지.
+                  displayNo: currentDisplayNo > 0 ? String(Math.max(1, cmd === 'A' ? currentDisplayNo - 1 : currentDisplayNo + 1)) : undefined
                 });
               } catch (err) {
                 // 다음 기사도 짤린 기사 등으로 에러가 발생한 경우, 튕기지 않고 한 번 더 순차 이동 시도 (+-2)
@@ -245,7 +272,8 @@ export function createServiceCommandHandler(deps) {
                 try {
                   await showNewsArticle(state.serviceData.topicDoor, targetNo2, {
                     listPageNo: targetListPageNo2,
-                    skipOnIncomplete: true
+                    skipOnIncomplete: true,
+                    displayNo: currentDisplayNo > 0 ? String(Math.max(1, cmd === 'A' ? currentDisplayNo - 2 : currentDisplayNo + 2)) : undefined
                   });
                 } catch (err2) {
                   // [LOG_ID: 20260709_1610] +-2 기사도 없는 경우(기사 목록의 끝 경계선 도달) 목록으로 튕기지 않고 안내 문구 표시 후 현재 화면 유지
@@ -273,7 +301,11 @@ export function createServiceCommandHandler(deps) {
           try {
             await showNewsArticle(state.serviceData.topicDoor, String(targetNoNum), getNewsArticleOptions(prevArticle, {
               listPageNo: targetListPageNo,
-              skipOnIncomplete: true
+              skipOnIncomplete: true,
+              // [LOG_ID: 20260710_1210] URL 노출 번호는 스냅샷 위치 번호(no)가 아니라 사용자 기준의
+              // 순차 번호(현재 표시 번호 - 이동 칸수)로 넘긴다. 피드 재구성으로 no가 뒤바뀌어도
+              // 사용자에게는 8 → A → 7처럼 항상 연속으로 보인다.
+              displayNo: currentDisplayNo > 0 ? String(Math.max(1, currentDisplayNo - (currentIndex - skipIdx))) : undefined
             }));
             success = true;
             break;
@@ -304,7 +336,9 @@ export function createServiceCommandHandler(deps) {
           try {
             await showNewsArticle(state.serviceData.topicDoor, String(targetNoNum), getNewsArticleOptions(nextArticle, {
               listPageNo: targetListPageNo,
-              skipOnIncomplete: true
+              skipOnIncomplete: true,
+              // [LOG_ID: 20260710_1210] URL 노출 번호는 사용자 기준 순차 번호(현재 표시 번호 + 이동 칸수).
+              displayNo: currentDisplayNo > 0 ? String(currentDisplayNo + (skipIdx - currentIndex)) : undefined
             }));
             success = true;
             break;
@@ -351,15 +385,28 @@ export function createServiceCommandHandler(deps) {
           const source = art.sourceTitle ? `출처: ${art.sourceTitle}` : '';
           const link = art.link ? `원문: ${art.link}` : '';
           const text = [title, '', body, '', source, link].filter((l, i) => i < 2 || l).join('\n');
+          // [LOG_ID: 20260710_1530] 클립보드 복사는 사용자 제스처 직후에 먼저 실행(transient activation 유지),
+          // 토스트는 화면 전환이 끝난 뒤에 띄운다(전환 시 토스트 즉시 소거 로직에 지워지지 않도록).
+          let copied = false;
           try {
             await navigator.clipboard.writeText(text);
-            // [LOG: 20260613_1205] 힌트바 대신 푸터 하단 알림창에 띄우도록 수정
-            if (typeof showToast === 'function') {
-              showToast('기사 내용이 클립보드에 복사되었습니다.', 3000, 'success');
-            } else {
-              setHint('기사 내용이 클립보드에 복사되었습니다.');
-            }
+            copied = true;
           } catch {
+            copied = false;
+          }
+
+          // [LOG_ID: 20260710_1530] PC통신 갈무리 스타일: 본문 전체를 페이지 분할 없이 한 화면에 출력.
+          // [엔터]를 누르면 보던 페이지의 페이지네이션 보기로 복귀한다(위 _printView 핸들러).
+          if (!state.serviceData?._printView && state.serviceData?.topicDoor && state.serviceData?.articleNo) {
+            await showNewsArticle(state.serviceData.topicDoor, state.serviceData.articleNo, getNewsArticleOptions(art, {
+              articleKey: state.serviceData?.articleKey,
+              pageNo,
+              fullView: true
+            }));
+          }
+
+          // [LOG_ID: 20260710_1203] 성공 토스트는 터미널 본문 자체에 텍스트로 노출되므로 생략한다. 실패 시에만 에러 피드백을 출력한다.
+          if (!copied) {
             if (typeof showToast === 'function') {
               showToast('복사 실패: 브라우저 권한을 확인하세요.', 3000, 'error');
             } else {

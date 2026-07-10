@@ -118,7 +118,8 @@ function sanitizeArticleText(value, title = '') {
   const leadTrimmed = trimKnownArticleLeadNoise(spacingFixed);
   const strippedLines = stripKnownArticleBoilerplateLines(leadTrimmed);
   const trimmedTail = trimKnownArticleTailNoise(strippedLines);
-  const inlineTrimmed = trimInlineRelatedHeadlineNoise(trimmedTail);
+  const captionTailTrimmed = trimTrailingCaptionLines(trimmedTail);
+  const inlineTrimmed = trimInlineRelatedHeadlineNoise(captionTailTrimmed);
   const dedupedLead = dedupeLeadingTeaserLines(inlineTrimmed);
   const dedupedAdjacent = dedupeConsecutiveLines(dedupedLead);
   
@@ -288,6 +289,9 @@ function stripKnownArticleBoilerplateLines(value) {
     /^본문\s*글씨\s*(키우기|줄이기)$/i,
     /^스크롤\s*이동\s*상태바$/i,
     /^[^\n]{1,30}기자$/i,
+    // [LOG_ID: 20260710_1250] 이메일 글로벌 제거([LOG_ID: 20260709_1505]) 이후 "[곽재훈 기자()]"처럼
+    // 빈 괄호 잔재가 남은 대괄호 기자 바이라인 라인이 기존 패턴과 매칭되지 않던 회귀 보완.
+    /^\[[^\]\n]{0,60}기자[^\]\n]{0,60}\]$/i,
     /^(?:<|\[)?저작권자\s*(?:\(c\)|[ⓒ©]|&copy;)?.*$/i,
     /RSS\s*피드는\s*개인\s*리더\s*이용\s*목적으로\s*허용/i,
     /피드를\s*이용한\s*게시\s*등의\s*무단\s*복제/i,
@@ -305,7 +309,12 @@ function stripKnownArticleBoilerplateLines(value) {
     /^기사\s*스크랩$/i,
     /^댓글(?:\s*\d+)?$/i,
     /^기사\s*공유$/i,
-    /^글자크기(?:\s*조절)?$/i,
+    // [LOG_ID: 20260710_1250] 경기일보 등 공유 위젯 잔재(close, X(트위터), 글자크기 설정, 기자페이지, SNS명 단독 라인) 제거
+    /^글자\s*크기(?:\s*(?:조절|설정))?$/i,
+    /^close$/i,
+    /^X\s*\(?\s*(?:트위터|twitter)\s*\)?$/i,
+    /^(?:트위터|페이스북|카카오톡|카카오스토리|밴드|네이버\s*블로그|라인|텔레그램|URL\s*복사|링크\s*복사)$/i,
+    /^기자\s*페이지$/i,
     /^기자\s*구독하기$/i,
     /^큰사진보기$/i,
     /^크게보기$/i,
@@ -384,6 +393,10 @@ function stripKnownArticleBoilerplateLines(value) {
     /^\[[\uAC00-\uD7A3]{2,6}\s*\uAE30\uC790\([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\)\]$/i,
     /^\[[\uAC00-\uD7A3]{2,10}\s*(?:스타투데이|포토|자료사진)\]$/i,
     /^\(사진=[^\)]+\)$/i,
+    // [LOG_ID: 20260710_1310] 매일경제 등 사진 캡션 줄 제거: 줄 끝이 사진/캡처 키워드를 포함한
+    // 대괄호 출처(예: "[사진출처 영상 캡처]", "[사진=매경DB]")로 끝나는 줄은 사진 설명이므로
+    // 줄 전체를 제거한다(캡션 문구는 통상 본문 첫 문장과 중복). 일반 문장은 이런 대괄호로 끝나지 않는다.
+    /^[^\n]{0,200}\[[^\[\]\n]{0,80}(?:사진|캡처)[^\[\]\n]{0,80}\]$/i,
     /\*재판매\s*및\s*DB\s*금지/i,
     /재판매\s*(?:및\s*DB)?\s*금지/i,
     /^(?:제보\s*[:：]|제보는\s*카카오톡)/i,
@@ -523,7 +536,44 @@ function shouldSkipLeadImageCreditLine(line, nextLine) {
     return true;
   }
 
-  return /^[^\n]{4,180}\.\s*[^\n]{0,40}\s+(?:제공|뉴스1|연합뉴스|뉴시스|유토이미지)$/i.test(current);
+  // [LOG_ID: 20260710_1420] pexels/unsplash 등 무료 스톡 이미지 출처명으로 끝나는 리드 캡션도 제거
+  // (예: 경향신문 "저렴해진 양파, ... 좋은 시기이기도 하다. pexels")
+  return /^[^\n]{4,180}\.\s*[^\n]{0,40}\s+(?:제공|뉴스1|연합뉴스|뉴시스|유토이미지|pexels|unsplash|pixabay|픽사베이|게티이미지(?:뱅크)?|셔터스톡|freepik)$/i.test(current);
+}
+
+// [LOG_ID: 20260710_1440] 본문 맨 끝에 붙는 사진 캡션성 짧은 명사구 줄(예: 연합뉴스 "봉수대공원 물놀이장")을
+// 제거한다. 이런 줄이 남으면 마지막 문장 종결 검사(잘림 휴리스틱)가 조사('이' 등)를 보고 "잘린 기사"로
+// 오탐해 정상 기사가 통째로 차단된다. 안전장치: (1) 문장 종결부호로 끝나는 줄은 건드리지 않음,
+// (2) 40자 이하 짧은 줄만 제거, (3) 바로 위 의미 있는 줄이 문장 종결부호로 끝날 때만 제거, (4) 최대 3줄.
+function trimTrailingCaptionLines(value) {
+  const lines = String(value || '').split('\n');
+  let end = lines.length;
+  let removed = 0;
+
+  while (end > 1 && removed < 3) {
+    const current = String(lines[end - 1] || '').trim();
+    if (!current) {
+      end -= 1;
+      continue;
+    }
+    if (current.length > 40 || /[.!?"'”’」\)\]]$/.test(current)) {
+      break;
+    }
+
+    let prevIndex = end - 2;
+    while (prevIndex >= 0 && !String(lines[prevIndex] || '').trim()) {
+      prevIndex -= 1;
+    }
+    const prev = prevIndex >= 0 ? String(lines[prevIndex] || '').trim() : '';
+    if (!prev || !/[.!?"'”’」\)\]]$/.test(prev)) {
+      break;
+    }
+
+    end -= 1;
+    removed += 1;
+  }
+
+  return lines.slice(0, end).join('\n').trim();
 }
 
 function isKnownArticleTailStartLine(line) {
@@ -537,7 +587,13 @@ function isKnownArticleTailStartLine(line) {
     /^기사\s*전체보기$/i,
     /^관련기사$/i,
     /^독자들의\s*PICK!?$/i,
-    /^(?:많이\s*본|실시간\s*인기|인기|추천)\s*(?:뉴스|기사)$/i,
+    // [LOG_ID: 20260710_1330] 뉴시스 속보 스텁 뒤에 딸려오는 추천 위젯 블록("많이 본 사진",
+    // "뉴시스Pic", "그래픽뉴스", "이시간 핫뉴스", "오늘의 헤드라인") 시작 줄 추가 — 이후 전부 절단.
+    /^(?:많이\s*본|실시간\s*인기|인기|추천)\s*(?:뉴스|기사|사진)$/i,
+    /^뉴시스\s*Pic$/i,
+    /^그래픽\s*뉴스$/i,
+    /^이\s*시[간각]?\s*핫\s*뉴스$/i,
+    /^오늘의\s*헤드라인$/i,
     /^이\s*시각\s*추천\s*(?:뉴스|기사)$/i,
     /^당신이\s*좋아할\s*만한\s*(?:뉴스|기사)$/i,
     /^\[뉴스리뷰\]$/i,

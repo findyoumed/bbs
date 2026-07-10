@@ -233,10 +233,20 @@ export function createAuthScreens(deps) {
       const errEl = document.getElementById('l-error');
       if (errEl) errEl.textContent = '';
     };
+    // [LOG_ID: 20260710_1620] 단계 전환 시 공용 #cmd-input에 남은 직전 제출 텍스트를 비운다.
+    // raw 터미널 핸들러 경로는 "제출 텍스트를 입력창에 유지"하는 정책(20260619_1732)이라
+    // 핸들러가 직접 지워야 하는데, 로그인은 지우지 않아 (1) 비밀번호 단계에서 방금 친 ID가
+    // 마스킹 별표(*)로 미리 채워져 보이고 그대로 Enter 시 ID가 비밀번호로 제출되며,
+    // (2) ID 검증 실패 후에도 틀린 입력이 입력창에 그대로 남았다.
+    const clearSharedCommandInput = () => {
+      const sharedInput = document.getElementById('cmd-input');
+      if (sharedInput && sharedInput.value) sharedInput.value = '';
+    };
     const showLoginIdPrompt = () => {
       loginSession.step = 'id';
       loginSession.password = '';
       state._maskCommandInput = false;
+      clearSharedCommandInput();
       mountPromptRow?.(loginPromptHost);
       setLoginPromptVisible(true);
       setPrompt('회원 ID >>');
@@ -245,6 +255,7 @@ export function createAuthScreens(deps) {
       loginSession.step = 'password';
       loginSession.password = '';
       state._maskCommandInput = true;
+      clearSharedCommandInput();
       mountPromptRow?.(loginPromptHost);
       setLoginPromptVisible(true);
       setPrompt('비밀번호 >>');

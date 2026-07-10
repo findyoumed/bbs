@@ -1,0 +1,30 @@
+- main [ref=f1e2]:
+  - generic [ref=f1e4]:
+    - generic [ref=f1e6]:
+      - generic [ref=f1e7]:
+        - generic [ref=f1e8]:
+          - link "초기화면으로 이동" [ref=f1e9] [cursor=pointer]:
+            - /url: /
+            - text: PC통신동호회 01410
+          - generic [ref=f1e10]: ────────────────────────────────────────────────────────────────────────────────
+          - generic [ref=f1e11]: 2026-07-10 15:48:34
+        - generic [ref=f1e12]:
+          - generic [ref=f1e13]: LOGIN
+          - generic [ref=f1e14]: ID 로그인
+        - generic [ref=f1e16]: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]: "'PC통신동호회 01410'에 오신 것을 환영합니다!!ID가 없는 분은 '손님' 혹은 'GUEST'를 입력하십시오."
+        - generic [ref=f1e25]:
+          - generic [ref=f1e26]:
+            - textbox [ref=f1e27]: 회원 ID >>
+            - textbox [ref=f1e29]: claude-e2e-test@example.com
+          - generic [ref=f1e30]: 입력하신 이메일 또는 ID는 없습니다. 확인후 입력하십시오.
+          - generic [ref=f1e31]:
+            - textbox [ref=f1e32]: 회원 ID >>
+            - textbox [ref=f1e34]: e2e-test-2026!
+          - generic [ref=f1e35]: 입력하신 ID는 없습니다. 확인후 입력하십시오.
+        - generic [ref=f1e20]:
+          - generic [ref=f1e21]: 회원 ID >>
+          - textbox [ref=f1e22]: 회원 ID >>
+          - textbox "명령어 입력" [active] [ref=f1e24]: e2e-test-2026!
+    - text: ────────────────────────────────────────────────────────────────────────────────

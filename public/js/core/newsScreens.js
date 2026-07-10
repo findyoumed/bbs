@@ -90,22 +90,39 @@ export function createNewsScreens(deps) {
 
   function renderNewsSourceLinkHotspots(screenNode, article) {
     const link = getNewsArticleLink(article);
-    if (!screenNode || !link) return;
+    if (!screenNode) return;
 
     const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
     const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
-    const linkStartIdx = lineNodes.findIndex((lineNode) => String(lineNode?.textContent || '').includes('원문:'));
-    if (linkStartIdx < 0) return;
 
     const layer = createHotspotLayer();
-    const sourceLinkButtons = [];
     const positionedButtons = [];
+    const sourceLinkButtons = [];
+
+    // 1. [엔터] 복귀 가이드 핫스팟 (갈무리 모드 전용)
+    const enterGuideIdx = lineNodes.findIndex((lineNode) => String(lineNode?.textContent || '').includes('[엔터]를 누르면 페이지 보기로 돌아갑니다'));
+    if (enterGuideIdx >= 0) {
+      const sourceText = String(lineNodes[enterGuideIdx].textContent || '');
+      const guideOffset = sourceText.indexOf('[엔터]');
+      if (guideOffset >= 0) {
+        const trimmedEnd = sourceText.replace(/\s+$/g, '').length;
+        const bounds = measureLineSegmentBounds(screenNode, lineNodes[enterGuideIdx], guideOffset, trimmedEnd);
+        if (bounds) {
+          const btn = createHotspotButton('ENTER', '페이지 보기로 복귀', bounds);
+          btn.classList.add('ansi-hotspot--return-guide');
+          layer.appendChild(btn);
+          positionedButtons.push({ button: btn, rowIdx: enterGuideIdx, isGuide: true, startCol: guideOffset, endCol: trimmedEnd });
+        }
+      }
+    }
+
+    // 2. 원문 기사 핫스팟 (원문 링크가 있을 때만)
+    const linkStartIdx = lineNodes.findIndex((lineNode) => String(lineNode?.textContent || '').includes('원문:'));
     const sourceLinkGroup = `news-source-link-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    // [LOG: 20260616_1410] Ensure correct path is resolved
     function getSourceLinkBounds(rowIdx) {
       const sourceText = String(lineNodes[rowIdx]?.textContent || '');
-      if (!sourceText.trim() || sourceText.trim() === '마지막 페이지입니다') return null;
+      if (!sourceText.trim() || sourceText.trim() === '마지막 페이지입니다' || sourceText.includes('[엔터]') || sourceText.includes('복사되었습니다')) return null;
 
       return rowIdx === linkStartIdx
         ? (() => {
@@ -117,73 +134,80 @@ export function createNewsScreens(deps) {
         : (measureServiceLineBounds(screenNode, lineNodes[rowIdx]) || estimateServiceLineBounds(screenNode, lineNodes[rowIdx]));
     }
 
-    function applySourceLinkBounds(button, rowIdx) {
-      const bounds = getSourceLinkBounds(rowIdx);
-      if (!bounds) return false;
-      button.style.left = `${bounds.left}px`;
-      button.style.top = `${bounds.top}px`;
-      button.style.width = `${bounds.width}px`;
-      button.style.height = `${bounds.height}px`;
-      return true;
+    if (link && linkStartIdx >= 0) {
+      for (let rowIdx = linkStartIdx; rowIdx < lineNodes.length; rowIdx += 1) {
+        const sourceText = String(lineNodes[rowIdx]?.textContent || '');
+        if (!sourceText.trim() || sourceText.trim() === '마지막 페이지입니다' || sourceText.includes('[엔터]') || sourceText.includes('복사되었습니다')) break;
+
+        const bounds = getSourceLinkBounds(rowIdx);
+        if (!bounds) continue;
+        const btn = createHotspotButton('', '원문 기사 열기', bounds);
+        btn.dataset.externalUrl = link;
+        btn.dataset.hotspotGroup = sourceLinkGroup;
+        btn.classList.add('ansi-hotspot--source-link');
+        btn.removeAttribute('data-cmd');
+        layer.appendChild(btn);
+        sourceLinkButtons.push(btn);
+        positionedButtons.push({ button: btn, rowIdx, isGuide: false });
+      }
+      bindGroupedHotspotHover(sourceLinkButtons);
     }
 
-    function refreshSourceLinkBounds() {
+    // 3. 리사이즈/리프레시 로직 갱신
+    function refreshAllBounds() {
       if (screenNode.isConnected === false) return;
-      positionedButtons.forEach(({ button, rowIdx }) => {
-        applySourceLinkBounds(button, rowIdx);
+      positionedButtons.forEach(({ button, rowIdx, isGuide, startCol, endCol }) => {
+        if (isGuide) {
+          const sourceText = String(lineNodes[rowIdx]?.textContent || '');
+          const bounds = measureLineSegmentBounds(screenNode, lineNodes[rowIdx], startCol, endCol);
+          if (bounds) {
+            button.style.left = `${bounds.left}px`;
+            button.style.top = `${bounds.top}px`;
+            button.style.width = `${bounds.width}px`;
+            button.style.height = `${bounds.height}px`;
+          }
+        } else {
+          const bounds = getSourceLinkBounds(rowIdx);
+          if (bounds) {
+            button.style.left = `${bounds.left}px`;
+            button.style.top = `${bounds.top}px`;
+            button.style.width = `${bounds.width}px`;
+            button.style.height = `${bounds.height}px`;
+          }
+        }
       });
     }
 
-    function scheduleSourceLinkRefresh(delay = 0) {
+    function scheduleRefresh(delay = 0) {
       if (delay > 0) {
-        window.setTimeout(refreshSourceLinkBounds, delay);
+        window.setTimeout(refreshAllBounds, delay);
         return;
       }
       if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(refreshSourceLinkBounds);
+        requestAnimationFrame(refreshAllBounds);
       } else {
-        window.setTimeout(refreshSourceLinkBounds, 0);
+        window.setTimeout(refreshAllBounds, 0);
       }
     }
 
-    for (let rowIdx = linkStartIdx; rowIdx < lineNodes.length; rowIdx += 1) {
-      const sourceText = String(lineNodes[rowIdx]?.textContent || '');
-      if (!sourceText.trim() || sourceText.trim() === '마지막 페이지입니다') break;
-
-      const bounds = getSourceLinkBounds(rowIdx);
-
-      if (!bounds) continue;
-      const btn = createHotspotButton('', '원문 기사 열기', bounds);
-      btn.dataset.externalUrl = link;
-      btn.dataset.hotspotGroup = sourceLinkGroup;
-      btn.classList.add('ansi-hotspot--source-link');
-      btn.removeAttribute('data-cmd');
-      layer.appendChild(btn);
-      sourceLinkButtons.push(btn);
-      positionedButtons.push({ button: btn, rowIdx });
-    }
-
-    bindGroupedHotspotHover(sourceLinkButtons);
     if (layer.childElementCount > 0) {
       screenNode.appendChild(layer);
-
-      // [LOG: 20260505_1935] Photo images load after text render, so source-link hotspots must be remeasured.
-      scheduleSourceLinkRefresh();
-      scheduleSourceLinkRefresh(250);
-      scheduleSourceLinkRefresh(1000);
-      scheduleSourceLinkRefresh(1600);
+      scheduleRefresh();
+      scheduleRefresh(250);
+      scheduleRefresh(1000);
+      scheduleRefresh(1600);
 
       Array.from(screenNode.querySelectorAll('.news-article-image')).forEach((image) => {
         if (image.complete) {
-          scheduleSourceLinkRefresh();
+          scheduleRefresh();
           return;
         }
-        image.addEventListener('load', refreshSourceLinkBounds, { once: true });
-        image.addEventListener('error', refreshSourceLinkBounds, { once: true });
+        image.addEventListener('load', () => scheduleRefresh(), { once: true });
+        image.addEventListener('error', () => scheduleRefresh(), { once: true });
       });
 
       if (document.fonts && typeof document.fonts.ready?.then === 'function') {
-        document.fonts.ready.then(refreshSourceLinkBounds).catch(() => {});
+        document.fonts.ready.then(refreshAllBounds).catch(() => {});
       }
     }
   }
@@ -320,9 +344,10 @@ export function createNewsScreens(deps) {
     const expectedLink = String(requestOptions?.link || '').trim();
     const target = String(articleNo || '').trim();
 
+    // [LOG_ID: 20260710_1120] URL에는 짧게 자른 키(예: 앞 8자리)가 실릴 수 있으므로 prefix 매칭을 허용한다.
     let byKey = null;
-    if (expectedKey) {
-      byKey = list.find((item) => getNewsArticleKey(item) === expectedKey) || null;
+    if (expectedKey && expectedKey.length >= 6) {
+      byKey = list.find((item) => getNewsArticleKey(item).startsWith(expectedKey)) || null;
     }
 
     let byLink = null;
@@ -512,6 +537,10 @@ export function createNewsScreens(deps) {
   }
 
   async function showNewsMenu(fromHistory = false) {
+    if (typeof document !== 'undefined') {
+      delete document.body.dataset.printView;
+      delete document.documentElement.dataset.printView;
+    }
     state.screen = 'news-menu';
     if (!fromHistory) { updateURL(); pushHistory(); }
 
@@ -539,6 +568,10 @@ export function createNewsScreens(deps) {
   }
 
   async function showNewsList(topicDoor, options = false) {
+    if (typeof document !== 'undefined') {
+      delete document.body.dataset.printView;
+      delete document.documentElement.dataset.printView;
+    }
     const normalizedOptions = typeof options === 'boolean' ? { fromHistory: options } : (options || {});
     const fromHistory = Boolean(normalizedOptions.fromHistory);
     const requestedPageNo = Math.max(1, Number.parseInt(normalizedOptions.pageNo, 10) || 1);
@@ -587,8 +620,20 @@ export function createNewsScreens(deps) {
     }
   }
 
-  // [LOG: 20260622_1114] Fix truncated news article body by prioritizing API details first and dynamically guessing targetListPageNo from actual article number
   async function showNewsArticle(topicDoor, articleNo, options = {}) {
+    const fullView = Boolean(options?.fullView);
+    if (typeof document !== 'undefined') {
+      if (fullView) {
+        document.body.dataset.printView = 'true';
+        document.documentElement.dataset.printView = 'true';
+      } else {
+        delete document.body.dataset.printView;
+        delete document.documentElement.dataset.printView;
+      }
+    }
+    if (fullView && typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+    }
     const requestedPageNo = Math.max(1, Number.parseInt(options?.pageNo, 10) || 1);
     const fromHistory = Boolean(options?.fromHistory);
     const forceReload = Boolean(options?.forceReload);
@@ -597,7 +642,15 @@ export function createNewsScreens(deps) {
       && String(state.serviceData?.articleNo || '') === String(articleNo)
       && Number(state.serviceData?.pageNo || 1) === requestedPageNo
       && (!requestedArticleKey || String(state.serviceData?.articleKey || '').trim() === requestedArticleKey);
-    
+
+    // [LOG_ID: 20260710_1120] articleNo(no)는 피드가 백그라운드에서 재구성될 때마다 위치가 바뀔 수 있어
+    // URL/화면에 노출하는 "표시 번호"로 쓰기엔 불안정하다. 같은 기사(topicDoor+articleNo 동일)를 다시 그리는
+    // 경우(본문 페이지 이동 B/F, 새로고침 L 등)엔 기존 표시 번호를 그대로 이어가고, 진짜 새로운 기사 선택
+    // (목록 클릭, A/N 이동)일 때만 이번 요청 번호를 새 표시 번호로 채택한다.
+    const isSameArticleAsBefore = String(state.serviceData?.topicDoor || '') === String(topicDoor)
+      && String(state.serviceData?.articleNo || '') === String(articleNo);
+    const preservedDisplayNo = isSameArticleAsBefore ? state.serviceData?.displayNo : null;
+
     // [LOG_ID: 20260709_1450] 화면 전환 실패 시 복원을 위해 이전 screen을 저장
     const prevScreen = state.screen;
     state.screen = 'news-view';
@@ -684,13 +737,26 @@ export function createNewsScreens(deps) {
     let topics = [];
     let topicTitle = '';
     let items = [];
-    try {
-      const topicResult = await loadNewsTopicState(topicDoor, targetListPageNo);
-      topics = topicResult.topics;
-      topicTitle = topicResult.topicTitle;
-      items = topicResult.items;
-    } catch (e) {
-      console.warn('Failed to load topic state for list page preloading:', e.message);
+    // [LOG_ID: 20260710_1400] A/N 인접 탐색은 "사용자가 보던 목록 스냅샷" 기준이어야 한다.
+    // 여기서 최신 피드를 새로 받아 items를 교체하면, 백그라운드 재구성(새 기사 유입 + 날짜 미상
+    // 기사 재정렬)으로 인접 관계 자체가 바뀌어 N/A가 사용자 목록 기준으로 멀리 떨어진 기사로
+    // 이동하는 문제(예: 20번에서 N → 목록상 196번이던 기사)가 생긴다. 현재 상태의 items에
+    // 대상 기사가 존재하면 그 스냅샷을 그대로 재사용하고, 없을 때만 새로 로드한다.
+    const sameTopicItems = String(state.serviceData?.topicDoor || '') === String(topicDoor)
+      && Array.isArray(state.serviceData?.items) ? state.serviceData.items : [];
+    if (sameTopicItems.length > 0 && findNewsArticle(sameTopicItems, articleNo, requestOptions)) {
+      topics = getNewsTopics(state.serviceData);
+      topicTitle = String(state.serviceData?.topicTitle || '').trim();
+      items = sameTopicItems;
+    } else {
+      try {
+        const topicResult = await loadNewsTopicState(topicDoor, targetListPageNo);
+        topics = topicResult.topics;
+        topicTitle = topicResult.topicTitle;
+        items = topicResult.items;
+      } catch (e) {
+        console.warn('Failed to load topic state for list page preloading:', e.message);
+      }
     }
 
     // Match the article within the newly loaded list context
@@ -724,8 +790,12 @@ export function createNewsScreens(deps) {
       const clientTrimmed = String(resolvedArticle.body || resolvedArticle.description || '').trim();
       const isClientTruncated = /[.]{2,}$|[…,\-:/]$/.test(clientTrimmed)
         || /[며고나면지를을은는이가와과의로]/.test(clientTrimmed.slice(-3));
-      
-      if (isClientTruncated || clientTrimmed.length < 30) {
+      // [LOG_ID: 20260710_1330] 속보 스텁 기사("후속기사가 이어집니다" 단문)는 본문이 30자 미만이
+      // 정상이므로 서버와 동일하게 속보 키워드가 있으면 최소 길이 기준을 10자로 완화한다.
+      const isBreakingStub = /속보|단독|긴급|breaking/i.test(String(resolvedArticle.title || ''));
+      const minClientLength = isBreakingStub ? 10 : 30;
+
+      if (isClientTruncated || clientTrimmed.length < minClientLength) {
         console.debug('클라이언트측 잘린 기사 감지로 차단:', articleNo);
         // [LOG_ID: 20260709_1255] 단축키 N/A를 통한 순차 탐색 도중 잘린 기사를 만나면
         // 에러를 던져야 이전/다음 순차 스킵 탐색기가 멈추지 않고 다음 정상 기사를 계속 탐색할 수 있다.
@@ -745,7 +815,8 @@ export function createNewsScreens(deps) {
     }
 
 
-    const articleView = buildNewsArticleAnsi(resolvedTopicTitle, resolvedArticle, requestedPageNo);
+    // [LOG_ID: 20260710_1530] fullView(PR 갈무리 모드): 본문 전체를 페이지 분할 없이 한 번에 출력.
+    const articleView = buildNewsArticleAnsi(resolvedTopicTitle, resolvedArticle, requestedPageNo, { fullView });
     const currentListPageSize = Math.max(1, Number(state.serviceData?.listPageSize || 15));
     const resolvedListPageNo = Math.max(
       1,
@@ -757,10 +828,17 @@ export function createNewsScreens(deps) {
     state.serviceData = {
       topics, topicDoor, topicTitle: resolvedTopicTitle,
       articleNo: String(resolvedArticle?.no || articleNo),
+      // [LOG_ID: 20260710_1210] URL 노출 번호 우선순위: A/N 등 호출자가 명시한 순차 번호 >
+      // 같은 기사 재렌더링 시 보존된 번호 > 이번 요청 번호. 서버 스냅샷의 위치 번호(no)는 쓰지 않는다.
+      displayNo: String(options?.displayNo || preservedDisplayNo || articleNo),
       articleKey: getNewsArticleKey(resolvedArticle),
       articleLink: getNewsArticleLink(resolvedArticle),
       article: resolvedArticle, items,
-      pageCount: articleView.pageCount, pageNo: articleView.pageNo,
+      // [LOG_ID: 20260710_1530] fullView에서는 페이지 컨텍스트(pageNo/pageCount)를 진입 당시 값으로
+      // 보존해, [엔터] 복귀 시 보던 페이지로 정확히 돌아가게 한다. articleView는 단일 페이지(1/1)를 반환.
+      pageCount: fullView ? Math.max(1, Number(state.serviceData?.pageCount || 1)) : articleView.pageCount,
+      pageNo: fullView ? requestedPageNo : articleView.pageNo,
+      _printView: fullView,
       listPageNo: resolvedListPageNo, listPageSize: currentListPageSize
     };
     if (!fromHistory && !sameView) { updateURL(); pushHistory(); }
@@ -772,11 +850,18 @@ export function createNewsScreens(deps) {
       screenEl,
       renderScreenSequential,
       afterBodyRender: async () => {
-        await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('serviceArticle'));
+        await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText(fullView ? 'serviceArticleFull' : 'serviceArticle'));
+        if (fullView && typeof window !== 'undefined') {
+          window.scrollTo(0, 0);
+        }
       }
     });
     renderNewsArticleImage(rendered.screenNode, state.serviceData.article, articleView.pageNo);
     renderNewsSourceLinkHotspots(rendered.screenNode, state.serviceData.article);
+
+    if (fullView && typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+    }
 
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }

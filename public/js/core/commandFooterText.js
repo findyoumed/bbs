@@ -36,6 +36,8 @@ export const CMD_ORDER = {
   attachmentList: ['P', 'T', 'GO', 'H'],
   newsList: ['F', 'B', 'P', 'T', 'GO', 'H'],
   serviceArticle: ['F', 'B', 'N', 'A', 'P', 'T', 'PR:복사', 'H'],
+  // [LOG_ID: 20260710_1530] PR(복사) 전체 보기 모드: 엔터로 페이지 보기 복귀
+  serviceArticleFull: ['ENTER:페이지보기', 'N', 'A', 'P', 'T', 'H'],
   amusementInput: ['P', 'T', 'GO', 'H'],
   amusementView: ['L:처음', 'P', 'T', 'GO', 'H']
 };
@@ -104,6 +106,11 @@ export function createCommandFooterTextUtils(deps) {
     // auth menu footer should not advertise the LOGIN shortcut in the hint bar.
     if (currentScreen === 'board-select' && String(currentState.boardMenuPath || '').trim().toLowerCase() === 'log') {
       return getCommandFooterText('authMenu');
+    }
+
+    // [LOG_ID: 20260710_1530] PR(복사) 전체 보기 모드에서는 엔터 복귀 힌트를 우선 노출한다.
+    if (currentScreen === 'news-view' && currentState.serviceData?._printView) {
+      return getCommandFooterText('serviceArticleFull');
     }
 
     // [LOG: 20260429_1033] Unified PDS list keeps paging/search hints but

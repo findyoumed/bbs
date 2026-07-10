@@ -72,10 +72,19 @@ export function createRoutingUrlBuilder(deps) {
       case 'news-view': {
         const query = new URLSearchParams();
         const articleNo = String(serviceData?.articleNo || '');
-        query.set('article', articleNo);
+        // [LOG_ID: 20260710_1120] 화면에 노출하는 번호는 클릭 당시 번호(displayNo)를 그대로 쓴다.
+        // articleNo(no)는 피드가 백그라운드에서 재구성될 때마다 위치가 바뀔 수 있어 URL 번호가
+        // 사용자가 실제로 고른 번호와 달라 보이는 문제가 있었다.
+        const displayNo = String(serviceData?.displayNo || articleNo);
+        query.set('article', displayNo);
         const articleKey = String(serviceData?.articleKey || serviceData?.article?.articleKey || '').trim();
         const articleLink = String(serviceData?.article?.link || serviceData?.articleLink || '').trim();
-        
+
+        // [LOG_ID: 20260710_1120] 번호가 흔들려도 항상 같은 기사를 가리키도록, 링크에서 유도한
+        // 안정적인 키의 앞부분을 URL에 함께 싣는다. no와 달리 이 키는 기사 링크가 바뀌지 않는 한
+        // 절대 변하지 않으므로, 세션이 끊긴 뒤 재접속하거나 링크를 공유해도 같은 기사로 복원된다.
+        if (articleKey) query.set('key', articleKey.slice(0, 8));
+
         // [LOG: 20260617_2155] Store news metadata in sessionStorage to keep URL clean
         const topicDoor = serviceData?.topicDoor || '';
         if (topicDoor && articleNo && (articleKey || articleLink)) {

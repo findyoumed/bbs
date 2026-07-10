@@ -1,0 +1,186 @@
+- main [ref=f7e2]:
+  - generic [ref=f7e4]:
+    - generic [ref=f7e422]:
+      - generic [ref=f7e423]:
+        - generic [ref=f7e424]:
+          - link "초기화면으로 이동" [ref=f7e425] [cursor=pointer]:
+            - /url: /
+            - text: PC통신동호회 01410
+          - generic [ref=f7e426]: ────────────────────────────────────────────────────────────────────────────────
+          - generic [ref=f7e427]: 2026-07-10 10:50:45
+        - generic [ref=f7e428]:
+          - generic [ref=f7e429]: READ
+          - generic [ref=f7e430]: 기사 읽기
+          - generic [ref=f7e431]: (01/01)
+        - generic [ref=f7e432]: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=f7e433]:
+        - generic [ref=f7e434]:
+          - generic [ref=f7e435]:
+            - generic [ref=f7e436]: 제
+            - generic [ref=f7e437]: 목
+            - text: ":"
+          - generic [ref=f7e438]:
+            - text: "["
+            - generic [ref=f7e439]: 속
+            - generic [ref=f7e440]: 보
+            - text: "]"
+            - generic [ref=f7e441]: 청
+            - generic [ref=f7e442]: 와
+            - generic [ref=f7e443]: 대
+            - text: "\""
+            - generic [ref=f7e444]: 정
+            - generic [ref=f7e445]: 부
+            - generic [ref=f7e446]: 일
+            - generic [ref=f7e447]: 방
+            - generic [ref=f7e448]: 아
+            - generic [ref=f7e449]: 닌
+            - generic [ref=f7e450]: 국
+            - generic [ref=f7e451]: 민
+            - text: ·
+            - generic [ref=f7e452]: 전
+            - generic [ref=f7e453]: 문
+            - generic [ref=f7e454]: 가
+            - generic [ref=f7e455]: 와
+            - generic [ref=f7e456]: 해
+            - generic [ref=f7e457]: 법
+            - generic [ref=f7e458]: 찾
+            - generic [ref=f7e459]: 을
+            - generic [ref=f7e460]: 것
+            - text: "\""
+        - generic [ref=f7e462]:
+          - generic [ref=f7e463]: 출
+          - generic [ref=f7e464]: 처
+          - text: ":"
+          - generic [ref=f7e465]: 연
+          - generic [ref=f7e466]: 합
+          - generic [ref=f7e467]: 뉴
+          - generic [ref=f7e468]: 스
+          - text: TV
+          - generic [ref=f7e469]: 일
+          - generic [ref=f7e470]: 시
+          - text: ": 2026/07/10 10:45"
+        - generic [ref=f7e471]: ────────────────────────────────────────────────────────────────────────────────
+        - generic [ref=f7e473]:
+          - text: "\""
+          - generic [ref=f7e474]: 부
+          - generic [ref=f7e475]: 동
+          - generic [ref=f7e476]: 산
+          - generic [ref=f7e477]: 세
+          - generic [ref=f7e478]: 제
+          - generic [ref=f7e479]: 개
+          - generic [ref=f7e480]: 편
+          - generic [ref=f7e481]: 늦
+          - generic [ref=f7e482]: 어
+          - generic [ref=f7e483]: 도
+          - text: "7"
+          - generic [ref=f7e484]: 말
+          - text: "8"
+          - generic [ref=f7e485]: 초
+          - generic [ref=f7e486]: 예
+          - generic [ref=f7e487]: 정
+          - generic [ref=f7e488]: 대
+          - generic [ref=f7e489]: 로
+          - text: "\""
+          - generic [ref=f7e490]: 세
+          - generic [ref=f7e491]: 제
+          - generic [ref=f7e492]: 관
+          - generic [ref=f7e493]: 련
+          - text: "\""
+          - generic [ref=f7e494]: 주
+          - generic [ref=f7e495]: 거
+          - generic [ref=f7e496]: 안
+          - generic [ref=f7e497]: 정
+          - generic [ref=f7e498]: 등
+          - generic [ref=f7e499]: 원
+          - generic [ref=f7e500]: 칙
+          - generic [ref=f7e501]: 갖
+          - generic [ref=f7e502]: 고
+          - generic [ref=f7e503]: 의
+          - generic [ref=f7e504]: 견
+        - generic [ref=f7e506]:
+          - generic [ref=f7e507]: 경
+          - generic [ref=f7e508]: 청
+          - text: "\""
+          - generic [ref=f7e509]: 청
+          - generic [ref=f7e510]: 년
+          - generic [ref=f7e511]: 대
+          - generic [ref=f7e512]: 출
+          - generic [ref=f7e513]: 완
+          - generic [ref=f7e514]: 화
+          - generic [ref=f7e515]: 관
+          - generic [ref=f7e516]: 련
+          - text: "\""
+          - generic [ref=f7e517]: 아
+          - generic [ref=f7e518]: 픈
+          - generic [ref=f7e519]: 부
+          - generic [ref=f7e520]: 분
+          - text: …
+          - generic [ref=f7e521]: 경
+          - generic [ref=f7e522]: 청
+          - generic [ref=f7e523]: 할
+          - generic [ref=f7e524]: 것
+          - text: "\""
+          - generic [ref=f7e525]: 연
+          - generic [ref=f7e526]: 합
+          - generic [ref=f7e527]: 뉴
+          - generic [ref=f7e528]: 스
+          - text: TV
+          - generic [ref=f7e529]: 속
+          - generic [ref=f7e530]: 보
+          - text: (CG)
+          - generic [ref=f7e531]: 연
+          - generic [ref=f7e532]: 합
+          - generic [ref=f7e533]: 뉴
+          - generic [ref=f7e534]: 스
+          - text: TV
+        - generic [ref=f7e536]:
+          - generic [ref=f7e537]: 기
+          - generic [ref=f7e538]: 사
+          - generic [ref=f7e539]: 문
+          - generic [ref=f7e540]: 의
+          - generic [ref=f7e541]: 및
+          - generic [ref=f7e542]: 제
+          - generic [ref=f7e543]: 보
+          - text: ":"
+          - generic [ref=f7e544]: 카
+          - generic [ref=f7e545]: 톡
+          - text: /
+          - generic [ref=f7e546]: 라
+          - generic [ref=f7e547]: 인
+          - text: jebo23
+          - generic [ref=f7e548]: 팽
+          - generic [ref=f7e549]: 재
+          - generic [ref=f7e550]: 용
+          - text: ()
+        - generic [ref=f7e552]:
+          - generic [ref=f7e553]: 원
+          - generic [ref=f7e554]: 문
+          - text: ": https://www.yonhapnewstv.co.kr/news/AKR20260710104558nn3"
+        - generic [ref=f7e556]:
+          - generic [ref=f7e557]: 마
+          - generic [ref=f7e558]: 지
+          - generic [ref=f7e559]: 막
+          - generic [ref=f7e560]: 페
+          - generic [ref=f7e561]: 이
+          - generic [ref=f7e562]: 지
+          - generic [ref=f7e563]: 입
+          - generic [ref=f7e564]: 니
+          - generic [ref=f7e565]: 다
+      - button "원문 기사 열기" [ref=f7e577] [cursor=pointer]
+    - generic [ref=f7e404]:
+      - text: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=f7e578]:
+        - generic [ref=f7e579]:
+          - generic [ref=f7e580] [cursor=pointer]: 상위(P)
+          - text: ","
+        - generic [ref=f7e581]:
+          - generic [ref=f7e582] [cursor=pointer]: 초기화면(T)
+          - text: ","
+        - generic [ref=f7e583]:
+          - generic [ref=f7e584] [cursor=pointer]: 복사(PR)
+          - text: ","
+        - generic "H, HELP, ?" [ref=f7e586] [cursor=pointer]: 도움말(H)
+      - generic [ref=f7e417]:
+        - generic [ref=f7e418]: 선택 >>
+        - textbox [ref=f7e419]: 선택 >>
+        - textbox "명령어 입력" [active] [ref=f7e421]

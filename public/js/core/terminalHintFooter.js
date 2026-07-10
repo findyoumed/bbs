@@ -159,6 +159,14 @@ export function createTerminalHintFooter(deps) {
       } else {
         delete document.body.dataset.screen;
       }
+      // [LOG_ID: 20260710_1203] PR 갈무리(전체 보기) 모드일 때 print-view 속성을 html/body에 설정하여 세로 늘어남을 가능케 함
+      if (screenName === 'news-view' && state.serviceData?._printView) {
+        document.body.dataset.printView = 'true';
+        document.documentElement.dataset.printView = 'true';
+      } else {
+        delete document.body.dataset.printView;
+        delete document.documentElement.dataset.printView;
+      }
     }
 
     const container = document.getElementById('terminal-container');

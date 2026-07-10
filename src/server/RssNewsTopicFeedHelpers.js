@@ -106,9 +106,9 @@ async function resolveTopic(service, parseNewsMenuXml, topicDoor) {
   return buildNewsTopics(service, menu).find((topic) => topic.door === String(topicDoor)) || null;
 }
 
-// [LOG: 20260619_1945] v16 -> v17: 빈 본문 항목 목록 제외 필터 추가 후 캐시 무효화
+// [LOG_ID: 20260710_1145] v17 -> v18: no(전역 번호)에 page 오프셋이 잘못 누적되던 버그 수정 후 캐시 무효화
 function getTopicFeedCacheKey(topicDoor) {
-  return `news:topicfeed:v17:${String(topicDoor || '').trim()}`;
+  return `news:topicfeed:v18:${String(topicDoor || '').trim()}`;
 }
 
 
@@ -487,17 +487,16 @@ async function buildTopicFeed(service, parseNewsFeedXml, topic, page = 1) {
     fetchedAt: nowStr,
     unavailable: allFail,
     message: allFail ? (results[0]?.feed?.message || message) : message,
-    items: finalItems.map((item, index) => {
-      // [LOG_ID: 20260709_1045] 페이징된 목록 반환 시 기사의 no(순차번호)가 1~15로 초기화되어 
-      // 클라이언트의 이전/다음 기사 인덱스 탐색이 완전히 꼬이는 버그를 해결하기 위해,
-      // 페이지 정보에 맞춰 실제 전역 목록에서의 기사 번호 오프셋을 올바르게 누적하여 제공한다.
-      const offset = page > 0 ? (page - 1) * 15 : 0;
-      return {
-        ...item,
-        no: offset + index + 1,
-        articleKey: buildNewsArticleKey(service, item)
-      };
-    })
+    // [LOG_ID: 20260710_1145] finalItems는 page 값과 무관하게 항상 정렬된 전체 목록(최대 1000개)이다.
+    // 예전엔 "페이지 단위로 잘린 배열"이라 가정하고 (page-1)*15 오프셋을 여기에 더했지만, 실제로는
+    // 배열이 잘리지 않으므로 이 오프셋이 전체 배열 전 항목에 그대로 더해져 같은 기사의 no가 마지막으로
+    // 빌드된 page 값에 따라 완전히 다른 값으로 뒤바뀌는 버그(예: 4번 기사에서 다음글 이동 시 166번으로
+    // 점프)를 낳았다. index+1이 이미 전역(절대) 번호이므로 오프셋 없이 그대로 쓴다.
+    items: finalItems.map((item, index) => ({
+      ...item,
+      no: index + 1,
+      articleKey: buildNewsArticleKey(service, item)
+    }))
   };
 }
 

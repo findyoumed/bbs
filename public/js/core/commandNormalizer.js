@@ -33,6 +33,11 @@ export function normalizeCommand(rawCmd, stateScreen) {
   // 1. 단일 키워드 정규화
   if (koAliasMap[cmd]) {
     cmd = koAliasMap[cmd];
+  } else {
+    // [LOG_ID: 20260710_1203] 모든 영문 명령어가 한글 오타로 들어왔을 때 범용적으로 영타 자판 복원 처리
+    if (/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cmd) && !cmd.startsWith('/')) {
+      cmd = convertKoreanToEnglish(cmd).toUpperCase();
+    }
   }
 
   // 2. 특수 기호 알리어스
@@ -66,4 +71,38 @@ export function normalizeCommand(rawCmd, stateScreen) {
 
   // 재조합
   return args.length > 0 ? `${cmd} ${args.join(' ')}` : cmd;
+}
+
+/**
+ * [LOG_ID: 20260710_1203] 한글 오타(Dubeolsik)를 QWERTY 영문 자판으로 실시간 번역
+ */
+function convertKoreanToEnglish(text) {
+  const chosungs = ['r', 'R', 's', 'e', 'E', 'f', 'a', 'q', 'Q', 't', 'T', 'd', 'w', 'W', 'c', 'z', 'x', 'v', 'g'];
+  const jungsungs = ['k', 'o', 'i', 'O', 'j', 'p', 'u', 'P', 'h', 'hk', 'ho', 'hl', 'y', 'n', 'nj', 'np', 'nl', 'y', 'm', 'ml', 'l'];
+  const jongsungs = ['', 'r', 'R', 'rt', 's', 'sw', 'sg', 'e', 'f', 'fr', 'fa', 'fq', 'ft', 'fx', 'fv', 'fg', 'a', 'q', 'qt', 't', 'T', 'd', 'w', 'c', 'z', 'x', 'v', 'g'];
+  
+  const singleMap = {
+    'ㄱ': 'r', 'ㄲ': 'R', 'ㄴ': 's', 'ㄷ': 'e', 'ㄸ': 'E', 'ㄹ': 'f', 'ㅁ': 'a',
+    'ㅂ': 'q', 'ㅃ': 'Q', 'ㅅ': 't', 'ㅆ': 'T', 'ㅇ': 'd', 'ㅈ': 'w', 'ㅉ': 'W',
+    'ㅊ': 'c', 'ㅋ': 'z', 'ㅌ': 'x', 'ㅍ': 'v', 'ㅎ': 'g',
+    'ㅏ': 'k', 'ㅐ': 'o', 'ㅑ': 'i', 'ㅒ': 'O', 'ㅓ': 'j', 'ㅔ': 'p', 'ㅕ': 'u',
+    'ㅖ': 'P', 'ㅗ': 'h', 'ㅛ': 'y', 'ㅜ': 'n', 'ㅠ': 'y', 'ㅡ': 'm', 'ㅣ': 'l'
+  };
+
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code >= 0xAC00 && code <= 0xD7A3) {
+      const offset = code - 0xAC00;
+      const cho = Math.floor(offset / 588);
+      const jung = Math.floor((offset % 588) / 28);
+      const jong = offset % 28;
+      
+      result += chosungs[cho] + jungsungs[jung] + jongsungs[jong];
+    } else {
+      const char = text.charAt(i);
+      result += singleMap[char] || char;
+    }
+  }
+  return result;
 }

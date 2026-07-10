@@ -187,7 +187,10 @@ export function createNewsAnsiBuilders(deps) {
     };
   }
 
-  function buildNewsArticleAnsi(topic, article, pageNo = 1) {
+  function buildNewsArticleAnsi(topic, article, pageNo = 1, options = {}) {
+    // [LOG_ID: 20260710_1530] fullView: PR(복사) 시 PC통신 갈무리처럼 본문 전체를
+    // 페이지 분할 없이 한 번에 출력하는 모드.
+    const fullView = options?.fullView === true;
     // [LOG: 20260426_2345] Adaptive layout: Use 44 columns for mobile portrait
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -213,11 +216,19 @@ export function createNewsAnsiBuilders(deps) {
                        .replace(/조회\s*\n?\s*조회수/gi, '')
                        .replace(/영문\s*기사\s*보기\s*\(View\s*English\s*Article\)/gi, '')
                        .replace(/(?:본문\s*바로가기|메뉴\s*바로가기|달력보기|전체재생|상세\s*기사보기|재생목록|연속재생)/gi, '')
-                       .replace(/\s{2,}/g, ' ')
+                       // [LOG_ID: 20260710_1230] \s{2,}는 줄바꿈까지 삼켜 단락 구분(\n\n)이 공백 한 칸으로
+                       // 뭉개지는 부작용이 있었다(본문 전체가 한 덩어리로 붙어 가독성 저하). 가로 공백만
+                       // 축약하고 줄바꿈은 보존하되, 3연속 이상만 단락 구분(\n\n)으로 정리한다.
+                       .replace(/[ \t]+\n/g, '\n')
+                       .replace(/\n{3,}/g, '\n\n')
+                       .replace(/[ \t]{2,}/g, ' ')
                        .trim();
 
 
-    if (!shouldDisplayNewsArticleImage(article) && bodyText.length < 40) {
+    // [LOG_ID: 20260710_1330] 속보 스텁("후속기사가 이어집니다")은 로드 실패가 아니라 본문 전체가
+    // 그 한 줄인 정상 기사이므로 "불러오지 못했습니다" 안내를 붙이지 않는다.
+    const isBreakingStubBody = /후속\s*기사가?\s*이어집니다/.test(bodyText);
+    if (!shouldDisplayNewsArticleImage(article) && bodyText.length < 40 && !isBreakingStubBody) {
       bodyText += '\n\n' + '[상세 본문을 불러오지 못했습니다. 하단의 \'원문\' 링크를 클릭하여 전체 기사를 확인해 주세요.]';
     }
     const bodyLines = wrapAnsiText(bodyText, targetCols);
@@ -247,30 +258,35 @@ export function createNewsAnsiBuilders(deps) {
     const lastPageFooterLines = sourceLinkLines.length + 1;
 
     // [LOG: 20260615_1720] 페이지별 가용 라인 수 시뮬레이션 분할 로직 구현
+    // [LOG_ID: 20260710_1530] fullView 모드는 분할 없이 본문 전체를 한 페이지로 출력한다.
     const pages = [];
-    let currentLineIdx = 0;
-    const totalBodyLines = Math.max(1, bodyLines.length);
+    if (fullView) {
+      pages.push(bodyLines);
+    } else {
+      let currentLineIdx = 0;
+      const totalBodyLines = Math.max(1, bodyLines.length);
 
-    while (currentLineIdx < totalBodyLines) {
-      const pageIdx = pages.length; // 0-based page index
-      const isFirstPage = pageIdx === 0;
-      const baseLines = isFirstPage 
-        ? Math.max(5, Math.max(10, 18 - (hasImage ? (isMobile ? 5 : 7) : 0)) - headerLineCount)
-        : Math.max(5, 18 - headerLineCount);
+      while (currentLineIdx < totalBodyLines) {
+        const pageIdx = pages.length; // 0-based page index
+        const isFirstPage = pageIdx === 0;
+        const baseLines = isFirstPage
+          ? Math.max(5, Math.max(10, 18 - (hasImage ? (isMobile ? 5 : 7) : 0)) - headerLineCount)
+          : Math.max(5, 18 - headerLineCount);
 
-      // 마지막 페이지인지 판별 (남은 줄이 현재 페이지 가용 기본 줄 수 이하인 경우)
-      const isLastPage = (totalBodyLines - currentLineIdx) <= baseLines;
-      const allowedLines = isLastPage ? Math.max(3, baseLines - lastPageFooterLines) : baseLines;
+        // 마지막 페이지인지 판별 (남은 줄이 현재 페이지 가용 기본 줄 수 이하인 경우)
+        const isLastPage = (totalBodyLines - currentLineIdx) <= baseLines;
+        const allowedLines = isLastPage ? Math.max(3, baseLines - lastPageFooterLines) : baseLines;
 
-      const chunk = bodyLines.slice(currentLineIdx, currentLineIdx + allowedLines);
-      pages.push(chunk);
-      currentLineIdx += chunk.length;
+        const chunk = bodyLines.slice(currentLineIdx, currentLineIdx + allowedLines);
+        pages.push(chunk);
+        currentLineIdx += chunk.length;
+      }
     }
 
     const pageCount = pages.length;
-    const currentPage = Math.min(Math.max(Number.parseInt(pageNo, 10) || 1, 1), pageCount);
+    const currentPage = fullView ? 1 : Math.min(Math.max(Number.parseInt(pageNo, 10) || 1, 1), pageCount);
     const visibleBodyLines = pages[currentPage - 1] || [];
-    const pageLabel = buildPageLabel(currentPage, pageCount);
+    const pageLabel = fullView ? '(전체)' : buildPageLabel(currentPage, pageCount);
 
     // Pass targetCols to top header
     parts.push(buildTopHeader(topic ? ['뉴스/인물', topic, '기사 읽기'] : ['뉴스/인물', '기사 읽기'], pageLabel, targetCols));
@@ -300,7 +316,13 @@ export function createNewsAnsiBuilders(deps) {
       sourceLinkLines.forEach((line) => {
         parts.push(ansiColor(8) + line + ANSI_RESET);
       });
-      parts.push(ansiColor(14) + '마지막 페이지입니다' + ANSI_RESET);
+      // [LOG_ID: 20260710_1530] fullView(갈무리)에서는 복사 완료 텍스트 안내 및 엔터 복귀 안내를 출력한다.
+      if (fullView) {
+        parts.push(ansiColor(10) + '◆ 기사 본문 전체가 클립보드에 복사되었습니다.' + ANSI_RESET);
+        parts.push(ansiColor(14) + '[엔터]를 누르면 페이지 보기로 돌아갑니다' + ANSI_RESET);
+      } else {
+        parts.push(ansiColor(14) + '마지막 페이지입니다' + ANSI_RESET);
+      }
     }
 
     return {

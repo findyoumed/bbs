@@ -1,0 +1,603 @@
+- main [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e2806]:
+      - generic [ref=e2807]:
+        - generic [ref=e2808]:
+          - link "초기화면으로 이동" [ref=e2809] [cursor=pointer]:
+            - /url: /
+            - text: PC통신동호회 01410
+          - generic [ref=e2810]: ────────────────────────────────────────────────────────────────────────────────
+          - generic [ref=e2811]: 2026-07-10 10:09:09
+        - generic [ref=e2812]:
+          - generic [ref=e2813]: READ
+          - generic [ref=e2814]: 기사 읽기
+          - generic [ref=e2815]: (01/02)
+        - generic [ref=e2816]: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=e2817]:
+        - generic [ref=e2818]:
+          - generic [ref=e2819]:
+            - generic [ref=e2820]: 제
+            - generic [ref=e2821]: 목
+            - text: ":"
+          - generic [ref=e2822]:
+            - generic [ref=e2823]: 마
+            - generic [ref=e2824]: 이
+            - generic [ref=e2825]: 크
+            - generic [ref=e2826]: 론
+            - text: "\"2035"
+            - generic [ref=e2827]: 년
+            - generic [ref=e2828]: 까
+            - generic [ref=e2829]: 지
+            - generic [ref=e2830]: 미
+            - generic [ref=e2831]: 국
+            - generic [ref=e2832]: 투
+            - generic [ref=e2833]: 자
+            - text: "378"
+            - generic [ref=e2834]: 조
+            - generic [ref=e2835]: 원
+            - generic [ref=e2836]: 으
+            - generic [ref=e2837]: 로
+            - generic [ref=e2838]: 확
+            - generic [ref=e2839]: 대
+            - text: "\""
+        - generic [ref=e2841]:
+          - generic [ref=e2842]: 출
+          - generic [ref=e2843]: 처
+          - text: ":"
+          - generic [ref=e2844]: 동
+          - generic [ref=e2845]: 아
+          - generic [ref=e2846]: 일
+          - generic [ref=e2847]: 보
+          - generic [ref=e2848]: 일
+          - generic [ref=e2849]: 시
+          - text: ": 2026/07/10 10:04"
+        - generic [ref=e2850]: ────────────────────────────────────────────────────────────────────────────────
+        - generic [ref=e2852]:
+          - text: “
+          - generic [ref=e2853]: 메
+          - generic [ref=e2854]: 모
+          - generic [ref=e2855]: 리
+          - generic [ref=e2856]: 심
+          - generic [ref=e2857]: 각
+          - generic [ref=e2858]: 히
+          - generic [ref=e2859]: 부
+          - generic [ref=e2860]: 족
+          - text: …
+          - generic [ref=e2861]: 데
+          - generic [ref=e2862]: 이
+          - generic [ref=e2863]: 터
+          - generic [ref=e2864]: 센
+          - generic [ref=e2865]: 터
+          - generic [ref=e2866]: 가
+          - generic [ref=e2867]: 수
+          - generic [ref=e2868]: 요
+          - generic [ref=e2869]: 절
+          - generic [ref=e2870]: 반
+          - generic [ref=e2871]: 차
+          - generic [ref=e2872]: 지
+          - text: ”
+          - generic [ref=e2873]: 반
+          - generic [ref=e2874]: 도
+          - generic [ref=e2875]: 체
+          - generic [ref=e2876]: 공
+          - generic [ref=e2877]: 급
+          - generic [ref=e2878]: 망
+          - generic [ref=e2879]: 강
+          - generic [ref=e2880]: 화
+          - generic [ref=e2881]: 위
+          - generic [ref=e2882]: 해
+          - text: …
+          - generic [ref=e2883]: 최
+          - generic [ref=e2884]: 대
+          - text: "4"
+        - generic [ref=e2886]:
+          - generic [ref=e2887]: 조
+          - text: "5300"
+          - generic [ref=e2888]: 억
+          - generic [ref=e2889]: 원
+          - generic [ref=e2890]: 투
+          - generic [ref=e2891]: 자
+          - text: AP
+          - generic [ref=e2892]: 뉴
+          - generic [ref=e2893]: 시
+          - generic [ref=e2894]: 스
+          - generic [ref=e2895]: 미
+          - generic [ref=e2896]: 국
+          - generic [ref=e2897]: 반
+          - generic [ref=e2898]: 도
+          - generic [ref=e2899]: 체
+          - generic [ref=e2900]: 제
+          - generic [ref=e2901]: 조
+          - generic [ref=e2902]: 업
+          - generic [ref=e2903]: 체
+          - generic [ref=e2904]: 마
+          - generic [ref=e2905]: 이
+          - generic [ref=e2906]: 크
+          - generic [ref=e2907]: 론
+          - generic [ref=e2908]: 이
+          - text: "2035"
+          - generic [ref=e2909]: 년
+          - generic [ref=e2910]: 까
+          - generic [ref=e2911]: 지
+          - generic [ref=e2912]: 미
+          - generic [ref=e2913]: 국
+          - generic [ref=e2914]: 내
+          - generic [ref=e2915]: 투
+          - generic [ref=e2916]: 자
+        - generic [ref=e2918]:
+          - generic [ref=e2919]: 를
+          - text: "2500"
+          - generic [ref=e2920]: 억
+          - text: (377
+          - generic [ref=e2921]: 조
+          - text: "7500"
+          - generic [ref=e2922]: 억
+          - generic [ref=e2923]: 원
+          - text: )
+          - generic [ref=e2924]: 달
+          - generic [ref=e2925]: 러
+          - generic [ref=e2926]: 로
+          - generic [ref=e2927]: 확
+          - generic [ref=e2928]: 대
+          - generic [ref=e2929]: 하
+          - generic [ref=e2930]: 겠
+          - generic [ref=e2931]: 다
+          - generic [ref=e2932]: 고
+          - text: "9"
+          - generic [ref=e2933]: 일
+          - text: (
+          - generic [ref=e2934]: 현
+          - generic [ref=e2935]: 지
+          - generic [ref=e2936]: 시
+          - generic [ref=e2937]: 간
+          - text: )
+          - generic [ref=e2938]: 밝
+          - generic [ref=e2939]: 혔
+          - generic [ref=e2940]: 다
+          - text: . CNBC
+          - generic [ref=e2941]: 등
+          - generic [ref=e2942]: 에
+        - generic [ref=e2944]:
+          - generic [ref=e2945]: 따
+          - generic [ref=e2946]: 르
+          - generic [ref=e2947]: 면
+          - generic [ref=e2948]: 산
+          - generic [ref=e2949]: 제
+          - generic [ref=e2950]: 이
+          - generic [ref=e2951]: 메
+          - generic [ref=e2952]: 흐
+          - generic [ref=e2953]: 로
+          - generic [ref=e2954]: 트
+          - generic [ref=e2955]: 라
+          - generic [ref=e2956]: 마
+          - generic [ref=e2957]: 이
+          - generic [ref=e2958]: 크
+          - generic [ref=e2959]: 론
+          - generic [ref=e2960]: 최
+          - generic [ref=e2961]: 고
+          - generic [ref=e2962]: 경
+          - generic [ref=e2963]: 영
+          - generic [ref=e2964]: 자
+          - text: (CEO)
+          - generic [ref=e2965]: 는
+          - text: “
+          - generic [ref=e2966]: 미
+          - generic [ref=e2967]: 국
+          - generic [ref=e2968]: 건
+          - generic [ref=e2969]: 국
+          - text: "250"
+          - generic [ref=e2970]: 주
+          - generic [ref=e2971]: 년
+          - generic [ref=e2972]: 을
+          - generic [ref=e2973]: 기
+          - generic [ref=e2974]: 념
+          - generic [ref=e2975]: 하
+        - generic [ref=e2977]:
+          - generic [ref=e2978]: 는
+          - generic [ref=e2979]: 이
+          - generic [ref=e2980]: 시
+          - generic [ref=e2981]: 점
+          - generic [ref=e2982]: 에
+          - generic [ref=e2983]: 데
+          - generic [ref=e2984]: 이
+          - generic [ref=e2985]: 터
+          - generic [ref=e2986]: 와
+          - generic [ref=e2987]: 메
+          - generic [ref=e2988]: 모
+          - generic [ref=e2989]: 리
+          - generic [ref=e2990]: 는
+          - generic [ref=e2991]: 현
+          - generic [ref=e2992]: 대
+          - generic [ref=e2993]: 경
+          - generic [ref=e2994]: 제
+          - generic [ref=e2995]: 의
+          - generic [ref=e2996]: 근
+          - generic [ref=e2997]: 간
+          - generic [ref=e2998]: 이
+          - generic [ref=e2999]: 된
+          - generic [ref=e3000]: 다
+          - text: ”
+          - generic [ref=e3001]: 며
+          - text: “2035
+          - generic [ref=e3002]: 년
+          - generic [ref=e3003]: 까
+          - generic [ref=e3004]: 지
+          - generic [ref=e3005]: 미
+          - generic [ref=e3006]: 국
+          - generic [ref=e3007]: 투
+          - generic [ref=e3008]: 자
+        - generic [ref=e3010]:
+          - generic [ref=e3011]: 규
+          - generic [ref=e3012]: 모
+          - generic [ref=e3013]: 를
+          - text: "2500"
+          - generic [ref=e3014]: 억
+          - generic [ref=e3015]: 달
+          - generic [ref=e3016]: 러
+          - generic [ref=e3017]: 이
+          - generic [ref=e3018]: 상
+          - generic [ref=e3019]: 으
+          - generic [ref=e3020]: 로
+          - generic [ref=e3021]: 늘
+          - generic [ref=e3022]: 리
+          - generic [ref=e3023]: 겠
+          - generic [ref=e3024]: 다
+          - text: ”
+          - generic [ref=e3025]: 고
+          - generic [ref=e3026]: 발
+          - generic [ref=e3027]: 표
+          - generic [ref=e3028]: 했
+          - generic [ref=e3029]: 다
+          - text: .
+          - generic [ref=e3030]: 이
+          - generic [ref=e3031]: 는
+          - generic [ref=e3032]: 기
+          - generic [ref=e3033]: 존
+          - generic [ref=e3034]: 보
+          - generic [ref=e3035]: 다
+          - generic [ref=e3036]: 약
+          - text: "500"
+          - generic [ref=e3037]: 억
+          - generic [ref=e3038]: 달
+          - generic [ref=e3039]: 러
+          - generic [ref=e3040]: 확
+        - generic [ref=e3042]:
+          - generic [ref=e3043]: 대
+          - generic [ref=e3044]: 된
+          - generic [ref=e3045]: 규
+          - generic [ref=e3046]: 모
+          - generic [ref=e3047]: 로
+          - text: ","
+          - generic [ref=e3048]: 인
+          - generic [ref=e3049]: 공
+          - generic [ref=e3050]: 지
+          - generic [ref=e3051]: 능
+          - text: (AI)
+          - generic [ref=e3052]: 구
+          - generic [ref=e3053]: 축
+          - generic [ref=e3054]: 에
+          - generic [ref=e3055]: 따
+          - generic [ref=e3056]: 른
+          - generic [ref=e3057]: 메
+          - generic [ref=e3058]: 모
+          - generic [ref=e3059]: 리
+          - generic [ref=e3060]: 수
+          - generic [ref=e3061]: 요
+          - generic [ref=e3062]: 가
+          - generic [ref=e3063]: 증
+          - generic [ref=e3064]: 가
+          - generic [ref=e3065]: 한
+          - generic [ref=e3066]: 영
+          - generic [ref=e3067]: 향
+          - generic [ref=e3068]: 으
+          - generic [ref=e3069]: 로
+          - generic [ref=e3070]: 풀
+          - generic [ref=e3071]: 이
+          - generic [ref=e3072]: 된
+          - generic [ref=e3073]: 다
+          - text: .
+          - generic [ref=e3074]: 마
+        - generic [ref=e3076]:
+          - generic [ref=e3077]: 이
+          - generic [ref=e3078]: 크
+          - generic [ref=e3079]: 론
+          - generic [ref=e3080]: 은
+          - generic [ref=e3081]: 현
+          - generic [ref=e3082]: 재
+          - generic [ref=e3083]: 아
+          - generic [ref=e3084]: 이
+          - generic [ref=e3085]: 다
+          - generic [ref=e3086]: 호
+          - generic [ref=e3087]: 와
+          - generic [ref=e3088]: 버
+          - generic [ref=e3089]: 지
+          - generic [ref=e3090]: 니
+          - generic [ref=e3091]: 아
+          - generic [ref=e3092]: 에
+          - generic [ref=e3093]: 반
+          - generic [ref=e3094]: 도
+          - generic [ref=e3095]: 체
+          - generic [ref=e3096]: 생
+          - generic [ref=e3097]: 산
+          - generic [ref=e3098]: 시
+          - generic [ref=e3099]: 설
+          - generic [ref=e3100]: 을
+          - generic [ref=e3101]: 보
+          - generic [ref=e3102]: 유
+          - generic [ref=e3103]: 하
+          - generic [ref=e3104]: 고
+          - generic [ref=e3105]: 있
+          - generic [ref=e3106]: 으
+          - generic [ref=e3107]: 며
+          - text: ","
+          - generic [ref=e3108]: 이
+          - generic [ref=e3109]: 날
+          - generic [ref=e3110]: 뉴
+        - generic [ref=e3112]:
+          - generic [ref=e3113]: 욕
+          - generic [ref=e3114]: 주
+          - generic [ref=e3115]: 클
+          - generic [ref=e3116]: 레
+          - generic [ref=e3117]: 이
+          - generic [ref=e3118]: 에
+          - generic [ref=e3119]: 서
+          - generic [ref=e3120]: 첨
+          - generic [ref=e3121]: 단
+          - generic [ref=e3122]: 메
+          - generic [ref=e3123]: 모
+          - generic [ref=e3124]: 리
+          - generic [ref=e3125]: 반
+          - generic [ref=e3126]: 도
+          - generic [ref=e3127]: 체
+          - generic [ref=e3128]: 공
+          - generic [ref=e3129]: 장
+          - generic [ref=e3130]: 첫
+          - generic [ref=e3131]: 콘
+          - generic [ref=e3132]: 크
+          - generic [ref=e3133]: 리
+          - generic [ref=e3134]: 트
+          - generic [ref=e3135]: 타
+          - generic [ref=e3136]: 설
+          - generic [ref=e3137]: 행
+          - generic [ref=e3138]: 사
+          - generic [ref=e3139]: 를
+          - generic [ref=e3140]: 진
+          - generic [ref=e3141]: 행
+          - generic [ref=e3142]: 했
+          - generic [ref=e3143]: 다
+          - text: .
+          - generic [ref=e3144]: 메
+          - generic [ref=e3145]: 흐
+          - generic [ref=e3146]: 로
+        - generic [ref=e3148]:
+          - generic [ref=e3149]: 트
+          - generic [ref=e3150]: 라
+          - text: CEO
+          - generic [ref=e3151]: 는
+          - generic [ref=e3152]: 폭
+          - generic [ref=e3153]: 스
+          - generic [ref=e3154]: 비
+          - generic [ref=e3155]: 즈
+          - generic [ref=e3156]: 니
+          - generic [ref=e3157]: 스
+          - generic [ref=e3158]: 인
+          - generic [ref=e3159]: 터
+          - generic [ref=e3160]: 뷰
+          - generic [ref=e3161]: 에
+          - generic [ref=e3162]: 서
+          - generic [ref=e3163]: 확
+          - generic [ref=e3164]: 대
+          - generic [ref=e3165]: 배
+          - generic [ref=e3166]: 경
+          - generic [ref=e3167]: 을
+          - generic [ref=e3168]: 추
+          - generic [ref=e3169]: 가
+          - generic [ref=e3170]: 로
+          - generic [ref=e3171]: 설
+          - generic [ref=e3172]: 명
+          - generic [ref=e3173]: 하
+          - generic [ref=e3174]: 며
+          - text: “
+          - generic [ref=e3175]: 메
+          - generic [ref=e3176]: 모
+          - generic [ref=e3177]: 리
+          - generic [ref=e3178]: 수
+          - generic [ref=e3179]: 요
+          - generic [ref=e3180]: 가
+          - generic [ref=e3181]: 전
+        - generic [ref=e3183]:
+          - generic [ref=e3184]: 례
+          - generic [ref=e3185]: 없
+          - generic [ref=e3186]: 는
+          - generic [ref=e3187]: 수
+          - generic [ref=e3188]: 준
+          - generic [ref=e3189]: 에
+          - generic [ref=e3190]: 달
+          - generic [ref=e3191]: 했
+          - generic [ref=e3192]: 다
+          - text: .
+          - generic [ref=e3193]: 메
+          - generic [ref=e3194]: 모
+          - generic [ref=e3195]: 리
+          - generic [ref=e3196]: 가
+          - generic [ref=e3197]: 심
+          - generic [ref=e3198]: 각
+          - generic [ref=e3199]: 하
+          - generic [ref=e3200]: 게
+          - generic [ref=e3201]: 부
+          - generic [ref=e3202]: 족
+          - generic [ref=e3203]: 한
+          - generic [ref=e3204]: 상
+          - generic [ref=e3205]: 황
+          - text: ”
+          - generic [ref=e3206]: 이
+          - generic [ref=e3207]: 라
+          - generic [ref=e3208]: 며
+          - text: “AI
+          - generic [ref=e3209]: 데
+          - generic [ref=e3210]: 이
+          - generic [ref=e3211]: 터
+          - generic [ref=e3212]: 센
+          - generic [ref=e3213]: 터
+          - generic [ref=e3214]: 가
+          - generic [ref=e3215]: 전
+        - generic [ref=e3217]:
+          - generic [ref=e3218]: 체
+          - generic [ref=e3219]: 수
+          - generic [ref=e3220]: 요
+          - generic [ref=e3221]: 의
+          - text: 50%
+          - generic [ref=e3222]: 를
+          - generic [ref=e3223]: 차
+          - generic [ref=e3224]: 지
+          - generic [ref=e3225]: 하
+          - generic [ref=e3226]: 고
+          - generic [ref=e3227]: 있
+          - generic [ref=e3228]: 다
+          - text: ”
+          - generic [ref=e3229]: 고
+          - generic [ref=e3230]: 전
+          - generic [ref=e3231]: 했
+          - generic [ref=e3232]: 다
+          - text: .
+          - generic [ref=e3233]: 마
+          - generic [ref=e3234]: 이
+          - generic [ref=e3235]: 크
+          - generic [ref=e3236]: 론
+          - generic [ref=e3237]: 은
+          - text: DRAM
+          - generic [ref=e3238]: 메
+          - generic [ref=e3239]: 모
+          - generic [ref=e3240]: 리
+          - generic [ref=e3241]: 반
+          - generic [ref=e3242]: 도
+          - generic [ref=e3243]: 체
+          - text: 40%
+          - generic [ref=e3244]: 를
+          - generic [ref=e3245]: 장
+        - generic [ref=e3247]:
+          - generic [ref=e3248]: 기
+          - generic [ref=e3249]: 적
+          - generic [ref=e3250]: 으
+          - generic [ref=e3251]: 로
+          - generic [ref=e3252]: 미
+          - generic [ref=e3253]: 국
+          - generic [ref=e3254]: 내
+          - generic [ref=e3255]: 에
+          - generic [ref=e3256]: 서
+          - generic [ref=e3257]: 생
+          - generic [ref=e3258]: 산
+          - generic [ref=e3259]: 한
+          - generic [ref=e3260]: 다
+          - generic [ref=e3261]: 는
+          - generic [ref=e3262]: 계
+          - generic [ref=e3263]: 획
+          - generic [ref=e3264]: 이
+          - generic [ref=e3265]: 다
+          - text: .
+          - generic [ref=e3266]: 또
+          - generic [ref=e3267]: 이
+          - generic [ref=e3268]: 번
+          - generic [ref=e3269]: 콘
+          - generic [ref=e3270]: 크
+          - generic [ref=e3271]: 리
+          - generic [ref=e3272]: 트
+          - generic [ref=e3273]: 타
+          - generic [ref=e3274]: 설
+          - generic [ref=e3275]: 이
+          - generic [ref=e3276]: 예
+          - generic [ref=e3277]: 정
+          - generic [ref=e3278]: 보
+          - generic [ref=e3279]: 다
+          - text: 25%
+        - generic [ref=e3281]:
+          - generic [ref=e3282]: 앞
+          - generic [ref=e3283]: 당
+          - generic [ref=e3284]: 겨
+          - generic [ref=e3285]: 진
+          - generic [ref=e3286]: 행
+          - generic [ref=e3287]: 됐
+          - generic [ref=e3288]: 다
+          - generic [ref=e3289]: 며
+          - generic [ref=e3290]: 부
+          - generic [ref=e3291]: 지
+          - generic [ref=e3292]: 준
+          - generic [ref=e3293]: 비
+          - generic [ref=e3294]: 단
+          - generic [ref=e3295]: 계
+          - generic [ref=e3296]: 에
+          - generic [ref=e3297]: 서
+          - generic [ref=e3298]: 본
+          - generic [ref=e3299]: 격
+          - generic [ref=e3300]: 적
+          - generic [ref=e3301]: 인
+          - generic [ref=e3302]: 수
+          - generic [ref=e3303]: 직
+          - generic [ref=e3304]: 건
+          - generic [ref=e3305]: 설
+          - generic [ref=e3306]: 단
+          - generic [ref=e3307]: 계
+          - generic [ref=e3308]: 로
+          - generic [ref=e3309]: 돌
+          - generic [ref=e3310]: 입
+          - generic [ref=e3311]: 했
+          - generic [ref=e3312]: 음
+          - generic [ref=e3313]: 을
+          - generic [ref=e3314]: 의
+          - generic [ref=e3315]: 미
+          - generic [ref=e3316]: 한
+        - generic [ref=e3318]:
+          - generic [ref=e3319]: 다
+          - generic [ref=e3320]: 고
+          - generic [ref=e3321]: 설
+          - generic [ref=e3322]: 명
+          - generic [ref=e3323]: 했
+          - generic [ref=e3324]: 다
+          - text: .
+          - generic [ref=e3325]: 마
+          - generic [ref=e3326]: 이
+          - generic [ref=e3327]: 크
+          - generic [ref=e3328]: 론
+          - generic [ref=e3329]: 은
+          - generic [ref=e3330]: 이
+          - generic [ref=e3331]: 날
+          - generic [ref=e3332]: 미
+          - generic [ref=e3333]: 국
+          - generic [ref=e3334]: 내
+          - generic [ref=e3335]: 반
+          - generic [ref=e3336]: 도
+          - generic [ref=e3337]: 체
+          - generic [ref=e3338]: 공
+          - generic [ref=e3339]: 급
+          - generic [ref=e3340]: 망
+          - generic [ref=e3341]: 강
+          - generic [ref=e3342]: 화
+          - generic [ref=e3343]: 를
+          - generic [ref=e3344]: 위
+          - generic [ref=e3345]: 해
+          - generic [ref=e3346]: 서
+          - generic [ref=e3347]: 도
+          - generic [ref=e3348]: 최
+          - generic [ref=e3349]: 대
+          - text: "30"
+          - generic [ref=e3350]: 억
+    - generic [ref=e380]:
+      - text: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=e3352]:
+        - generic [ref=e3353]:
+          - generic [ref=e3354] [cursor=pointer]: 다음쪽(F)
+          - text: ","
+        - generic [ref=e3355]:
+          - generic [ref=e3356] [cursor=pointer]: 상위(P)
+          - text: ","
+        - generic [ref=e3357]:
+          - generic [ref=e3358] [cursor=pointer]: 초기화면(T)
+          - text: ","
+        - generic [ref=e3359]:
+          - generic [ref=e3360] [cursor=pointer]: 복사(PR)
+          - text: ","
+        - generic "H, HELP, ?" [ref=e3362] [cursor=pointer]: 도움말(H)
+      - generic [ref=e393]:
+        - generic [ref=e394]: 선택 >>
+        - textbox [ref=e395]: 선택 >>
+        - textbox "명령어 입력" [active] [ref=e397]

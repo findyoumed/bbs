@@ -207,6 +207,17 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
   const topbarHtml = buildTopbarHtml(model);
   if (screenEl) {
     screenEl.innerHTML = `<div class="ansi-screen" data-layout-mode="${layoutMode}" data-layout-cols="${layoutCols}">${topbarHtml}<div class="ansi-screen-body"></div></div>`;
+    // [LOG_ID: 20260710_1510] 화면이 실제로 교체되는 이 시점에 이전 화면의 알림 토스트("본문 전체를
+    // 불러올 수 없는 기사입니다" 등) 잔상을 즉시 제거한다. 토스트는 3초 타이머로만 사라지므로 그 사이
+    // 화면이 전환되면 새 화면 위에 계속 남는다. 뉴스 등 topbar 화면은 renderScreenSequential을
+    // 하위 컨테이너+clear:false로 호출해 그쪽 소거 로직(20260710_1500)이 발동하지 않으므로 여기서 직접 지운다.
+    if (typeof document !== 'undefined') {
+      const notifyEl = document.getElementById('terminal-notification');
+      if (notifyEl) {
+        notifyEl.style.display = 'none';
+        notifyEl.textContent = '';
+      }
+    }
   }
   const bodyContainer = screenEl?.querySelector('.ansi-screen-body');
 
@@ -216,11 +227,12 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
     // 전체 레이아웃을 먼저 확정하고 줄 단위로 visibility만 해제하는 방식이라 footer가 밀리지 않는다.
     if (bodyContainer) {
       if (typeof renderScreenSequential === 'function') {
+        const isPrintView = typeof state !== 'undefined' && state.serviceData?._printView === true;
         await renderScreenSequential(bodyRendered.html, {
           container: bodyContainer,
           clear: false,
           revealInPlace: true,
-          scrollIntoView: true
+          scrollIntoView: !isPrintView
         });
       } else {
         bodyContainer.innerHTML = bodyRendered.html;

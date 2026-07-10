@@ -145,8 +145,8 @@ class RssNewsService extends RssServiceBase {
 
     if (requestedKey || requestedLink) {
       const hash = requestedKey || this._hashUrl(requestedLink);
-      // Scan active versions of detail cache. We support v31 primarily.
-      const cacheKey = `news:article:v31:${hash}`;
+      // [LOG_ID: 20260710_1250] v31 -> v32: 리드 공유 위젯 노이즈(close, X(트위터) 등) 제거 파서 반영을 위한 캐시 버전업
+      const cacheKey = `news:article:v32:${hash}`;
       const storeKey = `rss:feed:${cacheKey}`;
       try {
         cachedDetail = await this._getPersistentCacheEntry(storeKey);
@@ -292,7 +292,10 @@ class RssNewsService extends RssServiceBase {
           || /속보|단독|긴급|breaking/i.test(trimmed);
 
         // [LOG_ID: 20260709_1240] 불완전/문장 짤림 기사 차단 정책 복원 (isTruncated가 true 이거나 본문이 너무 짧으면 차단)
-        const isDetailValid = !detail.unavailable && trimmed.length >= 30 && !isTruncated;
+        // [LOG_ID: 20260710_1330] 속보 스텁 기사("후속기사가 이어집니다" 단문)는 노이즈 절단 후 본문이
+        // 30자 미만이 정상이므로, 속보 키워드가 있으면 최소 길이 기준을 10자로 완화해 차단을 면제한다.
+        const minValidLength = hasBreakingNewsKeyword ? 10 : 30;
+        const isDetailValid = !detail.unavailable && trimmed.length >= minValidLength && !isTruncated;
         resolvedArticle.detailFetched = !!isDetailValid;
       } else {
         resolvedArticle.detailFetched = false;
@@ -372,9 +375,10 @@ class RssNewsService extends RssServiceBase {
     const expectedLink = this._normalize(options.link || '');
     const target = String(targetNo || '').trim();
 
+    // [LOG_ID: 20260710_1120] URL에는 짧게 자른 키(예: 앞 8자리)가 실릴 수 있으므로 prefix 매칭을 허용한다.
     let byKey = null;
-    if (expectedKey) {
-      byKey = list.find((item) => this._buildNewsArticleKey(item) === expectedKey) || null;
+    if (expectedKey && expectedKey.length >= 6) {
+      byKey = list.find((item) => this._buildNewsArticleKey(item).startsWith(expectedKey)) || null;
     }
 
     let byLink = null;
@@ -486,7 +490,8 @@ class RssNewsService extends RssServiceBase {
       return { unavailable: true, message: '피드 오류: 기사 링크 없음', items: [] };
     }
 
-    const cacheKey = `news:article:v31:${this._hashUrl(normalizedLink)}`;
+    // [LOG_ID: 20260710_1250] v31 -> v32: 리드 공유 위젯 노이즈 제거 파서 반영을 위한 캐시 버전업
+    const cacheKey = `news:article:v32:${this._hashUrl(normalizedLink)}`;
     const memory = this._getMemoryCacheEntry(this.feedCache, cacheKey);
     // [LOG: 20260618_0915] Accept cached entries if they are not unavailable to prevent re-crawling short articles
     if (memory && !memory.unavailable) {

@@ -1182,6 +1182,91 @@ body[data-screen="news-view"] #terminal-screen {
     min-height: 0 !important;
 }
 
+/* [LOG_ID: 20260710_1203] PR 갈무리(전체 보기) 모드일 때 터미널 레이아웃 높이 제한을 풀고 세로로 늘어나게 하여 브라우저 창 스크롤로 기사를 전체 확인하게 함 */
+html[data-print-view="true"] {
+    height: auto !important;
+    overflow-y: auto !important;
+}
+html[data-print-view="true"] body {
+    height: auto !important;
+    overflow-y: visible !important;
+    overflow-x: visible !important;
+}
+
+/* [LOG_ID: 20260710_1203] 모바일 세로 모드의 fixed 레이아웃 강제 고정을 갈무리 모드일 때 해제 */
+@media (max-width: 768px) and (orientation: portrait) {
+    html[data-print-view="true"] body {
+        position: static !important;
+        height: auto !important;
+        min-height: 100% !important;
+        overflow-y: visible !important;
+    }
+
+    body[data-print-view="true"] .app-shell {
+        position: static !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    body[data-print-view="true"] #terminal-wrapper {
+        max-height: none !important;
+    }
+
+    body[data-print-view="true"] #terminal-screen {
+        overflow: visible !important;
+    }
+}
+
+/* [LOG_ID: 20260710_1203] 하단 가려짐 방지를 위한 패딩 추가 */
+html[data-print-view="true"] body {
+    padding-bottom: 80px !important;
+}
+
+/* [LOG_ID: 20260710_1203] 전역적으로 숨겨진 웹킷/브라우저 스크롤바를 갈무리 모드일 때 강제로 노출 */
+html[data-print-view="true"]::-webkit-scrollbar,
+body[data-print-view="true"]::-webkit-scrollbar {
+    display: block !important;
+    width: 12px !important;
+}
+html[data-print-view="true"]::-webkit-scrollbar-thumb,
+body[data-print-view="true"]::-webkit-scrollbar-thumb {
+    background-color: #444 !important;
+    border: 2px solid var(--bgcolor, #000) !important;
+    border-radius: 6px !important;
+}
+html[data-print-view="true"]::-webkit-scrollbar-track,
+body[data-print-view="true"]::-webkit-scrollbar-track {
+    background-color: var(--bgcolor, #000) !important;
+}
+html[data-print-view="true"],
+body[data-print-view="true"] {
+    scrollbar-width: thin !important;
+    scrollbar-color: #444 var(--bgcolor, #000) !important;
+    -ms-overflow-style: auto !important;
+}
+
+body[data-print-view="true"] #terminal-wrapper,
+body[data-print-view="true"] #terminal-container,
+body[data-print-view="true"] #terminal-screen,
+body[data-print-view="true"] .ansi-screen {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+}
+
+/* [LOG_ID: 20260710_1203] 갈무리 모드일 때 터미널의 줌(scale) 효과를 비활성화하여 음수 좌표계 윗부분 짤림 및 스크롤 불가 현상 차단 */
+body[data-print-view="true"] #terminal-container {
+    transform: none !important;
+    transform-origin: initial !important;
+}
+
+body[data-print-view="true"] #terminal-screen,
+body[data-print-view="true"] .ansi-screen {
+    overflow-y: visible !important;
+    overflow-x: visible !important;
+}
+
 /* [LOG: 20260416_2241] 로딩 중일 ?�만 25번째 �??�태�??? ?��? */
 #terminal-container.is-loading #terminal-screen>div>div:nth-child(25) {
     visibility: hidden;
@@ -1501,19 +1586,17 @@ body[data-screen="news-view"] #terminal-screen {
 
     #terminal-prompt-row {
         min-height: 36px;
-        /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
-        column-gap: 0 !important;
+        /* [LOG_ID: 20260710_1730] PC 기본 규칙(20260708_1710)이 프롬프트-입력 사이 한 칸을
+           label::after 스페이스 대신 column-gap: 0.5em으로 그리도록 바뀐 뒤에도, 모바일
+           오버라이드에는 옛 설계(20260611_1600, label::after가 공백 담당) 시절의 0이 남아
+           모바일에서만 프롬프트와 커서 사이 공백이 사라졌다. PC와 동일한 0.5em(현재 폰트
+           크기 기준 반 칸 = 터미널 한 셀)으로 통일한다. */
+        column-gap: 0.5em !important;
         row-gap: 0 !important;
         padding: 3px 6px;
-        border: 1px solid rgba(255, 255, 255, 0.38);
-        /* [LOG: 20260623_1511] 레트로: 모바일 입력박스 각진 모서리(PC통신 룩) */
-        border-radius: 0;
-        background: rgba(255, 255, 255, 0.06);
-    }
-
-    #terminal-prompt-row:focus-within {
-        border-color: #fff;
-        background: rgba(255, 255, 255, 0.12);
+        /* [LOG_ID: 20260710_1745] 모바일 전용 입력박스 테두리/배경(20260623_1511)과 focus-within
+           강조를 제거한다 — PC에는 없는 장식이라 입력줄 생김새가 기기마다 달랐다. 터치 타깃
+           크기는 min-height/padding이 그대로 보장하므로 시각 장식만 걷어내 PC와 통일한다. */
     }
 
     #terminal-footer label {
@@ -1536,8 +1619,8 @@ body[data-screen="news-view"] #terminal-screen {
 
     #terminal-prompt-row {
         min-height: 34px;
-        /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
-        column-gap: 0 !important;
+        /* [LOG_ID: 20260710_1730] PC와 동일한 한 칸 공백(0.5em) — 상세 사유는 768px 블록 주석 참고. */
+        column-gap: 0.5em !important;
         row-gap: 0 !important;
         padding: 2px 5px;
     }
@@ -1636,11 +1719,11 @@ body[data-screen="news-view"] #terminal-screen {
 
     #terminal-prompt-row {
         min-height: 20px;
-        /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
-        column-gap: 0 !important;
+        /* [LOG_ID: 20260710_1730] PC와 동일한 한 칸 공백(0.5em) — 상세 사유는 768px 블록 주석 참고. */
+        column-gap: 0.5em !important;
         row-gap: 0 !important;
         padding: 1px 4px;
-        border-width: 1px;
+        /* [LOG_ID: 20260710_1745] border-width 잔재 제거 — 768px 블록의 border가 사라져 의미 없음. */
     }
 
     #cmd-input {
@@ -1897,8 +1980,9 @@ body[data-screen="news-view"] #terminal-screen {
 
     #terminal-prompt-row {
         min-height: 30px;
-        /* [LOG: 20260611_1600] Prompt spacing is rendered by label::after only. */
-        column-gap: 0 !important;
+        /* [LOG_ID: 20260710_1730] PC와 동일한 한 칸 공백(0.5em) — 상세 사유는 768px 블록 주석 참고.
+           (세로 모드 블록이 소스상 가장 뒤라 여기가 0이면 앞의 모바일 수정들을 전부 덮어쓴다.) */
+        column-gap: 0.5em !important;
         row-gap: 0 !important;
         padding: 2px 4px;
     }

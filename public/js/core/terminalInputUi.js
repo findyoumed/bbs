@@ -256,8 +256,20 @@ export function createTerminalInputUi(deps) {
 
     const isMasked = cmdInput.dataset.masked === 'true';
     const maskLength = isMasked ? Array.from(cmdInput.value || '').length : 0;
-    maskTextEl.textContent = maskLength > 0 ? '*'.repeat(maskLength) : '';
-    maskTextEl.hidden = !isMasked || maskLength <= 0;
+    // [LOG_ID: 20260710_1610] 반드시 "변경될 때만" DOM에 쓴다(멱등 동기화). 로그인처럼 프롬프트 행이
+    // screenEl 내부(#login-prompt-host)로 mount된 화면에서는 cursorStateObserver가 screenEl을
+    // childList+subtree로 감시 중인데, textContent 대입은 같은 문자열이어도 텍스트 노드를 통째로
+    // 교체해 childList 변이를 만든다 → 옵저버 콜백(이 함수) 재발동 → 재대입 → 무한 마이크로태스크
+    // 루프로 메인 스레드가 영구 블로킹되어 탭이 크래시했다(비밀번호 단계 진입 직후: masked=true 전환
+    // 시점에 입력창에 ID 문자열이 남아 있어 마스크 텍스트가 비어있지 않은 경우 100% 재현).
+    const nextMaskText = maskLength > 0 ? '*'.repeat(maskLength) : '';
+    if (maskTextEl.textContent !== nextMaskText) {
+      maskTextEl.textContent = nextMaskText;
+    }
+    const nextHidden = !isMasked || maskLength <= 0;
+    if (maskTextEl.hidden !== nextHidden) {
+      maskTextEl.hidden = nextHidden;
+    }
     maskTextEl.parentElement?.classList.toggle('has-masked-input', isMasked);
   }
 

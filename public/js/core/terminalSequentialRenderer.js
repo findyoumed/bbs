@@ -42,6 +42,17 @@ export function createTerminalSequentialRenderer(deps) {
     if (clear) {
       container.innerHTML = '';
       container.scrollTop = 0;
+      // [LOG_ID: 20260710_1500] 새 화면 렌더링 시작 시 이전 화면에서 띄운 알림 토스트("본문 전체를
+      // 불러올 수 없는 기사입니다" 등)의 잔상을 즉시 제거한다. 토스트는 3초 타이머로만 사라지므로
+      // 그 사이 화면이 전환되면 새 화면 위에 남아 터미널 UI 몰입감을 깨뜨렸다. 화면 유지 중 안내
+      // (예: "다음 기사가 없습니다")는 전체 화면 전환(clear)이 아니므로 영향 없다.
+      if (container === screenEl) {
+        const notifyEl = document.getElementById('terminal-notification');
+        if (notifyEl) {
+          notifyEl.style.display = 'none';
+          notifyEl.textContent = '';
+        }
+      }
     }
 
     const tempDiv = document.createElement('div');

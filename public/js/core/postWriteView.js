@@ -70,9 +70,23 @@ export function createPostWriteView(deps) {
     return '본문 >>';
   }
 
+  // [LOG_ID: 20260710_1640] 본문 입력이 길어지면 transcript가 하단 구분선 아래로 밀려
+  // 지금 치는 줄이 화면 밖으로 사라졌다. 화면 본문 높이(약 19행)에 맞춰 마지막 줄들만 보여주고,
+  // 잘린 앞부분은 생략 표시 한 줄로 안내한다(PC통신 라인 에디터의 "화면 끝 줄부터 이어쓰기" 방식).
+  const MAX_VISIBLE_TRANSCRIPT_LINES = 18;
+
+  function getVisibleTranscriptLines(editor) {
+    const lines = editor.transcript;
+    if (lines.length <= MAX_VISIBLE_TRANSCRIPT_LINES) {
+      return lines;
+    }
+    const hiddenCount = lines.length - (MAX_VISIBLE_TRANSCRIPT_LINES - 1);
+    return [`(... 이전 ${hiddenCount}줄 생략 ...)`, ...lines.slice(hiddenCount)];
+  }
+
   function renderLineEditor(editor) {
     if (!editor) return;
-    const transcriptHtml = editor.transcript
+    const transcriptHtml = getVisibleTranscriptLines(editor)
       .map((line) => `<div class="ansi-line">${esc(line)}</div>`)
       .join('');
     const boardCode = String(state.board?.id || state.board?.boardId || 'BBS').toUpperCase();
@@ -89,8 +103,21 @@ export function createPostWriteView(deps) {
     setPrompt(getWritePrompt(editor));
   }
 
+  // [LOG_ID: 20260710_1640] getSupportedFooterText()는 "명령 힌트\n선택 >>"처럼 프롬프트 줄까지
+  // 포함한 풋터 원문을 돌려준다. 다른 화면은 applyCommandFooter→parseCommandFooter가 힌트/프롬프트를
+  // 분리해 쓰는데, 글쓰기 화면은 원문을 통째로 setHint에 넣어 힌트 아래 "선택 >>"가 단계 프롬프트
+  // ("제목 >>" 등)와 함께 이중 프롬프트로 표시됐다. 같은 규칙('>>' 포함 줄은 프롬프트)으로 힌트만 쓴다.
+  function getWriteHintText() {
+    const hintOnly = String(getSupportedFooterText() || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.includes('>>'))
+      .join(' ');
+    return hintOnly || '저장:S 또는 /s  취소:P/M/B 또는 /q';
+  }
+
   function setBodyEditorHint() {
-    setHint(getSupportedFooterText() || '저장:S 또는 /s  취소:P/M/B 또는 /q');
+    setHint(getWriteHintText());
   }
 
   function clearPostWriteEditor() {
@@ -228,7 +255,7 @@ export function createPostWriteView(deps) {
     renderInitialTranscript(editor);
     state._postWriteEditor = editor;
     // [LOG: 20260509_1115] Post writing uses the shared terminal prompt as a PC통신 line editor.
-    state._postWriteInputHandler = async (raw) => {
+    const handlePostWriteLine = async (raw) => {
       const activeEditor = getWriteEditorState();
       if (!activeEditor || state.screen !== 'post-write') return false;
       const line = String(raw || '');
@@ -285,9 +312,22 @@ export function createPostWriteView(deps) {
       renderLineEditor(activeEditor);
       return true;
     };
+    // [LOG_ID: 20260710_1640] raw 터미널 핸들러는 제출 텍스트를 입력창에 유지하는 정책(20260619_1732)이라
+    // 핸들러가 직접 지워야 한다. 지우지 않아 머리말 번호가 제목 프롬프트에, 마지막 본문 줄과 저장 명령(S)이
+    // 다음 화면 입력창에 그대로 남았다. 각 줄은 transcript에 즉시 echo되므로 잔류 텍스트는 필요 없다.
+    state._postWriteInputHandler = async (raw) => {
+      const handled = await handlePostWriteLine(raw);
+      if (handled && cmdInput && cmdInput.value) {
+        cmdInput.value = '';
+      }
+      return handled;
+    };
     state._terminalInputHandler = state._postWriteInputHandler;
-    setHint(getSupportedFooterText() || '취소:P/M/B 또는 /q');
-    setPrompt(getWritePrompt(editor));
+    setHint(getWriteHintText());
+    // [LOG_ID: 20260710_1640] 진입 즉시 글쓰기 화면을 그린다. 기존에는 renderLineEditor를 첫 입력
+    // 처리 때만 호출해서, W/E 직후에도 이전 목록 화면이 그대로 남고 하단 프롬프트만 바뀌어
+    // "글쓰기가 안 된다"고 느껴지는 상태였다(첫 줄을 입력해야 비로소 화면이 전환됐다).
+    renderLineEditor(editor);
     cmdInput?.focus();
   }
 
