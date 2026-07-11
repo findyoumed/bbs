@@ -43,6 +43,17 @@ export function createTerminalInputUi(deps) {
   })();
 
   function initTooltips() {
+    const hideTooltip = () => {
+      cmdTooltipEl.style.display = 'none';
+    };
+
+    // [LOG_ID: 20260711_1030] 터치 기기에서는 탭이 합성 mouseover를 만들어 툴팁이 뜨지만,
+    // 이후 mousemove/mouseout이 이어지지 않아 툴팁 글자가 화면에 잔상으로 남았다(명령 실행으로
+    // 화면이 재렌더돼도 그대로). 호버가 가능한 포인터(마우스)일 때만 툴팁을 띄운다.
+    // 이벤트 시점마다 판정해 하이브리드 기기(마우스 연결/해제)도 따라간다.
+    const canHover = () => typeof window.matchMedia !== 'function'
+      || window.matchMedia('(hover: hover)').matches;
+
     const updateTooltipPos = (event) => {
       cmdTooltipEl.style.left = `${event.clientX + 10}px`;
       cmdTooltipEl.style.top = `${event.clientY - 24}px`;
@@ -50,8 +61,8 @@ export function createTerminalInputUi(deps) {
 
     document.addEventListener('mouseover', (event) => {
       const token = event.target.closest?.('.cmd-token');
-      if (!token) {
-        cmdTooltipEl.style.display = 'none';
+      if (!token || !canHover()) {
+        hideTooltip();
         return;
       }
       cmdTooltipEl.textContent = token.dataset.tip || '';
@@ -68,9 +79,14 @@ export function createTerminalInputUi(deps) {
 
     document.addEventListener('mouseout', (event) => {
       if (event.target.closest?.('.cmd-token')) {
-        cmdTooltipEl.style.display = 'none';
+        hideTooltip();
       }
     });
+
+    // [LOG_ID: 20260711_1030] 토큰을 눌러 명령이 실행되면 화면이 재렌더돼 호버 중이던 토큰이
+    // DOM에서 제거되는데, 제거된 요소는 mouseout을 내지 않아 데스크톱에서도 툴팁이 남을 수 있다.
+    // 어떤 포인터든 누르는 순간 툴팁을 접는다(호버를 다시 올리면 즉시 재표시되므로 부작용 없음).
+    document.addEventListener('pointerdown', hideTooltip, true);
   }
 
   // [LOG_ID: 20260623_1345] The terminal input and password-star overlay use fixed cells.
