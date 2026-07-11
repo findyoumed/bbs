@@ -1,3 +1,76 @@
+## [2026-07-11 21:35] 참고 프로젝트(coroke/olddos) 분석 적용: 힌트바 생략 무력화 근본 원인 수정 + 모바일 키보드 개선
+
+**LOG_ID: 20260711_2140**
+목표: 저장소 내 두 참고 프로젝트(`bbs_01410.coroke.net-main`, `olddos-bbs-main`)를 분석해 배울 점을
+찾아 적용하고, 모바일 키보드 경험을 개선한다(사용자 요청). 검증 과정에서 힌트바 우선순위 생략
+기능(20260622_1900)이 도입 이후 내내 시각적으로 무력화되어 있었음을 발견해 근본 수정했다.
+변경 파일:
+1) `public/style.css` (.cmd-entry[hidden]{display:none} 추가 + 터치 기기 힌트 토큰 히트영역 확장)
+2) `public/index.html` (#cmd-input에 enterkeyhint="go" 추가)
+수행 작업:
+1) [분석] 두 참고 프로젝트를 대조한 결과, 핵심 기법 대부분은 이미 우리 쪽이 더 잘 구현하고 있었다:
+   한글 IME 자판 별칭(coroke는 11개 키, 우리는 commandNormalizer의 광범위 매핑), VirtualKeyboard API
+   오버레이 모드(20260711_1320), IME 조합 확정 blur-focus 트릭(20260709_1210), 문맥 조건부 푸터
+   (olddos의 다음(NA)/이전(PA) 조건 표시 = 우리 shouldShowFooterToken). 누락 확인: enterkeyhint 속성,
+   모바일 힌트 토큰 터치 타겟. 미적용: 세션 연결시간 상태줄(연결 0:23 — 사용자가
+   불필요 결정, 재제안 금지), 전화 접속음.
+2) [근본 원인 발견] Playwright 검증 중 모바일 힌트바가 3줄(59px)로 넘치고 트리밍이 8개 중 7개를
+   과잉 숨김하는 이상을 추적 → `hidden` 속성이 붙은 .cmd-entry의 computed display가 block으로 남아
+   실제로는 화면에 그대로 렌더링됨을 확인. 원인: UA 스타일시트의 [hidden]{display:none}은 저자
+   규칙 `.cmd-entry{display:inline-block}`에 origin 우선순위로 항상 패배(특이성 무관). 즉 JS 트리밍
+   (trimHintEntriesToFit)의 entry.hidden=true가 도입(20260622) 이후 시각 효과가 전혀 없었고, 이것이
+   "가로너비를 넘어가는 힌트바"(사용자 보고)의 진짜 원인. 트리밍 루프도 숨겨도 레이아웃이 안
+   줄어드니 종료 조건(listOverflowsLine)이 계속 참이 되어 후보를 전부 숨기는 폭주가 함께 있었다.
+3) [수정 A] `.cmd-entry[hidden]{display:none}` 저자 규칙 추가(특이성 0,1,1 > 0,1,0) — 이 한 줄로
+   오전(20260711_2114)에 살린 넘침 감지 + 우선순위 생략 + H 툴팁 집계 파이프라인 전체가 처음으로
+   실제 작동하게 됨.
+4) [수정 B — 모바일 키보드] ① #cmd-input에 enterkeyhint="go" 추가: 모바일 OS 키보드 엔터키가
+   "이동/Go"로 표시되어 엔터=명령 제출임이 드러난다. ② 터치 전용 기기(@media hover:none, pointer:
+   coarse)에서 힌트바 명령 토큰에 투명 ::after 오버레이(세로 ±8px/가로 ±2px)로 터치 히트영역만
+   확장 — 시각 크기(레트로 한 줄 상태줄)는 불변, 탭 성공률 개선. elementFromPoint 실측으로 토큰
+   위쪽 5px 지점이 토큰으로 잡힘을 확인(아래쪽은 프롬프트 행이 우선 — 의도된 상호작용 영역).
+5) [검증] 로컬 Playwright(chromium 1.59.1): 데스크톱 1280px/700px 목록 8개 전부 한 줄 표시(생략
+   불필요 시 미발동), 좁은 창 520px에서 6개 표시+2개 숨김(첫장/연속읽기가 숨고 H 툴팁에 "이 화면의
+   다른 명령 — …"으로 집계), 모바일 360px에서 4개 표시+4개 숨김·힌트바 높이 20px(수정 전 59px 3줄
+   → 1줄), 스크린샷 확인. enterkeyhint="go" 속성 실측. `npm run smoke:vercel-ready`,
+   `npm run smoke:renderer-ui` ok.
+결과: ✅ 완료
+
+---
+
+## [2026-07-11 21:14] 데스크톱 폭에서 힌트바(하단 명령 목록)가 잘리기만 하고 개수가 안 줄던 문제 수정
+
+**LOG_ID: 20260711_2114**
+목표: 명령이 많은 화면(post-view 13개, post-list 10개 등)에서 힌트바가 가로 폭을 넘으면 우선순위 낮은
+순으로 개수를 줄여 생략하는 기능(20260622_1900)이 있었는데, 데스크톱/가로 모드에서는 이 기능이 아예
+작동하지 않고 text-overflow:clip으로 글자만 잘려 보이던 문제(사용자 보고)를 수정한다.
+변경 파일:
+1) `public/style.css` (넘침 감지용 줄바꿈 허용 규칙을 모바일 세로 전용에서 전체 폭 공통 기본 규칙으로 승격, +18/-14줄)
+수행 작업:
+1) [원인] `terminalHintLayout.js`의 넘침 감지(`listOverflowsLine`)는 항목이 실제로 "다음 줄"로 내려갔는지
+   Y좌표를 비교해 판단하는 방식인데, 이 판정이 성립하려면 CSS가 줄바꿈을 허용해야 한다. 그런데
+   `white-space:normal` + `.cmd-entry-list{display:inline-flex;flex-wrap:wrap}` 완화가
+   `@media (max-width:768px) and (orientation:portrait)`(모바일 세로) 블록에만 있었고, 데스크톱을 포함한
+   그 외 모든 폭은 기본값인 `white-space:nowrap`이 강제되어 있었다. nowrap 하에서는 항목들이 아무리
+   넘쳐도 전부 한 줄에 강제로 눌러 담겨 Y좌표 차이가 절대 발생하지 않으므로, 넘침 감지가 트리거되지
+   않고 우선순위 기반 숨김도 전혀 실행되지 않은 채 `overflow:hidden;text-overflow:clip`으로 초과분이
+   그냥 잘려 보이기만 했다.
+2) [수정] `#cmd-hint.has-cmd-tokens:not(.is-expanded)` + `.cmd-entry-list`의 줄바꿈 허용 규칙을 모바일
+   세로 전용 블록에서 `#cmd-hint`/`.cmd-entry-list` 기본(폭 무관) 규칙으로 승격해 모든 화면 폭에서 넘침
+   감지·우선순위 숨김(도움말 H 토큰 tooltip에 모으기)이 작동하도록 했다. 세로 공간이 부족한 모바일
+   가로(landscape, max-height:480px) 화면은 줄바꿈 대신 가로 스크롤 폴백을 쓰던 기존 설계를 그대로
+   보존하기 위해 해당 블록에서만 `.cmd-entry-list`를 다시 `display:inline;flex-wrap:nowrap`으로 되돌렸다.
+3) [검증] `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui` 모두 ok. 브라우저 확장(claude-in-chrome)
+   미연결 + Playwright 네비게이션 권한이 "don't ask mode"로 자동 거부되어 실제 브라우저 렌더링 확인은
+   하지 못했다 — 사용자가 실제 화면(특히 명령이 많은 post-view/post-list를 좁은 데스크톱 창 폭)에서
+   직접 확인 필요.
+기대: 데스크톱을 포함한 모든 폭에서, 힌트바 명령 목록이 한 줄에 다 안 들어가면 우선순위 낮은 명령부터
+숨겨져 도움말(H) 토큰 tooltip으로 모이고, 보이는 항목은 항상 잘리지 않고 한 줄 안에 온전히 표시된다.
+결과: ✅ 완료 (시각 검증은 후속 20260711_2140에서 로컬 Playwright로 완료 — 단 이 수정만으로는
+생략이 시각적으로 작동하지 않았음이 판명되어 .cmd-entry[hidden]{display:none} 추가로 완성됨)
+
+---
+
 ## [2026-07-11 12:00] 입력창 포커스 없을 때 엔터로 다음쪽 이동이 안 되던 문제 수정
 
 **LOG_ID: 20260711_1200**

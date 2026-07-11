@@ -286,6 +286,18 @@ body.theme-blue .write-field textarea {
     line-height: inherit;
 }
 
+/* [LOG_ID: 20260711_2114] 데스크톱을 포함한 모든 화면 폭에서 넘침 감지(terminalHintLayout.js의
+   listOverflowsLine, 항목이 "다음 줄"로 내려갔는지 위치 비교)가 동작하려면 실제로 줄바꿈이 허용되어야
+   한다. 이 규칙이 없으면 white-space:nowrap이 항목을 강제로 한 줄에 몰아넣어 다음 줄이 생기지 않고,
+   넘침 감지 자체가 트리거되지 않아 명령이 우선순위대로 생략되지 못한 채 text-overflow:clip으로 잘려
+   보이기만 했다(모바일 세로 화면에만 이 완화가 있었고 데스크톱/가로에는 없어서 발생한 문제).
+   실제 화면에 몇 개가 보일지는 JS가 폭에 맞춰 항목을 숨기므로, 이 규칙 자체가 여러 줄을 만들지는 않는다. */
+#cmd-hint.has-cmd-tokens:not(.is-expanded) {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: initial;
+}
+
 #cmd-hint.is-expanded {
     overflow: visible;
     white-space: normal;
@@ -299,9 +311,26 @@ body.theme-blue .write-field textarea {
     display: inline;
 }
 
+#cmd-hint.has-cmd-tokens .cmd-entry-list {
+    display: inline-flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+    vertical-align: top;
+}
+
 .cmd-entry {
     display: inline-block;
     vertical-align: top;
+}
+
+/* [LOG_ID: 20260711_2114] 트리밍(trimHintEntriesToFit)이 entry.hidden=true로 숨긴 엔트리를 실제로
+   화면에서 제거한다. 이 규칙이 없으면 UA 스타일시트의 [hidden]{display:none}은 저자 규칙인 위의
+   display:inline-block(특이성 무관, 저자 origin이 UA origin을 이김)에 져서 hidden 속성이 시각적으로
+   아무 효과가 없었다 — 우선순위 생략 기능(20260622_1900)이 도입 이후 내내 무력화되어, 명령이 많은
+   화면에서 힌트바가 여러 줄/잘림으로 넘쳐 보였고(모바일 3줄 실측), 트리밍 루프도 숨겨도 레이아웃이
+   안 줄어드니 과잉 숨김(8개 중 7개)으로 폭주했다. */
+.cmd-entry[hidden] {
+    display: none;
 }
 
 .cmd-sep {
@@ -1376,6 +1405,28 @@ body[data-print-view="true"] .ansi-screen {
     /* [LOG: 20260706] 명령 토큰 hover/focus 하이라이트 즉시 반영. 페이드 트랜지션 제거. */
 }
 
+/* [LOG_ID: 20260711_2140] 터치 전용 기기에서 힌트바 명령 토큰의 "터치 히트영역"만 확장한다.
+   모바일 세로는 힌트 폰트 10px·padding 0이라 실제 탭 가능 높이가 12px 남짓 — 오탭이 잦았다.
+   시각적 크기(레트로 한 줄 상태줄 미학)는 그대로 두고, 투명 ::after 오버레이로 히트 박스만
+   세로 ±8px/가로 ±2px 키운다(pseudo-element 클릭 시 event.target은 토큰 자신이므로 기존
+   data-cmd 클릭 위임 경로 변화 없음). 참고 프로젝트(01410.coroke.net)의 터치 우선 입력 설계를
+   분석하다 우리 쪽 터치 타겟 부족을 확인해 적용. hover 가능 포인터(PC)는 제외 — 확장된 히트
+   영역이 툴팁 hover 판정을 어지럽히지 않도록. */
+@media (hover: none) and (pointer: coarse) {
+    #cmd-hint .cmd-token {
+        position: relative;
+    }
+
+    #cmd-hint .cmd-token::after {
+        content: '';
+        position: absolute;
+        left: -2px;
+        right: -2px;
+        top: -8px;
+        bottom: -8px;
+    }
+}
+
 .cmd-token-overflow {
     cursor: default;
 }
@@ -2000,19 +2051,8 @@ body[data-print-view="true"] .ansi-screen {
         left: 5vw !important;
     }
 
-    /* [LOG: 20260428_2002] 모바일 세로에서는 접힌 명령 footer도 줄바꿈 허용으로 화면 밖 overflow를 막는다. */
-    #cmd-hint.has-cmd-tokens:not(.is-expanded) {
-        overflow: visible;
-        white-space: normal;
-        text-overflow: initial;
-    }
-
-    #cmd-hint.has-cmd-tokens .cmd-entry-list {
-        display: inline-flex;
-        flex-wrap: wrap;
-        max-width: 100%;
-        vertical-align: top;
-    }
+    /* [LOG_ID: 20260711_2114] 줄바꿈 허용/flex-wrap 자체는 이제 #cmd-hint.has-cmd-tokens 기본 규칙(모든 폭
+       공통)으로 승격되어 여기서는 중복 선언하지 않는다. 아래는 터치 폰트/터치 타겟 크기만 조정. */
 
     /* [LOG: 20260426_2035] 모바일 공통 터치 토큰 스타일이 힌트바를 2줄로 밀지 않도록 세로 화면에서만 원복 */
     #cmd-hint .cmd-token {
@@ -2072,6 +2112,14 @@ body[data-print-view="true"] .ansi-screen {
         white-space: nowrap;
         scrollbar-width: none;
         /* Hide scrollbar for cleaner retro look */
+    }
+
+    /* [LOG_ID: 20260711_2114] 세로 공간이 부족한 화면이라 위 규칙이 줄바꿈 대신 가로 스크롤을 선택한다.
+       기본 규칙(모든 폭 공통)이 넣은 flex-wrap을 여기서만 되돌려, 리스트가 다음 줄로 밀리지 않고
+       nowrap 한 줄 + 가로 스크롤로 남도록 한다. */
+    #cmd-hint.has-cmd-tokens:not(.is-expanded) .cmd-entry-list {
+        display: inline;
+        flex-wrap: nowrap;
     }
 
     #cmd-hint.has-cmd-tokens::-webkit-scrollbar {
