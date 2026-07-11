@@ -164,6 +164,13 @@
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
+
+			<!-- [LOG_ID: 20260711_1400] olddos-bbs txt/door 원본 아트 이식 -->
+			<item type="retro-art" go="retro" id="game_retro" door="6" access_level="1">
+				<name>추억의 접속화면</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
 		</item>
 
 	</item>

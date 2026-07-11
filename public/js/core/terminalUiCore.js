@@ -275,6 +275,19 @@ export function createTerminalUiCore(deps) {
     window.visualViewport.addEventListener('resize', _onResize);
     window.visualViewport.addEventListener('scroll', _onResize);
   }
+  // [LOG_ID: 20260711_1320] VirtualKeyboard API(Chromium Android): 가상 키보드를 오버레이 모드로
+  // 전환해 키보드 개폐 시 브라우저의 레이아웃/시각 뷰포트 리사이즈(이중 리플로우·점프)를 없앤다.
+  // 이 모드에서는 visualViewport 높이가 줄지 않으므로 키보드 높이는 geometrychange 이벤트와
+  // boundingRect로 받아 terminalViewportMetrics가 기존 CSS 변수 파이프라인에 그대로 공급한다.
+  // 미지원 브라우저(iOS Safari 등)는 이 블록을 건너뛰고 기존 visualViewport 경로를 유지한다.
+  if (typeof navigator !== 'undefined' && 'virtualKeyboard' in navigator) {
+    try {
+      navigator.virtualKeyboard.overlaysContent = true;
+      navigator.virtualKeyboard.addEventListener('geometrychange', _onResize);
+    } catch (error) {
+      console.warn('[TerminalUI] VirtualKeyboard API setup failed:', error?.message);
+    }
+  }
 
   return core;
 }

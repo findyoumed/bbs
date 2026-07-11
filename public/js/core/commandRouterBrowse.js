@@ -266,6 +266,24 @@ export function createBrowseCommandHandler(deps) {
         return true;
       }
 
+      // [LOG_ID: 20260711_1340] PR [번호] 연속읽기 — olddos-bbs(hanulso) 원작 명령 복원.
+      // 해당 글부터 열고, 이후 post-view에서 빈 엔터로 다음 글을 이어서 읽는다.
+      const prMatch = cmd.match(/^PR(?:\s+(\d+))?$/);
+      if (prMatch) {
+        const target = prMatch[1]
+          ? (state.posts.find((post) => String(post.id) === prMatch[1]) || state.posts[parseInt(prMatch[1], 10) - 1])
+          : state.posts[0];
+        if (!target) {
+          setHint(UI_TEXT.POST_NOT_FOUND);
+          setPrompt('>>');
+          return true;
+        }
+        state._continuousRead = { boardId: state.board.id };
+        await showPostView(state.board.id, target.id);
+        setHint('연속읽기: [엔터] 다음 글 · 다른 명령 입력 시 종료');
+        return true;
+      }
+
       const byPostId = state.posts.find((post) => String(post.id) === rawCmd);
       if (byPostId) { await showPostView(state.board.id, byPostId.id); return true; }
 

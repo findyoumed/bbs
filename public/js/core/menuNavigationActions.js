@@ -125,6 +125,8 @@ export function createMenuNavigationActions(deps) {
     if (node.type === 'biorhythm' && typeof refs.showBiorhythm === 'function') { await refs.showBiorhythm(); return true; }
     if (node.type === 'fortune' && typeof refs.showFortune === 'function') { await refs.showFortune(); return true; }
     if (node.type === 'mbti' && typeof refs.showMbti === 'function') { await refs.showMbti(); return true; }
+    // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
+    if (node.type === 'retro-art' && typeof refs.showRetroArt === 'function') { await refs.showRetroArt(); return true; }
     if (node.type === 'chatt' && typeof refs.showChatLobby === 'function') {
       await refs.showChatLobby();
       return true;

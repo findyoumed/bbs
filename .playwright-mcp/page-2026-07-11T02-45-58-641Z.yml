@@ -1,0 +1,58 @@
+- main [ref=f2e2]:
+  - generic [ref=f2e4]:
+    - generic [ref=f2e90]:
+      - generic [ref=f2e91]:
+        - generic [ref=f2e92]:
+          - link "초기화면으로 이동" [ref=f2e93] [cursor=pointer]:
+            - /url: /
+            - text: PC통신동호회 01410
+          - generic [ref=f2e94]: ────────────────────────────────────────────────────────────────────────────────
+          - generic [ref=f2e95]: 2026-07-11 11:45:58
+        - generic [ref=f2e96]:
+          - generic [ref=f2e97]: BOARD
+          - generic [ref=f2e98]: 게시판
+        - generic [ref=f2e100]: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=f2e101]:
+        - generic [ref=f2e102]:
+          - generic [ref=f2e103]:
+            - text: "1."
+            - generic [ref=f2e104]: 열
+            - generic [ref=f2e105]: 린
+            - generic [ref=f2e106]: 광
+            - generic [ref=f2e107]: 장
+          - text: (PLAZA)
+        - generic [ref=f2e108]:
+          - generic [ref=f2e109]:
+            - text: "2."
+            - generic [ref=f2e110]: 유
+            - generic [ref=f2e111]: 머
+            - generic [ref=f2e112]: 게
+            - generic [ref=f2e113]: 시
+            - generic [ref=f2e114]: 판
+          - text: (HUMOR)
+      - generic:
+        - button "열린광장 (PLAZA)" [ref=f2e115] [cursor=pointer]
+        - button "유머게시판 (HUMOR)" [ref=f2e116] [cursor=pointer]
+    - generic [ref=f2e72]:
+      - text: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=f2e117]:
+        - generic [ref=f2e118]:
+          - generic [ref=f2e119] [cursor=pointer]: 상위(P)
+          - text: ","
+        - generic [ref=f2e120]:
+          - generic [ref=f2e121] [cursor=pointer]: 초기화면(T)
+          - text: ","
+        - generic [ref=f2e122]:
+          - generic [ref=f2e123] [cursor=pointer]: 이동(GO)
+          - text: ","
+        - generic [ref=f2e124]:
+          - generic [ref=f2e125] [cursor=pointer]: 로그인(LOGIN)
+          - text: ","
+        - generic [ref=f2e126]:
+          - generic [ref=f2e127] [cursor=pointer]: 프로필(PF)
+          - text: ","
+        - generic "H, HELP, ?" [ref=f2e129] [cursor=pointer]: 도움말(H)
+      - generic [ref=f2e85]:
+        - generic [ref=f2e86]: 선택 >>
+        - textbox [ref=f2e87]: 선택 >>
+        - textbox "명령어 입력" [active] [ref=f2e89]

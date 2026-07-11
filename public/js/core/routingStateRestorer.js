@@ -43,7 +43,9 @@ export function createRoutingStateRestorer(deps) {
     showFortune,
     showFortuneResult,
     showMbti,
-    showMbtiDetail
+    showMbtiDetail,
+    showRetroArt,
+    showRetroArtView
   } = deps;
 
   // [LOG: 20260429_0206] Restore board write/edit URLs into the actual post-write
@@ -273,6 +275,14 @@ export function createRoutingStateRestorer(deps) {
         }
         if (typeof showMbti === 'function') return await showMbti(true);
       }
+      // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
+      if (sub === 'retro') {
+        if (param && typeof showRetroArtView === 'function') {
+          const shown = await showRetroArtView(decodeURIComponent(param), true);
+          if (shown) return shown;
+        }
+        if (typeof showRetroArt === 'function') return await showRetroArt(true);
+      }
       if (sub === 'vote') {
         if (param === 'create') {
           if (typeof showVoteCreate === 'function') return await showVoteCreate(true);
@@ -352,6 +362,8 @@ export function createRoutingStateRestorer(deps) {
         if (routeNode.type === 'biorhythm' && typeof showBiorhythm === 'function') return await showBiorhythm(true);
         if (routeNode.type === 'fortune' && typeof showFortune === 'function') return await showFortune(true);
         if (routeNode.type === 'mbti' && typeof showMbti === 'function') return remainingSegments[0] && typeof showMbtiDetail === 'function' ? await showMbtiDetail(remainingSegments[0], true) : await showMbti(true);
+        // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
+        if (routeNode.type === 'retro-art' && typeof showRetroArt === 'function') return remainingSegments[0] && typeof showRetroArtView === 'function' && await showRetroArtView(remainingSegments[0], true) ? true : await showRetroArt(true);
       }
 
       const menuNode = getMenuNodeByKey(segments[0] || '');

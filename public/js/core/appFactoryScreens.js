@@ -204,6 +204,8 @@ export function createAppFactoryScreens(deps) {
     buildFortuneAnsi: serviceAnsiBuilders.buildFortuneAnsi,
     buildMbtiListAnsi: serviceAnsiBuilders.buildMbtiListAnsi,
     buildMbtiDetailAnsi: serviceAnsiBuilders.buildMbtiDetailAnsi,
+    buildRetroArtListAnsi: serviceAnsiBuilders.buildRetroArtListAnsi,
+    buildRetroArtViewAnsi: serviceAnsiBuilders.buildRetroArtViewAnsi,
     findMbtiType: serviceAnsiBuilders.findMbtiType,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });

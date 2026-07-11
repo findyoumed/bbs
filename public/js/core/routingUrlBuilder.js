@@ -125,6 +125,9 @@ export function createRoutingUrlBuilder(deps) {
       case 'fortune-result': return getMenuNodeRoutePath('fortune');
       case 'mbti-list': return getMenuNodeRoutePath('mbti');
       case 'mbti-detail': return `${getMenuNodeRoutePath('mbti')}/${encodeURIComponent(state._mbtiCode || '')}`;
+      // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
+      case 'retro-list': return getMenuNodeRoutePath('retro');
+      case 'retro-view': return `${getMenuNodeRoutePath('retro')}/${encodeURIComponent(serviceData?.artKey || '')}`;
 
       case 'chat-room':
         return `/chat/${encodeURIComponent(_chatRoomId || '')}`;

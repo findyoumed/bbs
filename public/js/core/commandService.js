@@ -65,7 +65,7 @@ export const CMD_META = {
   ME: { label: '쪽지', tip: 'ME, MEMO', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   MEMO: { label: '쪽지', tip: 'ME, MEMO', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   O: { label: '방만들기', tip: 'O', login: true, priority: 42, cat: 'CHAT', desc: '채팅방을 개설합니다.' },
-  PR: { label: '복사', tip: 'PR', priority: 15, cat: 'SYS', desc: '현재 기사 내용을 클립보드에 복사합니다.' },
+  PR: { label: '복사/연속읽기', tip: 'PR [번호]', priority: 15, cat: 'SYS', desc: '뉴스: 기사 내용을 클립보드에 복사합니다. 게시판: 해당 번호부터 엔터로 글을 이어서 읽습니다.' },
 
   // VFS (Virtual File System)
   FILES: { label: '파일목록', tip: 'FILES, DIR', priority: 30, cat: 'VFS', desc: '가상 파일 시스템의 파일 목록을 보여줍니다.' },

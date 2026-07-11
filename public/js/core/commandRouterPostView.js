@@ -45,6 +45,30 @@ export function createPostViewCommandHandler(deps) {
       return false;
     }
 
+    // [LOG_ID: 20260711_1340] PR 연속읽기 — olddos-bbs(hanulso) 원작 명령 복원.
+    // 모드 중 빈 엔터는 다음 글로 이동, 마지막 글이면 모드를 마친다.
+    // A/N(인접 글 이동)과 빈 엔터 외의 명령을 입력하면 모드가 풀린다.
+    const continuousRead = state._continuousRead
+      && String(state._continuousRead.boardId) === String(state.board?.id);
+    if (continuousRead && cmd === '') {
+      if (await showAdjacentPost(1)) {
+        setHint('연속읽기: [엔터] 다음 글 · 다른 명령 입력 시 종료');
+      } else {
+        state._continuousRead = null;
+        setHint('마지막 글입니다. 연속읽기를 마칩니다.');
+        setPrompt('선택 >>');
+      }
+      return true;
+    }
+    if (cmd === 'PR') {
+      state._continuousRead = { boardId: state.board.id };
+      setHint('연속읽기: [엔터] 다음 글부터 이어서 보여줍니다.');
+      return true;
+    }
+    if (state._continuousRead && cmd !== '' && cmd !== 'A' && cmd !== 'N') {
+      state._continuousRead = null;
+    }
+
     if (cmd === 'T') {
       await showMain();
       return true;

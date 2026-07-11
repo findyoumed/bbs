@@ -1,0 +1,499 @@
+- main [ref=f1e2]:
+  - generic [ref=f1e4]:
+    - generic [ref=f1e96]:
+      - generic [ref=f1e97]:
+        - generic [ref=f1e98]:
+          - link "초기화면으로 이동" [ref=f1e99] [cursor=pointer]:
+            - /url: /
+            - text: PC통신동호회 01410
+          - generic [ref=f1e100]: ────────────────────────────────────────────────────────────────────────────────
+          - generic [ref=f1e101]: 2026-07-11 11:44:45
+        - generic [ref=f1e102]:
+          - generic [ref=f1e103]: NEWS
+          - generic [ref=f1e104]: 오늘의 주요기사-최신
+          - generic [ref=f1e105]: (01/62)
+        - generic [ref=f1e106]: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=f1e107]:
+        - generic [ref=f1e109]:
+          - generic [ref=f1e110]: 번
+          - generic [ref=f1e111]: 호
+          - generic [ref=f1e112]: 제
+          - generic [ref=f1e113]: 목
+          - generic [ref=f1e114]: 제
+          - generic [ref=f1e115]: 공
+          - generic [ref=f1e116]: 일
+        - generic [ref=f1e117]: ────────────────────────────────────────────────────────────────────────────────
+        - generic [ref=f1e118]:
+          - text: "1"
+          - generic [ref=f1e119]:
+            - generic [ref=f1e120]: 여
+            - generic [ref=f1e121]: 든
+            - generic [ref=f1e122]: 바
+            - generic [ref=f1e123]: 라
+            - generic [ref=f1e124]: 보
+            - generic [ref=f1e125]: 는
+            - generic [ref=f1e126]: 남
+            - generic [ref=f1e127]: 북
+            - generic [ref=f1e128]: 경
+            - generic [ref=f1e129]: 협
+            - generic [ref=f1e130]: 인
+            - text: ","
+            - generic [ref=f1e131]: 삭
+            - generic [ref=f1e132]: 발
+            - generic [ref=f1e133]: 호
+            - generic [ref=f1e134]: 소
+            - text: ..."
+            - generic [ref=f1e135]: 특
+            - generic [ref=f1e136]: 별
+            - generic [ref=f1e137]: 한
+            - generic [ref=f1e138]: 희
+            - generic [ref=f1e139]: 생
+            - generic [ref=f1e140]: 에
+            - generic [ref=f1e141]: 보
+            - generic [ref=f1e142]: 상
+            - text: "?"
+            - generic [ref=f1e143]: 남
+            - text: ..
+          - text: 26/07/11
+        - generic [ref=f1e144]:
+          - text: "2"
+          - generic [ref=f1e145]:
+            - text: "\""
+            - generic [ref=f1e146]: 모
+            - generic [ref=f1e147]: 든
+            - generic [ref=f1e148]: 것
+            - generic [ref=f1e149]: 이
+            - generic [ref=f1e150]: 애
+            - generic [ref=f1e151]: 매
+            - generic [ref=f1e152]: 합
+            - generic [ref=f1e153]: 니
+            - generic [ref=f1e154]: 다
+            - generic [ref=f1e155]: 만
+            - generic [ref=f1e156]: 사
+            - generic [ref=f1e157]: 형
+            - generic [ref=f1e158]: 에
+            - generic [ref=f1e159]: 처
+            - generic [ref=f1e160]: 해
+            - generic [ref=f1e161]: 주
+            - generic [ref=f1e162]: 십
+            - generic [ref=f1e163]: 시
+            - generic [ref=f1e164]: 오
+            - text: "\","
+            - generic [ref=f1e165]: 단
+            - generic [ref=f1e166]: 한
+            - generic [ref=f1e167]: 마
+            - generic [ref=f1e168]: 디
+            - generic [ref=f1e169]: 로
+            - generic [ref=f1e170]: 역
+            - text: ..
+          - text: 26/07/11
+        - generic [ref=f1e171]:
+          - text: "3"
+          - generic [ref=f1e172]:
+            - generic [ref=f1e173]: 경
+            - generic [ref=f1e174]: 찰
+            - text: ","
+            - generic [ref=f1e175]: 광
+            - generic [ref=f1e176]: 주
+            - generic [ref=f1e177]: 경
+            - generic [ref=f1e178]: 찰
+            - generic [ref=f1e179]: 청
+            - generic [ref=f1e180]: 장
+            - generic [ref=f1e181]: 등
+            - generic [ref=f1e182]: 장
+            - generic [ref=f1e183]: 윤
+            - generic [ref=f1e184]: 기
+            - generic [ref=f1e185]: 수
+            - generic [ref=f1e186]: 사
+            - generic [ref=f1e187]: 지
+            - generic [ref=f1e188]: 휘
+            - generic [ref=f1e189]: 부
+            - generic [ref=f1e190]: 강
+            - generic [ref=f1e191]: 제
+            - generic [ref=f1e192]: 수
+            - generic [ref=f1e193]: 사
+          - text: 26/07/11
+        - generic [ref=f1e194]:
+          - text: "4"
+          - generic [ref=f1e195]:
+            - text: "650"
+            - generic [ref=f1e196]: 분
+            - generic [ref=f1e197]: 무
+            - generic [ref=f1e198]: 실
+            - generic [ref=f1e199]: 점
+            - generic [ref=f1e200]: 멈
+            - generic [ref=f1e201]: 춘
+            - generic [ref=f1e202]: 스
+            - generic [ref=f1e203]: 페
+            - generic [ref=f1e204]: 인
+            - text: ...
+            - generic [ref=f1e205]: 슈
+            - generic [ref=f1e206]: 퍼
+            - generic [ref=f1e207]: 서
+            - generic [ref=f1e208]: 브
+            - text: "'"
+            - generic [ref=f1e209]: 메
+            - generic [ref=f1e210]: 리
+            - generic [ref=f1e211]: 노
+            - text: "' 117"
+            - generic [ref=f1e212]: 초
+            - generic [ref=f1e213]: 결
+            - generic [ref=f1e214]: 승
+            - generic [ref=f1e215]: 골
+            - generic [ref=f1e216]: 로
+            - text: ..
+          - text: 26/07/11
+        - generic [ref=f1e217]:
+          - text: "5"
+          - generic [ref=f1e218]:
+            - generic [ref=f1e219]: 오
+            - generic [ref=f1e220]: 키
+            - generic [ref=f1e221]: 나
+            - generic [ref=f1e222]: 와
+            - generic [ref=f1e223]: 수
+            - generic [ref=f1e224]: 족
+            - generic [ref=f1e225]: 관
+            - generic [ref=f1e226]: 에
+            - generic [ref=f1e227]: 서
+            - generic [ref=f1e228]: 고
+            - generic [ref=f1e229]: 래
+            - generic [ref=f1e230]: 상
+            - generic [ref=f1e231]: 어
+            - generic [ref=f1e232]: 를
+            - generic [ref=f1e233]: 마
+            - generic [ref=f1e234]: 주
+            - generic [ref=f1e235]: 한
+            - generic [ref=f1e236]: 아
+            - generic [ref=f1e237]: 이
+            - generic [ref=f1e238]: 의
+            - generic [ref=f1e239]: 질
+            - generic [ref=f1e240]: 문
+          - text: 26/07/11
+        - generic [ref=f1e241]:
+          - text: "6"
+          - generic [ref=f1e242]:
+            - generic [ref=f1e243]: 조
+            - generic [ref=f1e244]: 국
+            - generic [ref=f1e245]: 이
+            - generic [ref=f1e246]: 나
+            - generic [ref=f1e247]: 장
+            - generic [ref=f1e248]: 동
+            - generic [ref=f1e249]: 혁
+            - generic [ref=f1e250]: 이
+            - generic [ref=f1e251]: 나
+            - text: ...
+            - generic [ref=f1e252]: 리
+            - generic [ref=f1e253]: 센
+            - generic [ref=f1e254]: 느
+            - generic [ref=f1e255]: 논
+            - generic [ref=f1e256]: 란
+            - generic [ref=f1e257]: 에
+            - text: "'"
+            - generic [ref=f1e258]: 낄
+            - generic [ref=f1e259]: 끼
+            - generic [ref=f1e260]: 빠
+            - generic [ref=f1e261]: 빠
+            - text: "'"
+            - generic [ref=f1e262]: 못
+            - generic [ref=f1e263]: 하
+            - generic [ref=f1e264]: 는
+            - generic [ref=f1e265]: 정
+            - generic [ref=f1e266]: 치
+          - text: 26/07/11
+        - generic [ref=f1e267]:
+          - text: "7"
+          - generic [ref=f1e268]:
+            - generic [ref=f1e269]: 혈
+            - generic [ref=f1e270]: 압
+            - generic [ref=f1e271]: 낮
+            - generic [ref=f1e272]: 추
+            - generic [ref=f1e273]: 는
+            - generic [ref=f1e274]: 식
+            - generic [ref=f1e275]: 품
+            - text: "140"
+            - generic [ref=f1e276]: 가
+            - generic [ref=f1e277]: 지
+            - generic [ref=f1e278]: 비
+            - generic [ref=f1e279]: 교
+            - generic [ref=f1e280]: 했
+            - generic [ref=f1e281]: 더
+            - generic [ref=f1e282]: 니
+            - text: ...
+            - generic [ref=f1e283]: 끝
+            - generic [ref=f1e284]: 까
+            - generic [ref=f1e285]: 지
+            - generic [ref=f1e286]: 살
+            - generic [ref=f1e287]: 아
+            - generic [ref=f1e288]: 남
+            - generic [ref=f1e289]: 은
+            - generic [ref=f1e290]: 건
+            - text: "'"
+            - generic [ref=f1e291]: 이
+            - generic [ref=f1e292]: 거
+            - text: ..
+          - text: 26/07/11
+        - generic [ref=f1e293]:
+          - text: "8"
+          - generic [ref=f1e294]:
+            - text: SK
+            - generic [ref=f1e295]: 하
+            - generic [ref=f1e296]: 이
+            - generic [ref=f1e297]: 닉
+            - generic [ref=f1e298]: 스
+            - text: ","
+            - generic [ref=f1e299]: 나
+            - generic [ref=f1e300]: 스
+            - generic [ref=f1e301]: 닥
+            - generic [ref=f1e302]: 입
+            - generic [ref=f1e303]: 성
+            - text: ... '
+            - generic [ref=f1e304]: 경
+            - generic [ref=f1e305]: 쟁
+            - generic [ref=f1e306]: 사
+            - text: "'"
+            - generic [ref=f1e307]: 마
+            - generic [ref=f1e308]: 이
+            - generic [ref=f1e309]: 크
+            - generic [ref=f1e310]: 론
+            - generic [ref=f1e311]: 단
+            - generic [ref=f1e312]: 숨
+            - generic [ref=f1e313]: 에
+            - generic [ref=f1e314]: 제
+            - generic [ref=f1e315]: 쳤
+            - generic [ref=f1e316]: 다
+          - text: 26/07/11
+        - generic [ref=f1e317]:
+          - text: "9"
+          - generic [ref=f1e318]:
+            - generic [ref=f1e319]: 데
+            - generic [ref=f1e320]: 라
+            - generic [ref=f1e321]: 푸
+            - generic [ref=f1e322]: 엔
+            - generic [ref=f1e323]: 테
+            - generic [ref=f1e324]: 의
+            - generic [ref=f1e325]: 신
+            - generic [ref=f1e326]: 들
+            - generic [ref=f1e327]: 린
+            - generic [ref=f1e328]: 용
+            - generic [ref=f1e329]: 병
+            - generic [ref=f1e330]: 술
+            - text: ...
+            - generic [ref=f1e331]: 스
+            - generic [ref=f1e332]: 페
+            - generic [ref=f1e333]: 인
+            - text: ","
+            - generic [ref=f1e334]: 벨
+            - generic [ref=f1e335]: 기
+            - generic [ref=f1e336]: 에
+            - generic [ref=f1e337]: 물
+            - generic [ref=f1e338]: 리
+            - generic [ref=f1e339]: 치
+            - generic [ref=f1e340]: 고
+            - text: "4"
+            - generic [ref=f1e341]: 강
+            - generic [ref=f1e342]: 진
+            - generic [ref=f1e343]: 출
+          - text: 26/07/11
+        - generic [ref=f1e344]:
+          - text: "10"
+          - generic [ref=f1e345]:
+            - generic [ref=f1e346]: 추
+            - generic [ref=f1e347]: 경
+            - generic [ref=f1e348]: 호
+            - generic [ref=f1e349]: 대
+            - generic [ref=f1e350]: 구
+            - generic [ref=f1e351]: 시
+            - generic [ref=f1e352]: 장
+            - text: ", 120"
+            - generic [ref=f1e353]: 달
+            - generic [ref=f1e354]: 구
+            - generic [ref=f1e355]: 벌
+            - generic [ref=f1e356]: 콜
+            - generic [ref=f1e357]: 센
+            - generic [ref=f1e358]: 터
+            - generic [ref=f1e359]: 찾
+            - generic [ref=f1e360]: 아
+            - generic [ref=f1e361]: 민
+            - generic [ref=f1e362]: 원
+            - generic [ref=f1e363]: 응
+            - generic [ref=f1e364]: 대
+            - generic [ref=f1e365]: 시
+            - generic [ref=f1e366]: 스
+            - generic [ref=f1e367]: 템
+            - generic [ref=f1e368]: 점
+            - generic [ref=f1e369]: 검
+            - generic [ref=f1e370]: 상
+            - text: ..
+          - text: 26/07/11
+        - generic [ref=f1e371]:
+          - text: "11"
+          - generic [ref=f1e372]:
+            - generic [ref=f1e373]: 오
+            - generic [ref=f1e374]: 픈
+            - text: AI
+            - generic [ref=f1e375]: 와
+            - generic [ref=f1e376]: 구
+            - generic [ref=f1e377]: 글
+            - generic [ref=f1e378]: 의
+            - generic [ref=f1e379]: 굴
+            - generic [ref=f1e380]: 욕
+            - text: ","
+            - generic [ref=f1e381]: 미
+            - generic [ref=f1e382]: 국
+            - generic [ref=f1e383]: 은
+            - generic [ref=f1e384]: 앤
+            - generic [ref=f1e385]: 트
+            - generic [ref=f1e386]: 로
+            - generic [ref=f1e387]: 픽
+            - generic [ref=f1e388]: 만
+            - generic [ref=f1e389]: 남
+            - generic [ref=f1e390]: 았
+            - generic [ref=f1e391]: 다
+          - text: 26/07/11
+        - generic [ref=f1e392]:
+          - text: "12"
+          - generic [ref=f1e393]:
+            - generic [ref=f1e394]: 파
+            - generic [ref=f1e395]: 인
+            - generic [ref=f1e396]: 다
+            - generic [ref=f1e397]: 이
+            - generic [ref=f1e398]: 닝
+            - generic [ref=f1e399]: 쉐
+            - generic [ref=f1e400]: 프
+            - generic [ref=f1e401]: 의
+            - text: "\""
+            - generic [ref=f1e402]: 신
+            - generic [ref=f1e403]: 나
+            - generic [ref=f1e404]: 는
+            - text: "\""
+            - generic [ref=f1e405]: 장
+            - generic [ref=f1e406]: 사
+            - generic [ref=f1e407]: 전
+            - generic [ref=f1e408]: 략
+            - text: ","
+            - generic [ref=f1e409]: 눈
+            - generic [ref=f1e410]: 이
+            - generic [ref=f1e411]: 번
+            - generic [ref=f1e412]: 쩍
+            - generic [ref=f1e413]: 뜨
+            - generic [ref=f1e414]: 였
+            - generic [ref=f1e415]: 다
+          - text: 26/07/11
+        - generic [ref=f1e416]:
+          - text: "13"
+          - generic [ref=f1e417]:
+            - generic [ref=f1e418]: 냉
+            - generic [ref=f1e419]: 동
+            - generic [ref=f1e420]: 실
+            - generic [ref=f1e421]: 속
+            - generic [ref=f1e422]: 하
+            - generic [ref=f1e423]: 얀
+            - generic [ref=f1e424]: 얼
+            - generic [ref=f1e425]: 음
+            - generic [ref=f1e426]: 덮
+            - generic [ref=f1e427]: 인
+            - generic [ref=f1e428]: 고
+            - generic [ref=f1e429]: 기
+            - text: ","
+            - generic [ref=f1e430]: 상
+            - generic [ref=f1e431]: 한
+            - generic [ref=f1e432]: 걸
+            - generic [ref=f1e433]: 까
+            - text: "?..."
+            - generic [ref=f1e434]: 식
+            - generic [ref=f1e435]: 약
+            - generic [ref=f1e436]: 처
+            - generic [ref=f1e437]: 가
+            - generic [ref=f1e438]: 알
+            - generic [ref=f1e439]: 려
+            - generic [ref=f1e440]: 주
+            - generic [ref=f1e441]: 는
+            - text: ..
+          - text: 26/07/11
+        - generic [ref=f1e442]:
+          - text: "14"
+          - generic [ref=f1e443]:
+            - generic [ref=f1e444]: 문
+            - generic [ref=f1e445]: 틈
+            - generic [ref=f1e446]: 의
+            - generic [ref=f1e447]: ○
+            - generic [ref=f1e448]: ○
+            - generic [ref=f1e449]: ○
+            - generic [ref=f1e450]: ○
+            - generic [ref=f1e451]: 까
+            - generic [ref=f1e452]: 지
+            - generic [ref=f1e453]: 닦
+            - generic [ref=f1e454]: 아
+            - generic [ref=f1e455]: 야
+            - generic [ref=f1e456]: 진
+            - generic [ref=f1e457]: 짜
+            - generic [ref=f1e458]: 냉
+            - generic [ref=f1e459]: 장
+            - generic [ref=f1e460]: 고
+            - generic [ref=f1e461]: 청
+            - generic [ref=f1e462]: 소
+            - generic [ref=f1e463]: 끝
+            - text: "!"
+          - text: 26/07/11
+        - generic [ref=f1e464]:
+          - text: "15"
+          - generic [ref=f1e465]:
+            - generic [ref=f1e466]: 수
+            - generic [ref=f1e467]: 원
+            - text: FC 5
+            - generic [ref=f1e468]: 골
+            - generic [ref=f1e469]: 폭
+            - generic [ref=f1e470]: 풍
+            - generic [ref=f1e471]: 강
+            - generic [ref=f1e472]: 타
+            - text: ...
+            - generic [ref=f1e473]: 전
+            - generic [ref=f1e474]: 남
+            - text: "15"
+            - generic [ref=f1e475]: 게
+            - generic [ref=f1e476]: 임
+            - generic [ref=f1e477]: 연
+            - generic [ref=f1e478]: 속
+            - generic [ref=f1e479]: 무
+            - generic [ref=f1e480]: 승
+            - generic [ref=f1e481]: 수
+            - generic [ref=f1e482]: 렁
+            - generic [ref=f1e483]: 으
+            - generic [ref=f1e484]: 로
+          - text: 26/07/11
+      - generic:
+        - button "여든 바라보는 남북경협인, 삭발 호소...\"특별한 희생에 보상? 남북경협인도 특별한 희생\"" [ref=f1e487] [cursor=pointer]
+        - button "\"모든 것이 애매합니다만 사형에 처해주십시오\", 단 한 마디로 역사에 새겨진 검사" [ref=f1e488] [cursor=pointer]
+        - button "경찰, 광주경찰청장 등 장윤기 수사 지휘부 강제 수사" [ref=f1e489] [cursor=pointer]
+        - button "650분 무실점 멈춘 스페인... 슈퍼 서브 '메리노' 117초 결승골로 4강" [ref=f1e490] [cursor=pointer]
+        - button "오키나와 수족관에서 고래상어를 마주한 아이의 질문" [ref=f1e491] [cursor=pointer]
+        - button "조국이나 장동혁이나... 리센느 논란에 '낄끼빠빠' 못하는 정치" [ref=f1e492] [cursor=pointer]
+        - button "혈압 낮추는 식품 140가지 비교했더니…끝까지 살아남은 건 ‘이거’였다" [ref=f1e493] [cursor=pointer]
+        - button "SK하이닉스, 나스닥 입성… '경쟁사' 마이크론 단숨에 제쳤다" [ref=f1e494] [cursor=pointer]
+        - button "데 라 푸엔테의 신들린 용병술... 스페인, 벨기에 물리치고 4강 진출" [ref=f1e495] [cursor=pointer]
+        - button "추경호 대구시장, 120달구벌콜센터 찾아 민원 응대 시스템 점검 상담사 격려" [ref=f1e496] [cursor=pointer]
+        - button "오픈AI와 구글의 굴욕, 미국은 앤트로픽만 남았다" [ref=f1e497] [cursor=pointer]
+        - button "파인 다이닝 쉐프의 \"신나는\" 장사 전략, 눈이 번쩍 뜨였다" [ref=f1e498] [cursor=pointer]
+        - button "냉동실 속 하얀 얼음 덮인 고기, 상한 걸까?… 식약처가 알려주는 ‘냉동상’의 진실" [ref=f1e499] [cursor=pointer]
+        - button "문 틈의 ○○○○까지 닦아야 진짜 냉장고 청소 끝!" [ref=f1e500] [cursor=pointer]
+        - button "수원 FC 5골 폭풍 강타... 전남 15게임 연속 무승 수렁으로" [ref=f1e501] [cursor=pointer]
+    - generic [ref=f1e78]:
+      - text: ────────────────────────────────────────────────────────────────────────────────
+      - generic [ref=f1e502]:
+        - generic [ref=f1e503]:
+          - generic [ref=f1e504] [cursor=pointer]: 다음쪽(F)
+          - text: ","
+        - generic [ref=f1e505]:
+          - generic [ref=f1e506] [cursor=pointer]: 상위(P)
+          - text: ","
+        - generic [ref=f1e507]:
+          - generic [ref=f1e508] [cursor=pointer]: 초기화면(T)
+          - text: ","
+        - generic [ref=f1e509]:
+          - generic [ref=f1e510] [cursor=pointer]: 이동(GO)
+          - text: ","
+        - generic "H, HELP, ?" [ref=f1e512] [cursor=pointer]: 도움말(H)
+      - generic [ref=f1e91]:
+        - generic [ref=f1e92]: 선택 >>
+        - textbox [ref=f1e93]: 선택 >>
+        - textbox "명령어 입력" [active] [ref=f1e95]

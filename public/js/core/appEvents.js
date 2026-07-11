@@ -200,6 +200,28 @@ export function bindAppEvents(deps) {
         cmdInput.focus();
         moveCaretToEnd();
       }
+      return;
+    }
+
+    // [LOG_ID: 20260711_1200] 포커스가 입력창에 없어도 Enter는 명령줄 제출로 동작해야 한다.
+    // (빈 엔터는 paged 화면에서 commandNormalizer가 F(다음쪽)로 정규화한다.)
+    // 터치 지원 기기(터치스크린 노트북 포함)는 자동 포커스가 꺼져 있어(20260617_1550) 핫스팟
+    // 클릭 후 포커스가 body로 떨어지는데, 이때 Enter가 그냥 사라져 "엔터로 다음쪽"이 안 됐다.
+    // 문자 키와 달리 Enter는 포커스 이동만으로는 입력창에 전달되지 않으므로 합성 keydown을
+    // 직접 보낸다(bubbles 기본값 false라 이 리스너로 재유입되지 않는다). 버튼/링크 등
+    // 포커스된 대화형 요소의 Enter 기본 동작(키보드 접근성)은 그대로 둔다.
+    if (e.key === 'Enter') {
+      const focusedInteractive = activeEl && activeEl !== document.body
+        && (activeEl.tagName === 'BUTTON' || activeEl.tagName === 'A' || activeEl.hasAttribute?.('tabindex'));
+      if (focusedInteractive) {
+        return;
+      }
+      e.preventDefault();
+      if (shouldAutoFocusCommandInput()) {
+        cmdInput.focus();
+        moveCaretToEnd();
+      }
+      cmdInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     }
   });
 

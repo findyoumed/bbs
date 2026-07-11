@@ -16,7 +16,7 @@ export const CMD_ORDER = {
   // 전체 명령을 나열해도 화면에 들어가는 만큼만 표시되고, 넘치면 우선순위 낮은 순으로 숨겨 도움말(H)
   // 토큰 tooltip에 모인다. (안 넘치면 전부 노출 — 일부러 줄이지 않음)
   pdsList: ['F', 'B', 'P', 'T', 'GO', 'W:쓰기', 'LT:제목검색', 'LI:ID검색', 'H'],
-  postList: ['F', 'B', 'L', 'P', 'T', 'GO', 'W:글쓰기', 'LT:제목검색', 'LI:ID검색', 'H'],
+  postList: ['F', 'B', 'L', 'P', 'T', 'GO', 'W:글쓰기', 'PR:연속읽기', 'LT:제목검색', 'LI:ID검색', 'H'],
   postView: ['L:목록', 'N', 'A', 'P', 'T', 'GO', 'RE:답장', 'E:수정', 'D:삭제', 'V:추천', 'U:첨부', 'LT:제목검색', 'LI:ID검색', 'H'],
   postWrite: ['P:취소', 'S:저장', 'H'],
   chat: ['P', 'T', 'GO', 'O:방만들기', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
@@ -70,6 +70,7 @@ const SCREEN_TO_CATEGORY = {
   'bio-input': 'amusementInput', 'bio-result': 'amusementView',
   'fortune-input': 'amusementInput', 'fortune-result': 'amusementView',
   'mbti-list': 'amusementInput', 'mbti-detail': 'amusementView',
+  'retro-list': 'amusementInput', 'retro-view': 'amusementView',
   login: 'login',
   signup: 'authMenu'
 };

@@ -1,3 +1,17 @@
+## [2026-07-11 12:00] 입력창 포커스 없을 때 엔터로 다음쪽 이동이 안 되던 문제 수정
+
+**LOG_ID: 20260711_1200**
+목표: 뉴스/게시판 등 paged 화면에서 빈 엔터가 F(다음쪽)처럼 동작했었는데, 명령 입력창에 포커스가 없으면 엔터가 그냥 사라져 다음쪽 이동이 안 되던 문제(사용자 보고)를 수정한다.
+변경 파일:
+1) `public/js/core/appEvents.js` (전역 키 리다이렉트 리스너에 Enter 처리 추가, +23줄)
+수행 작업:
+1) [원인] 빈 엔터→F 정규화(commandNormalizer, 20260428_1730)와 디스패처 경로는 정상. 그러나 전역 키 리다이렉트(20260610_1425)는 일반 문자(key.length===1)와 Backspace만 입력창으로 넘기고 Enter는 무시한다. 터치 지원 기기(터치스크린 노트북 포함)는 자동 포커스가 꺼져 있어(20260617_1550, uiUtils.shouldAutoFocusCommandInput) 핫스팟 클릭 후 포커스가 body로 떨어지고, 이 상태의 Enter는 아무 데도 전달되지 않았다 — F 타이핑은 리다이렉트로 동작하고 엔터만 안 되는 증상과 일치.
+2) [수정] 리다이렉트 리스너에서 Enter를 감지하면 cmdInput에 합성 keydown(KeyboardEvent, bubbles 기본 false → 재유입 없음)을 직접 전달해 기존 제출 경로(handleKeyDown → handleCmd('') → F 정규화)를 태운다. 자동 포커스 가능 환경이면 포커스도 복원. 포커스된 버튼/링크/[tabindex]의 Enter 기본 동작(키보드 접근성)은 그대로 유지, 다른 input/textarea 입력 중에는 기존 가드로 제외.
+3) [검증] Playwright: (a) 입력창 포커스 상태 빈 엔터 → news-list/news-view/갈무리 복귀 모두 기존대로 페이지 이동, (b) cmdInput.blur() 후 body 포커스 상태에서 Enter → ?page=2, 재차 Enter → ?page=3 이동 확인. `node --check` ok, `npm run smoke:vercel-ready` ok.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-11 11:40] 탭한 핫스팟 선택 박스 복원 (20260711_1115 후속)
 
 **LOG_ID: 20260711_1140**

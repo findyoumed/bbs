@@ -1,4 +1,5 @@
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
+import { DOOR_ART } from './doorArtAssets.js';
 
 // [LOG_ID: 20260623_1300] Restored GAME builders for biorhythm, fortune, and MBTI.
 const MBTI_TYPES = [
@@ -71,5 +72,13 @@ export function createAmusementAnsiBuilders(deps) {
   function buildMbtiDetailAnsi(type) {
     return [buildTopHeader(['오락실', `MBTI ${type.code}`]), c(11, `${ANSI_BOLD}  ${type.code}${ANSI_RESET}  ${ansiColor(14)}${type.nick}${ANSI_RESET}`), c(8, `  ${'─'.repeat(52)}`), ...wrapAnsiText(type.desc, 70).map((line) => c(15, `  ${line}`)), '', c(8, '  다른 유형을 보려면 번호/코드를 입력하세요.')].join('\n');
   }
-  return { buildBiorhythmIntroAnsi, buildBiorhythmAnsi, buildFortuneIntroAnsi, buildFortuneAnsi, buildMbtiListAnsi, buildMbtiDetailAnsi, findMbtiType };
+  // [LOG_ID: 20260711_1400] 추억의 접속화면 — olddos-bbs(hanulso) txt/door 원본 아트 목록/뷰어.
+  function buildRetroArtListAnsi() {
+    const rows = DOOR_ART.map((item, index) => `  ${c(14, `${index + 1}.`)} ${c(15, fitCell(item.name, 24))} ${c(8, item.desc)}`);
+    return [buildTopHeader(['오락실', '추억의 접속화면']), c(15, '  90년대 PC통신·도스 시절 접속 화면을 원본 그대로 보여드립니다.'), c(8, `  (olddos-bbs 하늘소 원본 수록분, ${DOOR_ART.length}종)`), '', ...rows, '', c(11, '  번호를 입력하세요.')].join('\n');
+  }
+  function buildRetroArtViewAnsi(item) {
+    return [buildTopHeader(['추억의 접속화면', item.name]), item.art, '', c(8, `  ${item.desc} · 다른 화면: 번호 입력, 목록(L)`)].join('\n');
+  }
+  return { buildBiorhythmIntroAnsi, buildBiorhythmAnsi, buildFortuneIntroAnsi, buildFortuneAnsi, buildMbtiListAnsi, buildMbtiDetailAnsi, findMbtiType, buildRetroArtListAnsi, buildRetroArtViewAnsi };
 }
