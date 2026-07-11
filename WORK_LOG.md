@@ -1,3 +1,19 @@
+## [2026-07-11 11:40] 탭한 핫스팟 선택 박스 복원 (20260711_1115 후속)
+
+**LOG_ID: 20260711_1140**
+목표: 20260711_1115(터치 sticky hover 차단)로 로딩 화면 잔상 박스와 함께 사라진 "탭한 뉴스 제목의 박스선"(어떤 항목을 눌렀는지 보여주는 선택 피드백)을 잔상 없이 복원한다(사용자 재보고).
+변경 파일:
+1) `public/js/core/appEvents.js` (캡처 단계 명령 클릭 리스너에서 탭한 .ansi-hotspot에 is-tap-selected 부여)
+2) `public/js/core/interactionHandlers.js` (handleGlobalClick 경로에도 동일 부여 — menu-path/board-id 등)
+3) `public/style.css` (.ansi-hotspot.is-tap-selected 하이라이트 + is-loading 시 숨김 + theme-blue 변형)
+수행 작업:
+1) [설계] 예전 박스선은 터치 sticky :hover의 부수효과였다. 이를 JS가 명시적으로 관리하는 is-tap-selected 클래스로 대체: 탭 즉시 부여(이전 선택은 해제), 로딩 문구가 본문을 교체하는 시점(is-loading, setLoading 400ms 타이머)에는 CSS로 숨기고, 새 화면이 렌더되면 핫스팟 레이어가 재생성돼 자연 소멸.
+2) [경로] 핫스팟 클릭은 두 갈래로 처리됨을 확인: data-cmd/cmd-fill은 appEvents 캡처 리스너(stopImmediatePropagation으로 전파 차단 — 최초 구현이 interactionHandlers에만 있어 동작하지 않았던 원인), menu-path/board-id 등은 interactionHandlers.handleGlobalClick. 양쪽 모두에 부여 로직 추가.
+3) [검증] 터치 에뮬레이션(360×740, API 2.5초 지연): 메뉴 탭 +150ms 박스 표시(이전 화면 위) → 로딩 교체 후 숨김(잔상 없음) → 새 목록 렌더 후 잔류 클래스 없음 → 기사 제목 탭 시 제목 행에 박스 표시(목록이 유지되는 동안 계속 표시). PC 호버 하이라이트 기존 동작 유지. `node --check` 2건, `smoke:renderer-ui` ok.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-11 11:15] 모바일 화면 전환 시 빈 하이라이트 박스(테두리)가 남던 문제 수정
 
 **LOG_ID: 20260711_1115**

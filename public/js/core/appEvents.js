@@ -203,6 +203,21 @@ export function bindAppEvents(deps) {
     }
   });
 
+  // [LOG_ID: 20260711_1140] 탭/클릭한 핫스팟에 선택 표시 클래스를 부여한다. 예전에는 터치의
+  // sticky :hover가 우연히 이 역할(탭한 뉴스 제목의 박스선)을 했지만, 로딩 화면 위 잔상 문제로
+  // hover를 호버 가능 포인터로 제한(20260711_1115)하면서 함께 사라졌다 — CSS가 로딩 중에는
+  // 숨기는 조건(is-loading)과 짝을 이뤄, 제자리 선택 표시만 남기고 잔상은 차단한다.
+  // 핫스팟 클릭 경로는 두 갈래라 양쪽 모두에서 부여한다: data-cmd/cmd-fill은 여기(캡처 단계,
+  // stopImmediatePropagation으로 전파 차단), menu-path/board-id 등은 interactionHandlers.
+  function markTapSelectedHotspot(target) {
+    const hotspot = target?.closest?.('.ansi-hotspot');
+    if (!hotspot) return;
+    document.querySelectorAll('.ansi-hotspot.is-tap-selected').forEach((el) => {
+      if (el !== hotspot) el.classList.remove('is-tap-selected');
+    });
+    hotspot.classList.add('is-tap-selected');
+  }
+
   document.addEventListener('click', (event) => {
     const action = getCommandClickAction(event.target);
     if (!action) {
@@ -211,6 +226,7 @@ export function bindAppEvents(deps) {
 
     const handled = executeCommandFromClick(action);
     if (handled) {
+      markTapSelectedHotspot(event.target);
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();

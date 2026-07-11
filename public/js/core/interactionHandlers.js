@@ -212,7 +212,18 @@ export function createInteractionHandlers(deps) {
         if (!isQuiet && interruptRendering) {
           interruptRendering();
         }
-        
+
+        // [LOG_ID: 20260711_1140] 탭/클릭한 핫스팟에 선택 표시 클래스를 부여한다. 예전에는 터치의
+        // sticky :hover가 우연히 이 역할(탭한 뉴스 제목에 박스선)을 했지만, 로딩 화면 위 잔상 문제로
+        // hover를 호버 가능 포인터로 제한(20260711_1115)하면서 함께 사라졌다 — CSS가 로딩 중에는
+        // 숨기는 조건과 짝을 이뤄, 제자리 선택 표시만 남기고 잔상은 차단한다.
+        if (btn.classList?.contains('ansi-hotspot')) {
+          document.querySelectorAll('.ansi-hotspot.is-tap-selected').forEach((el) => {
+            if (el !== btn) el.classList.remove('is-tap-selected');
+          });
+          btn.classList.add('is-tap-selected');
+        }
+
         handler(btn);
         return true;
       }

@@ -98,7 +98,8 @@ body.theme-blue .cmd-token:focus-visible {
 }
 
 body.theme-blue .ansi-hotspot:focus-visible,
-body.theme-blue .ansi-hotspot.is-group-hovered {
+body.theme-blue .ansi-hotspot.is-group-hovered,
+body.theme-blue .ansi-hotspot.is-tap-selected {
     background: rgba(255, 255, 255, 0.18);
 }
 
@@ -1335,6 +1336,23 @@ body[data-print-view="true"] .ansi-screen {
         outline: 1px solid rgba(255, 255, 255, 0.55);
         outline-offset: 0;
     }
+}
+
+/* [LOG_ID: 20260711_1140] 탭/클릭한 핫스팟의 선택 표시(JS가 interactionHandlers에서 부여).
+   터치에서도 "내가 어떤 항목을 눌렀는지"(예: 뉴스 제목의 박스선)는 계속 보여야 한다 —
+   위 20260711_1115가 sticky hover를 막으면서 이 피드백까지 사라졌던 것을 복원한다.
+   단, 로딩 문구가 본문을 교체한 뒤(is-loading)에는 박스만 허공에 남는 잔상이 되므로 숨긴다.
+   새 화면이 렌더되면 핫스팟 레이어가 새로 만들어져 클래스는 자연히 사라진다. */
+.ansi-hotspot.is-tap-selected {
+    background: rgba(255, 255, 255, 0.14);
+    outline: 1px solid rgba(255, 255, 255, 0.55);
+    outline-offset: 0;
+}
+
+#terminal-screen.is-loading .ansi-hotspot.is-tap-selected,
+#terminal-container.is-loading .ansi-hotspot.is-tap-selected {
+    background: transparent;
+    outline: none;
 }
 
 /* [LOG_ID: 20260623_1231] Post rows use a full-width click target, so hover has no outline. */
