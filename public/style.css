@@ -2245,6 +2245,26 @@ body[data-print-view="true"] .ansi-screen {
         overscroll-behavior-y: contain !important;
     }
 
+    /* [LOG_ID: 20260711_0950] 뉴스 목록/기사가 모바일 세로에서 뷰포트를 넘쳐 스크롤이 생기던
+       근본 수정(위 20260710_1815는 잘린 부분을 볼 수 있게 한 응급 조치). 원인은 두 가지:
+       ① 기본 .ansi-line{min-height:24px}(데스크톱용)가 모바일 세로에도 살아 있어, 폰트를
+          아무리 줄여도 각 줄이 24px 밑으로 줄지 않았다(폰트 15px의 의도 줄높이는 19.8px).
+          가로 모드가 이미 min-height를 푸는 것과 같은 패턴으로, 줄높이(1.32em)를 하한으로 준다.
+       ② 뉴스는 본문 23줄 고정이라 프레임(상단바+본문+풋터)이 폰트 15px 기준 약 566px —
+          전역 폰트 세로 상한 2.7vh로는 짧은 뷰포트에서 이를 못 담는다. 뉴스 화면에 한해
+          상한을 2.5vh로 낮춰 프레임 전체가 한 화면에 들어가게 한다(프레임 총높이 ≈ 폰트의
+          약 37배 + 고정 여백이라 2.5vh면 ~93vh 소비). 긴 화면에서는 기존처럼 4.2vw/15px이
+          우선해 변화가 없고, 바닥값 11px 밑의 초소형 뷰포트는 위 스크롤 허용이 안전망. */
+    body[data-screen="news-list"] .ansi-line,
+    body[data-screen="news-view"] .ansi-line {
+        min-height: 1.32em;
+    }
+
+    body[data-screen="news-list"] #terminal-container,
+    body[data-screen="news-view"] #terminal-container {
+        font-size: clamp(11px, min(4.2vw, 2.5vh), 15px) !important;
+    }
+
     .ansi-screen,
     .ansi-line,
     #terminal-screen .retro-topbar--ansi,
