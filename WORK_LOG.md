@@ -1,3 +1,18 @@
+## [2026-07-11 11:15] 모바일 화면 전환 시 빈 하이라이트 박스(테두리)가 남던 문제 수정
+
+**LOG_ID: 20260711_1115**
+목표: 모바일에서 핫스팟(메뉴 항목 등)을 탭해 화면을 전환하면 "연결하는 중입니다" 로딩 화면 위에 내용 없는 박스 테두리가 남던 문제(실기기 스크린샷 screenshot/mobilesquare.jpg)를 수정한다.
+변경 파일:
+1) `public/style.css` (hover 하이라이트 규칙 8곳을 @media (hover: hover)로 스코프)
+수행 작업:
+1) [재현] headless Chromium 터치 에뮬레이션(360×740) + API 응답 2.5초 지연으로 로딩 화면을 고정한 뒤 뉴스 메뉴 1번 핫스팟 탭 → 탭한 .ansi-hotspot이 :hover 상태로 잔류(bg 0.14 + outline 1px)하며 사용자 스크린샷과 동일한 빈 박스 재현.
+2) [원인] 터치 탭은 sticky hover를 남기는데(이후 mouse 이벤트 없음), 로딩 중에는 이전 화면의 핫스팟 레이어가 유지되므로(20260708_1520 구조) 탭한 핫스팟의 :hover 하이라이트가 내용 없는 박스로 로딩 화면 위에 떠 보였다. 새 화면 렌더 후에도 마지막 탭 좌표의 요소에 hover가 재계산되어 같은 잔상이 가능.
+3) [수정] hover 하이라이트 계열 전체(.ansi-hotspot, .cmd-token, .cmd-clickable, .post-row, .bbs-menu-item, .myinfo-menu-item, .retro-topbar-left, theme-blue 변형 4종)를 `@media (hover: hover)`로 감싸 호버 가능한 포인터(마우스)에서만 적용. :focus-visible(키보드 접근성)과 .is-group-hovered는 기존대로 유지.
+4) [검증] 터치: 로딩 화면에서 탭한 핫스팟 bg transparent·outline none(박스 없음, 스크린샷 확인). PC: 호버 시 하이라이트 정상(bg 0.14 + outline 1px). `smoke:renderer-ui` ok.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-11 10:30] 모바일에서 명령 힌트 툴팁 글자가 잔상으로 남던 문제 수정
 
 **LOG_ID: 20260711_1030**

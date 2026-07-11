@@ -93,24 +93,34 @@ body.theme-blue #cmd-input {
     background: #0000aa;
 }
 
-body.theme-blue .cmd-token:hover,
 body.theme-blue .cmd-token:focus-visible {
     background: rgba(255, 255, 255, 0.18);
 }
 
-body.theme-blue .ansi-hotspot:hover,
 body.theme-blue .ansi-hotspot:focus-visible,
 body.theme-blue .ansi-hotspot.is-group-hovered {
     background: rgba(255, 255, 255, 0.18);
 }
 
-body.theme-blue .post-row:hover,
-body.theme-blue .bbs-menu-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
+/* [LOG_ID: 20260711_1115] hover 하이라이트는 호버 가능한 포인터에서만 — 터치 탭의 sticky
+   hover가 화면 전환 후 하이라이트 박스로 잔류하는 것을 막는다(아래 1297 부근 주석 참고). */
+@media (hover: hover) {
+    body.theme-blue .cmd-token:hover {
+        background: rgba(255, 255, 255, 0.18);
+    }
 
-body.theme-blue .cmd-clickable:hover {
-    background: rgba(255, 255, 255, 0.15);
+    body.theme-blue .ansi-hotspot:hover {
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    body.theme-blue .post-row:hover,
+    body.theme-blue .bbs-menu-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    body.theme-blue .cmd-clickable:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
 }
 
 body.theme-blue .ansi-screen,
@@ -563,8 +573,10 @@ body.theme-blue .write-field textarea {
     /* [LOG: 20260706] hover 하이라이트 즉시 반영(reverse video). 색상 페이드 트랜지션 제거. */
 }
 
-.bbs-menu-item:hover {
-    background: #111;
+@media (hover: hover) {
+    .bbs-menu-item:hover {
+        background: #111;
+    }
 }
 
 /* ?�?� 게시�?목록 ?�이�??�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� */
@@ -587,8 +599,10 @@ body.theme-blue .write-field textarea {
     /* [LOG: 20260706] 게시물 행 hover 즉시 반영. 색상 페이드 트랜지션 제거. */
 }
 
-.post-row:hover {
-    background: #111;
+@media (hover: hover) {
+    .post-row:hover {
+        background: #111;
+    }
 }
 
 .post-row td {
@@ -868,10 +882,12 @@ body.theme-blue .write-field textarea {
     /* [LOG: 20260706] 내 정보 메뉴 hover 즉시 반영. 배경 페이드 트랜지션 제거. */
 }
 
-.myinfo-menu-item:hover {
-    background: rgba(255, 255, 255, 0.14);
-    outline: 1px solid rgba(255, 255, 255, 0.55);
-    outline-offset: 0;
+@media (hover: hover) {
+    .myinfo-menu-item:hover {
+        background: rgba(255, 255, 255, 0.14);
+        outline: 1px solid rgba(255, 255, 255, 0.55);
+        outline-offset: 0;
+    }
 }
 
 .myinfo-menu-code {
@@ -1023,9 +1039,14 @@ body.theme-blue .write-field textarea {
     cursor: pointer;
 }
 
-.retro-topbar--ansi .retro-topbar-left:hover,
 .retro-topbar--ansi .retro-topbar-left:focus-visible {
     outline: 2px solid #fff;
+}
+
+@media (hover: hover) {
+    .retro-topbar--ansi .retro-topbar-left:hover {
+        outline: 2px solid #fff;
+    }
 }
 
 /* [LOG: 20260610_1354] Unify horizontal lines using text characters */
@@ -1294,12 +1315,26 @@ body[data-print-view="true"] .ansi-screen {
 
 /* [LOG: 20260706] .ansi-hotspot hover 하이라이트 즉시 반영(reverse video). 배경 페이드 트랜지션 제거. */
 
-.ansi-hotspot:hover,
 .ansi-hotspot:focus-visible,
 .ansi-hotspot.is-group-hovered {
     background: rgba(255, 255, 255, 0.14);
     outline: 1px solid rgba(255, 255, 255, 0.55);
     outline-offset: 0;
+}
+
+/* [LOG_ID: 20260711_1115] 터치 기기에서는 탭이 sticky hover를 남긴다 — 탭한 핫스팟이 :hover인
+   채로 화면이 전환되고, 로딩 중에는 이전 화면의 핫스팟 레이어가 유지되므로(20260708_1520 구조)
+   "연결하는 중입니다" 로딩 화면 위에 내용 없는 하이라이트 박스(배경+테두리)가 잔상처럼 떠
+   보였다(실기기 신고: screenshot/mobilesquare.jpg, 헤드리스 터치 에뮬레이션으로 재현 확정).
+   hover 하이라이트 계열(.ansi-hotspot/.cmd-token/.cmd-clickable/.post-row/.bbs-menu-item/
+   .myinfo-menu-item/.retro-topbar-left 및 theme-blue 변형)을 전부 @media (hover: hover)로
+   감싸 호버 가능한 포인터(마우스)에서만 적용한다. :focus-visible(키보드 접근성)은 유지. */
+@media (hover: hover) {
+    .ansi-hotspot:hover {
+        background: rgba(255, 255, 255, 0.14);
+        outline: 1px solid rgba(255, 255, 255, 0.55);
+        outline-offset: 0;
+    }
 }
 
 /* [LOG_ID: 20260623_1231] Post rows use a full-width click target, so hover has no outline. */
@@ -1327,10 +1362,16 @@ body[data-print-view="true"] .ansi-screen {
     cursor: default;
 }
 
-.cmd-token:hover,
 .cmd-token:focus-visible {
     background: rgba(255, 255, 255, 0.14);
     outline-color: rgba(255, 255, 255, 0.45);
+}
+
+@media (hover: hover) {
+    .cmd-token:hover {
+        background: rgba(255, 255, 255, 0.14);
+        outline-color: rgba(255, 255, 255, 0.45);
+    }
 }
 
 /* [LOG: 20240410_1235] ?�릭 가?�한 명령???��???*/
@@ -1340,8 +1381,10 @@ body[data-print-view="true"] .ansi-screen {
     /* [LOG: 20260706] 클릭 가능한 명령어 hover 즉시 반영. 배경 페이드 트랜지션 제거. */
 }
 
-.cmd-clickable:hover {
-    background: #222;
+@media (hover: hover) {
+    .cmd-clickable:hover {
+        background: #222;
+    }
 }
 
 #cmd-tooltip {
