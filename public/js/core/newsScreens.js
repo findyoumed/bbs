@@ -793,9 +793,14 @@ export function createNewsScreens(deps) {
       // [LOG_ID: 20260710_1330] 속보 스텁 기사("후속기사가 이어집니다" 단문)는 본문이 30자 미만이
       // 정상이므로 서버와 동일하게 속보 키워드가 있으면 최소 길이 기준을 10자로 완화한다.
       const isBreakingStub = /속보|단독|긴급|breaking/i.test(String(resolvedArticle.title || ''));
-      const minClientLength = isBreakingStub ? 10 : 30;
+      // [LOG_ID: 20260712_0140] 사진/포토/화보/영상 기사는 "짧은 캡션 + 크레딧 꼬리('… /')"가 정상
+      // 형태라 절단 휴리스틱이 상시 오탐 — 서버(RssNewsService) 완화와 반드시 동일 조건을 유지해야
+      // 한다. 서버만 완화하면 이 2차 방어 가드가 available:true 기사를 다시 차단해 무의미해진다.
+      const isPhotoArticle = /\[\s*(?:[A-Za-z가-힣]*\s*)?(사진|포토|화보|영상|photo|video|pic)s?\s*\]/i
+        .test(String(resolvedArticle.title || ''));
+      const minClientLength = (isBreakingStub || isPhotoArticle) ? 10 : 30;
 
-      if (isClientTruncated || clientTrimmed.length < minClientLength) {
+      if ((isClientTruncated && !isPhotoArticle) || clientTrimmed.length < minClientLength) {
         console.debug('클라이언트측 잘린 기사 감지로 차단:', articleNo);
         // [LOG_ID: 20260709_1255] 단축키 N/A를 통한 순차 탐색 도중 잘린 기사를 만나면
         // 에러를 던져야 이전/다음 순차 스킵 탐색기가 멈추지 않고 다음 정상 기사를 계속 탐색할 수 있다.

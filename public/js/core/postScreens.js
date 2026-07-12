@@ -5,14 +5,14 @@ import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
 
 export function createPostScreens(deps) {
   const {
-    ansiToHTML, applyCommandFooter, buildPostListAnsi, buildPostViewAnsi, buildAttachmentListAnsi,
+    ansiToHTML, apiFetch, applyCommandFooter, buildPostListAnsi, buildPostViewAnsi, buildAttachmentListAnsi,
     cmdInput, createPost, downloadAttachment, esc, findBoardByKey, getBoardKey, getBoardSelectTitle,
     getCommandFooterText, getSupportedFooterText, loadAttachments, loadPost, loadPosts, replyPost,
     screenEl, setLoading, showMain, state, updatePost, updateURL,
     renderScreenSequential
   } = deps;
 
-  const { showPostList } = createPostListView({ ...deps, renderScreenSequential });
+  const { showPostList, showPtPrepare, showPtResult } = createPostListView({ ...deps, renderScreenSequential });
   const { showPostView, showAdjacentPost } = createPostViewView({ ...deps, renderScreenSequential });
   const { showPostWrite, handleWriteSubmit, cancelPostWrite } = createPostWriteView(deps);
 
@@ -22,7 +22,9 @@ export function createPostScreens(deps) {
     showPostWrite: (m, r) => showPostWrite(handlers, m, r),
     handleWriteSubmit: () => handleWriteSubmit(handlers),
     cancelPostWrite: () => cancelPostWrite(handlers),
-    showAdjacentPost: (d) => showAdjacentPost(d, handlers)
+    showAdjacentPost: (d) => showAdjacentPost(d, handlers),
+    showPtPrepare: (startNum) => showPtPrepare(startNum),
+    showPtResult: () => showPtResult()
   };
 
   async function showAttachmentList(boardId, postId, fromHistory = false) {

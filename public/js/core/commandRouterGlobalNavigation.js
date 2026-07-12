@@ -206,6 +206,14 @@ export function createGlobalNavigationCommandHandler(deps) {
     }
 
     if (cmd === 'Z') {
+      // [LOG_ID: 20260712_2130] Z를 하이텔 원전 의미(길라잡이 p.90 "잡음이 끼어들어 이상한 글자가
+      // 나타날 때 'z'로 깨끗한 화면을 재전송")대로 "현재 화면 재그리기"로 변경(사용자 결정).
+      // 종전의 '이전 화면'(handleHistoryBack) 동작을 대체하며, 현재 URL 기준 화면 재구성 배관
+      // (restoreStateFromURL, fromHistory 경로)을 재사용해 서버 재조회 + 재렌더한다.
+      if (typeof deps.refs?.restoreStateFromURL === 'function') {
+        await deps.refs.restoreStateFromURL();
+        return true;
+      }
       await handleHistoryBack();
       return true;
     }

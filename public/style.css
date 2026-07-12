@@ -1509,6 +1509,11 @@ body[data-print-view="true"] .ansi-screen {
 .ansi-bg-14 { background-color: #55ffff !important; }
 .ansi-bg-15 { background-color: #ffffff !important; }
 
+/* [LOG_ID: 20260712_2150] 반전 강조(흰 배경) 위 글자는 검정 — 위의 "모든 글자 흰색" 통일 규칙
+   (20260611_1300)이 흰 배경 조합에서 흰 글자를 만들어 반전 배너가 빈 막대로 보였다.
+   하이텔 원전(길라잡이 그림 5.1 하단 배너)의 반전 표기 재현에 필요한 최소 예외. */
+.ansi-bg-15, .ansi-bg-15 * { color: #000000 !important; }
+
 .ansi-bold { font-weight: bold !important; }
 
 #terminal-footer,

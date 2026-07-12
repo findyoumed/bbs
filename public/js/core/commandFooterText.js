@@ -35,7 +35,12 @@ export const CMD_ORDER = {
   systemLog: ['P', 'T', 'GO', 'R:새로고침', 'C:지우기', 'CP:복사', 'H'],
   attachmentList: ['P', 'T', 'GO', 'H'],
   newsList: ['F', 'B', 'P', 'T', 'GO', 'H'],
-  serviceArticle: ['F', 'B', 'N', 'A', 'P', 'T', 'PR:복사', 'H'],
+  // [LOG_ID: 20260712_0030] PR 표기를 '연속읽기'로 통일(사용자 결정) — 게시판(postList)과 동일 용어.
+  // [LOG_ID: 20260712_0100] N/A는 뉴스 기사 화면에서 실제 동작(이전/다음 기사 이동)하는데,
+  // 기본 라벨 '이전글/다음글'이 shouldShowFooterToken의 "post-view 전용" 숨김 규칙에 걸려
+  // 힌트바에서만 사라져 있었다(coroke 참조 구현은 기사 화면에 '글이동(A,N)'을 표시).
+  // 뉴스 맥락에 맞는 라벨로 오버라이드해 숨김 규칙을 피하고 표기도 정확히 한다.
+  serviceArticle: ['F', 'B', 'N:이전기사', 'A:다음기사', 'P', 'T', 'PR:연속읽기', 'H'],
   // [LOG_ID: 20260710_1530] PR(복사) 전체 보기 모드: 엔터로 페이지 보기 복귀
   serviceArticleFull: ['ENTER:페이지보기', 'N', 'A', 'P', 'T', 'H'],
   amusementInput: ['P', 'T', 'GO', 'H'],

@@ -144,6 +144,9 @@ export function createAppFactoryHandlers(deps) {
     setZoom: services.terminalUiCore.setZoom,
     autoAdjustZoom: services.terminalUiCore.autoAdjustZoom,
     setScale: services.settingsService.setScale,
+    // [LOG_ID: 20260711_2340] SET/UNSET/MATH가 envVars를 localStorage에 저장할 때 쓰는
+    // settingsService.saveEnvVars 경로 — 서비스 자체가 주입되지 않아 저장이 항상 건너뛰어졌다.
+    settingsService: services.settingsService,
     performanceService: services.performanceService,
     handleCmd: handleCmdRef
   };

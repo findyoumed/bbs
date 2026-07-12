@@ -1,5 +1,0 @@
-approval_policy = "never"
-sandbox_mode = "danger-full-access"
-
-# Supabase MCP 자격 증명은 사용자 환경 변수와 사용자 전역 Codex 설정에서 관리합니다.
-# 이 프로젝트 설정 파일에는 토큰 원문을 저장하지 않습니다.

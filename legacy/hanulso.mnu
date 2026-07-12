@@ -48,7 +48,7 @@
 			</item>
 
 			<item type="board" go="humor" id="bbs_humor" door="2" access_level="1">
-				<name>유머게시판</name>
+				<name>유머</name>
 				<attachment>yes</attachment>
 				<reply>yes</reply>
 				<header></header>

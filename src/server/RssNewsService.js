@@ -291,11 +291,18 @@ class RssNewsService extends RssServiceBase {
           || /속보|단독|긴급|breaking/i.test(resolvedArticle.title || detail.title)
           || /속보|단독|긴급|breaking/i.test(trimmed);
 
+        // [LOG_ID: 20260712_0140] 사진/포토/화보/영상 기사는 본문이 "짧은 캡션 + 크레딧 꼬리('… /',
+        // '사진=OO기자', '2026.07.12 /')"가 정상 형태라, 절단 휴리스틱(isTruncated)과 30자 최소
+        // 길이가 상시 오탐을 냈다 — "본문 전체를 불러올 수 없는 기사입니다"가 사진 기사마다 발생
+        // (사용자 보고). 속보 완화(20260710_1330)와 동일 패턴으로 제목 키워드 기반 면제를 준다.
+        const hasPhotoKeyword = /\[\s*(?:[A-Za-z가-힣]*\s*)?(사진|포토|화보|영상|photo|video|pic)s?\s*\]/i
+          .test(resolvedArticle.title || detail.title || '');
+
         // [LOG_ID: 20260709_1240] 불완전/문장 짤림 기사 차단 정책 복원 (isTruncated가 true 이거나 본문이 너무 짧으면 차단)
         // [LOG_ID: 20260710_1330] 속보 스텁 기사("후속기사가 이어집니다" 단문)는 노이즈 절단 후 본문이
         // 30자 미만이 정상이므로, 속보 키워드가 있으면 최소 길이 기준을 10자로 완화해 차단을 면제한다.
-        const minValidLength = hasBreakingNewsKeyword ? 10 : 30;
-        const isDetailValid = !detail.unavailable && trimmed.length >= minValidLength && !isTruncated;
+        const minValidLength = (hasBreakingNewsKeyword || hasPhotoKeyword) ? 10 : 30;
+        const isDetailValid = !detail.unavailable && trimmed.length >= minValidLength && (!isTruncated || hasPhotoKeyword);
         resolvedArticle.detailFetched = !!isDetailValid;
       } else {
         resolvedArticle.detailFetched = false;

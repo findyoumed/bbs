@@ -14,7 +14,7 @@ const DEFAULT_BOARDS = [
   { boardId: 'plaza', name: '자유 게시판', menuPath: 'top', door: '51', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '', postHeaders: PLAZA_POST_HEADERS },
   { boardId: 'market', name: '장터 게시판', menuPath: 'top', door: '52', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' },
   { boardId: 'te99', name: '질문 게시판', menuPath: 'top', door: '53', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' },
-  { boardId: 'humor', name: '유머 게시판', menuPath: 'top', door: '54', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' }
+  { boardId: 'humor', name: '유머', menuPath: 'top', door: '54', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' }
 ];
 
 function mergeBoardDefinitions(...groups) {

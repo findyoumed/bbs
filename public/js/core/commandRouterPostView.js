@@ -51,6 +51,17 @@ export function createPostViewCommandHandler(deps) {
     const continuousRead = state._continuousRead
       && String(state._continuousRead.boardId) === String(state.board?.id);
     if (continuousRead && cmd === '') {
+      if (state._continuousRead.queue && state._continuousRead.queue.length > 0) {
+        const nextId = state._continuousRead.queue.shift();
+        await showPostView(state.board.id, nextId);
+        if (state._continuousRead.queue.length > 0) {
+          setHint(`연속읽기(남은글 ${state._continuousRead.queue.length}건): [엔터] 다음 글 · 다른 명령 입력 시 종료`);
+        } else {
+          setHint('연속읽기: [엔터] 다음 글(마지막) · 다른 명령 입력 시 종료');
+        }
+        return true;
+      }
+
       if (await showAdjacentPost(1)) {
         setHint('연속읽기: [엔터] 다음 글 · 다른 명령 입력 시 종료');
       } else {

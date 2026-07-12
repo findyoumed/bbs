@@ -21,7 +21,11 @@ export function createGlobalScriptingCommandHandler(deps) {
   }
 
   return async function handleGlobalScriptingCommand({ cmd, rawCmd }) {
-    if (cmd === 'MATH') {
+    // [LOG_ID: 20260711_2340] cmd는 입력 전체 문자열이므로 인자를 받는 명령은 첫 토큰으로
+    // 비교한다(전체 일치는 인자가 붙으면 매칭 불가 — commandRouterGlobalWorkspace 주석 참고).
+    const head = String(cmd || '').trim().split(/\s+/)[0];
+
+    if (head === 'MATH') {
       const parts = splitCommand(rawCmd);
       const varName = (parts[1] || '').toUpperCase();
       const expr = parts.slice(2).join(' ');
@@ -54,7 +58,7 @@ export function createGlobalScriptingCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'READ') {
+    if (head === 'READ') {
       const parts = splitCommand(rawCmd);
       const varName = (parts[1] || '').toUpperCase();
       const promptText = parts.slice(2).join(' ') || `${varName} >> `;
@@ -75,7 +79,7 @@ export function createGlobalScriptingCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'TRAP') {
+    if (head === 'TRAP') {
       const parts = splitCommand(rawCmd);
       const trapCmd = parts.slice(1, -1).join(' ').replace(/^\((.+)\)$/, '$1');
       const signal = (parts[parts.length - 1] || '').toUpperCase();
@@ -93,7 +97,7 @@ export function createGlobalScriptingCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'WAITPID') {
+    if (head === 'WAITPID') {
       const parts = splitCommand(rawCmd);
       const pid = parseInt(parts[1], 10);
 
@@ -134,7 +138,7 @@ export function createGlobalScriptingCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'KILL') {
+    if (head === 'KILL') {
       const pid = parseInt(splitCommand(rawCmd)[1], 10);
       if (Number.isNaN(pid)) {
         setHint('사용법: KILL [PID]');

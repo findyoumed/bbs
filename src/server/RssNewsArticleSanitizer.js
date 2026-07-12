@@ -188,7 +188,8 @@ function trimKnownArticleLeadNoise(value) {
   let cleanText = String(value || '').trim();
   
   // [LOG: 20260616_1228] Remove leading inline metadata/navigation chains directly to protect trailing article sentences
-  const leadInlineBoilerplate = /^\s*(?:기사\s*읽기|요약|기사를\s*재생\s*중이에요|구글\s*검색\s*선호\s*매체로\s*추가|펼치기\/접기|왼쪽으로|오른쪽으로|[\s\-|/])+/gi;
+  // [LOG_ID: 20260712_0140] 구글 버튼 라벨 신표기('펼침', '구글 선호 매체 등록') 추가 — 구표기만 잡던 패턴을 유연화.
+  const leadInlineBoilerplate = /^\s*(?:기사\s*읽기|요약|기사를\s*재생\s*중이에요|구글\s*(?:검색\s*)?선호\s*매체(?:로\s*추가|\s*등록)|펼치기\/접기|펼침|왼쪽으로|오른쪽으로|[\s\-|/])+/gi;
   cleanText = cleanText.replace(leadInlineBoilerplate, '').trim();
 
   if (!cleanText) {
@@ -380,7 +381,8 @@ function stripKnownArticleBoilerplateLines(value) {
     /^youtube$/i,
     /^유튜브로\s*보기$/i,
     // [LOG: 20260616_1220] 펼치기/접기, 요약, 구글 검색 선호 매체로 추가 제거패턴 추가
-    /^(?:펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가)$/i,
+    // [LOG_ID: 20260712_0140] 구글 버튼 라벨 신표기('펼침', '구글 선호 매체 등록') 단독 라인 제거 추가.
+    /^(?:펼치기\/접기|펼침|요약|구글\s*(?:검색\s*)?선호\s*매체(?:로\s*추가|\s*등록))$/i,
     // [LOG: 20260622_0950] Strip standalone '바로가기' and '복사하기' buttons
     /^(?:바로가기|복사하기)$/i,
     // [LOG: 20260703_1730] 연합뉴스TV 등 기사 읽어주기 안내문 + SNS 공유 위젯 라벨 + 글자크기 위젯('가') 제거
@@ -776,7 +778,7 @@ function isLikelyNoisyBody(value) {
   // [LOG: 20260617_0930] Add generic UI buttons, resize elements, scrap triggers, and navigation blocks
   // [LOG: 20260619_2030] 단독 '요약' 제거 → 버튼형(요약봇/AI 요약)만 매칭. 본문 정상어(경제전망요약 등) 오탐 방지
   // [LOG_ID: 20260709_1300] "후속 기사가 이어집니다" 및 하단 추천/메뉴 유출 노이즈 탐색 추가
-  return /(\\u[0-9a-fA-F]{4}|\$\(document\)\.ready|spinTopParams|_spinTop|\uC624\uB298\uC758 \uCD94\uCC9C\uC601\uC0C1|\uC9C0\uAE08 \uB728\uB294 \uB274\uC2A4|\uC88B\uC544\uC694|\uCF54\uBA58\uD2B8|\uB313\uAE00|\uACF5\uC720\uD558\uAE30|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC \uC77D\uC5B4\uC8FC\uAE30|기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약봇|AI\s*요약|구글\s*검색\s*선호\s*매체로\s*추가|이전\s*기사보기|다음\s*기사보기|기사\s*스크랩(?:하기)?|다른\s*공유\s*찾기|본문\s*글씨\s*(?:키우기|줄이기)|스크롤\s*이동\s*상태바|\uC0AC\uC9C4\s*\uD655\uB300|\uC774\uBBF8\uC9C0\s*\uD655\uB300|\uD070\uC0AC\uC9C4\uBCF4\uAE30|\uAD00\uB828\uC0AC\uC9C4\uBCF4\uAE30|\uCE74\uCE74\uC624\uD1A1|\uD398\uC774\uC2A4\uBD81\uBA54\uC2E0\uC800|\uBCF5\uC0AC|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|\uC7AC\uD310\uB9E4\s*(?:\uBC0F\s*DB)?\uAE08\uC9C0|video\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|\uC624\uB514\uC624\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|후속\s*기사가\s*이어집니다|많이\s*본\s*사진|이시간\s*핫뉴스|오늘의\s*헤드라인|뉴시스Pic|^[\(\)\[\]\s]+$)/.test(source);
+  return /(\\u[0-9a-fA-F]{4}|\$\(document\)\.ready|spinTopParams|_spinTop|\uC624\uB298\uC758 \uCD94\uCC9C\uC601\uC0C1|\uC9C0\uAE08 \uB728\uB294 \uB274\uC2A4|\uC88B\uC544\uC694|\uCF54\uBA58\uD2B8|\uB313\uAE00|\uACF5\uC720\uD558\uAE30|\uC804\uCCB4\uBA54\uB274|\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C\uAC00\uAE30|\uAE00\uC790\uD06C\uAE30|\uAE30\uC0AC \uC77D\uC5B4\uC8FC\uAE30|기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|^펼침$|요약봇|AI\s*요약|구글\s*(?:검색\s*)?선호\s*매체(?:로\s*추가|\s*등록)|이전\s*기사보기|다음\s*기사보기|기사\s*스크랩(?:하기)?|다른\s*공유\s*찾기|본문\s*글씨\s*(?:키우기|줄이기)|스크롤\s*이동\s*상태바|\uC0AC\uC9C4\s*\uD655\uB300|\uC774\uBBF8\uC9C0\s*\uD655\uB300|\uD070\uC0AC\uC9C4\uBCF4\uAE30|\uAD00\uB828\uC0AC\uC9C4\uBCF4\uAE30|\uCE74\uCE74\uC624\uD1A1|\uD398\uC774\uC2A4\uBD81\uBA54\uC2E0\uC800|\uBCF5\uC0AC|\uB3C5\uC790\uB4E4\uC758\s*PICK|\uC804\uCCB4\s*\uB0B4\uC6A9\uBCF4\uAE30|\uAE30\uC0AC\uBB38\uC758\s*\uBC0F\s*\uC81C\uBCF4|\uC7AC\uD310\uB9E4\s*(?:\uBC0F\s*DB)?\uAE08\uC9C0|video\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|\uC624\uB514\uC624\s*\uD0DC\uADF8\uB97C\s*\uC9C0\uC6D0\uD558\uC9C0|후속\s*기사가\s*이어집니다|많이\s*본\s*사진|이시간\s*핫뉴스|오늘의\s*헤드라인|뉴시스Pic|^[\(\)\[\]\s]+$)/.test(source);
 }
 
 function isScriptCodeDumping(value) {

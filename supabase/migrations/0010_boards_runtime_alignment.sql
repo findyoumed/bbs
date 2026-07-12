@@ -32,7 +32,7 @@ VALUES
   ('tosysop',   '건의하기',       'top', '2', 2, 1, false, true,  false),
   -- 게시판
   ('plaza',     '열린광장',       'top', '3', 3, 1, false, true,  false),
-  ('humor',     '우스개',         'top', '4', 4, 1, false, true,  false),
+  ('humor',     '유머',         'top', '4', 4, 1, false, true,  false),
   ('say',       '횡설수설',       'top', '5', 5, 1, false, true,  false),
   ('qna',       '묻고답하기',     'top', '6', 6, 1, false, true,  false),
   ('newface',   '가입인사',       'top', '7', 7, 1, false, true,  false),

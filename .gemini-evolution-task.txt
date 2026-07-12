@@ -1,2 +1,0 @@
-[REPL Loop 진화(Evolve) 모드 38/500]
-이전 목표: 작업 제어(JOBS, KILL) 및 스크립팅 고도화(TRY/CATCH/TRAP) 시스템 구축

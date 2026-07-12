@@ -14,7 +14,8 @@ export const CMD_META = {
   M: { label: '상위', tip: 'P, M', priority: 95, cat: 'NAV', desc: '상위 메뉴로 이동합니다.' },
   T: { label: '초기화면', tip: 'T', priority: 98, cat: 'NAV', desc: 'BBS 초기 화면으로 이동합니다.' },
   GO: { label: '이동', tip: 'GO [코드]', priority: 90, cat: 'NAV', desc: '특정 메뉴나 게시판 코드로 바로 이동합니다.' },
-  Z: { label: '이전', tip: 'Z', priority: 85, cat: 'NAV', desc: '이전 화면으로 돌아갑니다.' },
+  // [LOG_ID: 20260712_2130] 하이텔 원전 의미(화면 재전송)로 변경 — 사용자 결정 (hitel_upgrade_plan P4-1)
+  Z: { label: '재전송', tip: 'Z', priority: 85, cat: 'NAV', desc: '현재 화면을 다시 그립니다. (하이텔: 잡음으로 깨진 화면 재전송)' },
   F: { label: '다음쪽', tip: 'F, [ENTER]', priority: 70, cat: 'NAV', desc: '다음 페이지로 이동합니다. (또는 엔터키)' },
   B: { label: '이전쪽', tip: 'B', priority: 70, cat: 'NAV', desc: '이전 페이지로 이동합니다.' },
   C: { label: '배경색', tip: 'C', priority: 36, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
@@ -65,7 +66,8 @@ export const CMD_META = {
   ME: { label: '쪽지', tip: 'ME, MEMO', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   MEMO: { label: '쪽지', tip: 'ME, MEMO', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   O: { label: '방만들기', tip: 'O', login: true, priority: 42, cat: 'CHAT', desc: '채팅방을 개설합니다.' },
-  PR: { label: '복사/연속읽기', tip: 'PR [번호]', priority: 15, cat: 'SYS', desc: '뉴스: 기사 내용을 클립보드에 복사합니다. 게시판: 해당 번호부터 엔터로 글을 이어서 읽습니다.' },
+  // [LOG_ID: 20260712_0030] 라벨을 '연속읽기'로 통일(사용자 결정). 뉴스의 클립보드 복사 동작은 desc에만 남긴다.
+  PR: { label: '연속읽기', tip: 'PR [번호]', priority: 15, cat: 'SYS', desc: '게시판: 해당 번호부터 엔터로 글을 이어서 읽습니다. 뉴스: 본문 전체를 한 화면에 펼치고 클립보드에 복사합니다.' },
 
   // VFS (Virtual File System)
   FILES: { label: '파일목록', tip: 'FILES, DIR', priority: 30, cat: 'VFS', desc: '가상 파일 시스템의 파일 목록을 보여줍니다.' },

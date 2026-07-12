@@ -305,7 +305,8 @@ function scoreArticleText(text, sourceType = 'body', title = '') {
   const avgLine = lines.length ? Math.min(80, length / lines.length) : 0;
   const paragraphCount = lines.filter((line) => line.length >= 20).length;
   // [LOG: 20260616_1205] 동아일보의 재생/슬라이더 문구(기사 읽기, 재생 중이에요, 왼쪽으로, 오른쪽으로) 및 [LOG: 20260616_1220] 펼치기/접기, 요약, 구글 검색 선호 매체 포함 시 감점 처리하도록 보강
-  const penalty = /(기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*검색\s*선호\s*매체로\s*추가|본문으로\s*바로가기|전체메뉴)/.test(source) ? 520 : 0;
+  // [LOG_ID: 20260712_0140] 구글 버튼 라벨 신표기('구글 선호 매체 등록') 추가('펼침' 단독은 부분매칭 오탐 위험으로 제외).
+  const penalty = /(기사\s*읽기|기사를\s*재생\s*중이에요|왼쪽으로|오른쪽으로|펼치기\/접기|요약|구글\s*(?:검색\s*)?선호\s*매체(?:로\s*추가|\s*등록)|본문으로\s*바로가기|전체메뉴)/.test(source) ? 520 : 0;
   const teaserPenalty = looksLikeTruncatedTeaser(source)
     ? (length <= 320 ? 1100 : 420)
     : (paragraphCount <= 1 && length < 160 ? 240 : 0);

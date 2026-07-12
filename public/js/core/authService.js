@@ -3,12 +3,33 @@ import { createAuthServiceBootstrap } from './authServiceBootstrap.js';
 
 export function createAuthService(deps) {
   const {
+    apiFetch,
+    showToast,
     state,
     updateUserInfo
   } = deps;
 
   function guestUser() {
     return { userId: 'guest', nickName: '손님', level: 1, isAdmin: false, isGuest: true };
+  }
+
+  // [LOG_ID: 20260712_1940] 하이텔 '전자사서함 확인' 재현 — 접속(로그인/세션 복원) 직후 새 쪽지
+  // 도착 여부를 알려준다(하이텔 길라잡이 p.94: 접속 시 새 편지 도착 여부 확인이 환경설정 항목일
+  // 만큼 보편적 경험). 서버 GET /api/memos/unread/count 는 이미 있었으나 클라이언트가 한 번도
+  // 호출하지 않던 것을 연결. 0통이거나 조회 실패면 침묵한다.
+  async function notifyUnreadMemos() {
+    if (typeof apiFetch !== 'function' || state.user?.isGuest !== false) {
+      return;
+    }
+    try {
+      const result = await apiFetch('/api/memos/unread/count', { silent: true });
+      const count = Number(result?.count || 0);
+      if (count > 0 && typeof showToast === 'function') {
+        showToast(`새 쪽지가 ${count}통 도착해 있습니다. (쪽지함: ME)`, 5000, 'info');
+      }
+    } catch (error) {
+      // 접속 알림은 부가 기능 — 실패는 조용히 넘긴다.
+    }
   }
 
   async function refreshUser() {
@@ -31,6 +52,11 @@ export function createAuthService(deps) {
       state.menuLookup = {};
       state.menuParents = {};
       state._menuTreeGuestState = undefined;
+      // [LOG_ID: 20260712_1940] 손님→회원 전환(로그인 완료 또는 부팅 시 세션 복원) 시점에만
+      // 전자사서함(새 쪽지)을 확인한다. 로그아웃(회원→손님)에는 발동하지 않는다.
+      if (!isGuest) {
+        void notifyUnreadMemos();
+      }
     }
     updateUserInfo();
   }

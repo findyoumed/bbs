@@ -23,7 +23,7 @@ function seedMemoryBoardRepository(repo) {
   }
   seedRoot(repo, 'plaza', '열린광장에 오신 것을 환영합니다', '이곳은 자유롭게 의견을 나누는 공간입니다.\n정리된 메뉴 구조에 따라 이제 모든 게시판이 정상 작동합니다.', 'user5', '회원5');
 
-  // 우스개
+  // 유머
   seedRoot(repo, 'humor', '도스 시절 추억', 'autoexec.bat 한 줄에 하루가 걸리던 시절이 있었습니다.\n\nCONFIG.SYS 설정 하나 잘못 건드렸다가 밤새운 경험, 다들 있으시죠?', 'retro1', '레트로');
   seedRoot(repo, 'humor', '286에서 486으로 업그레이드하던 날', '386SX 살까 386DX 살까 한참 고민했던 그 시절...\n결국 486DX33으로 결정했는데 지금 생각하면 웃음이 나옵니다.', 'retro2', '추억남');
   seedRoot(repo, 'humor', 'PC통신 요금 폭탄 맞았던 사연', '한달에 전화비가 십만원 넘게 나왔던 그 시절의 공포를 아십니까?', 'user1', '회원1');

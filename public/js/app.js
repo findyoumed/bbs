@@ -18,6 +18,9 @@ let state = {
   cmdHistory: [],
   cmdHistoryIndex: -1,
   cmdHistoryTemp: '',
+  _prQueue: [],
+  _memberBannerShown: {},
+  commandGrade: 'middle', // Default helpbar grade
 };
 
 const refs = {};

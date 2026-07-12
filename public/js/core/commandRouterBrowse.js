@@ -26,7 +26,9 @@ export function createBrowseCommandHandler(deps) {
     showPostView,
     showPostWrite,
     showToast,
-    state
+    state,
+    showPtPrepare,
+    showPtResult
   } = deps;
 
   function resolveVisiblePostTarget(rawValue) {
@@ -80,6 +82,22 @@ export function createBrowseCommandHandler(deps) {
   }
 
   return async function handleBrowseCommand({ s, input, cmd, rawCmd, context }) {
+    // [LOG_ID: 20260712_2200] PT 가상 화면 입출력 바인딩
+    if (s === 'pt-prepare') {
+      if (typeof showPtResult === 'function') {
+        await showPtResult();
+      }
+      return true;
+    }
+    if (s === 'pt-view') {
+      await showPostList(state.board.id, state.page, {
+        menuPath: state.boardMenuPath,
+        menuTitle: state.boardMenuTitle,
+        searchParams: state.searchParams
+      });
+      return true;
+    }
+
     if (s === 'main') {
       const visibleEntries = Array.isArray(state.boardMenuEntries) && state.boardMenuEntries.length
         ? state.boardMenuEntries
@@ -266,21 +284,63 @@ export function createBrowseCommandHandler(deps) {
         return true;
       }
 
+      // [LOG_ID: 20260712_2200] PT [번호] 제목 100건 일괄 출력 연출 복원
+      const ptMatch = cmd.match(/^PT(?:\s+(\d+))?$/);
+      if (ptMatch) {
+        const startNum = ptMatch[1] ? parseInt(ptMatch[1], 10) : 1;
+        if (typeof showPtPrepare === 'function') {
+          await showPtPrepare(startNum);
+          return true;
+        }
+      }
+
       // [LOG_ID: 20260711_1340] PR [번호] 연속읽기 — olddos-bbs(hanulso) 원작 명령 복원.
       // 해당 글부터 열고, 이후 post-view에서 빈 엔터로 다음 글을 이어서 읽는다.
-      const prMatch = cmd.match(/^PR(?:\s+(\d+))?$/);
+      // [LOG_ID: 20260712_2210] 하이텔 원전 스펙(길라잡이 p.136) 확장: 'PR 번호1-번호2'(범위)와
+      // 'PR 번호1,번호2,...'(나열, 최대 10건)를 지원한다. 지정 집합은 큐(_continuousRead.queue)에
+      // 담아 빈 엔터마다 순서대로 열고, 소진되면 연속읽기를 마친다. 현재 목록(state.posts)에 있는
+      // 글만 대상이며 범위는 번호 오름차순(옛 글부터)으로 순회한다.
+      const prMatch = cmd.match(/^PR(?:\s+([\d,\s-]+))?$/);
       if (prMatch) {
-        const target = prMatch[1]
-          ? (state.posts.find((post) => String(post.id) === prMatch[1]) || state.posts[parseInt(prMatch[1], 10) - 1])
-          : state.posts[0];
-        if (!target) {
+        const spec = String(prMatch[1] || '').trim();
+        let targets = [];
+
+        const rangeMatch = spec.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (rangeMatch) {
+          const low = Math.min(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10));
+          const high = Math.max(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10));
+          targets = state.posts
+            .filter((post) => { const id = parseInt(post.id, 10); return id >= low && id <= high; })
+            .sort((left, right) => parseInt(left.id, 10) - parseInt(right.id, 10))
+            .slice(0, 10);
+        } else if (spec.includes(',')) {
+          const ids = spec.split(',').map((token) => token.trim()).filter(Boolean).slice(0, 10);
+          targets = ids
+            .map((idToken) => state.posts.find((post) => String(post.id) === idToken))
+            .filter(Boolean);
+        } else if (spec) {
+          const single = state.posts.find((post) => String(post.id) === spec)
+            || state.posts[parseInt(spec, 10) - 1];
+          if (single) targets = [single];
+        } else {
+          targets = state.posts.length ? [state.posts[0]] : [];
+        }
+
+        if (!targets.length) {
           setHint(UI_TEXT.POST_NOT_FOUND);
           setPrompt('>>');
           return true;
         }
-        state._continuousRead = { boardId: state.board.id };
-        await showPostView(state.board.id, target.id);
-        setHint('연속읽기: [엔터] 다음 글 · 다른 명령 입력 시 종료');
+
+        const [first, ...rest] = targets;
+        state._continuousRead = {
+          boardId: state.board.id,
+          queue: rest.map((post) => post.id)
+        };
+        await showPostView(state.board.id, first.id);
+        setHint(rest.length
+          ? `연속읽기(${targets.length}건): [엔터] 다음 글 · 다른 명령 입력 시 종료`
+          : '연속읽기: [엔터] 다음 글 · 다른 명령 입력 시 종료');
         return true;
       }
 

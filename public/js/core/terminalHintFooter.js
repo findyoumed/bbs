@@ -45,6 +45,24 @@ export function createTerminalHintFooter(deps) {
     });
   }
 
+  // [LOG_ID: 20260711_2155] 힌트바의 토큰이 아닌 영역을 탭/클릭하면 펼침을 토글한다.
+  // 넘쳐서 숨겨진 명령은 도움말(H) 토큰의 hover 툴팁에 모이는데(20260622_1900 사용자 선택),
+  // 터치 기기는 hover가 없고 펼치기 명령(+)도 키보드 전용이라 숨겨진 명령을 볼 방법이 없었다.
+  // 토큰 자체의 클릭은 appEvents의 캡처 단계 명령 리스너가 stopImmediatePropagation으로 먼저
+  // 소비하므로 여기(버블 단계)에는 토큰이 아닌 영역의 클릭만 도달한다. 숨겨진 명령이 없으면
+  // (hintExpandable=false, 펼침 상태도 아님) 아무 동작도 하지 않는다.
+  if (hintEl) {
+    hintEl.addEventListener('click', (event) => {
+      if (event.target.closest?.('.cmd-token')) {
+        return;
+      }
+      if (hintEl.dataset.hintExpandable !== 'true' && !hintEl.classList.contains('is-expanded')) {
+        return;
+      }
+      toggleHintExpansion();
+    });
+  }
+
   function scheduleHintTrim(attempt = 0) {
     if (!hintEl || typeof window === 'undefined') {
       return;
@@ -275,9 +293,18 @@ export function createTerminalHintFooter(deps) {
     // applyCommandFooter의 finally)와 함께 전담하므로 이 추론은 불필요하며 제거해도 로딩 표시는 그대로 동작한다.
   }
 
+  // [LOG_ID: 20260712_0010] 20260711_2210에서 넣었던 프롬프트 위치 접두('[열린광장] 선택 >>')는
+  // 사용자 결정으로 제거 — 기본 프롬프트는 항상 '선택 >>'. 아래 사용자 정의(SET PROMPT) 처리는
+  // 20260711_2340 SET 수정과 짝이므로 유지한다.
   function setPrompt(text) {
-    const promptText = (text === undefined || text === null || text === '>>')
-      ? (state.envVars?.PROMPT || DEFAULT_COMMAND_PROMPT)
+    // applyCommandFooter는 파싱된 기본 프롬프트('선택 >>')를 명시 문자열로 전달하므로,
+    // 기본 프롬프트와 동일한 텍스트도 사용자 정의 치환 대상으로 취급한다.
+    // envVars.PROMPT의 초기값 '>>'는 settingsService가 넣는 "사용자 정의 없음" 센티널이므로
+    // 사용자 정의 프롬프트로 취급하지 않는다(SET PROMPT로 바꾼 값만 존중).
+    const customPrompt = String(state.envVars?.PROMPT || '').trim();
+    const userPrompt = customPrompt && customPrompt !== '>>' ? customPrompt : '';
+    const promptText = (text === undefined || text === null || text === '>>' || String(text).trim() === DEFAULT_COMMAND_PROMPT)
+      ? (userPrompt || DEFAULT_COMMAND_PROMPT)
       : String(text);
 
     if (cmdInput) {

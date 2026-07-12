@@ -94,6 +94,7 @@ export function createAppFactoryScreens(deps) {
     ...screenDeps,
     ...boardService,
     ...menuService,
+    apiFetch,
     buildBoardSelectAnsi: boardAnsiBuilders.buildBoardSelectAnsi,
     buildMainMenuAnsi: boardAnsiBuilders.buildMainMenuAnsi,
     buildMenuHotspotsFromRows,
@@ -119,6 +120,7 @@ export function createAppFactoryScreens(deps) {
   const postScreens = createPostScreens({
     ...screenDeps,
     ...postService,
+    apiFetch,
     buildAttachmentListAnsi: boardAnsiBuilders.buildAttachmentListAnsi,
     buildPostListAnsi: boardAnsiBuilders.buildPostListAnsi,
     buildPostViewAnsi: boardAnsiBuilders.buildPostViewAnsi,

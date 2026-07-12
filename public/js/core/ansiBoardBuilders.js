@@ -13,6 +13,7 @@ export function createBoardAnsiBuilders(deps) {
     buildPageLabel,
     buildTopHeader,
     ansiHLine,
+    displayWidth,
     estimatePostPageCount,
     fitCell,
     formatLongDate,
@@ -22,20 +23,76 @@ export function createBoardAnsiBuilders(deps) {
   } = createAnsiBuilderUtils(deps);
 
   // [LOG: 20260410_1330] ANSI 화면 빌더를 board/service 단위로 재분리
-  function buildMainMenuAnsi(title, entries, stats = null) {
+  // [LOG_ID: 20260712_2150] 하이텔 원전(길라잡이 그림 5.1) 재현: 초기 메뉴를 데스크톱에서 2열
+  // 행 우선(1,2 / 3,4 …) 배치 + 행 사이 빈 줄로 화면을 채우고, 하단에 반전 배너 한 줄을 둔다
+  // (원전: "하이텔 고속서비스 접속번호 'go con'"). 종전 1열 8항목은 화면 대부분이 공백이었다.
+  // 모바일(44칸)은 폭이 좁아 기존 1열을 유지한다. 핫스팟은 buildMenuHotspotsFromRows가 텍스트
+  // 스캔("door. " 마커, 같은 줄 복수 탐지)이라 2열에서도 항목별로 정상 생성된다.
+  function buildMainMenuAnsi(title, entries, stats = null, noticeText = null) {
     void title;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
     const sortedEntries = (entries || [])
       .slice()
       .sort((left, right) => compareDoor(left?.door, right?.door));
     const parts = [buildTopHeader(['초기화면'])];
-    sortedEntries.forEach((entry) => {
+
+    const entryText = (entry) => {
       const door = String(entry?.door || '').trim().padStart(2, ' ');
       const label = String(entry?.title || entry?.label || '메뉴').trim();
-      parts.push(ansiColor(15) + `${door}. ${label}` + ANSI_RESET);
-    });
+      return `${door}. ${label}`;
+    };
+
+    if (isMobile || sortedEntries.length < 4) {
+      sortedEntries.forEach((entry) => {
+        parts.push(ansiColor(15) + entryText(entry) + ANSI_RESET);
+      });
+    } else {
+      const rightColStart = 40;
+      for (let i = 0; i < sortedEntries.length; i += 2) {
+        const leftText = ' ' + entryText(sortedEntries[i]);
+        const rightEntry = sortedEntries[i + 1];
+        let line = leftText;
+        if (rightEntry) {
+          const padWidth = Math.max(1, rightColStart - displayWidth(leftText));
+          line += ' '.repeat(padWidth) + entryText(rightEntry);
+        }
+        parts.push(ansiColor(15) + line + ANSI_RESET);
+        if (i + 2 < sortedEntries.length) {
+          parts.push('');
+        }
+      }
+    }
 
     if (!sortedEntries.length) {
       parts.push(ansiColor(8) + ' 등록된 메뉴가 없습니다.' + ANSI_RESET);
+    }
+
+    if (noticeText) {
+      parts.push('');
+      // [LOG_ID: 20260712_2200] 작은공지 영역 렌더링
+      const prefix = '[작은공지] ';
+      const titleOnly = noticeText.startsWith(prefix) ? noticeText.slice(prefix.length) : noticeText;
+      const goToken = '(GO NOTICE)';
+      const prefixLen = displayWidth(prefix);
+      const goLen = displayWidth(goToken);
+      const remaining = targetCols - prefixLen - goLen - 2;
+      const fitTitle = fitCell(titleOnly, remaining).trim();
+      const dotCount = Math.max(2, remaining - displayWidth(fitTitle));
+      const formattedNotice = `${prefix}${fitTitle}${'.'.repeat(dotCount)}${goToken}`;
+      parts.push(ansiColor(11) + formattedNotice + ANSI_RESET);
+    }
+
+    if (sortedEntries.length) {
+      // 하단 반전 배너 (그림 5.1의 "하이텔 고속서비스 접속번호 'go con'" 자리)
+      const bannerText = isMobile
+        ? ` 서비스안내는 'GO GUIDE' `
+        : ` 우리말 이동 지원 — 'GO 열린광장' / 서비스안내 'GO GUIDE' `;
+      const bannerWidth = displayWidth(bannerText);
+      const bannerPad = Math.max(0, Math.floor((targetCols - bannerWidth) / 2));
+      parts.push('');
+      parts.push('');
+      parts.push(' '.repeat(bannerPad) + ansiColor(0, 15) + bannerText + ANSI_RESET);
     }
 
     /* [LOG: 20260425_2140] 사용자 요청으로 시스템 통계 요약 제거 
@@ -54,7 +111,7 @@ export function createBoardAnsiBuilders(deps) {
     return parts.join('\n');
   }
 
-  function buildPostListAnsi(board, posts, page, totalPages, totalCount, contextTitle = '', searchParams = {}) {
+  function buildPostListAnsi(board, posts, page, totalPages, totalCount, contextTitle = '', searchParams = {}, memberBanner = null) {
     void contextTitle;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -127,6 +184,14 @@ export function createBoardAnsiBuilders(deps) {
       columnHeader(),
       ansiHLine(targetCols, 8)
     ];
+
+    if (memberBanner) {
+      // [LOG_ID: 20260712_2200] 동호회 신분 배너 한 줄 삽입
+      const bannerLine = fitCell(memberBanner, targetCols, 'left');
+      parts.push(ansiColor(14) + bannerLine + ANSI_RESET);
+      parts.push(ansiHLine(targetCols, 8));
+    }
+
     if (!posts.length) {
       parts.push(ansiColor(8) + ' 등록된 글이 없습니다.' + ANSI_RESET);
     } else {
@@ -158,7 +223,10 @@ export function createBoardAnsiBuilders(deps) {
     const highlightedContent = highlightText(rawContent, highlightTerm, 14, 15);
     const contentLines = wrapAnsiText(highlightedContent, targetCols);
 
-    const parts = [buildTopHeader(['게시판', boardCode ? `${boardName} (${boardCode})` : boardName, '글읽기'], '', targetCols)];
+    // [LOG_ID: 20260712_2050] 하이텔 원전(길라잡이 그림 5.5) 재현: 글읽기 상단바는 'READ/글읽기'가
+    // 아니라 게시판명('큰마을 (PLAZA)')이다 — 어느 게시판의 글인지 화면에서 사라지던 문제도 함께
+    // 해소되고, 목록(125행)과 동일한 config 방식이라 목록↔글읽기 전환 시 상단바가 흔들리지 않는다.
+    const parts = [buildTopHeader({ leftLabel: boardCode || 'READ', centerLabel: boardName }, '', targetCols)];
 
     parts.push(ansiColor(14) + '제목 : ' + ansiColor(15) + title + ANSI_RESET);
 

@@ -23,13 +23,30 @@ export function createAnsiBuilderUtils(deps) {
     let result = '';
     let width = 0;
 
-    for (const ch of source) {
-      const charWidth = isWideChar(ch) ? 2 : 1;
-      if (width + charWidth > maxWidth) {
-        break;
+    let i = 0;
+    const len = source.length;
+    while (i < len) {
+      const ch = source[i];
+      if (ch === '\x1b') {
+        result += ch;
+        i++;
+        while (i < len) {
+          const nextCh = source[i];
+          result += nextCh;
+          i++;
+          if (/[A-Za-z]/.test(nextCh)) {
+            break;
+          }
+        }
+      } else {
+        const charWidth = isWideChar(ch) ? 2 : 1;
+        if (width + charWidth > maxWidth) {
+          break;
+        }
+        result += ch;
+        width += charWidth;
+        i++;
       }
-      result += ch;
-      width += charWidth;
     }
 
     const padding = maxWidth - width;
@@ -278,16 +295,33 @@ export function createAnsiBuilderUtils(deps) {
 
       let current = '';
       let currentWidth = 0;
+      let i = 0;
+      const len = rawLine.length;
 
-      for (const ch of rawLine) {
-        const charWidth = isWideChar(ch) ? 2 : 1;
-        if (currentWidth + charWidth > width) {
-          lines.push(current);
-          current = '';
-          currentWidth = 0;
+      while (i < len) {
+        const ch = rawLine[i];
+        if (ch === '\x1b') {
+          current += ch;
+          i++;
+          while (i < len) {
+            const nextCh = rawLine[i];
+            current += nextCh;
+            i++;
+            if (/[A-Za-z]/.test(nextCh)) {
+              break;
+            }
+          }
+        } else {
+          const charWidth = isWideChar(ch) ? 2 : 1;
+          if (currentWidth + charWidth > width) {
+            lines.push(current);
+            current = '';
+            currentWidth = 0;
+          }
+          current += ch;
+          currentWidth += charWidth;
+          i++;
         }
-        current += ch;
-        currentWidth += charWidth;
       }
 
       lines.push(current);

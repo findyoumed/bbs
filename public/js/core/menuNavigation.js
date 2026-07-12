@@ -5,6 +5,7 @@ import { shouldAutoFocusCommandInput } from './uiUtils.js';
 export function createMenuNavigation(deps) {
   const {
     ansiToHTML,
+    apiFetch,
     applyCommandFooter,
     buildBoardSelectAnsi,
     buildMainMenuAnsi,
@@ -104,11 +105,12 @@ export function createMenuNavigation(deps) {
     // 자체가 순간 비었다 채워지는 것이었다). 20260708_1420의 setLoading() 힌트-즉시-비움 문제와 동일 계열.
     setLoading('연결하는 중입니다..');
 
-    // [LOG: 20260426_1110] 메뉴 로드 시 시스템 통계도 병렬로 로드
-    const [, menuTree, stats] = await Promise.all([
+    // [LOG: 20260712_2200] 메뉴 로드 시 시스템 통계 및 최신 공지글 병렬 로드
+    const [, menuTree, stats, noticeData] = await Promise.all([
       loadBoards(),
       loadMenuTree(),
-      fetch('/api/system/stats').then(res => res.ok ? res.json() : null).catch(() => null)
+      fetch('/api/system/stats').then(res => res.ok ? res.json() : null).catch(() => null),
+      apiFetch('/api/boards/notice?page=1&pageSize=1').catch(() => null)
     ]);
 
     // [LOG: 20260611_1400] Clear loading timer before rendering to prevent overwriting content
@@ -134,9 +136,17 @@ export function createMenuNavigation(deps) {
       void updateURL();
     }
 
+    let noticeText = null;
+    if (noticeData && (noticeData.items?.length > 0 || noticeData.posts?.length > 0)) {
+      const noticePost = noticeData.items?.[0] || noticeData.posts?.[0];
+      if (noticePost && noticePost.title) {
+        noticeText = `[작은공지] ${noticePost.title}`;
+      }
+    }
+
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({
-      ansiText: buildMainMenuAnsi(state.boardMenuTitle, menuEntries, stats),
+      ansiText: buildMainMenuAnsi(state.boardMenuTitle, menuEntries, stats, noticeText),
       ansiToHTML,
       screenEl,
       renderScreenSequential,

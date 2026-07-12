@@ -1,3 +1,371 @@
+## [2026-07-12 22:00] 하이텔 기능 확장 Phase 1 + ANSI-aware 텍스트 파서 리팩토링
+
+**LOG_ID: 20260712_2200**
+목표: 하이텔 길라잡이 전권 학습 로드맵의 Phase 1 기능들(PT 100건 제목 출력, PR 범위 연속읽기 확장, 동호회 신분 배너, 메인 작은공지 라인)을 적용하고, Firebird BBS(util.js)의 너비 계산 알고리즘을 이식하여 ANSI 코드가 포함된 한글 텍스트의 렌더링 찌그러짐을 해결한다.
+변경 파일:
+1) `public/js/app.js` (state 초기 큐 및 세션 플래그, commandGrade 추가)
+2) `public/js/core/ansiBuilderUtils.js` (ANSI 제어 시퀀스를 너비 계산에서 스킵하는 fitCell, wrapAnsiText 리팩토링)
+3) `public/js/core/ansiBoardBuilders.js` (buildMainMenuAnsi 작은공지 렌더, buildPostListAnsi 신분 배너 렌더 추가)
+4) `public/js/core/menuNavigation.js` (apiFetch로 공지사항 notice 최신글 병렬 fetch 후 pass)
+5) `public/js/core/postListView.js` (최초 진입 시 신분 배너 생성, PT 가상 뷰어 showPtPrepare, showPtResult 구현)
+6) `public/js/core/postScreens.js` (postListView로부터 showPtPrepare, showPtResult를 디바인딩해 handlers로 매핑)
+7) `public/js/core/commandRouterBrowse.js` (PT 명령어 라우팅, pt-prepare/pt-view 가상 상태 입력 매핑)
+8) `public/js/core/commandRouterPostView.js` (PR 연속읽기 시 state._continuousRead.queue 순회 배관 추가)
+9) `public/js/core/appFactoryScreens.js` (menuNav 및 postScreens 디펜던시에 apiFetch 명시적 주입)
+수행 작업:
+1) [ANSI 파서 개선] `fitCell` 과 `wrapAnsiText`에서 `\x1b`를 감지하면 알파벳 제어코드가 끝날 때까지 너비(width) 누적에 더하지 않고 결과물 버퍼에는 그대로 유지하도록 상태 탐색 루프 추가. 색상 코드나 검색어 하이라이트(`highlightText`)가 섞인 텍스트가 화면 폭을 침범하거나 어긋나는 고질적 버그 해결.
+2) [PT 100건 일괄 출력] 목록/자료실에서 `PT [번호]` 입력 시 `pt-prepare` 화면에서 캡처 엔터 대기 연출(`PRINTER/CAPTURE 를 준비하시고 Enter를 누르십시오`) 후, 엔터 입력 시 `/api/boards/:id` 로 pageSize=100을 fetch하여 지정 번호부터 100건 제목을 정통 CUI 컬럼 포맷으로 화면에 가득 출력하고 `pt-view` 상에서 아무 키나 누르면 목록 복구.
+3) [PR 연속읽기 확장] 기존 단일 연속읽기를 나아가 `PR 1-5` (범위) 또는 `PR 10,12,15` (나열)를 지원하기 위해 큐(`queue`)를 활용하도록 `commandRouterPostView` 보완. 본문에서 빈 엔터( Enter ) 제출 시 큐에 남아 있는 글을 차례대로 fetch/렌더하고 소진 시 복귀.
+4) [신분 배너] 게시판/자료실 목록 최초 진입 시 `state.user` 세션 정보와 `_memberBannerShown` 플래그를 조합해 `## {닉네임}({아이디})님은 {회원등급}입니다 ##` (손님/정회원/시삽) 한 줄 배너를 1회 한정 렌더링.
+5) [작은공지] 메인 화면 부팅 시 notice 게시판의 최신 1개 제목을 병렬 fetch하여 메인 하단 배너 위에 `[작은공지] 공지제목....................(GO NOTICE)` 레트로 한 줄 링크로 생성.
+6) [검증] `npm run build` 스모크 헬스 체크 패스(ok: true, fbbs-supabase 드라이버 정상).
+결과: ✅ 완료 (다음: Phase 2 로드맵 착수 — CAP 갈무리 토글, 보낸쪽지함 및 수신확인 구현)
+
+---
+
+## [2026-07-12 21:55] 초기 메뉴 2열 배치 + 하단 반전 배너 — 하이텔 그림 5.1 재현 (U-1/U-2)
+
+**LOG_ID: 20260712_2150**
+목표: 사용자 승인("UI도 잘 진행해")에 따라 UI 트랙 U-1(메인 2열)·U-2(반전 배너)를 구현한다.
+원전: 길라잡이 그림 5.1 — 2열 행 우선 메뉴 + 그룹 빈 줄 + 하단 반전 배너("하이텔 고속서비스
+접속번호 'go con'"). 종전 우리 메인은 1열 8항목으로 화면 대부분이 공백이었다.
+변경 파일:
+1) `public/js/core/ansiBoardBuilders.js` (buildMainMenuAnsi 2열+배너, displayWidth 구조분해 추가)
+2) `public/style.css` (.ansi-bg-15 반전 배경 위 검정 글자 예외)
+3) `docs/hitel_upgrade_plan.txt` (U-1/U-2 완료 표기)
+수행 작업:
+1) [U-1] 데스크톱(80칸)에서 메뉴를 2열 행 우선(1,2/3,4/5,6/7,8, 우측 열 시작 40칸)으로 배치하고
+   행 사이 빈 줄로 그림 5.1의 리듬 재현. 모바일(44칸)은 폭 부족으로 기존 1열 유지. 핫스팟은
+   buildMenuHotspotsFromRows가 텍스트 스캔("door. " 마커, 같은 줄 복수 탐지)이라 무수정 대응.
+2) [U-2] 메뉴 아래 반전 강조 중앙 배너 1줄: "우리말 이동 지원 — 'GO 열린광장' / 서비스안내
+   'GO GUIDE'"(모바일은 축약형). [작은공지] 동적 연동은 P1-4 후속.
+3) [파생 수정 2건] ① displayWidth가 이 파일 스코프에 미구조분해라 초기화 오류(displayWidth is
+   not defined) → 구조분해 추가. ② 전역 "모든 글자 흰색 고정"(20260611_1300, !important) 규칙이
+   흰 배경(ansi-bg-15) 조합에서 흰 글자를 만들어 배너가 빈 흰 막대로 렌더 → `.ansi-bg-15,
+   .ansi-bg-15 *{color:#000}` 최소 예외 추가(다른 bg-15 사용처는 topbar 브랜드뿐 — 그 줄은
+   retro-topbar로 변환돼 영향 없음).
+4) [검증] Playwright: 데스크톱 2열+빈 줄+배너 검정 글자 스크린샷 확인, 핫스팟 8개 전부 항목별
+   생성·우측 열(날씨) 클릭 → weather-menu 이동 실측. 모바일 1열 유지·한 줄 2항목 없음 확인.
+   `node --check`(ESM) ok, `smoke:renderer-ui`·`smoke:vercel-ready` ok.
+결과: ✅ 완료 (다음: P1-2 PR 범위 연속읽기 → P1-1 PT → P1-3 신분 배너 순)
+
+---
+
+## [2026-07-12 21:30] Z 명령을 하이텔 원전 의미(화면 재전송)로 변경 — 사용자 결정 P4-1~3 반영
+
+**LOG_ID: 20260712_2130**
+목표: hitel_upgrade_plan.txt Phase 4의 충돌 항목 3건에 대한 사용자 결정을 반영한다.
+결정: ① Z=재그리기(원전 채택) ② HI=내정보 유지(재제안 금지) ③ M=P 동일 유지(재제안 금지).
+변경 파일:
+1) `public/js/core/commandRouterGlobalNavigation.js` (Z 처리: handleHistoryBack → restoreStateFromURL)
+2) `public/js/core/commandService.js` (CMD_META Z: '이전' → '재전송', desc 갱신)
+3) `docs/hitel_upgrade_plan.txt` (P4-1 완료, P4-2/3 종결 표기)
+수행 작업:
+1) [구현] Z 입력 시 종전 '이전 화면'(handleHistoryBack) 대신, 현재 URL 기준 화면 재구성 배관
+   (refs.restoreStateFromURL, fromHistory 경로)을 재사용해 현재 화면을 다시 그린다 — 길라잡이
+   p.90의 "깨끗한 화면 재전송" 의미. 배관 부재 시 기존 동작 폴백. 한글 오타 별칭(ㅋ→z)은
+   commandNormalizer에 기존재해 자동 적용.
+2) [검증] Playwright: post-list에서 Z → 같은 화면·URL 유지+목록 재렌더 / post-view(305)에서
+   Z → 같은 글 재렌더(본문 유지) / main에서 Z → main 유지. `node --check`(ESM) 2건,
+   `smoke:renderer-ui` ok.
+결과: ✅ 완료
+
+---
+
+## [2026-07-12 21:10] 게시판 목록 핫스팟이 3줄 위로 어긋나 헤더가 클릭되던 문제 수정
+
+**LOG_ID: 20260712_2110**
+목표: /board/plaza 목록에서 카운트라인("1-7/7 ( 총 7건 )")·컬럼 헤더·구분선이 클릭되던
+문제(사용자 보고)를 수정한다.
+변경 파일:
+1) `public/js/core/postListView.js` (renderPostHotspots 줄 매칭 방식 전환)
+수행 작업:
+1) [원인] renderPostHotspots가 "본문 줄 0부터가 게시물"이라는 인덱스 가정(rowIdx = index)으로
+   핫스팟을 배치했는데, 실제 본문은 카운트라인·컬럼 헤더·구분선 3줄이 먼저 온다. 그 결과 핫스팟
+   레이어 전체가 3줄 위로 어긋나 ① 헤더 영역 3줄이 엉뚱한 게시물로 클릭되고 ② 정작 마지막
+   게시물 3건은 클릭 영역이 없었다.
+2) [수정] 인덱스 가정 대신 각 게시물 번호(postLine의 첫 토큰, 6칸 우측정렬)로 실제 .ansi-line을
+   순차 탐색(searchFrom 포인터로 O(n))해 그 줄의 rect에 핫스팟을 붙인다 — 본문 헤더 줄 수가
+   바뀌어도 어긋나지 않는 구조. pds(자료실) 목록도 같은 경로라 함께 수정됨.
+3) [검증] Playwright: 카운트라인/컬럼 헤더 클릭 지점의 elementFromPoint가 핫스팟이 아님 확인,
+   핫스팟 7개 전부 해당 번호의 게시물 줄과 top 정렬(±3px) 확인, 첫 게시물 줄 클릭 → post-view
+   정상 이동. `node --check`(ESM) ok, `smoke:renderer-ui`·`smoke:boards` ok.
+결과: ✅ 완료
+
+---
+
+## [2026-07-12 20:50] 하이텔 화면 그림 시각 대조(UI 트랙 신설) + 글읽기 상단바 원전 정합 수정
+
+**LOG_ID: 20260712_2050**
+목표: "기능뿐 아니라 UI도 책을 따라야 한다"(사용자 지시)에 따라, OCR 텍스트로는 알 수 없는
+화면 레이아웃을 책의 실제 캡처 그림으로 시각 대조하고, 발견된 UI 격차를 수정한다.
+변경 파일:
+1) `public/js/core/ansiBoardBuilders.js` (buildPostViewAnsi 상단바를 config 방식으로, 1곳)
+2) `docs/hitel_upgrade_plan.txt` (2-B UI 재현 트랙 섹션 신설 — 그림 위치 지도 + 갭 U-0~U-5)
+수행 작업:
+1) [시각 대조 체계] 책의 그림 번호↔PDF 페이지 지도를 작성(4~10장 화면 그림 40여 개 위치 확정)
+   → 핵심 4장면(그림 5.1 초기 메뉴/5.4 목록/5.5 글읽기)을 PNG(130dpi)로 렌더해 눈으로 확인
+   → 같은 장면의 우리 화면을 Playwright로 캡처해 나란히 대조.
+2) [대조 결과 — 정합] 목록 화면은 컬럼(번호 이름 ID 날짜 조회 Pg 제목)·카운트라인·상단바까지
+   그림 5.4와 사실상 일치(모바일의 컬럼 축약은 반응형 설계). 프롬프트 입력 에코도 정합.
+3) [발견·수정 — U-0] 글읽기 상단바가 'READ/글읽기'로, 어느 게시판의 글인지 화면에서 사라짐.
+   원전(그림 5.5)은 첫 줄이 게시판명 '큰마을 (PLAZA)'. 원인: 목록은 buildTopHeader를
+   config({leftLabel: 코드, centerLabel: 이름}) 방식으로 부르는데 글읽기만 구식 배열 호출이라
+   resolveHeaderLabels가 마지막 세그먼트('글읽기')만 채택하고 게시판명을 버림. 글읽기도 config
+   방식으로 통일 → 상단바 'PLAZA / 열린광장'(목록↔글읽기 전환 시 상단바 무변동 부수 효과).
+4) [백로그 — UI 트랙 신설] U-1 메인 메뉴 2열 배치(그림 5.1 — 현재 1열 8항목으로 화면 대부분
+   공백. 미학 민감 영역이라 사용자 확인 후), U-2 메인 하단 반전 배너+[작은공지](그림 5.1/4.4),
+   U-3 카운트라인 형식(우리 방식이 더 명확해 보류), U-4 대기실 레이아웃, U-5 쪽지 화면 계열.
+5) [검증] Playwright: /board/plaza/305 글읽기 상단바 'PLAZA 열린광장' 표시 스크린샷 확인.
+   `node --check`(ESM) ok, `smoke:renderer-ui`·`smoke:boards` ok.
+결과: ✅ 완료 (다음: U-1/U-2는 사용자 확인 후, Phase 1 기능 구현과 병행)
+
+---
+
+## [2026-07-12 20:20] 하이텔 길라잡이 전권 학습 완료 + 확장 계획서 전면 개정
+
+**LOG_ID: 20260712_2020**
+목표: 직전(20260712_1940) 에이전트 분석이 책의 일부 구간만 커버했다는 사용자 지적에 따라,
+미학습 구간을 마저 학습해 전권(173쪽) 커버를 완성하고 docs/hitel_upgrade_plan.txt를 전면 개정한다.
+변경 파일:
+1) `docs/hitel_upgrade_plan.txt` (전면 재작성 — 전권 학습 기반 4단계 로드맵)
+수행 작업:
+1) [미학습 구간 보완] 1~2장(p.5~18, 모뎀/AT명령 — 접속 연출 소재만 수확), 4장(p.63~80, 가입
+   절차·[작은공지]+GO 링크 화면), 5장 기본 명령어 원문(HI/H/X/Z/M 정의) 직접 학습. 색인부 제외
+   전권 커버 완성.
+2) [구판 계획서 검증·정정] 기존 hitel_upgrade_plan.txt(작성 주체 불명)의 항목을 코드 실측 대조:
+   ① A/N 글 이동은 "신규"가 아니라 이미 구현됨 ② Z는 책의 '화면 재전송'과 달리 현행 '이전
+   화면'으로 이미 사용 중(용도 충돌) ③ HI도 책은 '서비스 안내', 현행은 내정보 별칭(충돌)
+   ④ go abc 전용 TUI 화면은 SET 한 줄로 충분한 것의 과설계 — 이상 4건을 충돌/보류로 재분류.
+3) [계획서 구성] 장별 학습 요약 → 이미 정합 확인 목록 → Phase 1(저위험: PT 일괄출력, PR 범위
+   연속읽기, 신분 배너, 작은공지) → Phase 2(상징 기능: CAP 갈무리, 보낸쪽지함+수신확인, 대기실
+   상황판) → Phase 3(환경 구축: SET LEVEL 표시등급, LS/LD, SET HOME, 귓속말, K/KW) → Phase 4
+   (충돌·연출·저빈도 보류: Z/HI/M 재정의, DN 연출, 부재통지, 편지 8종, 접속 연출) + 원전 화면
+   인용 보관(힌트바 원문 3종, 대기실, 편지 종류 등 13건) + 검증 원칙.
+결과: ✅ 완료 (다음 이터레이션부터 Phase 1 순차 구현)
+
+---
+
+## [2026-07-12 19:55] 하이텔 길라잡이 분석(에이전트 2기 병렬) + 접속 시 새 쪽지 도착 알림 구현
+
+**LOG_ID: 20260712_1940**
+목표: docs/hitel길라잡이.pdf(173쪽, OCR 스캔본)를 분석해 배울 기능/UI를 발굴·적용한다(사용자 요청,
+ralph-loop 1회차). 에이전트 활용 지시에 따라 general-purpose 서브에이전트 2기를 병렬 투입.
+변경 파일:
+1) `public/js/core/authService.js` (notifyUnreadMemos 신설 + 손님→회원 전환 훅, +25줄)
+2) `public/js/core/appFactoryServices.js` (authService deps에 showToast 주입)
+수행 작업:
+1) [분석 체계] PyMuPDF로 PDF 전체 텍스트 추출(13.6만자) → 스크래치패드 공유 → 에이전트 A(5~7장:
+   메뉴 체계·기본 명령어·대화실·전자우편)와 B(3장 이야기 + 8~10장: 게시판·동호회·자료실 GL)가
+   각자 프로젝트 현황(commandFooterText/CMD_META/WORK_LOG)과 대조 분석. 기존 정합 확인:
+   게시판 컬럼·카운트라인·번호/명령 푸터·F/B/P/T/GO/A/N 체계는 책의 화면 예시와 이미 일치.
+2) [발굴 백로그(후속 이터레이션 후보)] A: 보낸쪽지함+수신확인(스키마 기존재), 대기실 상황판(ST),
+   귓속말 /TO, 화면 표시 등급(SET LEVEL), 초기 화면 설정(SET HOME), 부재통지. B: 세션 갈무리(CAP)
+   토글('갈무리 중' 상태 표시), PT 제목 100건 일괄+"PRINTER/CAPTURE를 준비하시고" 연출, LS/LD
+   번호·날짜 검색, PR 범위 연속읽기(PR n-m, 최대 10), 손님 인사 배너, DN 프로토콜 선택 연출+전송
+   컬럼, K/KW 주제어. 원전 화면 인용(대기실 상황판, 편지 종류 8종, 발송 명령 6종, PF 3줄 형식,
+   하이텔 TOP/게시판/자료실 힌트바 원문 등)은 에이전트 보고서에 수록됨.
+3) [이번 구현 — 접속 시 전자사서함 확인] 책 p.94: 하이텔은 접속 직후 새 편지 도착 여부를 알려줬다
+   (환경설정 항목일 만큼 보편적 경험). 서버 GET /api/memos/unread/count(ensureAuthenticated)는
+   이미 완성돼 있었으나 클라이언트 호출이 0건이던 것을 연결: refreshUser의 손님→회원 전환 분기
+   (로그인 완료·부팅 세션 복원 공통 경로)에서 notifyUnreadMemos() 호출 → count>0이면
+   "새 쪽지가 N통 도착해 있습니다. (쪽지함: ME)" 토스트(5초). 0통/실패/로그아웃 전환은 침묵.
+4) [검증] Playwright(페이지 fetch 몽키패치로 회원 세션+count:3 주입 — 실DB 쪽지 생성 없이 안전
+   검증): #terminal-notification에 "새 쪽지가 3통 도착해 있습니다. (쪽지함: ME)" 표시 실측.
+   게스트 부팅 시 unread API 호출 0회(불필요 요청 없음) 확인. `node --check`(ESM) 2건,
+   `smoke:vercel-ready` ok. (참고: Playwright route 인터셉션은 로컬 서버에서 무관 API까지
+   network 오류를 일으켜 addInitScript fetch 패치 방식으로 검증함.)
+결과: ✅ 완료 (백로그는 다음 이터레이션에서 우선순위 재평가 — 차기 최우선 후보: 세션 갈무리(CAP)
+또는 PT 제목 일괄 출력)
+
+---
+
+## [2026-07-12 13:30] 뉴스: 구글 보일러플레이트 신표기 제거 + [사진]/[포토] 기사 차단 오탐 수정
+
+**LOG_ID: 20260712_0140**
+목표: ① 기사 본문에 '펼침', '구글 선호 매체 등록' 같은 구글뉴스 버튼 텍스트가 섞여 나오는 문제와
+② [사진]/[포토] 기사마다 "본문 전체를 불러올 수 없는 기사입니다" 에러가 나던 문제(모두 사용자
+보고)를 수정한다.
+변경 파일:
+1) `src/server/RssNewsArticleSanitizer.js` (보일러플레이트 패턴 3곳: 선두 스트립·단독 라인·노이즈 판정)
+2) `src/server/RssNewsArticleParserExtractors.js` (구조화 데이터 노이즈 판정 1곳)
+3) `src/server/RssNewsArticleParserScoring.js` (후보 감점 패턴 1곳)
+4) `src/server/RssNewsService.js` (사진 기사 절단 휴리스틱 면제)
+5) `public/js/core/newsScreens.js` (클라이언트 2차 방어 가드에 동일 면제 — 서버와 동조 필수)
+수행 작업:
+1) [원인 ①] 기존 필터가 구글의 옛 버튼 표기('펼치기/접기', '구글 검색 선호 매체로 추가')만 잡고
+   있었는데 구글이 라벨을 '펼침', '구글 선호 매체 등록'으로 변경 — 신표기가 필터를 전부 통과해
+   본문에 섞였다. 5개 판정식을 신·구표기 모두 잡는 유연 패턴으로 확장('펼침' 단독은 본문 정상어
+   오탐 방지를 위해 단독 라인/선두 스트립에만 적용, 부분매칭 판정식에는 ^펼침$ 앵커).
+2) [원인 ②-서버] 사진/포토/화보/영상 기사의 본문은 "짧은 캡션 + 크레딧 꼬리('… /', '2026.07.12 /',
+   '사진=OO기자')"가 정상 형태인데, 절단 휴리스틱(끝문자 '/', 조사 등)과 30자 최소 길이가 이를
+   짤린 기사로 오판해 available:false로 차단했다. 속보 완화(20260710_1330)와 동일 패턴으로 제목
+   키워드([사진]/[포토]/[화보]/[영상]/[뉴시스Pic]/[MD포토] 등, 접두 매체명 허용) 기반 면제 추가.
+3) [원인 ②-클라] newsScreens.js의 클라이언트측 2차 방어 가드가 서버와 같은 휴리스틱을 중복 구현
+   하고 있어(속보 완화만 있음) 서버만 고치면 available:true 기사를 클라가 다시 차단 — 동일한 사진
+   키워드 면제를 추가해 서버·클라 판정을 동조시켰다.
+4) [검증] sanitizer 유닛: '펼침'/'구글 선호 매체 등록'/'구글 검색 선호 매체로 추가'/'펼치기/접기'
+   단독 라인 모두 제거 + 본문 문장 보존 + 정상어('날개를 펼침으로써') 보존. 서버 재시작 후 사진
+   기사 8건 전부 available:true(크레딧 '/' 꼬리 기사 포함). 브라우저(Playwright): 목록에서 [사진]
+   기사 열기 → 기사 화면 정상 표시(사진+캡션+크레딧, 에러 없음) 스크린샷 확인.
+   `node --check` 5건, `smoke:rss-services` ok.
+5) [참고 — 별개 이슈] 검증 중 피드 재구성 레이스(목록 스냅샷의 기사 key가 서버 최신 피드와
+   불일치 → 다른 기사가 조회되어 불완전 판정)도 에러의 한 축임을 관찰. 서버는 key 우선 조회 +
+   영구 캐시 복원 + no 폴백 거부 로직이 이미 있어 대부분 방어되나, 캐시 미스 + 피드 이탈 조합은
+   여전히 에러 가능 — 필요시 후속 과제.
+결과: ✅ 완료
+
+---
+
+## [2026-07-12 01:00] 힌트바 구성·순서 참조 대조 감사 + 뉴스 기사 N/A 누락 수정
+
+**LOG_ID: 20260712_0100**
+목표: docs·coroke·olddos의 힌트바(푸터)와 우리 구성·순서가 정합한지 감사한다(사용자 질문).
+변경 파일:
+1) `public/js/core/commandFooterText.js` (serviceArticle에 N:이전기사/A:다음기사 라벨 오버라이드)
+2) `public/js/core/terminalHintMarkup.js` (이전기사/다음기사도 글 이동 정렬 그룹(10)에 포함)
+수행 작업:
+1) [감사 결과 — 정합] ① PR '연속읽기' 용어는 olddos help.txt 원본([PR]: 연속 읽기)과 정확히 일치
+   (20260712_0030 통일이 원전 근거 확보). ② 구성 요소(F/B 페이지, P 상위, T 초기화면, GO, W 글쓰기,
+   LT/LI 검색, H 도움말, 조건부 LOGIN)는 세 참조의 교집합과 합치. ③ olddos는 힌트바 없이
+   '선택(도움말[H]) >>' 프롬프트 + H 도움말 집약 방식인데, 우리 트리밍 시스템(숨긴 명령이 H 툴팁에
+   모임, H 항상 표시)이 같은 철학의 현대적 구현임을 확인.
+2) [감사 결과 — 순서 차이(설계 선택)] coroke는 명령어안내(C)가 맨 앞·종료(X)가 맨 뒤, 우리는 이동류
+   (F/B/L/N/A)가 맨 앞·도움말(H)이 맨 뒤 앵커. 우리 배치는 트리밍과 결합된 설계(H가 뒤 고정이어야
+   숨김 집약 진입점이 항상 보임)라 유지가 타당 — 참조와 다르지만 오류 아님.
+3) [감사 결과 — 불일치 1건 발견·수정] 뉴스 기사 화면(news-view)에서 N/A(이전/다음 기사 이동)가
+   실제 동작하고 serviceArticle 카테고리에도 정의되어 있는데, 기본 라벨 '이전글/다음글'이
+   shouldShowFooterToken의 "post-view 전용" 숨김 규칙에 걸려 힌트바에서만 사라져 있었다(coroke
+   참조 구현은 기사 화면에 '글이동(A,N)' 표시). 뉴스 맥락 라벨 'N:이전기사/A:다음기사'로
+   오버라이드해 숨김 규칙을 피하고 표기도 정확히 했다. 정렬 그룹도 글 이동(10)에 포함.
+4) [검증] Playwright: news-view 힌트바 '다음쪽(F),이전기사(N),다음기사(A),상위(P),초기화면(T),
+   연속읽기(PR),도움말(H)' 표시 + N 입력 시 실제 이전 기사 이동 동작 확인. `node --check`(ESM) 2건,
+   `smoke:renderer-ui`·`smoke:rss-services`·`smoke:boards` ok.
+결과: ✅ 완료
+
+---
+
+## [2026-07-12 00:30] PR 명령 표기를 '연속읽기'로 통일 — 사용자 결정
+
+**LOG_ID: 20260712_0030**
+목표: 뉴스 기사 화면 힌트바의 '복사(PR)'를 게시판과 동일한 '연속읽기(PR)'로 용어 통일한다(사용자 요청).
+변경 파일:
+1) `public/js/core/commandFooterText.js` (serviceArticle 'PR:복사' → 'PR:연속읽기')
+2) `public/js/core/commandService.js` (CMD_META PR label '복사/연속읽기' → '연속읽기', desc 정리)
+수행 작업:
+1) 힌트바 표기와 CMD_META 라벨을 '연속읽기'로 통일. 뉴스에서 PR의 실제 동작(본문 전체 갈무리
+   + 클립보드 복사)은 그대로이며 desc에만 남긴다. 실제 기능 메시지('복사 실패' 등)는 유지.
+2) [검증] Playwright: news-view 힌트바 '연속읽기(PR)', post-list 힌트바 '연속읽기(PR)' 확인.
+   'PR:복사'·'복사(PR)' 잔여 표기 grep 0건. `node --check`(ESM) 2건, `smoke:renderer-ui`·
+   `smoke:rss-services` ok.
+결과: ✅ 완료
+
+---
+
+## [2026-07-12 00:10] 프롬프트 위치 접두([열린광장] 선택 >>) 제거 — 사용자 결정
+
+**LOG_ID: 20260712_0010**
+목표: 20260711_2210에서 넣은 프롬프트 위치 접두를 사용자 결정으로 제거한다(재제안 금지).
+기본 프롬프트는 항상 '선택 >>'로 복귀.
+변경 파일:
+1) `public/js/core/terminalHintFooter.js` (getPromptLocationLabel/getDefaultTopTitle 삭제, 접두 로직 제거)
+수행 작업:
+1) 위치 접두 로직만 걷어내고, 그 위에 얹혀 있던 SET PROMPT 사용자 정의 처리(20260711_2340의
+   센티널 구분·기본 프롬프트 치환 조건)는 그대로 유지 — SET 수정과 짝이므로 함께 제거하면
+   사용자 정의 프롬프트가 화면 전환마다 무시되는 회귀가 재발한다.
+2) [검증] Playwright: post-list/board-select/main 모두 '선택 >>' / SET PROMPT NURI> → 즉시·화면
+   전환 후에도 'NURI>' 유지 / UNSET PROMPT → 즉시 '선택 >>' 복귀. `node --check`(ESM) ok,
+   `smoke:renderer-ui` ok.
+결과: ✅ 완료
+
+---
+
+## [2026-07-11 23:45] SET 등 인자 받는 시스템 명령 전체가 라우팅되지 않던 회귀 수정
+
+**LOG_ID: 20260711_2340**
+목표: 직전(20260711_2210)에 발견·기록한 "SET 명령 미동작" 버그를 수정한다(사용자 요청).
+변경 파일:
+1) `public/js/core/commandRouterGlobalWorkspace.js` (ALIAS/WS/SET/UNSET/TRACE 첫 토큰 비교 + UNSET PROMPT 즉시 복귀)
+2) `public/js/core/commandRouterGlobalScripting.js` (MATH/READ/TRAP/WAITPID/KILL 첫 토큰 비교)
+3) `public/js/core/commandRouterGlobalRuntime.js` (PERF/ZOOM 첫 토큰 비교)
+4) `public/js/core/appFactoryHandlers.js` (globalCommandHandlerDeps에 settingsService 주입 추가)
+수행 작업:
+1) [원인 ①: 매칭 계약 붕괴] dispatcher(commandDispatcherExecution)는 핸들러에 cmd로 "정규화된
+   입력 전체 대문자 문자열"('SET PROMPT X')을 넘기는데, 전역 시스템 핸들러 3종은 전부
+   `cmd === 'SET'` 식 전체 일치로 비교 — 인자가 붙는 순간 어떤 명령도 매칭될 수 없었다.
+   핸들러 내부가 splitCommand(rawCmd)로 인자를 파싱하는 설계인 점이 원래 계약(cmd=첫 토큰)의
+   증거로, 리팩터링 과정에서 계약이 깨진 회귀다. SET뿐 아니라 ALIAS [이름] [대상], WS ADD/SW/RM,
+   TRACE ON/OFF, MATH/READ/TRAP/WAITPID/KILL, PERF CLR/CACHE, ZOOM IN/OUT/RESET 등 "인자 받는
+   시스템 명령 전체"가 같은 이유로 죽어 있었다(인자 없는 단독 입력만 동작). 수정: 각 핸들러에서
+   첫 토큰(head)으로 비교. 인자 없는 명령(ACT/SYSINFO/DIAG/SYSLOG/LOG/C/ENV/VARS/JOBS)은 기존
+   전체 일치를 유지해 동작 변화를 만들지 않았다.
+2) [원인 ②: 저장 서비스 미주입] 핸들러가 envVars를 localStorage에 저장하는
+   `settingsService.saveEnvVars` 경로가 `if (settingsService)` 가드로 감싸여 있는데,
+   appFactoryHandlers의 globalCommandHandlerDeps에 settingsService 자체가 주입되지 않아
+   (setScale만 개별 주입) 저장이 항상 조용히 건너뛰어졌다 — SET이 라우팅됐더라도 새로고침
+   시 소실됐을 두 번째 결함. 주입 추가로 해결.
+3) [보완] UNSET PROMPT 직후 삭제된 사용자 정의 프롬프트가 다음 화면 전환까지 잔류하던 것을
+   setPrompt('>>') 센티널 호출로 즉시 기본(위치 접두 포함)에 복귀시킴.
+4) [검증] Playwright: SET PROMPT NURI> → 즉시 반영·게시판 이동 후에도 유지(사용자 정의가 위치
+   접두보다 우선) → 새로고침 후 지속(localStorage) → UNSET PROMPT → 즉시 '[열린광장] 선택 >>'
+   복귀 → 재새로고침에도 기본 유지. MATH X (10+20)*2 = 60, ALIAS 등록, ZOOM IN/RESET, VARS 목록
+   모두 정상. `node --check`(ESM) 4건, `smoke:renderer-ui`·`smoke:vercel-ready` ok.
+결과: ✅ 완료
+
+---
+
+## [2026-07-11 23:20] 프롬프트에 현재 위치 표시 — 당시 3사 공통 관례 재현 (docs 분석 적용)
+
+**LOG_ID: 20260711_2210**
+목표: docs 자료(PC통신_명령어_완전_정리.txt, NOWNURI_SCREEN_RECONSTRUCTED.md)와 두 참고 프로젝트를
+종합 분석해 미적용 관례를 찾아 적용한다(사용자 요청). 당시 하이텔 '[프라자] Command:', 나우누리
+'[유머란] 명령어:', 천리안 '[word] >>' — 3사 모두 프롬프트에 현재 위치를 표시했는데 우리는 항상
+'선택 >>' 고정이었다. "프롬프트 생김새만 봐도 어디인지 알 수 있었다"는 당시 감성의 핵심 요소.
+변경 파일:
+1) `public/js/core/terminalHintFooter.js` (setPrompt 기본 프롬프트에 위치 라벨 접두, +32줄)
+수행 작업:
+1) [분석] docs 대조 결과 나우누리식 우리말 GO('GO 열린광장', 'GO 우스개')는 이미 완벽 지원됨을 실측
+   확인(resolveBoardTarget/resolveMenuNodeTarget이 한글 이름 매칭 포함). 3사 공통 관례 중 유일한
+   미적용이 프롬프트 위치 표시였다.
+2) [구현] 보수적으로 위치가 명확한 화면만: post-list/post-view/post-write는 '[게시판명] 선택 >>',
+   board-select는 '[메뉴명] 선택 >>'(꼬리 괄호 코드 "게시판 (BBS)"→"게시판" 정리). 최상위(main)와
+   기타 화면은 기존 '선택 >>' 유지. 명시적 특수 프롬프트('회원 ID >>', '비밀번호 >>' 등)는 무영향.
+3) [함정 2건 해결] ① applyCommandFooter가 기본 프롬프트를 명시 문자열('선택 >>')로 전달해 기본값
+   경로를 안 타므로, 기본 프롬프트와 동일한 텍스트도 접두 대상에 포함. ② state.envVars.PROMPT의
+   초기값 '>>'는 settingsService의 "사용자 정의 없음" 센티널인데 이를 사용자 정의로 취급하면
+   프롬프트가 '>>'로 고착 — 센티널 제외 처리(SET PROMPT로 바꾼 값만 존중).
+4) [검증] Playwright: main '선택 >>'(불변) / post-list·post-view '[열린광장] 선택 >>' /
+   board-select '[게시판] 선택 >>' / login '회원 ID >>'(불변). 모바일 360px에서 프롬프트+입력 한 줄
+   (입력 폭 194px, 넘침 없음) 스크린샷 확인. `smoke:renderer-ui`·`smoke:vercel-ready` ok.
+   `npm test`의 chatRawTextDispatch 실패는 변경 전 clean tree에서도 동일한 기존 이슈(무관 확인).
+5) [발견 이슈 기록] SET/UNSET 명령이 현재 어떤 화면에서도 라우팅되지 않음(힌트 피드백·저장 모두
+   없음) — 이번 범위 밖의 별개 버그로 후속 과제.
+결과: ✅ 완료
+
+---
+
+## [2026-07-11 22:00] 힌트바 빈 영역 탭으로 숨겨진 명령 펼침/접힘 (터치 접근성)
+
+**LOG_ID: 20260711_2155**
+목표: 힌트바에서 넘쳐 숨겨진 명령이 터치 기기에서는 완전히 접근 불가였던 격차를 해소한다.
+숨긴 명령은 도움말(H) 토큰의 hover 툴팁에 모이는데(20260622_1900 사용자 선택) 터치에는 hover가
+없고, 펼치기 명령(+)도 물리 키보드 전용이었다. (참고 프로젝트 분석 후속 — ralph-loop 1회차)
+변경 파일:
+1) `public/js/core/terminalHintFooter.js` (hintEl 클릭 리스너 추가, +17줄)
+수행 작업:
+1) [설계] 힌트바(#cmd-hint)의 "토큰이 아닌 영역"을 탭/클릭하면 기존 toggleHintExpansion()을 호출해
+   펼침(전체 명령 표시)/접힘을 토글한다. 새 UI 요소 없음 — 사용자가 기각한 '+N' 토큰을 되살리지
+   않고, 기존 상태 배관(hintExpandable dataset, is-expanded 클래스)을 그대로 재사용.
+2) [충돌 회피] 토큰 자체의 탭은 appEvents의 캡처 단계 명령 리스너가 stopImmediatePropagation으로
+   먼저 소비하므로 버블 단계인 이 리스너에는 도달하지 않는다(명령 실행 동작 보존). 숨겨진 명령이
+   없으면(expandable=false·비펼침) 아무 동작도 하지 않아 평시 오탭에 무반응.
+3) [검증] Playwright 터치 에뮬레이션(360×740, /board/plaza): 초기 4개 표시/4개 숨김(1줄 20px) →
+   빈 영역 탭 → 8개 전부 표시(3줄 59px, is-expanded) → 재탭 → 4개/1줄 복귀 → 도움말(H) 토큰 탭 →
+   기존대로 help 화면 이동. `node --check`(ESM) ok, `smoke:renderer-ui`·`smoke:vercel-ready` ok.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-11 21:35] 참고 프로젝트(coroke/olddos) 분석 적용: 힌트바 생략 무력화 근본 원인 수정 + 모바일 키보드 개선
 
 **LOG_ID: 20260711_2140**
@@ -6103,3 +6471,13 @@ Expected: The staged vote/ranking feature set remains behaviorally unchanged and
 Result: Done - all listed checks passed.
 
 ---
+
+## [2026-07-11 23:26] Rename board menu '우스개' to '유머'
+
+**LOG_ID: 20260711_2326**
+Goal: Rename the humor board display name from '우스개' to '유머' (Humor) across the web and DB setup for better user experience.
+Changed files: `supabase/migrations/0010_boards_runtime_alignment.sql`, `src/server/BoardDefinitionResolver.js`, `legacy/hanulso.mnu`, `src/server/MemoryBoardRepositorySeed.js`, `WORK_LOG.md`
+Work: 1) Renamed the board from '우스개' and '유머 게시판' to '유머' in `0010_boards_runtime_alignment.sql` and `BoardDefinitionResolver.js`. 2) Replaced menu item title to '유머' in `legacy/hanulso.mnu`. 3) Updated memory database seed file comment.
+Run: `node --check src/server/BoardDefinitionResolver.js`, `node --check src/server/MemoryBoardRepositorySeed.js`, `npm run build`
+Expected: System builds cleanly, and the board displays as '유머' with path '/board/humor'.
+Result: ✅ 완료 - All syntax and smoke tests passed successfully.

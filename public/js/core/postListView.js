@@ -1,9 +1,11 @@
 import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
+import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 
 export function createPostListView(deps) {
   const {
     ansiToHTML,
+    apiFetch,
     applyCommandFooter,
     buildPostListAnsi,
     cmdInput,
@@ -16,11 +18,24 @@ export function createPostListView(deps) {
     screenEl,
     setLoading,
     setReady,
+    setPrompt,
+    setHint,
     state,
     updateURL,
     findBoardByKey,
     renderScreenSequential
   } = deps;
+
+  const {
+    ANSI_RESET,
+    ansiColor,
+    buildTopHeader,
+    ansiHLine,
+    fitCell,
+    formatShortDate,
+    wrapAnsiText,
+    displayWidth
+  } = createAnsiBuilderUtils(deps);
 
   function renderPostHotspots(screenNode, posts) {
     if (!screenNode || !posts.length) return;
@@ -28,14 +43,30 @@ export function createPostListView(deps) {
     layer.className = 'ansi-hotspot-layer';
     const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
     const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
-    posts.forEach((post, index) => {
-      const rowIdx = index; // Sequential body starts from row 0 of body
-      if (!lineNodes[rowIdx]) return;
+    // [LOG_ID: 20260712_2110] 종전에는 "본문 줄 0부터가 게시물"이라는 인덱스 가정(rowIdx = index)으로
+    // 핫스팟을 붙였는데, 실제 본문은 카운트라인·컬럼 헤더·구분선 3줄이 먼저 온다 — 핫스팟 전체가
+    // 3줄 위로 어긋나 헤더 영역이 클릭되고(사용자 보고) 정작 마지막 게시물 3건은 클릭 불가였다.
+    // 인덱스 가정 대신 각 게시물 번호(postLine의 첫 토큰)로 실제 줄을 찾아 붙인다 — 헤더 줄 수가
+    // 바뀌어도 어긋나지 않는다.
+    const screenRect = screenNode.getBoundingClientRect();
+    let searchFrom = 0;
+    posts.forEach((post) => {
+      const idToken = String(post.id || '').trim();
+      if (!idToken) return;
+      let lineNode = null;
+      for (let i = searchFrom; i < lineNodes.length; i++) {
+        const firstToken = (lineNodes[i].textContent || '').trim().split(/\s+/)[0];
+        if (firstToken === idToken) {
+          lineNode = lineNodes[i];
+          searchFrom = i + 1;
+          break;
+        }
+      }
+      if (!lineNode) return;
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'ansi-hotspot post-hotspot';
       btn.dataset.postid = String(post.id); btn.setAttribute('aria-label', post.title || '');
-      const rect = lineNodes[rowIdx].getBoundingClientRect();
-      const screenRect = screenNode.getBoundingClientRect();
+      const rect = lineNode.getBoundingClientRect();
       btn.style.left = '0'; btn.style.top = `${rect.top - screenRect.top}px`;
       btn.style.width = '100%'; btn.style.height = `${rect.height || 16}px`;
       layer.appendChild(btn);
@@ -82,11 +113,26 @@ export function createPostListView(deps) {
     // 낡은 내용인 채) 노출되는 순서 역행을 만들었다.
     setReady(true);
 
+    // [LOG_ID: 20260712_2200] 게시판 최초 진입 시 회원 신분 배너 노출 결정 및 세션 플래그 설정
+    let memberBanner = null;
+    if (boardKey && !state._memberBannerShown[boardKey]) {
+      const u = state.user;
+      const uId = String(u?.userId || u?.username || 'GUEST').trim();
+      const uNick = String(u?.nickName || u?.nickname || '손님').trim();
+      const isGuest = !u || uId === 'GUEST' || u?.role === 'guest';
+      let roleLabel = '손님';
+      if (!isGuest) {
+        roleLabel = u?.role === 'admin' ? '시삽' : '정회원';
+      }
+      memberBanner = `## ${uNick}(${uId})님은 ${roleLabel}입니다 ##`;
+      state._memberBannerShown[boardKey] = true;
+    }
+
     // [LOG: 20260426_1450] Evolve Mode: Sequential rendering for post list
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const footerAssetPath = String(state.board?.footerFile || '').trim();
     const rendered = await renderAnsiScreenWithTopbarSequential({
-      ansiText: buildPostListAnsi(state.board, state.posts, state.page, state.totalPages, state.totalCount, displayTitle, searchParams),
+      ansiText: buildPostListAnsi(state.board, state.posts, state.page, state.totalPages, state.totalCount, displayTitle, searchParams, memberBanner),
       ansiToHTML,
       screenEl,
       renderScreenSequential,
@@ -106,5 +152,142 @@ export function createPostListView(deps) {
     }
   }
 
-  return { showPostList };
+  // [LOG_ID: 20260712_2200] PT 100건 제목 출력 대기 화면
+  async function showPtPrepare(startNum) {
+    state.screen = 'pt-prepare';
+    state._ptStartNum = startNum;
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+
+    const boardName = state.board?.name || state.board?.boardId || '게시판';
+    const boardCode = state.board?.id || '';
+    const header = buildTopHeader({ leftLabel: boardCode, centerLabel: boardName }, '', targetCols);
+
+    const bodyLines = [
+      '',
+      ' PRINTER/CAPTURE 를 준비하시고 Enter를 누르십시오',
+      ''
+    ];
+
+    const ansiText = header + '\n' + bodyLines.join('\n') + '\n' + '─'.repeat(targetCols);
+
+    renderAnsiScreenWithTopbar({
+      ansiText,
+      ansiToHTML,
+      screenEl
+    });
+
+    setPrompt('Enter키를 누르십시오 >>');
+    setHint('PT: 프린터/갈무리 대기 상태');
+    setReady(true);
+    if (shouldAutoFocusCommandInput()) {
+      cmdInput.focus();
+    }
+  }
+
+  // [LOG_ID: 20260712_2200] PT 100건 제목 일괄 출력 구현
+  async function showPtResult() {
+    state.screen = 'pt-view';
+    setLoading('출력하는 중입니다..');
+
+    const boardKey = String(state.board?.id || '').trim();
+    const url = `/api/boards/${encodeURIComponent(boardKey)}?page=1&pageSize=100`;
+    const responseData = await apiFetch(url).catch(() => null);
+
+    setReady(true);
+
+    const posts = Array.isArray(responseData?.items) ? responseData.items : (responseData?.posts || []);
+    const filtered = posts
+      .filter(post => Number(post.id) >= (state._ptStartNum || 1))
+      .slice(0, 100);
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+
+    const boardName = state.board?.name || state.board?.boardId || '게시판';
+    const boardCode = state.board?.id || '';
+    const header = buildTopHeader({ leftLabel: boardCode, centerLabel: boardName }, '', targetCols);
+
+    function columnHeader() {
+      if (isMobile) {
+        return ansiColor(14) + ' 번호   ID     날짜  제  목' + ANSI_RESET;
+      }
+      return ansiColor(14) + ' 번호   이름       ID      날짜  조회 Pg    제  목' + ANSI_RESET;
+    }
+
+    function postLine(post) {
+      if (isMobile) {
+        const titlePrefix = Number(post.step || 0) > 0 ? '└ ' : '';
+        const rawTitle = titlePrefix + String(post.title || '');
+        const title = fitCell(rawTitle, 22);
+
+        const userId = fitCell(post.userId || post.authorUserId || '', 8);
+        const date = fitCell(formatShortDate(post.createdAt).slice(0, 5), 5);
+        const postId = fitCell(String(post.id || ''), 6, 'right');
+
+        return ansiColor(15) + postId + ' ' +
+          ansiColor(11) + userId + ' ' +
+          ansiColor(8) + date + ' ' +
+          ansiColor(15) + title +
+          ANSI_RESET;
+      }
+
+      const titlePrefix = Number(post.step || 0) > 0 ? '└ ' : '';
+      const rawTitle = titlePrefix + String(post.title || '');
+      const title = fitCell(rawTitle, 36);
+
+      const author = fitCell(post.nickName || post.authorNickName || '', 8);
+      const userId = fitCell(post.userId || post.authorUserId || '', 8);
+      const date = fitCell(formatShortDate(post.createdAt), 5);
+      const hits = fitCell(String(post.hit || post.views || 0), 4, 'right');
+
+      const sample = String(post.content || post.body || post.title || '').trim();
+      const wrapLines = wrapAnsiText(sample, 60);
+      const pageCount = Math.max(1, Math.ceil(wrapLines.length / 16));
+      const pages = fitCell(String(pageCount), 2, 'right');
+
+      const postId = fitCell(String(post.id || ''), 6, 'right');
+
+      return ansiColor(15) + postId + ' ' +
+        ansiColor(15) + author + ' ' +
+        ansiColor(11) + userId + ' ' +
+        ansiColor(8) + date + ' ' +
+        ansiColor(8) + hits + ' ' +
+        ansiColor(8) + pages + '  ' +
+        ansiColor(15) + title +
+        ANSI_RESET;
+    }
+
+    const lines = [
+      header,
+      columnHeader(),
+      ansiHLine(targetCols, 8)
+    ];
+
+    if (!filtered.length) {
+      lines.push(ansiColor(8) + ' 지정 번호 이후의 글이 없습니다.' + ANSI_RESET);
+    } else {
+      filtered.forEach(post => {
+        lines.push(postLine(post));
+      });
+    }
+
+    lines.push(ansiHLine(targetCols, 8));
+    lines.push(ansiColor(15) + ' 아무 키나 누르시면 목록으로 돌아갑니다...' + ANSI_RESET);
+
+    renderAnsiScreenWithTopbar({
+      ansiText: lines.join('\n'),
+      ansiToHTML,
+      screenEl
+    });
+
+    setPrompt('아무 키나 누르십시오 >>');
+    setHint('PT: 출력 완료 (목록 복귀 대기)');
+    if (shouldAutoFocusCommandInput()) {
+      cmdInput.focus();
+    }
+  }
+
+  return { showPostList, showPtPrepare, showPtResult };
 }

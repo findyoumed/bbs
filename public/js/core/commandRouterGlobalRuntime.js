@@ -30,7 +30,12 @@ export function createGlobalRuntimeCommandHandler(deps) {
   }
 
   return async function handleGlobalRuntimeCommand({ cmd, rawCmd }) {
-    if (cmd === 'PERF') {
+    // [LOG_ID: 20260711_2340] cmd는 입력 전체 문자열이므로 인자를 받는 명령(PERF/ZOOM)은
+    // 첫 토큰으로 비교한다(commandRouterGlobalWorkspace 주석 참고). 인자 없는 명령들
+    // (ACT/SYSINFO/DIAG/SYSLOG/LOG/C)은 기존 전체 일치를 유지해 동작 변화를 만들지 않는다.
+    const head = String(cmd || '').trim().split(/\s+/)[0];
+
+    if (head === 'PERF') {
       const { performanceService } = deps;
       if (!performanceService) {
         return false;
@@ -82,7 +87,7 @@ export function createGlobalRuntimeCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'ZOOM') {
+    if (head === 'ZOOM') {
       const parts = splitCommand(rawCmd);
       const sub = (parts[1] || '').toUpperCase();
 

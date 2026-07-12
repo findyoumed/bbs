@@ -72,8 +72,9 @@ export function createTerminalHintMarkup(deps) {
     const resolvedLabel = resolveCommandLabel(normalizedCmd, label);
 
     if (['F', 'B', 'L'].includes(normalizedCmd)) return 10;
-    if (normalizedCmd === 'N') return resolvedLabel === '이전글' ? 10 : 50;
-    if (normalizedCmd === 'A') return resolvedLabel === '다음글' ? 10 : 50;
+    // [LOG_ID: 20260712_0100] 뉴스 기사 화면의 '이전기사/다음기사'도 글 이동 그룹(10)으로 정렬.
+    if (normalizedCmd === 'N') return ['이전글', '이전기사'].includes(resolvedLabel) ? 10 : 50;
+    if (normalizedCmd === 'A') return ['다음글', '다음기사'].includes(resolvedLabel) ? 10 : 50;
     if (['P', 'M', 'Z'].includes(normalizedCmd)) return 20;
     if (normalizedCmd === 'T') return 30;
     if (normalizedCmd === 'GO') return 40;

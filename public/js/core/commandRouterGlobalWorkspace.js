@@ -21,7 +21,13 @@ export function createGlobalWorkspaceCommandHandler(deps) {
   }
 
   return async function handleGlobalWorkspaceCommand({ cmd, rawCmd }) {
-    if (cmd === 'ALIAS') {
+    // [LOG_ID: 20260711_2340] cmd는 dispatcher가 정규화한 "입력 전체" 문자열이라('SET PROMPT X'),
+    // 전체 일치(cmd === 'SET')로는 인자가 붙는 순간 어떤 명령도 매칭되지 않았다(회귀 — 아래에서
+    // splitCommand(rawCmd)로 인자를 파싱하는 설계 자체가 원래 첫 토큰 비교였음을 보여준다).
+    // 인자를 받는 명령(ALIAS/WS/SET/UNSET/TRACE)은 첫 토큰으로 비교한다.
+    const head = String(cmd || '').trim().split(/\s+/)[0];
+
+    if (head === 'ALIAS') {
       const parts = splitCommand(rawCmd);
       const sub = (parts[1] || '').toUpperCase();
       const { aliasService } = deps;
@@ -81,7 +87,7 @@ export function createGlobalWorkspaceCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'WS') {
+    if (head === 'WS') {
       const parts = splitCommand(rawCmd);
       const sub = (parts[1] || '').toUpperCase();
       const value = parts[2];
@@ -151,27 +157,32 @@ export function createGlobalWorkspaceCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'SET' || cmd === 'UNSET') {
+    if (head === 'SET' || head === 'UNSET') {
       const parts = splitCommand(rawCmd);
       const name = (parts[1] || '').toUpperCase();
       const value = parts.slice(2).join(' ');
       const { settingsService } = deps;
       const envVars = ensureEnvVars();
 
-      if (cmd === 'SET' && !name) {
+      if (head === 'SET' && !name) {
         setHint('사용법: SET [이름] [값]\n예: SET PROMPT BBS >\n예: SET SYSTEM_NAME MyBBS');
         setDefaultPrompt();
         return true;
       }
-      if (cmd === 'UNSET' && !name) {
+      if (head === 'UNSET' && !name) {
         setHint('사용법: UNSET [이름]\n예: UNSET SYSTEM_NAME');
         setDefaultPrompt();
         return true;
       }
 
-      if (cmd === 'UNSET' || (cmd === 'SET' && !value)) {
+      if (head === 'UNSET' || (head === 'SET' && !value)) {
         delete envVars[name];
         setHint(`환경 변수 [${name}]이(가) 삭제되었습니다.`);
+        if (name === 'PROMPT') {
+          // '>>' 센티널로 setPrompt를 태워 위치 접두 포함 기본 프롬프트로 즉시 복귀시킨다
+          // (없으면 삭제된 사용자 정의 프롬프트가 다음 화면 전환까지 잔류).
+          setPrompt('>>');
+        }
       } else {
         envVars[name] = value;
         setHint(`환경 변수 [${name}] = ${value} 로 설정되었습니다.`);
@@ -186,7 +197,7 @@ export function createGlobalWorkspaceCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'TRACE') {
+    if (head === 'TRACE') {
       const parts = splitCommand(rawCmd);
       const sub = (parts[1] || '').toUpperCase();
 
