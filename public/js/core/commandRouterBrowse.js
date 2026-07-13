@@ -199,6 +199,86 @@ export function createBrowseCommandHandler(deps) {
         });
         return true;
       }
+      // [LOG_ID: 20260713_1120] 자료실 목록 화면에서의 DN 단독 실행 2단계 가로채기
+      if (state._pendingDownloadPrompt) {
+        const idx = parseInt(cmd, 10);
+        state._pendingDownloadPrompt = false;
+        setPrompt('선택 >>');
+        if (idx >= 1 && state.posts?.[idx - 1]) {
+          const post = state.posts[idx - 1];
+          await startPdsDownloadSequence(post);
+        } else {
+          setHint('잘못된 번호입니다.');
+        }
+        return true;
+      }
+
+      // [LOG_ID: 20260713_1120] PDS 자료 올리기(UP) 커맨드
+      if (cmd === 'UP') {
+        const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
+        if (isPds) {
+          showPostWrite('create');
+          return true;
+        }
+      }
+
+      // [LOG_ID: 20260713_1120] PDS 자료 내려받기(DN [번호]) 커맨드
+      const dnMatch = cmd.match(/^DN(?:\s+(\d+))?$/i);
+      if (dnMatch) {
+        const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
+        if (!isPds) {
+          return false;
+        }
+
+        const rawNum = dnMatch[1];
+        if (rawNum) {
+          const idx = parseInt(rawNum, 10);
+          if (idx >= 1 && state.posts?.[idx - 1]) {
+            const post = state.posts[idx - 1];
+            await startPdsDownloadSequence(post);
+          } else {
+            setHint('존재하지 않는 번호입니다.');
+            setPrompt('선택 >>');
+          }
+          return true;
+        } else {
+          state._pendingDownloadPrompt = true;
+          setHint('다운로드할 글 번호를 입력해 주십시오.');
+          setPrompt('글 번호 >>');
+          return true;
+        }
+      }
+
+      async function startPdsDownloadSequence(post) {
+        setHint('첨부파일 정보를 확인하는 중입니다..');
+        try {
+          const attachments = await apiFetch(`/api/boards/${state.board.id}/posts/${post.id}/attachments`);
+          if (Array.isArray(attachments) && attachments.length > 0) {
+            const file = attachments[0];
+            state._pendingDownload = {
+              boardId: state.board.id,
+              postId: post.id,
+              fileId: file.id,
+              fileName: file.originalFilename || file.filename,
+              fileSize: file.fileSize
+            };
+            
+            // 임시로 attachment-list 로 전환하여 postView의 공통 프로토콜 선택 모듈을 재사용
+            state._originScreenForDownload = 'post-list';
+            state.screen = 'attachment-list';
+            state._downloadStage = 'protocol';
+            setHint('* 화일 전송 프로토콜을 선택하십시오.\n1.Kermit  2.Zmodem  3.Super Kermit  0.취소');
+            setPrompt('선택 (1-3, 0) >>');
+          } else {
+            setHint('이 게시글에는 첨부파일이 존재하지 않습니다.');
+            setPrompt('선택 >>');
+          }
+        } catch (err) {
+          setHint(`정보 조회 실패: ${err.message}`);
+          setPrompt('선택 >>');
+        }
+      }
+
       if (cmd === 'W') {
         // [LOG: 20260429_0258] Route list-screen write through postWriteView's
         // shared guard so guest users get the same login-required hint as direct /board/.../write.

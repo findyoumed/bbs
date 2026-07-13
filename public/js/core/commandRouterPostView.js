@@ -95,7 +95,13 @@ export function createPostViewCommandHandler(deps) {
             state._pendingDownload = null;
             setPrompt('선택 >>');
             
-            if (typeof showAttachmentList === 'function') {
+            // [LOG_ID: 20260713_1120] 자료실 목록 화면(post-list)에서 다운로드가 완료된 경우 목록 화면으로 복원
+            if (state._originScreenForDownload === 'post-list') {
+              state._originScreenForDownload = null;
+              if (typeof showPostList === 'function') {
+                await showPostList(state.board.id, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
+              }
+            } else if (typeof showAttachmentList === 'function') {
               await showAttachmentList(file.postId);
             }
           };
