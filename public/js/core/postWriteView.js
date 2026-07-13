@@ -67,6 +67,9 @@ export function createPostWriteView(deps) {
     if (!editor) return '>>';
     if (editor.stage === 'header') return '머리말 번호/이름 >>';
     if (editor.stage === 'title') return '제목 >>';
+    if (editor.stage === 'keyword_1') return '검색어 1 >>';
+    if (editor.stage === 'keyword_2') return '검색어 2 >>';
+    if (editor.stage === 'keyword_3') return '검색어 3 >>';
     return '본문 >>';
   }
 
@@ -298,7 +301,68 @@ export function createPostWriteView(deps) {
         return true;
       }
 
+      // [LOG_ID: 20260713_1110] 검색 키워드 1단계 수집
+      if (activeEditor.stage === 'keyword_1') {
+        activeEditor.keywords = activeEditor.keywords || [];
+        const kw = line.trim();
+        appendTranscriptLine(activeEditor, line);
+        if (!kw) {
+          appendTranscriptLine(activeEditor, '검색 키워드를 입력하십시오.');
+          renderLineEditor(activeEditor);
+          return true;
+        }
+        activeEditor.keywords.push(kw);
+        appendTranscriptLine(activeEditor, `키워드 1: ${kw}`);
+        activeEditor.stage = 'keyword_2';
+        renderLineEditor(activeEditor);
+        return true;
+      }
+
+      // [LOG_ID: 20260713_1110] 검색 키워드 2단계 수집
+      if (activeEditor.stage === 'keyword_2') {
+        const kw = line.trim();
+        appendTranscriptLine(activeEditor, line);
+        if (!kw) {
+          appendTranscriptLine(activeEditor, '검색 키워드를 입력하십시오.');
+          renderLineEditor(activeEditor);
+          return true;
+        }
+        activeEditor.keywords.push(kw);
+        appendTranscriptLine(activeEditor, `키워드 2: ${kw}`);
+        activeEditor.stage = 'keyword_3';
+        renderLineEditor(activeEditor);
+        return true;
+      }
+
+      // [LOG_ID: 20260713_1110] 검색 키워드 3단계 수집 및 본문 꼬리 추가
+      if (activeEditor.stage === 'keyword_3') {
+        const kw = line.trim();
+        appendTranscriptLine(activeEditor, line);
+        if (!kw) {
+          appendTranscriptLine(activeEditor, '검색 키워드를 입력하십시오.');
+          renderLineEditor(activeEditor);
+          return true;
+        }
+        activeEditor.keywords.push(kw);
+        appendTranscriptLine(activeEditor, `키워드 3: ${kw}`);
+        
+        const kLines = activeEditor.keywords.join(' / ');
+        activeEditor.bodyLines.push('', `* 검색 키워드 : ${kLines}`);
+        
+        await handlers.handleWriteSubmit();
+        return true;
+      }
+
       if (isSaveWriteCommand(line)) {
+        // [LOG_ID: 20260713_1110] 자료실(pds) 신규 글 작성인 경우 저장 전에 검색 키워드 3개 등록 단계를 순차 진행
+        const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
+        if (isPds && activeEditor.mode !== 'edit') {
+          activeEditor.stage = 'keyword_1';
+          appendTranscriptLine(activeEditor, '');
+          appendTranscriptLine(activeEditor, '자료 검색용 키워드 3개를 순서대로 입력해 주십시오.');
+          renderLineEditor(activeEditor);
+          return true;
+        }
         await handlers.handleWriteSubmit();
         return true;
       }
