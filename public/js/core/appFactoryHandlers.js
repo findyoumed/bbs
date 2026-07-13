@@ -81,6 +81,7 @@ export function createAppFactoryHandlers(deps) {
   const handlePostViewCommand = createPostViewCommandHandler({
     ...handlerDeps,
     ...screens.postScreens,
+    renderScreenSequential: services.terminalUiCore.renderScreenSequential,
     showConfirm: services.terminalUiCore.showConfirm,
     showAlert: services.terminalUiCore.showAlert,
     showPrompt: services.terminalUiCore.showPrompt,

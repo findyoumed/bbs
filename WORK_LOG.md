@@ -1,3 +1,20 @@
+## [2026-07-13 10:30] Phase 4 감성 연출 추가: 자료실 DN 프로토콜 선택 및 모뎀 접속 연출(ATDT)
+
+**LOG_ID: 20260713_1030**
+목표: 하이텔 길라잡이 전권 학습 로드맵의 Phase 4 감성 연출 사양(자료실 DN 프로토콜 선택 연출, 초기 모뎀 다이얼링 접속 연출)을 구현하여 완성도 높은 클래식 BBS를 재현한다.
+변경 파일:
+1) `public/js/core/appFactoryHandlers.js` (createPostViewCommandHandler에 renderScreenSequential 주입 추가)
+2) `public/js/core/commandRouterPostView.js` (화일 전송 단계 _downloadStage/_pendingDownload 처리 및 프로토콜 선택 모달, 전송 박스 프로그레스 아스키 애니메이션 추가)
+3) `public/js/app.js` (최초 '/' 대문 진입 시 모뎀 접속 시퀀스인 ATDT 01410 -> DIALING -> CONNECT 연출 기능 추가)
+수행 작업:
+1) [DN 프로토콜 연출] 자료실에서 첨부 파일 다운로드 시 즉시 다운로드되는 대신 1.Kermit 2.Zmodem 3.Super Kermit 0.취소 프로토콜 선택을 묻고, 번호 입력 시 1.5초간 TUI 전송율 프로그레스 게이지 애니메이션을 시뮬레이션한 후 브라우저 네이티브 다운로드를 개시.
+2) [모뎀 접속 연출] 최초 대문 페이지('/')로 브라우저 진입 시 빈 터미널 화면에 ATDT 01410 다이얼링 명령과 모뎀 전화 연결음 딜레이 시뮬레이션 후 CONNECT 14400 / HiTEL 메시지가 타이핑되며 자연스럽게 대문 화면으로 페이드인되는 시퀀스 연동.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 10:20] Phase 3 확장 사양 추가: LS/LD 목록 점프, K/KW 주제어 검색, 대화방 내 /TO 귓속말 구현
 
 **LOG_ID: 20260713_1020**

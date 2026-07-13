@@ -7,6 +7,7 @@ import { UI_TEXT } from './i18n.js';
 
 export function createPostViewCommandHandler(deps) {
   const {
+    apiFetch,
     deletePost,
     recommendPost,
     restoreStateFromURL,
@@ -19,8 +20,12 @@ export function createPostViewCommandHandler(deps) {
     showPostWrite,
     showAttachmentList,
     downloadAttachment,
+    renderScreenSequential,
     state
   } = deps;
+
+  // [LOG_ID: 20260713_0930] LV 등급 별칭 — 서버 BoardRepositoryAccess.LEVEL_NAME_MAP과 동일하게 유지
+  const LEVEL_LABELS = { 1: '일반회원', 2: '특별회원', 99: '운영자' };
 
   return async function handlePostViewCommand({ cmd, context }) {
     if (state.screen !== 'post-view' && state.screen !== 'attachment-list') {
@@ -28,6 +33,82 @@ export function createPostViewCommandHandler(deps) {
     }
 
     if (state.screen === 'attachment-list') {
+      // [LOG_ID: 20260713_1030] 화일 전송 프로토콜 선택 분기 가로채기
+      if (state._downloadStage === 'protocol' && state._pendingDownload) {
+        const choice = String(cmd || '').trim();
+        if (choice === '0') {
+          state._downloadStage = null;
+          state._pendingDownload = null;
+          setHint('화일 전송이 취소되었습니다.');
+          setPrompt('선택 >>');
+          return true;
+        }
+
+        if (['1', '2', '3'].includes(choice)) {
+          const protocolName = choice === '1' ? 'Kermit' : choice === '2' ? 'Zmodem' : 'Super Kermit';
+          state._downloadStage = 'transferring';
+          
+          const file = state._pendingDownload;
+          const targetCols = typeof window !== 'undefined' && window.innerWidth < 768 ? 44 : 80;
+
+          // Hitel 원전 화일 전송 대화 상자 연출 빌더
+          const drawTransferBox = (percent) => {
+            const barLength = Math.max(10, targetCols - 30);
+            const filledLength = Math.floor((barLength * percent) / 100);
+            const emptyLength = barLength - filledLength;
+            const bar = '█'.repeat(filledLength) + '░'.repeat(emptyLength);
+            
+            // 80칸 기준 TUI 전송 박스
+            const padName = String(file.fileName).substring(0, 25).padEnd(25);
+            const padProto = String(protocolName).padEnd(25);
+            const padSize = String(Math.round(file.fileSize / 1024) + ' KB').padEnd(25);
+            const padPct = String(percent + ' %').padEnd(25);
+
+            return `\n\n\n` +
+              `      ┌──────────────────────────────────────────────┐\n` +
+              `      │         [ 화 일  전 송  프 로 토 콜 ]        │\n` +
+              `      ├──────────────────────────────────────────────┤\n` +
+              `      │  파일명    : ${padName} │\n` +
+              `      │  프로토콜  : ${padProto} │\n` +
+              `      │  파일 크기 : ${padSize} │\n` +
+              `      │  전송 진행 : ${padPct} │\n` +
+              `      │  [${bar}] │\n` +
+              `      └──────────────────────────────────────────────┘\n`;
+          };
+
+          const runTransferAnimation = async () => {
+            if (typeof renderScreenSequential === 'function') {
+              for (let pct = 0; pct <= 100; pct += 25) {
+                await renderScreenSequential(drawTransferBox(pct), { clear: true });
+                await new Promise(r => setTimeout(r, 200));
+              }
+            }
+
+            try {
+              await downloadAttachment(file.boardId, file.postId, file.fileId, file.fileName);
+              setHint(`화일 전송 완료: ${file.fileName}`);
+            } catch (err) {
+              setHint(`화일 전송 실패: ${err.message}`);
+            }
+
+            state._downloadStage = null;
+            state._pendingDownload = null;
+            setPrompt('선택 >>');
+            
+            if (typeof showAttachmentList === 'function') {
+              await showAttachmentList(file.postId);
+            }
+          };
+
+          runTransferAnimation();
+          return true;
+        }
+
+        setHint('잘못된 선택입니다. (1.Kermit  2.Zmodem  3.Super Kermit  0.취소)');
+        setPrompt('선택 (1-3, 0) >>');
+        return true;
+      }
+
       if (cmd === 'P' || cmd === 'M' || cmd === 'B') {
         await showPostView(state.board.id, state.post.id);
         return true;
@@ -39,7 +120,17 @@ export function createPostViewCommandHandler(deps) {
       const idx = parseInt(cmd, 10);
       if (idx >= 1 && state._attachments?.[idx - 1]) {
         const file = state._attachments[idx - 1];
-        await downloadAttachment(state.board.id, state.post.id, file.id, file.originalFilename || file.filename);
+        // [LOG_ID: 20260713_1030] 파일 다운로드 즉시 실행 대신 프로토콜 선택 단계 개시
+        state._pendingDownload = {
+          boardId: state.board.id,
+          postId: state.post.id,
+          fileId: file.id,
+          fileName: file.originalFilename || file.filename,
+          fileSize: file.fileSize
+        };
+        state._downloadStage = 'protocol';
+        setHint('* 화일 전송 프로토콜을 선택하십시오.\n1.Kermit  2.Zmodem  3.Super Kermit  0.취소');
+        setPrompt('선택 (1-3, 0) >>');
         return true;
       }
       return false;
@@ -212,6 +303,38 @@ export function createPostViewCommandHandler(deps) {
 
     if (cmd === 'U') {
       await showAttachmentList(state.board.id, state.post.id);
+      return true;
+    }
+
+    // [LOG_ID: 20260713_0930] LV [등급] — 글 작성자의 회원 등급 변경 (olddos-bbs 원작 명령 복원).
+    // 운영자 전용, 게시글 보기 상태에서만. 서버도 ensureAdmin으로 이중 방어한다.
+    const lvMatch = cmd.match(/^LV(?:\s+(\d+))?$/);
+    if (lvMatch) {
+      if (!state.user?.isAdmin) {
+        setHint('LV는 운영자만 사용할 수 있는 명령입니다.');
+        return true;
+      }
+      const authorId = String(state.post?.authorUserId || state.post?.userId || '').trim();
+      if (!authorId) {
+        setHint('이 글의 작성자 정보를 확인할 수 없습니다.');
+        return true;
+      }
+      if (!lvMatch[1]) {
+        setHint(`사용법: LV {등급} — ${authorId}님의 등급을 변경합니다. (1:일반회원, 2:특별회원, 99:운영자)`);
+        return true;
+      }
+      const nextLevel = Number(lvMatch[1]);
+      try {
+        const updated = await apiFetch(`/api/members/${encodeURIComponent(authorId)}/level`, {
+          method: 'POST',
+          body: JSON.stringify({ level: nextLevel, nickNameHint: state.post?.nickName || state.post?.author || authorId })
+        });
+        const label = LEVEL_LABELS[updated?.level ?? nextLevel] || `레벨 ${nextLevel}`;
+        deps.showToast?.(`${authorId}님의 등급을 ${label}(으)로 변경했습니다.`, 2500, 'success');
+        setHint(`${authorId} → ${label}`);
+      } catch (error) {
+        setHint(`${UI_TEXT.ERROR}: ${error.message}`);
+      }
       return true;
     }
 

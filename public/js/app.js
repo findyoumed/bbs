@@ -66,6 +66,41 @@ async function waitForPrimaryFonts(timeoutMs = 2500) {
   }
 }
 
+// [LOG_ID: 20260713_1030] 90년대 모뎀 접속 연출 (ATDT 01410 -> CONNECT)
+async function showConnectSequence() {
+  const container = document.getElementById('terminal-screen');
+  if (!container) return;
+
+  const originalContent = container.innerHTML;
+  container.innerHTML = '<div id="connect-seq" style="padding:20px; font-family:\'Sam3KRFont\',\'DungGeunMo\',\'GulimChe\',monospace; font-size:17px; color:#ffffff; line-height:1.6; white-space:pre-wrap;"></div>';
+  const seqEl = document.getElementById('connect-seq');
+
+  const lines = [
+    'ATDT 01410',
+    'DIALING...',
+    'CONNECT 14400 / HiTEL'
+  ];
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  for (const line of lines) {
+    if (line.startsWith('ATDT') || line === 'CONNECT 14400 / HiTEL') {
+      for (let i = 0; i < line.length; i++) {
+        seqEl.textContent += line[i];
+        await delay(50);
+      }
+      seqEl.textContent += '\n';
+      await delay(300);
+    } else {
+      seqEl.textContent += line + '\n';
+      await delay(800);
+    }
+  }
+
+  await delay(500);
+  container.innerHTML = originalContent;
+}
+
 async function init() {
   restoreTheme(); // [LOG: 20260424_1755] 저장된 테마 즉시 복원
   await waitForPrimaryFonts();
@@ -99,6 +134,11 @@ async function init() {
     if (window.location.pathname !== '/') {
       await restoreStateFromURL();
     } else {
+      try {
+        await showConnectSequence();
+      } catch (err) {
+        console.warn('접속 연출 실패:', err.message);
+      }
       await showMain();
     }
   } catch (e) {
