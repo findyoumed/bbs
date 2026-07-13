@@ -28,7 +28,29 @@ export function createGlobalNavigationCommandHandler(deps) {
     return ['main', 'board-select', 'top'].includes(state.screen);
   }
 
-  return async function handleGlobalNavigationCommand({ cmd, rawCmd }) {
+  return async function handleGlobalNavigationCommand({ cmd, rawCmd, input }) {
+    // [LOG_ID: 20260713_1130] 하이텔식 종료 확인 가로채기
+    if (state._exitConfirm) {
+      const ans = String(input || cmd || '').trim().toUpperCase();
+      state._exitConfirm = false;
+      setDefaultPrompt();
+
+      if (ans === 'Y' || ans === 'YES') {
+        setHint('안녕히 가십시오.');
+        await new Promise(r => setTimeout(r, 600));
+
+        if (!state.user?.isGuest) {
+          await doLogout();
+        }
+        window.location.assign('/');
+        return true;
+      } else {
+        setHint('종료가 취소되었습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+    }
+
     if (cmd === 'LOGIN' || (cmd === 'L' && isLoginShortcutScreen())) {
       if (state.user?.isGuest) {
         if (typeof showLogin === 'function') {
@@ -235,16 +257,10 @@ export function createGlobalNavigationCommandHandler(deps) {
     }
 
     if (cmd === 'Q' || cmd === 'EXIT' || cmd === 'BYE' || cmd === 'X' || cmd === 'LOGOUT') {
-      const confirmed = await showConfirm('BBS 접속을 종료하시겠습니까?');
-      if (!confirmed) {
-        setDefaultPrompt();
-        return true;
-      }
-
-      if (!state.user?.isGuest) {
-        await doLogout();
-      }
-      window.location.assign('/');
+      // [LOG_ID: 20260713_1130] 하이텔식 종료 확인 시퀀스로 전환
+      state._exitConfirm = true;
+      setHint('* 끝내시려면 \'Y\' 를 누르고 엔터키를 누르십시오');
+      setPrompt('-> ');
       return true;
     }
 
