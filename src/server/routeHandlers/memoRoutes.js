@@ -81,7 +81,19 @@ class MemoRouter extends BaseRouter {
     const { memoRepository } = this.deps;
     const body = await this.getCreateMemoBody();
     const context = await this.getContext();
-    return this.send(201, await memoRepository.createMemo(body, context));
+    const result = await memoRepository.createMemo(body, context);
+
+    // [LOG_ID: 20260713_1050] 수신자 부재 여부 체크 동반 반환
+    global.absentMessages = global.absentMessages || new Map();
+    const rcpt = String(body.recipientUserId || '').trim();
+    const isAbsent = global.absentMessages.has(rcpt);
+    const absentMsg = isAbsent ? global.absentMessages.get(rcpt) : null;
+
+    return this.send(201, {
+      ...result,
+      recipientAbsent: isAbsent,
+      absentMsg
+    });
   }
 
   async getMemo(params) {

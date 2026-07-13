@@ -13,6 +13,8 @@ const {
 class MemberRouter extends BaseRouter {
   get routes() {
     return [
+      { method: 'GET', pattern: '/api/members/absent', handler: 'getMyAbsent', needContext: true },
+      { method: 'POST', pattern: '/api/members/absent', handler: 'setAbsent', needContext: true },
       { method: 'GET', pattern: '/api/members', handler: 'listMembers', middlewares: ['ensureAdmin'] },
       { method: 'GET', pattern: '/api/members/search', handler: 'search', needContext: true },
       { 
@@ -421,6 +423,39 @@ class MemberRouter extends BaseRouter {
       console.error('[MemberRouter] Auth password fallback verification failed:', error.message);
       return { verified: false, source: 'auth-password' };
     }
+  }
+
+  // [LOG_ID: 20260713_1050] 내 부재 상태 조회 API
+  async getMyAbsent() {
+    const context = await this.getContext();
+    const userId = context.userId;
+    if (!userId || userId === 'guest') {
+      return this.error(401, '로그인이 필요한 서비스입니다.');
+    }
+    global.absentMessages = global.absentMessages || new Map();
+    const msg = global.absentMessages.get(userId) || null;
+    return this.send(200, { absentMsg: msg });
+  }
+
+  // [LOG_ID: 20260713_1050] 부재 상태 설정 API
+  async setAbsent() {
+    const context = await this.getContext();
+    const userId = context.userId;
+    if (!userId || userId === 'guest') {
+      return this.error(401, '로그인이 필요한 서비스입니다.');
+    }
+    
+    const payload = await this.getJsonBody() || {};
+    const msg = String(payload.absentMsg || '').trim();
+    
+    global.absentMessages = global.absentMessages || new Map();
+    if (msg) {
+      global.absentMessages.set(userId, msg);
+    } else {
+      global.absentMessages.delete(userId);
+    }
+    
+    return this.send(200, { ok: true, absentMsg: msg || null });
   }
 }
 

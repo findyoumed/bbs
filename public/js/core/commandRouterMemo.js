@@ -64,6 +64,40 @@ export function createMemoCommandHandler(deps) {
 
     return async function handleMemoCommand({ input, rawCmd, cmd, context }) {
         if (state.screen === 'memo-list') {
+            // [LOG_ID: 20260713_1050] 부재 메시지 설정 입력 가로채기
+            if (state._absentStage === 'setting') {
+                const msg = String(input || '').trim();
+                setHint?.('부재 등록을 처리 중입니다..');
+                apiFetch('/api/members/absent', {
+                    method: 'POST',
+                    body: JSON.stringify({ absentMsg: msg })
+                })
+                .then(() => {
+                    if (msg) {
+                        setHint?.(`부재 등록되었습니다: "${msg}"`);
+                    } else {
+                        setHint?.('부재 등록이 해제되었습니다.');
+                    }
+                    setPrompt?.('선택 >>');
+                    state._absentStage = null;
+                    showMemoList();
+                })
+                .catch((err) => {
+                    setHint?.(`부재 등록 실패: ${err.message}`);
+                    setPrompt?.('선택 >>');
+                    state._absentStage = null;
+                    showMemoList();
+                });
+                return true;
+            }
+
+            if (cmd === 'ABSENT' || cmd === '부재') {
+                state._absentStage = 'setting';
+                setHint?.('부재 중 메시지를 입력하십시오. (최대 50자, 해제는 빈 엔터)');
+                setPrompt?.('부재 메시지 >>');
+                return true;
+            }
+
             if (cmd === 'T') {
                 await showMain();
                 return true;

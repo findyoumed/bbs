@@ -1,3 +1,22 @@
+## [2026-07-13 10:50] Phase 4 추가 재현: 부재 통지(ABSENT) 등록 및 쪽지 발송 시 자동 회신 알림 구현
+
+**LOG_ID: 20260713_1050**
+목표: 하이텔 길라잡이 전권 학습 로드맵의 Phase 4 부재 통지(ABSENT) 등록 및 자동 메시지 전송 연출을 구현하여 PC통신 환경을 완벽하게 재구현한다.
+변경 파일:
+1) `src/server/routeHandlers/memberRoutes.js` (부재 설정/조회를 위한 /api/members/absent 엔드포인트 POST/GET 추가 및 메모리 Map 영속화)
+2) `src/server/routeHandlers/memoRoutes.js` (createMemo 시 수신자 ID를 기점으로 global.absentMessages 맵을 검사하여 부재 여부 및 메시지 추가 반환하도록 수정)
+3) `public/js/core/commandRouterMemo.js` (쪽지함에서 ABSENT/부재 입력 시 부재 상태 설정 프롬프트를 띄우고 API에 저장하는 가로채기 핸들러 추가)
+4) `public/js/core/memoScreens.js` (쪽지 발송 성공 시 서버 응답 내 recipientAbsent 플래그가 참이면 힌트바에 상대방의 부재 중 메시지를 자동으로 팝업 에코 노출 처리)
+수행 작업:
+- 쪽지함 목록에서 `ABSENT` 또는 `부재`를 치면 `부재 메시지 >>` 프롬프트 활성화.
+- 임의의 부재 문구를 기입하면 서버의 글로벌 absentMessages 맵에 저장(빈 입력 시 해제).
+- 다른 사용자가 부재 등록된 사용자에게 쪽지를 보낼 시, 성공 응답과 함께 자동으로 부재 안내문(`[부재알림] guest님은 현재 부재 중입니다: "회의 중입니다."`)이 힌트바에 팝업 노출되는 연동 구축.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 10:40] Phase 4 추가 재현: 쪽지(편지) 발송 옵션 (1:발송, 2:저장, 3:발송+저장, 0:취소) 시퀀스 구현
 
 **LOG_ID: 20260713_1040**

@@ -260,7 +260,7 @@ export function createMemoScreens(deps) {
             setHint('쪽지를 발송하는 중입니다..');
             const saveToSent = choice !== 1;
 
-            await apiFetch('/api/memos', {
+            const res = await apiFetch('/api/memos', {
                 method: 'POST',
                 body: JSON.stringify({
                     recipientUserId: targetUserId,
@@ -271,6 +271,13 @@ export function createMemoScreens(deps) {
             });
             clearMemoWriteFlow();
             state._memoBox = choice === 2 ? 'inbox' : 'sent';
+
+            // [LOG_ID: 20260713_1050] 수신자 부재 알림 힌트 노출
+            if (res && res.recipientAbsent) {
+                setHint(`[부재알림] ${targetUserId}님은 현재 부재 중입니다: "${res.absentMsg || ''}"`);
+            } else {
+                setHint('쪽지를 발송했습니다.');
+            }
             await showMemoList();
             return true;
         } catch (e) {
