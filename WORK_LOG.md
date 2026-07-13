@@ -1,3 +1,19 @@
+## [2026-07-13 11:00] Phase 4 추가 재현: 받은 쪽지 전달(FW / F) 기능 구현
+
+**LOG_ID: 20260713_1100**
+목표: 하이텔 길라잡이 전권 학습 로드맵의 Phase 4 편지(쪽지) 전달 기능(FW 또는 F)을 구현하여 전자우편 시스템의 복원 완성도를 극대화한다.
+변경 파일:
+1) `public/js/core/commandRouterMemo.js` (memo-view 스크린에서 FW 또는 F 명령어 입력 시 현재 쪽지 내용을 구분선과 함께 state._forwardMemoContent에 복사하고 showMemoWrite를 부르도록 분기 배선)
+2) `public/js/core/memoScreens.js` (showMemoWrite 실행 시 state._forwardMemoContent에 복사된 내용이 있으면 bodyLines에 줄 바꿈 단위로 쪼개어 자동 채워넣은 후 버퍼를 비우고 stage를 target으로 설정)
+수행 작업:
+- 쪽지 조회 화면에서 `FW` 또는 `F`를 치면 `---------- 전달된 쪽지 ----------` 머리말과 보낸이, 날짜 정보가 포함된 원본 내용이 복사되어 쪽지 작성기로 전송.
+- 작성기는 수신자 ID를 묻는 `받는 사람 >>` 상태로 시작하며, 본문 내용에는 원본 본문이 이미 자동으로 한 줄씩 입력 완료된 상태로 시작되어 즉각 전송이 가능하도록 연동.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 10:60] Phase 1-4 추가 재현: 메인 대문 [작은공지] (GO NOTICE) 링크 및 클릭 핫스팟 연동
 
 **LOG_ID: 20260713_1060**

@@ -228,6 +228,14 @@ export function createMemoScreens(deps) {
         updateURL(true);
 
         state._memoWriteFlow = createMemoWriteFlow(state._memoTarget);
+
+        // [LOG_ID: 20260713_1100] 전달받은 원본 내용이 있을 경우 본문에 미리 채워넣고 복제
+        if (state._forwardMemoContent) {
+            state._memoWriteFlow.bodyLines = state._forwardMemoContent.split('\n');
+            state._forwardMemoContent = null;
+            state._memoWriteFlow.stage = 'target';
+        }
+
         // [LOG: 20260509_1115] Memo write consumes raw terminal lines so body text is not treated as global commands.
         state._terminalInputHandler = handleMemoRawInput;
         renderMemoWriteScreen();

@@ -150,6 +150,15 @@ export function createMemoCommandHandler(deps) {
                 if (memo) await showMemoWrite(memo.senderUserId);
                 return true;
             }
+            // [LOG_ID: 20260713_1100] 쪽지 전달(FW / F) 기능 추가
+            if (cmd === 'FW' || cmd === 'F') {
+                const memo = state._memos?.find((m) => String(m?.id) === String(state._currentMemoId));
+                if (memo) {
+                    state._forwardMemoContent = `---------- 전달된 쪽지 ----------\n보낸이: ${memo.senderUserId}\n날짜: ${new Date(memo.createdAt).toLocaleString()}\n\n${memo.content}`;
+                    await showMemoWrite();
+                }
+                return true;
+            }
             if (cmd === 'DD' || cmd === 'D') {
                 return await beginMemoDeleteConfirm();
             }
