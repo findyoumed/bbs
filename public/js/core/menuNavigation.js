@@ -156,7 +156,8 @@ export function createMenuNavigation(deps) {
     if (noticeData && (noticeData.items?.length > 0 || noticeData.posts?.length > 0)) {
       const noticePost = noticeData.items?.[0] || noticeData.posts?.[0];
       if (noticePost && noticePost.title) {
-        noticeText = `[작은공지] ${noticePost.title}`;
+        // [LOG_ID: 20260713_1060] (GO NOTICE) 클릭 가능 토큰을 포함한 텍스트로 보완
+        noticeText = `[작은공지] ${noticePost.title} (GO NOTICE)`;
       }
     }
 

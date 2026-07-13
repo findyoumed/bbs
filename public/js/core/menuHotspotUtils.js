@@ -90,6 +90,26 @@ export function buildMenuHotspotsFromRows(rows, entries, compareDoor) {
       }
     }
 
+    // [LOG_ID: 20260713_1060] (GO [이름]) 괄호 명령어 패턴 감지 (예: (GO NOTICE))
+    const goRegex = /\(GO\s+([A-Z0-9_-]+)\)/gi;
+    let goMatch;
+    while ((goMatch = goRegex.exec(rowText)) !== null) {
+      const targetName = goMatch[1].toUpperCase();
+      const startCol = displayWidth(rowText.slice(0, goMatch.index));
+      const endCol = startCol + displayWidth(goMatch[0]);
+      if (hasOverlappingHotspot(hotspots, rowIndex, startCol, endCol)) {
+        continue;
+      }
+      hotspots.push({
+        row: rowIndex,
+        startCol,
+        endCol,
+        inputValue: `GO ${targetName}`,
+        cmd: `GO ${targetName}`,
+        label: `이동: GO ${targetName}`
+      });
+    }
+
     // 3. 외부 링크(URL) 패턴 감지
     const urlRegex = /https?:\/\/[^\s]+/g;
     let urlMatch;
