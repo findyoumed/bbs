@@ -256,6 +256,17 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260713_1140] 하이텔식 이용시간 확인(TIME) 커맨드 구현
+    if (cmd === 'TIME') {
+      const elapsedMs = Date.now() - (state._sessionStartTime || Date.now());
+      const elapsedMin = Math.floor(elapsedMs / 60000);
+      const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
+      const now = new Date();
+      const currentStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      setHint(`[이용시간] 현재시각: ${currentStr} | 누적접속: ${elapsedMin}분 ${elapsedSec}초`);
+      return true;
+    }
+
     if (cmd === 'Q' || cmd === 'EXIT' || cmd === 'BYE' || cmd === 'X' || cmd === 'LOGOUT') {
       // [LOG_ID: 20260713_1130] 하이텔식 종료 확인 시퀀스로 전환
       state._exitConfirm = true;

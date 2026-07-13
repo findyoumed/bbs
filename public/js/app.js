@@ -21,6 +21,7 @@ let state = {
   _prQueue: [],
   _memberBannerShown: {},
   commandGrade: 'middle', // Default helpbar grade
+  _sessionStartTime: Date.now(),
 };
 
 const refs = {};
