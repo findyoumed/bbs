@@ -79,11 +79,12 @@ class SupabaseMemoRepository extends BaseRepository {
 
   async createMemo(input = {}, context = {}) {
     const payload = validateMemoInput(input);
+    const saveToSent = input.saveToSent !== false;
     const columns = await this._getColumnMap();
     const { data, error } = await this.client
       .from(this.table)
       .insert({
-        [columns.sender]: normalizeText(context.userId, 'guest'),
+        [columns.sender]: saveToSent ? normalizeText(context.userId, 'guest') : null,
         [columns.recipient]: payload.recipientUserId,
         title: payload.title,
         content: payload.content,

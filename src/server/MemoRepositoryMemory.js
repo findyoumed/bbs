@@ -46,9 +46,10 @@ class MemoryMemoRepository {
 
   async createMemo(input = {}, context = {}) {
     const payload = validateMemoInput(input);
+    const saveToSent = input.saveToSent !== false;
     const memo = {
       id: this.nextId++,
-      senderUserId: normalizeText(context.userId, 'guest'),
+      senderUserId: saveToSent ? normalizeText(context.userId, 'guest') : null,
       recipientUserId: payload.recipientUserId,
       title: payload.title,
       content: payload.content,

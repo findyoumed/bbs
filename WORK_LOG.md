@@ -1,3 +1,23 @@
+## [2026-07-13 10:40] Phase 4 추가 재현: 쪽지(편지) 발송 옵션 (1:발송, 2:저장, 3:발송+저장, 0:취소) 시퀀스 구현
+
+**LOG_ID: 20260713_1040**
+목표: 하이텔 길라잡이 전권 학습 로드맵의 Phase 4 쪽지 발송 명령 선택 기능(1:발송, 2:저장, 3:발송+저장, 0:취소)을 구현하여 PC통신 특유의 편지함 시스템을 완벽히 재현한다.
+변경 파일:
+1) `src/server/MemoRepositoryMemory.js` (createMemo 시 saveToSent === false 일 때 senderUserId를 null로 설정하여 보낸편지함 저장 방지 처리)
+2) `src/server/MemoRepositorySupabase.js` (createMemo 시 saveToSent === false 일 때 sender 컬럼을 null로 인서트하여 보낸편지함 저장 방지 처리)
+3) `public/js/core/memoScreens.js` (handleMemoRawInput에서 /s/SEND 전송 시 발송 옵션(1-3, 0) 선택 프롬프트 단계로 유도하고, 선택 값에 따라 저장 안함/내게만 전송/정상 전송 기능을 수행하는 handleMemoSubmitWithOptions 구현)
+수행 작업:
+- 편지 작성 완료 후 바로 발송하지 않고 `발송 명령 (1-3, 0) >>` 프롬프트를 노출.
+- `1. 발송`: 수신자에게 보내되 본인 보낸쪽지함에는 미기록(saveToSent = false)
+- `2. 저장`: 나에게만 전송하여 메모/드래프트 저장
+- `3. 발송+저장`: 수신자에게 보내고 본인 보낸쪽지함에도 함께 기록
+- `0. 취소`: 편지 발송 전면 중단
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 10:30] Phase 4 감성 연출 추가: 자료실 DN 프로토콜 선택 및 모뎀 접속 연출(ATDT)
 
 **LOG_ID: 20260713_1030**

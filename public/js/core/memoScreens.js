@@ -233,13 +233,18 @@ export function createMemoScreens(deps) {
         renderMemoWriteScreen();
     }
 
-    async function handleMemoSubmit() {
+    // [LOG_ID: 20260713_1040] Hitel 발송 옵션을 적용하는 서브밋 헬퍼 함수
+    async function handleMemoSubmitWithOptions(choice) {
         if (!ensureMemoAccess()) {
             return false;
         }
 
         const flow = state._memoWriteFlow;
-        const targetUserId = String(flow?.target || state._memoTarget || '').trim();
+        const myId = state.user?.userId || 'guest';
+        const targetUserId = choice === 2 
+            ? myId 
+            : String(flow?.target || state._memoTarget || '').trim();
+            
         const content = Array.isArray(flow?.bodyLines) ? flow.bodyLines.join('\n').trim() : '';
 
         if (!targetUserId || !content) {
@@ -253,27 +258,34 @@ export function createMemoScreens(deps) {
                 flow.sending = true;
             }
             setHint('쪽지를 발송하는 중입니다..');
+            const saveToSent = choice !== 1;
+
             await apiFetch('/api/memos', {
                 method: 'POST',
                 body: JSON.stringify({
                     recipientUserId: targetUserId,
                     title: `${content.substring(0, 20)}...`,
-                    content
+                    content,
+                    saveToSent
                 })
             });
             clearMemoWriteFlow();
-            // [LOG_ID: 20260713_1000] 쪽지 전송 성공 시 보낸쪽지함으로 이동하여 발송 수신 대기 상태 확인
-            state._memoBox = 'sent';
+            state._memoBox = choice === 2 ? 'inbox' : 'sent';
             await showMemoList();
             return true;
         } catch (e) {
             if (flow) {
                 flow.sending = false;
+                flow.stage = 'body';
             }
             appendMemoWriteLine('[안내]', `발송 실패: ${String(e?.message || '알 수 없는 오류입니다.')}`);
             renderMemoWriteScreen();
             return false;
         }
+    }
+
+    async function handleMemoSubmit() {
+        return await handleMemoSubmitWithOptions(3);
     }
 
     async function cancelMemoWrite() {
@@ -297,6 +309,26 @@ export function createMemoScreens(deps) {
         const trimmed = line.trim();
         const cmd = trimmed.toUpperCase();
         const isCancel = trimmed === '/q' || cmd === 'P' || cmd === 'M' || cmd === 'B';
+
+        // [LOG_ID: 20260713_1040] Hitel 발송 옵션 가로채기
+        if (flow.stage === 'send_cmd') {
+            appendMemoWriteLine('발송 명령 >>', line);
+            if (trimmed === '0') {
+                renderMemoWriteScreen();
+                return await cancelMemoWrite();
+            }
+
+            if (['1', '2', '3'].includes(trimmed)) {
+                const choice = parseInt(trimmed, 10);
+                await handleMemoSubmitWithOptions(choice);
+                return true;
+            }
+
+            appendMemoWriteLine('[안내]', '잘못된 명령입니다. 1, 2, 3, 0 중 하나를 입력해 주세요.');
+            setPrompt('발송 명령 (1-3, 0) >>');
+            renderMemoWriteScreen();
+            return true;
+        }
 
         if (flow.stage === 'target') {
             if (isCancel) {
@@ -328,8 +360,10 @@ export function createMemoScreens(deps) {
 
         if (trimmed === '/s' || cmd === 'SEND') {
             appendMemoWriteLine('내용 >>', line);
+            flow.stage = 'send_cmd';
+            appendMemoWriteLine('[선택]', '명령(1:발송, 2:저장, 3:발송+저장, 0:취소)');
+            setPrompt('발송 명령 (1-3, 0) >>');
             renderMemoWriteScreen();
-            await handleMemoSubmit();
             return true;
         }
 
