@@ -76,6 +76,17 @@ export function createMemoCommandHandler(deps) {
                 await showMemoWrite();
                 return true;
             }
+            // [LOG_ID: 20260713_1000] 보낸쪽지함/받는쪽지함 토글 처리
+            if (cmd === 'S') {
+                state._memoBox = 'sent';
+                await showMemoList();
+                return true;
+            }
+            if (cmd === 'I') {
+                state._memoBox = 'inbox';
+                await showMemoList();
+                return true;
+            }
             const idx = parseInt(cmd, 10);
             if (idx >= 1 && state._memos?.[idx - 1]) {
                 await showMemoView(state._memos[idx - 1].id);

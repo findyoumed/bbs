@@ -248,7 +248,7 @@ export function createRoutingStateRestorer(deps) {
       await showMyInfo(true, { mode });
     },
 
-    async memo(segments) {
+    async memo(segments, query) {
       // [LOG: 20260429_0515] Restore /memo/write into the actual compose screen
       // instead of collapsing back to the memo list after reload/history restore.
       if (segments[1] === 'write') {
@@ -257,6 +257,9 @@ export function createRoutingStateRestorer(deps) {
       if (segments[1]) {
         return await showMemoView(decodeURIComponent(segments[1]), true);
       }
+      // [LOG_ID: 20260713_1000] URL 쿼리 파라미터에서 box 복원
+      const box = query?.get('box') || 'inbox';
+      state._memoBox = box;
       await showMemoList(true);
     },
     // [LOG: 20260623_0013] game(vote/ranking) 라우트 복구 핸들러 (origin/main 포팅)

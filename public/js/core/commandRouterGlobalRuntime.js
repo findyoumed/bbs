@@ -143,6 +143,81 @@ export function createGlobalRuntimeCommandHandler(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260713_1000] 갈무리(CAP) 명령어 구현
+    if (cmd === 'CAP') {
+      if (!state.captureActive) {
+        state.captureActive = true;
+        state.captureBuffer = '';
+        updateCaptureBadge(true);
+        setHint('[갈무리 시작] 이후 출력되는 화면이 갈무리 버퍼에 기록됩니다. (종료: CAP)');
+      } else {
+        state.captureActive = false;
+        updateCaptureBadge(false);
+        const buffer = state.captureBuffer || '';
+        state.captureBuffer = '';
+
+        if (buffer.trim()) {
+          // 1. 파일 다운로드 실행
+          if (typeof document !== 'undefined') {
+            try {
+              const blob = new Blob([buffer], { type: 'text/plain;charset=utf-8' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              const now = new Date();
+              const pad = (n) => String(n).padStart(2, '0');
+              const dateStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+              a.download = `capture_${dateStr}.txt`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            } catch (err) {
+              console.error('갈무리 파일 다운로드 실패:', err.message);
+            }
+          }
+
+          // 2. 클립보드 복사 실행
+          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            navigator.clipboard.writeText(buffer)
+              .then(() => {
+                setHint(`[갈무리 종료] 다운로드 및 클립보드 복사 완료 (총 ${buffer.length}자)`);
+              })
+              .catch((err) => {
+                console.warn('갈무리 클립보드 복사 실패:', err.message);
+                setHint(`[갈무리 종료] 다운로드 완료 (총 ${buffer.length}자, 클립보드 복사는 권한 부족으로 취소됨)`);
+              });
+          } else {
+            setHint(`[갈무리 종료] 다운로드 완료 (총 ${buffer.length}자)`);
+          }
+        } else {
+          setHint('[갈무리 종료] 갈무리된 화면이 없습니다.');
+        }
+      }
+      setDefaultPrompt();
+      return true;
+    }
+
     return false;
   };
+
+  // [LOG_ID: 20260713_1000] 갈무리 상태 뱃지 오버레이 동적 생성 및 제거
+  function updateCaptureBadge(isActive) {
+    if (typeof document === 'undefined') return;
+    let badge = document.getElementById('capture-badge');
+    if (isActive) {
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'capture-badge';
+        badge.className = 'capture-badge';
+        badge.textContent = '● 갈무리 중';
+        document.getElementById('terminal-wrapper')?.appendChild(badge);
+      }
+    } else {
+      if (badge) {
+        badge.remove();
+      }
+    }
+  }
 }
+

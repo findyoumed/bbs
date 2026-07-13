@@ -70,16 +70,20 @@ export function createMemoScreens(deps) {
         if (!ensureMemoAccess()) {
             return;
         }
+        if (!state._memoBox) {
+            state._memoBox = 'inbox';
+        }
         if (!fromHistory) {
             updateURL();
         }
         setLoading('데이터를 송수신 중입니다..');
 
         try {
-            const memos = await apiFetch('/api/memos');
+            const box = state._memoBox || 'inbox';
+            const memos = await apiFetch(`/api/memos?box=${box}`);
             state._memos = memos || [];
 
-            const ansiText = buildMemoListAnsi(state._memos);
+            const ansiText = buildMemoListAnsi(state._memos, box);
             renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
 
             await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
@@ -105,7 +109,8 @@ export function createMemoScreens(deps) {
 
             // [LOG: 20260429_0042] Direct /memo/:memoId restores need the fetched memo context
             // so memo-view commands keep working even when the list screen was never loaded first.
-            if (!hydratedMemo.isRead) {
+            // [LOG_ID: 20260713_1000] 내가 보낸 쪽지가 아닐 때만(남에게 받은 편지일 때만) 수신확인(읽음 처리) 처리
+            if (hydratedMemo.senderUserId !== state.user?.userId && !hydratedMemo.isRead) {
                 const markedMemo = await apiFetch(`/api/memos/${memoId}/read`, { method: 'POST' });
                 Object.assign(hydratedMemo, markedMemo || {}, { isRead: true });
             }
@@ -121,7 +126,7 @@ export function createMemoScreens(deps) {
                 state._memos = [hydratedMemo, ...existingMemos];
             }
 
-            const ansiText = buildMemoViewAnsi(hydratedMemo);
+            const ansiText = buildMemoViewAnsi(hydratedMemo, state.user?.userId);
             const rendered = renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
             const deleteConfirm = state._memoDeleteConfirm;
             const deleteConfirmHtml = deleteConfirm && String(deleteConfirm.memoId || '') === String(state._currentMemoId || '')
@@ -257,6 +262,8 @@ export function createMemoScreens(deps) {
                 })
             });
             clearMemoWriteFlow();
+            // [LOG_ID: 20260713_1000] 쪽지 전송 성공 시 보낸쪽지함으로 이동하여 발송 수신 대기 상태 확인
+            state._memoBox = 'sent';
             await showMemoList();
             return true;
         } catch (e) {

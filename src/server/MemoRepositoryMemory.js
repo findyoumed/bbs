@@ -22,8 +22,9 @@ class MemoryMemoRepository {
 
   async listForUser(context = {}) {
     const userId = normalizeText(context.userId, 'guest');
+    const isSentBox = context.box === 'sent';
     return this.memos
-      .filter((memo) => memo.recipientUserId === userId)
+      .filter((memo) => isSentBox ? memo.senderUserId === userId : memo.recipientUserId === userId)
       .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
       .map((memo) => ({ ...memo }));
   }

@@ -86,6 +86,19 @@ export function createChatCommandHandler(deps) {
         return true;
       }
 
+      // [LOG_ID: 20260713_1000] J [방번호] / JOIN [방번호] / /J [방번호] 명령어 배선 추가
+      const jMatch = cmd.match(/^(?:\/?J|JOIN)\s+(\d+)$/i);
+      if (jMatch) {
+        const roomNo = parseInt(jMatch[1], 10);
+        const room = state._chatRooms?.find((r) => r.no === roomNo);
+        if (room) {
+          await showChatRoom(room.no);
+        } else {
+          setHint(`해당 방번호(#${roomNo})의 방이 존재하지 않습니다.`);
+        }
+        return true;
+      }
+
       const selectedRoom = parseInt(cmd, 10);
       if (selectedRoom >= 1 && state._chatRooms?.[selectedRoom - 1]) {
         await showChatRoom(state._chatRooms[selectedRoom - 1].no);

@@ -191,6 +191,22 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260713_1000] 전역 ME / MEMO 명령어 배선 추가
+    if (cmd === 'ME' || cmd === 'MEMO') {
+      if (state.user?.isGuest) {
+        setHint('쪽지함은 로그인 후 사용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+      if (typeof showMemoList === 'function') {
+        // 처음 진입할 때 기본적으로 받은편지함(inbox)으로 설정되도록 초기화
+        state._memoBox = 'inbox';
+        await showMemoList();
+        return true;
+      }
+      return false;
+    }
+
     if (cmd === 'CLS' || cmd === 'CLEAR') {
       if (typeof deps.renderScreenSequential === 'function') {
         await deps.renderScreenSequential('', { clear: true });

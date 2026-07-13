@@ -125,7 +125,8 @@ export function createTerminalUiCore(deps) {
     performanceService,
     soundService,
     setBusy,
-    showNotification
+    showNotification,
+    state
   });
 
   const core = {

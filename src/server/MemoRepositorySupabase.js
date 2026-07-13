@@ -32,10 +32,11 @@ class SupabaseMemoRepository extends BaseRepository {
   async listForUser(context = {}) {
     const userId = normalizeText(context.userId, 'guest');
     const columns = await this._getColumnMap();
+    const isSentBox = context.box === 'sent';
     const { data, error } = await this.client
       .from(this.table)
       .select('*')
-      .eq(columns.recipient, userId)
+      .eq(isSentBox ? columns.sender : columns.recipient, userId)
       .order('created_at', { ascending: false });
     if (error) {
       this._throwError('메모 목록 조회', error, { table: this.table });

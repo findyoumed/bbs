@@ -6,7 +6,8 @@ export function createTerminalSequentialRenderer(deps) {
     performanceService,
     soundService,
     setBusy,
-    showNotification
+    showNotification,
+    state
   } = deps;
 
   let renderAbortController = null;
@@ -196,6 +197,14 @@ export function createTerminalSequentialRenderer(deps) {
     }
 
     onComplete?.();
+
+    // [LOG_ID: 20260713_1000] 갈무리(CAP) 활성화 시 화면에 렌더링 완료된 텍스트 수집 후 버퍼 누적
+    if (state && state.captureActive) {
+      const screenText = container.innerText || container.textContent || '';
+      if (screenText.trim()) {
+        state.captureBuffer = (state.captureBuffer || '') + (state.captureBuffer ? '\n\n--------------------------------------------------------------------------------\n\n' : '') + screenText.trim();
+      }
+    }
 
     if (performanceService) {
       const duration = Math.round(performance.now() - renderStartTime);

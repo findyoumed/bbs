@@ -165,8 +165,10 @@ export function createRoutingUrlBuilder(deps) {
         return '/myinfo';
       }
 
-      case 'memo-list':
-        return '/memo';
+      case 'memo-list': {
+        const box = state._memoBox || 'inbox';
+        return box === 'sent' ? '/memo?box=sent' : '/memo';
+      }
 
       case 'memo-view':
         return `/memo/${encodeURIComponent(_currentMemoId || '')}`;

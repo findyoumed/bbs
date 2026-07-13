@@ -39,6 +39,7 @@ export const CMD_META = {
 
   // Search
   LI: { label: 'ID검색', tip: 'LI [아이디]', priority: 80, cat: 'POST', desc: '작성자 아이디로 게시글을 검색합니다.' },
+  LV: { label: '등급변경', tip: 'LV [등급]', login: true, priority: 5, cat: 'POST', desc: '(운영자) 게시글 작성자의 회원 등급을 변경합니다. 게시글 보기 화면에서 사용. (1:일반회원, 2:특별회원, 99:운영자)' },
   LT: { label: '제목검색', tip: 'LT [검색어]', priority: 82, cat: 'POST', desc: '제목과 본문을 포함하여 게시글을 검색합니다.' },
   FIND: { label: '통합검색', tip: '/, FIND [검색어]', priority: 80, cat: 'POST', desc: '게시판 및 메뉴 통합 검색을 수행합니다.' },
   '/': { label: '통합검색', tip: '/, FIND [검색어]', priority: 80, cat: 'POST', desc: '게시판 및 메뉴 통합 검색을 수행합니다.' },
@@ -110,6 +111,8 @@ export const CMD_META = {
   WAITPID: { label: '프로세스대기', tip: 'WAITPID [PID]', priority: 10, cat: 'SYS', desc: '백그라운드 프로세스가 종료될 때까지 대기합니다.' },
   JOBS: { label: '작업목록', tip: 'JOBS', priority: 10, cat: 'SYS', desc: '현재 실행 중인 백그라운드 작업 목록을 표시합니다.' },
   KILL: { label: '작업종료', tip: 'KILL [PID]', priority: 10, cat: 'SYS', desc: '백그라운드 작업을 강제로 종료합니다.' },
+  // [LOG_ID: 20260713_1000] 갈무리(CAP) 기능 메타데이터 추가
+  CAP: { label: '갈무리', tip: 'CAP, 갈무리', priority: 15, cat: 'SYS', desc: '화면 갈무리를 시작하거나 종료합니다.' },
 };
 
 /**

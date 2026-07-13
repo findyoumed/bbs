@@ -1,3 +1,56 @@
+## [2026-07-13 10:00] 하이텔 기능 확장 Phase 2 + 대기실 TUI 리팩토링 및 쪽지함 보낸편지함 토글
+
+**LOG_ID: 20260713_1000**
+목표: 하이텔 길라잡이 전권 학습 로드맵의 Phase 2 기능(CAP 세션 갈무리, 보낸쪽지함 및 수신확인)을 구현하고, U-4 트랙(대기실 상황판 ST) 및 U-5 트랙(보낸쪽지 목록 컬럼)을 원전 사양에 맞춰 재현한다.
+변경 파일:
+1) `public/style.css` (오버레이 갈무리 뱃지 `.capture-badge` 스타일 정의)
+2) `public/js/core/commandService.js` (CAP 명령어 메타데이터 추가)
+3) `public/js/core/commandNormalizer.js` (한글 '갈무리', '캡' -> 'CAP' 정규화 맵핑)
+4) `public/js/core/commandRouterGlobalRuntime.js` (CAP 명령어의 토글, 파일 다운로드, 클립보드 복사, 뱃지 제어 구현)
+5) `public/js/core/terminalUiCore.js` (createTerminalSequentialRenderer에 `state` 주입)
+6) `public/js/core/terminalSequentialRenderer.js` (renderScreenSequential 완료 시점에 텍스트 갈무리 버퍼 누적 후킹)
+7) `src/server/routeHandlers/memoRoutes.js` (listMemos에서 box=sent 쿼리 파라미터 추출 지원)
+8) `src/server/MemoRepositoryMemory.js` (listForUser에서 box=sent 조건 분기 구현)
+9) `src/server/MemoRepositorySupabase.js` (listForUser에서 box=sent Supabase 쿼리 구현)
+10) `public/js/core/routingUrlBuilder.js` (memo-list URL 생성 시 box=sent 반영)
+11) `public/js/core/routingStateRestorer.js` (URL 복원 시 box 쿼리 상태를 state._memoBox로 복원)
+12) `public/js/core/memoScreens.js` (showMemoList의 쿼리 전달, showMemoView의 수신확인 API 호출 가드 및 currentUserId 파라미터 전달, handleMemoSubmit 성공 시 보낸쪽지함 자동 전환)
+13) `public/js/core/memoAnsiBuilders.js` (buildMemoListAnsi와 buildMemoViewAnsi의 보낸쪽지함/받는쪽지함 분기 및 수신/않읽음 텍스트, 보낸이/받는이 라벨 분기 렌더링)
+14) `public/js/core/commandRouterMemo.js` (memo-list 화면에서 S/I 입력 시 쪽지함 전환 단축키 구현)
+15) `public/js/core/commandRouterGlobalNavigation.js` (전역 ME / MEMO 명령어 배선 구현)
+16) `public/js/core/chatAnsiBuilders.js` (buildChatLobbyAnsi를 Hitel 그림 6.1에 부합하는 대기실 상황판 레이아웃으로 전면 개편)
+17) `public/js/core/commandRouterChat.js` (대기실에서 J [방번호] 및 JOIN [방번호] /J [방번호] 입장 배선 구현)
+수행 작업:
+1) [세션 갈무리] `CAP` 명령어 입력 시 `captureActive` 상태를 토글하고, 갈무리 중에는 우하단에 깜빡이는 `● 갈무리 중` 뱃지를 표시하며 렌더링 완료되는 모든 텍스트를 누적. 종료 시 captureBuffer를 다운로드시키고 클립보드에 자동 복사.
+2) [보낸쪽지함 & 수신확인] 서버/클라이언트 라우팅 전체 배선에 `box=sent` 쿼리 파라미터를 통합하여 받은쪽지함과 보낸쪽지함을 완벽하게 연동. 보낸쪽지함에서는 수신여부(수신/않읽음)를 표시하고 상세 보기에서 수신확인 요청 차단 및 받는이로 라벨 변경. 쪽지함에서 `S`, `I` 단축키로 토글 가능.
+3) [대기실 상황판 ST] 로비 레이아웃을 【대기실】 N명 / 【대화실】 (개설방수: m/100 현재참여인원: p명) + 접속자 명단 + 방 목록 세로 배치 형식으로 개편. `J [방번호]` 입장 추가 지원.
+실행: `npm run smoke:vercel-ready`
+기대: 모든 Supabase 레포지토리 연결 헬스 체크 ok 및 빌드 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 09:30] 참고 프로젝트 학습 적용: virtualKeyboard·추억의 접속화면·LV 등급변경
+
+**LOG_ID: 20260713_0930** (선행 작업 LOG_ID: 20260711_1320, 20260711_1340, 20260711_1400)
+목표: olddos-bbs-main(hanulso 원작)과 bbs_01410.coroke.net-main 분석에서 도출한 개선안 중 사용자가 승인한 4건(virtualKeyboard API, door 아트 이식, PR 연속읽기, 회원 등급 복원)을 적용한다. 접속시간 표시는 사용자 결정으로 제외.
+변경 파일:
+1) `public/js/core/terminalUiCore.js` (+13줄, VirtualKeyboard API 오버레이 모드 + geometrychange 리스너 — 20260711_1320)
+2) `public/js/core/terminalViewportMetrics.js` (오버레이 모드에서 키보드 인셋을 boundingRect로 산출, 기존 visualViewport 경로는 미지원 브라우저 폴백 유지)
+3) `public/js/core/doorArtAssets.js` (신규 — olddos txt/door 4종(xt/ketel/chol/xmas) EUC-KR→UTF-8 변환, [=NF 전경색 유지·화면제어/배경색 코드 제거 — 20260711_1400)
+4) `public/js/core/amusementAnsiBuilders.js`, `amusementScreens.js`, `appFactoryScreens.js`, `menuNavigationActions.js`, `commandRouterService.js`, `commandFooterText.js`, `routingUrlBuilder.js`, `routingStateRestorer.js`, `legacy/hanulso.mnu` (오락실 6번 '추억의 접속화면' 화면·명령·URL(/game/retro[/key]) 배선)
+5) `public/js/core/commandRouterBrowse.js`, `commandRouterPostView.js` (PR [번호] 연속읽기 기본 구현 — 20260711_1340; 이후 20260712_2200 세션이 범위/나열 큐로 확장)
+6) `public/js/core/commandRouterPostView.js`, `appFactoryHandlers.js`, `commandService.js` (LV [등급] 명령 — 운영자 전용, POST /api/members/:id/level 호출, 사용법/성공/실패 힌트)
+7) `public/js/core/systemAnsiBuilders.js` (프로필 회원등급 라벨에 특별회원(레벨 2) 반영 — 기존엔 운영자/일반회원만 표기)
+수행 작업:
+1) [조사] 서버 등급 시스템(level 필드·setLevel·ensureAdmin API·BoardRepositoryAccess의 등급별 접근 제한)이 이미 완비돼 있어, 클라이언트 LV 명령과 표기만 보강하면 됨을 확인.
+2) [주의점] virtualKeyboard.overlaysContent=true 모드에서는 visualViewport가 줄지 않아 기존 인셋 계산(layout-visual 차)이 0이 되므로, 이 모드일 때만 vk.boundingRect.height를 인셋 소스로 교체 (CSS 변수 파이프라인은 동일).
+3) [검증] Playwright E2E — 추억의 접속화면: 메뉴 노출→목록→아트 2종 렌더(스크린샷 확인)→L/P 복귀→URL 복원(/game/retro/ketel) 전부 통과. PR 연속읽기: PR 1→엔터 7건 순회→마지막 글 안내→모드 종료 통과. LV: 게스트 차단 힌트 통과, API는 curl로 관리자 200/무권한 403/범위밖 400 확인. 데스크톱/모바일 에뮬레이션 부팅·콘솔 에러 0건. `smoke:vercel-ready`, `smoke:boards` ok.
+4) [참고] `npm test`는 20260712 커밋(f418136)에서 archive/dev-only/tests가 삭제되어 현재 실행 불가 — 본 작업과 무관한 선행 상태.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-12 22:00] 하이텔 기능 확장 Phase 1 + ANSI-aware 텍스트 파서 리팩토링
 
 **LOG_ID: 20260712_2200**

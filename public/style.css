@@ -2698,3 +2698,27 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
         line-height: 1.1 !important;
     }
 }
+
+/* [LOG_ID: 20260713_1000] 갈무리(CAP) 기능 상태를 보여주기 위한 오버레이 뱃지 스타일 정의 */
+.capture-badge {
+    position: absolute;
+    right: 20px;
+    bottom: 50px;
+    background-color: #aa0000;
+    color: #ffffff;
+    font-family: "Sam3KRFont", "DungGeunMo", monospace;
+    font-size: 14px;
+    padding: 3px 8px;
+    border: 1px solid #ff5555;
+    border-radius: 2px;
+    z-index: 1000;
+    box-shadow: 0 0 6px rgba(255, 0, 0, 0.6);
+    animation: capture-blink 1.5s infinite;
+    pointer-events: none;
+}
+
+@keyframes capture-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+

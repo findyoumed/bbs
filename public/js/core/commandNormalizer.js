@@ -27,6 +27,7 @@ export function normalizeCommand(rawCmd, stateScreen) {
     '햎': 'GO', '구꽬': 'RE', '두깋': 'ED', '뉸깋': 'DD', 'ㅌㅊㅣ': 'LT', 'ㅌㅊㅐ': 'LI',
     'ㅣㅅ': 'LT', 'ㅣㅑ': 'LI', 'ㅕㄴㄷㄱ': 'USER', 'ㅎ디ㅔ': 'HELP',
     'ㅡㄷ': 'ME', 'ㅡ드': 'ME', 'ㅠㅠㄴ': 'BBS', '쳐': 'CHAT',
+    '갈무리': 'CAP', '캡': 'CAP',
     '/ㅁ': '/Q', '/균ㅆ': '/QUIT', 'ㅐ': 'O'
   };
 

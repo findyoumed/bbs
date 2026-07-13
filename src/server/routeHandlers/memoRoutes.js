@@ -27,7 +27,9 @@ class MemoRouter extends BaseRouter {
   async listMemos() {
     const { memoRepository } = this.deps;
     const context = await this.getContext();
-    return this.send(200, await memoRepository.listForUser(context));
+    // [LOG_ID: 20260713_1000] box 쿼리 파라미터(inbox / sent)를 읽어 레포지토리에 전달
+    const box = this.requestUrl.searchParams.get('box') || 'inbox';
+    return this.send(200, await memoRepository.listForUser({ ...context, box }));
   }
 
   async unreadMemoCount() {
