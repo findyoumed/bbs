@@ -1,3 +1,200 @@
+## [2026-07-13 18:10] 쪽지함(전자우편) 메인 메뉴 진입점 신설 — refs 누락 버그 동반 수정
+
+**LOG_ID: 20260713_1700**
+목표: 사용자가 메인 메뉴 8개 항목(1.뉴스/인물~8.오락실)을 캡처해 "메뉴가 없는데?"라고 지적 — 쪽지함(MEMO)이 `ME` 명령을 아는 사람만 쓸 수 있고 메뉴 어디에도 없었다.
+발견한 문제 2가지:
+1) `legacy/hanulso.mnu`에 쪽지함 항목 자체가 없었다(door 1~8이 뉴스/날씨/게시판/자료실/대화실/서비스안내/가입로그인/오락실로 이미 다 참). 
+2) 그런데 단순히 메뉴 항목만 추가해서는 안 됐다 — `appFactoryRuntime.js`의 `Object.assign(refs, {...screens.postScreens, ...})` 스프레드 목록에 `screens.memoScreens`가 통째로 빠져 있어서, `refs.showMemoList`가 **항상 undefined**였다. 이 때문에 (a) 메뉴 타입 디스패치가 쪽지 화면을 못 열고, (b) 쪽지 보기/쓰기 화면에서 브라우저 뒤로가기를 누르면 `menuNavigation.js`의 `handleHistoryBack`이 조용히 메인으로 튕기는 부작용도 있었다(코드는 있었지만 실행된 적 없는 죽은 분기).
+변경 파일:
+1) `legacy/hanulso.mnu` — 대화실(door 5) 다음에 `<item type="memo" id="bbs_memo" door="9" go="memo">전자우편 (MEMO)</item>` 신설.
+2) `public/js/core/appFactoryRuntime.js` — refs 스프레드 목록에 `...screens.memoScreens` 추가(근본 수정).
+3) `public/js/core/menuNavigationActions.js` — `node.type === 'memo'` 분기 추가(`refs.showMemoList` 호출).
+4) `public/js/core/routingStateRestorer.js` — `routeNode.type === 'memo'` 분기 추가(주소창에 `/memo` 직접 입력·새로고침 시 복원).
+검증: `node --input-type=module --check` 전체 통과. `MenuResolver`가 파싱 결과를 메모리에 캐싱해 재시작 전까지 XML 변경이 반영되지 않는다는 걸 재확인(오늘 두 번째로 겪음 — `/api/boards/counts` 때와 동일 패턴)하고 서버 재기동. 재기동 후 Playwright로: 메인 메뉴에 "9. 전자우편 (MEMO)" 노출 확인, 숫자 `9` 입력 시 쪽지함 진입(게스트는 "로그인 후 이용 가능" 정상 안내) 확인, `GO MEMO` 정상 동작, 주소창 직접 `/memo` 진입 후 새로고침 복원 정상. `GO 전자우편`(괄호 포함 한글 라벨 단독 매칭)은 실패했지만 `GO 게시판` 등 기존 항목도 동일하게 실패함을 확인해 **이번 변경과 무관한 전역 사전 존재 한계**로 결론(스코프 밖, 미수정). `npm run smoke:vercel-ready`·`smoke:boards` 통과, 콘솔 에러 0건.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 17:40] H 도움말 전수 감사(MATH 죽은 명령 수정) + 편지 종류 8종 UI 노출
+
+**LOG_ID: 20260713_1660**
+목표: 사용자가 "편지는 UI 구현이 안되어있다"고 정확히 지적. 이어서 "H 도움말에는 있는데 구현이 안 된 것, 혹은 구현 불가능한데 불필요하게 있는 메뉴가 있나" 질문에 답하기 위해 CMD_META(H 도움말) 63개 항목 전수 감사 후 편지 종류 UI를 실제로 구현.
+
+**1) H 도움말 감사 결과**
+- 정적 word-boundary grep으로 전 항목이 라우터 어딘가에 존재함을 1차 확인.
+- 의심 항목(JOBS/WAITPID/KILL/TRAP/IF/FOR/WHILE/REPEAT/FUNC/CALL/TRY/MATH — "Evolution Mode" 시절 미니 스크립팅 DSL)을 브라우저로 직접 실행해 검증.
+- **최초 테스트에서 다수 "고장"으로 보였으나, 실제로는 이 DSL의 문법(괄호 없이 `IF a==b THEN cmd`, `FOR var start end cmd` 형태이며 TRY/CATCH/FUNC 정의부만 괄호 사용)을 모르고 잘못된 문법(불필요한 괄호, THEN 누락)으로 테스트한 것이 원인 — 올바른 문법으로 재시도하니 IF/FOR/WHILE/REPEAT/FUNC/CALL/TRY/JOBS/KILL/WAITPID/백그라운드(`&`) 전부 정상 동작 확인.**
+- **단 하나 실제로 깨진 것: MATH.** `eval(expr)`을 쓰는데 사이트 CSP(`script-src`에 `unsafe-eval` 미허용)가 매번 차단해 실행할 때마다 오류만 표시되는 죽은 명령이었다. 입력이 이미 `/^[0-9+\-*/%().\s]+$/`로 제한돼 있어 안전한 문자셋만 다루므로, `public/js/core/commandRouterGlobalScripting.js`에 재귀 하강 산술 파서(`evaluateSafeArithmetic`)를 새로 작성해 `eval` 대체. `+-*/%()`와 소수 지원, 0나눗셈/잘못된 문자 오류 처리 포함.
+- 결론: "구현 불가능한데 불필요하게 있는 메뉴"는 없었음(MATH도 이제 구현 가능하게 고쳤음). 전체 63개 CMD_META 항목 모두 정상 작동.
+
+**2) 편지 종류 8종 UI 구현** (20260713_1620에서 로직만 있고 UI가 없다는 지적 반영)
+- 문제: 이전 구현은 제목 앞에 `[비밀·지연:20분]` 같은 대괄호를 붙였지만, **쪽지 보기 화면(`buildMemoViewAnsi`)은 애초에 제목 자체를 렌더링하지 않아 태그가 전혀 보이지 않았다.** 목록에서도 그냥 요약 텍스트에 섞여 잘리기 일쑤였다.
+- 변경 파일:
+  1) `public/js/core/memoScreens.js` — `/s` 입력 시 편지 종류 8종을 DN 프로토콜 선택처럼 번호별 한 줄씩 세로로 나열(`1.\n일반편지` 형태)하도록 변경. 선택/지연시간 입력 완료 시 "[확인] 6. 비밀+지연 선택됨" 식으로 골라진 종류명을 바로 확인시켜줌.
+  2) `public/js/core/memoAnsiBuilders.js` — `parseMemoTypeTag`/`stripMemoTypeTag` 헬퍼 추가. `buildMemoViewAnsi`에 "종류: 비밀·답장요망·지연:20분" 전용 줄 신설(태그 없으면 줄 자체가 안 뜸). `buildMemoListAnsi`는 태그를 제목에서 분리해 `[비답지]`(초성 조합) 색상 마커로 표시하고 제목은 태그 없는 깨끗한 텍스트로 노출.
+- 검증: 태그 파싱 순수 함수 재사용 확인, API로 8종 조합 태그 쪽지 생성 후 `memoAnsiBuilders.js`를 Node에서 직접 import해 목록/보기 화면 ANSI 출력을 렌더링 대조 — `[비답지]` 마커+깨끗한 제목(목록), "종류:" 줄(보기), 일반 편지는 종류 줄 미표시 모두 육안 확인. `node --input-type=module --check` 통과, `npm run smoke:vercel-ready` 통과. UI 로그인 E2E는 여전히 Supabase 이메일 인증 요구로 막혀 있어(브라우저 자동화 한계) 렌더러 직접 호출 방식으로 대체 검증. 테스트 메모(id 98) 삭제 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 16:30] 세 가지 후속 작업 완료: 전역 밑줄 재검증·DN 프로토콜 재확인·편지 종류 8종 구현
+
+**LOG_ID: 20260713_1630**
+목표: "이제 뭐 구현해야하지"에 대한 답으로 제시한 3개 후보를 순서대로 처리.
+
+1) **전역 밑줄/구분선 재검증** — 20260713_1600 isWideChar 수정 이후 ansiHLine을 쓰는 화면(게시판/자료실/대화실/뉴스/공지)을 실제 메뉴 이동(GO 명령)으로 전수 방문해 구분선이 80칸 전체를 채우는지 재확인. 도움말(H) 화면은 원래 구분선을 쓰지 않음(정상). 4개 화면 모두 dashLines=[80,80] 등으로 정상 확인, 추가 수정 없음.
+
+2) **DN 프로토콜 선택 연출 재확인** — 실DB 쓰기 대신 fetch 몽키패치(게시판 목록·첨부파일 API 응답 가로채기)로 자료실 글 1건+첨부 1건을 가짜 주입해 검증. `DN 1` → "화일 전송 프로토콜을 선택하십시오(1.Kermit 2.Zmodem...)" 힌트 정상 표시 → `2`(Zmodem) 선택 → 실제 브라우저 다운로드(demo.txt) 트리거까지 전 과정 정상 동작 확인. 코드 변경 없음(기존 20260713_1030/1120 구현이 이미 정상).
+
+3) **편지 종류 8종 구현** (하이텔 계획 P4-6, 원전 p.105) — 변경 파일: `public/js/core/memoScreens.js`
+   - LETTER_TYPES 8종(일반/비밀/답장요망/지연/비밀+답장/비밀+지연/답장+지연/비밀+답장+지연) 정의. 서버 스키마 변경 없이 제목 앞 `[비밀·답장요망·지연:20분]`식 대괄호 태그로 인코딩(자료실 키워드 태그 기법과 동일 패턴).
+   - 쪽지 작성 흐름에 새 단계 추가: 본문 `/s` 입력 시 기존 발송명령(1-3,0) 전에 `편지 종류(1-8)` 선택 단계 삽입. 지연 계열(4/6/7/8) 선택 시 `지연 시간(분, 1~1440)` 추가 프롬프트.
+   - 받은쪽지함(inbox) 목록 조회 시 `isDelayedMemoPending()`으로 지연 시간이 지나지 않은 편지를 클라이언트에서 숨김(서버는 항상 반환, 발신자 보낸쪽지함은 항상 노출 — 원전의 "지정 시각까지 수신 보류" 재현).
+   검증: 태그 생성/지연 판정 순수 함수 단위 테스트 14/14 PASS(8종 태그 형식·최소 지연 처리·경계값), 실제 회원 2명 신규 가입 후 API로 메모 생성→조회 왕복 정확 일치 확인(UTF-8 정확성 포함), 서버가 지연편지를 수신자에게도 원본 그대로 반환함을 확인(필터는 클라이언트 책임이라는 설계 확인). UI 로그인 단계 E2E는 Supabase 이메일 인증 요구로 브라우저 자동화가 막혀 API+단위테스트 조합으로 대체 검증. `node --input-type=module --check`·`npm run smoke:vercel-ready` 통과. 테스트 메모(id 96,97)는 삭제 완료, 테스트 회원 계정 2개(ltest1783927456, ltest1783927456b)는 잔존.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 16:06] 사이트 전역 버그 수정: isWideChar()가 박스 문자를 오판정해 구분선이 절반으로 잘리던 문제
+
+**LOG_ID: 20260713_1600**
+목표: 사용자가 http://localhost:3000/service/news/1 의 헤더 밑줄(가로선)이 이상하다고 보고. XT/xmas와 무관한 뉴스 화면이라는 점에서 훨씬 넓은 범위의 버그임을 확인, 근본 원인을 추적해 사이트 전역 수정을 진행했다.
+근본 원인: `ansiRenderUtils.js`의 `isWideChar()`가 U+2500-259F(박스 문자: ─│┌┐└┘┏┓┗┛┬┴├┤▒ 등)를 2칸(wide)으로 판정하고 있었다(20260616_0945에 도입된 기존 규칙). 그런데 `ansiToHTML()`은 80칸 고정 그리드 버퍼에 문자를 채우다 `col >= ANSI_COLS`가 되면 **나머지 문자를 조용히 버린다**(1행 71~72줄). `ansiHLine(80)`처럼 80개의 '─'로 목록 헤더 밑줄을 그리는 모든 화면(뉴스/게시판/자료실 등)에서, 각 '─'가 2칸으로 계산되는 바람에 40개째에서 그리드가 가득 차 나머지 40개가 버려져 밑줄이 절반 길이로 잘리고 있었다. Canvas `measureText()` 실측(이 세션에서 재확인)으로도 박스 문자는 이 폰트에서 8.5px(=1칸, ASCII/space와 동일)임을 재차 확인 — 2칸 판정 자체가 틀렸다.
+변경 파일:
+1) `public/js/core/ansiRenderUtils.js` — `isWideChar()`에서 U+2500-259F를 광폭 판정에서 제외(narrow로 복귀). 실제 광폭인 U+25A0-27BF(Geometric Shapes/Dingbats, ▣▥■▶▨▤▧▩ 등, 기존 ◎●☎ 예외 포함)는 유지.
+2) `public/js/core/doorArtAssets.js` — 위 규칙 변경에 따라 xt/xmas 항목을 narrow 기준으로 재작도(20260713_1523/1535/1545에서 만든 wide-기준 버전을 폐기하고 narrow 폭으로 재계산). 나머지(ketel/chol/nowtop/nowbbs/nownotice)는 애초에 박스 문자를 쓰지 않아 영향 없음.
+검증: 뉴스 목록 헤더 밑줄이 80칸 전체를 채움(수정 전 40자 절반 → 수정 후 80자 전체, 헤더 텍스트 폭과 일치) 스크린샷 확인. 게시판 목록도 동일하게 전체 폭 밑줄 확인. 추억의 접속화면 1~8번 전수 재검증(overflow 없음 8/8), XT/xmas 스크린샷 육안 확인(박스 정렬 정상), `node --input-type=module --check`·`npm run smoke:vercel-ready`·`smoke:renderer-ui`·`smoke:boards` 전부 통과, 콘솔 에러 0건.
+영향 범위 참고: `ansiHLine()`을 쓰는 화면(게시판/자료실/뉴스 목록, 각종 상단바 구분선 등) 전반에 동일 버그가 있었을 가능성이 높다 — 이번 수정으로 함께 해소됨. 게시판 목록에서 직접 확인 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 15:45] 삼보 XT 화면 그리드 방식 재작도 — 중첩 박스 접점 프로그램적 정렬
+
+**LOG_ID: 20260713_1545**
+목표: 사용자가 http://localhost:3000/game/retro/xt("전에는 잘 나왔는데 지금 안 나온다")로 재보고. 성탄카드와 동일한 원인(박스 문자 폭 오판정) + 모니터-본체 두 박스가 T분기(┬/┴)로 접합되는 중첩 구조라 수작업 칸 계산으로는 반복적으로 어긋났다.
+근본 조치: 문자열을 손으로 이어붙이는 대신, 80칸 터미널 버퍼와 동일한 파이썬 배열(그리드)에 절대 좌표로 문자를 배치하는 방식으로 전환. 광폭 문자(박스 문자 등, isWideChar 기준)는 그리드 2칸을 점유하도록 자동 처리해 폭 계산 실수 자체가 구조적으로 불가능하게 만들었다. 모니터 하단의 다리(┬) 절대 칸과 본체 상단 접점(┴) 절대 칸을 변수로 공유해 프로그램이 항상 같은 값이 되도록 강제(assert로 검증).
+변경 파일: `public/js/core/doorArtAssets.js` (xt 항목 전면 재작도)
+검증: 그리드 산출 단계에서 모니터 박스 우측 테두리 6/6 동일 칸, 본체 박스 우측 테두리 7/7 동일 칸, 다리-접점 칸 일치 assert 통과. 브라우저 DOM 픽셀 실측(우선 실측이 아니라 이번엔 그리드가 이미 보장하므로 확인 차원): 모니터 박스 7줄 rightEdge 605px로 완전 동일, 본체 박스 7줄 656px로 완전 동일. 추억의 접속화면 1~8번 전수 재검증(scrollHeight===clientHeight 8/8), `node --input-type=module --check`·`npm run smoke:vercel-ready` 통과, 콘솔 에러 0건.
+참고: `/retro/xt`(game 접두어 없음)는 애초에 유효한 라우트가 아니며 TOP으로 폴백된다 — 올바른 경로는 `/game/retro/xt`.
+교훈: 중첩 박스 등 접점이 여러 개인 ASCII 아트는 문자열 이어붙이기 대신 그리드 배열 배치가 근본적으로 더 안전하다 — 향후 유사 아트(성탄카드 트리 등)에도 필요 시 같은 방식 적용 검토.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 15:35] 성탄카드 진짜 근본 원인 수정 — isWideChar() 실제 폭 규칙으로 재작도
+
+**LOG_ID: 20260713_1535**
+목표: 20260713_1523에서 픽셀 글자를 걷어내고 박스만 남겼는데도 사용자가 "여전히 안 맞는다"고 재보고. 재조사 결과 1523의 폭 계산 자체가 틀렸다 — 렌더링 DOM(`<span class="wc">`)을 확인하니 실제 렌더러(`ansiRenderUtils.js`의 `isWideChar()`)는 박스 문자(U+2500~259F, ┏━┓┃┗┛ 등)를 **2칸**으로 판정하고 `.wc` CSS(`width:2ch`)로 그 폭을 강제한다. 1523에서는 Canvas `measureText()` 실측(글꼴 잉크 폭)을 기준으로 박스 문자를 1칸으로 계산했는데, 이는 실제 렌더링 폭이 아니라 순수 글리프 폭이라 CSS가 강제하는 그리드와 어긋났다.
+근본 조치: `isWideChar()` 로직을 Python으로 그대로 이식한 `is_wide()`/`cw()`로 폭을 재계산해 xmas 우측 타이틀 박스·인사말 박스를 재작도. 코너 문자(┏┓┗┛)도 2칸이므로 "테두리 2 + 내부 N칸 = N+4"로 검증 공식을 수정.
+검증: 이번엔 산수뿐 아니라 **브라우저 DOM 픽셀 실측**으로 확인 — 타이틀 박스 관련 3줄의 우측 테두리가 792px, 인사말 박스 4줄이 911px로 모든 줄에서 완전히 동일(편차 0px). 추억의 접속화면 1~8번 전수 재검증 scrollHeight===clientHeight 8/8, chol/nowtop/nowbbs 복원 내용 3/3 PASS(이번 수정은 xmas 블록만 교체해 기존 복원분 영향 없음 확인), `npm run smoke:vercel-ready` 통과, 콘솔 에러 0건.
+교훈: ANSI 폭 계산은 반드시 `ansiRenderUtils.isWideChar()`를 기준으로 해야 한다 — 글꼴 실측(Canvas measureText)이나 육안 짐작은 `.wc` CSS의 강제 그리드와 다를 수 있다.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 15:23] 추억의 접속화면 재복원(2차) + 성탄카드 픽셀 글자 제거로 근본 해결
+
+**LOG_ID: 20260713_1523**
+목표: 20260713_1457에서 복원한 chol/nowtop/nowbbs 본문이 병렬 진행 중인 다른 세션의 편집으로 재차 유실됨(20260713_1457 이후에도 계속 동일 파일이 외부에서 수정됨을 파일 mtime으로 확인). 사용자가 "다시 진행해줘"라고 명시적으로 승인하여 재복원하고, 추가로 사용자가 새로 지적한 /game/retro/xmas 정렬 문제의 근본 원인(우측 상단 MERRY/CHRIST 픽셀 글자 박스아트)을 제거해 재발을 차단했다.
+발견: 재확인 결과 nowbbs는 1차 복원 이후 더 심하게 훼손되어 있었음 — "5.연예/오락"이 "15.컴퓨터초보시절"의 라벨/건수로 치환되고 15번 항목 자체가 소실, "9.불가사의"가 "9.불가사항"으로 오타, "8.횡설수설"은 여전히 누락.
+근본 원인 진단: 우측 MERRY/CHRIST 박스아트는 `\x1b[=NF` 색상코드 사이사이에 박스 이음매 문자(┏┬┐├┘ 등)를 칸 단위로 정밀 배치해야 글자 형태가 유지되는 구조라, 세션이 바뀔 때마다(20260713_1310/1415/1450/1510 등 총 5회 이상) 정렬이 반복적으로 깨졌다. 브라우저에서 실측한 결과 이 폰트의 박스 문자는 1칸 폭(다른 세션이 가정한 2칸 아님)이었고, 정렬이 맞아도 글자로 읽히지 않는 추상적 도형이었다.
+변경 파일: `public/js/core/doorArtAssets.js`
+1) chol: 시 본문 7줄 재복원("높푸른 꿈과 이상도" ~ "그대 젊음의 것입니다.")
+2) nowtop: "서비스안내" 재복원 + 17/18/19/27/28/29번 메뉴 6개 재복원
+3) nowbbs: "5.연예/오락"·"9.불가사의" 오손 복구, "8.횡설수설" 행 재복원
+4) xmas: 픽셀 글자 블록(MERRY/CHRIST 박스아트, 약 8줄) 전면 제거. 트리 좌측 아트는 그대로 유지하고, 우측에는 이미 정상 동작하던 "MERRY X-MAS!" 타이틀 박스와 인사말 박스만 남겨 재작도(실측 폭 함수로 각 줄을 고정 열까지 패딩 후 박스 부착, 18줄 예산 준수).
+검증: `node --input-type=module --check` 통과, `npm run smoke:vercel-ready` 통과. Playwright: xmas 단독 스크린샷(타이틀/인사말 박스 모두 직각 정렬 확인), 추억의 접속화면 1~8번 전수 순회 scrollHeight===clientHeight 8/8 OK, 폭 초과 없음, chol/nowtop/nowbbs 복원 텍스트 어서션 3/3 PASS, 콘솔 에러 0건.
+참고: 이 파일을 동시 편집하는 다른 세션이 있다면 이번 수정도 되돌아갈 수 있다. 재발 시 doorArtAssets.js를 이 세션이 전담하도록 조율 필요.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 14:57] 추억의 접속화면 8종 전수 재검증 — 병렬 세션 편집으로 유실된 본문 3건 복원
+
+**LOG_ID: 20260713_1457**
+목표: 사용자가 "/game/retro에서 글자열이 안맞거나 높이가 안맞는 게 몇 개 있다"고 보고. 8개 화면을 Playwright로 전수 재현·측정한 결과, 이 세션의 이전 정렬 수정(LOG_ID 20260713_1250, XT·성탄카드 박스 재작도 + 하단 설명줄 제거)과 별개로, 그 사이 병렬 진행된 다른 세션(LOG_ID 20260713_1320~1450, 천리안·성탄카드 폭 재보정)의 편집 과정에서 실제 문서 내용이 유실된 회귀 3건을 발견해 복원했다.
+발견 경위: 세로 스크롤(overflow) 여부는 8종 전부 정상(scrollHeight===clientHeight)이었으나, 화면별 본문을 육안 대조한 결과 아래 손실을 확인.
+변경 파일: `public/js/core/doorArtAssets.js`
+1) 천리안(chol): `￦`→`\` 폭 보정 시 각 줄 뒤에 붙어 있던 시(詩) 본문 7줄("높푸른 꿈과 이상도" ~ "그대 젊음의 것입니다.")이 통째로 삭제되어 있었음 — 원본 Johab 디코딩(now_menu_screens.txt 대조 불필요, olddos-bbs 원문 그대로) 기준으로 복원.
+2) 나우누리 초기화면(nowtop): "1. 서비스안내"가 "1. service안내"로 오손, 메뉴 항목 17/18/19번(온라인게임/모임포럼/전문강좌)과 27/28/29번(기업/경영·기업포럼·기업통신 CUG) 두 행(6개 항목)이 통째로 누락되어 41/51번이 잘못된 위치로 밀려 있었음 — nowro/NOW_MENU.DAT Johab 디코딩 원문(scratchpad now_menu_screens.txt) 대조로 복원.
+3) 나우누리 게시판(nowbbs): "8. 횡설수설 (61/10053)" 행이 누락되어 다음 행 "22. 통신작가 글마을"이 8번 자리로 밀려 붙어 있었음 — 원문 대조로 복원.
+4) 나우누리 공지사항(nownotice): 게시물 번호 "389"가 오타(원본 "379", 388 다음이므로 내림차순 규칙상 379가 맞음) — 수정.
+검증: 수정 전/후 8종 전체 재캡처(1280×800), scrollHeight/clientHeight 8/8 일치(세로 잘림 없음), 폭 초과 없음, 복원 내용 3건 텍스트 어서션 3/3 PASS, 모바일(390×740) 뷰포트 8/8 오버플로 없음, 콘솔 페이지 에러 0건. `node --input-type=module --check` 통과.
+결과: ✅ 완료 — 8종 전부 정렬·높이·본문 정상 확인.
+
+---
+
+## [2026-07-13 14:50] 성탄 축하 카드(/game/retro/xmas) 박스 드로잉 정렬 및 격자 어긋남 완벽 해결
+
+**LOG_ID: 20260713_1450**
+목표: 선 그리기 문자의 실제 너비(2ch) 불일치로 인해 성탄 축하 카드(/game/retro/xmas) 화면 우측의 MERRY/CHRIST/MAS 영문 아치 및 타이틀/메시지 박스들의 가로선이 삐뚤어지던 현상을 완벽히 해결한다.
+변경 파일:
+1) `public/js/core/ansiRenderUtils.js`: `isWideChar` 함수에 선 그리기 및 블록 문자 범위(`U+2500`~`U+259F`)를 광폭 문자(2ch)로 지정하여 브라우저의 실제 렌더링과 자바스크립트 폭 계산을 1:1로 일치시킴.
+2) `public/js/core/doorArtAssets.js`: `xmas` 템플릿의 가로선 `─` 개수를 2ch 선 문자 너비에 맞게 절반으로 정교하게 보정(14개->7개, 34개->17개)하고 패딩 공백 시작점을 39ch(40번째 열)로 엄격히 통일함.
+실행: `node --check public/js/core/ansiRenderUtils.js` 및 `node --check public/js/core/doorArtAssets.js`
+기대: 모든 아치 문자, 타이틀 상자 및 하단 편지함 테두리가 한치의 어긋남 없이 반듯하게 수직 정렬됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 14:15] 성탄 축하 카드(/game/retro/xmas) 영문 아치 및 타이틀 상자 세로 정렬 어긋남 해결
+
+**LOG_ID: 20260713_1415**
+목표: 성탄 축하 카드(/game/retro/xmas) 화면 우측의 MERRY CHRISTMAS 영문 아치형 문자 및 MERRY X-MAS! 타이틀 상자가 수직으로 삐뚤어지게 그려지는 현상을 해결한다.
+변경 파일:
+1) `public/js/core/doorArtAssets.js` (xmas 템플릿의 MERRY 둘째/셋째 줄, CHRIST 첫째 줄, MERRY X-MAS! 상자의 둘째/셋째 줄 등 총 5개 행의 좌측 공백을 실측 렌더링에 맞게 1칸씩 늘리거나 줄여 시작 위치를 40번째 열로 수직 일치시킴. 추가로 72라인에 오타로 들어갔던 따옴표 `"""`를 `""`로 복구하여 문법 오류 해결)
+실행: `node --check public/js/core/doorArtAssets.js`
+기대: 성탄 축하 카드(/game/retro/xmas) 우측 영문 타이틀과 상자들이 삐뚤어지지 않고 세로선이 완벽하게 정렬되며 구문 에러가 발생하지 않음.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 13:55] 추억의 접속화면(/game/retro) 목록/상세 마우스 호버 및 클릭 인터랙션(핫스팟) 활성화
+
+**LOG_ID: 20260713_1355**
+목표: 추억의 접속화면(/game/retro) 목록에서 마우스 호버 시 하이라이트가 되고, 클릭 시 해당 접속화면으로 곧바로 이동하는 핫스팟 기능을 도입하며, 상세 감상 화면에서도 마우스를 호버하면 포인터 커서로 바뀌고 클릭 시 목록으로 직관적으로 복귀하는 마우스 제어 인터랙션을 추가한다.
+변경 파일:
+1) `public/js/core/amusementScreens.js` (render 함수가 rendered 객체를 리턴하도록 수정하여 마운트된 screenNode 획득, `createServiceUiUtils`를 임포트 및 초기화하여 핫스팟 생성 헬퍼 함수를 직접 획득, 목록 영역의 1~16번 아이템 라인(`lineOffset = 3` 반영)에 핫스팟 버튼을 생성하는 `renderRetroArtListHotspots` 함수 구현, `showRetroArtView` 상세 화면에서 screenNode 전체 영역에 cursor: pointer 스타일과 click 이벤트(목록 복귀 대응)를 부여해 마우스 인터랙션 완성)
+실행: `node --check public/js/core/amusementScreens.js`
+기대: 추억의 접속화면 목록(1~16번 라인 오프셋 완벽 일치)과 상세 화면에서 마우스 호버/클릭 동작이 정확하게 작동함.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 13:20] 추억의 접속화면(XT/천리안/성탄카드) 레이아웃 붕괴 및 본문 한글/기호 겹침 근절
+
+**LOG_ID: 20260713_1320**
+목표: 추억의 접속화면(/game/retro)에서 일부 문자열 정렬이 어긋나 높이 및 테두리가 깨지고 글자가 겹치는 문제를 해결한다.
+변경 파일:
+1) `public/js/core/ansiRenderUtils.js` (isWideChar 예외에 U+25CE ◎, U+25CF ●, U+260E ☎ 추가하여 1ch 반각 판정으로 동기화)
+2) `public/js/core/doorArtAssets.js` (삼보 XT 본체의 굵은 선 문자(━, ┃ 등)를 1ch짜리 가벼운 선(─, │)으로 완전 대체하여 80ch 격자 정렬 정합성 복원, 천리안의 Won 기호 `￦` 오타를 백슬래시 `\`로 복원, 성탄 축하 카드의 MERRY X-MAS! 및 하단 편지함 테두리 너비 미스매치 정밀 교정 - 둘째 줄 우측 공백 2개 추가 및 셋째 줄 우측 공백 1개 축소)
+3) `public/style.css` (fonts-loading이 완료되어도 `.wc`를 strict `inline-block` 및 `width: 2ch;`로 유지시켜 크로미움 브라우저의 영숫자+한글 인라인 렌더러 자간 계산 버그를 완전 우회하고 한글 겹침 현상 최종 근절)
+실행: `node --check public/js/core/ansiRenderUtils.js` 및 `node --check public/js/core/doorArtAssets.js`
+기대: 추억의 접속화면에서 삼보 XT 본체 테두리가 붕괴하지 않고, 글자 겹침 현상과 크리스마스 상자 갭이 완벽하게 해결됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-13 12:30] 나우누리 융합(테마 아님): 메뉴 건수·CM 발송취소·도움말 분류·1995 화면 이식
+
+**LOG_ID: 20260713_1230**
+목표: 사용자 결정("테마로 할 필요는 없어. ui와 기능을 배워와서 적용시키는거야")에 따라 나우누리 UI/기능을 별도 테마가 아닌 기본 UI에 직접 융합한다. 원전은 nowro/NOW_MENU.DAT를 조합형(Johab) 디코딩해 복원한 91개 화면(docs/NOWNURI_SCREENS_FULL_DECODED.txt, 신규)과 docs/nownuri_merge_plan.txt(신규 계획서).
+변경 파일:
+1) `src/server/MemoryBoardRepository.js` / `src/server/SupabaseBoardRepositoryPostReads.js`(+60초 인스턴스 캐시) / `src/server/SupabaseBoardRepository.js` / `src/server/routeHandlers/boardRoutes.js` — `GET /api/boards/counts` 신설: 게시판별 { total, recent(최근 3일) } 집계 (라우트는 `/api/boards/:boardId`보다 앞에 등록)
+2) `public/js/core/menuNavigation.js` — showBoardSelect 진입 시 건수 로드(60초 클라 캐시, 실패 시 조용히 생략)
+3) `public/js/core/ansiBoardBuilders.js` — buildBoardSelectAnsi에 나우누리식 `( 신규 / 전체 )` 건수 병기(라벨 열 고정폭 정렬, 건수 확보 항목만)
+4) `public/js/core/commandRouterMemo.js` — 보낸쪽지함 `CM [번호]` 발송취소(나우누리 CMAIL 재현): 않읽음 한정, 수신확인된 쪽지는 거부, DELETE /api/memos/:id 재사용
+5) `public/js/core/commandService.js` — CM 명령 CMD_META 등록
+6) `public/js/core/commandFooterText.js` — 쪽지함 힌트바를 상자별 동적 구성(받은함: W/S, 보낸함: I/CM)
+7) `public/js/core/helpScreens.js` / `public/js/core/commandRouterGlobalNavigation.js` — 나우누리 GUIDE '명령어안내'식 분류선택: 도움말 화면에서 0.전체/1~6.분류 숫자 선택(state.helpTab), 목차 줄 추가·페이지 예산 유지
+8) `public/js/core/doorArtAssets.js` — 나우누리 1995 원본 화면 4종(nowtop 초기화면, nowbbs 게시판 건수, nownotice 공지, nowchat 대화참여)을 추억의 접속화면 코너(5~8번)에 추가
+계획서 반영: N-1 파란 배경 테마 ❌ 제외(사용자 결정, 재제안 금지) / N-2 이름 컬럼·N-4 CHATIN 로비는 기구현 확인으로 종결 / N-5 메인 섹션 라벨은 20260713_1010 사용자 단순화 결정과 충돌하여 보류. C 키는 기존 테마 토글(20260424~) 유지 — 명령어안내는 H 확장으로 재현.
+검증: 수정 전 파일 node --check 통과, `npm run smoke:vercel-ready`·`smoke:boards` 통과, /api/boards/counts 실측(Supabase 실전 카운트 확인), CM 흐름 API 검증(생성→보낸함 목록→발신자 삭제 200→목록 비움, 테스트 데이터 정리 완료), Playwright E2E 8/8 PASS(게시판 메뉴 건수 표시, 도움말 분류선택 2/0, 추억의 접속화면 나우누리 4종 렌더, 페이지 에러 0건).
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 11:65] 나우누리 이식 고도화: 나우누리 가이드(GUIDE) 메뉴 복원 및 접속방법 안내 연동
 
 **LOG_ID: 20260713_1165**

@@ -22,6 +22,11 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.voteScreens,
     ...screens.rankingScreens,
     ...screens.amusementScreens,
+    // [LOG_ID: 20260713_1700] refs에 빠져 있어 refs.showMemoList가 항상 undefined였다 —
+    // 메인 메뉴에 쪽지함 진입점이 없던 문제(menuNavigationActions type='memo')와
+    // 쪽지 화면에서 뒤로가기 시 메인으로 튕기던 문제(menuNavigation.js handleHistoryBack)
+    // 둘 다 이 누락이 원인이었다.
+    ...screens.memoScreens,
     showSignup: screens.signupModule.showSignup,
     showMain: screens.showMain,
     showBoardSelect: screens.showBoardSelect,

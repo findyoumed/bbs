@@ -1,3 +1,72 @@
+// [LOG_ID: 20260713_1650] MATH 명령이 eval()을 써서 사이트 CSP(script-src, unsafe-eval 미허용)에
+// 막혀 항상 실패했다(H 도움말엔 있지만 실행 불가한 죽은 명령이었음). 입력이 이미
+// `/^[0-9+\-*/%().\s]+$/`로 제한되어 있으므로, 같은 문자 집합만 다루는 재귀 하강 파서로 대체한다.
+function evaluateSafeArithmetic(expr) {
+  let pos = 0;
+  const text = expr.replace(/\s+/g, '');
+
+  function peek() { return text[pos]; }
+  function fail(msg) { throw new Error(msg); }
+
+  function parseNumber() {
+    const start = pos;
+    while (pos < text.length && /[0-9.]/.test(text[pos])) pos += 1;
+    if (pos === start) fail('숫자가 필요합니다.');
+    const numText = text.slice(start, pos);
+    if ((numText.match(/\./g) || []).length > 1) fail(`잘못된 숫자: ${numText}`);
+    return Number(numText);
+  }
+
+  function parseUnary() {
+    if (peek() === '+') { pos += 1; return parseUnary(); }
+    if (peek() === '-') { pos += 1; return -parseUnary(); }
+    if (peek() === '(') {
+      pos += 1;
+      const value = parseExpr();
+      if (peek() !== ')') fail("')' 가 필요합니다.");
+      pos += 1;
+      return value;
+    }
+    return parseNumber();
+  }
+
+  function parseTerm() {
+    let value = parseUnary();
+    for (;;) {
+      const op = peek();
+      if (op === '*' || op === '/' || op === '%') {
+        pos += 1;
+        const rhs = parseUnary();
+        if (op === '*') value *= rhs;
+        else if (op === '/') { if (rhs === 0) fail('0으로 나눌 수 없습니다.'); value /= rhs; }
+        else { if (rhs === 0) fail('0으로 나눌 수 없습니다.'); value %= rhs; }
+      } else {
+        return value;
+      }
+    }
+  }
+
+  function parseExpr() {
+    let value = parseTerm();
+    for (;;) {
+      const op = peek();
+      if (op === '+' || op === '-') {
+        pos += 1;
+        const rhs = parseTerm();
+        value = op === '+' ? value + rhs : value - rhs;
+      } else {
+        return value;
+      }
+    }
+  }
+
+  if (!text) fail('수식이 비어 있습니다.');
+  const result = parseExpr();
+  if (pos !== text.length) fail(`처리되지 않은 문자: ${text.slice(pos)}`);
+  if (!Number.isFinite(result)) fail('계산 결과가 유효하지 않습니다.');
+  return result;
+}
+
 export function createGlobalScriptingCommandHandler(deps) {
   const {
     state,
@@ -40,8 +109,7 @@ export function createGlobalScriptingCommandHandler(deps) {
 
       if (/^[0-9+\-*/%().\s]+$/.test(expr)) {
         try {
-          // eslint-disable-next-line no-eval
-          const result = eval(expr);
+          const result = evaluateSafeArithmetic(expr);
           envVars[varName] = String(result);
           setHint(`계산 결과: ${varName} = ${result}`);
           if (settingsService) {

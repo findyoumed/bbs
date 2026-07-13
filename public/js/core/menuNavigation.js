@@ -185,6 +185,22 @@ export function createMenuNavigation(deps) {
     }
   }
 
+  // [LOG_ID: 20260713_1230] 나우누리식 게시판 메뉴 ( 신규 / 전체 ) 건수 로드 (60초 캐시,
+  // 실패 시 표기만 생략되도록 조용히 무시)
+  async function loadBoardCounts() {
+    const cached = state._boardCounts;
+    if (cached && (Date.now() - cached.at) < 60 * 1000) {
+      return;
+    }
+    try {
+      const counts = await apiFetch('/api/boards/counts');
+      state._boardCounts = { at: Date.now(), data: counts || {} };
+    } catch (error) {
+      void error;
+      state._boardCounts = { at: Date.now(), data: {} };
+    }
+  }
+
   async function showBoardSelect(menuPath = 'top', title = getBoardSelectTitle(menuPath), fromHistory = false) {
     if (menuPath === 'pds' && typeof refs.showPostList === 'function') {
       await refs.showPostList('pds', 1, {
@@ -204,7 +220,7 @@ export function createMenuNavigation(deps) {
     // [LOG_ID: 20260708_1845] showMain()과 동일한 이유로 setHint('')/setPrompt('') 즉시 호출 제거.
     setLoading('연결하는 중입니다..');
 
-    await Promise.all([loadBoards(), loadMenuTree()]);
+    await Promise.all([loadBoards(), loadMenuTree(), loadBoardCounts()]);
     
     // [LOG: 20260611_1405] Clear loading timer before rendering
     setReady(true);

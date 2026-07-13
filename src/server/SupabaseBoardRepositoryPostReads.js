@@ -40,6 +40,39 @@ async function countPostsSince(repo, since) {
   return Number(count || 0);
 }
 
+// [LOG_ID: 20260713_1230] 나우누리식 게시판 메뉴 ( 신규 / 전체 ) 건수 — 게시판별 HEAD 카운트를
+// 병렬 수행하고 저장소 인스턴스에 60초 캐시해 Supabase 부하를 막는다. 실패한 게시판은 표기만 생략.
+async function listBoardCounts(repo, options = {}) {
+  const cacheTtlMs = 60 * 1000;
+  const cached = repo._boardCountsCache;
+  if (cached && (Date.now() - cached.at) < cacheTtlMs) {
+    return cached.data;
+  }
+
+  const days = Math.max(1, Number(options.recentDays) || 3);
+  const sinceIso = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString();
+  const counts = {};
+
+  await Promise.all((repo.boards || []).map(async (board) => {
+    const base = () => applyBoardFilter(
+      repo.client.from(repo.tables.posts).select('id', { count: 'exact', head: true }),
+      board.boardId
+    );
+    const [totalRes, recentRes] = await Promise.all([
+      base(),
+      base().gte('created_at', sinceIso)
+    ]);
+    if (totalRes.error || recentRes.error) return;
+    counts[board.boardId] = {
+      total: Number(totalRes.count || 0),
+      recent: Number(recentRes.count || 0)
+    };
+  }));
+
+  repo._boardCountsCache = { at: Date.now(), data: counts };
+  return counts;
+}
+
 async function listPosts(repo, boardId, options = {}) {
   const board = await getBoard(repo, boardId);
   assertBoardAccessible(board, options.context, repo.levelAliases);
@@ -219,6 +252,7 @@ async function listHotPosts(repo, options = {}) {
 module.exports = {
   countPosts,
   countPostsSince,
+  listBoardCounts,
   fetchPagedPosts,
   fetchPost,
   getNavigation,

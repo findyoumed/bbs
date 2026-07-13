@@ -24,6 +24,21 @@ class MemoryBoardRepository {
     return isNaN(ts) ? 0 : this.posts.filter(p => Date.parse(p.createdAt || '') >= ts).length;
   }
 
+  // [LOG_ID: 20260713_1230] 나우누리식 게시판 메뉴 ( 신규 / 전체 ) 건수 — 게시판별 집계
+  async listBoardCounts(options = {}) {
+    const days = Math.max(1, Number(options.recentDays) || 3);
+    const ts = Date.now() - (days * 24 * 60 * 60 * 1000);
+    const counts = {};
+    this.boards.forEach((board) => {
+      const posts = this.filterPostsByBoard(board.boardId);
+      counts[board.boardId] = {
+        total: posts.length,
+        recent: posts.filter((p) => Date.parse(p.createdAt || '') >= ts).length
+      };
+    });
+    return counts;
+  }
+
   async listHotPosts(options = {}) {
     const limit = Math.min(100, Math.max(1, Number(options.limit) || 10));
     const days = Math.max(1, Number(options.days) || 7);

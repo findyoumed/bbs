@@ -75,10 +75,12 @@ export function createAmusementAnsiBuilders(deps) {
   // [LOG_ID: 20260711_1400] 추억의 접속화면 — olddos-bbs(hanulso) txt/door 원본 아트 목록/뷰어.
   function buildRetroArtListAnsi() {
     const rows = DOOR_ART.map((item, index) => `  ${c(14, `${index + 1}.`)} ${c(15, fitCell(item.name, 24))} ${c(8, item.desc)}`);
-    return [buildTopHeader(['오락실', '추억의 접속화면']), c(15, '  90년대 PC통신·도스 시절 접속 화면을 원본 그대로 보여드립니다.'), c(8, `  (olddos-bbs 하늘소 원본 수록분, ${DOOR_ART.length}종)`), '', ...rows, '', c(11, '  번호를 입력하세요.')].join('\n');
+    return [buildTopHeader(['오락실', '추억의 접속화면']), c(15, '  90년대 PC통신·도스 시절 접속 화면을 원본 그대로 보여드립니다.'), c(8, `  (하늘소·나우누리 원본 수록분, ${DOOR_ART.length}종)`), '', ...rows, '', c(11, '  번호를 입력하세요.')].join('\n');
   }
   function buildRetroArtViewAnsi(item) {
-    return [buildTopHeader(['추억의 접속화면', item.name]), item.art, '', c(8, `  ${item.desc} · 다른 화면: 번호 입력, 목록(L)`)].join('\n');
+    // [LOG_ID: 20260713_1250] 하단 설명줄 제거 — 아트 최대 18줄 + 상단바 6줄 = 24줄 예산에
+    // 맞춰 세로 잘림(스크롤)을 없앤다. 이동 안내는 힌트바가 담당한다.
+    return [buildTopHeader(['추억의 접속화면', item.name]), item.art].join('\n');
   }
   return { buildBiorhythmIntroAnsi, buildBiorhythmAnsi, buildFortuneIntroAnsi, buildFortuneAnsi, buildMbtiListAnsi, buildMbtiDetailAnsi, findMbtiType, buildRetroArtListAnsi, buildRetroArtViewAnsi };
 }

@@ -40,6 +40,7 @@ class SupabaseBoardRepository extends BaseRepository {
   async listBoards() { return readOps.listBoards(this); }
   async getBoard(boardId) { return readOps.getBoard(this, boardId); }
   async countPosts() { return readOps.countPosts(this); }
+  async listBoardCounts(options = {}) { return readOps.listBoardCounts(this, options); }
   async countPostsSince(since) { return readOps.countPostsSince(this, since); }
   async listHotPosts(options = {}) { return readOps.listHotPosts(this, options); }
   async listPosts(boardId, options = {}) { return readOps.listPosts(this, boardId, options); }

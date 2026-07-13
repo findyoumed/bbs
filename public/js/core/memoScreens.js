@@ -1,6 +1,46 @@
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 import { renderAnsiScreenWithTopbar, renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
 
+// [LOG_ID: 20260713_1620] 하이텔 원전(길라잡이 p.105) 편지 종류 8종 — 비밀/답장요망/지연
+// 3개 속성의 조합. 서버 스키마 변경 없이 제목 앞 대괄호 태그로 인코딩한다.
+const LETTER_TYPES = {
+  1: { label: '일반편지', secret: false, replyRequired: false, delayed: false },
+  2: { label: '비밀편지', secret: true, replyRequired: false, delayed: false },
+  3: { label: '답장요망', secret: false, replyRequired: true, delayed: false },
+  4: { label: '지연편지', secret: false, replyRequired: false, delayed: true },
+  5: { label: '비밀+답장요망', secret: true, replyRequired: true, delayed: false },
+  6: { label: '비밀+지연', secret: true, replyRequired: false, delayed: true },
+  7: { label: '답장요망+지연', secret: false, replyRequired: true, delayed: true },
+  8: { label: '비밀+답장요망+지연', secret: true, replyRequired: true, delayed: true }
+};
+
+function buildMemoTitleTag(letterType, delayMinutes) {
+  const meta = LETTER_TYPES[letterType];
+  if (!meta || letterType === 1) {
+    return '';
+  }
+  const parts = [];
+  if (meta.secret) parts.push('비밀');
+  if (meta.replyRequired) parts.push('답장요망');
+  if (meta.delayed) parts.push(`지연:${Math.max(1, Number(delayMinutes) || 0)}분`);
+  return parts.length ? `[${parts.join('·')}] ` : '';
+}
+
+// [LOG_ID: 20260713_1620] 지연편지 태그를 파싱해 아직 지연 시간이 지나지 않은 항목인지 판정.
+// 받은쪽지함에서만 숨기고(원전: 지정 시각까지 수신 보류), 보낸쪽지함/발신자 본인 시야는 항상 노출한다.
+function isDelayedMemoPending(memo) {
+  const match = String(memo?.title || '').match(/지연:(\d+)분/);
+  if (!match) {
+    return false;
+  }
+  const delayMs = Number(match[1]) * 60 * 1000;
+  const createdMs = Date.parse(memo?.createdAt || '');
+  if (Number.isNaN(createdMs)) {
+    return false;
+  }
+  return (Date.now() - createdMs) < delayMs;
+}
+
 export function createMemoScreens(deps) {
     const {
         ansiToHTML,
@@ -81,7 +121,8 @@ export function createMemoScreens(deps) {
         try {
             const box = state._memoBox || 'inbox';
             const memos = await apiFetch(`/api/memos?box=${box}`);
-            state._memos = memos || [];
+            // [LOG_ID: 20260713_1620] 받은쪽지함에서만 지연편지의 지연 시간이 지나지 않은 항목을 숨긴다.
+            state._memos = box === 'inbox' ? (memos || []).filter((m) => !isDelayedMemoPending(m)) : (memos || []);
 
             const ansiText = buildMemoListAnsi(state._memos, box);
             renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
@@ -267,12 +308,14 @@ export function createMemoScreens(deps) {
             }
             setHint('쪽지를 발송하는 중입니다..');
             const saveToSent = choice !== 1;
+            // [LOG_ID: 20260713_1620] 편지 종류 태그(예: [비밀·답장요망]) 제목 앞에 부착
+            const typeTag = buildMemoTitleTag(flow?.letterType, flow?.delayMinutes);
 
             const res = await apiFetch('/api/memos', {
                 method: 'POST',
                 body: JSON.stringify({
                     recipientUserId: targetUserId,
-                    title: `${content.substring(0, 20)}...`,
+                    title: `${typeTag}${content.substring(0, 20)}...`,
                     content,
                     saveToSent
                 })
@@ -325,6 +368,60 @@ export function createMemoScreens(deps) {
         const cmd = trimmed.toUpperCase();
         const isCancel = trimmed === '/q' || cmd === 'P' || cmd === 'M' || cmd === 'B';
 
+        // [LOG_ID: 20260713_1620] 편지 종류(1-8) 선택 가로채기
+        if (flow.stage === 'letter_type') {
+            appendMemoWriteLine('편지 종류 >>', line);
+            if (isCancel) {
+                renderMemoWriteScreen();
+                return await cancelMemoWrite();
+            }
+            const typeChoice = parseInt(trimmed, 10);
+            if (!LETTER_TYPES[typeChoice]) {
+                appendMemoWriteLine('[안내]', '잘못된 선택입니다. 1~8 중 하나를 입력해 주세요.');
+                setPrompt('편지 종류 (1-8) >>');
+                renderMemoWriteScreen();
+                return true;
+            }
+            flow.letterType = typeChoice;
+            // [LOG_ID: 20260713_1660] 숫자만 남기지 않고 고른 종류의 이름을 바로 확인시켜준다.
+            appendMemoWriteLine('[확인]', `${typeChoice}. ${LETTER_TYPES[typeChoice].label} 선택됨`);
+            if (LETTER_TYPES[typeChoice].delayed) {
+                flow.stage = 'delay_minutes';
+                appendMemoWriteLine('[안내]', '지연 시간을 분 단위로 입력하세요. (1~1440, 예: 30)');
+                setPrompt('지연 시간(분) >>');
+                renderMemoWriteScreen();
+                return true;
+            }
+            flow.stage = 'send_cmd';
+            appendMemoWriteLine('[선택]', '명령(1:발송, 2:저장, 3:발송+저장, 0:취소)');
+            setPrompt('발송 명령 (1-3, 0) >>');
+            renderMemoWriteScreen();
+            return true;
+        }
+
+        // [LOG_ID: 20260713_1620] 지연편지 지연 시간(분) 입력 가로채기
+        if (flow.stage === 'delay_minutes') {
+            appendMemoWriteLine('지연 시간(분) >>', line);
+            if (isCancel) {
+                renderMemoWriteScreen();
+                return await cancelMemoWrite();
+            }
+            const minutes = parseInt(trimmed, 10);
+            if (!Number.isFinite(minutes) || minutes < 1 || minutes > 1440) {
+                appendMemoWriteLine('[안내]', '1~1440(24시간) 사이의 숫자를 입력해 주세요.');
+                setPrompt('지연 시간(분) >>');
+                renderMemoWriteScreen();
+                return true;
+            }
+            flow.delayMinutes = minutes;
+            appendMemoWriteLine('[확인]', `수신함에서 ${minutes}분 뒤부터 보이도록 지연 설정됨`);
+            flow.stage = 'send_cmd';
+            appendMemoWriteLine('[선택]', '명령(1:발송, 2:저장, 3:발송+저장, 0:취소)');
+            setPrompt('발송 명령 (1-3, 0) >>');
+            renderMemoWriteScreen();
+            return true;
+        }
+
         // [LOG_ID: 20260713_1040] Hitel 발송 옵션 가로채기
         if (flow.stage === 'send_cmd') {
             appendMemoWriteLine('발송 명령 >>', line);
@@ -375,9 +472,14 @@ export function createMemoScreens(deps) {
 
         if (trimmed === '/s' || cmd === 'SEND') {
             appendMemoWriteLine('내용 >>', line);
-            flow.stage = 'send_cmd';
-            appendMemoWriteLine('[선택]', '명령(1:발송, 2:저장, 3:발송+저장, 0:취소)');
-            setPrompt('발송 명령 (1-3, 0) >>');
+            flow.stage = 'letter_type';
+            // [LOG_ID: 20260713_1660] 편지 종류(1-8)를 DN 프로토콜 선택처럼 번호별 한 줄씩
+            // 세로로 나열해 실제로 눈에 보이는 선택 목록(메뉴)으로 만든다.
+            appendMemoWriteLine('[편지 종류 선택]', '');
+            for (let i = 1; i <= 8; i += 1) {
+                appendMemoWriteLine(`  ${i}.`, LETTER_TYPES[i].label);
+            }
+            setPrompt('편지 종류 (1-8) >>');
             renderMemoWriteScreen();
             return true;
         }

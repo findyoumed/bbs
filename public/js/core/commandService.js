@@ -66,6 +66,8 @@ export const CMD_META = {
   // Messaging & Chat
   ME: { label: '쪽지', tip: 'ME, MEMO', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   MEMO: { label: '쪽지', tip: 'ME, MEMO', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
+  // [LOG_ID: 20260713_1230] 나우누리 CMAIL '배달 확인/취소' 재현 — 보낸쪽지함 발송 취소
+  CM: { label: '발송취소', tip: 'CM [번호]', login: true, priority: 32, cat: 'MEMO', desc: '보낸쪽지함에서 상대가 아직 읽지 않은 쪽지의 발송을 취소합니다.' },
   O: { label: '방만들기', tip: 'O', login: true, priority: 42, cat: 'CHAT', desc: '채팅방을 개설합니다.' },
   // [LOG_ID: 20260712_0030] 라벨을 '연속읽기'로 통일(사용자 결정). 뉴스의 클립보드 복사 동작은 desc에만 남긴다.
   PR: { label: '연속읽기', tip: 'PR [번호]', priority: 15, cat: 'SYS', desc: '게시판: 해당 번호부터 엔터로 글을 이어서 읽습니다. 뉴스: 본문 전체를 한 화면에 펼치고 클립보드에 복사합니다.' },

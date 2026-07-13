@@ -135,7 +135,7 @@ export function createAppFactoryServices(deps) {
     displayWidth,
     state
   });
-  const serviceAnsiBuilders = createServiceAnsiBuilders({ isWideChar, displayWidth });
+  const serviceAnsiBuilders = createServiceAnsiBuilders({ isWideChar, displayWidth, state });
   const systemAnsiBuilders = createSystemAnsiBuilders({ isWideChar, displayWidth });
 
   // [LOG: 20260623_0013] vote/ranking ansi 빌더 (origin/main 포팅)

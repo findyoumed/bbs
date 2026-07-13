@@ -45,7 +45,8 @@ export function createSystemAnsiBuilders(deps) {
     parts.push('');
     parts.push(row('아이디', member.userId || '정보 없음'));
     parts.push(row('닉네임', member.nickName || '정보 없음'));
-    parts.push(row('회원등급', `${member.level || 1} (${member.isAdmin ? '운영자' : '일반회원'})`));
+    // [LOG_ID: 20260713_0930] 특별회원(레벨 2) 라벨 반영 — 서버 BoardRepositoryAccess.LEVEL_NAME_MAP과 동일
+    parts.push(row('회원등급', `${member.level || 1} (${member.isAdmin ? '운영자' : (Number(member.level) >= 2 ? '특별회원' : '일반회원')})`));
     parts.push(row('가입일', formatLongDate(member.registrationDateTime) || '정보 없음'));
     parts.push(ansiHLine(targetCols, 8));
 

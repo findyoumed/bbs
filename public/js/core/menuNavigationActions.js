@@ -137,6 +137,11 @@ export function createMenuNavigationActions(deps) {
       await refs.showChatLobby();
       return true;
     }
+    // [LOG_ID: 20260713_1700] 쪽지함(전자우편) 메인 메뉴 진입점
+    if (node.type === 'memo' && typeof refs.showMemoList === 'function') {
+      await refs.showMemoList();
+      return true;
+    }
     if (node.type === 'login' && typeof refs.showLogin === 'function') {
       refs.showLogin();
       return true;

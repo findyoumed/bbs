@@ -4,6 +4,8 @@ export const ANSI_ROWS = 1000; // [LOG: 20260426_1755] Increase buffer for scrol
 export function isWideChar(ch) {
   if (!ch) return false;
   const cp = ch.codePointAt(0);
+  // [LOG: 20260713_1300] ◎, ●, ☎는 이 폰트에서 1칸(반각)이므로 광폭 문자 판정에서 제외한다.
+  if (cp === 0x25CE || cp === 0x25CF || cp === 0x260E) return false;
   // [LOG: 20260427_1150] CJK Unified Ideographs (Hanja) + Hangul + Full-width Symbols
   // [LOG: 20260428_2225] Include CJK Extension A / Compatibility Ideographs so titles like "李" occupy 2 cells
   // [LOG: 20260610_1423] Include CJK Enclosed Letters and Months (U+3200-U+32FF) like ㈜ to display as wide chars
@@ -22,7 +24,12 @@ export function isWideChar(ch) {
     || (cp >= 0x3040 && cp <= 0x309F) // Hiragana
     || (cp >= 0x30A0 && cp <= 0x30FF) // Katakana
     || (cp === 0x203B) // Reference Mark (※)
-    || (cp >= 0x25A0 && cp <= 0x27BF); // Geometric shapes, Dingbats (excludes Box Drawings 0x2500-0x259F)
+    || (cp >= 0x25A0 && cp <= 0x27BF); // Geometric shapes, Dingbats (실측 확인된 광폭 대역만)
+  // [LOG_ID: 20260713_1600] U+2500-259F(박스 문자, 예: ─│┌┐└┘┏┓┗┛┬┴├┤▒)는 실측 결과
+  // 이 폰트에서 1칸(narrow)이다. 2칸으로 판정되면 ansiToHTML의 80칸 고정 버퍼가 절반
+  // 지점에서 커서 오버플로로 나머지 문자를 조용히 버려서, ansiHLine()이 만드는 구분선
+  // (뉴스/게시판/자료실 목록 헤더 밑줄 등 사이트 전역)이 절반 길이로 잘리는 버그가
+  // 발생했다 — 광폭 판정에서 제외한다.
 }
 
 export function displayWidth(text) {

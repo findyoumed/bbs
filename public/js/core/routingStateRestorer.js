@@ -367,6 +367,8 @@ export function createRoutingStateRestorer(deps) {
         if (routeNode.type === 'mbti' && typeof showMbti === 'function') return remainingSegments[0] && typeof showMbtiDetail === 'function' ? await showMbtiDetail(remainingSegments[0], true) : await showMbti(true);
         // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
         if (routeNode.type === 'retro-art' && typeof showRetroArt === 'function') return remainingSegments[0] && typeof showRetroArtView === 'function' && await showRetroArtView(remainingSegments[0], true) ? true : await showRetroArt(true);
+        // [LOG_ID: 20260713_1700] 쪽지함(전자우편) 메인 메뉴 진입점 — /memo 직접 접속/새로고침 복원
+        if (routeNode.type === 'memo' && typeof showMemoList === 'function') return await showMemoList(true);
       }
 
       const menuNode = getMenuNodeByKey(segments[0] || '');

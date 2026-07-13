@@ -249,6 +249,13 @@ export function createBoardAnsiBuilders(deps) {
       : [options.title || '메뉴'];
     const parts = [buildTopHeader(titlePath, options.pageLabel || '')];
 
+    // [LOG_ID: 20260713_1230] 나우누리식 ( 신규 / 전체 ) 건수 병기 — NOW_MENU.DAT의 BBS 메뉴
+    // 원전(` 1. 열린광장 (   54 / 3947 )`) 재현. 건수가 확보된 게시판 항목에만 붙이고,
+    // 라벨 열을 고정폭으로 맞춰 세로 정렬한다.
+    const isMobileSelect = typeof window !== 'undefined' && window.innerWidth < 768;
+    const boardCounts = (state && state._boardCounts && state._boardCounts.data) || null;
+    const labelColWidth = isMobileSelect ? 20 : 26;
+
     boards.forEach((board) => {
       const door = String(board?.door || getBoardDoor(board) || '').padStart(2, ' ');
       const label = String(board?.label || board?.name || getBoardDisplayName(board) || '메뉴').trim();
@@ -256,8 +263,20 @@ export function createBoardAnsiBuilders(deps) {
       const line = `${door}. ${label}`;
       const suffix = code && !label.toUpperCase().includes(`(${code.toUpperCase()})`) ? `(${code})` : '';
 
+      const countInfo = boardCounts && board?.boardId ? boardCounts[board.boardId] : null;
+      let countText = '';
+      if (countInfo) {
+        countText = isMobileSelect
+          ? `(${countInfo.recent}/${countInfo.total})`
+          : `( ${String(countInfo.recent).padStart(4, ' ')} /${String(countInfo.total).padStart(6, ' ')} )`;
+      }
+      const linePadding = countText
+        ? ' '.repeat(Math.max(1, labelColWidth - displayWidth(line)))
+        : '';
+
       parts.push(
         ansiColor(15) + line +
+        (countText ? linePadding + ansiColor(8) + countText : '') +
         (suffix ? ' ' + ansiColor(8) + suffix : '') +
         ANSI_RESET
       );

@@ -121,6 +121,38 @@ export function createMemoCommandHandler(deps) {
                 await showMemoList();
                 return true;
             }
+            // [LOG_ID: 20260713_1230] 나우누리 CMAIL '배달 확인/취소' — 보낸쪽지함에서
+            // CM [번호]로 상대가 아직 읽지 않은 편지의 발송을 취소(삭제)한다. (원전 p.NOW_MENU CMAIL)
+            const cmMatch = cmd.match(/^CM(?:\s+(\d+))?$/);
+            if (cmMatch) {
+                if (state._memoBox !== 'sent') {
+                    setHint?.('발송 취소(CM)는 보낸쪽지함에서만 사용할 수 있습니다. (S: 보낸쪽지함)');
+                    return true;
+                }
+                if (!cmMatch[1]) {
+                    setHint?.('사용법: CM {번호} — 않읽음 상태인 보낸 쪽지의 발송을 취소합니다.');
+                    return true;
+                }
+                const cmIdx = parseInt(cmMatch[1], 10);
+                const target = state._memos?.[cmIdx - 1];
+                if (!target) {
+                    setHint?.(`${cmIdx}번 쪽지를 찾을 수 없습니다.`);
+                    return true;
+                }
+                if (target.isRead) {
+                    setHint?.('이미 수신확인된 쪽지는 발송을 취소할 수 없습니다.');
+                    return true;
+                }
+                try {
+                    await apiFetch(`/api/memos/${target.id}`, { method: 'DELETE' });
+                    await showMemoList();
+                    setHint?.(`${cmIdx}번 쪽지의 발송을 취소했습니다. (수신자: ${target.recipientUserId || '?'})`);
+                } catch (error) {
+                    setHint?.(`발송 취소 실패: ${error.message}`);
+                }
+                return true;
+            }
+
             const idx = parseInt(cmd, 10);
             if (idx >= 1 && state._memos?.[idx - 1]) {
                 await showMemoView(state._memos[idx - 1].id);

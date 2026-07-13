@@ -1,5 +1,16 @@
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 
+// [LOG_ID: 20260713_1660] 편지 종류(1-8) 태그는 제목 앞 대괄호로 인코딩되어 있다(memoScreens.js
+// buildMemoTitleTag와 동일 형식). 목록/보기 화면에서 공통으로 파싱해 표시하기 위한 헬퍼.
+function parseMemoTypeTag(title) {
+  const match = String(title || '').match(/^\[([^\]]+)\]\s*/);
+  return match ? match[1] : null;
+}
+
+function stripMemoTypeTag(title) {
+  return String(title || '').replace(/^\[([^\]]+)\]\s*/, '');
+}
+
 export function createMemoAnsiBuilders(deps) {
   const {
     ANSI_RESET,
@@ -34,22 +45,41 @@ export function createMemoAnsiBuilders(deps) {
         ANSI_RESET;
     }
 
+    // [LOG_ID: 20260713_1660] 편지 종류 태그를 목록에서도 짧은 마커로 보여준다 —
+    // 이전엔 대괄호 태그가 그대로 요약 텍스트에 섞여 잘리기 일쑤였다.
+    function memoTypeMarker(memo) {
+      const tag = parseMemoTypeTag(memo.title);
+      if (!tag) return '';
+      let marker = '';
+      if (tag.includes('비밀')) marker += '비';
+      if (tag.includes('답장요망')) marker += '답';
+      if (tag.includes('지연')) marker += '지';
+      return marker;
+    }
+
     function memoLine(memo, index) {
       const num = String(index + 1).padStart(4);
       const userField = isSent ? (memo.recipientUserId || 'guest') : (memo.senderUserId || 'guest');
+      const marker = memoTypeMarker(memo);
+      const cleanTitle = stripMemoTypeTag(memo.title) || memo.content || '';
       if (isMobile) {
+        const markerText = marker ? `[${marker}]` : '';
+        const summaryWidth = 18 - (marker ? 4 : 0);
         const user = fitCell(userField, 10);
-        const summary = fitCell(memo.title || memo.content || '', 18);
+        const summary = fitCell(cleanTitle, summaryWidth);
         const date = fitCell(String(memo.createdAt || '').substring(5, 10), 8); // MM-DD
         const color = memo.isRead ? 8 : 15;
         return ansiColor(color) + num + ' ' +
           ansiColor(10) + user + ' ' +
+          (markerText ? ansiColor(9) + markerText + ' ' : '') +
           ansiColor(color) + summary + ' ' +
           ansiColor(8) + date +
           ANSI_RESET;
       }
+      const markerText = marker ? `[${marker}]` : '';
+      const summaryWidth = 40 - (marker ? 5 : 0);
       const user = fitCell(userField, 12);
-      const summary = fitCell(memo.title || memo.content || '', 40);
+      const summary = fitCell(cleanTitle, summaryWidth);
       const date = fitCell(String(memo.createdAt || '').substring(0, 10), 12);
       // 보낸쪽지함에서는 수신여부 표시, 받은쪽지함에서는 회색/흰색 글씨로만 구분
       const statusText = isSent ? (memo.isRead ? '수신' : '않읽음') : '';
@@ -58,6 +88,7 @@ export function createMemoAnsiBuilders(deps) {
 
       return ansiColor(color) + num + ' ' +
         ansiColor(10) + user + ' ' +
+        (markerText ? ansiColor(9) + markerText + ' ' : '') +
         ansiColor(color) + summary + ' ' +
         ansiColor(8) + date + ' ' +
         ansiColor(isSent && !memo.isRead ? 15 : 8) + status +
@@ -102,6 +133,12 @@ export function createMemoAnsiBuilders(deps) {
     parts.push(ansiColor(14) + '┌' + '─'.repeat(targetCols - 2) + '┐' + ANSI_RESET);
     parts.push(ansiColor(14) + '│ ' + ansiColor(11) + fitCell(userLabel, 8) + ansiColor(15) + fitCell(userValue, innerWidth - 8) + ansiColor(14) + ' │' + ANSI_RESET);
     parts.push(ansiColor(14) + '│ ' + ansiColor(11) + fitCell('받은날: ', 8) + ansiColor(15) + fitCell(formatLongDate(memo.createdAt) || memo.createdAt || '', innerWidth - 8) + ansiColor(14) + ' │' + ANSI_RESET);
+    // [LOG_ID: 20260713_1660] 편지 종류(비밀/답장요망/지연 조합)를 보기 화면에도 명확히 표시 —
+    // 이전엔 목록 요약 텍스트에만 대괄호 태그로 섞여 있어 상세보기에서는 아예 보이지 않았다.
+    const typeTag = parseMemoTypeTag(memo.title);
+    if (typeTag) {
+      parts.push(ansiColor(14) + '│ ' + ansiColor(11) + fitCell('종류: ', 8) + ansiColor(9) + fitCell(typeTag, innerWidth - 8) + ansiColor(14) + ' │' + ANSI_RESET);
+    }
     parts.push(ansiColor(14) + '├' + '─'.repeat(targetCols - 2) + '┤' + ANSI_RESET);
 
     const contentLines = String(memo.content || '').split('\n');

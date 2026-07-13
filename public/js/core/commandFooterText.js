@@ -98,6 +98,14 @@ export function createCommandFooterTextUtils(deps) {
   function getCommandFooterText(category) {
     let order = Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category] : [];
 
+    // [LOG_ID: 20260713_1230] 쪽지함 상자별 힌트바 — 보낸쪽지함에서는 나우누리 CMAIL식
+    // 발송취소(CM)를, 받은쪽지함에서는 보낸쪽지함 전환(S)을 안내한다.
+    if (category === 'memoList' && state) {
+      order = state._memoBox === 'sent'
+        ? ['P', 'T', 'GO', 'I:받은쪽지', 'CM:발송취소', 'H']
+        : ['P', 'T', 'GO', 'W:쓰기', 'S:보낸쪽지', 'H'];
+    }
+
     // [LOG_ID: 20260713_1160] 나우누리 테마 시 대화방/쪽지함 힌트바 토큰 동적 오버라이드
     if (state && state.theme === 'nownuri') {
       if (category === 'chat' || category === 'chatLobby') {

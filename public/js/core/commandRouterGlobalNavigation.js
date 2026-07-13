@@ -167,6 +167,13 @@ export function createGlobalNavigationCommandHandler(deps) {
     }
 
     if (state.screen === 'help') {
+      // [LOG_ID: 20260713_1230] 나우누리 GUIDE '명령어안내'식 분류 선택 — 0.전체 1~6.분류
+      if (/^[0-6]$/.test(cmd)) {
+        const helpTabKeys = ['NAV', 'POST', 'AUTH', 'MEMO', 'CHAT', 'UI'];
+        state.helpTab = cmd === '0' ? 'all' : helpTabKeys[Number(cmd) - 1];
+        await showHelp('', 1);
+        return true;
+      }
       if (cmd === 'F') {
         const nextPage = (state.page || 1) + 1;
         if (nextPage <= (state.helpTotalPages || 1)) {

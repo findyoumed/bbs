@@ -8,6 +8,7 @@ class BoardRouter extends BaseRouter {
       { method: 'GET', pattern: '/api/boards/meta', handler: 'getMeta' },
       { method: 'GET', pattern: '/api/boards', handler: 'listBoards' },
       { method: 'GET', pattern: '/api/boards/hot', handler: 'listHotPosts' },
+      { method: 'GET', pattern: '/api/boards/counts', handler: 'listBoardCounts' },
       { method: 'GET', pattern: '/api/boards/:boardId', handler: 'listPosts', needContext: true },
       { 
         method: 'POST', 
@@ -59,6 +60,11 @@ class BoardRouter extends BaseRouter {
 
   async listBoards() {
     return this.send(200, await this.deps.boardRepository.listBoards());
+  }
+
+  // [LOG_ID: 20260713_1230] 나우누리식 게시판 메뉴 ( 신규 / 전체 ) 건수
+  async listBoardCounts() {
+    return this.send(200, await this.deps.boardRepository.listBoardCounts());
   }
 
   async listHotPosts() {

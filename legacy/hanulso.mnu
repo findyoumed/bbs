@@ -130,6 +130,15 @@
 			<footer>txt/cmd_chat_footer.txt</footer>
 		</item>
 
+		<!-- [LOG_ID: 20260713_1700] 쪽지함(전자우편) — ME/MEMO 명령으로만 접근 가능하고
+		     메인 메뉴에 진입점이 없다는 사용자 지적으로 신설. door 9는 기존 1~8이 모두
+		     사용 중이라 다음 번호로 배정. -->
+		<item type="memo" id="bbs_memo" door="9" go="memo" access_level="1">
+			<name>전자우편 (MEMO)</name>
+			<header></header>
+			<footer></footer>
+		</item>
+
 		<!-- 08. 오락실 -->
 		<item type="menu" go="game" door="8">
 			<name>오락실 (GAME)</name>
