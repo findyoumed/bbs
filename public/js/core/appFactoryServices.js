@@ -132,7 +132,8 @@ export function createAppFactoryServices(deps) {
     getBoardDisplayName: boardService.getBoardDisplayName,
     getBoardDoor: boardService.getBoardDoor,
     isWideChar,
-    displayWidth
+    displayWidth,
+    state
   });
   const serviceAnsiBuilders = createServiceAnsiBuilders({ isWideChar, displayWidth });
   const systemAnsiBuilders = createSystemAnsiBuilders({ isWideChar, displayWidth });

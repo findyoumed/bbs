@@ -76,16 +76,21 @@ async function showConnectSequence() {
   container.innerHTML = '<div id="connect-seq" style="padding:20px; font-family:\'Sam3KRFont\',\'DungGeunMo\',\'GulimChe\',monospace; font-size:17px; color:#ffffff; line-height:1.6; white-space:pre-wrap;"></div>';
   const seqEl = document.getElementById('connect-seq');
 
+  // [LOG_ID: 20260713_1155] 나우누리 테마 시 전용 모뎀 번호 및 접속 멘트 분기
+  const isNownuri = state.theme === 'nownuri';
+  const targetNumber = isNownuri ? '01411' : '01410';
+  const targetLabel = isNownuri ? 'NOWNURI' : 'HiTEL';
+
   const lines = [
-    'ATDT 01410',
+    `ATDT ${targetNumber}`,
     'DIALING...',
-    'CONNECT 14400 / HiTEL'
+    `CONNECT 14400 / ${targetLabel}`
   ];
 
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
   for (const line of lines) {
-    if (line.startsWith('ATDT') || line === 'CONNECT 14400 / HiTEL') {
+    if (line.startsWith('ATDT') || line.startsWith('CONNECT')) {
       for (let i = 0; i < line.length; i++) {
         seqEl.textContent += line[i];
         await delay(50);

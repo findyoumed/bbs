@@ -100,6 +100,44 @@ export function createBrowseCommandHandler(deps) {
     }
 
     if (s === 'main') {
+      // [LOG_ID: 20260713_1155] 나우누리 테마 시 전용 번호 매핑 분기
+      if (state.theme === 'nownuri') {
+        const num = String(rawCmd || '').trim();
+        if (num === '11') {
+          if (state.user?.isGuest) {
+            setHint('편지함은 로그인 후 사용하실 수 있습니다.');
+            setDefaultPrompt();
+          } else if (typeof showMemoList === 'function') {
+            state._memoBox = 'inbox';
+            await showMemoList();
+          }
+          return true;
+        }
+        if (num === '12') {
+          if (typeof showBoardSelect === 'function') {
+            await showBoardSelect('top', '게시판 목록');
+          }
+          return true;
+        }
+        if (num === '13') {
+          if (typeof showChatLobby === 'function') {
+            await showChatLobby();
+          }
+          return true;
+        }
+        if (num === '16') {
+          if (typeof showPostList === 'function') {
+            await showPostList('pds', 1, { menuPath: 'top', menuTitle: '자료실' });
+          }
+          return true;
+        }
+        if (/^\d+$/.test(num)) {
+          setHint('준비 중인 서비스입니다.');
+          setDefaultPrompt();
+          return true;
+        }
+      }
+
       const visibleEntries = Array.isArray(state.boardMenuEntries) && state.boardMenuEntries.length
         ? state.boardMenuEntries
         : getMenuChildren(getMenuNodeByKey('top') || state.menuTree);

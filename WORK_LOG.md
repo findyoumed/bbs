@@ -1,3 +1,21 @@
+## [2026-07-13 11:56] 나우누리 이식 2~3단계: 나우누리 전용 모뎀 접속(ATDT 01411) 및 정통 대문(TOP) 복원 완료
+
+**LOG_ID: 20260713_1156**
+목표: 나우누리(Nownuri) UI/기능 이식 로드맵의 2단계(모뎀 접속 분기) 및 3단계(대문 복원 및 핫스팟)를 완료하여 BBS 내에 나우누리 접속 및 감성을 완벽하게 제공한다.
+변경 파일:
+1) `public/js/app.js` (showConnectSequence에서 state.theme === 'nownuri'일 때 ATDT 01411과 NOWNURI 접속 레이블로 텍스트 타이핑 동적 매핑)
+2) `public/js/core/appFactoryServices.js` (boardAnsiBuilders에 state 주입 연결)
+3) `public/js/core/ansiBoardBuilders.js` (createBoardAnsiBuilders에 state 의존성 매핑 및 buildMainMenuAnsi에 nownuri 테마 감지 시 buildNownuriMainMenuAnsi 전용 대문 빌더 연결)
+4) `public/js/core/commandRouterBrowse.js` (나우누리 대문 화면일 때 입력받은 11(편지), 12(게시판), 13(대화실), 16(자료실) 번호 커맨드를 전용 보기 함수로 다이렉트 바인딩)
+수행 작업:
+- 나우누리 테마 활성화 시 최초 진입 시 `ATDT 01411` 모뎀 번호와 `CONNECT 14400 / NOWNURI` 로 접속 시퀀스 타이핑 애니메이션 작동.
+- 대문 메뉴판이 나우누리 정통 `NowNuri Simulation 1.0` 텍스트 레이아웃으로 변경되며, `11`/`12`/`13`/`16` 번호를 입력해 곧바로 원하는 서비스로 직통 이동 지원.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 11:55] 나우누리 이식 1단계: 나우누리 청록색 테마 및 SET THEME NOWNURI 전환 로직 개발
 
 **LOG_ID: 20260713_1155**

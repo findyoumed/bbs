@@ -5,7 +5,8 @@ export function createBoardAnsiBuilders(deps) {
     compareDoor,
     getBoardCode,
     getBoardDisplayName,
-    getBoardDoor
+    getBoardDoor,
+    state
   } = deps;
   const {
     ANSI_RESET,
@@ -32,6 +33,12 @@ export function createBoardAnsiBuilders(deps) {
     void title;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
+
+    // [LOG_ID: 20260713_1155] 나우누리 테마 모드인 경우 나우누리식 전용 대문(TOP) 렌더링
+    if (state && state.theme === 'nownuri') {
+      return buildNownuriMainMenuAnsi(targetCols, noticeText);
+    }
+
     const sortedEntries = (entries || [])
       .slice()
       .sort((left, right) => compareDoor(left?.door, right?.door));
@@ -280,6 +287,46 @@ export function createBoardAnsiBuilders(deps) {
     }
 
     parts.push(ansiColor(14) + '└' + '─'.repeat(targetCols - 2) + '┘' + ANSI_RESET);
+    return parts.join('\n');
+  }
+
+  // [LOG_ID: 20260713_1155] 나우누리 전용 대문 ANSI 생성 함수
+  function buildNownuriMainMenuAnsi(targetCols, noticeText) {
+    const parts = [];
+    
+    // 나우누리 로고 타이틀 헤더
+    parts.push(ansiColor(14) + 'NowNuri Simulation 1.0' + ANSI_RESET + '  WMAIL                       자료-편지                   ☏ 02-590-3800');
+    parts.push('이용해 주셔서 감사합니다.(도움말(H) 입력)');
+    parts.push('');
+    parts.push('      ' + ansiColor(15) + '1. 서비스안내' + ANSI_RESET + '        ' + ansiColor(15) + '2. 나우로' + ANSI_RESET + '          ' + ansiColor(15) + '3. BOOK-NET' + ANSI_RESET);
+    parts.push('');
+    parts.push('     [ 서비스 ]           [ 안내 ]           [ 인터넷 ]');
+    parts.push('');
+    parts.push('     ' + ansiColor(15) + '11. 편지' + ANSI_RESET + '             ' + ansiColor(15) + '21. 뉴스/일반' + ANSI_RESET + '      ' + ansiColor(15) + '31. 인터넷' + ANSI_RESET);
+    parts.push('     ' + ansiColor(15) + '12. 게시판' + ANSI_RESET + '           ' + ansiColor(15) + '22. 토론/동호회' + ANSI_RESET + '    ' + ansiColor(15) + '32. 홈빌더' + ANSI_RESET);
+    parts.push('     ' + ansiColor(15) + '13. 대화실' + ANSI_RESET + '           ' + ansiColor(15) + '23. 정보/문화' + ANSI_RESET + '      ' + ansiColor(15) + '33. 홈쇼핑' + ANSI_RESET);
+    parts.push('     ' + ansiColor(15) + '14. 동호회' + ANSI_RESET + '           ' + ansiColor(15) + '24. 생활/경제' + ANSI_RESET + '      ' + ansiColor(15) + '34. 게임/오락' + ANSI_RESET);
+    parts.push('     ' + ansiColor(15) + '15. 모임' + ANSI_RESET + '             ' + ansiColor(15) + '25. 컴퓨터/통신' + ANSI_RESET);
+    parts.push('     ' + ansiColor(15) + '16. 자료실' + ANSI_RESET + '           ' + ansiColor(15) + '26. 교육/학습' + ANSI_RESET + '      [ 안내 ]');
+    parts.push('     ' + ansiColor(15) + '17. 인터넷' + ANSI_RESET + '           ' + ansiColor(15) + '27. 어린이/청소년' + ANSI_RESET + '  ' + ansiColor(15) + '41. 나우맵' + ANSI_RESET);
+    parts.push('     ' + ansiColor(15) + '18. 게임' + ANSI_RESET + '             ' + ansiColor(15) + '28. 스포츠' + ANSI_RESET);
+    parts.push('     ' + ansiColor(15) + '19. 정보' + ANSI_RESET + '             ' + ansiColor(15) + '29. 나우누리 CUG' + ANSI_RESET + '   ' + ansiColor(15) + '51. 인터넷' + ANSI_RESET);
+    parts.push('');
+
+    // 작은공지 영역 렌더링
+    if (noticeText) {
+      const prefix = '[작은공지] ';
+      const titleOnly = noticeText.startsWith(prefix) ? noticeText.slice(prefix.length) : noticeText;
+      const goToken = '(GO NOTICE)';
+      const prefixLen = displayWidth(prefix);
+      const goLen = displayWidth(goToken);
+      const remaining = targetCols - prefixLen - goLen - 2;
+      const fitTitle = fitCell(titleOnly, remaining).trim();
+      const dotCount = Math.max(2, remaining - displayWidth(fitTitle));
+      const formattedNotice = `${prefix}${fitTitle}${'.'.repeat(dotCount)}${goToken}`;
+      parts.push(ansiColor(11) + formattedNotice + ANSI_RESET);
+    }
+
     return parts.join('\n');
   }
 
