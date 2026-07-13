@@ -118,16 +118,16 @@ export function createChatCommandHandler(deps) {
 
       // [LOG: 20260411_2345] 대화방 내 명령어는 반드시 '/'로 시작해야 함
       if (input.startsWith('/')) {
-        // [LOG_ID: 20260713_1020] 대화방 귓속말(/TO 상대방ID 메시지) 구현
-        const toMatch = input.match(/^\/TO\s+(\S+)\s+(.+)$/i);
+        // [LOG_ID: 20260713_1160] 대화방 귓속말(/TO 또는 나우누리식 /EAR, /속 상대방ID 메시지) 구현
+        const toMatch = input.match(/^\/(TO|EAR|속)\s+(\S+)\s+(.+)$/i);
         if (toMatch) {
           if (state.user?.isGuest) {
             setHint('귓속말은 로그인 후 사용하실 수 있습니다.');
             setPrompt('선택 >>');
             return true;
           }
-          const recipient = toMatch[1].trim();
-          const messageContent = toMatch[2].trim();
+          const recipient = toMatch[2].trim();
+          const messageContent = toMatch[3].trim();
 
           apiFetch(`/api/chat/rooms/${encodeURIComponent(state._chatRoomId)}/messages`, {
             method: 'POST',

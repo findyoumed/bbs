@@ -96,7 +96,19 @@ export function createCommandFooterTextUtils(deps) {
   }
 
   function getCommandFooterText(category) {
-    const order = Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category] : [];
+    let order = Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category] : [];
+
+    // [LOG_ID: 20260713_1160] 나우누리 테마 시 대화방/쪽지함 힌트바 토큰 동적 오버라이드
+    if (state && state.theme === 'nownuri') {
+      if (category === 'chat' || category === 'chatLobby') {
+        order = ['P', 'T', 'GO', 'O:방만들기', 'EAR:귓속말', 'ST:상황판', 'H'];
+      } else if (category === 'memoList') {
+        order = ['P', 'T', 'GO', 'WMAIL:올리기', 'H'];
+      } else if (category === 'memoView') {
+        order = ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'WMAIL:전달', 'DD:삭제', 'H'];
+      }
+    }
+
     return formatCommandFooter(order);
   }
 

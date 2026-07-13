@@ -17,7 +17,8 @@ export function createGlobalNavigationCommandHandler(deps) {
     findBoardByCode,
     showPostList,
     showLogin,
-    showConfirm
+    showConfirm,
+    showMemoWrite
   } = deps;
 
   function setDefaultPrompt() {
@@ -213,8 +214,8 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
-    // [LOG_ID: 20260713_1000] 전역 ME / MEMO 명령어 배선 추가
-    if (cmd === 'ME' || cmd === 'MEMO') {
+    // [LOG_ID: 20260713_1160] 전역 ME / MEMO / CMAIL 명령어 배선 추가 (나우누리 편지함 조회)
+    if (cmd === 'ME' || cmd === 'MEMO' || cmd === 'CMAIL') {
       if (state.user?.isGuest) {
         setHint('쪽지함은 로그인 후 사용하실 수 있습니다.');
         setDefaultPrompt();
@@ -224,6 +225,20 @@ export function createGlobalNavigationCommandHandler(deps) {
         // 처음 진입할 때 기본적으로 받은편지함(inbox)으로 설정되도록 초기화
         state._memoBox = 'inbox';
         await showMemoList();
+        return true;
+      }
+      return false;
+    }
+
+    // [LOG_ID: 20260713_1160] 나우누리 편지쓰기(WMAIL) 명령어 배선 추가
+    if (cmd === 'WMAIL') {
+      if (state.user?.isGuest) {
+        setHint('쪽지 기능은 로그인 후 사용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+      if (typeof showMemoWrite === 'function') {
+        await showMemoWrite();
         return true;
       }
       return false;

@@ -130,6 +130,7 @@ export function createAppFactoryHandlers(deps) {
     showActivitySummary: screens.systemScreens.showActivitySummary,
     showSystemLog: screens.systemLogScreens.showSystemLog,
     showMemoList: screens.memoScreens.showMemoList,
+    showMemoWrite: screens.memoScreens.showMemoWrite,
     showMyInfo: screens.myInfoScreens.showMyInfo,
     showChatLobby: screens.chatScreens.showChatLobby,
     showHelp: screens.helpScreens.showHelp,

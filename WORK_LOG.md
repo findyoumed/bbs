@@ -1,3 +1,22 @@
+## [2026-07-13 11:60] 나우누리 이식 고도화: 나우누리식 귓속말(/EAR, /속) 및 편지 명령(WMAIL/CMAIL) 복원 완료
+
+**LOG_ID: 20260713_1160**
+목표: 나우누리(Nownuri) UI/기능 이식 로드맵 고도화로 나우누리식 귓속말(/EAR, /속) 및 편지 명령(WMAIL/CMAIL)과 동적 힌트바를 구현한다.
+변경 파일:
+1) `public/js/core/appFactoryHandlers.js` (globalCommandHandlerDeps에 showMemoWrite 핸들러 주입 추가)
+2) `public/js/core/commandRouterGlobalNavigation.js` (CMAIL 입력 시 showMemoList 연동, WMAIL 입력 시 showMemoWrite 작동하도록 글로벌 라우팅 구현)
+3) `public/js/core/commandRouterChat.js` (대화방 내에서 /TO 뿐만 아니라 나우누리 고유 단축어인 /EAR 및 /속 커맨드 입력 시 동일하게 귓속말이 발송되도록 귓속말 파서 정규식 매핑 확장)
+4) `public/js/core/commandFooterText.js` (state.theme === 'nownuri'일 때 대화방, 쪽지함, 쪽지뷰의 힌트바 토큰을 나우누리 전용 명령인 WMAIL, EAR, ST 등으로 자동 갱신해 출력하도록 오버라이드)
+수행 작업:
+- 나우누리식 편지 읽기 `CMAIL`, 편지 쓰기 `WMAIL` 커맨드가 전역에서 매끄럽게 동작.
+- 대화방 내에서 `/EAR 상대방ID 메시지` 혹은 `/속 상대방ID 메시지` 전송 시 정상적으로 귓속말 기능 동작 완료.
+- 나우누리 테마 시 힌트바 텍스트가 나우누리식 `WMAIL` 등으로 자동 변경되어 감성적인 몰입도 상승.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 11:56] 나우누리 이식 2~3단계: 나우누리 전용 모뎀 접속(ATDT 01411) 및 정통 대문(TOP) 복원 완료
 
 **LOG_ID: 20260713_1156**
