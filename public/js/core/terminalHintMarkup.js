@@ -123,6 +123,24 @@ export function createTerminalHintMarkup(deps) {
     const defaultLabel = resolveCommandLabel(normalizedCmd, '');
     const usesCustomLabel = Boolean(label) && resolvedLabel !== defaultLabel;
 
+    // [LOG_ID: 20260713_1010] SET LEVEL에 따른 힌트 토큰 필터링
+    const currentLevel = String(state.envVars?.LEVEL || '중급').trim().toUpperCase();
+    
+    // 1. 고급 등급: H(도움말/HELP/?) 토큰만 노출하고 나머지는 완전히 숨김
+    if (currentLevel === '고급' || currentLevel === 'HIGH') {
+      if (!['H', 'HELP', '?'].includes(normalizedCmd)) {
+        return false;
+      }
+    }
+    // 2. 초급 등급: 우선순위가 높은(주요 이동/도움말 등 priority <= 20) 핵심 명령어 토큰만 노출
+    else if (currentLevel === '초급' || currentLevel === 'LOW') {
+      const priority = getCommandPriority(normalizedCmd);
+      const isCoreNav = ['F', 'B', 'L', 'P', 'M', 'H', 'HELP', '?', 'LOGIN'].includes(normalizedCmd);
+      if (priority > 20 && !isCoreNav) {
+        return false;
+      }
+    }
+
     if (['X', 'Z', 'M'].includes(normalizedCmd)) return false;
     if (normalizedCmd === 'H' && state.screen === 'help') return false;
     if (normalizedCmd === 'LOGIN' && !state.user?.isGuest) return false;

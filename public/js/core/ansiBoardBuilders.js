@@ -43,26 +43,10 @@ export function createBoardAnsiBuilders(deps) {
       return `${door}. ${label}`;
     };
 
-    if (isMobile || sortedEntries.length < 4) {
-      sortedEntries.forEach((entry) => {
-        parts.push(ansiColor(15) + entryText(entry) + ANSI_RESET);
-      });
-    } else {
-      const rightColStart = 40;
-      for (let i = 0; i < sortedEntries.length; i += 2) {
-        const leftText = ' ' + entryText(sortedEntries[i]);
-        const rightEntry = sortedEntries[i + 1];
-        let line = leftText;
-        if (rightEntry) {
-          const padWidth = Math.max(1, rightColStart - displayWidth(leftText));
-          line += ' '.repeat(padWidth) + entryText(rightEntry);
-        }
-        parts.push(ansiColor(15) + line + ANSI_RESET);
-        if (i + 2 < sortedEntries.length) {
-          parts.push('');
-        }
-      }
-    }
+    // [LOG_ID: 20260713_1010] 사용자 요청으로 초기 메뉴 2열 배치에서 이전 1열 세로형 배치로 복원
+    sortedEntries.forEach((entry) => {
+      parts.push(' ' + ansiColor(15) + entryText(entry) + ANSI_RESET);
+    });
 
     if (!sortedEntries.length) {
       parts.push(ansiColor(8) + ' 등록된 메뉴가 없습니다.' + ANSI_RESET);
@@ -83,17 +67,7 @@ export function createBoardAnsiBuilders(deps) {
       parts.push(ansiColor(11) + formattedNotice + ANSI_RESET);
     }
 
-    if (sortedEntries.length) {
-      // 하단 반전 배너 (그림 5.1의 "하이텔 고속서비스 접속번호 'go con'" 자리)
-      const bannerText = isMobile
-        ? ` 서비스안내는 'GO GUIDE' `
-        : ` 우리말 이동 지원 — 'GO 열린광장' / 서비스안내 'GO GUIDE' `;
-      const bannerWidth = displayWidth(bannerText);
-      const bannerPad = Math.max(0, Math.floor((targetCols - bannerWidth) / 2));
-      parts.push('');
-      parts.push('');
-      parts.push(' '.repeat(bannerPad) + ansiColor(0, 15) + bannerText + ANSI_RESET);
-    }
+
 
     /* [LOG: 20260425_2140] 사용자 요청으로 시스템 통계 요약 제거 
     if (stats) {

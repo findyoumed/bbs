@@ -88,6 +88,22 @@ export function createMenuNavigation(deps) {
   }
 
   async function showMain(fromHistory = false) {
+    // [LOG_ID: 20260713_1010] SET HOME 환경 변수가 설정되어 있을 경우 초기 진입 시 해당 게시판/메뉴로 즉시 이동
+    const homeTarget = String(state.envVars?.HOME || '').trim();
+    if (homeTarget && !fromHistory && !state._isHomeRedirecting) {
+      state._isHomeRedirecting = true;
+      try {
+        const handled = await executeGoCommand(`GO ${homeTarget}`);
+        if (handled) {
+          return;
+        }
+      } catch (err) {
+        console.warn('HOME 리다이렉션 에러:', err.message);
+      } finally {
+        state._isHomeRedirecting = false;
+      }
+    }
+
     state.screen = 'main';
     state.boardMenuPath = 'top';
     state.boardMenuTitle = getBoardSelectTitle('top');

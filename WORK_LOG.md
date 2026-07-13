@@ -1,3 +1,22 @@
+## [2026-07-13 10:10] 초기 메뉴 1열 세로형 복원 + SET LEVEL (초급/중급/고급) 및 SET HOME 리다이렉트
+
+**LOG_ID: 20260713_1010**
+목표: 사용자 피드백에 따라 초기 화면의 메뉴 배치를 기존 1열 세로형으로 복원하고, Phase 3 항목 중 SET LEVEL에 따른 힌트 토큰 필터링과 SET HOME에 따른 초기 화면 리다이렉트 기능을 적용한다.
+변경 파일:
+1) `public/js/core/ansiBoardBuilders.js` (buildMainMenuAnsi 내 메뉴 2열 배치를 1열 세로형으로 복원 및 하단 반전 배너 블록 삭제)
+2) `public/js/core/terminalHintMarkup.js` (shouldShowFooterToken 내 state.envVars.LEVEL(초급/중급/고급) 필터링 로직 추가)
+3) `public/js/core/menuNavigation.js` (showMain 내 state.envVars.HOME 값 존재 시 executeGoCommand 우회 이동 구현)
+수행 작업:
+1) [초기 메뉴 복원] 80칸 데스크톱 해상도에서도 2열 행 우선 배치를 제거하고 이전 모바일과 같이 1열 세로 리스트형으로 통일 출력하도록 buildMainMenuAnsi 롤백.
+2) [메인 배너 제거] 사용자 요청으로 초기 메뉴 하단의 반전 홍보 배너 블록("우리말 이동 지원 / 서비스 안내")을 완전 삭제.
+3) [SET LEVEL] SET LEVEL 초급|중급|고급 환경 변수 설정에 맞추어 힌트 토큰 필터링. 초급은 priority <= 20 인 핵심/이동 명령어만 표시, 고급은 H/HELP/? 토큰 하나만 표시, 중급(기본)은 전체 표시.
+4) [SET HOME] SET HOME [게시판/메뉴] 설정 시 최초 부팅 또는 로그인 직후 showMain 실행 단계에서 해당 GO 명령을 트리거해 지정 화면으로 자동 리다이렉트.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 10:00] 하이텔 기능 확장 Phase 2 + 대기실 TUI 리팩토링 및 쪽지함 보낸편지함 토글
 
 **LOG_ID: 20260713_1000**
