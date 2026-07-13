@@ -60,7 +60,8 @@ export function createAppFactoryHandlers(deps) {
         .includes(services.boardService.normalizeSearchKey(target))),
     showChatLobby: screens.chatScreens.showChatLobby,
     showLogin: screens.authScreens.showLogin,
-    showToast: services.terminalUiCore.showToast
+    showToast: services.terminalUiCore.showToast,
+    showAlert: services.terminalUiCore.showAlert
   });
   const handleChatCommand = createChatCommandHandler({
     ...handlerDeps,

@@ -35,6 +35,12 @@ export function createMenuNavigationActions(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260713_1165] 나우누리 가이드(GUIDE) 메뉴 직통 분기
+    if (normalized === 'GUIDE') {
+      await showBoardSelect('guide', '서비스 안내');
+      return true;
+    }
+
     const currentMenuNode = state.screen === 'main'
       ? state.menuTree
       : getMenuNodeByKey(state.boardMenuPath);

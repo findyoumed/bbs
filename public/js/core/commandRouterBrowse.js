@@ -27,6 +27,7 @@ export function createBrowseCommandHandler(deps) {
     showPostView,
     showPostWrite,
     showToast,
+    showAlert,
     state,
     showPtPrepare,
     showPtResult
@@ -103,6 +104,12 @@ export function createBrowseCommandHandler(deps) {
       // [LOG_ID: 20260713_1155] 나우누리 테마 시 전용 번호 매핑 분기
       if (state.theme === 'nownuri') {
         const num = String(rawCmd || '').trim();
+        if (num === '1') {
+          if (typeof showBoardSelect === 'function') {
+            await showBoardSelect('guide', '서비스 안내');
+          }
+          return true;
+        }
         if (num === '11') {
           if (state.user?.isGuest) {
             setHint('편지함은 로그인 후 사용하실 수 있습니다.');
@@ -151,6 +158,31 @@ export function createBrowseCommandHandler(deps) {
     }
 
     if (s === 'board-select') {
+      // [LOG_ID: 20260713_1165] 나우누리 가이드 서브메뉴 번호 가로채기
+      if (state.theme === 'nownuri' && state.boardMenuPath === 'guide') {
+        const num = String(rawCmd || '').trim();
+        if (num === '14') {
+          if (typeof showAlert === 'function') {
+            await showAlert(
+              `나우누리 접속방법 및 전화번호 안내\n\n` +
+              `1. 모뎀 접속 번호 (전국망) : 01411 (NowRo 등 에뮬레이터 이용 시)\n` +
+              `2. 대표 안내 및 고객센터 : (02) 590-3800, (080) 990-3800\n` +
+              `3. 시스템 사양 : 286 PC 이상, HGC/CGA/EGA/VGA 모니터 지원\n` +
+              `4. 전용 통신 프로그램 : 나우로 (NowRo) v0.9b 권장\n\n` +
+              `[아무 키나 누르시면 가이드 메뉴로 복귀합니다]`
+            );
+          } else {
+            setHint('나우누리 접속번호: 01411 / (02) 590-3800');
+          }
+          return true;
+        }
+        if (/^\d+$/.test(num)) {
+          setHint('준비 중인 가이드 서비스입니다.');
+          setPrompt('선택 >>');
+          return true;
+        }
+      }
+
       if (cmd === 'B' || cmd === 'P' || cmd === 'M') {
         const parentKey = getMenuParentKey(state.boardMenuPath);
         if (!parentKey || parentKey === 'top') {

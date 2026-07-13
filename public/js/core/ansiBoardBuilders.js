@@ -234,6 +234,13 @@ export function createBoardAnsiBuilders(deps) {
   }
 
   function buildBoardSelectAnsi(boards, titleOrOptions) {
+    // [LOG_ID: 20260713_1165] 나우누리 가이드(GUIDE) 메뉴 전용 렌더링 스위칭
+    if (state && state.theme === 'nownuri' && state.boardMenuPath === 'guide') {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const targetCols = isMobile ? 44 : 80;
+      return buildNownuriGuideAnsi(targetCols);
+    }
+
     const options = titleOrOptions && typeof titleOrOptions === 'object' && !Array.isArray(titleOrOptions)
       ? titleOrOptions
       : { title: titleOrOptions };
@@ -327,6 +334,29 @@ export function createBoardAnsiBuilders(deps) {
       parts.push(ansiColor(11) + formattedNotice + ANSI_RESET);
     }
 
+    return parts.join('\n');
+  }
+
+  // [LOG_ID: 20260713_1165] 나우누리 가이드(GUIDE) 메뉴 ANSI 렌더링 함수
+  function buildNownuriGuideAnsi(targetCols) {
+    const parts = [];
+    parts.push(ansiColor(14) + 'GUIDE                           서비스 안내                     ☏ 02-590-3800' + ANSI_RESET);
+    parts.push('이용해 주셔서 감사합니다.(도움말(H) 입력)');
+    parts.push('');
+    parts.push('   ' + ansiColor(15) + '1. 서비스안내' + ANSI_RESET + '           ' + ansiColor(15) + '2. 나우로안내' + ANSI_RESET + '        3. 가입/해지/요금안내');
+    parts.push('');
+    parts.push('  [ 서비스안내 ]              [ 이용자안내 ]          [ 커뮤니티 ]');
+    parts.push('');
+    parts.push('  ' + ansiColor(15) + '11. 메뉴안내' + ANSI_RESET + '               ' + ansiColor(15) + '31. 이용수칙' + ANSI_RESET + '            41. 나우맵');
+    parts.push('  ' + ansiColor(15) + '12. 이용약관' + ANSI_RESET + '               ' + ansiColor(15) + '32. 보안실' + ANSI_RESET + '            42. 나우누리 소식');
+    parts.push('  ' + ansiColor(15) + '13. 요금안내' + ANSI_RESET + '               33. CUG             43. 나우누리 모임');
+    parts.push('  ' + ansiColor(15) + '14. 접속방법' + ANSI_RESET + '               34. 회원주소록      44. 소설/수필/소통');
+    parts.push('                              35. 서비스소개      45. 동호회 소식');
+    parts.push('  [ 이용자권리 ]              36. 건의함');
+    parts.push('                              37. 질문방');
+    parts.push('  21. 개인정보 처리방침       38. 버그신고');
+    parts.push('  22. 개인정보 열람청구       39. 관련사이트');
+    parts.push('');
     return parts.join('\n');
   }
 

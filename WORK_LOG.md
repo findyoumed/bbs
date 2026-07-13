@@ -1,3 +1,21 @@
+## [2026-07-13 11:65] 나우누리 이식 고도화: 나우누리 가이드(GUIDE) 메뉴 복원 및 접속방법 안내 연동
+
+**LOG_ID: 20260713_1165**
+목표: 나우누리(Nownuri) UI/기능 이식 로드맵 고도화로 나우누리식 가이드(GUIDE) 메뉴판 복원 및 전화번호/접속방법 안내 팝업을 연동한다.
+변경 파일:
+1) `public/js/core/ansiBoardBuilders.js` (buildBoardSelectAnsi 에 state.boardMenuPath === 'guide' 스위칭을 걸고 buildNownuriGuideAnsi 전용 가이드 텍스트 메뉴판 레이아웃 빌더 추가)
+2) `public/js/core/appFactoryHandlers.js` (handleBrowseCommand 디펜던시에 showAlert 주입 연동)
+3) `public/js/core/commandRouterBrowse.js` (의존성에 showAlert 추가하고, 대문 1번 서비스안내 입력 시 showBoardSelect('guide')로 점프되도록 설정, guide 메뉴에서 14번 입력 시 접속방법/전화번호 안내를 담은 팝업 모달 출력하도록 가로채기 연동)
+4) `public/js/core/menuNavigationActions.js` (executeGoCommand 내에서 GO GUIDE 입력 시 showBoardSelect('guide')로 바로 이동하도록 글로벌 이동 경로 배선)
+수행 작업:
+- 나우누리 대문에서 `1` 입력 시 혹은 전역에서 `GO GUIDE` 명령어 입력 시 정통 나우누리 가이드 메뉴판(`GUIDE`)이 청록색 화면으로 렌더링.
+- 가이드 화면에서 `14` (접속방법) 입력 시 모뎀 접속 전화번호 `01411` 등 안내 팝업 모달이 정상 출력되며 확인 후 원래 가이드 메뉴로 복구.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 11:60] 나우누리 이식 고도화: 나우누리식 귓속말(/EAR, /속) 및 편지 명령(WMAIL/CMAIL) 복원 완료
 
 **LOG_ID: 20260713_1160**
