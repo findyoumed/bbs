@@ -72,7 +72,7 @@ export function createAppFactoryServices(deps) {
   terminalUiCore.initTooltips();
   terminalUiCore.initZoom();
 
-  const { toggleTheme, restoreTheme } = createThemeService({
+  const { applyTheme, toggleTheme, restoreTheme } = createThemeService({
     state,
     setTheme: settingsService.setTheme
   });
@@ -171,6 +171,7 @@ export function createAppFactoryServices(deps) {
     statusManager,
     systemAnsiBuilders,
     terminalUiCore,
+    applyTheme,
     toggleTheme,
     vfsService,
     workspaceService

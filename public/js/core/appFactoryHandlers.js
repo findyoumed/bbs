@@ -116,6 +116,7 @@ export function createAppFactoryHandlers(deps) {
     state,
     refs,
     doLogout: services.authService.doLogout,
+    applyTheme: services.applyTheme,
     toggleTheme: services.toggleTheme,
     toggleHintExpansion: services.terminalUiCore.toggleHintExpansion,
     showConfirm: services.terminalUiCore.showConfirm,

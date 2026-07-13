@@ -2,7 +2,8 @@ export function createGlobalWorkspaceCommandHandler(deps) {
   const {
     state,
     setHint,
-    setPrompt
+    setPrompt,
+    applyTheme
   } = deps;
 
   function ensureEnvVars() {
@@ -183,11 +184,30 @@ export function createGlobalWorkspaceCommandHandler(deps) {
           // (없으면 삭제된 사용자 정의 프롬프트가 다음 화면 전환까지 잔류).
           setPrompt('>>');
         }
+        // [LOG_ID: 20260713_1155] UNSET THEME 시 default 테마로 원복
+        if (name === 'THEME' && typeof applyTheme === 'function') {
+          applyTheme('default');
+          try {
+            localStorage.setItem('bbs_theme', 'default');
+          } catch (e) {}
+        }
       } else {
         envVars[name] = value;
         setHint(`환경 변수 [${name}] = ${value} 로 설정되었습니다.`);
         if (name === 'PROMPT') {
           setPrompt(value);
+        }
+        // [LOG_ID: 20260713_1155] SET THEME 명령어 연동
+        if (name === 'THEME' && typeof applyTheme === 'function') {
+          const lowerTheme = value.trim().toLowerCase();
+          if (['default', 'blue', 'nownuri'].includes(lowerTheme)) {
+            applyTheme(lowerTheme);
+            try {
+              localStorage.setItem('bbs_theme', lowerTheme);
+            } catch (e) {}
+          } else {
+            setHint(`알 수 없는 테마입니다: ${value} (가능한 값: default, blue, nownuri)`);
+          }
         }
       }
 

@@ -9,16 +9,18 @@ export function createThemeService(deps) {
   function applyTheme(themeName) {
     state.theme = themeName;
     const isBlue = state.theme === 'blue';
+    const isNownuri = state.theme === 'nownuri';
     const root = document.documentElement;
-    const bgColor = isBlue ? '#0000aa' : '#000000';
-    // [LOG_ID: 20260623_1129] 파란 테마 전환 시에도 텍스트 글로우를 다시 주입하지 않는다.
+    
+    // [LOG_ID: 20260713_1155] 테마별 배경색 지정 (기본 블랙 / 하이텔 블루 / 나우누리 시안)
+    const bgColor = isNownuri ? '#00aaaa' : (isBlue ? '#0000aa' : '#000000');
     const textShadow = 'none';
 
-    root.setAttribute('data-theme', isBlue ? 'blue' : 'dark');
+    root.setAttribute('data-theme', isNownuri ? 'nownuri' : (isBlue ? 'blue' : 'dark'));
     document.body.classList.toggle('theme-blue', isBlue);
+    document.body.classList.toggle('theme-nownuri', isNownuri);
 
     // [LOG: 20260428_1442] theme-immediate-style 태그 동기화:
-    // 초기 로드 시 !important로 고정된 html/body 배경색을 테마 전환 시에도 함께 갱신
     const immediateStyle = document.getElementById('theme-immediate-style');
     if (immediateStyle) {
       immediateStyle.textContent =
@@ -32,7 +34,16 @@ export function createThemeService(deps) {
   }
 
   function toggleTheme() {
-    const next = state.theme === 'blue' ? 'default' : 'blue';
+    // [LOG_ID: 20260713_1155] 기본 -> 블루 -> 나우누리 순환 토글로 변경
+    let next = 'default';
+    if (state.theme === 'default' || state.theme === 'dark') {
+      next = 'blue';
+    } else if (state.theme === 'blue') {
+      next = 'nownuri';
+    } else if (state.theme === 'nownuri') {
+      next = 'default';
+    }
+    
     applyTheme(next);
     if (typeof setTheme === 'function') {
       setTheme(next);
@@ -45,10 +56,12 @@ export function createThemeService(deps) {
 
   function restoreTheme() {
     const saved = state.theme;
-    if (saved === 'default' || saved === 'dark') {
-      applyTheme('default');
-    } else {
+    if (saved === 'nownuri') {
+      applyTheme('nownuri');
+    } else if (saved === 'blue') {
       applyTheme('blue');
+    } else {
+      applyTheme('default');
     }
   }
 

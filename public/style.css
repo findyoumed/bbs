@@ -133,6 +133,57 @@ body.theme-blue .write-field textarea {
     background: var(--bgcolor, #0000aa);
 }
 
+/* [LOG_ID: 20260713_1155] 나우누리 청록색(Cyan) 테마 추가 */
+body.theme-nownuri {
+    background: #00aaaa;
+}
+
+body.theme-nownuri #terminal-wrapper,
+body.theme-nownuri #terminal-container,
+body.theme-nownuri #terminal-screen,
+body.theme-nownuri #terminal-footer,
+body.theme-nownuri #cmd-input {
+    background: #00aaaa;
+}
+
+body.theme-nownuri .cmd-token:focus-visible {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+body.theme-nownuri .ansi-hotspot:focus-visible,
+body.theme-nownuri .ansi-hotspot.is-group-hovered,
+body.theme-nownuri .ansi-hotspot.is-tap-selected {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+@media (hover: hover) {
+    body.theme-nownuri .cmd-token:hover {
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    body.theme-nownuri .ansi-hotspot:hover {
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    body.theme-nownuri .post-row:hover,
+    body.theme-nownuri .bbs-menu-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    body.theme-nownuri .cmd-clickable:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+}
+
+body.theme-nownuri .ansi-screen,
+body.theme-nownuri .post-header-box,
+body.theme-nownuri .bbs-btn,
+body.theme-nownuri .write-field input,
+body.theme-nownuri .write-field select,
+body.theme-nownuri .write-field textarea {
+    background: var(--bgcolor, #00aaaa);
+}
+
 
 .app-shell {
     width: min(100%, 800px);

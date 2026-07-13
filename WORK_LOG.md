@@ -1,3 +1,22 @@
+## [2026-07-13 11:55] 나우누리 이식 1단계: 나우누리 청록색 테마 및 SET THEME NOWNURI 전환 로직 개발
+
+**LOG_ID: 20260713_1155**
+목표: 나우누리(Nownuri) UI/기능 이식 로드맵의 1단계 나우누리 청록색 테마 및 SET THEME NOWNURI 전환 로직을 연동한다.
+변경 파일:
+1) `public/style.css` (body.theme-nownuri 청록색 배경 테마 CSS 클래스들 탑재)
+2) `public/js/core/themeService.js` (applyTheme 시 nownuri 테마 감지 및 #00aaaa 배경 동적 전환 연쇄 구현, toggleTheme 시 3색 default->blue->nownuri 순환 토글 변경, restoreTheme 3색 보완)
+3) `public/js/core/appFactoryServices.js` (applyTheme 테마 함수를 상위 서비스로 노출)
+4) `public/js/core/appFactoryHandlers.js` (applyTheme 함수를 globalCommandHandlerDeps 의존성에 추가)
+5) `public/js/core/commandRouterGlobalWorkspace.js` (SET THEME 및 UNSET THEME 명령어 입력 시 applyTheme와 연동해 테마가 즉각 전환되고 로컬스토리지에 영속 저장되도록 설정)
+수행 작업:
+- 사용자 화면 아무 곳에서나 `C` 를 입력하여 토글하면 기본 블랙 -> 하이텔 파랑 -> 나우누리 청록(시안, #00aaaa)으로 3색 테마가 유연하게 순환 전환.
+- `SET THEME NOWNURI` 또는 `SET THEME BLUE` 처럼 명시적으로 입력하면 원하는 전용 테마로 쾌속 강제 전환 및 브라우저 새로고침 영속화 적용.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 11:40] Phase 4 추가 재현: 이용시간 확인(TIME) 커맨드 구현
 
 **LOG_ID: 20260713_1140**
