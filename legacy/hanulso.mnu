@@ -6,13 +6,8 @@
 		<header>txt/header.txt</header>
 		<footer>txt/cmd_top_footer.txt</footer>
 
-		<!-- 01. 회원가입 -->
-		<item type="signup" go="signup" id="signup" door="7" access_level="1">
-			<name>회원가입 / 로그인 (LOG)</name>
-		</item>
-
-		<!-- 02. 서비스안내 -->
-		<item type="menu" go="guide" door="6">
+		<!-- 01. 서비스안내 -->
+		<item type="menu" go="guide" door="1">
 			<name>서비스안내 (GUIDE)</name>
 			<footer>txt/cmd_menu_footer.txt</footer>
 
@@ -32,10 +27,41 @@
 				<header></header>
 				<footer></footer>
 			</item>
+
+			<!-- [LOG_ID: 20260713_2300] 사용자 지적으로 자료실/개인영역/전자우편/대화실/온라인오락실
+			     바로가기 5개를 제거했다 — 나우누리 원전은 TOP이 3단 배치라 GUIDE 요약 인덱스가
+			     의미 있었지만, 이 앱은 TOP이 1열로 전부 노출되는 구조라 GUIDE의 이 항목들은
+			     TOP 3/4/6/8/9번과 완전히 동일한 화면으로 가는 순수 중복 바로가기였다(20260713_2030
+			     당시 원전을 기계적으로 베끼며 이 앱 맥락에서의 실효성을 안 따진 실수). 명령어안내/
+			     이용약관/개인정보처리방침 3개만 남긴다 — 이건 TOP에 없는 진짜 신규 기능이다. -->
+			<item type="help" go="guide_cmdhelp" id="guide_cmdhelp" door="3" access_level="1">
+				<name>명령어안내</name>
+			</item>
+
+			<item type="policy" go="guide_tos" id="guide_tos" target="tos" door="4" access_level="1">
+				<name>이용약관</name>
+			</item>
+
+			<item type="policy" go="guide_privacy" id="guide_privacy" target="privacy" door="5" access_level="1">
+				<name>개인정보처리방침</name>
+			</item>
 		</item>
 
-				<!-- 03. 게시판(BBS) -->
-		<item type="menu" go="bbs" door="3">
+		<!-- 02. 회원가입/로그인 -->
+		<item type="signup" go="signup" id="signup" door="2" access_level="1">
+			<name>회원가입 / 로그인 (LOG)</name>
+		</item>
+
+		<!-- 03. 개인영역 -->
+		<!-- [LOG_ID: 20260713_1900] 나우누리 원전 TOP 구조("2. 개인영역") 반영 —
+		     type="myinfo" 라우팅은 menuNavigationActions.js에 이미 존재(HI 명령과 동일 화면),
+		     최상위 메뉴 진입점만 신설. 코드 변경 불필요. -->
+		<item type="myinfo" go="myinfo" id="myinfo" door="3" access_level="1">
+			<name>개인영역 (MYINFO)</name>
+		</item>
+
+		<!-- 05. 게시판(BBS) -->
+		<item type="menu" go="bbs" door="5">
 			<name>게시판 (BBS)</name>
 			<footer>txt/cmd_menu_footer.txt</footer>
 
@@ -48,29 +74,48 @@
 			</item>
 
 			<item type="board" go="humor" id="bbs_humor" door="2" access_level="1">
-				<name>유머</name>
+				<name>우스개</name>
 				<attachment>yes</attachment>
 				<reply>yes</reply>
 				<header></header>
 				<footer>txt/cmd_board_footer.txt</footer>
 			</item>
+
+			<!-- [LOG_ID: 20260714_1100] 20260713_1930(나우누리 14종)·20260714_1000(하이텔/천리안
+			     6종)에 추가했던 게시판 20개를 전부 제거했다. 사용자 지적("실제로 내가 구현
+			     가능한 것만 메뉴로 만들어야지") — 실측 결과 추가한 20개 전부 글 0건인 빈
+			     껍데기였다(열린광장 7건, 우스개 1건만 실제 콘텐츠 보유). "원전에 있으니까"를
+			     이유로 기계적으로 베낀 것으로, 20260713_2300의 GUIDE 중복 사건과 같은 실수였다.
+			     게시판은 콘텐츠가 있어야 존재 의미가 있으므로, 실제 글이 쌓이거나 시드 데이터를
+			     넣을 근거가 생길 때만 추가한다. 재제안 금지. -->
 		</item>
-		<!-- 04. 뉴스/인물 -->
-		<item type="news" go="news" door="1" access_level="1">
+
+		<!-- 07. 여론광장 -->
+		<!-- [LOG_ID: 20260713_1900] 나우누리 원전 TOP 구조("15. 여론광장"=ACRO) 반영 —
+		     type="vote" 라우팅은 이미 오락실 하위에 존재, 최상위 진입점만 신설(go 값은
+		     기존 game_vote와 충돌 방지 위해 별도 "acro" 사용). 코드 변경 불필요. -->
+		<item type="vote" go="acro" id="acro" door="7" access_level="1">
+			<name>여론광장 (ACRO)</name>
+			<header></header>
+			<footer>txt/cmd_menu_footer.txt</footer>
+		</item>
+
+		<!-- 10. 뉴스/인물 -->
+		<item type="news" go="news" door="10" access_level="1">
 			<name>뉴스/인물 (NEWS)</name>
 			<header></header>
 			<footer>txt/cmd_menu_footer.txt</footer>
 		</item>
 
-		<!-- 05. 날씨/생활 -->
-		<item type="weather" go="weather" door="2" access_level="1">
+		<!-- 11. 날씨/생활 -->
+		<item type="weather" go="weather" door="11" access_level="1">
 			<name>날씨 (WEATHER)</name>
 			<header></header>
 			<footer>txt/cmd_menu_footer.txt</footer>
 		</item>
 
-		<!-- 06. 공개자료실 -->
-		<item type="menu" go="pds" door="4">
+		<!-- 08. 공개자료실 -->
+		<item type="menu" go="pds" door="8">
 			<name>자료실 (PDS)</name>
 			<footer>txt/cmd_menu_footer.txt</footer>
 
@@ -121,26 +166,27 @@
 				<header></header>
 				<footer>txt/pds_prog.txt</footer>
 			</item>
+
+			<!-- [LOG_ID: 20260714_1100] 20260714_1000에 추가했던 자료실 3종(초보자료실/추천자료실/
+			     문서자료)도 게시판 20종과 같은 이유로 제거 — 전부 자료 0건인 빈 껍데기였다. -->
 		</item>
 
-		<!-- 07. 대화실 -->
-		<item type="chatt" id="bbs_chat" door="5" go="chat" access_level="1">
+		<!-- 06. 대화실 -->
+		<item type="chatt" id="bbs_chat" door="6" go="chat" access_level="1">
 			<name>대화실 (CHAT)</name>
 			<header></header>
 			<footer>txt/cmd_chat_footer.txt</footer>
 		</item>
 
-		<!-- [LOG_ID: 20260713_1700] 쪽지함(전자우편) — ME/MEMO 명령으로만 접근 가능하고
-		     메인 메뉴에 진입점이 없다는 사용자 지적으로 신설. door 9는 기존 1~8이 모두
-		     사용 중이라 다음 번호로 배정. -->
-		<item type="memo" id="bbs_memo" door="9" go="memo" access_level="1">
+		<!-- 04. 전자우편(쪽지함) -->
+		<item type="memo" id="bbs_memo" door="4" go="memo" access_level="1">
 			<name>전자우편 (MEMO)</name>
 			<header></header>
 			<footer></footer>
 		</item>
 
-		<!-- 08. 오락실 -->
-		<item type="menu" go="game" door="8">
+		<!-- 09. 오락실 -->
+		<item type="menu" go="game" door="9">
 			<name>오락실 (GAME)</name>
 			<footer>txt/cmd_menu_footer.txt</footer>
 
@@ -162,20 +208,21 @@
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="vote" go="vote" id="game_vote" door="4" access_level="1">
-				<name>설문조사/투표</name>
-				<header></header>
-				<footer>txt/cmd_menu_footer.txt</footer>
-			</item>
-
-			<item type="ranking" go="ranking" id="game_ranking" door="5" access_level="1">
+			<!-- [LOG_ID: 20260714_1200] 오락실 하위 "설문조사/투표"(go="vote") 제거 — 사용자 지적으로
+			     확인: TOP 7번 여론광장(go="acro")과 type="vote"가 같아 화면·기능·데이터가 100%
+			     동일한 중복이었다. 20260713_1900에 acro를 추가하며 "go값 충돌 방지"라고 기록했으나,
+			     실제로는 충돌을 피한 게 아니라 중복을 만들어놓고 포장한 것이었다(GUIDE 중복
+			     20260713_2300, 빈 게시판 20260714_1100에 이은 같은 유형의 세 번째 실수).
+			     사용자 결정: 투표/설문은 오락이 아니라 여론 수렴 기능이므로 최상위 여론광장에만
+			     둔다(나우누리 ACRO·하이텔 여론광장 모두 최상위). 이하 door 번호 재배치. -->
+			<item type="ranking" go="ranking" id="game_ranking" door="4" access_level="1">
 				<name>게시판 랭킹</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
 			<!-- [LOG_ID: 20260711_1400] olddos-bbs txt/door 원본 아트 이식 -->
-			<item type="retro-art" go="retro" id="game_retro" door="6" access_level="1">
+			<item type="retro-art" go="retro" id="game_retro" door="5" access_level="1">
 				<name>추억의 접속화면</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>

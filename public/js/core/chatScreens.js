@@ -1,4 +1,4 @@
-import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createChatScreens(deps) {
@@ -11,6 +11,7 @@ export function createChatScreens(deps) {
     cmdInput,
     getCommandFooterText,
     getMenuNodeByKey,
+    renderScreenSequential,
     screenEl,
     setPrompt,
     state,
@@ -62,15 +63,19 @@ export function createChatScreens(deps) {
     state._chatRooms = rooms;
 
     const ansiResult = buildChatLobbyAnsi(users, rooms);
-    
-    // 표준 ANSI 상단바 화면으로 렌더링
-    renderAnsiScreenWithTopbar({ 
-      ansiText: ansiResult.text || ansiResult, 
-      ansiToHTML, 
-      screenEl 
+
+    // [LOG_ID: 20260713_2000] 화면 진입(1회성 렌더)이라 위→아래 순차 스트리밍 대상.
+    // (반면 아래 refreshRoom()의 폴링 재렌더는 매 tick 스트리밍하면 어색해 그대로 둔다.)
+    await renderAnsiScreenWithTopbarSequential({
+      ansiText: ansiResult.text || ansiResult,
+      ansiToHTML,
+      screenEl,
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter(getMenuNodeByKey('chat')?.footer, getCommandFooterText('chat'));
+      }
     });
 
-    await applyCommandFooter(getMenuNodeByKey('chat')?.footer, getCommandFooterText('chat'));
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
     if (screenEl?.parentElement) screenEl.parentElement.classList.remove('is-loading');
   }

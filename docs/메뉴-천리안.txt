@@ -1,0 +1,1580 @@
+추억의 PC 통신 시절, 천리안 전체 메뉴입니다.
+출처 : 마이컴 CD96 Vol.1.10
+
+1996년 4월 현제 GO LIST
+[1.게시판]
+가 - 라
+  게시판/BBS
+  게시판을 이용하기전에/BBSINFO
+  공개편지/OMAIL
+  교차로/CROSS
+  구인 구직/JOBINFO
+  기획 연재/SERIES
+  나눔의 터/SHARE
+  나도 한마디/WORD
+  나이 모임/AGE
+  농업원예/AG
+  다시보는 BEST서비스/BEST
+  대청마루/DAECHUNG
+  동호회 BBS소식/INFOBBS
+  르네상스/RENAI
+마 - 사
+  메디네트/MEDINET
+  모임마당/BBSMEET
+  문화 예술 모임/MUNHWA
+  묻고답하고/QNA
+  묻고답하고/QNA
+  미완성 비비에스/ICPLT
+  벼룩시장/CFM
+  빅 이벤트/BIG
+  사귀고 싶어요/LIKE
+  사랑방생활정보지/SARANG
+  사회 종교 모임/SOCIETY
+  새내기의 첫인사/GREET
+  생명의 빛#1/CHURCH
+  생명의 빛#2/PASTOR
+  소양강(춘천)/SOYANGR
+  신규이용자와함께/BEGIN
+  씨알의 소리/SIAL
+아 - 타
+  알뜰시장/MARKET
+  에술기획 -연극네트/YEGIE
+  연못골/POND
+  열린창(부산)/WINDOW
+  요즘X세대는/XAGE
+  유모어 상식/HUMOR
+  자동차함께타기/CARPOOL
+  지역 모임/AREA
+  취미 오락 모임/FUN
+  취미생활/ENJOY
+  친목 모임/FRI
+  컴퓨터 통신 모임/COMM
+   퀴즈 상식/RIDDLE
+  토론한마당/FORUMMENU
+  통일맞이/TONG1
+파 - 하
+  파트라슈/PATRASHU
+  팬클럽 모임/FANCLUB
+  평화만들기/PEACE
+  학교 모임/SCHL
+  학술 모임/SCHOLAR
+  행사 모임알림/INFOMEET
+  횡설수설/SAY
+[2.게임 오락]
+A - 가
+  UNIX&프로그래밍/BEE
+  게임 안내/GAINFO
+  게임 오락/ENT
+  게임 오락/GAMEPLAZA
+  게임 오락/GAMES
+  게임 오락/GRAPH
+  게임 오락/HOSTGAME
+  게임 오락/MUDS
+  게임 오락/ONDOSA
+  게임 오락/ONGO
+  게임 오락/ONQZ
+  게임 오락/ORACK
+  게임월드/GWORLD
+  게임잡지/GMAZ
+  국제바국/IGS
+  그림 장기대국/GJANGGI
+  그림으로 즐기는 게임/GGAMES
+다 - 사
+  단군의 땅/DANGUN
+  대통령만들기 게임/PRES
+  대화오락/CGAME
+  리틀매직랜드/MLAND
+  미래가상 SF 1999/1999
+  바둑대국/BADUK
+  바람의나라/BARAM
+  바이러스 방역 마법사/TREND
+  배틀 TETRIS게임/TETRIS
+  백성호 바둑교실/BDC
+  베스트멀티미디어쇼/BMS
+  빛의전사/JUNSA
+  생체리듬/BIO
+  숫자판맞추기/16P
+  스크램블/SCRM
+  스타랜드/STARLAND
+  시간여행자/TS
+아 - 자
+  아이큐 도전(그림)/GIQ
+  야구(숫자맞추기)/BASE
+  영어단어 숙어 학습게임/WP
+  영어단어맞추기/HANGMAN
+  영웅전기/YOO
+  오 목/OMOK
+  오델로/OTH
+  오델로(그림)/GOTH
+  오목(그림)/GOMOK
+  온라인 바둑/ONBADUK
+  온라인 헥사게임/HEXA
+  온라인노래방(자료실)/SONG
+  온라인당구게임/DANGGU
+  재미있는 심리게임/SIMRI
+  쥬라기공원/JP
+카 - 하
+  퀴즈박사/QUIZ
+  퀴즈의 천국/QP
+  크로스 워드퍼즐(그림)/GCROSS
+  타자 연습 게임/TT
+  포토뱅크/PTB
+  프로바둑 명국감상(그림)/GGIBO
+  한국기원바둑서비스/GIBO
+  혈액형진단/BLOOD
+  혼자하는 게임/HOSTGAME
+[3.경제 산업]
+A - Z
+  GALLUP DB/GALLUP
+  KOBIS 입찰정보/KOBIS
+  KOTRA해외시장정보/KOTRA
+  P&P정치정보/POL
+  PC 장터(전문)/PCJT
+가 - 가
+  가격/PRICE
+  건설/BUILD
+  건설자재가격 적산자료/CONST
+  건설정보/KCFC
+  경매정보/AUCTION
+  경영 노동/MANAGE
+  경제 산업/ECONOMY
+  골프 회원권/GOLF
+  공시지가/LANDP
+  교보생명/INSU
+  국내기술인정보/TECHMAN
+  국제생명보험/KJINSU
+  금융/MONEY
+  금융실명제 상담 안내/SM
+  기업 무역/TRADE
+  기업재무재표/JEMU
+  기업정보/KOMPASS
+  김궉컴 정치전망대/KSP
+나 - 바
+  노동상담정보/HOPE
+  노동조합정보/TU
+  노무정보/LABOR
+  농림수산/AGRI
+  농림어업전문경영인/BFARMER
+  뉴비즈니스창업정보/NBC
+  다물정보/DM
+  당좌거래정지정보/BUDO
+  대한민국 법령DB/KOLD
+  러시아무역정보/RUSSIA
+  렌탈 리스정보/RENTAL
+  미주지역정보(전문)/USINFO
+  법률상담사례/LQA
+  법률속보/LAWNEWS
+  보험/INS
+  보험정보/INSURE
+  북한인명록/NKP
+사 - 아
+  사업정보/BINFO
+  성공사업정보/SUC
+  성업공사 매각물건정보/SUNGUP
+  세무/GTAX
+  세무 법률/TARIFF
+  세무정보/TAX
+  소규모 사업정보/KDC
+  수상자 정보/PRIZE
+  쌍용경제 연구소/SSRI
+  약품가격/DRPRC
+  양도세자동계산/TINT
+  여성부업정보/RDS
+  용산전자상가 가격일일정/YSP
+  운송종합정보(전문)/SHIPPING
+  위험괸리정보/RMI
+  유망사업정보(전문)/KBI
+  인물/WHO
+  인물정보/PEOPLE
+  인허가 제조업체/MANU
+  입찰 경매/BID
+  입찰정보/BIDDING
+자 - 차
+  자금시장정보/FINDS
+  자동차 구매정보/CPI
+  자동차사고 및 보험법률/TA
+  자동차시세 부품정보/DRCAR
+  전문전시 미디어 광장/ECC
+  전시회월드/EEW
+  정부기업지원정보/SII
+  정책/POLICY
+  정치/POLITIC
+  종합 통계정보/KOSIS
+  중국정보(전문)/CI
+  지사 대리점 사업정보/BAA
+  지역경제/REGION
+  청과물출하정보/GNONGLIM
+  체인사업정보/CHAIN
+타 - 하
+  태인경매정보/TAEIN
+  핀텍외환정보/FINTEC
+  한국기업체정보/DIR
+  한국리서어치 마케팅정보/HRC
+  한국은행정보/BOK
+  한기평 기업경영정보/KMCC
+  한맥보험정보/HIMS
+  한신평 기업정보/KIS
+  해외시장조사보고서/MRR
+  해외투자정보/OIIS
+  홍보 사보 가이드/PHG
+  화학시장정보/CHEMA
+[4.공개자료실]
+1 - Z
+  386BSD O S/BEE386BSD
+  DOS&WINDOWS자료/MANMUL2
+  FreeBSD O S/BEEBSD
+  FreeWare 공모전 자료실/PDSFW
+  H W유틸리티/PCHW
+  LAN 관련/BEELAN
+  NeXTSTEP 자료/BEENEXT
+  OS2&UNIX자료실/MANMUL5
+  OS2자료실/NEWOS2
+  PC 자료실/PC
+  S WGAME토론실/PDSFORUM
+  S W유틸리티/PCSW
+  SHAREWARE전문자료실/MANMUL3
+  SOURCE전용자료실/MANMUL4
+  WINDOWS NT/NEWWIN
+가 - 다
+  게임/PDSGAME
+  게임/OS2GAME
+  게임 메뉴얼/PCGAME
+  공개자료실/PDS
+  공개자료실 이용안내/PDSINFO
+  교육 업무/PDSEDU
+  교육 문서 업무/PCWP
+  그래픽/PCPIC
+  그래픽 사움드/OS2GRAP
+  기타/PDSETC
+  기타IP자료실/ETCIP
+  기획자료실/PDSHOT
+  뉴스레터 데모 기타/OS2ETC
+  데이타 베이스 관련/BEEDB
+  데이타 자료/PCDAT
+마 - 아
+  만물 자료실/MANMUL
+  매직콜제공자료/PDSCHOL
+  뮤직 사운드/PDSMU
+  서비스팩 패치/OS2PAT
+  시스템 드라이버/OS2SYS
+  신세대 자료방/NEW
+  신착자료/PCNEW
+  안철수 연구소포럼/AHN
+  워드프로세서/NEWWP
+  워드프로세서 문서자료/PDSWP
+  윈도우즈 프로그래밍/BEEWIN
+  유닉스 자료/BEEUNIX
+  유틸리티/NEWUTIL
+  유틸리티/OS2UTIL
+  유틸리티/PDSUTIL
+  음악 SOUND/PCMU
+  인IP GAME/INTGAME
+  인IP INTERNET자료실/INTINTE
+  인IP NEW/INTNEW
+  인IP SIM CICA/INTSICI
+아 - 차
+  인IP WU CDROM/INTWUCD
+  인IP 그래픽 사운드/INTPIC
+  인IP 일반 UTIL/INTUTIL
+  인IP 추천자료실/INTRECO
+  인IP 통신 네트워크/INTCOM
+  인IP 학술 문서/INTEDU
+  인IP 회원등록자료실/INTUSER
+  인터넷 공개자료실/INT
+  일반 프로그래밍/BEEPROG
+  자료찾기/PDS114
+  전문 프로그래밍/BEEPRO
+  전문학술자료/NEWPRO
+  초보자를 위한 자료모음/PDSSTA
+  추억의 인기자료/PDSBEST
+  추천 공개자료실/PDSRECO
+  취미 오락 만화/TASTE
+카 - 하
+  컴퓨터 음악/NEWMUS
+  컴퓨터 프로그래밍/NEWPGM
+  컴퓨터 그래픽/NEWGRP
+  컴퓨터 잡지사제공자료실/PDSMG
+  큰사람 정보마당/KSR
+  테크니컬 문서 규격/BEEDOC
+  통신 S W/NEWCOM
+  통신 S W/PDSCOM
+  통신 네트웍/OS2NET
+  통신 인터넷/PCCOM
+  폰트 갤러리/BEEFONT
+  프로그래밍/OS2PGM
+  프로그래밍/PDSPGM
+  프로그래밍 소스/PCPGM
+  하드웨어관련자료/MANMUL1
+  하드웨어소자 기기/MANMUL7
+[5.공공 지역]
+1st APEC Technomart/APEC
+KITEL/KITEL
+KOISnet/KOIS
+POL-NET/PNET
+TK-NET/TKNET
+YMCA 청소년 상담실/YCOUNS
+가락동농.수산물시세/GARAK
+고향사랑운동/LAND
+공공 지역/LOCAL
+국회 국회의원/ASSEMBLY
+국회큰마당/CONGRESS
+그린스카우트/GREENS
+내무부 무엇을.../MOHA
+소비자 보호 상담/CONSU
+소비자 보호 상담/COUNS
+소비자상담/CONSUM
+수온 해어황정보/SBANK
+연길이산가족정보/YISAN
+열린정부 알림마당/ALLIM
+외국인 투자정보/FDI
+저축정보/SAV
+전통문화의 본고장 안동/ANDONG
+정보통신부 소식/MIC
+정부행사 안내/CEREMONY
+[6.교육 가정]
+A - 가
+  AFKN STUDY/AFKN
+  C프로그래밍세계/CAMPUSC
+  Hello! 조화유/HI
+  가정/LIFESTYLE
+  강남성모병원/CMC
+  강좌 산업교육/LECT
+  강현구 영어학습/KANGENG
+  건강 의료/CARE
+  건강상식/HEAL
+  건강진단/CHECKUP
+  경기도청소년상담코너/KKCOUN
+  계몽사CDROM백과사전/KEMONGSA
+  고려대학교/KRU
+  고령자 구직정보/SILVER
+  교수인명록/PROFS
+  교육/EDUC
+  교육 가정/LIVING
+  교육정보 논술/STUDYC
+  교육정보안내/PROEDU
+  교통 자동차/TRAFFIC
+  교통정보/TRANS
+  구인구직/JOBMAN
+  국가기술자격정보/LICENSE
+  국내외 대학연감/UNI
+  기독교 정보/KCMI
+나 - 마
+  날씨 운세 심리/CLIFOR
+  남과 여! 그리고 성/MWS
+  다이어트 정보/DIET
+  대성학원진학정보/DSI
+  대학가 소식 오嵋트 뱅크/UNIEL
+  대학생 전용룸/UROOM
+  대학정보망/UNINET
+  라미 미용정보/BEAUTY
+  리쿠르트 취업정보/RECRUIT
+  매경SCOUT/MSCOUT
+  메이크업/MAKEUP
+  면허와 자동차/LCAR
+  모자보건 응급처치/CHILD
+  무료행사 안내정보/FREEI
+  무진 관상학/KSANG
+  무진 점성술/MUJIN
+  물가 시세/PRI
+  미국유학정보/UHAK
+  민간한방요법/HANBANG
+바 - 사
+  법의학이야기(문진국 박/MJURI
+  병원정보/HOSPITAL
+  보석정보(최신정보)/JEWEL
+  복권세계/LUCK
+  불교방송/BBSR
+  뿌리를 찾아서/ROOT
+  사건25시/TFTIME
+  사랑의 전화/COUNSEL
+  사주박사/SAJU
+  사회교육정보/SOC
+  살림 소프트 요리특선/WSOFT
+  상식의 세계/COMMON
+  생체리듬(그림)/GBIO
+  생활속의 의료보험/MEDINSU
+  서당 학습상담실/BCON
+  서일진학정보/SEOIL
+  선논술 고사/NONSUL
+  성경/BIBLE
+  성균관대학교/SKKU
+  성현진학정보/SH
+  소비자 상담 피해구제/SOBI
+  슈트 인테리어 경제콤비/COMBI
+  시범학습물/DEMOEDU
+  시사 English Hotline/SISA
+  시선집중 패션세상/FSNW
+  심리검사정보/KPTC
+아 - 아
+  아르바이트 정보/ABT
+  아이템 쇼핑/ISHOP
+  아주대학교/AJOU
+  아카데미아/ACADEMIA
+  알기쉬운 건강진단/HC
+  어린이 천리안/KID
+  어린이 천리안 접속/KID
+  어린이집 놀이방정보/BABY
+  엄마사랑! 아가사랑!/WBABY
+  여대생 전용 룸/WROOM
+  여성 패션/FEM
+  여성JUMP UP 정보/WJUMP
+  여성만의 마실방/WNN
+  여성신문/WN
+  여성클럽/WOMAN
+  여성클럽/WOMEN
+  여자세상 주부경제박사/WWD
+  연구문화단체/STCU
+아 - 아
+  오늘의 Korea Times특강/KTIMES
+  오늘의운세/DOSAT
+  오픈 마이크 우먼타운/WOM
+  외국어 유학/FORLA
+  요람에서 결혼까지/TWN
+  우먼 매거진/WNEWS
+  우먼 클리닉/WCLC
+  우먼 토크쇼/WTALK
+  운세 심리/FORTUNE
+  운세풀이/DOSA
+  운세풀이(그림)/GDOSA
+  워킹우먼/WWN
+  월드패션/WFSN
+  유방암 온라인 상담실/BRC
+  유학정보/WMP
+  육아소프트/BABE
+  응급처치/EMERG
+  이벤트 뱅크/EVENTB
+  이영수QUIZ ENGHISH/LEI
+  인재육성 교육정보/HRD
+  일기예보/WEATHER
+자 - 차
+  자가진단/CHECK
+  자격증 수험정보/LCS
+  재테크 프라자/WPLAZA
+  적중!꿈예언/MONG
+  전문의 의료정보/SDOC
+  조석정보/TIDE
+  종교/BELIEF
+  주택복권당첨안내/LOTTERY
+  쫑 토플 토익/ZONG
+  척추질환의학정보/WEHO
+  철도정보/RAIL
+  청소년 정보마을/YOUTH
+  추천 웹 사이트/WWEBSITE
+  취업 부업/WAR
+  취업 진학/FINDJOB
+  취업정보/JOB
+카 - 하
+  캠퍼스 매거진/CAMPM
+  컴 논술/COMNS
+  컴 스타디/COMSTUDY
+  컴퓨터 파라다이스/PARADISE
+  컴퓨터 학습 상담실/CCON
+  컴퓨터 학습 이용안내/CHELP
+  컴퓨터크리닉/CLINIC
+  컴퓨터학습공부방/CROOM
+  코스모취업정보/COSMO
+  큰꿈이 이야기/GV
+  품질경영 소비자보호/QM
+  프리넷 패션정보/FFSN
+  하선정 요리백과/HDISH
+  학원 강습 정보/ACADEMY
+  학원 해외연수/INSTITU
+  한국예술종합학교/KNUA
+  혈액형진단(그림)/GBLOOD
+  홍보 여론조사/PUBLIC
+  홍보 여론조사/SVY
+  화상취업정보/SUHIL
+[7.기업포럼]
+(주) - Z
+  (주)고려여행사/SUNTOUR
+  (주)다우기술/DAOU
+  (주)두리두리미디어/DRDR
+  (주)마이크로 소프트/MSCH
+  (주)삼성나이세스/NICES
+  (주)신원/SHINWON
+  (주)콜.그린 꽃바구니/CGREEN
+  (주)크라운제과/CROWN
+  (주)한국오라클/ORACLE
+  LG그룹/NEWLG
+  LG전자(주)/LGE
+  LG정유/LGOIL
+  MAC 자료실/MACSP
+  TTS편입정보학원/TTS
+가 - 다
+  가산전자주식회사/KASAN
+  강남대학교 온라인통신/KANGU
+  개인사업포럼/INDIV
+  게임소프트웨어/GAMESW1
+  그룹홍보/GROUP
+  기독교한국루터회 정보통/LCK
+  기아자동차(주)/KIA
+  기업포럼/PCLAND
+  꽃배달-청운방/CUBPR
+  나래이동통신/NARAY
+  나래이동통신/NARAYTEL
+  내외경제연구소/NPLAZA
+  대성셀틱(주)/CELTIC
+  대우가족/DAEWOO
+  대우전자(주)/DWE
+  대우통신(주)/DWPC
+  대학교 온라인통신/USCHOOL
+  대학생과 함께 하는 LG/LGU
+  데이콤 전화한마당/DACOM
+  데이콤전화 상세이용내역/DACALL
+  동양제과/ORION
+라 - 사
+  롯데제과(주)/LOTTE
+  미래서당개인교습/SDM
+  반포텐트/BANPO
+  방송위원회/KBC
+  백화점 유통 패션/DEPT
+  법원/JURIST
+  볼랜드/BORLAND
+  빙그레 주식회사/BING
+  삼성전자/SEC
+  상품세일정보/SALE
+  서울랜드 광고/SLD
+  서울이동통신(주)/ADSEL
+  세계도전코너/TAMSA
+  소프트웨어/SOFT
+  식품 음료/BAKERY
+  신도리코(주)/SINDO
+  쌍방울 다반/IMZ
+  쌍용그룹/SSY
+  씨엠티코리아/CMT
+아 - 아
+  아남산업주식회사/ANAM
+  에스콰이아(주)/ESQ
+  에이스 골프 콘도 헬스/ACE
+  옛틤스 BBS/MAC
+  여행 교육 레저/TRCU
+  영남공인중개사회/YKG
+  오성식생활영어/OSS
+  오토데스크코리아/AUTODESK
+  온라인통신학교 운영위원/ONS
+  온라인학교/SCHOOL
+  유니언플라워/UF
+  인터넷 토탈 정보검색/INFOI
+자 - 카
+  자동차 중고자동차/AUTO
+  자동차종합정보/MOTOR
+  전국대학 연합수업 온라/VNI
+  전국중고자동차 매물정보/UDCAR
+  전자 가전/ELEC
+  정유/OIL
+  제이씨현시스템 (주)/JCHYUN
+  제일제당/CJ
+  종합생활문화/COMPLEX
+  주옥촌(문단작가방)/JUOK
+  지방자치단체 국제화재단/KLF
+  청운방 꽃배달 서비스/CUB
+  카스맥주/CASS
+  컴팩 컴퓨터/COMPAQ
+  컴퓨터 멀티미디어 사무/HW
+  큰틀/KNTL
+타 - 하
+  통신/TEL
+  하이트맥주/HITE
+  한국단학회 연정원/DAN
+  한국메디팜/MEDIPH
+  한국무역협회/KFTA
+  한국복권서비스(주)/LOTO
+  한국썬마이크시스템즈(주/SUN
+  한국아이비엠(주)/IBMUNIX
+  한국에이서(주)/ACER
+  한국이동통신(주)/KMT
+  한국장로교회 NETWORK/PCK
+  한국휴렛팩커드/HPK
+  한도컴퓨터/HANDO
+  한성장례토탈서비스/HJS
+  한솔전자(주)/HANSOL
+  한일건설산업광고/HLPR
+  해태제과주식회사/HAITAI
+  허니문여행사/HONEY
+  현대방송/HBS
+  현대자동차/HDMOTOR
+  현대전자산업(주)/HEI
+  호남정유/HOYU
+[8.뉴스신문  잡지]
+A - Z
+  C 프로그램세계/CPRO
+  CATV/CABLETV
+  HIM/HIM
+  KBS 문자방송/KOINS
+  M21 코리아음악방송/M21
+  P.R NEWS/PRNEWS
+  PC 라인/PCLINE
+  PC 월드/PCWORLD
+  PC통신 통일한마당/HB
+  TV 저널/TVJ
+  TV 타임즈/TVT
+  The Man/MAN
+가 - 나
+  강원일보/KW
+  객석/GS
+  건설경제신문/CENEWS
+  게임챔프/CHAMP
+  격주간 컴퓨터 월드/CW
+  경영과컴퓨터/MNC
+  경제 산업/ECOMAG
+  경제지/ECONEWS
+  경향신문/KHN
+  광주일보/KWJ
+  국내잡지정보/MAGAZINE
+  국좟컵문 정보/KJNEWS
+  국제신문/KJ
+  금융경제/FINANCE
+  날씨/CLIMATE
+  내외통신(북한뉴스)/NWP
+  뉴스/NEWS
+  뉴스 복수정보검색/MULTINEWS
+  뉴스 피플/NEWSP
+  뉴스메이커/NEWSMK
+다 - 마
+  도쿄팩스라인 일본서적/ISK
+  동아일보/DA
+  동양일보/DY
+  레이디 경향/LADYKH
+  마리끌레르/MRC
+  마이웨딩/MYWED
+  마이컴/MYCOM
+  마이크로 소프트웨어/MASO
+  매일경제신문/MEET
+  매일신문/MI
+  매직콜 어게인/AGAIN
+  매직콜 어게인/AGAINDOS
+  맥마당/MMD
+  무등일보/MD
+  문화일보/MHNEWS
+바 - 사
+  법보신문정보/PUBPO
+  보건사회뉴스/BG
+  복수정보검색/MEDUC
+  부산일보/PS
+  불교신문/BUDNEWS
+  생활 예술/LIFMAG
+  생활인의 기상정보/WIC
+  서울경제/SK
+  소프트 월드/SOWORLD
+  스포츠 연예 게임/SPOMAG
+  스포츠 연예신문/SPONEWS
+  스포츠 취미 오락/GAMENEWS
+  스포츠서울/SS
+  시사 저널/SISAJ
+  시사 교양 종교 뉴스/SISANEWS
+  시사 정치/CURMAG
+  신문 시사 만평/SISAM
+  신문기사정보/KINDS
+  신문독자 투고/OPINION
+  실리콘밸리뉴스/JASVNEWS
+아 - 이
+  오성 톱모델/EL
+  여론조사결과/SRI
+  여성 패션/WOMMAG
+  여행 교통 생활 연예 뉴/TOURNEWS
+  연예 TV가이드/TALENT
+  연예영화신문/EM
+  연예정보 신문/EINFO
+  영남일보/YEONGNAM
+  온라인 설문/POLL
+  월간 뉴월드/NEWWD
+  월간 쉬즈/SHES
+  월간 인터넷/INTER
+  월간 천리안 Magicall/CHNEWS
+  월간 홈피씨/HOMEPC
+  윈도우세계/WW
+  일간스포츠/DS
+  일본힛트상품정보/KMCI
+자 - 지
+  잡지/JOURNAL
+  잡지목록 여론조사/CONTENT
+  전문지/SPENEWS
+  전자신문/ETNEWS
+  전자신문 독자투고란/ELEOPI
+  전자신문 클릭/JNEWS
+  정보통신시대/CC
+  제민일보/JJ
+  조선일보/CS
+  조선일보 네티즌 포럼/CNF
+  종합 일간지/GENNEWS
+  주간조선/WCS
+  주간한국/WK
+  중국산업경제속보/CHN
+  중도일보/JD
+  중앙산업뉴스/JI
+  중앙일보뉴스/JANEWS
+  지구촌생활경제정보/GLOBE
+  지역 뉴스/LNEWS
+  지역신문/LOCNEWS
+카 - 하
+  컴퓨터 전자/COMMAG
+  컴퓨터 정보통신 과학 뉴/COMNEWS
+  컴퓨터마인드/CMIND
+  케이블투데이/CATV
+  코리아헤럴드/KH
+  클리핑서비스/CLIP
+  클릭/CLICK
+  타이로스기상정보/TIROS
+  특집! 농구대잔치/DS66
+  포토뮤직/PM
+  하이테크 정보/HITECH
+  한겨레신문/HKR
+  한겨레신문 독자마당/HANOPI
+  한국경제신문/ECONET
+  한국섬유신문/KTN
+  한국일보/HK
+  해외산업경제속보/IBIS
+  행복이 가득한 집/BH
+  헬로우PC/HP
+[9.대화 토론]
+대화 토론/PCMEET
+영어전용 대화/ECHAT
+온라인 대화/CHAT
+온라인 메모/MEMO
+울타리 대화/ULTARI
+조용한대화/TALK
+토론한마당/FORUM
+[10.동호회]
+1 - Z
+  10대동호회/TEN
+  21세기마을/TOWN21
+  30대통신동호회/SD
+  BIOS동호회/BIOS
+  EEC&자동화동호회/EEC
+  IBM UNION 공개자료실/UNION
+  IVF동호회/IVF
+  KAIST 동호회/KAIST
+  NICE동호회/NICE
+  Network User 동호회/NET
+  OS 2동호회/OS2
+  PCWARE동호회/PCW
+  SF동호회-멋진신세계/BNW
+  SPICE동호회/SP
+  TV-Mania 동호회/TV
+  UNIX동호회/UNIX
+  WIND-SKI 동호회/WINKI
+  XBASE동호회/XBASE
+가 - 가
+  가고파 동호회/GAGOPA
+  가톨릭통신동호회/CATH
+  건축동호회/BUILT
+  검과마법 동호회/SWORD
+  게임동호회/GAME
+  견우동호회/KUN
+  고교생활동호회/FHS
+  고시출신공직자동호회/ADMIN
+  고전음악동호회/CLASSIC
+  공간사랑동호회/SPLOVE
+  공간정보연구회/SIS
+  과학그린비/GREEN
+  광고 동호회/ADVER
+  교사 동호회/CHAM
+  교육 종교/EDUCATION
+  국제문제 연구 동호회/GIF
+  국제어 에스페란토 동호/ESP
+  까치멀 동호회/GGACHI
+  꼬꼬모임동호회/COCO
+  꽃들에게 희망을/HFTF
+  꿈의동산/DREAM
+나 - 다
+  나라구실동호회/NARA
+  나무나루터동호회/MKP
+  남가람동호회/JINJU
+  농구동호회/BBC
+  다솜방/JUNIOR
+  달구벌동호회/DAL
+  당구동호회/BILLIARD
+  대학연합동호회/CAMPUS
+  대화오락동호회/OLAK
+  도시 환경동호회/CITY
+  독서토론동호회/READ
+  동서게임채널/LKHDSG
+  동호회/SIG
+  동호회 자료실/SIGPDS
+  동호회안내/SIGINFO
+  동호회운영자협의회/SYSOP
+  동호회일람/SLIST
+  돼지띠동호회/PIG
+  두레마을/MUSIC
+  디지탈동호회/DIG
+  딸사랑 동호회/DAUG
+라 - 마
+  락음악동호회/CRAM
+  러시아 연구 동호회/RUS
+  레크레이션동호회/REC
+  마이크로머신동호회/MICRO
+  만남동호회/DURI
+  만화창작동호회/COMIC
+  매킨토시동호회/MUG
+  머드 동호회/MUD
+  명지대/MJI
+  모두동호회/MODU
+  모두하나동호회/HANA
+  모의전투(서바이벌)동호/SUR
+  모터스포츠 동호회/MAS
+  무림동호회/MURIM
+  문법이론연구모임/GTA
+  문학동호회/LITER
+  문화/CULTURE
+  문화예술사랑동호회/COLL
+  문화유산답사동호회/UL
+  민중가요동호회/MJ
+바 - 바
+  바둑동호회/BADUCK
+  바이러스 치료 동호회/VIRUS
+  바이크동호회/BIKE
+  방송인동호회/BROAD
+  배구동호회/VOL
+  뱀띠동호회/SNAKE
+  법률평론/VENIS
+  보딩동호회/BOARD
+  볼링동호회/BOWL
+  부부사랑동호회/BUBU
+  부산,경남동호회/BUSAN
+  불교동호회/BUD
+  빛고을동호회/PINK
+사 - 사
+  사계절 동호회/SEASON
+  사랑방동호회/LOVE
+  사무자동화동호회/OA
+  사운드카드클럽/SCC
+  사진동호회/PCMAN
+  사회비평동호회/PP
+  사회인 동호회/SOCIAL
+  사회학 동호회/XCY
+  상문 은굳玲호회/SMEK
+  상식동호회/SENSE
+  생활 가정/LIFESIG
+  서(울)초구사랑모임동호/SSM
+  설악동호회/EAST
+  섬사랑동호회/ISLAND
+  셈말동호회/SMAL
+  셈틀소리/SEMTLE
+  소프트웨어동호회/SW
+  수학동호회/MATH
+  수화사랑 동호회/SIGN
+  순수회화동호회/WEST
+  술사랑동호회/BAR
+  스카우트동호회/SCOUT
+  스쿠바 동호회/SCUBA
+  스포츠 레저/LEISURE
+  시뮬레이션/SIMUL
+  시인통신동호회/POEM
+  식도락동호회/EAT
+  신규동호회/SIGOPEN
+  신천지동호회/SCG
+  심리학동호회/SIM
+아.. [1]
+  아름누리/ARI
+  아마추어디자인동호회/AD
+  아마추어무선/HAM
+  아세아연합신학대학 동호/ACTS
+  아이벤트동호회/II
+  아주대학교 동호회/AJOU1
+  아트미디어(MultiMedia+W/AM
+  악기동호회/INST
+  애니메이트(ANIMATE)/ANI
+  애서가동호회/BL
+  애완동물동호회/PET
+  앤시나라동호회/ANSI
+  야구동호회/HOME
+  양띠 동호회/YANG
+  어린이지도자 동호회/BOSAL
+  에어로빅 보디빌딩동호회/ABC
+  에이브이[Audio & Visual/AV
+  여성학동호회/FEMI
+  여행동호회/TOUR
+  역사동호회/HIS
+아..[2]
+  연극마당/THEATRE
+  영동고 영동여고동호회/YDH
+  영어동호회/ENG
+  영화동호회/SCREEN
+  예술/ARTSIG
+  오락 동호회/GAMESIG
+  용띠 동호회/YONG
+  우리말글사랑동호회/KLW
+  우표동호회/STAMP
+  울산동호회/ULSAN
+  원로통신동호회/SENIOR
+  원불교동호회/WON
+  유학과토플동호회/TF
+  인문 과학/CULTURA
+  인천동호회/INCH
+  일본어동호회/JPN
+자.. [1]
+  자동차동호회/CAR
+  자연 과학/NATURAL
+  자유학교/FREE
+  작은별동호회/STR
+  장군멍군골[장기]/JANG
+  장로회신학대학교동호회/JSC
+  재테크동호회/JTC
+  전국한의과대학교동호회/HANI
+  전산이론동호회/COM
+  전자공학 동호회/EE
+  전통차동호회/TEA
+자.. [2]
+  좟컵과학동호회/JF
+  제주대학교 동호회/ARA
+  조선대학교동호회/CSU
+  주부 동호회/JUBU
+  중고교등/CAMPUS3
+  중고등생동호회/BARI
+  중국어동호회/CHINA
+  중국정보교류회/CIT
+  중앙대학교동호회/CAU
+  쥐띠동호회/MOUSE
+  증권동호회/PCSTK
+  증산도동호회/JSD
+  지방정보화 연구회/ISS
+  직장인 동호회/JSIG
+차 - 치
+  참간호 동호회/NURSE
+  창원대학교 동호회/CWNU
+  쳔먕소프트동호회/CHAESO
+  천도선법 동호회/GI
+  천문동호회/COSMOS
+  철학교육자 동호회/SOPHIA
+  청년문화동호회/SANI
+  청주대 동호회/CJU
+  초보자의 뜰/START
+  총신대학교 동호회/CSD
+  추리문학 동호회/CHURI
+  축구 동호회/GOAL
+  충남대학교동호회/CNU
+  충북대학교동호회/CBU
+  충청동호회/CHUNG
+  취미 오락/HOBBY
+  친목/FRIEND
+카 - 크
+  캐드동호회/CAD
+  캠퍼스(가-라)/CAMPUS1
+  캠퍼스(마-사)/CAMPUS4
+  캠퍼스(아-하)/CAMPUS2
+  컬러랜드/CLAND
+  컴퓨레저/COMLE
+  컴퓨터/COMPUTE
+  컴퓨터기자 동호회/PRESS
+  컴퓨터선교회동호회/KCM
+  컴퓨터소그룹동호회/COMGO
+  컴퓨터출판협회동호회/DTP
+  컴퓨터통신/NETWORK
+  큰사람 동호회/KSRB
+타 - 파
+  타임지동호회/TIME
+  탁구동호회/PIN
+  탑비지니스 동호회/TB
+  태공터/FISH
+  토끼띠동호회/TOMO
+  통신사랑모임동호회/TSM
+  패션라이프동호회/SFL
+  페인터 동호회/PAINT
+  편지사랑 동호회/LETTER
+  퐁당동호회/PONG
+  표준렌즈동호회/PHOTO
+  프로그램뱅크동호회/PBANK
+  프로젝트실무과정 동호회/ITEC
+하.. [1]
+  하늘소와 함께/HAN
+  하드웨어동호회/CHC
+  한가족 동호회/FAMILY
+  한국PC통신연합회/KPC
+  한국고고학동호회/ARC
+  한국교원대 동호회/KNUE
+  한국교회지도자동호회/LIGHT
+  한국항공대학교 동호회/AIR
+  한남대학교동호회/HNPC
+  한라 동호회/CHEJU
+  한림대학교동호회/HALLYM
+  한백오름/HAC
+하.. [2]
+  한양대학교동호회/HANYANG
+  한우동호회/HANWOO
+  한우리방/FUTURE
+  항공스포츠동호회/SKY
+  해외 DB동호회/DB
+  현대철학동호회/PT
+  호랑이모임동호회/HOMO
+  호스트동호회/HOST
+  홍익대학교동호회/HIC
+  홍익대학교미술대학동호/HUAC
+  환상빌리지/FANTA
+  휘문 진선동호회/WMJS
+[11.매직콜길잡이]
+가 - 사
+  가입정보 변경신청/QMY
+  개인메뉴/MYMENU
+  개인수첩/DIARY
+  개인스케줄관리 금일일정/DISPSCH
+  교육 이용설명서 신청/ONEDU
+  데이콤 서비스/DSVC
+  매직콜 기행/CHOL
+  매직콜 길잡이/GUIDE
+  명령어 사용법HOW-TO
+  비밀번호변경/PASSWD
+  서비스 안내/SERV
+  서비스유보 해지/IDD
+  서비스이용관련/QGUIDE
+  신고코너/SINGO
+  신규 이용자를 위한 자료/STPDS
+아 - 하
+  약관/AGREE
+  에디터(편집기) 사용법/EDITOR
+  요금납부방법변경/BWAY
+  우수이용자 추천및 제안/EX
+  이용내역검색/BILLMENU
+  이용안내/WAY
+  인터넷 정복하기/INTGUIDE
+  자기소개 변경/MMY
+  자기정보열람/RMY
+  정보 이용현황/INFOBILL
+  정보소재찾기/FIND
+  제안 문의 신고/SOS
+  천리안 Magicall 접속안/ACCESS
+  통신 사용자영역 이용현/BILL
+  환경 설정/MEMMEM
+  환경설정/ENV
+  회원정보 검색/ROTHER
+[12.매직콜토픽]
+'96 프로야구 축제!/PROB
+2002 월드컵 코리아!/2002
+FIFA메일보내기/FIFA
+GO명 알아보기/GOLIST
+GO명 알아보기/LIST
+공지사항/NOTICE
+공지사항 모음/INFORM
+기업포럼 통신학교-토픽/TOPNEW2
+매직콜 마당/TOPICS
+매직콜 토픽/TOPIC
+방송 연예 오락-토픽/TOPNEW1
+일반 전문 생활-토픽/TOPNEW
+정보분야별 동시검색/MULTI
+[13.문화 레포츠]
+1 - Z
+  96미시모델 선발대회/MISSY
+  AD CLUB/ADCLUB
+  ART&ARTS/ARTS
+  CD-ROM 타이틀정보(Down/CDROM
+  CF BANK/CF
+  PC 만화방/PCCOMIC
+  WINE/WINE
+가 - 다
+  갤러리프롬나드/GPROM
+  결혼정보/WED
+  경마박사/HD
+  골프다이제스트/GOLFD
+  관굼畔소(그림)/GSIGHT
+  관광정보데이타베이스/KOTOUR
+  광고세상/ADVT
+  국내외 숙박 여행정보/NTOUR
+  그림강좌(그림)/CANVAS
+  내고향쉼터(그림)/GNONG
+  내고향쉼터(농가민박)/NONG
+  내일로 가는 배낭여행/IBN
+  다크호스 경마분석/DK
+  덩크슛/DUNK
+  듀오배우자 미팅정보/MEETING
+  드림박스/DREAMBOX
+  드림포토정보/DP
+라 - 마
+  레저 건강정보/LH
+  레포츠 만남! 최민수/GEOIN
+  레포츠전문지/LEPORTS
+  로드쇼/ROAD
+  만화&애니메이션세상/CNA
+  만화 동화/CARTOON
+  만화 동화(그림)/GCOMIC
+  멋 분위기 있는 공간/MOOD
+  모델 패션 광고/MODF
+  모델 패션정보/MODEL
+  모델정보/MOD
+  문학 컴퓨터문단/LITERA
+  문화 레포츠/CULT
+  문화 레포츠/LEPORT
+  문화계 소식/CULNEWS
+  문화예술정보/ITECH
+  문화체육부소식/MC
+  문화행사안내/CULTU
+  미스코리아 정보/MISSK
+바 - 사
+  브라이트시네마/BCINEMA
+  비디오 길잡이/VMOVIE
+  비디오 천국/VPLAZA
+  비디오 영상/UVIDEO
+  사진 취미 광고/PH
+  섬따라 파도따라/BEACH
+  세계의광고/ADVIEW
+  세계지도정보/WMAP
+  스크린/SCR
+  스타워즈 TRILOGY/STARWARS
+  스포츠 레져/SPORTS
+  시네마광장/CINEMAM
+  시네필/CINE
+  신세대 미팅 결혼/XMEET
+  신세대를 위한성의세계/YSWLD
+아 - 자
+  알트만배우자정보/ALTM
+  애니타임/ANITIME
+  애완동물정보/PETS
+  에코러스배우자정보(정보/ECR
+  여행/TRAVEL
+  온라인 VIEW/VIEW
+  우표정보/STM
+  월간루키/ROOKIE
+  음식점안내/FOOD
+  음악 미술/ART
+  이벤트 미팅/EMEET
+  자동차로도전하는대륙횡/WORLD
+  전국YMCA 소식/YMCA
+  전자지도/MAP
+  전자화랑/MPC
+  제주소식/JEJUNEWS
+카 - 하
+  카멜롯의 전설/CAMELOT
+  컴퓨터 문단/DEBUT
+  코드명J/CODEJ
+  코스피아레포츠/KOSPIA
+  태극조각그림/TCLIP
+  토탈무비광장/TMOVIE
+  패션정보/FASHION
+  프로야구속보/KBO
+  프로야구정보 코비/KOBI
+  한국경마안내/HORSE
+  해외관광 박람회(일반)/WTOUR
+  해외모델 에이젼시/FMMODEL
+  해외여행 상품정보/KTM
+  해외여행정보/TOURTIMES
+  허구연의 프로야구 24시/BASEBALL
+  활동사진21/HD21
+[14.방송 연예]
+0 - <
+  0시의 세종로/TBSZERO
+  0시의 재즈/JAZZ
+  10시! 임성훈입니다/MBC10
+  12시에 만납시다/TWELVE
+  1318 힘을 내/1318
+  2라디오에 물어보세요/KBSQNA
+  96 라디오 주간 PC토론/MBCRADIO
+  << 김기덕의 POP교실 >>/POPPM2
+  <TV 구인광고>인재를 찾/WANT
+  <생방송>EBS 수능특강/EBSLIVE
+  <생방송>우리들의 광장/EBSOK
+  <생방송>청소년 상담실/EBSCOUN
+C - E
+  CBS 열린세상/CBS
+  EBSR 방송참여/EBSR
+  EBSTV 방송참여/EBSTV
+  EBS와 함께/EBS
+K - K
+  KBS 뉴스 제보/KBSNEWS
+  KBS 스포츠 파노라마/SPORAMA
+  KBS 시청자 프로그램 제/TVIDEA
+  KBS 시청자의견을듣습니/OMBUSMAN
+  KBS 여수/KBSYS
+  KBS 영화방/CINEMA
+  KBS 제주/JJKBS
+  KBS-2TV 가요TOP10/TOP10
+  KBS-2TV게임천국/TVGAME
+  KBS/KBS
+  KBS2TV 추적60분/KBS60
+  KBS라디오 김홍신 김수미/HELLO
+  KBS라디오 열린마당/KBSR
+  KBS위성방송소식/KBSDBS
+  M21 정재환의 뮤직캠프/M21CAMP
+M - M
+  MBC TV속의 TV/TVTV
+  MBC 김현철의 디스크쇼/DISK
+  MBC 라디오 컴퓨터쇼/RACOM
+  MBC 박소현의 FM데이트/FMDATE
+  MBC 배유정의 영화음악/FMCINE
+  MBC 사랑의 스튜디오/MBCLOVE
+  MBC 손에 잡히는 경제/HAND
+  MBC 스페셜/SPECIAL
+  MBC 시사매거진2580/MBC2580
+  MBC-TV/MBCTV
+  MBC-TV PD수첩/PDD
+  MBC-TV 경찰청 사람들/POLMAN
+  MBC-TV 라디오/MBC
+  MBC라디오/MRADIO
+  MBC카메라출동/CAMERA
+  Magicall-Win 이벤트/MAGICALL
+S - S
+  SBS '95수퍼에리트 모델/ELITE
+  SBS TV 참여코너/SBSTV
+  SBS TV영화 아스팔트 사/SBSMAN
+  SBS 광복50주년기념 모래/SBSMOLE
+  SBS 기동취재 다이알 200/DIAL
+  SBS 남량특집 SF 냉동인/ICEMAN
+  SBS 테마여행 세상끝까지/TRIP
+  SBS-TV 코리아 게이트/GATE
+  SBS에서 만나요/SBS
+  TBC와 만나요!/TBC
+T - T
+  TV TOEIC/TVTOEIC
+  TV 동창회/TVCLASS
+  TV 퀴즈 미팅/TVMEETING
+  TV 퀴즈대학/KBSQUIZ
+  YTN Online/YTN
+가 - 나
+  가요 팝/MUSICPOP
+  가족오락관/ORAK
+  강릉MBC/KRMBC
+  경향신문 독자투고란/KHSIN
+  광주MBC/KJMBC
+  광주방송/KBCTV
+  교통방송/TBS
+  교통신문 자동차저널 독/TRAOPI
+  국민일보 독자투고란/KMOPI
+  김한길의 열린세상/KHK
+  김현주의 음악살롱/SALON
+  깨어있는 당신을 위하여/WAKE
+  날아라 호킹/HOKING
+  내 친구 문화일보/MOONHWA
+  노영심이 여는 세상/KBS0SIM
+  논술세대 장학퀴즈/JANGHAK
+다 - 마
+  대구CBS 12시의 정보데이/TGCBS
+  대구MBC/TGMBC
+  대전 MBC-AM 젊음이 있는/DJMBC
+  동아일보 독자투고란/DAOPI
+  라디오 TOEIC 강좌/RTOEIC
+  라디오방송 CATV/STATION
+  리마스 문자속보/RIMAS
+  마산MBC/MSMBC
+  매일경제신문 독자투고란/MIOPI
+  모두가 사랑이예요/ALLOVE
+  목포 KBS/KBSMP
+  목포MBC/MPMBC
+  뮤직 네트워크/MUSICNET
+  뮤직라이프/ML
+  미디어마을/MEDIACITY
+바 - 사
+  방송/MEDIA
+  방송프로그램안내/TOPICMEDIA
+  베스트 10/BEST10
+  별이 빛나는 밤에/BRIGHT
+  부산MBC-AM/BSMBC
+  부산방송/PSBTV
+  부산일보 독자투고란/PSIL
+  삼척 MBC/SCMBC
+  새미기픈믈/SAMMUL
+  새벽이 아름다운 이유/MBCDAWN
+  생방송 아침/MORNING
+  서울신문 독자투고란/SEOPI
+  세계일보 독자투고란/SGTIMES
+  세권逑보정보/SKM
+  세상은 넓다/WWIDE
+  소년소녀가장을 위한 사/EBSLOVE
+  소비자 시대/SOBIJA
+  송지나 영상세계/JCOM
+  슈퍼선데이/SUNDAY
+  스타가 되기까지/MBCSTAR
+  스타사랑/STAR
+  스타월드/STW
+  시네마천국/EBSCINE
+  시청자 옛팡우카드제/KBSYC
+  시청자 참여코너/KBSTV
+  신성일 스타패밀리/SSI
+  신세대 보고 어른들은 몰/KBSED
+  신해철의 FM음악도시/FMCITY
+  싱싱한 아침세상 박무일/SINGSING
+아 - 아
+  아름다운 당신에게/YOU
+  아름다운 세상 커다란 꿈/EBSASKG
+  엄마는 못말려/MOTHER
+  여성시대/YEOSUNG
+  여수MBC/YSMBC
+  연예/ENTERTAIN
+  연예가 중계/KENT
+  연예가뉴스/AMUSE
+  오후의 클래식/MUSE
+  우리들/WE
+  우리들의 스타/OURSTAR
+  우정의 무대/SF
+  울산MBC-FM AM/ULAMFM
+  웃으며 삽시다/SMILE
+  원주 MBC-FM/WJMBC
+  이것이 궁금하다/THIS
+  이경실의 세상을 만나자/SESANG
+  이무송 & 노사연/HAMA
+  이문세쇼/LEESHOW
+  이본의 볼륨을 높여요/VOLUP
+  이용안내 모음/ANNE
+  이주노의 FM 인기가요/FM2
+  이홍렬 쇼/HONGSHOW
+  인간탐험 뉴스따라잡기/HNEWS
+  인기가요 베스트 50/BEST50
+  인기스타 팬클럽/FAN
+  일요예술무대/ARTER
+  일요일 일요일 밤에/ILBAM
+자 - 자
+  저녁 스케치939/939
+  전국 주부대항 퀴즈/MRS
+  전주 MBC 라디오/MBCJUNJU
+  전주KBS-FM 2시에 만납시/KBSJUNJU
+  정보특급 금요베스트 10/SBSBEST10
+  정효성의 뮤직쇼/JMSHOW
+  제주MBC/JJMBC
+  조선일보 독자투고란/CHOSUN
+  주병진나이트쇼/MBCJBJ
+  중앙일보 독자투고란/JOONGANG
+  지구촌 영상음악/GMV
+  지구촌 영상음악/KGM
+  지금은 라디오 시대/GRC
+  지역 민영방송/AMFM
+ㅊ - 타
+  체험 삶의 현장/LIFE
+  초보자 탈출하기/123
+  초이스 뮤직 비디오/CMV
+  추적, 사건과 사람들/SAGUN
+  춘천MBC/CHMBC
+  출발! 모닝와이드/WIDE
+  출발!서울대행진 1,2부/TBSGO1
+  컴퓨터는 내친구/EBSCOM
+  코미디 일번지/KBS7
+  코미디 전망대/COJUN
+  클럽 m.net/MNET
+  터놓고 말해요/EBSOPEN
+  테마게임/THEME
+  토요일 전원출발/SAT
+파 - 하
+  팝스 & 잉글리시/EBSPOPS
+  퍼즐특급열차/PUZZLE
+  포항MBC/PHMBC
+  폭소 발명왕/EDISON
+  피키연예채널/PKEY
+  하덕규의 CCM캠프/CCM
+  한국경제신문 독자투고란/HKECO
+  한국일보 독자투고란/HKOPI
+  한밤의 TV 연예/HANBAM
+  행운의 일요특급/LUCKY
+  현장출동 김승규/KSG
+  황인용의 FM모닝쇼/MSHOW
+[15.부동산]
+까치라인/ILINE
+대한부동산신탁 매물정보/KORET
+분양 및 임대사무실 정보/MH
+분양 매물정보/ALLOT
+[16.전자우편]
+FAX 서비스/FAX
+게시판 그림엽서/GEMAIL
+그림엽서받기/GRMAIL
+그림엽서보내기/GWMAIL
+부재기간등록/NOMAN
+사용자영역/WORK
+쓰기및보내기/FWMAIL
+전자우편/MAIL
+주소록 등록/ADDRESS
+편지배달확인/CMAIL
+편지쓰기/WMAIL
+편지읽기/RMAIL
+[17.증권]
+SBC 증권현장뉴스/SBC
+고려증권투자정보/COSCO
+골든힐브라더스/GHB
+대신증권/DSSTK
+엄길청 투자가이드/API
+여의도증권투자정보/YS
+우진골든포인트/WIS
+제일증권홈트레이딩/JISTK
+주가지수 선물정보/SISI
+손에 잡히는 경제/SHAND
+재개발 재건축 전원주택/KSI
+토지정보(토지개발공사)/KLDC
+주식연구소투자정보/JYI
+주식전략핫라인(전문)/HOTLINE
+증권/STOCK
+한일투자자문/HIMCO
+현대증권/HDSISE
+현대증권 그래프정보(그/GHDSTK
+홈트레이딩 서비스/HTS
+[18.초기메뉴]
+천리안 Magicall/TOP
+[19.학술 문헌]
+A - Z
+  EMBASE의약학정보/EMBASE
+  ISO 정보/ISO
+가 - 바
+  간호학 학위논문 초록/NURINDEX
+  과학 기술/SCIENCE
+  과학 기술/TEC
+  관리기술정보 목록/MTECH
+  광주중앙도서관/KLIBRARY
+  국립중앙도서관/LIBRARY
+  국어정보학회정보/KLIS
+  국회도서관 문헌정보/NOLIS
+  규격/STANDARD
+  기독교 도서정보/NIC
+  기술복덕방/TECROOM
+  대한수학회정보/KMSI
+  도서평론정보/KPEC
+  불교자료실/BBSDATA
+사 - 하
+  산업경영 종합정보/DR
+  상표/MARK
+  상표정보/TM
+  수송기계기술정보/MARINE
+  스크린북 서점/SB
+  시험연구알선 이용알선/TRE
+  약품 제약업체정보/DRUG
+  에너지 기술정보/ETIS
+  에너지 절약정보/KEMCO
+  역사현장/HIST
+  예인 전자도서관/YEIN
+  온라안 서점/ONBOOK
+  온라인 기독자료실/KIDOK
+  우주과학 군사무기/SPACE
+  의약논문/DRPAP
+  의학논문/MEDINDEX
+  의학정보/MEDIC
+  인포메카종합도서정보/BOOKINFO
+자 - 파
+  전문문헌 정보/ADVANCE
+  전문의코너/DOCTOR
+  전자 사전/ELECDIC
+  전자도서관도깨비방망이/DOBY
+  정보통신 동향/CCINFO
+  종교관련 정보/RELIGION
+  최신일본자료정보/NADA
+  컴퓨터 용어사전정보/EDIC
+  특허/PATENT
+  특허정보(전문)/PIS
+  표준화소식/STDNEWS
+  학술 문헌/REFER
+  학술정보/EDUPIA
+  한국사회과학도서관/KSSL
+  한국산업규격/KS
+  한일도서정보/HANIL
+  해외전자정보/ENI
+  현대지식정보사전/COKID
+  형식승인및통신기기정보/HSSI
+[20.해외서비스]
+DIALOG 접속/DL
+Dialog 접속/DIALOG
+KNOWLEDGE INDEX 접속/KI
+KORDIC-NET/KORDIC
+LEXIS NEXIS/LEXIS
+Web Guide/WEBG
+고퍼/GOPHER
+미국학위논문 신청/UMI
+아태평화재단/ATAE
+원격접속/TELNET
+월드와이드웹/WWW
+인터넷 전자우편/EMAIL
+인터넷접속/INTERNET
+일본 PCVAN 접속/PCVAN
+일본과학기술정보/JOIS
+파일전송/FTP
+한글 인터넷 정보/HINT
+해외 서비스 연결/OUTSVC
+[21.홈쇼핑 홈뱅킹]
+A - Z
+  C 마트/CMART
+  CD-ROM 주문/MASHOP
+  KBS 비디오 영상물 주문/VIDEO
+가 - 나
+  가우자리영화예약/GAUJARI
+  각종생활용품/DAILYPRO
+  강원은행 홈뱅킹/KWB
+  건강식품 가공식품/HFOOD
+  게임기 소프트웨어/GAMESW
+  경남은행 홈뱅킹/KNB
+  공연물예매/TICKET
+  광주은행홈뱅킹/KINS
+  교보문고/KYOBO
+  교보문고(그림)/GKYOBO
+  국내외 꽃배달/FLOWER
+  국민은행 홈뱅킹/KMB
+  귀금속이베레떼/EBE
+  꽃 케이크 배달/FCAKE
+  꽃배달(국내외)/GFLOWER
+  나눔바자클럽/BAZAR
+  나이세스 홈쇼핑/NICESHOP
+  농 수산물/OFISH
+  뉴스이벤트플라워/NEF
+다 - 바
+  대구은행 홈뱅킹/DGB
+  대동은행홈뱅킹/DDB
+  대한서림/DHBOOK
+  대한항공/KAL
+  더 하우스 홈쇼핑/THEHOUSE
+  도서 번역/BOOK
+  도서 번역/TRAN
+  동.서양난/NAN
+  동아백화점주문/DONGA
+  렌트카 자동차 검사/RENT
+  매직콜 쇼핑(GUEST)/MASHO
+  매직콜 홈쇼핑/MHS
+  멀티미디어 2000/ARISU
+  백화점/DEPTSTORE
+  보람은행 홈뱅킹/BRB
+  보석 악세사리/JEWAC
+  부산은행 홈뱅킹/PSB
+  비씨카드 홈뱅킹/BC
+사 - 사
+  삼성홈마트/HMART
+  상업은행 홈뱅킹/CBK
+  서울랜드 이용권/SLAND
+  서울랜드 공연물/LANDTICKET
+  서울랜드이용권/GSLAND
+  서울은행 홈뱅킹/SBNET
+  선물상품코너/NETPLAZA
+  소프트 마트/SOD
+  소프트웨어 주문/SWINFO
+  수협/NFFC
+  스페이스완구백화점/TOY
+  신세계백화점주문/SSG
+  신한은행 PC뱅킹/SHB
+아 - 아
+  아시아나 항공/ASIANA
+  아프로만/APRO
+  외국학술서적/HBC
+  외환은행 홈뱅킹/KEB
+  월덴투/W2
+  은행/BANKCD
+  음반 비디오/RVIDEO
+  음반 비디오(그림)/GRECORD
+  음반 비디오테이프/RECORD
+  이디알 통신판매/EDR
+  이사예약/TONGIN
+  이스로마향수/EAS
+  임금님의 아이디어/INNO
+자 - 차
+  전국꽃배달서비스/FDM
+  전국특산품 주문판매/POST
+  전문BBS광장/PBBS
+  정보통신기기 과학기자재/SCI
+  제일은행 PC종합 서비스/KFB
+  조흥은행 홈뱅킹/CHB
+  주문/SHOP
+  주문내역조회/GINQ
+  주문내역조회/INQ
+  주택은행 홈뱅킹/KHB
+  중소기업은행 홈뱅킹/IBK
+  쥬얼랜드/JEW
+  청록천/CHEONG
+  충청은행홈뱅킹/CCB
+  취업관련서적/JBOOK
+  취업관련서적(그림)/GJBOOK
+카 - 하
+  칼라상품코너/COLOR
+  컴퓨터관련서적/CBOOK
+  케이크배달/CAKE
+  통신기기 과학기기/INFO
+  통신판매 텔레마트/TELEMART
+  티지오정보통신/SHOPPING
+  프로랜스 언어번역서비스/PROLANGS
+  하나은행 홈뱅킹/HNB
+  하드웨어 소프트웨어/HWSW
+  하이쇼핑/HI45
+  학술정보은행/HAK
+  한미은행 홈뱅킹/KAB
+  한일북네트/HIP
+  한일은행 홈뱅킹/HIB
+  해외존뜯간행물/WILLMAX
+  향수갤러리/PERFUME
+  호텔 콘도 레져/CAMP
+  홈뱅킹/HBANK
+  휴대폰 삐삐주문/SIC
+  휴대폰 삐삐주문

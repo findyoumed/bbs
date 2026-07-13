@@ -27,6 +27,11 @@ export function initializeAppFactoryRuntime(deps) {
     // 쪽지 화면에서 뒤로가기 시 메인으로 튕기던 문제(menuNavigation.js handleHistoryBack)
     // 둘 다 이 누락이 원인이었다.
     ...screens.memoScreens,
+    // [LOG_ID: 20260713_2100] refs.showHelp/showPolicy가 빠져 있어 GUIDE 메뉴의
+    // "명령어안내"/"이용약관"/"개인정보처리방침" 바로가기(menuNavigationActions type='help'/'policy')가
+    // 항상 조용히 실패(return false)하던 문제 — MEMO 때(20260713_1700)와 동일한 유형의 누락.
+    showHelp: screens.helpScreens.showHelp,
+    showPolicy: screens.policyScreens.showPolicy,
     showSignup: screens.signupModule.showSignup,
     showMain: screens.showMain,
     showBoardSelect: screens.showBoardSelect,

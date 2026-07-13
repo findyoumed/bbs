@@ -1,5 +1,5 @@
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
-import { renderAnsiScreenWithTopbar, renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential, renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
 
 // [LOG_ID: 20260713_1620] 하이텔 원전(길라잡이 p.105) 편지 종류 8종 — 비밀/답장요망/지연
 // 3개 속성의 조합. 서버 스키마 변경 없이 제목 앞 대괄호 태그로 인코딩한다.
@@ -52,6 +52,7 @@ export function createMemoScreens(deps) {
         esc,
         getSupportedFooterText,
         getMenuNodeByKey,
+        renderScreenSequential,
         screenEl,
         setHint,
         setLoading,
@@ -125,9 +126,15 @@ export function createMemoScreens(deps) {
             state._memos = box === 'inbox' ? (memos || []).filter((m) => !isDelayedMemoPending(m)) : (memos || []);
 
             const ansiText = buildMemoListAnsi(state._memos, box);
-            renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
-
-            await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
+            await renderAnsiScreenWithTopbarSequential({
+                ansiText,
+                ansiToHTML,
+                screenEl,
+                renderScreenSequential,
+                afterBodyRender: async () => {
+                    await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
+                }
+            });
             focusCommandInput();
         } catch (e) {
             renderMemoStatus(`쪽지 목록을 불러오지 못했습니다. ${String(e?.message || '알 수 없는 오류입니다.')}`);
@@ -168,20 +175,26 @@ export function createMemoScreens(deps) {
             }
 
             const ansiText = buildMemoViewAnsi(hydratedMemo, state.user?.userId);
-            const rendered = renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
             const deleteConfirm = state._memoDeleteConfirm;
             const deleteConfirmHtml = deleteConfirm && String(deleteConfirm.memoId || '') === String(state._currentMemoId || '')
                 ? '<div class="ansi-line ansi-yellow">[안내] 이 쪽지를 삭제하시겠습니까? (y/n)</div>'
                 : '';
-            if (deleteConfirmHtml) {
-                rendered.screenNode?.querySelector('.ansi-screen-body')?.insertAdjacentHTML('beforeend', deleteConfirmHtml);
-            }
-
-            await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
-            if (deleteConfirmHtml) {
-                setHint('삭제하려면 Y, 취소하려면 N을 입력하세요.');
-                setPrompt('삭제 (y/n) >>');
-            }
+            await renderAnsiScreenWithTopbarSequential({
+                ansiText,
+                ansiToHTML,
+                screenEl,
+                renderScreenSequential,
+                afterBodyRender: async () => {
+                    if (deleteConfirmHtml) {
+                        screenEl?.querySelector('.ansi-screen-body')?.insertAdjacentHTML('beforeend', deleteConfirmHtml);
+                    }
+                    await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
+                    if (deleteConfirmHtml) {
+                        setHint('삭제하려면 Y, 취소하려면 N을 입력하세요.');
+                        setPrompt('삭제 (y/n) >>');
+                    }
+                }
+            });
             focusCommandInput();
         } catch (e) {
             renderMemoStatus(`쪽지를 읽지 못했습니다. ${String(e?.message || '알 수 없는 오류입니다.')}`);

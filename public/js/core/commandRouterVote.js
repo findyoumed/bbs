@@ -2,7 +2,6 @@
 export function createVoteCommandHandler(deps) {
   const {
     showMain,
-    showBoardSelect,
     showVoteList,
     showVoteDetail,
     castVote,
@@ -16,7 +15,9 @@ export function createVoteCommandHandler(deps) {
   return async function handleVoteCommand({ s, cmd, rawCmd, context }) {
     if (s === 'vote-list') {
       if (cmd === 'T') { await showMain(); return true; }
-      if (cmd === 'P' || cmd === 'M') { await showBoardSelect('game'); return true; }
+      // [LOG_ID: 20260714_1200] 여론광장은 이제 최상위(TOP 7) 항목이라 상위(P/M)는 초기화면으로 간다.
+      // (종전엔 오락실 하위였으므로 showBoardSelect('game')이었다.)
+      if (cmd === 'P' || cmd === 'M') { await showMain(); return true; }
       if (cmd === 'W') {
         if (!context || context.isGuest) {
           setHint('설문조사 등록은 로그인 후에 가능합니다.');
@@ -35,7 +36,9 @@ export function createVoteCommandHandler(deps) {
 
     if (s === 'vote-detail') {
       if (cmd === 'T') { await showMain(); return true; }
-      if (cmd === 'P' || cmd === 'M') { await showBoardSelect('game'); return true; }
+      // [LOG_ID: 20260714_1200] 여론광장은 이제 최상위(TOP 7) 항목이라 상위(P/M)는 초기화면으로 간다.
+      // (종전엔 오락실 하위였으므로 showBoardSelect('game')이었다.)
+      if (cmd === 'P' || cmd === 'M') { await showMain(); return true; }
       if (cmd === 'B') { await showVoteList(); return true; }
 
       const voteId = state.serviceData?.voteId;

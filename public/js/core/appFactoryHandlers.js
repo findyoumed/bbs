@@ -136,6 +136,7 @@ export function createAppFactoryHandlers(deps) {
     showChatLobby: screens.chatScreens.showChatLobby,
     showHelp: screens.helpScreens.showHelp,
     showHistory: screens.helpScreens.showHistory,
+    showPolicy: screens.policyScreens.showPolicy,
     handleHistoryBack: screens.handleHistoryBack,
     setHint: services.terminalUiCore.setHint,
     setPrompt: services.terminalUiCore.setPrompt,

@@ -2,7 +2,7 @@
  * [LOG: 20260426_0210] 시스템 관련 화면 처리 (Who is online 등)
  */
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
-import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 
 export function createSystemScreens(deps) {
   const {
@@ -13,6 +13,7 @@ export function createSystemScreens(deps) {
     buildSystemDiagnosticsAnsi,
     getCommandFooterText,
     getSupportedFooterText,
+    renderScreenSequential,
     screenEl,
     setLoading,
     updateURL,
@@ -27,8 +28,10 @@ export function createSystemScreens(deps) {
   // - applyCommandFooter를 호출해 setReady(true)까지 위임한다. 기존엔 setLoading()만 걸고
   //   setReady를 한 번도 부르지 않아, 내부 400ms 로딩 타이머가 취소되지 않고 뒤늦게 발동해
   //   방금 그린 화면을 "연결하는 중입니다"로 영구히 덮어써 버리는 결함이 있었다.
-  function renderSystemAnsiScreen(ansiText) {
-    renderAnsiScreenWithTopbar({ ansiText, ansiToHTML, screenEl });
+  // [LOG_ID: 20260713_2000] renderAnsiScreenWithTopbarSequential로 전환 — 위→아래 순차 스트리밍 후
+  // 본문+푸터가 함께 드러나도록 afterBodyRender에 footer 콜백을 받는다.
+  async function renderSystemAnsiScreen(ansiText, afterBodyRender) {
+    await renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTML, screenEl, renderScreenSequential, afterBodyRender });
   }
 
   function renderSystemError(message) {
@@ -39,13 +42,14 @@ export function createSystemScreens(deps) {
     state.screen = 'active-users';
     if (!fromHistory) updateURL();
     setLoading('연결하는 중입니다..');
+    const applyFooter = () => applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     try {
       const users = await apiFetch('/api/system/active-users');
-      renderSystemAnsiScreen(buildActiveUsersAnsi(users || []));
+      await renderSystemAnsiScreen(buildActiveUsersAnsi(users || []), applyFooter);
     } catch (e) {
       renderSystemError('접속자 정보를 가져오지 못했습니다.');
+      await applyFooter();
     }
-    await applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
     }
@@ -55,14 +59,15 @@ export function createSystemScreens(deps) {
     state.screen = 'activity-summary';
     if (!fromHistory) updateURL();
     setLoading('활동 내역을 분석하는 중입니다..');
+    const applyFooter = () => applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     try {
       const data = await apiFetch('/api/system/activity-summary');
       const { buildActivitySummaryAnsi } = deps;
-      renderSystemAnsiScreen(buildActivitySummaryAnsi(data));
+      await renderSystemAnsiScreen(buildActivitySummaryAnsi(data), applyFooter);
     } catch (e) {
       renderSystemError('활동 요약을 가져오지 못했습니다.');
+      await applyFooter();
     }
-    await applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
     }
@@ -72,13 +77,14 @@ export function createSystemScreens(deps) {
     state.screen = 'system-diagnostics';
     if (!fromHistory) updateURL();
     setLoading('시스템 정보를 수집하는 중입니다..');
+    const applyFooter = () => applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     try {
       const info = await apiFetch('/api/system/info');
-      renderSystemAnsiScreen(buildSystemDiagnosticsAnsi(info));
+      await renderSystemAnsiScreen(buildSystemDiagnosticsAnsi(info), applyFooter);
     } catch (e) {
       renderSystemError('시스템 정보를 가져오지 못했습니다.');
+      await applyFooter();
     }
-    await applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
     }

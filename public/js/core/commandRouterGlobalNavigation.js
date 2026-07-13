@@ -11,6 +11,7 @@ export function createGlobalNavigationCommandHandler(deps) {
     showMyInfo,
     showHelp,
     showHistory,
+    showPolicy,
     handleHistoryBack,
     setHint,
     setPrompt,
@@ -185,6 +186,24 @@ export function createGlobalNavigationCommandHandler(deps) {
         const prevPage = (state.page || 1) - 1;
         if (prevPage >= 1) {
           await showHelp('', prevPage);
+        }
+        return true;
+      }
+    }
+
+    // [LOG_ID: 20260713_2100] GUIDE 이용약관/개인정보처리방침 뷰어 페이징 (help와 동일 패턴)
+    if (state.screen === 'policy') {
+      if (cmd === 'F') {
+        const nextPage = (state.page || 1) + 1;
+        if (nextPage <= (state.policyTotalPages || 1)) {
+          await showPolicy(state.policyKind, nextPage);
+        }
+        return true;
+      }
+      if (cmd === 'B') {
+        const prevPage = (state.page || 1) - 1;
+        if (prevPage >= 1) {
+          await showPolicy(state.policyKind, prevPage);
         }
         return true;
       }

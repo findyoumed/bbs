@@ -173,7 +173,18 @@ export function createMenuNavigationActions(deps) {
       refs.showMyInfo();
       return true;
     }
-
+    // [LOG_ID: 20260713_2030] 나우누리 GUIDE 화면의 "31.명령어" 바로가기 — 기존 H/HELP
+    // 전역 명령과 동일 화면(refs.showHelp) 재사용.
+    if (node.type === 'help' && typeof refs.showHelp === 'function') {
+      await refs.showHelp();
+      return true;
+    }
+    // [LOG_ID: 20260713_2100] GUIDE 화면 "12.이용약관" 등 정적 문서 뷰어 — target 속성으로
+    // tos/privacy 중 어느 문서를 열지 지정한다(기본값 tos).
+    if (node.type === 'policy' && typeof refs.showPolicy === 'function') {
+      await refs.showPolicy(String(node.target || 'tos').trim());
+      return true;
+    }
     return false;
   }
 

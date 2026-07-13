@@ -262,7 +262,19 @@ export function createRoutingStateRestorer(deps) {
       state._memoBox = box;
       await showMemoList(true);
     },
-    // [LOG: 20260623_0013] game(vote/ranking) 라우트 복구 핸들러 (origin/main 포팅)
+    // [LOG_ID: 20260714_1200] 여론광장(ACRO) 라우트 — 투표/설문. 종전 /game/vote 하위에 있던 것을
+    // 최상위로 옮겼다(오락실 하위 중복 항목 제거와 함께). /acro, /acro/create, /acro/:voteId.
+    async acro(segments) {
+      const [, sub] = segments;
+      if (sub === 'create') {
+        if (typeof showVoteCreate === 'function') return await showVoteCreate(true);
+      } else if (sub) {
+        if (typeof showVoteDetail === 'function') return await showVoteDetail(Number(sub), true);
+      }
+      if (typeof showVoteList === 'function') return await showVoteList(true);
+      return await showMain(true);
+    },
+    // [LOG: 20260623_0013] game(ranking) 라우트 복구 핸들러 (origin/main 포팅)
     async game(segments) {
       const [, sub, param] = segments;
       // [LOG_ID: 20260623_1630] Restore local GAME utility routes that share /game/* with vote/ranking.
@@ -285,14 +297,6 @@ export function createRoutingStateRestorer(deps) {
           if (shown) return shown;
         }
         if (typeof showRetroArt === 'function') return await showRetroArt(true);
-      }
-      if (sub === 'vote') {
-        if (param === 'create') {
-          if (typeof showVoteCreate === 'function') return await showVoteCreate(true);
-        } else if (param) {
-          if (typeof showVoteDetail === 'function') return await showVoteDetail(Number(param), true);
-        }
-        if (typeof showVoteList === 'function') return await showVoteList(true);
       }
       if (sub === 'ranking') {
         if (param) {

@@ -2,12 +2,12 @@
  * [LOG: 20260410_2315] 사용자 프로필 화면 처리 모듈
  */
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
-import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 
 export function createProfileScreens(deps) {
   const {
     ansiToHTML, apiFetch, applyCommandFooter, buildProfileAnsi, cmdInput,
-    getCommandFooterText, getSupportedFooterText, screenEl, setLoading, state, updateURL
+    getCommandFooterText, getSupportedFooterText, renderScreenSequential, screenEl, setLoading, state, updateURL
   } = deps;
 
   async function applyProfileFooter() {
@@ -31,9 +31,18 @@ export function createProfileScreens(deps) {
     return payload;
   }
 
+  async function renderProfileAnsi(ansiText) {
+    await renderAnsiScreenWithTopbarSequential({
+      ansiText,
+      ansiToHTML,
+      screenEl,
+      renderScreenSequential,
+      afterBodyRender: applyProfileFooter
+    });
+  }
+
   async function renderMissingProfile(userId) {
-    renderAnsiScreenWithTopbar({ ansiText: buildProfileAnsi(null, { notFound: true, userId }), ansiToHTML, screenEl });
-    await applyProfileFooter();
+    await renderProfileAnsi(buildProfileAnsi(null, { notFound: true, userId }));
   }
 
   async function showProfile(userId, fromHistory = false) {
@@ -54,12 +63,10 @@ export function createProfileScreens(deps) {
         return;
       }
 
-      renderAnsiScreenWithTopbar({ ansiText: buildProfileAnsi(member), ansiToHTML, screenEl });
-      await applyProfileFooter();
+      await renderProfileAnsi(buildProfileAnsi(member));
     } catch (e) {
       console.error('프로필 조회 실패:', e.message);
-      renderAnsiScreenWithTopbar({ ansiText: buildProfileAnsi(null, { error: true }), ansiToHTML, screenEl });
-      await applyProfileFooter();
+      await renderProfileAnsi(buildProfileAnsi(null, { error: true }));
     }
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();

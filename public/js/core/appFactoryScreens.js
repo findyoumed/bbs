@@ -11,6 +11,7 @@ export function createAppFactoryScreens(deps) {
     createChatScreens,
     createHelpScreens,
     createMemoScreens,
+    createPolicyScreens,
     createMenuNavigation,
     createMyInfoScreens,
     createPostScreens,
@@ -158,6 +159,12 @@ export function createAppFactoryScreens(deps) {
     getMenuNodeByKey: menuService.getMenuNodeByKey,
     showMain
   });
+  // [LOG_ID: 20260713_2100] GUIDE 화면 이용약관/개인정보처리방침 뷰어.
+  const policyScreens = createPolicyScreens({
+    ...screenDeps,
+    SIGNUP_PRIVACY_TEXT,
+    SIGNUP_TOS_TEXT
+  });
   const signupModule = createSignupModule({
     ...screenDeps,
     SIGNUP_PRIVACY_TEXT,
@@ -222,6 +229,7 @@ export function createAppFactoryScreens(deps) {
     memoScreens,
     menuNav,
     myInfoScreens,
+    policyScreens,
     postScreens,
     profileScreens,
     screenDeps,

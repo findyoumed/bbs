@@ -40,6 +40,7 @@ import { createHelpScreens } from './helpScreens.js';
 import { createProfileScreens } from './profileScreens.js';
 import { createMyInfoScreens } from './myInfoScreens.js';
 import { createMemoScreens } from './memoScreens.js';
+import { createPolicyScreens } from './policyScreens.js';
 import { createSystemAnsiBuilders } from './systemAnsiBuilders.js';
 import { createSystemScreens } from './systemScreens.js';
 import { createSystemLogger } from './systemLogger.js';
@@ -103,6 +104,7 @@ export function initApp(deps) {
     createChatScreens,
     createHelpScreens,
     createMemoScreens,
+    createPolicyScreens,
     createMenuNavigation,
     createMyInfoScreens,
     createPostScreens,

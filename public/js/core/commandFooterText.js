@@ -9,6 +9,8 @@ export const CMD_ORDER = {
   authMenu: ['P', 'T', 'GO', 'H'],
   help: ['F', 'B', 'P', 'T', 'GO'],
   history: ['P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260713_2100] GUIDE 화면 이용약관/개인정보처리방침 뷰어 — help와 동일하게 페이징.
+  policy: ['F', 'B', 'P', 'T', 'GO', 'H'],
   newsMenu: ['P', 'T', 'GO', 'LOGIN', 'H'],
   weatherMenu: ['P', 'T', 'GO', 'H'],
   weatherView: ['F', 'B', 'P', 'T', 'GO', 'H'],
@@ -52,6 +54,7 @@ const SCREEN_TO_CATEGORY = {
   'board-select': 'menu',
   help: 'help',
   history: 'history',
+  policy: 'policy',
   'post-list': 'postList',
   'post-view': 'postView',
   'post-write': 'postWrite',

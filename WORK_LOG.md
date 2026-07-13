@@ -1,3 +1,144 @@
+## [2026-07-14 12:00] 여론광장(ACRO)/오락실 투표 중복 해소 — 투표를 최상위로 일원화
+
+**LOG_ID: 20260714_1200**
+목표: 사용자 질문 "여론광장 acro와 /game/vote는 같은거야?" → 확인 결과 **100% 동일한 화면**이었다. TOP 7번 여론광장(`go="acro"`)과 오락실 4번 설문조사/투표(`go="game_vote"`)가 둘 다 `type="vote"`라 `menuNavigationActions.js`가 똑같이 `refs.showVoteList()`를 호출 — 이름만 다르고 화면·기능·데이터가 같았다.
+**근본 원인(같은 유형 3번째)**: 20260713_1900에 acro를 추가하며 로그에 "기존 game_vote와 go값 충돌 방지 위해 별도 acro 사용"이라고 적었는데, 이는 충돌을 피한 게 아니라 **중복을 만들어놓고 그럴싸하게 포장한 것**이었다. GUIDE 중복(20260713_2300), 빈 게시판 23개(20260714_1100)에 이은 같은 실수.
+**사용자 결정: A안** — 투표/설문은 오락이 아니라 여론 수렴 기능이므로(나우누리 ACRO·하이텔 여론광장 모두 최상위) 최상위 여론광장에만 두고 오락실 하위는 제거.
+변경 파일:
+1) `legacy/hanulso.mnu` — 오락실 하위 `game_vote` 제거, 이하 door 재배치(랭킹 5→4, 추억의접속화면 6→5). `acro` 노드에 `<footer>txt/cmd_menu_footer.txt</footer>` 추가(종전 footer 미지정이라 오락실 노드 것을 빌려 쓰고 있었음).
+2) `public/js/core/routingUrlBuilder.js` — vote URL을 `/game/vote*` → `/acro*`로 이전(vote-list `/acro`, vote-detail `/acro/:id`, vote-create `/acro/create`).
+3) `public/js/core/routingStateRestorer.js` — `acro` 루트 라우트 핸들러 신설, `game` 핸들러에서 `sub === 'vote'` 분기 제거.
+4) `public/js/core/commandRouterVote.js` — vote-list/vote-detail의 상위(P/M)가 `showBoardSelect('game')`(더 이상 투표를 포함하지 않는 메뉴)로 가던 것을 `showMain()`으로 수정. 미사용이 된 `showBoardSelect` deps 제거.
+5) `public/js/core/voteScreens.js` — footer 조회를 `getMenuNodeByKey('game')` → `('acro')`로 수정.
+검증: 4개 JS `node --check` 통과. `MenuResolver` 파싱(오락실 5개로 축소, acro footer 정상, go값 중복 없음, TOP 11개 유지). `smoke:boards`/`smoke:command-parity`/`smoke:renderer-ui`/`smoke:vercel-ready` 전부 통과. 서버 재시작 후 `/acro` 200 응답·`/api/votes` 정상·메뉴 구조 실측 확인. (vercel.json은 `/((?!api/).*)` catch-all이 있어 별도 rewrite 불필요.)
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 11:00] 빈 껍데기 게시판/자료실 23개 전량 제거 (20260713_1930·20260714_1000 롤백)
+
+**LOG_ID: 20260714_1100**
+목표: 사용자 지적 — "실제로 내가 구현가능한 것만 메뉴로 만들어야지".
+**실측 근거**: 전체 게시판의 글 수를 `/api/boards/:id`로 전수 조회한 결과, 실제 콘텐츠가 있는 건 **열린광장(7건)·우스개(1건) 단 2개**뿐이고, 내가 20260713_1930(나우누리 14종)과 20260714_1000(하이텔/천리안 게시판 6종+자료실 3종)에 추가한 **23개 전부 0건인 빈 껍데기**였다.
+**근본 원인(반복된 실수)**: "원전에 있으니까"를 유일한 근거로 메뉴를 기계적으로 복제했다. 20260713_2300에 GUIDE에서 정확히 같은 실수(TOP과 중복되는 바로가기 5개 추가)를 지적받고 롤백했음에도, 게시판에서 같은 패턴을 반복했다. 심지어 20260714_1000 로그에 "GUIDE 실수를 겪은 직후라 확실한 것만 반영" 이라고 써놓고도, 정작 그 '확실한 것'이 빈 게시판이라는 점은 검증하지 않았다 — **원전 대조는 했으나 결과물의 실사용 가치는 한 번도 확인하지 않은 것이 공통 원인.**
+변경 파일: `legacy/hanulso.mnu` — BBS 하위 20개(carpool/locnews/entertain/promo/bbspr/say/mystery/sf/qna/iflove/first/newface/novice/best/reading/movie/jobinfo/flea/missing/riddle), PDS 하위 3개(pds_novice/pds_best/pds_docs) 제거. 열린광장·우스개, 기존 PDS 6종은 유지. 우스개 이름(원전명, 기존 '유머')은 콘텐츠 있는 게시판의 명칭 정정이라 유지.
+검증: `MenuResolver` 파싱(BBS 2개, PDS 6개, go값 중복 없음, TOP 11개 유지), `smoke:boards`(boardCount 31→17 원복, menuDoorCount 11 유지)/`smoke:command-parity`/`smoke:vercel-ready` 통과. 포트 3000 재시작 후 `/api/menu` 실측 확인.
+**향후 원칙(재발 방지)**: 게시판/자료실은 콘텐츠가 있어야 존재 의미가 있다. 실제 글이 쌓이거나 시드 데이터를 넣을 구체적 근거가 생길 때만 추가한다. 원전에 이름이 있다는 것만으로는 추가 사유가 되지 않는다. `docs/nownuri_merge_plan.txt` N-12에 ❌(재제안 금지)로 기록.
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 10:00] 하이텔/천리안 원전 전체 메뉴 학습 후 게시판·자료실 확장 [❌ 20260714_1100에 전량 롤백됨]
+
+**LOG_ID: 20260714_1000**
+목표: 사용자가 신규 참고자료 `docs/메뉴-하이텔.txt`(1996-06-08 기준, 마이컴 CD96 Vol.1.10, 전체 GO 메뉴 2319줄)와 `docs/메뉴-천리안.txt`(1996-04, 1579줄, 알파벳순 GO 인덱스)를 제시하며 "실제로 구현할 수 있는 메뉴와 구조를 따라하라"고 요청.
+학습 범위: 하이텔 19개 최상위 카테고리(서비스안내~영문해외DB) 전수 스캔, 천리안 21개 카테고리 전수 스캔. 대부분(뉴스/증권금융/경영산업/과학문헌/교육 내 특정 대학·은행·정부기관/동호회(실명 동호회 수백 개)/광고홍보/홈쇼핑홈뱅킹/공공정보/영문해외DB/기업포럼)은 1996년 당시 실제 외부 기업·기관과의 제휴 서비스라 콘텐츠·연동 근거가 전혀 없어 재현 불가 판단(기존 나우누리 작업의 "재현 가치 낮음" 제외 기준과 동일). 콘텐츠 없이 게시판 타입 하나로 바로 기능하는 항목만 선별.
+변경 파일: `legacy/hanulso.mnu`
+1) 게시판(BBS) 6종 추가: 독서(reading)/영화·비디오(movie)/구인·구직(jobinfo)/벼룩시장(flea)/사람을 찾습니다(missing)/수수께끼(riddle) — 이미 나우누리 작업으로 추가했던 자동차함께타기·지역소식·연예오락·횡설수설 등과 중복되지 않는 항목만 선별. go 코드는 전역 명령어(CMD_META) 전체와 대조해 충돌 없음 확인.
+2) 자료실(PDS) 3종 추가: 초보자료실(pds_novice)/추천자료실(pds_best)/문서자료(pds_docs).
+검증: `MenuResolver` 파싱(BBS 16→22, PDS 6→9, 트리 전체 go값 54개 중복 없음), `smoke:boards`/`smoke:command-parity`/`smoke:vercel-ready` 통과. 포트 3000 서버 재시작(MenuResolver 캐시 특성) 후 `/api/menu`로 실제 반영 확인.
+결과: ✅ 완료. GUIDE 쪽 추가 후보(메뉴안내/인덱스안내 등 사이트맵성 정적 문서)는 이번엔 보류 — 직전(20260713_2300)에 "원전을 맥락 없이 베끼다 TOP과 중복시킨" 실수를 겪은 직후라, 이번엔 게시판/자료실처럼 "콘텐츠 있는 화면 타입 재사용"으로 확실한 것만 반영하고 새 화면 타입이 필요한 항목은 사용자 확인 후 진행하기로 함.
+
+---
+
+## [2026-07-13 23:00] GUIDE 화면 바로가기 5개 제거 — TOP 메뉴와 완전 중복이라는 사용자 지적 반영
+
+**LOG_ID: 20260713_2300**
+목표: 사용자가 `http://localhost:3000/guide`를 보고 "하위 메뉴가 이상하다"고 지적 — 직전 반복(20260713_2030)에서 추가한 자료실/개인영역/전자우편/대화실/온라인오락실 5개 바로가기가 TOP 메뉴 3/4/6/8/9번과 **완전히 동일한 화면**으로 가는 순수 중복이었음을 확인. 나우누리 원전은 TOP이 3단 배치라 GUIDE 요약 인덱스가 유의미했지만, 이 앱은 TOP이 1열로 전체 노출되는 구조라 그 전제가 성립하지 않는데도 원전을 맥락 없이 그대로 베낀 판단 실수였다.
+변경 파일:
+1) `legacy/hanulso.mnu` — GUIDE 하위에서 guide_pds/guide_myinfo/guide_memo/guide_chat/guide_game 5개 항목 삭제, door 재배치(공지사항1/건의하기2/명령어안내3/이용약관4/개인정보처리방침5).
+2) `public/js/core/menuNavigationActions.js` — 위 5개 제거로 사용처가 없어진 `type==="shortcut"` 분기(20260713_2030에 신설)를 죽은 코드로 판단해 함께 삭제. `type==="help"`/`type==="policy"` 분기는 유지(명령어안내/이용약관/개인정보처리방침이 계속 사용).
+검증: `MenuResolver` 파싱(GUIDE 5개 항목, 트리 전체 go값 45개 중복 없음) 확인, `node --check` 통과, `smoke:boards`/`smoke:command-parity`/`smoke:vercel-ready` 통과. 포트 3000 개발 서버(MenuResolver 인메모리 캐시 특성상 재시작 필수 — 오늘 세 번째로 겪음) 재기동 후 `/api/menu`로 실제 반영 확인.
+결과: ✅ 완료. `docs/nownuri_merge_plan.txt` N-10 항목을 ❌(재제안 금지)로 정정.
+
+---
+
+## [2026-07-13 22:00] 하이텔/나우누리 확장 계획서 전수 재감사 — 신규 구현 없음(전부 기 완료 확인)
+
+**LOG_ID: 20260713_2200**
+목표: 사용자가 "이제 또 하이텔과 나우누리 학습해서 만들 기능 더 있어?"라고 질문 — `docs/hitel_upgrade_plan.txt`(2026-07-12 작성)의 Phase 1~3 전 항목을 코드 실측으로 재확인.
+**과정 중 자체 정정**: 처음엔 grep으로 `'LS'`/`'LD'` 문자열 리터럴만 찾아 "LS/LD가 힌트바엔 있는데 실제 구현이 없다(광고된 기능이 깨져있다)"고 사용자에게 보고할 뻔했으나, 실제로는 `commandRouterBrowse.js`가 정규식(`cmd.match(/^LS\s+(\d+)$/i)`, `/^LD\s+(\d{1,2})\/(\d{1,2})$/i`)으로 두 명령 모두 이미 구현해두고 있었다(LOG_ID 20260713_1020) — 문자열 리터럴 검색이 정규식 기반 구현을 못 찾은 내 검색 방법 오류였음. 재검색으로 즉시 정정.
+재확인 결과 — Phase 1~3 12개 항목 전부 기 구현 확인(코드 위치 특정):
+- P1-1 PT(제목 100건), P1-2 PR 범위/나열, P1-3 손님 배너(`## 닉네임(ID)님은 등급입니다 ##`), P1-4 작은공지+GO 링크
+- P2-1 CAP 갈무리 토글, P2-2 보낸쪽지함+수신확인+CM 발송취소, P2-3 대화실 ST 대기실 상황판
+- P3-1 SET LEVEL(초급/중급/고급), P3-2 LS/LD 목록 점프, P3-3 SET HOME, P3-4 /TO·/EAR·/속 귓속말, P3-5 K/KW 주제어검색
+변경 파일: `docs/hitel_upgrade_plan.txt`에만 각 Phase 헤더 옆에 `[✅ 실측 확인 20260713_2200]` 표기 추가(코드 변경 없음 — 이번 반복은 순수 감사).
+결과: ✅ 완료. **결론: 현재 `hitel_upgrade_plan.txt`·`nownuri_merge_plan.txt` 두 계획서에 문서화된, 책/원전 근거가 명확한 항목 중 남은 미구현 항목이 없다.** 더 진행하려면 (a) 두 원전을 벗어난 새 범위를 사용자가 지정하거나, (b) Phase 4의 명시적 보류 항목(DN 프로토콜 연출, 접속음 연출 등 — 재제안 금지 이력 있음)을 사용자가 재검토 요청해야 함.
+
+---
+
+## [2026-07-13 21:00] 이용약관/개인정보처리방침 정적 문서 뷰어 신설 (type="policy") + refs.showHelp 누락 버그 발견·수정
+
+**LOG_ID: 20260713_2100**
+목표: (ralph-loop 계속 — 완료 서약 없음) 직전 반복에서 "설계가 더 필요하다"며 보류했던 GUIDE "12.이용약관" 항목을 실제로 구현. 텍스트 자체는 회원가입 동의 단계(`signupPolicyText.js`의 `SIGNUP_TOS_TEXT`/`SIGNUP_PRIVACY_TEXT`, 100줄+)에 이미 있었으나 그쪽은 "동의" 버튼이 달린 전용 HTML 화면이라 재사용이 아닌 별도 뷰어가 필요했음.
+**부수 발견 버그**: 이 작업 중 직전 반복(20260713_2030)에서 추가한 GUIDE "명령어안내"(`type="help"`) 바로가기가 실제로는 **한 번도 동작하지 않았음**을 발견 — `menuNavigationActions.js`가 호출하는 `refs.showHelp`가 `appFactoryRuntime.js`의 `Object.assign(refs, {...})` 목록에 아예 없어 항상 `undefined`였음(클릭해도 조용히 `return false`). 20260713_1700의 `refs.showMemoList` 누락과 정확히 같은 유형의 실수 — 이번에 `showHelp`/`showPolicy` 둘 다 refs에 추가해 함께 수정.
+변경 파일:
+1) `public/js/core/policyScreens.js`(신규) — `createPolicyScreens(deps)`: help 화면과 동일한 페이징 패턴(19줄/페이지, `buildPageLabel`)으로 TOS/개인정보 텍스트를 `wrapAnsiText`로 줄바꿈해 렌더링. `showPolicy(kind, page, fromHistory)` 노출.
+2) `public/js/core/commandFooterText.js` — `CMD_ORDER.policy`/`SCREEN_TO_CATEGORY.policy` 추가(F/B/P/T/GO/H, help와 동일).
+3) `public/js/core/commandRouterGlobalNavigation.js` — `state.screen === 'policy'`일 때 F/B 페이지 이동 분기 추가(help 블록과 동일 패턴), `showPolicy` deps 추가.
+4) `public/js/core/menuNavigationActions.js` — `type==='policy'`(target 속성으로 tos/privacy 선택, 기본값 tos) 분기 추가.
+5) `public/js/core/appFactory.js`/`appFactoryScreens.js` — `createPolicyScreens` 임포트·구성·반환값 추가(`SIGNUP_TOS_TEXT`/`SIGNUP_PRIVACY_TEXT`를 memoScreens와 동일한 방식으로 스레딩).
+6) `public/js/core/appFactoryHandlers.js` — `globalCommandHandlerDeps.showPolicy` 추가.
+7) `public/js/core/appFactoryRuntime.js` — **버그 수정**: `Object.assign(refs, {...})`에 `showHelp`/`showPolicy` 추가.
+8) `legacy/hanulso.mnu` — GUIDE 하위에 이용약관(door9, type=policy target=tos)/개인정보처리방침(door10, type=policy target=privacy) 추가.
+검증: `MenuResolver` 파싱(GUIDE 10개 항목, 트리 전체 go값 50개 중복 없음) 확인. 8개 변경 JS 파일 전부 `node --check`(`.mjs` 복사) 통과. `policyScreens.js`를 스크래치 환경에서 stub deps로 직접 실행해 `showPolicy('tos',1)`/`('privacy',1)`/`('bogus',999)` 3가지 시나리오 모두 예외 없이 통과, `totalPages: 11`(TOS 기준) 확인. `smoke:boards`/`smoke:command-parity`/`smoke:renderer-ui`/`smoke:vercel-ready`/`smoke:full-traversal` 전부 통과(기존 무관 채팅 로비 실패 1건 제외).
+결과: ✅ 완료. GUIDE 화면의 "[이용안내]" 구역 재현이 사실상 마무리됨(명령어/자료실/개인영역/전자우편/대화실/온라인오락실/이용약관/개인정보처리방침 8개 전부). 실제 나우누리 브라우저 클릭 시나리오는 이번에도 Playwright 권한이 막혀 있어 미검증 — 로직 자체는 스크래치 실행으로 검증했으나, 사용자 쪽에서 실제 브라우저로 GUIDE 메뉴 클릭 확인을 권장.
+
+---
+
+## [2026-07-13 20:30] GUIDE 화면 원전 바로가기 인덱스 재현 (type="shortcut" 신설)
+
+**LOG_ID: 20260713_2030**
+목표: (ralph-loop 계속 — 완료 서약 없음, 이전 반복에서 남겨둔 항목 이어감) 나우누리 원전 GUIDE 화면의 "[이용안내]" 구역(31~38: 명령어/자료실/개인영역/전자우편/대화실/온라인오락실 바로가기)을 재현. 자료실/온라인오락실은 실제 하위 게시판/미니게임 목록을 가진 `type="menu"` 노드라 기존 go값을 그대로 재사용하면 `GO PDS`/`GO GAME` 조회가 마지막 색인 노드로 덮어써지는 문제가 있어(indexTree가 go값 중복 시 마지막 것으로 lookup을 덮어씀), 별도 대상 지정 메커니즘이 필요했음.
+변경 파일:
+1) `src/server/MenuResolver.js` — `normalizeItem`에 `target` 속성 패스스루 추가(신규 필드, 기존 필드 영향 없음).
+2) `public/js/core/menuNavigationActions.js` — `type==='help'`(refs.showHelp 재사용) 및 `type==='shortcut'`(target으로 실제 노드를 찾아 `executeMenuNodeAction` 재귀 위임) 두 분기 신설.
+3) `legacy/hanulso.mnu` — GUIDE 하위에 6개 항목 추가: 명령어안내(type=help), 자료실(type=shortcut target=pds), 개인영역(type=myinfo, go만 재별칭), 전자우편(type=memo, go만 재별칭), 대화실(type=chatt, go만 재별칭), 온라인오락실(type=shortcut target=game). 이용약관/이용요금/인덱스/편집기/음성서비스는 정적 콘텐츠 화면 기능 자체가 없어 계속 제외.
+검증: `MenuResolver` 직접 호출로 GUIDE 하위 8개 항목 파싱 확인 + 트리 전체 go값 중복 없음(48개) 확인. 스크래치 서버(`PORT=3051`)로 `/api/menu` 응답에 `target` 필드가 정상 전달됨을 실측. `node --check`(MenuResolver.js 직접, menuNavigationActions.js는 `.mjs` 복사) 통과. `smoke:boards`/`smoke:command-parity`/`smoke:vercel-ready`/`smoke:full-traversal` 전부 통과(기존 "Chat lobby did not expose a selectable first room" 1건은 재현되나 원본에서도 동일해 무관 확인됨, 재수정 시도 안 함 — Supabase chat_rooms 시드 데이터 부재로 추정).
+결과: ✅ 완료. 남은 항목: 이용약관 등 정적 문서 화면화(신규 화면 타입 필요), CHATIN 실제 콘텐츠 정밀 대조 — 계속 진행.
+
+---
+
+## [2026-07-13 20:00] 위→아래 순차 스트리밍 미적용 화면 6곳 전수 수정 (ralph-loop 계속)
+
+**LOG_ID: 20260713_2000**
+목표: (ralph-loop 완료 서약 없이 계속 반복 중 — "다했어?" 질문에 답하기 위해 남은 작업 점검) 이번 세션 초반에 정한 원래 대원칙("모든 UI가 PC통신처럼 위→아래로 나와야 한다. 모든 화면이 다 마찬가지")을 전수 재검사. `grep -rln "renderAnsiScreenWithTopbar[^S]"`로 아직 `renderAnsiScreenWithTopbarSequential`(위→아래 스트리밍 버전)로 전환되지 않은 화면 진입 지점을 전부 찾음.
+전환 대상(화면 최초 진입 시 1회성 렌더만 — 폴링/실시간 갱신은 스트리밍 대상에서 의도적으로 제외):
+1) `chatScreens.js` `showChatLobby` — 대화실 로비 진입. (단, 같은 파일의 `refreshRoom()`은 `setInterval` 폴링용이라 매 tick 스트리밍하면 어색해져 그대로 둠 — 의도적 예외로 주석 명시.)
+2) `memoScreens.js` `showMemoList`/`showMemoView` — 쪽지함 목록/보기. 보기 화면은 삭제확인 배너 삽입 시점도 `afterBodyRender`로 이동해 본문 스트리밍 도중 배너가 끼어들지 않게 함.
+3) `profileScreens.js` — `showProfile`(성공/오류/미존재 3개 분기 공용 헬퍼 `renderProfileAnsi`로 통합).
+4) `systemLogScreens.js` `showSystemLog`/`renderLogs` — 화면 진입뿐 아니라 C(초기화)/R(새로고침) 명령의 재렌더도 함께 스트리밍 대상에 포함(재전송 느낌과 일관).
+5) `systemScreens.js` — WHO/ACT/SYSINFO 3개 화면 공용 헬퍼 `renderSystemAnsiScreen`에 `afterBodyRender` 콜백 매개변수 추가, 오류 경로(`renderSystemError`)는 즉시 렌더 유지하되 footer는 동일하게 붙임.
+6) `postScreens.js` `showAttachmentList` — 첨부파일 목록 화면.
+검증: 6개 파일 전부 `node --check`(스크래치 `.mjs` 복사 후) 통과. `smoke:renderer-ui`/`smoke:vercel-ready`/`smoke:command-parity`/`smoke:full-traversal` 전부 실행 — traversal의 "Chat lobby did not expose a selectable first room" 1건은 이번에도 재현(Supabase chat_rooms 테이블에 시드된 방이 없는 환경/데이터 이슈로 추정, 코드 변경과 무관, 원본에서도 동일 재현 기 확인됨 — 미수정).
+결과: ✅ 완료. "전부"는 여전히 아님 — 남은 항목: GUIDE 화면의 원전 3단 바로가기 인덱스(다른 메뉴로의 "바로가기" 자체가 코드에 없어 설계 필요), 이용약관 등 정적 문서 화면화, 나우누리 CHATIN 실제 콘텐츠(대기실 명단 등) 정밀 대조.
+
+---
+
+## [2026-07-13 19:30] 게시판(BBS) 하위 메뉴를 나우누리 원전 명명 게시판 16종으로 확장 [❌ 20260714_1100에 전량 롤백됨 — 전부 글 0건인 빈 껍데기였음]
+
+**LOG_ID: 20260713_1930**
+목표: (ralph-loop 자동 반복 중 — 완료 서약 "전부"는 아직 미달성, 다음 대상은 GUIDE 화면 문구/CHAT 레이아웃) 이전 TOP 메뉴 작업과 같은 패턴으로 게시판 이름/구성을 원전에 맞춤. `docs/NOWNURI_SCREENS_FULL_DECODED.txt`(스크래치 `now_menu_decoded.txt`와 동일 소스)에서 게시판-* 접두 라인 16개를 전수 확인.
+변경: `legacy/hanulso.mnu`의 게시판(BBS) 하위 메뉴를 기존 2개(열린광장/유머)에서 원전 16종 전체로 확장 — 열린광장(PLAZA, 기존)·우스개(HUMOR, 기존 go="humor" 유지하되 라벨을 "유머"→원전 "우스개"로 정정)·자동차함께타기(CARPOOL)·지역소식(LOCNEWS)·연예오락(ENTERTAIN)·홍보(go="promo")·사설BBS(BBSPR)·횡설수설(SAY)·불가사의(MYSTERY)·공상과학(SF)·묻고답하기(QNA)·..라면..텐데(go="iflove")·나의으뜸버금(FIRST)·가입인사(NEWFACE)·컴퓨터초보시절(NOVICE)·추천게시물(BEST). 홍보/..라면..텐데 두 개만 원전 go 코드(PR/IF)가 기존 전역 명령어(연속읽기/조건문)와 충돌해 별칭(promo/iflove)으로 대체 — `commandService.js`의 CMD_META 전체 키와 대조해 나머지 12개는 충돌 없음을 확인.
+검증: `MenuResolver` 직접 호출로 XML 파싱·전체 트리 go값 중복 없음 확인, `npm run smoke:boards`(boardCount 17→31, menuDoorCount 11 유지) / `smoke:command-parity` / `smoke:vercel-ready` 전부 통과.
+결과: ✅ 완료 (다음: GUIDE 화면 문구, CHAT 레이아웃 — 계속 진행 중, "전부 완성" 아님)
+
+---
+
+## [2026-07-13 19:00] TOP 메뉴 구조를 실제 나우누리 원전에 맞춰 확장 (개인영역/여론광장 신설)
+
+**LOG_ID: 20260713_1900**
+목표: 사용자가 `nowro/` 폴더(나우누리 DOS 클라이언트 원본 `NOW.EXE`+`NOW_MENU.DAT`)를 제시하며 "UI나 기능을 맞춰달라"고 요청. `NOW_MENU.DAT`를 Johab 인코딩(`iconv -f JOHAB`)으로 디코딩해 실제 TOP 화면 원문을 복원(기존 `docs/NOWNURI_TOP_MENU_RESTORED.md`와 일치 확인)한 뒤, 현재 `legacy/hanulso.mnu`(door 9개)와 대조.
+발견: 실제 원전 TOP은 19개 항목(3단 구성)이지만, 재현 가치가 낮은 거래서비스(홈뱅킹/증권/나우장터 등)는 `docs/nownuri_merge_plan.txt`에 이미 제외 결정이 기록되어 있었음(재제안 금지 대상). 그중 코드 변경 없이 바로 살릴 수 있는 두 항목을 발견:
+1) "2. 개인영역" — `menuNavigationActions.js`에 `type==='myinfo'` 분기가 이미 존재(HI/MYINFO 명령과 동일 화면)하지만 메뉴 트리 진입점이 없었음.
+2) "15. 여론광장(ACRO)" — `type==='vote'` 분기가 이미 존재(오락실 하위)하지만 최상위 진입점이 없었음.
+변경 파일:
+1) `legacy/hanulso.mnu` — 최상위 door 번호를 원전 우선순위에 가깝게 재배치: 1.서비스안내(GUIDE) 2.회원가입/로그인(LOG) 3.개인영역(MYINFO, 신규) 4.전자우편(MEMO) 5.게시판(BBS) 6.대화실(CHAT) 7.여론광장(ACRO, 신규, go="acro"로 기존 game_vote와 go값 충돌 회피) 8.자료실(PDS) 9.오락실(GAME) 10.뉴스/인물(NEWS) 11.날씨(WEATHER). 기존 오락실 하위 "설문조사/투표"는 유지(중복 접근 허용, 기존 경로 삭제 없음).
+검증: `MenuResolver`를 직접 호출해 XML 파싱 및 door 유일성 확인(1~11 중복 없음) → `PORT=3041 node server.js`로 스크래치 서버 기동 후 `/api/menu` 응답으로 순서 재확인 → `npm run smoke:boards`(menuDoorCount: 11 확인) / `smoke:command-parity` / `smoke:vercel-ready` 전부 통과. `smoke:full-traversal`은 "Chat lobby did not expose a selectable first room" 1건 실패했으나 `git stash`로 원본 파일에서도 동일하게 재현되어 **이번 변경과 무관한 기존 결함**으로 확인(스코프 밖, 미수정). 브라우저 자동화(Playwright MCP) 도구는 이번 세션 권한 정책상 차단되어 실제 클릭 시나리오는 미검증 — 코드 경로 자체가 기존에 검증된 HI/GAME>투표 분기 재사용이라 리스크는 낮음.
+결과: ✅ 완료 (TOP 메뉴 구조 1차 확장 — 정보광장/문화취미/증권 등 콘텐츠 기반 항목은 데이터 부재로 계속 제외)
+
+---
+
 ## [2026-07-13 18:10] 쪽지함(전자우편) 메인 메뉴 진입점 신설 — refs 누락 버그 동반 수정
 
 **LOG_ID: 20260713_1700**

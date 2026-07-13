@@ -92,6 +92,10 @@ function normalizeItem(node) {
     go: node.attrs.go || '',
     id: node.attrs.id || '',
     door: node.attrs.door || '',
+    // [LOG_ID: 20260713_2030] type="shortcut" 노드가 실제로 가리키는 다른 트리 노드의 go 값.
+    // (예: GUIDE 하위 "자료실" 바로가기가 최상위 PDS 메뉴 전체를 가리킬 때 사용 — PDS 자신의
+    // go="pds"는 그대로 두고 별도 go 값으로 색인해 GO 명령 충돌을 피한다.)
+    target: node.attrs.target || '',
     text: node.attrs.text || '',
     accessLevel: Number(node.attrs.access_level || 1),
     name: cleanName(textOf(node, 'name') || node.attrs.go || node.attrs.id || ''),

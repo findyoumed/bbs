@@ -1,7 +1,7 @@
 import { createPostListView } from './postListView.js';
 import { createPostViewView } from './postViewView.js';
 import { createPostWriteView } from './postWriteView.js';
-import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 
 export function createPostScreens(deps) {
   const {
@@ -46,8 +46,16 @@ export function createPostScreens(deps) {
     // applyCommandFooter를 거쳐 setReady(true)까지 위임한다. 기존엔 setLoading()만 걸고
     // setReady를 부르지 않아 내부 400ms 로딩 타이머가 취소되지 않고 뒤늦게 발동해
     // 방금 그린 첨부파일 목록을 "연결하는 중입니다"로 영구히 덮어써 버리는 결함이 있었다.
-    renderAnsiScreenWithTopbar({ ansiText: buildAttachmentListAnsi(state._attachments), ansiToHTML, screenEl });
-    await applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('attachmentList'));
+    // [LOG_ID: 20260713_2000] renderAnsiScreenWithTopbarSequential로 전환 — 위→아래 순차 스트리밍.
+    await renderAnsiScreenWithTopbarSequential({
+      ansiText: buildAttachmentListAnsi(state._attachments),
+      ansiToHTML,
+      screenEl,
+      renderScreenSequential,
+      afterBodyRender: async () => {
+        await applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('attachmentList'));
+      }
+    });
   }
 
   return { ...handlers, showAttachmentList };
