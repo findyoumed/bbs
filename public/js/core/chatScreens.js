@@ -118,7 +118,9 @@ export function createChatScreens(deps) {
     async function refreshRoom() {
       if (state.screen !== 'chat-room') return;
       const nick = state.user?.nickName || '나';
-      const ansiResult = buildChatRoomAnsi(state._chatRoom, state._chatMessages, nick);
+      // [LOG_ID: 20260713_1020] buildChatRoomAnsi에 내 userId 추가 전달
+      const myId = state.user?.userId || '';
+      const ansiResult = buildChatRoomAnsi(state._chatRoom, state._chatMessages, nick, myId);
       
       renderAnsiScreenWithTopbar({ 
         ansiText: ansiResult.text || ansiResult, 

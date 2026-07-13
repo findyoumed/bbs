@@ -46,6 +46,7 @@ export function createAppFactoryHandlers(deps) {
     ...handlerDeps,
     ...screens.menuNav,
     ...screens.postScreens,
+    apiFetch: services.apiFetch,
     deletePost: services.postService.deletePost,
     doLogout: services.authService.doLogout,
     getMenuChildren: services.menuService.getMenuChildren,
@@ -88,7 +89,9 @@ export function createAppFactoryHandlers(deps) {
     recommendPost: services.postService.recommendPost,
     restoreStateFromURL: (...args) => refs.restoreStateFromURL(...args),
     showAttachmentList: screens.postScreens.showAttachmentList,
-    downloadAttachment: services.postService.downloadAttachment
+    downloadAttachment: services.postService.downloadAttachment,
+    // [LOG_ID: 20260713_0930] LV 등급변경(운영자) — olddos-bbs 원작 명령 복원
+    apiFetch: services.apiFetch
   });
 
   // [LOG: 20260623_0013] vote/ranking command handler (origin/main 포팅)

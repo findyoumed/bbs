@@ -16,6 +16,12 @@ function applySupabaseSearch(queryBuilder, capabilities, search) {
     queryBuilder = queryBuilder.eq(capabilities.category, search.category);
   }
 
+  // [LOG_ID: 20260713_1020] Supabase k 주제어 대괄호 ilike 필터 적용
+  if (search?.k) {
+    const escapedK = escapeLikeQuery(String(search.k).trim());
+    queryBuilder = queryBuilder.ilike('title', `%[${escapedK}]%`);
+  }
+
   if (!search?.mode || !search?.query) {
     return queryBuilder;
   }

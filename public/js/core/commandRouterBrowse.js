@@ -7,6 +7,7 @@ import { UI_TEXT } from './i18n.js';
 
 export function createBrowseCommandHandler(deps) {
   const {
+    apiFetch,
     deletePost,
     doLogout,
     executeMenuNodeAction,
@@ -212,6 +213,121 @@ export function createBrowseCommandHandler(deps) {
           menuTitle: state.boardMenuTitle,
           searchParams: { lt: ltMatch[1].trim() }
         });
+        return true;
+      }
+
+      // [LOG_ID: 20260713_1020] LS [번호] 리스트 점프 명령어 추가
+      const lsMatch = cmd.match(/^LS\s+(\d+)$/i);
+      if (lsMatch) {
+        const targetPostId = Number(lsMatch[1]);
+        setHint('번호 위치를 스캔 중입니다..');
+        apiFetch(`/api/boards/${state.board.id}?page=1&pageSize=9999`)
+          .then((res) => {
+            const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
+            const idx = posts.findIndex((p) => Number(p.id) === targetPostId);
+            if (idx >= 0) {
+              const targetPage = Math.floor(idx / 15) + 1;
+              setHint(`[목록 점프] #${targetPostId} 글이 있는 ${targetPage}페이지로 이동합니다.`);
+              return showPostList(state.board.id, targetPage, {
+                menuPath: state.boardMenuPath,
+                menuTitle: state.boardMenuTitle
+              });
+            } else {
+              setHint(`해당 번호(#${targetPostId})의 글이 존재하지 않습니다.`);
+              setPrompt('선택 >>');
+            }
+          })
+          .catch((err) => {
+            setHint(`스캔 실패: ${err.message}`);
+            setPrompt('선택 >>');
+          });
+        return true;
+      }
+
+      // [LOG_ID: 20260713_1020] LD [월/일] 리스트 점프 명령어 추가
+      const ldMatch = cmd.match(/^LD\s+(\d{1,2})\/(\d{1,2})$/i);
+      if (ldMatch) {
+        const targetMonth = Number(ldMatch[1]);
+        const targetDay = Number(ldMatch[2]);
+        if (targetMonth < 1 || targetMonth > 12 || targetDay < 1 || targetDay > 31) {
+          setHint('날짜 형식이 잘못되었습니다. (예: LD 07/13)');
+          setPrompt('선택 >>');
+          return true;
+        }
+
+        setHint('날짜 위치를 스캔 중입니다..');
+        apiFetch(`/api/boards/${state.board.id}?page=1&pageSize=9999`)
+          .then((res) => {
+            const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
+            const currentYear = new Date().getFullYear();
+            const targetDate = new Date(currentYear, targetMonth - 1, targetDay, 23, 59, 59);
+
+            const idx = posts.findIndex((p) => {
+              const postDate = new Date(p.createdAt);
+              return postDate <= targetDate;
+            });
+
+            if (idx >= 0) {
+              const targetPage = Math.floor(idx / 15) + 1;
+              setHint(`[목록 점프] ${targetMonth}/${targetDay}와 같거나 이전인 글이 있는 ${targetPage}페이지로 이동합니다.`);
+              return showPostList(state.board.id, targetPage, {
+                menuPath: state.boardMenuPath,
+                menuTitle: state.boardMenuTitle
+              });
+            } else {
+              setHint(`지정하신 날짜(${targetMonth}/${targetDay}) 이전의 글이 존재하지 않습니다.`);
+              setPrompt('선택 >>');
+            }
+          })
+          .catch((err) => {
+            setHint(`스캔 실패: ${err.message}`);
+            setPrompt('선택 >>');
+          });
+        return true;
+      }
+
+      // [LOG_ID: 20260713_1020] K [주제어] 검색 명령어 추가
+      const kMatch = cmd.match(/^K\s+(.+)$/i);
+      if (kMatch) {
+        await showPostList(state.board.id, 1, {
+          menuPath: state.boardMenuPath,
+          menuTitle: state.boardMenuTitle,
+          searchParams: { k: kMatch[1].trim() }
+        });
+        return true;
+      }
+
+      // [LOG_ID: 20260713_1020] K 주제어 해제 명령어 추가
+      if (cmd === 'K') {
+        await showPostList(state.board.id, 1, {
+          menuPath: state.boardMenuPath,
+          menuTitle: state.boardMenuTitle,
+          searchParams: { k: '' }
+        });
+        return true;
+      }
+
+      // [LOG_ID: 20260713_1020] KW 주제어(말머리) 집계 목록 명령어 추가
+      if (cmd === 'KW') {
+        setHint('주제어를 수집 중입니다..');
+        apiFetch(`/api/boards/${state.board.id}?page=1&pageSize=9999`)
+          .then((res) => {
+            const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
+            const keywordsSet = new Set();
+            posts.forEach((p) => {
+              const m = String(p.title || '').match(/\[([^\]]+)\]/);
+              if (m) {
+                keywordsSet.add(m[1].trim());
+              }
+            });
+            const list = [...keywordsSet].join(', ');
+            setHint(list ? `[주제어 목록] ${list}` : '이 게시판에는 등록된 주제어가 없습니다.');
+            setPrompt('선택 >>');
+          })
+          .catch((err) => {
+            setHint(`수집 실패: ${err.message}`);
+            setPrompt('선택 >>');
+          });
         return true;
       }
 

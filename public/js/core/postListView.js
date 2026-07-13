@@ -106,6 +106,8 @@ export function createPostListView(deps) {
     let displayTitle = state.boardMenuTitle;
     if (searchParams.lt) displayTitle += ` [제목검색: ${searchParams.lt}]`;
     if (searchParams.li) displayTitle += ` [작성자검색: ${searchParams.li}]`;
+    // [LOG_ID: 20260713_1020] 상단바에 주제어검색 텍스트 추가
+    if (searchParams.k) displayTitle += ` [주제어검색: ${searchParams.k}]`;
 
     // [LOG_ID: 20260708_1300] setReady(true)를 남은 await(loadMenuTree)가 모두 끝난 뒤,
     // 렌더 호출 바로 직전으로 옮긴다. 예전 위치(로딩 타이머 취소 목적)는 그 뒤에 여전히

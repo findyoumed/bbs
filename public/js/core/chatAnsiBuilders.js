@@ -129,16 +129,50 @@ export function createChatAnsiBuilders(deps) {
     };
   }
 
-  function buildChatRoomAnsi(room, messages, userNick) {
+  function buildChatRoomAnsi(room, messages, userNick, myId) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
 
     const roomName = String(room?.name || room?.title || room?.roomId || '대화실');
     const userCount = room?.userCount || room?.memberCount || '1';
 
+    // [LOG_ID: 20260713_1020] 귓속말 필터링 및 렌더링
+    const myIdNormalized = String(myId || '').trim().toLowerCase();
+    
+    // 제3자의 귓속말은 완전히 걸러내고, 나와 연관된 귓속말만 노출
+    const filteredMessages = (messages || []).filter((msg) => {
+      const text = String(msg.content || msg.message || '');
+      const whisperMatch = text.match(/^\[TO:(\S+)\]\s*(.+)$/i);
+      if (whisperMatch) {
+        const recipient = whisperMatch[1].trim().toLowerCase();
+        const sender = String(msg.userId || '').trim().toLowerCase();
+        // 내가 보냈거나, 나에게 온 귓속말인 경우에만 통과
+        return recipient === myIdNormalized || sender === myIdNormalized;
+      }
+      return true;
+    });
+
     function msgLine(message) {
       const who = String(message.nickName || message.userId || '?');
-      const text = String(message.content || message.message || '');
+      const senderId = String(message.userId || '').trim().toLowerCase();
+      let text = String(message.content || message.message || '');
+
+      const whisperMatch = text.match(/^\[TO:(\S+)\]\s*(.+)$/i);
+      if (whisperMatch) {
+        // 나에게 온 귓속말 또는 내가 보낸 귓속말인 경우
+        const recipient = whisperMatch[1].trim();
+        const actualText = whisperMatch[2].trim();
+        const isFromMe = senderId === myIdNormalized;
+
+        const prefix = isFromMe 
+          ? `[귓속말 -> ${recipient}] ` 
+          : `[귓속말][${who}] `;
+          
+        const maxText = (targetCols - 2) - displayWidth(prefix);
+        // 귓속말은 Hitel 원전 감성을 살려 핑크색(13)으로 표시
+        return ansiColor(13) + prefix + ansiColor(15) + fitCell(actualText, maxText) + ANSI_RESET;
+      }
+
       const prefix = `[${who}] `;
       const maxText = (targetCols - 2) - displayWidth(prefix);
 
@@ -154,7 +188,7 @@ export function createChatAnsiBuilders(deps) {
     // [LOG: 20260707_1424] 상단바 4줄이 본문 앞에 추가되므로 메시지 슬롯은 16줄이 화면 예산(80x24)에 맞는다.
     // (18줄이면 하단 상태줄이 잘리고 세로 스크롤이 생긴다)
     const parts = [];
-    const shown = messages.slice(-16);
+    const shown = filteredMessages.slice(-16);
     for (const message of shown) {
       parts.push(msgLine(message));
     }

@@ -1,3 +1,26 @@
+## [2026-07-13 10:20] Phase 3 확장 사양 추가: LS/LD 목록 점프, K/KW 주제어 검색, 대화방 내 /TO 귓속말 구현
+
+**LOG_ID: 20260713_1020**
+목표: 하이텔 길라잡이 전권 학습 로드맵의 Phase 3 확장 사양(LS/LD 목록 점프, K/KW 주제어 검색, 대화방 내 /TO 귓속말)을 모두 구현하여 PC통신 환경을 완벽하게 재구현한다.
+변경 파일:
+1) `public/js/core/appFactoryHandlers.js` (createBrowseCommandHandler에 apiFetch 주입 추가)
+2) `public/js/core/commandRouterBrowse.js` (LS, LD, K, KW 명령어의 클라이언트 핸들러 배선 추가 및 apiFetch 구조분해)
+3) `public/js/core/postListView.js` (k 주제어검색 상태일 때 상단바 제목에 [주제어검색: 단어] 노출 추가)
+4) `src/server/BoardRepositorySearch.js` (메모리 데이터의 k 주제어 필터링 파싱 및 대괄호 제목 검색 적용)
+5) `src/server/SupabaseBoardRepositoryQueryHelpers.js` (Supabase 쿼리의 k 주제어 ilike 대괄호 제목 필터링 추가)
+6) `public/js/core/chatScreens.js` (buildChatRoomAnsi 호출 시 로그인한 userId인 myId 전달)
+7) `public/js/core/chatAnsiBuilders.js` (buildChatRoomAnsi 내 제3자 귓속말 필터링 및 본인 연관 귓속말 13번 색상 강조 포맷팅)
+8) `public/js/core/commandRouterChat.js` (대화방 내 /TO 상대방ID 메시지 귓속말 전송 및 피드백 힌트 배선 추가)
+수행 작업:
+1) [LS/LD 목록 점프] 게시판 목록 화면에서 LS [번호], LD [월/일] 입력 시 전체 글을 스캔하여 해당 글의 위치 인덱스를 통해 타겟 페이지 번호를 산출한 후 showPostList를 호출하여 그 페이지로 쾌속 점프.
+2) [K/KW 주제어] K [주제어] 입력 시 제목의 대괄호 말머리 [주제어] 일치 글만 필터링하여 노출. KW 입력 시 전체 글의 대괄호 말머리를 파싱하여 고유 목록을 추출한 후 힌트바에 리스팅.
+3) [대화방 귓속말 /TO] 대화방에서 /TO 상대방ID 메시지 입력 시 prefix를 붙여 전송. 3초 주기 폴링 시 나와 연관된 귓속말만 노출하고 제3자의 귓속말은 완전히 가림 처리하여 Hitel 감성 귓속말 완벽 복원.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 통과 및 헬스 체크 정상.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-13 10:10] 초기 메뉴 1열 세로형 복원 + SET LEVEL (초급/중급/고급) 및 SET HOME 리다이렉트
 
 **LOG_ID: 20260713_1010**

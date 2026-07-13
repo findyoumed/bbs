@@ -24,7 +24,8 @@ function normalizeSearchOptions(options = {}) {
   const category = String(options.search?.category || options.category || options.header || '').trim();
   const directMode = normalizeSearchMode(options.search?.mode);
   const directQuery = String(options.search?.query || '').trim().slice(0, MAX_QUERY_LENGTH);
-
+  const k = String(options.k || '').trim();
+ 
   let search = null;
   if (directMode && directQuery) {
     search = { mode: directMode, query: directQuery };
@@ -38,11 +39,16 @@ function normalizeSearchOptions(options = {}) {
       }
     }
   }
-
+ 
   if (category) {
     search = { ...(search || {}), category };
   }
 
+  // [LOG_ID: 20260713_1020] 주제어 검색 필터 k를 search 객체에 영사
+  if (k) {
+    search = { ...(search || {}), k };
+  }
+ 
   return search;
 }
 
@@ -56,6 +62,15 @@ function filterPostsBySearch(posts, search) {
   if (search?.category) {
     const cat = String(search.category).toLowerCase();
     result = result.filter(post => String(post.category || post.header || '').toLowerCase() === cat);
+  }
+
+  // [LOG_ID: 20260713_1020] 대괄호 안에 들어있는 주제어([k]) 필터 검사 적용
+  if (search?.k) {
+    const keyword = String(search.k).toLowerCase();
+    result = result.filter(post => {
+      const title = String(post.title || '').toLowerCase();
+      return title.includes(`[${keyword}]`);
+    });
   }
 
   if (!search?.mode || !search?.query) {
