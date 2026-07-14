@@ -53,6 +53,97 @@ export function createSystemAnsiBuilders(deps) {
     return parts.join('\n');
   }
 
+  // [LOG_ID: 20260716_1400] 하이텔 원전 (1)서비스안내-24.이용자검색(member/byid/byname) 화면.
+  // 서버 API(/api/members/search)와 프로필 화면(buildProfileAnsi)은 이미 있었지만 이를 사용자에게
+  // 노출하는 화면이 없어, 아이디를 정확히 아는 사람만 PF/WHO 명령으로 프로필을 볼 수 있었다
+  // (닉네임으로 찾을 방법은 아예 없었다).
+  function buildMemberSearchAnsi(options = {}) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    const cmdWidth = isMobile ? 18 : 22;
+
+    const parts = [
+      buildTopHeader({ leftLabel: 'WHO', centerLabel: '이용자 검색 (MEMBER)' }, '', targetCols)
+    ];
+
+    parts.push('');
+    // 44칸(모바일)을 넘기지 않도록 안내 문구를 화면 폭에 맞춰 나눈다.
+    parts.push(isMobile
+      ? `  ${ansiColor(15)}아이디 또는 이름을 입력하세요.${ANSI_RESET}`
+      : `  ${ansiColor(15)}찾으려는 이용자의 아이디 또는 이름(닉네임)을 입력하십시오.${ANSI_RESET}`);
+    parts.push('');
+    parts.push(ansiHLine(targetCols, 8));
+    parts.push(`  ${ansiColor(11)}${fitCell('BYID   <아이디>', cmdWidth)}${ANSI_RESET}${ansiColor(15)}아이디로 찾기${ANSI_RESET}`);
+    parts.push(`  ${ansiColor(11)}${fitCell('BYNAME <이름>', cmdWidth)}${ANSI_RESET}${ansiColor(15)}이름으로 찾기${ANSI_RESET}`);
+    parts.push(ansiHLine(targetCols, 8));
+    parts.push('');
+    parts.push(isMobile
+      ? `  ${ansiColor(8)}그냥 입력하면 아이디부터 찾습니다.${ANSI_RESET}`
+      : `  ${ansiColor(8)}명령 없이 그냥 입력하면 아이디, 이름 순서로 찾습니다.${ANSI_RESET}`);
+
+    const notFound = String(options.notFoundQuery || '').trim();
+    if (notFound) {
+      parts.push('');
+      // 모바일(44칸)에서는 검색어를 12칸으로 줄이고 문구도 짧게 — 아이디를 길게 넣으면
+      // 원래 문구("...이용자를 찾을 수 없습니다.")가 45칸으로 1칸 넘쳤다(폭 검증에서 발견).
+      parts.push(isMobile
+        ? `  ${ansiColor(12)}'${truncateDisplayText(notFound, 12)}' 이용자가 없습니다.${ANSI_RESET}`
+        : `  ${ansiColor(12)}'${truncateDisplayText(notFound, 30)}' 이용자를 찾을 수 없습니다.${ANSI_RESET}`);
+    }
+
+    return parts.join('\n');
+  }
+
+  // [LOG_ID: 20260716_2200] 하이텔 (1)-25 접속통계(account) 계열 — 내 이용 현황.
+  // 원전은 접속 횟수·사용 시간·요금을 보여줬지만 이 앱은 세션을 기록하지 않아 그 수치는 없다.
+  // 없는 값을 지어내는 대신 실제로 가진 것만 보여준다.
+  function buildMyStatsAnsi(stats) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    const labelWidth = isMobile ? 12 : 16;
+
+    const parts = [
+      buildTopHeader({ leftLabel: 'ACCT', centerLabel: '이용 현황 (ACCOUNT)' }, '', targetCols)
+    ];
+
+    if (!stats) {
+      parts.push('');
+      parts.push(`  ${ansiColor(12)}이용 현황을 불러오지 못했습니다.${ANSI_RESET}`);
+      return parts.join('\n');
+    }
+
+    const row = (label, value) => `  ${ansiColor(11)}${fitCell(label, labelWidth)}${ANSI_RESET}: ${ansiColor(15)}${value}${ANSI_RESET}`;
+    const gradeName = stats.isAdmin ? '운영자' : (Number(stats.level) >= 2 ? '특별회원' : '일반회원');
+
+    parts.push('');
+    parts.push(`  ${ansiColor(14)}[ 계정 ]${ANSI_RESET}`);
+    parts.push(row('아이디', stats.userId || '-'));
+    parts.push(row('닉네임', stats.nickName || '-'));
+    parts.push(row('회원등급', `${stats.level || 1} (${gradeName})`));
+    parts.push(row('가입일', formatLongDate(stats.registrationDateTime) || '정보 없음'));
+    parts.push(row('최근 접속', formatLongDate(stats.lastLoginDateTime) || '기록 없음'));
+    parts.push(ansiHLine(targetCols, 8));
+
+    parts.push(`  ${ansiColor(14)}[ 게시물 ]${ANSI_RESET}`);
+    parts.push(row('올린 글', `${stats.postCount || 0} 편`));
+    parts.push(row('받은 조회', `${stats.hitsSum || 0} 회`));
+    parts.push(row('받은 추천', `${stats.recommendSum || 0} 회`));
+    parts.push(ansiHLine(targetCols, 8));
+
+    parts.push(`  ${ansiColor(14)}[ 전자우편 ]${ANSI_RESET}`);
+    parts.push(row('받은 쪽지', `${stats.memoInbox || 0} 통 (안 읽음 ${stats.memoUnread || 0})`));
+    parts.push(row('보낸 쪽지', `${stats.memoSent || 0} 통`));
+    parts.push(row('보관한 쪽지', `${stats.memoArchived || 0} 통`));
+    parts.push(ansiHLine(targetCols, 8));
+
+    // 원전에 있던 "사용 시간/요금"이 왜 없는지 화면에서도 분명히 밝힌다.
+    parts.push(isMobile
+      ? `  ${ansiColor(8)}접속 시간·요금은 집계하지 않습니다.${ANSI_RESET}`
+      : `  ${ansiColor(8)}이 서비스는 접속 시간과 이용 요금을 집계하지 않습니다.${ANSI_RESET}`);
+
+    return parts.join('\n');
+  }
+
   function buildActiveUsersAnsi(users) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -231,5 +322,5 @@ export function createSystemAnsiBuilders(deps) {
     return parts.join('\n');
   }
 
-  return { buildActiveUsersAnsi, buildSystemDiagnosticsAnsi, buildActivitySummaryAnsi, buildSystemLogAnsi, buildProfileAnsi };
+  return { buildActiveUsersAnsi, buildSystemDiagnosticsAnsi, buildActivitySummaryAnsi, buildSystemLogAnsi, buildProfileAnsi, buildMemberSearchAnsi, buildMyStatsAnsi };
 }

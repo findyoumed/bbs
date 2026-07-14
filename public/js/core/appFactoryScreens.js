@@ -2,6 +2,10 @@
 import { createVoteScreens } from './voteScreens.js';
 import { createRankingScreens } from './rankingScreens.js';
 import { createAmusementScreens } from './amusementScreens.js';
+// [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색(member/byid/byname)
+import { createMemberSearchScreens } from './memberSearchScreens.js';
+// [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 메뉴안내·인덱스안내(menu/index)
+import { createMenuIndexScreens } from './menuIndexScreens.js';
 
 export function createAppFactoryScreens(deps) {
   const {
@@ -83,7 +87,9 @@ export function createAppFactoryScreens(deps) {
     apiFetch,
     buildActiveUsersAnsi: systemAnsiBuilders.buildActiveUsersAnsi,
     buildSystemDiagnosticsAnsi: systemAnsiBuilders.buildSystemDiagnosticsAnsi,
-    buildActivitySummaryAnsi: systemAnsiBuilders.buildActivitySummaryAnsi
+    buildActivitySummaryAnsi: systemAnsiBuilders.buildActivitySummaryAnsi,
+    // [LOG_ID: 20260716_2200] 하이텔 (1)-25 계열 — 내 이용 현황.
+    buildMyStatsAnsi: systemAnsiBuilders.buildMyStatsAnsi
   });
   const systemLogScreens = createSystemLogScreens({
     ...screenDeps,
@@ -179,7 +185,21 @@ export function createAppFactoryScreens(deps) {
     doSignup: authService.doSignup
   });
   const helpScreens = createHelpScreens({ ...screenDeps });
+  // [LOG_ID: 20260716_1600] 전체 메뉴 안내(INDEX) — 살아있는 메뉴 트리에서 매번 생성한다.
+  const menuIndexScreens = createMenuIndexScreens({
+    ...screenDeps,
+    getMenuChildren: menuService.getMenuChildren,
+    getMenuNodeLabel: menuService.getMenuNodeLabel
+  });
   const profileScreens = createProfileScreens({ ...screenDeps, apiFetch, buildProfileAnsi: systemAnsiBuilders.buildProfileAnsi });
+  // [LOG_ID: 20260716_1400] 이용자검색 — 검색은 기존 authService.searchMember(/api/members/search),
+  // 결과 표시는 기존 프로필 화면을 그대로 재사용한다(신규 API·신규 데이터 없음).
+  const memberSearchScreens = createMemberSearchScreens({
+    ...screenDeps,
+    buildMemberSearchAnsi: systemAnsiBuilders.buildMemberSearchAnsi,
+    searchMember: authService.searchMember,
+    showProfile: profileScreens.showProfile
+  });
   const myInfoScreens = createMyInfoScreens({
     ...screenDeps,
     apiFetch,
@@ -226,7 +246,9 @@ export function createAppFactoryScreens(deps) {
     handleHistoryBack,
     helpScreens,
     jumpToContent,
+    memberSearchScreens,
     memoScreens,
+    menuIndexScreens,
     menuNav,
     myInfoScreens,
     policyScreens,

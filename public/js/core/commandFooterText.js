@@ -24,9 +24,16 @@ export const CMD_ORDER = {
   chat: ['P', 'T', 'GO', 'O:방만들기', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
   chatLobby: ['P', 'T', 'GO', 'O:방만들기', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
   memoList: ['P', 'T', 'GO', 'W:쓰기', 'H'],
-  memoView: ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'DD:삭제', 'H'],
+  // [LOG_ID: 20260716_1800] K:보관 — 하이텔 (10)-5 편지보관함(mbox).
+  memoView: ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'K:보관', 'DD:삭제', 'H'],
   memoWrite: ['P:취소', 'SEND:전송', 'H'],
   profile: ['P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색 — 원전의 byid/byname 두 하위 항목을
+  // 별도 화면이 아니라 한 화면의 두 명령으로 흡수했다(그냥 입력하면 아이디→이름 순 검색).
+  memberSearch: ['BYID:아이디로', 'BYNAME:이름으로', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 전체 메뉴 안내 — help처럼 F/B로 페이징하고,
+  // 목록의 코드를 그냥 입력하면 GO 없이 바로 이동한다.
+  menuIndex: ['F', 'B', 'P', 'T', 'GO', 'H'],
   myInfoView: ['P', 'T', 'GO', 'H'],
   myInfoEdit: ['P:취소', 'T', 'ENTER:변경', 'H'],
   myInfoDelete: ['P:취소', 'T', 'ENTER:탈퇴', 'H'],
@@ -85,6 +92,10 @@ const SCREEN_TO_CATEGORY = {
   'memo-view': 'memoView',
   'memo-write': 'memoWrite',
   profile: 'profile',
+  'member-search': 'memberSearch',
+  'menu-index': 'menuIndex',
+  // [LOG_ID: 20260716_2200] 이용 현황 — 다른 조회 전용 화면과 같은 systemInfo(P/T/GO/H).
+  'my-stats': 'systemInfo',
   'active-users': 'systemInfo',
   'activity-summary': 'systemInfo',
   'system-diagnostics': 'systemInfo',
@@ -120,10 +131,15 @@ export function createCommandFooterTextUtils(deps) {
 
     // [LOG_ID: 20260713_1230] 쪽지함 상자별 힌트바 — 보낸쪽지함에서는 나우누리 CMAIL식
     // 발송취소(CM)를, 받은쪽지함에서는 보낸쪽지함 전환(S)을 안내한다.
+    // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) 추가 — 상자가 셋이 됐다.
     if (category === 'memoList' && state) {
-      order = state._memoBox === 'sent'
-        ? ['P', 'T', 'GO', 'I:받은쪽지', 'CM:발송취소', 'H']
-        : ['P', 'T', 'GO', 'W:쓰기', 'S:보낸쪽지', 'H'];
+      if (state._memoBox === 'archive') {
+        order = ['P', 'T', 'GO', 'I:받은쪽지', 'S:보낸쪽지', 'K:보관해제', 'H'];
+      } else if (state._memoBox === 'sent') {
+        order = ['P', 'T', 'GO', 'I:받은쪽지', 'MB:보관함', 'CM:발송취소', 'K:보관', 'H'];
+      } else {
+        order = ['P', 'T', 'GO', 'W:쓰기', 'S:보낸쪽지', 'MB:보관함', 'K:보관', 'H'];
+      }
     }
 
     // [LOG_ID: 20260713_1160] 나우누리 테마 시 대화방/쪽지함 힌트바 토큰 동적 오버라이드

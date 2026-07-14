@@ -10,6 +10,8 @@
     "check": "node scripts/check-supabase-ready.js",
     "smoke:boards": "node scripts/smoke-boards.js",
     "smoke:command-parity": "node scripts/smoke-command-parity.js",
+    "smoke:menu-wiring": "node scripts/smoke-menu-wiring.js",
+    "smoke:signup-ime": "node scripts/smoke-signup-ime.mjs",
     "smoke:renderer-ui": "node scripts/smoke-renderer-ui.js",
     "smoke:runtime-diagnostics": "node scripts/smoke-runtime-diagnostics.js",
     "smoke:ui-geometry": "node scripts/smoke-ui-geometry.js",

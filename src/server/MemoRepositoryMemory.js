@@ -20,11 +20,24 @@ class MemoryMemoRepository {
     };
   }
 
+  // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — Supabase 구현과 동일 의미로 맞춘다
+  // (dual-mode라 두 드라이버의 동작이 갈리면 안 된다).
   async listForUser(context = {}) {
     const userId = normalizeText(context.userId, 'guest');
+
+    if (context.box === 'archive') {
+      return this.memos
+        .filter((memo) => (memo.recipientUserId === userId && memo.recipientArchived)
+          || (memo.senderUserId === userId && memo.senderArchived))
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+        .map((memo) => ({ ...memo }));
+    }
+
     const isSentBox = context.box === 'sent';
     return this.memos
-      .filter((memo) => isSentBox ? memo.senderUserId === userId : memo.recipientUserId === userId)
+      .filter((memo) => (isSentBox
+        ? memo.senderUserId === userId && !memo.senderArchived
+        : memo.recipientUserId === userId && !memo.recipientArchived))
       .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
       .map((memo) => ({ ...memo }));
   }
@@ -32,8 +45,24 @@ class MemoryMemoRepository {
   async countUnread(context = {}) {
     const userId = normalizeText(context.userId, 'guest');
     return {
-      count: this.memos.filter((memo) => memo.recipientUserId === userId && memo.isRead !== true).length
+      count: this.memos.filter((memo) => memo.recipientUserId === userId
+        && memo.isRead !== true
+        && !memo.recipientArchived).length
     };
+  }
+
+  async setArchived(id, archived, context = {}) {
+    const memo = this._findMemo(id);
+    const userId = normalizeText(context.userId, 'guest');
+    if (memo.recipientUserId !== userId && memo.senderUserId !== userId) {
+      throw createHttpError(403, '쪽지를 보관할 권한이 없습니다.');
+    }
+    if (memo.recipientUserId === userId) {
+      memo.recipientArchived = Boolean(archived);
+    } else {
+      memo.senderArchived = Boolean(archived);
+    }
+    return { ...memo };
   }
 
   async getMemo(id, context = {}) {
@@ -55,7 +84,9 @@ class MemoryMemoRepository {
       content: payload.content,
       isRead: false,
       createdAt: new Date().toISOString(),
-      readAt: null
+      readAt: null,
+      senderArchived: false,
+      recipientArchived: false
     };
     this.memos.push(memo);
     return { ...memo };

@@ -42,6 +42,10 @@ node archive/dev-only/tests/unit/<name>.test.js
 
 ### 2.3 Domain-Specific Smoke Tests
 If modifying specific modules, run the relevant test:
+- `npm run smoke:menu-wiring`  # **Run after ANY `legacy/hanulso.mnu` or screen change.**
+  Catches the recurring "menu does nothing when clicked" bug: `menuNavigationActions.js` has the
+  `node.type` branch but `refs.showX` was never added to `appFactoryRuntime.js`, so
+  `executeMenuNodeAction` silently `return false`s. Hit three times (showMemoList, showHelp, showPolicy).
 - `npm run smoke:boards`       # Board API
 - `npm run smoke:auth-bridge`   # Auth/Supabase Bridge
 - `npm run smoke:chat-rooms`    # Chat API

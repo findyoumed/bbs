@@ -169,6 +169,22 @@ export function createRoutingUrlBuilder(deps) {
       case 'profile':
         return `/profile/${encodeURIComponent(_profileUserId || '')}`;
 
+      // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색. policy 때(20260715_2400)처럼 고유
+      // 경로가 없으면 default('/')로 떨어져 TOP과 URL이 같아지고, 그 탓에 handleHistoryBack()의
+      // "currentPath !== '/'" 판정이 깨진다 — 처음부터 전용 경로를 준다.
+      case 'member-search':
+        return '/member';
+
+      // [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 전체 메뉴 안내. help와 동일하게 페이지도 주소에 싣는다.
+      case 'menu-index': {
+        const indexPage = Math.max(1, Number(page || 1));
+        return indexPage > 1 ? `/index?page=${encodeURIComponent(indexPage)}` : '/index';
+      }
+
+      // [LOG_ID: 20260716_2200] 하이텔 (1)-25 계열 이용 현황.
+      case 'my-stats':
+        return '/account';
+
       case 'myinfo': {
         const myInfoMode = String(_myInfoMode || 'view').trim().toLowerCase();
         if (myInfoMode === 'nickname') return '/myinfo/nick';
@@ -178,8 +194,11 @@ export function createRoutingUrlBuilder(deps) {
       }
 
       case 'memo-list': {
+        // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — 상자가 셋이 됐다.
         const box = state._memoBox || 'inbox';
-        return box === 'sent' ? '/memo?box=sent' : '/memo';
+        if (box === 'sent') return '/memo?box=sent';
+        if (box === 'archive') return '/memo?box=archive';
+        return '/memo';
       }
 
       case 'memo-view':

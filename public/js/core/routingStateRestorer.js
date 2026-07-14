@@ -26,6 +26,9 @@ export function createRoutingStateRestorer(deps) {
     showPostList,
     showPostView,
     showPostWrite,
+    showMemberSearch,
+    showMenuIndex,
+    showMyStats,
     showProfile,
     showSignup,
     showUnifiedPdsList,
@@ -245,6 +248,31 @@ export function createRoutingStateRestorer(deps) {
       await showMain(true);
     },
 
+    // [LOG_ID: 20260716_1400] /member 복원 — 하이텔 (1)-24 이용자검색.
+    async member() {
+      if (typeof showMemberSearch === 'function') {
+        return await showMemberSearch(true);
+      }
+      await showMain(true);
+    },
+
+    // [LOG_ID: 20260716_1600] /index?page=N 복원 — 하이텔 (1)-6/8 전체 메뉴 안내.
+    async index(_segments, query) {
+      if (typeof showMenuIndex === 'function') {
+        const page = Math.max(1, parseInt(query?.get('page') || '1', 10) || 1);
+        return await showMenuIndex(page, true);
+      }
+      await showMain(true);
+    },
+
+    // [LOG_ID: 20260716_2200] /account 복원 — 하이텔 (1)-25 계열 이용 현황.
+    async account() {
+      if (typeof showMyStats === 'function') {
+        return await showMyStats(true);
+      }
+      await showMain(true);
+    },
+
     async myinfo(segments) {
       const modeMap = {
         nick: 'nickname',
@@ -267,8 +295,9 @@ export function createRoutingStateRestorer(deps) {
         return await showMemoView(decodeURIComponent(segments[1]), true);
       }
       // [LOG_ID: 20260713_1000] URL 쿼리 파라미터에서 box 복원
-      const box = query?.get('box') || 'inbox';
-      state._memoBox = box;
+      // [LOG_ID: 20260716_1800] 편지보관함(archive) 추가 — 알 수 없는 값은 받은쪽지함으로 떨군다.
+      const box = String(query?.get('box') || 'inbox');
+      state._memoBox = ['inbox', 'sent', 'archive'].includes(box) ? box : 'inbox';
       await showMemoList(true);
     },
     // [LOG_ID: 20260714_1200] 여론광장(ACRO) 라우트 — 투표/설문. 종전 /game/vote 하위에 있던 것을

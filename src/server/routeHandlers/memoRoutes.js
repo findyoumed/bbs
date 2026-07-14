@@ -1,6 +1,11 @@
 'use strict';
 
 const BaseRouter = require('./BaseRouter');
+const { parseRecipients } = require('../MemoRepositoryShared');
+
+// [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — 한 번에 보낼 수 있는 수신자 수 상한.
+// 상한이 없으면 쪽지 한 통 요청으로 임의 개수의 행을 만들 수 있다.
+const MEMO_MAX_RECIPIENTS = 20;
 
 /**
  * [LOG: 20260426_1900] Modularized MemoRoutes from MemberRouter (Evolution Mode: Structural Optimization)
@@ -20,6 +25,8 @@ class MemoRouter extends BaseRouter {
       { method: 'GET', pattern: '/api/memos/:memoId', handler: 'getMemo', middlewares: ['ensureAuthenticated'] },
       { method: 'POST', pattern: '/api/memos/:memoId/read', handler: 'markMemoRead', middlewares: ['ensureAuthenticated'] },
       { method: 'PATCH', pattern: '/api/memos/:memoId/read', handler: 'markMemoRead', middlewares: ['ensureAuthenticated'] },
+      // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — 보관/보관해제.
+      { method: 'POST', pattern: '/api/memos/:memoId/archive', handler: 'archiveMemo', middlewares: ['ensureAuthenticated'], needBody: true },
       { method: 'DELETE', pattern: '/api/memos/:memoId', handler: 'deleteMemo', middlewares: ['ensureAuthenticated'] }
     ];
   }
@@ -77,22 +84,48 @@ class MemoRouter extends BaseRouter {
     };
   }
 
+  // [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — 받는 사람을 쉼표/공백으로 여러 명 적으면
+  // 수신자 수만큼 쪽지를 만든다. 쪽지 1건 = 1행이라 스키마 변경 없이 된다.
+  // (원전의 "그룹지정"=이름 붙인 수신자 그룹 저장은 별도 테이블이 필요해 구현하지 않았다.)
   async createMemo() {
     const { memoRepository } = this.deps;
     const body = await this.getCreateMemoBody();
     const context = await this.getContext();
-    const result = await memoRepository.createMemo(body, context);
 
-    // [LOG_ID: 20260713_1050] 수신자 부재 여부 체크 동반 반환
+    const recipients = parseRecipients(body.recipientUserId);
+    if (!recipients.length) {
+      this.validationError('body parameter "recipientUserId" is required.');
+    }
+    if (recipients.length > MEMO_MAX_RECIPIENTS) {
+      this.validationError(`단체편지는 한 번에 최대 ${MEMO_MAX_RECIPIENTS}명까지 보낼 수 있습니다.`);
+    }
+
     global.absentMessages = global.absentMessages || new Map();
-    const rcpt = String(body.recipientUserId || '').trim();
-    const isAbsent = global.absentMessages.has(rcpt);
-    const absentMsg = isAbsent ? global.absentMessages.get(rcpt) : null;
 
+    const results = [];
+    const absentRecipients = [];
+    for (const recipientUserId of recipients) {
+      const created = await memoRepository.createMemo({ ...body, recipientUserId }, context);
+      results.push(created);
+      if (global.absentMessages.has(recipientUserId)) {
+        absentRecipients.push({
+          userId: recipientUserId,
+          absentMsg: global.absentMessages.get(recipientUserId)
+        });
+      }
+    }
+
+    // 수신자 1명이면 종전 응답 형태(쪽지 객체 + recipientAbsent/absentMsg)를 그대로 유지한다 —
+    // 기존 클라이언트/스모크 테스트가 이 형태에 의존한다.
+    const first = absentRecipients[0] || null;
     return this.send(201, {
-      ...result,
-      recipientAbsent: isAbsent,
-      absentMsg
+      ...results[0],
+      recipientAbsent: Boolean(first),
+      absentMsg: first ? first.absentMsg : null,
+      // 단체편지용 추가 필드 (수신자 1명일 때도 채워지므로 클라이언트가 일관되게 읽을 수 있다)
+      recipients,
+      sentCount: results.length,
+      absentRecipients
     });
   }
 
@@ -102,6 +135,17 @@ class MemoRouter extends BaseRouter {
     if (isNaN(memoId)) this.error(400, 'Invalid memo ID');
     const context = await this.getContext();
     return this.send(200, await memoRepository.getMemo(memoId, context));
+  }
+
+  // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — body.archived(기본 true)로 보관/해제.
+  async archiveMemo(params) {
+    const { memoRepository } = this.deps;
+    const memoId = Number(params.memoId);
+    if (isNaN(memoId)) this.error(400, 'Invalid memo ID');
+    const body = await this.getBody();
+    const archived = body && body.archived === false ? false : true;
+    const context = await this.getContext();
+    return this.send(200, await memoRepository.setArchived(memoId, archived, context));
   }
 
   async markMemoRead(params) {

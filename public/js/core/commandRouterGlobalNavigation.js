@@ -12,6 +12,8 @@ export function createGlobalNavigationCommandHandler(deps) {
     showHelp,
     showHistory,
     showPolicy,
+    // [LOG_ID: 20260716_1600] 전체 메뉴 안내(INDEX) — F/B 페이징 + 코드 직접 입력.
+    showMenuIndex,
     handleHistoryBack,
     setHint,
     setPrompt,
@@ -190,6 +192,32 @@ export function createGlobalNavigationCommandHandler(deps) {
           await showHelp('', prevPage);
         }
         return true;
+      }
+    }
+
+    // [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 전체 메뉴 안내 — F/B 페이징(help와 동일)에 더해,
+    // 목록에 적힌 코드를 GO 없이 그대로 입력해도 이동한다(인덱스 화면의 존재 이유).
+    if (state.screen === 'menu-index' && typeof showMenuIndex === 'function') {
+      if (cmd === 'F') {
+        const nextPage = (state.page || 1) + 1;
+        if (nextPage <= (state.menuIndexTotalPages || 1)) {
+          await showMenuIndex(nextPage);
+        }
+        return true;
+      }
+      if (cmd === 'B') {
+        const prevPage = (state.page || 1) - 1;
+        if (prevPage >= 1) {
+          await showMenuIndex(prevPage);
+        }
+        return true;
+      }
+      // P/T(상위·초기화면)는 아래 공용 처리에 맡기고, 그 외 입력은 코드로 간주해 GO로 넘긴다.
+      const keyword = String(rawCmd || '').trim();
+      if (keyword && !['P', 'M', 'B', 'T', 'F', 'H'].includes(cmd)) {
+        if (typeof executeGoCommand === 'function' && await executeGoCommand(`GO ${keyword}`)) {
+          return true;
+        }
       }
     }
 

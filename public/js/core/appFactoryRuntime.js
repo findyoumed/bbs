@@ -32,6 +32,14 @@ export function initializeAppFactoryRuntime(deps) {
     // 항상 조용히 실패(return false)하던 문제 — MEMO 때(20260713_1700)와 동일한 유형의 누락.
     showHelp: screens.helpScreens.showHelp,
     showPolicy: screens.policyScreens.showPolicy,
+    // [LOG_ID: 20260716_1400] 이용자검색(menuNavigationActions type='member-search') 진입점.
+    // showMemoList(20260713_1700)·showHelp/showPolicy(20260713_2100) 때와 동일한 누락이
+    // 나지 않도록 refs·routingModule 양쪽에 함께 등록한다.
+    ...screens.memberSearchScreens,
+    // [LOG_ID: 20260716_1600] 전체 메뉴 안내(menuNavigationActions type='menu-index').
+    ...screens.menuIndexScreens,
+    // [LOG_ID: 20260716_2200] 이용 현황(menuNavigationActions type='my-stats').
+    showMyStats: screens.systemScreens.showMyStats,
     showSignup: screens.signupModule.showSignup,
     showMain: screens.showMain,
     showBoardSelect: screens.showBoardSelect,
@@ -169,6 +177,12 @@ export function initializeAppFactoryRuntime(deps) {
     // 빠져 있어 URL 라우팅(buildURLForState/restoreStateFromURL)이 이 화면을 아예 모르는
     // 상태였다 — showHelp/showHistory 때(20260713_2100/2300)와 동일한 유형의 누락.
     showPolicy: screens.policyScreens.showPolicy,
+    // [LOG_ID: 20260716_1400] /member URL 라우팅(buildURLForState/restoreStateFromURL)용.
+    showMemberSearch: screens.memberSearchScreens.showMemberSearch,
+    // [LOG_ID: 20260716_1600] /index URL 라우팅용.
+    showMenuIndex: screens.menuIndexScreens.showMenuIndex,
+    // [LOG_ID: 20260716_2200] /account URL 라우팅용.
+    showMyStats: screens.systemScreens.showMyStats,
     showMyInfo: screens.myInfoScreens.showMyInfo,
     showProfile: screens.profileScreens.showProfile,
     showSignup: screens.signupModule.showSignup,

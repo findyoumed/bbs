@@ -221,8 +221,19 @@ export function createSignupEmailHandler(deps) {
     }
   }
 
-  function sanitizeCurrentCommandInput() {
+  // [LOG_ID: 20260717_1200] 한글 IME가 조합 중일 때 value를 건드리면 안 된다 — 조합의 기준이
+  // 발밑에서 바뀌어 글자가 씹히거나 중복된다("아이디 칸에 입력이 잘 안 된다" 사용자 보고).
+  // 종전엔 'input' 리스너가 조합 진행 중에도 매 글자 발동해 cmdInput.value를 통째로 갈아끼웠다.
+  // (applyEnglishInputMode의 style.imeMode='inactive'는 크롬이 무시하는 비표준 속성이라
+  //  IME가 꺼지지 않는다 — 조합은 실제로 일어난다.)
+  // 조합 중에는 손대지 않고, 조합이 끝난 뒤(compositionend)에 한 번에 정리한다.
+  function sanitizeCurrentCommandInput(event) {
     if (!cmdInput) {
+      return;
+    }
+
+    // event.isComposing 은 조합 중인 input 이벤트에서 true. compositionend 에서는 false다.
+    if (event && event.isComposing) {
       return;
     }
 
@@ -252,7 +263,12 @@ export function createSignupEmailHandler(deps) {
     }
 
     cmdInput.addEventListener('input', sanitizeCurrentCommandInput);
-    cmdInput.addEventListener('compositionend', sanitizeCurrentCommandInput);
+    // compositionend 는 브라우저가 value를 확정한 뒤에 온다. 다만 크롬은 compositionend 시점에
+    // 아직 확정 문자를 value에 반영하기 전인 경우가 있어, 다음 틱에 한 번 더 정리한다.
+    cmdInput.addEventListener('compositionend', (event) => {
+      sanitizeCurrentCommandInput(event);
+      window.setTimeout(() => sanitizeCurrentCommandInput(), 0);
+    });
     englishInputGuardAttached = true;
   }
 

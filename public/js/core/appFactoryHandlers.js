@@ -31,6 +31,8 @@ export function createAppFactoryHandlers(deps) {
     ...handlerDeps,
     ...screens.serviceScreens,
     ...screens.amusementScreens,
+    // [LOG_ID: 20260716_1400] 이용자검색 화면의 자유입력(아이디/닉네임)·BYID/BYNAME 처리.
+    ...screens.memberSearchScreens,
     showToast: services.terminalUiCore.showToast
   });
   const handleEntryCommand = createEntryCommandHandler({
@@ -136,6 +138,8 @@ export function createAppFactoryHandlers(deps) {
     showHelp: screens.helpScreens.showHelp,
     showHistory: screens.helpScreens.showHistory,
     showPolicy: screens.policyScreens.showPolicy,
+    // [LOG_ID: 20260716_1600] 전체 메뉴 안내(INDEX) F/B 페이징·코드 직접 입력 처리용.
+    showMenuIndex: screens.menuIndexScreens.showMenuIndex,
     handleHistoryBack: screens.handleHistoryBack,
     setHint: services.terminalUiCore.setHint,
     setPrompt: services.terminalUiCore.setPrompt,

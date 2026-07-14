@@ -32,16 +32,56 @@ class SupabaseMemoRepository extends BaseRepository {
   async listForUser(context = {}) {
     const userId = normalizeText(context.userId, 'guest');
     const columns = await this._getColumnMap();
+
+    // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — 상자를 inbox/sent/archive 셋으로
+    // 넓혔다. 보관함은 "내가 보관한 것"이므로 받은 쪽지(receiver_archived)와 보낸 쪽지
+    // (sender_archived)를 함께 담고, 받은/보낸 상자에서는 보관된 것을 빼서 보여준다.
+    if (context.box === 'archive') {
+      const { data, error } = await this.client
+        .from(this.table)
+        .select('*')
+        .or(`and(${columns.recipient}.eq.${userId},receiver_archived.is.true),and(${columns.sender}.eq.${userId},sender_archived.is.true)`)
+        .order('created_at', { ascending: false });
+      if (error) {
+        this._throwError('보관함 목록 조회', error, { table: this.table });
+      }
+      return (data || []).map(normalizeMemo);
+    }
+
     const isSentBox = context.box === 'sent';
     const { data, error } = await this.client
       .from(this.table)
       .select('*')
       .eq(isSentBox ? columns.sender : columns.recipient, userId)
+      .not(isSentBox ? 'sender_archived' : 'receiver_archived', 'is', true)
       .order('created_at', { ascending: false });
     if (error) {
       this._throwError('메모 목록 조회', error, { table: this.table });
     }
     return (data || []).map(normalizeMemo);
+  }
+
+  // [LOG_ID: 20260716_1800] 보관/보관해제. 받은 쪽지면 receiver_archived, 보낸 쪽지면
+  // sender_archived를 바꾼다 — 같은 쪽지를 보낸이와 받은이가 서로 간섭 없이 보관한다.
+  async setArchived(id, archived, context = {}) {
+    const memo = await this.getMemo(id, context);
+    const userId = normalizeText(context.userId, 'guest');
+    const column = memo.recipientUserId === userId ? 'receiver_archived' : 'sender_archived';
+
+    if (memo.recipientUserId !== userId && memo.senderUserId !== userId) {
+      throw createHttpError(403, '쪽지를 보관할 권한이 없습니다.');
+    }
+
+    const { data, error } = await this.client
+      .from(this.table)
+      .update({ [column]: Boolean(archived) })
+      .eq('id', memo.id)
+      .select('*')
+      .single();
+    if (error) {
+      this._throwError('쪽지 보관 처리', error, { table: this.table });
+    }
+    return normalizeMemo(data);
   }
 
   async countUnread(context = {}) {
@@ -51,7 +91,10 @@ class SupabaseMemoRepository extends BaseRepository {
       .from(this.table)
       .select('*', { count: 'exact', head: true })
       .eq(columns.recipient, userId)
-      .eq('is_read', false);
+      .eq('is_read', false)
+      // [LOG_ID: 20260716_1800] 보관한 쪽지는 받은쪽지함에서 빠지므로 안 읽은 수에서도 뺀다 —
+      // 안 그러면 목록엔 없는 쪽지 때문에 미확인 배지가 안 사라진다.
+      .not('receiver_archived', 'is', true);
     if (error) {
       this._throwError('미수신 메모 수 조회', error, { table: this.table });
     }

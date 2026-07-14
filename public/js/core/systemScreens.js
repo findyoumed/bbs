@@ -90,5 +90,27 @@ export function createSystemScreens(deps) {
     }
   }
 
-  return { showActiveUsers, showSystemDiagnostics, showActivitySummary };
+  // [LOG_ID: 20260716_2200] 하이텔 (1)-25 접속통계(account) 계열 — 내 이용 현황.
+  async function showMyStats(fromHistory = false) {
+    state.screen = 'my-stats';
+    if (!fromHistory) updateURL();
+    setLoading('이용 현황을 집계하는 중입니다..');
+    const applyFooter = () => applyCommandFooter('', getCommandFooterText('systemInfo'));
+    try {
+      const stats = await apiFetch('/api/members/stats');
+      const { buildMyStatsAnsi } = deps;
+      await renderSystemAnsiScreen(buildMyStatsAnsi(stats), applyFooter);
+    } catch (e) {
+      // 게스트는 서버가 401을 낸다 — 로그인 안내로 바꿔 보여준다.
+      renderSystemError(state.user?.isGuest
+        ? '이용 현황은 로그인 후 확인하실 수 있습니다.'
+        : `이용 현황을 가져오지 못했습니다. ${String(e?.message || '')}`);
+      await applyFooter();
+    }
+    if (shouldAutoFocusCommandInput()) {
+      cmdInput.focus();
+    }
+  }
+
+  return { showActiveUsers, showSystemDiagnostics, showActivitySummary, showMyStats };
 }

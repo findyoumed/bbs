@@ -1,3 +1,124 @@
+## [2026-07-17 12:00] 회원가입 아이디/비밀번호 칸 입력 먹통 — 한글 IME 조합 중에 value를 덮어쓰던 버그
+
+**LOG_ID: 20260717_1200**
+목표: "https://01410.vercel.app/log/signup/email 의 `//*[@id="cmd-input"]` 에 입력이 잘 안 된다" 사용자 보고.
+
+**원인**: `/log/signup/email` 의 첫 단계는 **아이디 입력**(`signup-userid`)이고, 이 단계와 비밀번호 단계에는 영문 전용 가드가 붙는다(`signupEmailForm.js`의 `sanitizeCurrentCommandInput`). 이 가드가 한글을 두벌식 자판 키로 변환해 걸러내는데, **그 변환을 `input` 이벤트에서 하고 있었다.**
+
+`input` 이벤트는 **한글 조합이 진행 중일 때도 매 글자 발동**한다. 그래서 IME가 "고"를 조합하고 있는 도중에 `cmdInput.value` 를 "rh"로 통째로 갈아치웠다 — 브라우저는 이미 바뀐 값 위에서 조합을 이어가려 하니 글자가 씹히거나 중복된다. `event.isComposing` 검사가 아예 없었다. `applyEnglishInputMode` 가 `style.imeMode = 'inactive'` 로 IME를 끄려 하지만 **이건 크롬이 무시하는 비표준 속성**이라 조합은 실제로 일어난다.
+
+**수정**: 조합 중(`event.isComposing`)에는 값을 건드리지 않고, 조합이 확정된 뒤(`compositionend`)에 한 번에 변환한다. 크롬이 `compositionend` 시점에 아직 확정 문자를 value에 반영하지 않은 경우가 있어 다음 틱에 한 번 더 정리한다.
+
+**검증**(브라우저 자동화 권한이 막혀 있어 재현 불가 → `#cmd-input` 을 흉내 낸 가짜 엘리먼트에 실제 이벤트를 쏴서 검증):
+- **`scripts/smoke-signup-ime.mjs` 신규**(`npm run smoke:signup-ime`) — 사용자가 신고한 버그이므로 회귀 테스트로 남겼다.
+- **수정 전 코드에서 실제로 실패**하고(`조합 중 "고" → "rh"로 훼손`) 수정본에서 통과하는 것을 확인했다 — "고친 척"이 아님을 증명.
+- 기존 동작 회귀 없음도 함께 검사(영문 입력 그대로 유지, 아이디 금지문자 제거).
+- `smoke:menu-wiring`/`smoke:renderer-ui`/`smoke:command-parity`/`smoke:vercel-ready`/`qa:final` 전부 통과.
+
+**주의**: 배포된 사이트(01410.vercel.app)는 아직 이 수정이 반영되지 않은 옛 코드다. 푸시/배포는 하지 않았다(프로젝트 규칙).
+**미확인**: 실제 브라우저에서 한글 IME로 타이핑해 보는 최종 확인은 못 했다(Playwright·Chrome MCP 권한 모두 거부됨). 사용자가 겪은 증상이 "글자가 씹힌다"가 아니라 다른 것(예: 아이디 칸에서 `@`·`.` 이 지워진다 — 이건 아이디 규칙상 의도된 동작)이라면 원인이 다를 수 있다.
+변경 파일: `public/js/core/signupEmailForm.js`, `scripts/smoke-signup-ime.mjs`(신규), `package.json`.
+결과: ✅ 완료 (사용자 최종 확인 필요)
+
+---
+
+## [2026-07-17 01:00] 세 번 반복된 "메뉴 눌러도 무반응" 버그를 스모크 테스트로 고정 (smoke:menu-wiring)
+
+**LOG_ID: 20260717_0100**
+목표: "계속" — 하이텔 메뉴에서 **기존 데이터로 만들 수 있는 항목은 전부 소진**됐다. 남은 건 축하카드(vmail, ASCII 아트를 새로 창작해야 함)·그룹지정(새 테이블)·토론의광장(새 테이블 3개)뿐이라, 셋 다 내가 임의로 정할 성격이 아니라 판단해 `AskUserQuestion`으로 물으려 했으나 권한이 막혀(don't ask mode) 직접 판단했다.
+
+**만들지 않기로 한 것 — 최신자료목록(하이텔 (13)-51)**: 처음엔 후보였으나 실측하니 **게시판 전체에 살아있는 글이 2건**(열린광장 1, 우스개 1)뿐이었다. 게시판이 2개인데 글도 2건이면 "새글 모음" 화면은 게시판을 그냥 들어가는 것과 다를 게 없다. 빈 게시판 20종(20260714_1100)·GUIDE 중복(20260713_2300)과 같은 실수라 만들지 않았다. **재제안 금지 — 게시판에 글이 의미 있게 쌓인 뒤에 재검토.**
+
+**대신 한 것 — 진짜 리스크를 줄였다.** 이번 세션에 화면 6개를 만들었는데 Playwright 권한이 막혀 **브라우저에서 한 번도 못 봤다**. 그런데 이 저장소에서 세 번 반복된 버그가 정확히 그 지점이다:
+- 20260713_1700 `refs.showMemoList` 누락 → 메인 메뉴 전자우편 무반응
+- 20260713_2100 `refs.showHelp`/`showPolicy` 누락 → GUIDE 명령어안내/이용약관 무반응
+- 20260715_2400 `policy`가 routingUrlBuilder에 없어 URL이 `/`로 떨어짐 → P가 TOP으로 튐
+
+원인이 늘 같다: `menuNavigationActions.js` 에 `node.type === 'x'` 분기는 멀쩡한데 `refs.showX` 가 `appFactoryRuntime.js` 에 안 꽂혀 있어 `typeof refs.showX === 'function'` 검사에 걸려 **조용히 return false** 한다 — 에러도 로그도 안 남아 "눌러도 아무 일이 없다"로만 드러난다. 사람이 매번 기억할 수 없으니 검사로 고정했다.
+
+**`scripts/smoke-menu-wiring.js` (신규, `npm run smoke:menu-wiring`)**
+- 검사 대상을 하드코딩하지 않고 `legacy/hanulso.mnu` 에 실제로 쓰인 type을 전부 훑는다(메뉴를 새로 추가하면 자동으로 그것까지 검사).
+- refs 에 스프레드된 모듈에서 출발해 **재귀적으로** 도달 가능한 함수 이름을 모은다. 한 단계로는 안 됐다 — `postScreens.js`는 `return { ...handlers }`이고 `serviceScreens.js`는 `return { ...newsScreens, ...weatherScreens }`라 하위 모듈까지 내려가야 한다(첫 구현이 이걸 놓쳐 board/news/weather를 오탐으로 실패 처리했다).
+- refs 에서 출발해 도달 가능한 것만 보므로 **오탐(false positive)이 구조적으로 없다.** 과거 3건은 전부 "모듈이 refs 에서 아예 도달 불가"였다.
+
+**이 테스트가 진짜로 버그를 잡는지 검증**(통과만 봐서는 무용지물인지 알 수 없으므로): `refs.showHelp` 줄과 `...screens.memoScreens` 스프레드를 각각 실제로 지워 과거 버그를 재현했고, **두 경우 모두 정확한 메시지로 실패**하는 것을 확인한 뒤 원복했다. 현재 19개 type 전부 통과.
+`CLAUDE.md` §2.3에 "hanulso.mnu나 화면을 건드리면 반드시 실행"으로 명시했다.
+검증: `smoke:menu-wiring`/`smoke:renderer-ui`/`smoke:command-parity`/`smoke:boards`/`smoke:vercel-ready`/`qa:final` 전부 통과.
+변경 파일: `scripts/smoke-menu-wiring.js`(신규), `package.json`, `CLAUDE.md`.
+결과: ✅ 완료
+
+---
+
+## [2026-07-16 22:00] 하이텔 완독 감사에서 남은 3종 일괄 구현 — 편지보관함(MBOX)·단체편지·이용 현황(ACCOUNT)
+
+**LOG_ID: 20260716_2200**
+목표: "다 해야지" — 20260716_1600 완독 감사에서 "새 데이터 모델이 필요하다"며 남겨둔 3종을 전부 구현.
+
+**핵심 발견 — 셋 다 스키마 변경이 필요 없었다.** 앱 자신의 자격증명으로 실제 테이블을 읽어보니(`select * limit 1`, DDL 없음) **`memos` 테이블에 `sender_archived` / `receiver_archived` 컬럼이 이미 있었고 코드가 전혀 쓰지 않고 있었다**(`grep -rn archived src/ public/` → 0건). 처음엔 사용자 DB에 컬럼을 추가해야 하는 줄 알고 확인부터 했는데, 이미 있는 걸 안 쓰고 있던 것이었다. Supabase MCP는 권한이 막혀 있어 앱 자격증명으로 읽기만 해서 확인했다.
+
+**1. 편지보관함 (하이텔 (10)-5 mbox)** — 이미 있던 archived 컬럼 활용. 상자를 inbox/sent/**archive** 셋으로 확장.
+- `MemoRepositoryShared.js`: `normalizeMemo`에 `senderArchived`/`recipientArchived` 추가.
+- `MemoRepositorySupabase.js` / `MemoRepositoryMemory.js`: `listForUser(box)`에 archive 분기 + `setArchived()` 신설. **dual-mode라 두 드라이버 동작을 같은 의미로 맞췄다.** 보낸이·받은이가 같은 쪽지를 서로 간섭 없이 각자 보관한다(컬럼이 둘로 나뉜 이유).
+- 받은/보낸 상자에서는 보관된 것을 빼고, `countUnread`에서도 뺀다(안 그러면 목록에 없는 쪽지 때문에 미확인 배지가 안 사라진다).
+- API `POST /api/memos/:id/archive`. 명령: 목록에서 `MB`(보관함 열기)·`K {번호}`(보관/해제), 읽는 중 `K`(토글). URL `/memo?box=archive`.
+- `K`가 게시판 주제어검색과 겹치지만 그쪽은 `s === 'post-list'` 블록 안에만 있어 충돌 없음을 확인했다.
+
+**2. 단체편지 (하이텔 (10)-6)** — 쪽지 1건 = 1행이라 수신자 수만큼 만들면 되므로 스키마 불필요.
+- `MemoRepositoryShared.parseRecipients()`: 쉼표/세미콜론/공백 구분, 대소문자 무시 중복 제거. 상한 20명(없으면 요청 한 번으로 임의 개수의 행을 만들 수 있다).
+- 수신자 1명일 때 종전 응답 형태를 그대로 유지해 기존 클라이언트·스모크가 안 깨지게 했다.
+- **원전의 "그룹지정"(이름 붙인 수신자 그룹 저장)은 구현하지 않았다** — 별도 테이블이 필요하다. 다중 수신자 발송만 했다.
+
+**3. 이용 현황 (하이텔 (1)-25 account 계열)** — `GET /api/members/stats`, GUIDE 8번, `/account`.
+- **원전의 접속통계는 접속 횟수·사용 시간·요금인데 이 앱은 세션을 아예 기록하지 않아 그건 만들 수 없다.** 없는 수치를 지어내는 대신 이미 가진 것(가입일·최근접속·등급·글수/조회/추천·쪽지 4종)만 보여주고, **화면 하단에 "접속 시간과 이용 요금은 집계하지 않습니다"라고 명시**했다.
+- 기존 `activity-summary`(시스템 전체 활동 피드)와 중복이 아님을 먼저 확인하고 착수했다.
+- posts 컬럼명이 배포별로 가변이라 `rankingRoutes`와 동일하게 `select('*')` 후 JS에서 처리. 라우트 패턴은 `:userId`보다 **앞에** 둬야 'stats'가 아이디로 잡히지 않는다.
+
+**검증(실 DB·실 API)**: 보관 → 받은함 2→1통·보관함 0→1통 → 해제 → 원복 확인. 단체편지 2명 발송(sentCount=2), 중복 수신자 `sysop,SYSOP`→1명, 21명 → HTTP 400. **테스트로 만든 쪽지 3건은 전부 삭제해 memos 행 수를 원래 6건으로 되돌렸다.** `/api/members/stats`는 비로그인 401, 로그인 시 실제 집계(글 1편 등 — DB 직접 조회값과 일치). 이용 현황 화면 폭 데스크톱(80)·모바일(44) 오버플로우 0건. `node --check` 17개 파일 통과. `smoke:renderer-ui`/`smoke:command-parity`/`smoke:boards`/`smoke:vercel-ready`/`qa:final` 통과.
+**미실시/기존 실패**: `npm test`는 `archive/dev-only/tests/unit` 디렉터리가 저장소에 아예 없어 실패(내 변경과 무관한 기존 상태). 브라우저 실렌더링은 Playwright 권한이 막혀 미실시.
+결과: ✅ 완료
+
+---
+
+## [2026-07-16 16:00] 하이텔 (1)-6/8 전체 메뉴 안내(INDEX) 신설 + 하이텔 메뉴 문서 2,319줄 완독 감사
+
+**LOG_ID: 20260716_1600**
+목표: "다음에 할 일을 진행해봐. docs/메뉴-하이텔.txt 다 본거야?" (사용자 지적).
+
+**먼저 정정**: 직전 작업(20260716_1400)에서 "하이텔 메뉴를 항목별로 훑었다"고 적었으나 **실제로는 1~1740줄만 읽고 1741~2319줄(약 580줄)을 안 읽은 상태였다**. 사용자가 짚어줘서 나머지를 마저 읽었다. 결과적으로 결론은 바뀌지 않았지만(뒤쪽은 (14)동호회 수백 개·(15)기업광고·(16)홈뱅킹·(17)공공정보·(18)인터넷·(19)영문 해외DB·(99)핫라인으로 전부 외부 정보제공자(IP) 콘텐츠), **다 보지 않고 "다 봤다"고 쓴 것은 잘못이다.**
+
+**완독으로 새로 확인한 것**: (19)-11 영문 전자우편 목록(rmail/wmail/cmail/mbox/group/absent/vmail)에서 우리에게 없는 것은 **보관함(mbox)·단체편지(group)·축하카드(vmail)** 3개. (99) 핫라인의 문의/건의는 이미 "건의하기" 게시판으로 존재. 나머지는 구현 불가 또는 이미 구현됨.
+
+**이번에 만든 것 — (1)-6 메뉴안내 / (1)-8 인덱스안내**: `GO` 명령은 예전부터 있는데 **쓸 수 있는 키워드를 한눈에 볼 화면이 없었다**. 각 메뉴가 자기 항목의 `(코드)`를 보여주긴 하지만, TOP에는 11개만 노출되고 나머지 19개는 서브메뉴 4곳(GUIDE/BBS/PDS/GAME)을 일일이 들어가야 보인다. **중복 여부를 먼저 검증**했다 — 도움말(H)은 `CMD_META`(명령어)만 나열하고 메뉴 트리는 다루지 않으므로 중복이 아니다(GUIDE 중복 사건 20260713_2300의 재발 방지 절차).
+- 신규 `public/js/core/menuIndexScreens.js` — 살아있는 `state.menuTree`에서 매번 생성하므로 **낡거나 비지 않는다(신규 데이터·API 없음)**. 실제로 이 화면 자신(INDEX)도 트리에 추가하자마자 목록에 자동으로 나타나는 것을 확인했다.
+- 이름 끝의 괄호 코드는 떼어내고(`서비스안내 (GUIDE)` → `서비스안내`) 코드는 별도 칸에 `go` 원값 그대로 노출한다. `menuService.getMenuNodeCode()`는 10자 초과 코드를 숨기지만(화면 미관), 인덱스는 키워드를 알려주는 게 목적이라 `PDS_GRAPHIC`(11자)처럼 긴 값도 그대로 보여준다.
+- 코드를 `GO` 없이 그대로 입력하면 바로 이동한다(`executeGoCommand`에 위임).
+- `legacy/hanulso.mnu` GUIDE door 7 `type="menu-index"` / `go="index"`. 배선: `menuNavigationActions.js`, `appFactoryScreens.js`, `appFactoryHandlers.js`, `appFactoryRuntime.js`(refs+routingModule 양쪽), `commandRouterGlobalNavigation.js`(F/B 페이징+코드 입력), `commandFooterText.js`, `routingUrlBuilder.js`+`routingStateRestorer.js`(`/index?page=N`), **`commandDispatcherExecution.js`의 `HISTORY_BACK_SCREENS`에 `menu-index` 등록** — 자체 라우터에 F/B만 있고 P/M/T가 없는 화면은 여기 등록해야 공용 폴백을 탄다(힌트바엔 "상위(P)"가 뜨는데 실제로는 무반응이던 policy 버그 20260715_2300과 같은 함정이라 처음부터 등록).
+
+검증: `node --check` 11개 파일 통과. **실 서버의 `/api/menu` 트리를 그대로 먹여 화면을 렌더**해 데스크톱(80칸)·모바일(44칸) 2페이지 전부 폭 오버플로우 0건 확인. 서버 재시작 후 GUIDE 7번 항목·`GO INDEX`·`/index` HTTP 200 확인. `smoke:renderer-ui`/`smoke:command-parity`/`smoke:boards`/`smoke:vercel-ready`/`qa:final` 통과. **`smoke:full-traversal`은 2분 제한 내 완주하지 못해 미확인**(브라우저로 전 라우트를 순회하는 테스트로, 이전부터 대화실 문제로 실패하던 별건). 브라우저 실렌더링은 Playwright 권한이 막혀 미실시.
+결과: ✅ 완료
+
+---
+
+## [2026-07-16 14:00] 하이텔 (1)-24 이용자검색(MEMBER/BYID/BYNAME) 신설 — 이미 있던 검색 API·프로필 화면을 잇는 진입점
+
+**LOG_ID: 20260716_1400**
+목표: "docs/메뉴-하이텔.txt 에서 만들 수 있는 메뉴가 있잖아. 만들고. 이런식으로 하나씩 보면서 내가 개인적으로 구현할 수 있는게 있는지 봐" (사용자 요청).
+
+**전수 감사**: 하이텔 메뉴 2,319줄을 항목별로 훑었다. 대부분(신문사·은행·증권사·방송국·대학·동호회 수백 개)은 외부 정보제공자(IP) 콘텐츠라 우리가 채울 데이터가 없어 구현 불가 — **빈 게시판 20종 사건(20260714_1100)의 재발을 막기 위해 "원전에 이름이 있다"는 것만으로는 추가하지 않는다는 원칙을 그대로 적용**했다. 시스템 자체 기능만 추리면 (1)1/5/7 공지·약관·명령어안내 ✅, (1)21/22/27 MYINFO ✅, (10)1/2/4/7 편지읽기·쓰기·보낸편지확인·부재설정 ✅, (11)대화실 ✅, (12)2 텔레리서치=여론광장 ✅, (13)자료실 ✅ 로 이미 전부 있었고, **실제로 비어 있던 것은 (1)24 이용자검색 하나**였다.
+
+**추가 사유(빈 껍데기가 아닌 근거)**: 서버 API `/api/members/search?userId=|nickName=`(memberRoutes.js)와 프로필 화면 `showProfile`이 **이미 둘 다 있는데** 검색 API는 회원가입 중복확인(authClient/authServiceActions)에서만 쓰이고 있었고, 프로필은 `PF`/`WHO <아이디>` 명령으로 **아이디를 정확히 아는 경우에만** 열 수 있었다 — 닉네임으로 사람을 찾을 방법이 아예 없었다. 신규 API·신규 데이터 없이 기존 자산을 잇기만 하면 되는 진짜 빈칸이라 추가했다.
+
+**구현**: 원전의 하위 2항목(byid/byname)을 별도 화면 2개가 아니라 **한 화면의 두 명령**으로 흡수했다(그냥 입력하면 아이디→이름 순으로 검색). 결과는 기존 프로필 화면으로 그대로 연결.
+- 신규 `public/js/core/memberSearchScreens.js` (`showMemberSearch`/`findMember`), `systemAnsiBuilders.js`에 `buildMemberSearchAnsi` 추가.
+- `legacy/hanulso.mnu` GUIDE door 6 `type="member-search"` / `go="member"` (→ `GO MEMBER`도 동작).
+- 배선: `menuNavigationActions.js`(dispatch), `appFactoryScreens.js`, `appFactoryHandlers.js`, `appFactoryRuntime.js`(**refs + routingModule 양쪽** — showMemoList(20260713_1700)·showHelp/showPolicy(20260713_2100) 때 반복된 refs 누락 버그를 의식해 처음부터 둘 다 등록), `commandRouterService.js`(BYID/BYNAME/자유입력, P→GUIDE), `commandFooterText.js`, `routingUrlBuilder.js`+`routingStateRestorer.js`(`/member` 전용 경로 — policy가 고유 URL이 없어 P가 깨졌던 20260715_2400 재발 방지).
+
+**자체 발견한 버그 1건**: 폭 검증 스크립트로 모바일(44칸)에서 검색 실패 문구가 45칸으로 1칸 오버플로우하는 것을 발견 — 모바일은 검색어를 12칸으로 자르고 문구도 짧게("...이용자가 없습니다.") 수정.
+검증: `node --check` 10개 파일 통과. 실 데이터로 API 3경로 확인(아이디 `sysop` → found, **닉네임 `시샵` → found(기존엔 불가능했던 경로)**, 없는 아이디 → found:false). 서버 재시작 후 `/api/menu`에 GUIDE 6번 항목 노출·`/member` HTTP 200 확인. 폭 검증 데스크톱(80칸)·모바일(44칸) 오버플로우 0건. `smoke:renderer-ui`/`smoke:command-parity`/`smoke:boards`/`smoke:vercel-ready`/`qa:final` 전부 통과. (브라우저 실렌더링은 이번 세션에서 Playwright 권한이 막혀 미실시.)
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 00:00] 하이텔 길라잡이 스크린샷 대조 — MEMO(쪽지) 목록/보기 화면을 RMAIL/편지읽기 형식에 맞춰 재구현
 
 **LOG_ID: 20260716_1000**

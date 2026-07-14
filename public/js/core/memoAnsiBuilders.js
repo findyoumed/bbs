@@ -28,10 +28,14 @@ export function createMemoAnsiBuilders(deps) {
   // 컬럼 순서를 재현 — "No. 발신자ID ... 제목"처럼 아이디를 앞쪽에 두고 제목을 가장 뒤(가장
   // 넓은 칸)에 배치한다. 기존엔 번호/보낸사람/내용요약/날짜/상태 순으로 제목이 가운데 끼어
   // 있어 하이텔 목록과 열 순서가 달랐다(사용자 요청: 스크린샷을 보면서 화면을 맞춰라).
-  function buildMemoListAnsi(memos, boxType = 'inbox') {
+  // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — boxType에 'archive'가 추가됐다.
+  // 보관함에는 받은 쪽지와 보낸 쪽지가 섞여 있으므로, "상대방"이 누구인지는 상자 종류가 아니라
+  // 쪽지마다(내가 보낸 것이면 받는이, 받은 것이면 보낸이) 따로 판단해야 한다.
+  function buildMemoListAnsi(memos, boxType = 'inbox', currentUserId = '') {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
     const isSent = boxType === 'sent';
+    const isArchive = boxType === 'archive';
 
     const idWidth = isMobile ? 10 : 12;
     const dateWidth = isMobile ? 8 : 12;
@@ -45,7 +49,7 @@ export function createMemoAnsiBuilders(deps) {
     function colHeader() {
       let line = ansiColor(14) +
         fitCell('번호', 4, 'right') + ' ' +
-        fitCell(isSent ? '받는이' : '보낸이', idWidth) + ' ' +
+        fitCell(isArchive ? '상대방' : (isSent ? '받는이' : '보낸이'), idWidth) + ' ' +
         fitCell('날짜', dateWidth) + ' ';
       if (showStatus) {
         line += fitCell('상태', statusWidth) + ' ';
@@ -68,7 +72,11 @@ export function createMemoAnsiBuilders(deps) {
 
     function memoLine(memo, index) {
       const num = String(index + 1).padStart(4);
-      const userField = isSent ? (memo.recipientUserId || 'guest') : (memo.senderUserId || 'guest');
+      // 보관함은 내가 보낸 쪽지면 받는이를, 받은 쪽지면 보낸이를 "상대방"으로 보여준다.
+      const isMineSent = isArchive && currentUserId && memo.senderUserId === currentUserId;
+      const userField = (isSent || isMineSent)
+        ? (memo.recipientUserId || 'guest')
+        : (memo.senderUserId || 'guest');
       const marker = memoTypeMarker(memo);
       const cleanTitle = stripMemoTypeTag(memo.title) || memo.content || '';
       const markerText = marker ? `[${marker}]` : '';
@@ -94,14 +102,17 @@ export function createMemoAnsiBuilders(deps) {
       return line;
     }
 
-    const boxTitle = isSent ? '보낸쪽지함' : '받는쪽지함';
+    const boxTitle = isArchive ? '편지보관함' : (isSent ? '보낸쪽지함' : '받는쪽지함');
     const parts = [
       buildTopHeader({ leftLabel: 'MEMO', centerLabel: boxTitle }, `(총 ${memos.length}통)`, targetCols),
       colHeader(),
       ansiHLine(targetCols, 8)
     ];
     if (!memos.length) {
-      parts.push(ansiColor(8) + (isSent ? '   보낸 쪽지가 없습니다.' : '   도착한 쪽지가 없습니다.') + ANSI_RESET);
+      const emptyText = isArchive
+        ? '   보관한 쪽지가 없습니다.'
+        : (isSent ? '   보낸 쪽지가 없습니다.' : '   도착한 쪽지가 없습니다.');
+      parts.push(ansiColor(8) + emptyText + ANSI_RESET);
     } else {
       memos.slice(0, 16).forEach((memo, index) => parts.push(memoLine(memo, index)));
     }

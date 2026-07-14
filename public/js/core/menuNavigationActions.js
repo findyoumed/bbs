@@ -208,6 +208,21 @@ export function createMenuNavigationActions(deps) {
       await refs.showPolicy(String(node.target || 'tos').trim());
       return true;
     }
+    // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색 — 아이디/닉네임으로 회원을 찾아 프로필로 연결.
+    if (node.type === 'member-search' && typeof refs.showMemberSearch === 'function') {
+      await refs.showMemberSearch();
+      return true;
+    }
+    // [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 메뉴안내·인덱스안내 — 전체 메뉴 트리 + GO 키워드 색인.
+    if (node.type === 'menu-index' && typeof refs.showMenuIndex === 'function') {
+      await refs.showMenuIndex();
+      return true;
+    }
+    // [LOG_ID: 20260716_2200] 하이텔 (1)-25 접속통계 계열 — 내 이용 현황.
+    if (node.type === 'my-stats' && typeof refs.showMyStats === 'function') {
+      await refs.showMyStats();
+      return true;
+    }
     return false;
   }
 

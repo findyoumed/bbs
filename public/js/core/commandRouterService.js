@@ -16,6 +16,7 @@ export function createServiceCommandHandler(deps) {
     showMbtiDetail,
     showRetroArt,
     showRetroArtView,
+    findMember,
     state,
     showToast
   } = deps;
@@ -53,6 +54,20 @@ export function createServiceCommandHandler(deps) {
     if (s === 'mbti-list' || s === 'mbti-detail') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (s === 'mbti-detail' && cmd === 'L') { await showMbti(); return true; } if (/^(1[0-6]|[1-9]|[EI][SN][TF][JP])$/.test(cmd)) { await showMbtiDetail(cmd); return true; } return false; }
     // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
     if (s === 'retro-list' || s === 'retro-view') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (s === 'retro-view' && cmd === 'L') { await showRetroArt(); return true; } if (/^\d+$/.test(cmd)) { return await showRetroArtView(cmd); } return false; }
+    // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색 — 아이디/이름으로 회원을 찾아 프로필로 연결.
+    // 상위(P)는 이 항목이 속한 GUIDE로 간다(바이오리듬 등이 오락실로 돌아가는 것과 같은 방식).
+    if (s === 'member-search') {
+      if (cmd === 'T') { await showMain(); return true; }
+      if (['P', 'M', 'B'].includes(cmd)) { await showBoardSelect('guide'); return true; }
+      const raw = String(rawCmd || '').trim();
+      const byId = raw.match(/^BYID\s+(.+)$/i);
+      if (byId) return await findMember(byId[1], 'byid');
+      const byName = raw.match(/^BYNAME\s+(.+)$/i);
+      if (byName) return await findMember(byName[1], 'byname');
+      if (raw) return await findMember(raw, 'any');
+      return false;
+    }
+
     if (s === 'weather-menu') {
       if (cmd === 'T') {
         await showMain();

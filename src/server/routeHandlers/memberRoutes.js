@@ -17,6 +17,9 @@ class MemberRouter extends BaseRouter {
       { method: 'POST', pattern: '/api/members/absent', handler: 'setAbsent', needContext: true },
       { method: 'GET', pattern: '/api/members', handler: 'listMembers', middlewares: ['ensureAdmin'] },
       { method: 'GET', pattern: '/api/members/search', handler: 'search', needContext: true },
+      // [LOG_ID: 20260716_2200] 하이텔 (1)-25 접속통계(account) 계열 — 내 이용 현황.
+      // ':userId' 패턴보다 반드시 앞에 있어야 'stats'가 아이디로 잡히지 않는다.
+      { method: 'GET', pattern: '/api/members/stats', handler: 'getMyStats', middlewares: ['ensureAuthenticated'], needContext: true },
       { 
         method: 'POST', 
         pattern: '/api/members/profile', 
@@ -111,6 +114,73 @@ class MemberRouter extends BaseRouter {
 
     if (allowMissing) return this.send(200, { found: true, member });
     return this.send(200, member);
+  }
+
+  // [LOG_ID: 20260716_2200] 하이텔 (1)-25 "접속통계(account)" 계열 화면용 집계.
+  //
+  // 주의: 원전의 접속통계는 접속 횟수·사용 시간·요금을 보여줬지만, 이 앱은 세션(접속 시간)을
+  // 아예 기록하지 않으므로 그건 만들 수 없다. 대신 이미 가진 데이터(가입일·최근접속·등급·
+  // 글/조회/추천·쪽지)로 "이용 현황"을 낸다 — 없는 수치를 지어내지 않는다.
+  //
+  // posts 테이블은 배포별로 컬럼명이 가변(user_id/author_id, hits/hit, recommend/likes,
+  // is_deleted 유무)이라 rankingRoutes와 동일하게 select('*') 후 JS에서 처리한다.
+  async getMyStats() {
+    const { memberRepository, boardRepository, memoRepository } = this.deps;
+    const context = await this.getContext();
+    const userId = String(context?.userId || '').trim();
+
+    if (!userId || userId === 'guest') {
+      this.error(401, '로그인 후 이용할 수 있습니다.');
+    }
+
+    const member = await memberRepository.getMember(userId);
+    if (!member) {
+      this.notFound('회원 정보를 찾을 수 없습니다.');
+    }
+
+    let posts = [];
+    if (memberRepository.getMeta().driver === 'supabase') {
+      const postsTable = (boardRepository.tables && boardRepository.tables.posts) || 'posts';
+      const { data, error } = await boardRepository.client.from(postsTable).select('*');
+      if (error) {
+        this.error(502, `이용 현황 집계 실패: ${error.message}`);
+      }
+      posts = data || [];
+    } else {
+      posts = boardRepository.posts || [];
+    }
+
+    const mine = posts.filter((post) => {
+      if (post.is_deleted === true || post.isDeleted === true) return false;
+      const author = post.user_id || post.userId || post.author_id || post.authorId || '';
+      return String(author) === userId;
+    });
+
+    const postCount = mine.length;
+    const hitsSum = mine.reduce((sum, post) => sum + Number(post.hits ?? post.hit ?? 0), 0);
+    const recommendSum = mine.reduce((sum, post) => sum + Number(post.recommend ?? post.likes ?? 0), 0);
+
+    // 쪽지 수는 레포지토리 API로만 센다(드라이버별 컬럼명 차이를 레포가 이미 흡수한다).
+    const inbox = await memoRepository.listForUser({ ...context, box: 'inbox' });
+    const sent = await memoRepository.listForUser({ ...context, box: 'sent' });
+    const archive = await memoRepository.listForUser({ ...context, box: 'archive' });
+    const unread = await memoRepository.countUnread(context);
+
+    return this.send(200, {
+      userId: member.userId,
+      nickName: member.nickName,
+      level: member.level,
+      isAdmin: Boolean(member.isAdmin),
+      registrationDateTime: member.registrationDateTime || '',
+      lastLoginDateTime: member.lastLoginDateTime || '',
+      postCount,
+      hitsSum,
+      recommendSum,
+      memoInbox: inbox.length,
+      memoSent: sent.length,
+      memoArchived: archive.length,
+      memoUnread: Number(unread?.count || 0)
+    });
   }
 
   async updateProfile() {

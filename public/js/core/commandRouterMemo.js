@@ -121,6 +121,42 @@ export function createMemoCommandHandler(deps) {
                 await showMemoList();
                 return true;
             }
+            // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — MB로 보관함을 열고,
+            // K {번호}로 보관/보관해제한다(보관함 안에서는 해제로 동작).
+            if (cmd === 'MB') {
+                state._memoBox = 'archive';
+                await showMemoList();
+                return true;
+            }
+            const archiveMatch = cmd.match(/^K(?:\s+(\d+))?$/);
+            if (archiveMatch) {
+                const isArchiveBox = state._memoBox === 'archive';
+                if (!archiveMatch[1]) {
+                    setHint?.(isArchiveBox
+                        ? '사용법: K {번호} — 보관을 해제해 원래 쪽지함으로 되돌립니다.'
+                        : '사용법: K {번호} — 쪽지를 편지보관함으로 옮깁니다.');
+                    return true;
+                }
+                const kIdx = parseInt(archiveMatch[1], 10);
+                const target = state._memos?.[kIdx - 1];
+                if (!target) {
+                    setHint?.(`${kIdx}번 쪽지를 찾을 수 없습니다.`);
+                    return true;
+                }
+                try {
+                    await apiFetch(`/api/memos/${target.id}/archive`, {
+                        method: 'POST',
+                        body: JSON.stringify({ archived: !isArchiveBox })
+                    });
+                    await showMemoList();
+                    setHint?.(isArchiveBox
+                        ? `${kIdx}번 쪽지의 보관을 해제했습니다.`
+                        : `${kIdx}번 쪽지를 편지보관함으로 옮겼습니다. (MB: 보관함)`);
+                } catch (error) {
+                    setHint?.(`보관 처리 실패: ${error.message}`);
+                }
+                return true;
+            }
             // [LOG_ID: 20260713_1230] 나우누리 CMAIL '배달 확인/취소' — 보낸쪽지함에서
             // CM [번호]로 상대가 아직 읽지 않은 편지의 발송을 취소(삭제)한다. (원전 p.NOW_MENU CMAIL)
             const cmMatch = cmd.match(/^CM(?:\s+(\d+))?$/);
@@ -188,6 +224,32 @@ export function createMemoCommandHandler(deps) {
                 if (memo) {
                     state._forwardMemoContent = `---------- 전달된 쪽지 ----------\n보낸이: ${memo.senderUserId}\n날짜: ${new Date(memo.createdAt).toLocaleString()}\n\n${memo.content}`;
                     await showMemoWrite();
+                }
+                return true;
+            }
+            // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함 — 읽는 중에 K로 보관/해제 토글.
+            if (cmd === 'K') {
+                const memo = state._memos?.find((m) => String(m?.id) === String(state._currentMemoId));
+                if (!memo) {
+                    setHint?.('보관할 쪽지를 찾지 못했습니다.');
+                    return true;
+                }
+                const myId = state.user?.userId || '';
+                const archived = memo.recipientUserId === myId
+                    ? Boolean(memo.recipientArchived)
+                    : Boolean(memo.senderArchived);
+                try {
+                    await apiFetch(`/api/memos/${memo.id}/archive`, {
+                        method: 'POST',
+                        body: JSON.stringify({ archived: !archived })
+                    });
+                    // 보관하면 원래 쪽지함에서 빠지므로 목록으로 돌아간다.
+                    await showMemoList();
+                    setHint?.(archived
+                        ? '보관을 해제했습니다.'
+                        : '편지보관함으로 옮겼습니다. (MB: 보관함)');
+                } catch (error) {
+                    setHint?.(`보관 처리 실패: ${error.message}`);
                 }
                 return true;
             }

@@ -52,6 +52,31 @@
 			<item type="policy" go="privacy" id="guide_privacy" target="privacy" door="5" access_level="1">
 				<name>개인정보처리방침</name>
 			</item>
+
+			<!-- [LOG_ID: 20260716_1400] 하이텔 원전 (1)서비스안내-[회원정보]-24.이용자검색(member)
+			     -1.이용자 ID(byid) -2.이용자 이름(byname). 서버 API(/api/members/search)와 프로필
+			     화면(showProfile)이 이미 있는데 진입 화면만 없어서, 아이디를 정확히 아는 사람만
+			     PF/WHO 명령으로 프로필을 볼 수 있었다(닉네임 검색은 아예 불가). 빈 껍데기가 아니라
+			     이미 있는 데이터·API를 노출하는 화면이라 추가한다. -->
+			<item type="member-search" go="member" id="guide_member" door="6" access_level="1">
+				<name>이용자검색</name>
+			</item>
+
+			<!-- [LOG_ID: 20260716_1600] 하이텔 원전 (1)서비스안내-6.메뉴안내(menu)/8.인덱스안내(index).
+			     GO 명령은 있는데 쓸 수 있는 키워드를 한눈에 볼 화면이 없었다 — TOP엔 11개만 보이고
+			     나머지 19개는 서브메뉴 4곳을 일일이 들어가야 보인다. 살아있는 메뉴 트리에서 매번
+			     생성하므로 낡거나 비지 않는다(별도 데이터·API 없음). -->
+			<item type="menu-index" go="index" id="guide_index" door="7" access_level="1">
+				<name>전체 메뉴 안내</name>
+			</item>
+
+			<!-- [LOG_ID: 20260716_2200] 하이텔 원전 (1)서비스안내-[회원정보]-25.접속통계(account).
+			     원전은 접속 횟수·사용 시간·요금을 보여줬지만 이 앱은 세션을 기록하지 않아 그 수치는
+			     만들 수 없다. 없는 값을 지어내는 대신 이미 가진 데이터(가입일·최근접속·등급·글/조회/
+			     추천·쪽지)로 "이용 현황"을 낸다. -->
+			<item type="my-stats" go="account" id="guide_account" door="8" access_level="1">
+				<name>이용 현황</name>
+			</item>
 		</item>
 
 		<!-- 02. 회원가입/로그인 -->

@@ -125,7 +125,9 @@ export function createMemoScreens(deps) {
             // [LOG_ID: 20260713_1620] 받은쪽지함에서만 지연편지의 지연 시간이 지나지 않은 항목을 숨긴다.
             state._memos = box === 'inbox' ? (memos || []).filter((m) => !isDelayedMemoPending(m)) : (memos || []);
 
-            const ansiText = buildMemoListAnsi(state._memos, box);
+            // [LOG_ID: 20260716_1800] 보관함(archive)은 받은/보낸 쪽지가 섞여 있어 "상대방"을
+            // 쪽지마다 판단해야 하므로 내 아이디를 함께 넘긴다.
+            const ansiText = buildMemoListAnsi(state._memos, box, state.user?.userId || '');
             await renderAnsiScreenWithTopbarSequential({
                 ansiText,
                 ansiToHTML,
@@ -218,7 +220,8 @@ export function createMemoScreens(deps) {
             transcript.push({ prompt: '받는 사람 >>', value: target });
             transcript.push({ prompt: '[안내]', value: '내용을 한 줄씩 입력하세요. /s 또는 SEND 전송, /q 취소' });
         } else {
-            transcript.push({ prompt: '[안내]', value: '받는 사람 아이디를 입력하세요.' });
+            // [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — 쉼표로 여러 명에게 한 번에 보낸다.
+            transcript.push({ prompt: '[안내]', value: '받는 사람 아이디를 입력하세요. (여러 명은 쉼표로: hong,kim,lee)' });
         }
 
         return {
@@ -337,8 +340,18 @@ export function createMemoScreens(deps) {
             state._memoBox = choice === 2 ? 'inbox' : 'sent';
 
             // [LOG_ID: 20260713_1050] 수신자 부재 알림 힌트 노출
-            if (res && res.recipientAbsent) {
-                setHint(`[부재알림] ${targetUserId}님은 현재 부재 중입니다: "${res.absentMsg || ''}"`);
+            // [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — 여러 명에게 보냈으면 발송 건수를,
+            // 부재자가 여럿이면 그 명단을 함께 알린다.
+            const sentCount = Number(res?.sentCount || 1);
+            const absentList = Array.isArray(res?.absentRecipients) ? res.absentRecipients : [];
+
+            if (absentList.length) {
+                const names = absentList.map((entry) => entry.userId).join(', ');
+                setHint(sentCount > 1
+                    ? `${sentCount}명에게 발송했습니다. [부재중] ${names}`
+                    : `[부재알림] ${names}님은 현재 부재 중입니다: "${absentList[0].absentMsg || ''}"`);
+            } else if (sentCount > 1) {
+                setHint(`${sentCount}명에게 쪽지를 발송했습니다. (${(res.recipients || []).join(', ')})`);
             } else {
                 setHint('쪽지를 발송했습니다.');
             }

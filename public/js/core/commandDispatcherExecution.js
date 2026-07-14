@@ -10,8 +10,14 @@ import { normalizeCommand } from './commandNormalizer.js';
 const HISTORY_BACK_SCREENS = new Set([
   'help',
   'policy',
+  // [LOG_ID: 20260716_1600] 전체 메뉴 안내(INDEX)는 자체 라우터에 F/B(페이징)만 있고 P/M/T가
+  // 없으므로, 여기 등록해야 공용 handleHistoryBack()/showMain() 폴백을 탄다 — 등록을 빠뜨려
+  // 힌트바엔 "상위(P)"가 뜨는데 실제로는 무반응이던 policy 버그(20260715_2300)와 같은 함정.
+  'menu-index',
   'history',
   'profile',
+  // [LOG_ID: 20260716_2200] 이용 현황도 자체 라우터가 없는 조회 전용 화면 — P/M/B/T 폴백 필요.
+  'my-stats',
   'active-users',
   'activity-summary',
   'system-diagnostics',
