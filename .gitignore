@@ -28,3 +28,6 @@ loop_system/response_cycle_*.txt
 
 # Ralph Loop 세션 상태 (로컬 전용)
 .claude/ralph-loop.local.md
+
+# Playwright MCP 스크린샷 스크래치 (검증용 임시 캡처, 추적 불필요)
+.playwright-mcp/

@@ -46,7 +46,22 @@ export const CMD_ORDER = {
   // [LOG_ID: 20260710_1530] PR(복사) 전체 보기 모드: 엔터로 페이지 보기 복귀
   serviceArticleFull: ['ENTER:페이지보기', 'N', 'A', 'P', 'T', 'H'],
   amusementInput: ['P', 'T', 'GO', 'H'],
-  amusementView: ['L:처음', 'P', 'T', 'GO', 'H']
+  amusementView: ['L:처음', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260715_1100] 설문조사(여론광장/ACRO) 화면 전용 카테고리 — 종전엔 표준
+  // 힌트바(P/T/GO/H, amusementInput 재사용) 위에 "[번호] 보기 | [W] 설문등록 | [P] 이전 |
+  // [M] ... | [T] 대문" 같은 문구를 ANSI 본문에 직접 하드코딩해 완전히 중복되면서도
+  // 서로 다른 용어(이전/상위, 대문/초기화면)를 썼다(사용자 지적: "메뉴가 이상하다"). 다른
+  // 화면(postList/memoList 등)과 동일하게 표준 힌트바 토큰 체계로 흡수한다.
+  voteList: ['P', 'T', 'GO', 'W:설문등록', 'H'],
+  voteDetail: ['B:목록', 'P', 'T', 'GO', 'H'],
+  voteCreate: ['B:취소', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260715_1300] 게시판 랭킹 화면도 여론광장과 동일한 유형의 중복 하드코딩
+  // 안내줄("[1]레벨 [2]글수 [3]추천 [4]조회 | [M]오락실 [T]대문")을 본문에 갖고 있었다.
+  // 여기선 M/T 목적지 자체는 정확했지만(랭킹은 실제로 오락실 하위), 표준 힌트바의
+  // 상위(P)·초기화면(T)와 여전히 중복이었다 — 진짜 추가 정보(1~4 분류 전환, B)만
+  // 표준 체계로 흡수한다.
+  rankingSummary: ['1:레벨', '2:글수', '3:추천', '4:조회', 'P', 'T', 'GO', 'H'],
+  rankingDetail: ['B:종합', '1:레벨', '2:글수', '3:추천', '4:조회', 'P', 'T', 'GO', 'H']
 };
 
 const SCREEN_TO_CATEGORY = {
@@ -79,6 +94,8 @@ const SCREEN_TO_CATEGORY = {
   'fortune-input': 'amusementInput', 'fortune-result': 'amusementView',
   'mbti-list': 'amusementInput', 'mbti-detail': 'amusementView',
   'retro-list': 'amusementInput', 'retro-view': 'amusementView',
+  'vote-list': 'voteList', 'vote-detail': 'voteDetail', 'vote-create': 'voteCreate',
+  'ranking-summary': 'rankingSummary', 'ranking-detail': 'rankingDetail',
   login: 'login',
   signup: 'authMenu'
 };

@@ -137,7 +137,9 @@ export function createGlobalRuntimeCommandHandler(deps) {
       return false;
     }
 
-    if (cmd === 'C' && state.screen !== 'system-log') {
+    // [LOG_ID: 20260714_1600] COLOR가 CMD_META(도움말)에는 있지만 어디서도 디스패치되지
+    // 않던 죽은 명령이었다 — C만 실제로 동작했다. 같은 기능에 묶는다.
+    if ((cmd === 'C' || cmd === 'COLOR') && state.screen !== 'system-log') {
       toggleTheme();
       // [LOG: 20260609_1136] 터미널 테마 변경 힌트 표시 제거 (원래 힌트바 유지)
       return true;

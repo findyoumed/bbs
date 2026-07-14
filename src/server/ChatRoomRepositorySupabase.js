@@ -92,6 +92,45 @@ class SupabaseChatRoomRepository extends BaseRepository {
     return this._toPublicRoom(room, summarizeParticipantCounts(filtered, authCount));
   }
 
+  // [LOG_ID: 20260714_2200] 원전 /OUT id(강퇴) 재현 — 방 개설자(owner_user_id)만 실행 가능.
+  // 세션 목록에서만 제거(참여자 수/목록에 즉시 반영) — leave()도 메시지 전송을 별도로 막지
+  // 않는 동일한 얕은 프레즌스 모델이라, 강퇴도 그 이상을 강제하지 않는다.
+  async kick(roomNo, targetUserId, context = {}) {
+    await this._ensureDefaultRoom(); await this._cleanup();
+    const room = await this.queries.findRoomByNo(roomNo);
+    const requesterId = normalizeText(context.userId, 'guest');
+    if (room.owner_user_id !== requesterId) throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
+    const target = normalizeText(targetUserId, '');
+    const participants = this._participantsForRoom(room.room_no);
+    const before = participants.length;
+    const filtered = participants.filter(p => p.userId !== target);
+    if (filtered.length === before) throw createHttpError(404, '해당 이용자가 방에 없습니다.');
+    if (filtered.length) this.participantsByRoomNo.set(Number(room.room_no), filtered); else this.participantsByRoomNo.delete(Number(room.room_no));
+    const authCount = await this.memberPersistence.loadActiveAuthMemberCount(room.id);
+    return this._toPublicRoom(room, summarizeParticipantCounts(filtered, authCount));
+  }
+
+  // [LOG_ID: 20260714_2200] 원전 /E TITLE, /E USER(방 설정 변경) 재현 — 방 개설자 전용.
+  async updateRoom(roomNo, payload = {}, context = {}) {
+    await this._ensureDefaultRoom(); await this._cleanup();
+    const room = await this.queries.findRoomByNo(roomNo);
+    const requesterId = normalizeText(context.userId, 'guest');
+    if (room.owner_user_id !== requesterId) throw createHttpError(403, '방 개설자만 설정을 변경할 수 있습니다.');
+    const updates = {};
+    if (payload.title !== undefined) {
+      const title = normalizeRoomText(payload.title);
+      if (!title) throw createHttpError(400, '방 제목을 입력해 주세요.');
+      updates.name = title.slice(0, 60);
+    }
+    if (payload.maxUser !== undefined) {
+      updates.max_user = normalizeMaxUser(payload.maxUser, room.max_user);
+    }
+    if (Object.keys(updates).length === 0) return this._toPublicRoom(room);
+    const { data, error } = await this.client.from(this.table).update(updates).eq('room_no', Number(roomNo)).select(this.queries._selectColumns()).single();
+    if (error) throw createHttpError(502, `수정 실패: ${error.message}`);
+    return this._toPublicRoom(data);
+  }
+
   async sendMessage(roomNo, payload = {}, context = {}) {
     const num = Number(roomNo);
     const messages = this.messagesByRoomNo.get(num) || [];

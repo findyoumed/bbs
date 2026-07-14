@@ -206,7 +206,7 @@ export function createInteractionHandlers(deps) {
 
         // [LOG: 20260426_1325] 유틸리티 명령어(C, Y 등)는 렌더링을 중단하지 않도록 개선
         const cmdValue = btn.dataset.cmd || '';
-        const QUIET_COMMANDS = ['C', 'COLOR', 'Y', 'MUTE', '+', 'ZOOM', 'RESET', 'PERF', 'SYSINFO', 'DIAG', 'ACT', 'ACTIVITY', 'HIST', 'ENV', 'VARS', 'ALIAS', 'SET'];
+        const QUIET_COMMANDS = ['C', 'COLOR', 'Y', 'MUTE', '+', 'ZOOM', 'RESET', 'PERF', 'SYSINFO', 'DIAG', 'ACT', 'ACTIVITY', 'HIST', 'ENV', 'VARS', 'SET'];
         const isQuiet = QUIET_COMMANDS.some(q => cmdValue.toUpperCase().startsWith(q));
 
         if (!isQuiet && interruptRendering) {

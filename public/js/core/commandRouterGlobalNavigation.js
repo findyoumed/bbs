@@ -19,7 +19,9 @@ export function createGlobalNavigationCommandHandler(deps) {
     showPostList,
     showLogin,
     showConfirm,
-    showMemoWrite
+    showMemoList,
+    showMemoWrite,
+    settingsService
   } = deps;
 
   function setDefaultPrompt() {
@@ -225,7 +227,10 @@ export function createGlobalNavigationCommandHandler(deps) {
     }
 
     const isWriteConflictScreen = ['post-list', 'memo-list', 'post-write', 'memo-write', 'login', 'password-reset', 'signup'].includes(state.screen);
-    if (cmd === 'USER' || cmd === 'WHO' || cmd === 'WH' || (cmd === 'W' && !isWriteConflictScreen)) {
+    // [LOG_ID: 20260714_2100] 원전(NOW_MENU.DAT) 명령어표의 UID(총 접속자 ID 조회)/
+    // USER ALL(전체 메뉴별 이용자 현황)을 추가 — 우리 접속자 목록 화면이 이미 사용자별
+    // 위치(위치 컬럼)까지 보여주므로 기존 화면 그대로 재사용한다(신규 화면 불필요).
+    if (cmd === 'USER' || cmd === 'USER ALL' || cmd === 'UID' || cmd === 'WHO' || cmd === 'WH' || (cmd === 'W' && !isWriteConflictScreen)) {
       await showActiveUsers();
       return true;
     }
@@ -241,7 +246,10 @@ export function createGlobalNavigationCommandHandler(deps) {
     }
 
     // [LOG_ID: 20260713_1160] 전역 ME / MEMO / CMAIL 명령어 배선 추가 (나우누리 편지함 조회)
-    if (cmd === 'ME' || cmd === 'MEMO' || cmd === 'CMAIL') {
+    // [LOG_ID: 20260714_1900] RMAIL(편지읽기)/MAIL(전자우편 진입) 추가 — 원전(NOW_MENU.DAT)의
+    // "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)" 4개 명령
+    // 중 RMAIL/MAIL만 배선이 빠져 있었다(사용자 지적).
+    if (cmd === 'ME' || cmd === 'MEMO' || cmd === 'CMAIL' || cmd === 'RMAIL' || cmd === 'MAIL') {
       if (state.user?.isGuest) {
         setHint('쪽지함은 로그인 후 사용하실 수 있습니다.');
         setDefaultPrompt();
@@ -268,6 +276,35 @@ export function createGlobalNavigationCommandHandler(deps) {
         return true;
       }
       return false;
+    }
+
+    // [LOG_ID: 20260714_2100] 원전 MSG 명령 — 메시지수신 상태 확인(ON/OFF로 변경), MSG R로
+    // 최근 쪽지 확인. envVars.MSG='OFF'면 접속 시 새 쪽지 도착 알림(notifyUnreadMemos)을 끈다.
+    const msgMatch = cmd.match(/^MSG(?:\s+(\S+))?$/);
+    if (msgMatch) {
+      const arg = (msgMatch[1] || '').toUpperCase();
+      if (arg === 'R') {
+        if (state.user?.isGuest) {
+          setHint('쪽지함은 로그인 후 사용하실 수 있습니다.');
+          setDefaultPrompt();
+          return true;
+        }
+        state._memoBox = 'inbox';
+        await showMemoList();
+        return true;
+      }
+      if (arg === 'ON' || arg === 'OFF') {
+        state.envVars = state.envVars || {};
+        state.envVars.MSG = arg;
+        if (settingsService) settingsService.saveEnvVars(state.envVars);
+        setHint(`메시지 수신 알림이 ${arg === 'ON' ? '켜졌습니다' : '꺼졌습니다'}. (MSG R: 최근 쪽지 확인)`);
+        setDefaultPrompt();
+        return true;
+      }
+      const current = (state.envVars?.MSG || 'ON').toUpperCase();
+      setHint(`메시지 수신 상태: ${current}\n사용법: MSG ON, MSG OFF, MSG R(최근 쪽지 확인)`);
+      setDefaultPrompt();
+      return true;
     }
 
     if (cmd === 'CLS' || cmd === 'CLEAR') {

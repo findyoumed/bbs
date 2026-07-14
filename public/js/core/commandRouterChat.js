@@ -104,6 +104,22 @@ export function createChatCommandHandler(deps) {
         await showChatRoom(state._chatRooms[selectedRoom - 1].no);
         return true;
       }
+
+      // [LOG_ID: 20260714_2200] 원전 대기실 명령 LT title(제목으로 대화방 찾기) 재현
+      const ltMatch = cmd.match(/^LT\s+(.+)$/i);
+      if (ltMatch) {
+        const keyword = ltMatch[1].trim().toLowerCase();
+        const matches = (state._chatRooms || []).filter((r) =>
+          String(r.title || r.name || '').toLowerCase().includes(keyword));
+        if (matches.length === 1) {
+          await showChatRoom(matches[0].no);
+        } else if (matches.length > 1) {
+          setHint(`검색 결과: ${matches.map((r) => `#${r.no} ${r.title || r.name}`).join(', ')}`);
+        } else {
+          setHint(`"${ltMatch[1].trim()}"이(가) 포함된 대화방을 찾을 수 없습니다.`);
+        }
+        return true;
+      }
       return false;
     }
 
@@ -185,6 +201,166 @@ export function createChatCommandHandler(deps) {
           return true;
         }
 
+        // [LOG_ID: 20260714_2200] 원전(NOW_MENU.DAT) 대화실 명령어표 잔여분 재현.
+        if (slashCmd === 'UID') {
+          const ids = (state._chatRoom?.participants || []).map((p) => p.userId).filter(Boolean);
+          setHint(ids.length ? `현재 방 참여자 ID: ${ids.join(', ')}` : '참여자 정보를 확인할 수 없습니다.');
+          return true;
+        }
+
+        if (slashCmd.startsWith('FI ')) {
+          const targetId = rawCmd.substring(4).trim();
+          if (!targetId) {
+            setHint('사용법: /FI id');
+            return true;
+          }
+          try {
+            const users = await apiFetch('/api/system/active-users');
+            const found = (Array.isArray(users) ? users : []).find((u) => u.userId === targetId);
+            setHint(found
+              ? `[${targetId}] 위치: ${found.path || '알 수 없음'} (${found.nickName || ''})`
+              : `[${targetId}]님의 접속 정보를 찾을 수 없습니다.`);
+          } catch (e) {
+            setHint('조회에 실패했습니다.');
+          }
+          return true;
+        }
+
+        if (slashCmd.startsWith('EX ')) {
+          const targetId = rawCmd.substring(4).trim();
+          if (!targetId) {
+            setHint('사용법: /EX id');
+            return true;
+          }
+          if (!state._chatMutedUserIds) state._chatMutedUserIds = new Set();
+          if (state._chatMutedUserIds.has(targetId)) {
+            state._chatMutedUserIds.delete(targetId);
+            setHint(`[${targetId}]님의 메시지 수신거부를 해제했습니다.`);
+          } else {
+            state._chatMutedUserIds.add(targetId);
+            setHint(`[${targetId}]님의 메시지를 수신거부합니다.`);
+          }
+          const nick = state.user?.nickName || '나';
+          const visibleMessages = (state._chatMessages || []).filter((m) => !state._chatMutedUserIds.has(m.userId));
+          const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick, state.user?.userId);
+          renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });
+          return true;
+        }
+
+        // 방 개설자 전용 - 강퇴 (실제 권한 검증은 서버에서 최종 수행)
+        if (slashCmd.startsWith('OUT ')) {
+          const targetId = rawCmd.substring(5).trim();
+          if (!targetId) {
+            setHint('사용법: /OUT id');
+            return true;
+          }
+          if (state._chatRoom?.owner !== state.user?.userId) {
+            setHint('방 개설자만 강퇴할 수 있습니다.');
+            return true;
+          }
+          try {
+            await apiFetch(`/api/chat/rooms/${encodeURIComponent(state._chatRoomId)}/kick`, {
+              method: 'POST',
+              body: JSON.stringify({ targetUserId: targetId })
+            });
+            setHint(`[${targetId}]님을 강퇴했습니다.`);
+          } catch (e) {
+            setHint(`강퇴 실패: ${e.message}`);
+          }
+          return true;
+        }
+
+        // 방 개설자 전용 - 제목/정원 변경
+        const editMatch = rawCmd.match(/^\/E\s+(TITLE|USER)\s+(.+)$/i);
+        if (editMatch) {
+          if (state._chatRoom?.owner !== state.user?.userId) {
+            setHint('방 개설자만 설정을 변경할 수 있습니다.');
+            return true;
+          }
+          const field = editMatch[1].toUpperCase();
+          const value = editMatch[2].trim();
+          try {
+            const payload = field === 'TITLE' ? { title: value } : { maxUser: parseInt(value, 10) };
+            const updated = await apiFetch(`/api/chat/rooms/${encodeURIComponent(state._chatRoomId)}/settings`, {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+            state._chatRoom = { ...state._chatRoom, ...updated };
+            setHint(field === 'TITLE' ? `방 제목이 [${value}](으)로 변경되었습니다.` : `참여 제한 인원이 ${value}명으로 변경되었습니다.`);
+          } catch (e) {
+            setHint(`설정 변경 실패: ${e.message}`);
+          }
+          return true;
+        }
+
+        // 비공개방 초대 - 쪽지로 방번호/비밀번호 안내
+        if (slashCmd.startsWith('IN ')) {
+          const targetId = rawCmd.substring(4).trim();
+          if (!targetId) {
+            setHint('사용법: /IN id');
+            return true;
+          }
+          try {
+            const room = state._chatRoom || {};
+            const roomLabel = room.name || room.title || '대화실';
+            // [LOG_ID: 20260714_2200] 방 비밀번호는 공개 API 응답에 포함되지 않는다(보안상 의도적) —
+            // 비공개방이면 개설자에게 직접 문의하도록 안내한다.
+            const inviteText = room.requiresPassword
+              ? `[대화실 초대] "${roomLabel}" 방에 초대합니다. (방번호: ${room.no}, 비밀번호는 개설자에게 문의하세요)`
+              : `[대화실 초대] "${roomLabel}" 방에 초대합니다. (방번호: ${room.no})`;
+            await apiFetch('/api/memos', {
+              method: 'POST',
+              body: JSON.stringify({ recipientUserId: targetId, title: '[대화실 초대]', content: inviteText })
+            });
+            setHint(`[${targetId}]님께 초대 쪽지를 보냈습니다.`);
+          } catch (e) {
+            setHint(`초대 실패: ${e.message}`);
+          }
+          return true;
+        }
+
+        // 신고 - 건의하기 게시판에 등록
+        if (slashCmd === 'JUDGE') {
+          try {
+            const room = state._chatRoom || {};
+            await apiFetch('/api/boards/tosysop/posts', {
+              method: 'POST',
+              body: JSON.stringify({
+                title: `[대화실 신고] ${room.name || room.title || ''} (방번호 ${room.no || '?'})`,
+                content: `신고자: ${state.user?.userId}\n방번호: ${room.no}\n신고 시각: ${new Date().toLocaleString()}\n\n(신고 사유를 관리자에게 직접 알려주세요.)`
+              })
+            });
+            setHint('신고가 접수되었습니다. (건의하기 게시판)');
+          } catch (e) {
+            setHint(`신고 접수 실패: ${e.message}`);
+          }
+          return true;
+        }
+
+        // 지나간 대화 다시보기(재출력) - /Z, /Z 숫자(최근 N개만)
+        const zMatch = slashCmd.match(/^Z(?:\s+(\d+))?$/i);
+        if (zMatch) {
+          const n = zMatch[1] ? parseInt(zMatch[1], 10) : null;
+          const all = state._chatMessages || [];
+          const visible = n ? all.slice(-n) : all;
+          const nick = state.user?.nickName || '나';
+          const ansiResult = buildChatRoomAnsi(state._chatRoom, visible, nick, state.user?.userId);
+          renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });
+          return true;
+        }
+
+        // /P, /GO - 대화실에서 이동 명령(/T, /M은 위에서 이미 처리)
+        if (slashCmd === 'P') {
+          if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+          await showChatLobby();
+          return true;
+        }
+        if (slashCmd === 'GO' || slashCmd.startsWith('GO ')) {
+          if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+          await showMain();
+          return true;
+        }
+
         // [LOG: 20260507_1500] Unknown chat slash commands are ignored without footer noise.
         setHint('');
         return true;
@@ -215,7 +391,12 @@ export function createChatCommandHandler(deps) {
         }
 
         const nick = state.user?.nickName || '나';
-        const ansiResult = buildChatRoomAnsi(state._chatRoom, state._chatMessages || [], nick);
+        // [LOG_ID: 20260714_2200] /EX(수신거부) 뮤트 목록은 낙관적 갱신 렌더에도 적용한다.
+        const muted = state._chatMutedUserIds;
+        const visibleMessages = muted && muted.size
+          ? (state._chatMessages || []).filter((m) => !muted.has(m.userId))
+          : (state._chatMessages || []);
+        const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick);
         // [LOG: 20260707_1424] 낙관적 갱신도 표준 상단바 렌더러를 사용한다.
         // 기존의 screenEl.innerHTML 직접 조립은 상단바 없이 그려져 메시지 전송 직후 로고/시계가 사라졌다.
         renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });

@@ -52,11 +52,15 @@ export function createPostViewCommandHandler(deps) {
           const targetCols = typeof window !== 'undefined' && window.innerWidth < 768 ? 44 : 80;
 
           // Hitel 원전 화일 전송 대화 상자 연출 빌더
+          // [LOG_ID: 20260715_1200] '█'/'░'는 커스텀 픽셀 폰트에 글리프가 없어 색상 폰트로
+          // 폴백되며 무지개색 노이즈로 깨졌다(투표 그래프와 동일 원인). 실측 확인된
+          // '■'/'□'(폭 2칸)로 교체 — 폭이 2배가 되므로 barLength를 절반으로 줄여 원래의
+          // 시각적 길이(표시폭)를 유지한다.
           const drawTransferBox = (percent) => {
-            const barLength = Math.max(10, targetCols - 30);
+            const barLength = Math.max(5, Math.floor((targetCols - 30) / 2));
             const filledLength = Math.floor((barLength * percent) / 100);
             const emptyLength = barLength - filledLength;
-            const bar = '█'.repeat(filledLength) + '░'.repeat(emptyLength);
+            const bar = '■'.repeat(filledLength) + '□'.repeat(emptyLength);
             
             // 80칸 기준 TUI 전송 박스
             const padName = String(file.fileName).substring(0, 25).padEnd(25);

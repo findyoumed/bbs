@@ -20,23 +20,13 @@ export function createMenuService(deps) {
   }
 
   // [LOG: 20260622_1030] 원래 mnu 파일에 설정된 door 키 매핑을 받아와 반영하도록 개선
+  // [LOG_ID: 20260714_1800] 로그인 시 이 슬롯을 "정보관리(MYINFO)"로 대체하던 분기를 제거했다 —
+  // 20260713_1900에 hanulso.mnu에 별도의 정적 "개인영역(MYINFO)" 최상위 항목이 추가되면서
+  // 로그인 상태에서 go=myinfo 항목이 두 번(정보관리/개인영역) 노출되는 순수 중복이 됐다
+  // (사용자 보고: 로그인 후 메인 메뉴에 MYINFO 항목 2개). 이 함수는 이제 게스트 전용
+  // 회원가입/로그인 서브메뉴만 만들고, 로그인 상태의 처리는 applyRuntimeMenuOverrides에서
+  // 슬롯 자체를 제거하는 것으로 옮겼다.
   function createEntryMenuNode(doorVal = '1') {
-    if (!isGuestMenuState()) {
-      return {
-        type: 'myinfo',
-        go: 'myinfo',
-        id: 'myinfo',
-        door: doorVal,
-        text: '',
-        showCode: true,
-        accessLevel: 1,
-        name: '정보관리',
-        header: '',
-        footer: 'txt/cmd_menu_footer.txt',
-        children: []
-      };
-    }
-
     const children = [
       { type: 'signup', go: 'signup', id: 'signup', door: '1', name: '회원가입', children: [] },
       { type: 'login', go: 'login', id: 'signin', door: '2', name: '로그인: 이메일/아이디', children: [] },
@@ -65,25 +55,35 @@ export function createMenuService(deps) {
   }
 
   // [LOG: 20260622_1030] 원래 로드된 signup/log 메뉴 노드의 door 단축키 설정을 추출하여 전달하도록 보완
+  // [LOG_ID: 20260714_1800] 로그인 상태에서는 이 슬롯 자체를 제거한다 — 정적 "개인영역(MYINFO)"
+  // 항목이 이미 그 역할을 하므로 대체 삽입 시 중복이 생겼다. 슬롯이 사라져 door 번호에 구멍이
+  // 나지 않도록 남은 항목의 door를 door 순으로 재정렬해 1부터 다시 매긴다.
   function applyRuntimeMenuOverrides(tree) {
     if (!tree || typeof tree !== 'object') return tree;
     const clonedTree = applyMenuNodeOverrides(tree);
     if (getMenuNodeKey(clonedTree) !== 'top') return clonedTree;
 
-    let originalDoor = '1';
-    const origNode = (clonedTree.children || []).find(c => {
-      const k = getMenuNodeKey(c).toLowerCase();
-      return k === 'signup' || k === 'entry' || k === 'log';
-    });
-    if (origNode && origNode.door) {
-      originalDoor = String(origNode.door).trim();
-    }
-
     const preserved = (clonedTree.children || []).filter(c => {
       const k = getMenuNodeKey(c).toLowerCase();
       return k !== 'signup' && k !== 'entry' && k !== 'log';
     });
-    clonedTree.children = [createEntryMenuNode(originalDoor), ...preserved];
+
+    if (isGuestMenuState()) {
+      let originalDoor = '1';
+      const origNode = (clonedTree.children || []).find(c => {
+        const k = getMenuNodeKey(c).toLowerCase();
+        return k === 'signup' || k === 'entry' || k === 'log';
+      });
+      if (origNode && origNode.door) {
+        originalDoor = String(origNode.door).trim();
+      }
+      clonedTree.children = [createEntryMenuNode(originalDoor), ...preserved];
+    } else {
+      clonedTree.children = preserved
+        .slice()
+        .sort((a, b) => compareDoor(a?.door, b?.door))
+        .map((child, index) => ({ ...child, door: String(index + 1) }));
+    }
     return clonedTree;
   }
 
@@ -135,7 +135,11 @@ export function createMenuService(deps) {
 
   function getMenuNodeCode(node) {
     const code = String(node?.go || '').trim().toUpperCase();
-    return (!code || code === 'TOP' || (node?.type === 'board' && code.length > 10)) ? '' : code;
+    // [LOG_ID: 20260714_1300] 종전엔 board 타입에만 "긴 코드 숨김" 예외를 적용해,
+    // help/policy 등 다른 타입의 스네이크케이스 go값(예: guide_cmdhelp)이
+    // "(GUIDE_CMDHELP)" 식으로 그대로 노출됐다. 타입 제한을 없애 모든 타입에
+    // 동일하게 적용한다.
+    return (!code || code === 'TOP' || code.length > 10) ? '' : code;
   }
 
   function getMenuNodeTitle(node) {

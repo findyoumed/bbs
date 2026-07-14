@@ -28,7 +28,8 @@ export function createHelpScreens(deps) {
     buildPageLabel,
     buildTopHeader,
     fitCell,
-    truncateDisplayText
+    truncateDisplayText,
+    wrapAnsiText
   } = createAnsiBuilderUtils({ displayWidth, isWideChar });
 
   const CAT_LABELS = {
@@ -97,18 +98,24 @@ export function createHelpScreens(deps) {
 
     // 2. 전체 줄(Lines) 구성
     const helpLines = [];
+    // [LOG_ID: 20260714_1500] 종전엔 설명이 폭(56칸)을 넘으면 truncateDisplayText가 말줄임
+    // 표시조차 없이 그냥 잘라버렸다 — LV(등급변경) 설명은 111칸이라 절반 넘게 유실되어
+    // "회원 등급을 변경합니다. 게시글" 에서 뚝 끊기고 정작 중요한 등급 값 안내
+    // "(1:일반회원, 2:특별회원, 99:운영자)"가 통째로 사라졌다(사용자 보고). 자르는 대신
+    // wrapAnsiText로 줄바꿈해 두 번째 줄부터는 명령 칸만큼 들여써서 전체 내용을 보존한다.
     const buildHelpLineAdaptive = (cmd, desc) => {
       // [LOG: 20260707_1430] "Q, X, EXIT, BYE, LOGOUT"(23자)이 폭 22에서 공백 없이 잘려
       // "LOGOU로그아웃하고"처럼 설명과 붙던 문제: 폭을 24로 늘리고, 명령이 폭을 넘치면
       // 폭-1로 잘라 컬럼 사이 최소 1칸 간격을 보장한다.
       const cmdWidth = isMobile ? 12 : 24;
-      return [
-        ansiColor(14),
-        fitCell(truncateDisplayText(cmd, cmdWidth - 1), cmdWidth),
+      const cmdCell = fitCell(truncateDisplayText(cmd, cmdWidth - 1), cmdWidth);
+      const descLines = wrapAnsiText(desc, targetCols - cmdWidth);
+      return descLines.map((line, idx) => [
+        idx === 0 ? ansiColor(14) + cmdCell : ' '.repeat(cmdWidth),
         ansiColor(15),
-        truncateDisplayText(desc, targetCols - cmdWidth),
+        line,
         ANSI_RESET
-      ].join('');
+      ].join(''));
     };
 
     const visibleTabs = currentTab === 'all' ? HELP_TAB_KEYS : [currentTab];
@@ -116,7 +123,7 @@ export function createHelpScreens(deps) {
       if (categories[cat] && categories[cat].length > 0) {
         helpLines.push(ansiColor(11) + (CAT_LABELS[cat] || `[${cat}]`) + ANSI_RESET);
         categories[cat].forEach((row) => {
-          helpLines.push(buildHelpLineAdaptive(row.command, row.description));
+          helpLines.push(...buildHelpLineAdaptive(row.command, row.description));
         });
         // [LOG: 20260623_1236] 카테고리 간 빈 줄 제거 → 세로 스크롤바 방지
       }
@@ -159,6 +166,20 @@ export function createHelpScreens(deps) {
     };
   }
 
+  // [LOG_ID: 20260714_1500] 설명(desc)이 길면(예: LV 111칸) 한 줄 폭을 넘어 잘리던 문제 —
+  // truncateDisplayText 대신 wrapAnsiText로 줄바꿈해 라벨 폭만큼 이어지는 줄을 들여쓴다.
+  function buildLabeledWrappedLines(label, text, textColorCode, width) {
+    const prefix = `${label}: `;
+    const prefixWidth = displayWidth(prefix);
+    const lines = wrapAnsiText(text, Math.max(1, width - prefixWidth));
+    return lines.map((line, idx) => [
+      idx === 0 ? ansiColor(11) + prefix : ' '.repeat(prefixWidth),
+      ansiColor(textColorCode),
+      line,
+      ANSI_RESET
+    ].join(''));
+  }
+
   function buildCommandHelpAnsi(cmdKey) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -171,8 +192,8 @@ export function createHelpScreens(deps) {
       '',
       `${ansiColor(11)}${UI_TEXT.COMMAND_NAME}: ${ansiColor(14)}${cmdKey.toUpperCase()}${ANSI_RESET}`,
       `${ansiColor(11)}${UI_TEXT.LABEL}: ${ansiColor(15)}${meta.label}${ANSI_RESET}`,
-      `${ansiColor(11)}${UI_TEXT.DESCRIPTION}: ${ansiColor(15)}${truncateDisplayText(meta.desc || UI_TEXT.NO_DESCRIPTION, targetCols - 10)}${ANSI_RESET}`,
-      `${ansiColor(11)}${UI_TEXT.USAGE}: ${ansiColor(14)}${truncateDisplayText(meta.tip, targetCols - 10)}${ANSI_RESET}`,
+      ...buildLabeledWrappedLines(UI_TEXT.DESCRIPTION, meta.desc || UI_TEXT.NO_DESCRIPTION, 15, targetCols),
+      ...buildLabeledWrappedLines(UI_TEXT.USAGE, meta.tip, 14, targetCols),
       `${ansiColor(11)}${UI_TEXT.CATEGORY}: ${ansiColor(15)}${CAT_LABELS[meta.cat] || meta.cat}${ANSI_RESET}`,
       `${ansiColor(11)}${UI_TEXT.LOGIN_REQUIRED_SHORT}: ${ansiColor(15)}${meta.login ? 'YES' : 'NO'}${ANSI_RESET}`,
       '',
@@ -181,7 +202,7 @@ export function createHelpScreens(deps) {
 
     while (parts.length < 24) parts.push('');
     return {
-      text: parts.join('\n'),
+      text: parts.slice(0, 24).join('\n'),
       page: 1,
       totalPages: 1
     };

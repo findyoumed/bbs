@@ -21,6 +21,7 @@ export function createRoutingStateRestorer(deps) {
     showNewsList,
     showNewsMenu,
     showPasswordReset,
+    showPolicy,
     showAttachmentList,
     showPostList,
     showPostView,
@@ -219,6 +220,14 @@ export function createRoutingStateRestorer(deps) {
       // coercing the second argument to boolean and snapping back to page 1.
       const page = Math.max(1, parseInt(query?.get('page') || '1', 10) || 1);
       await showHelp('', { fromHistory: true, page });
+    },
+
+    // [LOG_ID: 20260715_2400] /policy/:kind 복원 — help와 동일 패턴. 이 핸들러가 없으면
+    // buildURLForState가 새로 부여한 /policy/tos 등을 새로고침/뒤로가기 시 복원할 수 없어
+    // showMain()으로 떨어진다.
+    async policy(segments, query) {
+      const page = Math.max(1, parseInt(query?.get('page') || '1', 10) || 1);
+      await showPolicy(segments[1] || 'tos', page, true);
     },
 
     async history() {

@@ -6982,8 +6982,12 @@ async function verifyPlaywrightChatFlow(page, errors) {
             return;
         }
 
+        // [LOG_ID: 20260715_1500] 20260713_1000 대기실 상황판(ST) 재설계로 방 목록 표기가
+        // "[1] 제목" 형식에서 나우누리 원전 형식 "#1 공개(인원/정원) [개설자] 방제목"으로
+        // 바뀌었는데, 이 테스트는 갱신되지 않아 "[1]" 리터럴을 계속 찾다가 항상 실패
+        // 판정을 내리고 있었다(실제 UI는 정상 — full-traversal을 이번에 처음 돌려보다 발견).
         const lobbyText = await page.evaluate(() => document.getElementById('terminal-screen')?.textContent || '');
-        if (!hasNonEmptyText(lobbyText) || !lobbyText.includes('[1]')) {
+        if (!hasNonEmptyText(lobbyText) || !lobbyText.includes('공개(')) {
             errors.push('Chat lobby did not expose a selectable first room.');
             return;
         }

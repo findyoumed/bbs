@@ -58,7 +58,7 @@ export function createVoteScreens(deps) {
     try {
       const votes = await apiFetch('/api/votes');
       const ansi = buildVoteListAnsi(votes || []);
-      await render(ansi, 'amusementInput', '설문 번호 입력 >> ');
+      await render(ansi, 'voteList', '설문 번호 입력 >> ');
     } catch (e) {
       setHint('설문조사 목록을 가져오지 못했습니다: ' + e.message);
     }
@@ -75,7 +75,7 @@ export function createVoteScreens(deps) {
       const vote = await apiFetch(`/api/votes/${id}`);
       const ansi = buildVoteDetailAnsi(vote);
       const prompt = (vote.isActive && vote.userVotedOption === null) ? '투표 번호 입력 >> ' : '선택 >> ';
-      await render(ansi, 'amusementInput', prompt);
+      await render(ansi, 'voteDetail', prompt);
     } catch (e) {
       setHint('설문 정보를 가져오지 못했습니다: ' + e.message);
       await showVoteList(true);
@@ -104,7 +104,7 @@ export function createVoteScreens(deps) {
     state.voteCreateData = { title: '', options: [] };
     if (!fromHistory) { updateURL(); pushHistory(); }
 
-    await render(buildVoteCreateAnsi(), 'amusementInput', '설문 제목 입력 >> ');
+    await render(buildVoteCreateAnsi(), 'voteCreate', '설문 제목 입력 >> ');
   }
 
   // 5. 설문조사 생성 제출

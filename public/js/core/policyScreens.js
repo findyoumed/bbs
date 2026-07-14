@@ -30,8 +30,8 @@ export function createPolicyScreens(deps) {
   } = createAnsiBuilderUtils({ displayWidth, isWideChar });
 
   const POLICY_DOCS = {
-    tos: { title: '이용약관', lines: SIGNUP_TOS_TEXT },
-    privacy: { title: '개인정보처리방침', lines: SIGNUP_PRIVACY_TEXT }
+    tos: { title: '이용약관', code: 'TOS', lines: SIGNUP_TOS_TEXT },
+    privacy: { title: '개인정보처리방침', code: 'PRIVACY', lines: SIGNUP_PRIVACY_TEXT }
   };
 
   function normalizePolicyKind(kind) {
@@ -59,7 +59,10 @@ export function createPolicyScreens(deps) {
     const pageSlice = bodyLines.slice((finalPage - 1) * linesPerPage, finalPage * linesPerPage);
 
     const parts = [
-      buildTopHeader({ leftLabel: 'GUIDE', centerLabel: doc.title }, buildPageLabel(finalPage, totalPages), targetCols),
+      // [LOG_ID: 20260714_1300] leftLabel을 상위 메뉴("GUIDE") 하드코딩 대신 문서 자신의
+      // 코드로 — 사용자 지적: 이용약관/개인정보처리방침 어느 걸 열어도 좌상단이 "GUIDE"로
+      // 통일되어 있었다. 다른 화면들(게시판 등)은 모두 자기 자신의 코드를 좌상단에 쓴다.
+      buildTopHeader({ leftLabel: doc.code, centerLabel: doc.title }, buildPageLabel(finalPage, totalPages), targetCols),
       ...pageSlice
     ];
 

@@ -116,15 +116,20 @@ export function createPostListView(deps) {
     setReady(true);
 
     // [LOG_ID: 20260712_2200] 게시판 최초 진입 시 회원 신분 배너 노출 결정 및 세션 플래그 설정
+    // [LOG_ID: 20260715_1400] 게스트 판정이 존재하지 않는 필드(u.role === 'guest')와 대소문자가
+    // 안 맞는 비교(uId === 'GUEST', 실제 게스트 userId는 소문자 'guest')에 의존해 항상
+    // 거짓으로 평가됐다 — 실제 게스트도 "정회원입니다"로 표시되는 모순된 배너가 나왔다
+    // (사용자 실측 보고: "## 손님(guest)님은 정회원입니다 ##"). 사이트 전역에서 쓰는
+    // 표준 필드(user.isGuest/user.isAdmin, 예: systemAnsiBuilders.js)로 맞춘다.
     let memberBanner = null;
     if (boardKey && !state._memberBannerShown[boardKey]) {
       const u = state.user;
-      const uId = String(u?.userId || u?.username || 'GUEST').trim();
-      const uNick = String(u?.nickName || u?.nickname || '손님').trim();
-      const isGuest = !u || uId === 'GUEST' || u?.role === 'guest';
+      const uId = String(u?.userId || 'GUEST').trim();
+      const uNick = String(u?.nickName || '손님').trim();
+      const isGuest = !u || u.isGuest !== false;
       let roleLabel = '손님';
       if (!isGuest) {
-        roleLabel = u?.role === 'admin' ? '시삽' : '정회원';
+        roleLabel = u?.isAdmin ? '시삽' : '정회원';
       }
       memberBanner = `## ${uNick}(${uId})님은 ${roleLabel}입니다 ##`;
       state._memberBannerShown[boardKey] = true;

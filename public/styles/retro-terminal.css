@@ -5,6 +5,13 @@
     font-style: normal;
     font-display: block;
 }
+@font-face {
+    font-family: 'DungGeunMo';
+    src: url('/fonts/DungGeunMo.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+    font-display: block;
+}
 
 :root,
 :root[data-theme="dark"] {
@@ -142,7 +149,14 @@ body,
     }
 }
 
-@media (max-width: 768px) {
+/* [LOG_ID: 20260714_1400] 종전엔 768px 밑에서만 스케일을 1로 되돌렸는데, 80칸 터미널의
+   실제 필요 폭(80ch+32px, 대략 850~985px)이 1.15배 확대되면 약 975~1130px가 되어
+   768~1100px 사이 창 폭에서는 확대된 터미널이 뷰포트보다 넓어진다. body가
+   overflow:hidden이고 스크롤바도 전역 숨김이라 그 초과분이 그냥 안 보이게 잘려나갔다
+   (사용자 보고: "/help 화면 오른편으로 글이 넘쳐서 안보이는 것 같다" — help 화면은 각 줄이
+   정확히 80칸을 꽉 채워써서 가장 먼저 눈에 띄었다). 폰트 글리프 폭 오차를 감안해
+   여유 있게 1100px까지 스케일을 1로 유지한다. */
+@media (max-width: 1100px) {
     :root {
         --terminal-scale: 1;
     }

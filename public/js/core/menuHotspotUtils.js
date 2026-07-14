@@ -9,7 +9,18 @@ function findMenuLabelEnd(text, startIdx) {
     if (ch === '·') break;
     if (ch === ' ') {
       spaceRun += 1;
-      if (spaceRun >= 2) break;
+      if (spaceRun >= 2) {
+        // [LOG_ID: 20260715_2000] GUIDE처럼 라벨-코드 사이를 여러 칸 정렬 공백으로 채우는
+        // 화면(buildBoardSelectAnsi의 labelColWidth 패딩)에서는 공백 2칸 규칙이 "(코드)"
+        // 표기까지 잘라내 호버/클릭 영역에서 빠뜨렸다(사용자 보고: guide 호버링 영역이
+        // 이상함). 공백 뒤 남은 내용이 "(코드)" 하나뿐이면 라벨의 일부로 포함시킨다.
+        const tail = text.slice(i);
+        const codeMatch = tail.match(/^\s*(\([^)]+\))\s*$/);
+        if (codeMatch) {
+          return i + tail.indexOf(codeMatch[1]) + codeMatch[1].length;
+        }
+        break;
+      }
       continue;
     }
     spaceRun = 0;
@@ -67,10 +78,18 @@ export function buildMenuHotspotsFromRows(rows, entries, compareDoor) {
       }
     }
 
+    // [LOG_ID: 20260715_0930] 이 행에 이미 번호 기반 메뉴 항목 핫스팟이 있으면, 뒤따르는
+    // "(코드)" 표기는 그 항목 자신의 코드다 — 아래 전역 명령어 패턴과 별개로 취급해야 한다.
+    // GUIDE의 "4. 이용약관 (TOS)"처럼 코드가 우연히 1~3글자(TOS)면 전역 명령 패턴과 혼동되어
+    // "이용약관" 버튼과 겹치는 자리에 "명령 실행: TOS"라는 엉뚱한 핫스팟이 별도로 생겨,
+    // 그 부분만 클릭해도 메뉴 이동 대신 존재하지도 않는 TOS 명령이 실행되는 문제가 있었다
+    // (사용자 보고: guide 화면 호버·클릭 영역이 다른 메뉴와 다름).
+    const rowHasMenuItemHotspot = hotspots.some((h) => h.row === rowIndex && (h.nodeKey || h.boardId || h.menuPath));
+
     // 2. [LOG: 20260410_2325] 괄호 명령어 패턴 감지 (예: (P), (T), (Q))
     const parenRegex = /\(([^)]+)\)/g;
     let match;
-    while ((match = parenRegex.exec(rowText)) !== null) {
+    while (!rowHasMenuItemHotspot && (match = parenRegex.exec(rowText)) !== null) {
       const inner = match[1];
       // 괄호 안이 1~3글자의 대문자(명령어 후보)인 경우
       if (/^[A-Z]{1,3}$/.test(inner)) {

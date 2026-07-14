@@ -127,6 +127,45 @@ class MemoryChatRoomRepository {
     return publicRoom(room, summarizeParticipantCounts(room.participants));
   }
 
+  // [LOG_ID: 20260714_2200] 원전 /OUT id(강퇴) 재현 — 방 개설자(ownerUserId)만 실행 가능.
+  kick(roomNo, targetUserId, context = {}) {
+    this._cleanup();
+    const room = this._findRoom(roomNo);
+    const requesterId = normalizeText(context.userId, 'guest');
+    if (room.ownerUserId !== requesterId) {
+      throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
+    }
+    const target = normalizeText(targetUserId, '');
+    const before = room.participants.length;
+    room.participants = room.participants.filter((entry) => entry.userId !== target);
+    if (room.participants.length === before) {
+      throw createHttpError(404, '해당 이용자가 방에 없습니다.');
+    }
+    this._removeIfDisposable(room);
+    return publicRoom(room, summarizeParticipantCounts(room.participants));
+  }
+
+  // [LOG_ID: 20260714_2200] 원전 /E TITLE, /E USER(방 설정 변경) 재현 — 방 개설자 전용.
+  updateRoom(roomNo, payload = {}, context = {}) {
+    this._cleanup();
+    const room = this._findRoom(roomNo);
+    const requesterId = normalizeText(context.userId, 'guest');
+    if (room.ownerUserId !== requesterId) {
+      throw createHttpError(403, '방 개설자만 설정을 변경할 수 있습니다.');
+    }
+    if (payload.title !== undefined) {
+      const title = normalizeRoomText(payload.title);
+      if (!title) {
+        throw createHttpError(400, '방 제목을 입력해 주세요.');
+      }
+      room.title = title.slice(0, 60);
+    }
+    if (payload.maxUser !== undefined) {
+      room.maxUser = normalizeMaxUser(payload.maxUser, room.maxUser);
+    }
+    return publicRoom(room, summarizeParticipantCounts(room.participants));
+  }
+
   // [LOG: 20260428_2332] Memory chat driver must preserve the same message APIs
   // as the Supabase driver so local/default environments do not 500 on chat send/list.
   sendMessage(roomNo, payload = {}, context = {}) {

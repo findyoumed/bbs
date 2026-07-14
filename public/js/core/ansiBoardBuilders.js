@@ -256,6 +256,19 @@ export function createBoardAnsiBuilders(deps) {
     const boardCounts = (state && state._boardCounts && state._boardCounts.data) || null;
     const labelColWidth = isMobileSelect ? 20 : 26;
 
+    // [LOG_ID: 20260714_2400] GUIDE는 게시판(공지사항/건의하기)과 도움말/정책(명령어안내
+    // 등)이 섞인 메뉴다 — 다른 모든 메뉴(GAME 등)처럼 항목 전체가 "라벨 (코드)" 한 가지
+    // 형식으로만 보이도록 GUIDE에서는 건수 표기 자체를 생략해 시각 언어를 통일한다.
+    const suppressCount = state && state.boardMenuPath === 'guide';
+    // [LOG_ID: 20260715_2200] GAME/PDS/NEWS 등 건수(boardCounts)가 애초에 존재하지 않는
+    // 가상 메뉴에서도 labelColWidth 기준 다칸 정렬 패딩이 무조건 붙어 "1. 바이오리듬
+    // (BIO)"처럼 라벨-코드 사이가 불필요하게 벌어졌다(사용자 재지적 — GUIDE만 고치고
+    // 다른 메뉴는 그대로 남아있었음). 이 화면의 항목 중 실제 건수를 가진 게 하나도 없다면
+    //애초에 "정렬해서 맞출 대상"이 없는 것이므로, 그 경우도 공백 1칸만 쓴다.
+    const hasAnyRealCount = !suppressCount && !!boardCounts
+      && boards.some((b) => b?.boardId && boardCounts[b.boardId]);
+    const useColumnPadding = !suppressCount && hasAnyRealCount;
+
     boards.forEach((board) => {
       const door = String(board?.door || getBoardDoor(board) || '').padStart(2, ' ');
       const label = String(board?.label || board?.name || getBoardDisplayName(board) || '메뉴').trim();
@@ -263,21 +276,27 @@ export function createBoardAnsiBuilders(deps) {
       const line = `${door}. ${label}`;
       const suffix = code && !label.toUpperCase().includes(`(${code.toUpperCase()})`) ? `(${code})` : '';
 
-      const countInfo = boardCounts && board?.boardId ? boardCounts[board.boardId] : null;
+      const countInfo = useColumnPadding && board?.boardId ? boardCounts[board.boardId] : null;
       let countText = '';
       if (countInfo) {
         countText = isMobileSelect
           ? `(${countInfo.recent}/${countInfo.total})`
           : `( ${String(countInfo.recent).padStart(4, ' ')} /${String(countInfo.total).padStart(6, ' ')} )`;
       }
-      const linePadding = countText
-        ? ' '.repeat(Math.max(1, labelColWidth - displayWidth(line)))
+      // [LOG_ID: 20260714_2300] 건수(countText)가 있는 줄과 코드만 있는 줄이 섞인 화면에서는
+      // 건수 있는 줄만 정렬되고 나머지는 라벨 길이에 따라 코드 위치가 들쭉날쭉해 목록 전체가
+      // 통일성 없어 보였다(사용자 지적) — 코드(suffix)만 있어도 동일하게 정렬한다. 단, 이
+      // 화면에 애초에 건수를 가진 항목이 하나도 없다면(useColumnPadding=false) 정렬 자체가
+      // 무의미하므로 다른 메뉴(TOP/GAME 등)와 동일하게 공백 1칸만 쓴다.
+      const hasTrailer = Boolean(countText || suffix);
+      const linePadding = hasTrailer
+        ? (useColumnPadding ? ' '.repeat(Math.max(1, labelColWidth - displayWidth(line))) : ' ')
         : '';
 
       parts.push(
-        ansiColor(15) + line +
-        (countText ? linePadding + ansiColor(8) + countText : '') +
-        (suffix ? ' ' + ansiColor(8) + suffix : '') +
+        ansiColor(15) + line + linePadding +
+        (countText ? ansiColor(8) + countText + (suffix ? ' ' : '') : '') +
+        (suffix ? ansiColor(8) + suffix : '') +
         ANSI_RESET
       );
     });

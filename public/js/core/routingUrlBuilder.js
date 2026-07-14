@@ -153,6 +153,16 @@ export function createRoutingUrlBuilder(deps) {
         return helpPage > 1 ? `/help?page=${encodeURIComponent(helpPage)}` : '/help';
       }
 
+      // [LOG_ID: 20260715_2400] 'policy'에 케이스가 없어 default('/')로 떨어졌다 — TOS/PRIVACY
+      // 화면의 URL이 TOP과 똑같이 '/'가 되면서 handleHistoryBack()의 "currentPath !== '/'"
+      // 판정이 항상 실패해 상위(P)가 GUIDE로 못 돌아가고 곧장 TOP으로 튀는 원인이 됐다
+      // (사용자 보고). help와 동일한 패턴으로 고유 경로를 부여한다.
+      case 'policy': {
+        const policyPage = Math.max(1, Number(page || 1));
+        const policyKind = state.policyKind || 'tos';
+        return policyPage > 1 ? `/policy/${policyKind}?page=${encodeURIComponent(policyPage)}` : `/policy/${policyKind}`;
+      }
+
       case 'history':
         return '/history';
 

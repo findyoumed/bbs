@@ -12,7 +12,6 @@ export function createAppFactoryHandlers(deps) {
     createMyInfoCommandHandler,
     createPostViewCommandHandler,
     createServiceCommandHandler,
-    createVfsCommandHandler,
     refs,
     screens,
     services,
@@ -144,15 +143,12 @@ export function createAppFactoryHandlers(deps) {
     showPostList: screens.postScreens.showPostList,
     showLogin: screens.authScreens.showLogin,
     toggleMute: services.soundService.toggleMute,
-    workspaceService: services.workspaceService,
-    aliasService: services.aliasService,
-    vfsService: services.vfsService,
     networkService: services.networkService,
     adjustZoom: services.terminalUiCore.adjustZoom,
     setZoom: services.terminalUiCore.setZoom,
     autoAdjustZoom: services.terminalUiCore.autoAdjustZoom,
     setScale: services.settingsService.setScale,
-    // [LOG_ID: 20260711_2340] SET/UNSET/MATH가 envVars를 localStorage에 저장할 때 쓰는
+    // [LOG_ID: 20260711_2340] SET/UNSET이 envVars를 localStorage에 저장할 때 쓰는
     // settingsService.saveEnvVars 경로 — 서비스 자체가 주입되지 않아 저장이 항상 건너뛰어졌다.
     settingsService: services.settingsService,
     performanceService: services.performanceService,
@@ -169,7 +165,6 @@ export function createAppFactoryHandlers(deps) {
     handleMyInfoCommand,
     handlePostViewCommand,
     handleServiceCommand,
-    handleVfsCommand: createVfsCommandHandler(globalCommandHandlerDeps),
     // [LOG: 20260623_0013] vote/ranking command handler 리턴 (origin/main 포팅)
     handleVoteCommand,
     handleRankingCommand

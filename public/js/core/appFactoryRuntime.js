@@ -165,6 +165,10 @@ export function initializeAppFactoryRuntime(deps) {
     resolveMenuRoute: services.menuService.resolveMenuRoute,
     showHelp: screens.helpScreens.showHelp,
     showHistory: screens.helpScreens.showHistory,
+    // [LOG_ID: 20260715_2400] policy(이용약관/개인정보처리방침) 화면이 routingModule deps에
+    // 빠져 있어 URL 라우팅(buildURLForState/restoreStateFromURL)이 이 화면을 아예 모르는
+    // 상태였다 — showHelp/showHistory 때(20260713_2100/2300)와 동일한 유형의 누락.
+    showPolicy: screens.policyScreens.showPolicy,
     showMyInfo: screens.myInfoScreens.showMyInfo,
     showProfile: screens.profileScreens.showProfile,
     showSignup: screens.signupModule.showSignup,
@@ -183,8 +187,6 @@ export function initializeAppFactoryRuntime(deps) {
     soundService: services.soundService,
     recordCommandExecution: services.settingsService.recordCommandExecution,
     logger: services.logger,
-    aliasService: services.aliasService,
-    vfsService: services.vfsService,
     handlers: {
       handleGlobalCommand: handlers.handleGlobalCommand,
       handleEntryCommand: handlers.handleEntryCommand,
@@ -194,7 +196,6 @@ export function initializeAppFactoryRuntime(deps) {
       handleMemoCommand: handlers.handleMemoCommand,
       handleMyInfoCommand: handlers.handleMyInfoCommand,
       handlePostViewCommand: handlers.handlePostViewCommand,
-      handleVfsCommand: handlers.handleVfsCommand,
       handleLogCommand: screens.systemLogScreens.handleLogCommand,
       // [LOG: 20260623_0013] vote/ranking command handler 연결 (origin/main 포팅)
       handleVoteCommand: handlers.handleVoteCommand,

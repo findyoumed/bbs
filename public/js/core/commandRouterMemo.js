@@ -198,7 +198,12 @@ export function createMemoCommandHandler(deps) {
         }
 
         if (state.screen === 'memo-write') {
-            if (typeof handleMemoRawInput === 'function') {
+            // [LOG_ID: 20260714_2000] 클릭으로 들어온 내비게이션 명령(상단바 로고='T' 등)까지
+            // handleMemoRawInput이 무조건 가로채 편지 본문 한 줄로 취급하던 버그 — 사용자 보고:
+            // "/memo/write에서 로고를 클릭하면 화면에 T라고 나온다". 다른 원시 텍스트 입력 화면
+            // (대화방/내정보 편집)과 동일하게 클릭 출처는 raw input보다 먼저 명령으로 처리한다.
+            const isClickSource = context?.source === 'click';
+            if (!isClickSource && typeof handleMemoRawInput === 'function') {
                 return await handleMemoRawInput(input);
             }
             if (cmd === 'SEND') {
@@ -212,6 +217,9 @@ export function createMemoCommandHandler(deps) {
             if (cmd === 'P' || cmd === 'M' || cmd === 'B') {
                 await showMemoList();
                 return true;
+            }
+            if (typeof handleMemoRawInput === 'function') {
+                return await handleMemoRawInput(input);
             }
             return false;
         }

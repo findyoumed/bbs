@@ -7,8 +7,11 @@ import { CMD_META, getBestMatch } from './commandService.js';
  */
 export function normalizeCommand(rawCmd, stateScreen) {
   // [LOG: 20260428_1730] Auto-Next Page: Map empty input (Enter key) to "F" for paged screens.
+  // [LOG_ID: 20260715_2100] 'policy'(GUIDE의 이용약관/개인정보처리방침) 화면이 빠져있어 그
+  // 화면에서만 빈 엔터가 F로 정규화되지 않았다 — help/post-list 등과 똑같이 F 페이징을 쓰는
+  // 화면인데 목록에서 누락됐던 것(사용자 보고: guide 하위 메뉴에서 엔터로 다음쪽 이동 안 됨).
   if (!rawCmd || String(rawCmd).trim() === '') {
-    const pagedScreens = ['help', 'post-list', 'board-select', 'news-list', 'memo-list', 'memos-list', 'weather-view', 'news-view'];
+    const pagedScreens = ['help', 'policy', 'post-list', 'board-select', 'news-list', 'memo-list', 'memos-list', 'weather-view', 'news-view'];
     if (pagedScreens.includes(stateScreen)) {
       return 'F';
     }

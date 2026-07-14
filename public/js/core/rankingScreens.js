@@ -57,7 +57,7 @@ export function createRankingScreens(deps) {
       const data = await apiFetch('/api/ranking');
       state._rankingData = data; // 상세 전환용 임시 캐싱
       const ansi = buildRankingSummaryAnsi(data);
-      await render(ansi, 'amusementInput', '선택 >> ');
+      await render(ansi, 'rankingSummary', '선택 >> ');
     } catch (e) {
       setHint('랭킹 정보를 가져오지 못했습니다: ' + e.message);
     }
@@ -89,7 +89,7 @@ export function createRankingScreens(deps) {
         throw new Error('올바르지 않은 랭킹 종류입니다.');
       }
 
-      await render(ansi, 'amusementInput', '선택 >> ');
+      await render(ansi, 'rankingDetail', '선택 >> ');
     } catch (e) {
       setHint('랭킹 상세 정보를 가져오지 못했습니다: ' + e.message);
       await showRanking(true);

@@ -33,7 +33,12 @@ function main() {
   assertIncludes(retroCss, 'max-width: min(420px, calc(100vw - 24px));', 'notifications should avoid mobile overflow');
   assertIncludes(retroCss, 'max-width: calc(100vw - 24px);', 'scroll-bottom indicator should avoid mobile overflow');
   assertIncludes(retroCss, 'white-space: normal;', 'mobile helper descriptions should be allowed to wrap');
-  assertIncludes(retroCss, '@media (max-width: 768px) {\n    :root {\n        --terminal-scale: 1;', 'mobile portrait should disable transform auto scaling');
+  // [LOG_ID: 20260715_1600] 20260714_1400에 이 breakpoint를 768px에서 1100px로 넓혔다 —
+  // 80칸 터미널을 1.15배 확대한 실제 필요 폭(~975~1130px)이 768~1100px 사이 창 폭에서는
+  // 뷰포트보다 넓어져 글자가 안 보이게 잘리는 진짜 버그가 있었다(사용자 보고: "/help
+  // 화면 오른편으로 글이 넘쳐서 안보이는 것 같다"). 이 테스트는 옛 값(768px)을 그대로
+  // 찾고 있어 정당한 버그 수정 이후 항상 실패 판정을 내리고 있었다.
+  assertIncludes(retroCss, '@media (max-width: 1100px) {\n    :root {\n        --terminal-scale: 1;', 'mobile portrait should disable transform auto scaling');
   assertIncludes(retroCss, '@media (max-height: 540px) and (orientation: landscape) {\n    :root {\n        --terminal-scale: 1;', 'mobile landscape should disable transform auto scaling');
 
   assertIncludes(terminalInputUi, "window.getComputedStyle(document.documentElement).getPropertyValue('--terminal-scale')", 'auto zoom should preserve the configured CSS scale');

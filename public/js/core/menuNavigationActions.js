@@ -41,6 +41,24 @@ export function createMenuNavigationActions(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260714_1900] 나우누리 전자우편 GO 단축 — 원전(NOW_MENU.DAT)에서
+    // "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)"로
+    // GO 이동이 가능했다. 명령어(ME/MEMO/RMAIL/CMAIL/WMAIL)로는 이미 직접 입력 가능했지만
+    // GO 접두 형태는 메뉴/게시판만 매칭하고 CMD_META로 안 넘어가 빠져 있었다(사용자 지적).
+    if (normalized === 'MAIL' || normalized === 'RMAIL' || normalized === 'CMAIL') {
+      if (typeof refs.showMemoList === 'function') {
+        state._memoBox = 'inbox';
+        await refs.showMemoList();
+        return true;
+      }
+    }
+    if (normalized === 'WMAIL') {
+      if (typeof refs.showMemoWrite === 'function') {
+        await refs.showMemoWrite();
+        return true;
+      }
+    }
+
     const currentMenuNode = state.screen === 'main'
       ? state.menuTree
       : getMenuNodeByKey(state.boardMenuPath);
@@ -96,9 +114,14 @@ export function createMenuNavigationActions(deps) {
       return true;
     }
     if (node.type === 'board' && targetId && typeof refs.showPostList === 'function') {
+      // [LOG_ID: 20260714_1300] menuTitle을 상위 메뉴 제목(contextMenuTitle)이 아니라
+      // 게시판 자신의 제목으로 — 예전엔 GUIDE 하위 공지사항/건의하기를 메뉴 클릭으로
+      // 들어가면 상단바가 "서비스안내 (GUIDE)"로 표시됐다(직접 URL 접속 시엔 게시판
+      // 메타에서 자체 재계산되어 정상 표시라 발견이 늦었음). menuPath(상위 이동용
+      // 문맥)는 그대로 유지.
       await refs.showPostList(targetId, 1, {
         menuPath: contextMenuPath,
-        menuTitle: contextMenuTitle
+        menuTitle: getMenuNodeTitle(node)
       });
       return true;
     }

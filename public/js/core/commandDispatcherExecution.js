@@ -1,7 +1,15 @@
 import { normalizeCommand } from './commandNormalizer.js';
 
+// [LOG_ID: 20260715_2300] 'policy'(GUIDE의 이용약관/개인정보처리방침)가 빠져 있어 그 화면에서만
+// P/M(상위)과 T(초기화면)가 먹통이었다 — 힌트바엔 "상위(P)"가 떠 있는데 실제로 아무 반응이
+// 없었다(사용자 보고: "이용약관 메뉴에서 P 입력이 안되는데"). policy는 자체 라우터
+// (commandRouterGlobalNavigation.js)에 F/B(페이징)만 있고 P/M/T는 애초에 이 목록을 통한
+// 공통 처리에 의존하는 구조였는데, help/history 등과 함께 등록되지 않았던 것.
+// 다른 모든 화면(post-view/chat/news/weather/memo/myinfo/amusement/vote/ranking/login 등)은
+// 각자 라우터에서 P를 직접 처리하고 있어 이 목록 누락의 영향을 받지 않음을 전수 확인했다.
 const HISTORY_BACK_SCREENS = new Set([
   'help',
+  'policy',
   'history',
   'profile',
   'active-users',
@@ -58,7 +66,6 @@ export function createCommandDispatcherExecution(deps) {
     soundService,
     recordCommandExecution,
     logger,
-    aliasService,
     handlers: {
       handleGlobalCommand,
       handleEntryCommand,
@@ -68,7 +75,6 @@ export function createCommandDispatcherExecution(deps) {
       handleMemoCommand,
       handleMyInfoCommand,
       handlePostViewCommand,
-      handleVfsCommand,
       handleLogCommand,
       handleVoteCommand,
       handleRankingCommand
@@ -85,8 +91,7 @@ export function createCommandDispatcherExecution(deps) {
   async function executeSingleCommand(rawInput, context = {}) {
     const input = String(rawInput || '').trim();
     const sensitiveInput = isSensitiveCommandInput(state);
-    const expandedInput = sensitiveInput ? input : (aliasService ? aliasService.expand(input) : input);
-    const normalized = normalizeCommand(expandedInput, state.screen);
+    const normalized = normalizeCommand(input, state.screen);
     const cmd = normalized.toUpperCase();
     const screen = state.screen;
 
@@ -102,12 +107,10 @@ export function createCommandDispatcherExecution(deps) {
 
     if (logger && input) {
       const logInput = sensitiveInput ? '[REDACTED]' : input;
-      const logExpandedInput = sensitiveInput ? '[REDACTED]' : expandedInput;
       const logNormalized = sensitiveInput ? '[REDACTED]' : cmd;
-      logger.cmd(`Command: ${logInput} (expanded: ${logExpandedInput}, norm: ${logNormalized})`, {
+      logger.cmd(`Command: ${logInput} (norm: ${logNormalized})`, {
         screen,
         rawInput: logInput,
-        expandedInput: logExpandedInput,
         normalized: logNormalized,
         sensitive: sensitiveInput
       });
@@ -156,7 +159,6 @@ export function createCommandDispatcherExecution(deps) {
       async () => await handleVoteCommand({ s: screen, cmd, rawCmd: normalized, context }),
       async () => await handleRankingCommand({ s: screen, cmd, rawCmd: normalized, context }),
       async () => input && await handleGlobalCommand({ cmd, rawCmd: normalized, context }),
-      async () => input && await handleVfsCommand({ cmd, rawCmd: normalized, context }),
       async () => await handleEntryCommand({ s: screen, cmd, context }),
       async () => HISTORY_BACK_SCREENS.has(screen) && ['P', 'M', 'B'].includes(cmd) && (await handleHistoryBack(), true),
       async () => HISTORY_BACK_SCREENS.has(screen) && cmd === 'T' && (await showMain(), true),

@@ -67,7 +67,8 @@ export function createEntryCommandHandler(deps) {
         await handlePasswordResetSubmit();
         return true;
       }
-      if (isBackCommand(cmd)) {
+      // [LOG_ID: 20260714_2000] 상단바 로고(초기화면='T') 클릭 처리 누락 보완 — post-write와 동일 문제.
+      if (cmd === 'T' || isBackCommand(cmd)) {
         await handlePasswordResetCancel();
         return true;
       }
@@ -77,6 +78,13 @@ export function createEntryCommandHandler(deps) {
     if (s === 'post-write') {
       if (cmd === 'S' || cmd === 'SAVE') {
         await handleWriteSubmit();
+        return true;
+      }
+      // [LOG_ID: 20260714_2000] 상단바 로고(초기화면='T') 클릭 처리가 없어 글쓰기 화면에서
+      // 로고를 눌러도 아무 반응이 없었다 — login/signup 화면과 동일하게 처리.
+      if (cmd === 'T') {
+        cancelPostWrite();
+        await showMain();
         return true;
       }
       if (isBackCommand(cmd)) {

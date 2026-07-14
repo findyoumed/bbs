@@ -34,15 +34,22 @@
 			     TOP 3/4/6/8/9번과 완전히 동일한 화면으로 가는 순수 중복 바로가기였다(20260713_2030
 			     당시 원전을 기계적으로 베끼며 이 앱 맥락에서의 실효성을 안 따진 실수). 명령어안내/
 			     이용약관/개인정보처리방침 3개만 남긴다 — 이건 TOP에 없는 진짜 신규 기능이다. -->
-			<item type="help" go="guide_cmdhelp" id="guide_cmdhelp" door="3" access_level="1">
+			<!-- [LOG_ID: 20260714_1300] go값을 guide_* 접두 스네이크케이스에서 짧은 코드로 정정
+			     (id는 그대로 유지해 트리 내 고유성 확보) — getMenuNodeCode()가 이 go값을
+			     그대로 대문자화해 "(코드)" 형태로 화면에 노출하는데, 예전 값은
+			     "(GUIDE_CMDHELP)" 처럼 볼썽사납게 나왔었다. -->
+			<!-- [LOG_ID: 20260715_0900] go값을 cmdhelp -> help로 정정 — 이 항목은 전역 H/HELP
+			     명령과 동일한 화면(showHelp)으로 연결되므로, "(CMDHELP)"라는 실재하지 않는
+			     명령 코드보다 실제 명령어와 일치하는 "(HELP)"가 맞다(사용자 지적). -->
+			<item type="help" go="help" id="guide_cmdhelp" door="3" access_level="1">
 				<name>명령어안내</name>
 			</item>
 
-			<item type="policy" go="guide_tos" id="guide_tos" target="tos" door="4" access_level="1">
+			<item type="policy" go="tos" id="guide_tos" target="tos" door="4" access_level="1">
 				<name>이용약관</name>
 			</item>
 
-			<item type="policy" go="guide_privacy" id="guide_privacy" target="privacy" door="5" access_level="1">
+			<item type="policy" go="privacy" id="guide_privacy" target="privacy" door="5" access_level="1">
 				<name>개인정보처리방침</name>
 			</item>
 		</item>

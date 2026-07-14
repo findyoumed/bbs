@@ -125,7 +125,13 @@ export function createChatScreens(deps) {
       const nick = state.user?.nickName || '나';
       // [LOG_ID: 20260713_1020] buildChatRoomAnsi에 내 userId 추가 전달
       const myId = state.user?.userId || '';
-      const ansiResult = buildChatRoomAnsi(state._chatRoom, state._chatMessages, nick, myId);
+      // [LOG_ID: 20260714_2200] 원전 /EX id(수신거부) 재현 — 뮤트한 상대의 메시지는
+      // 폴링 재렌더 때마다 계속 걸러져야 하므로 여기서 필터링한다.
+      const muted = state._chatMutedUserIds;
+      const visibleMessages = muted && muted.size
+        ? state._chatMessages.filter((m) => !muted.has(m.userId))
+        : state._chatMessages;
+      const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick, myId);
       
       renderAnsiScreenWithTopbar({ 
         ansiText: ansiResult.text || ansiResult, 

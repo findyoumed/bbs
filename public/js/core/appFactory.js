@@ -45,15 +45,11 @@ import { createSystemAnsiBuilders } from './systemAnsiBuilders.js';
 import { createSystemScreens } from './systemScreens.js';
 import { createSystemLogger } from './systemLogger.js';
 import { createSystemLogScreens } from './systemLogScreens.js';
-import { createWorkspaceService } from './workspaceService.js';
-import { createAliasService } from './aliasService.js';
-import { createVfsService } from './vfsService.js'; // Added
 import { createNetworkService } from './networkService.js';
 import { createPerformanceService } from './performanceService.js';
 import { createInteractionHandlers } from './interactionHandlers.js';
 import { createMemoCommandHandler } from './commandRouterMemo.js';
 import { createMyInfoCommandHandler } from './commandRouterMyInfo.js';
-import { createVfsCommandHandler } from './commandRouterVfs.js';
 import { createGlobalCommandHandler } from './commandRouterGlobal.js';
 import { createThemeService } from './themeService.js';
 import { createSoundService } from './soundService.js';
@@ -69,7 +65,6 @@ export function initApp(deps) {
   const { state, refs, SIGNUP_TOS_TEXT, SIGNUP_PRIVACY_TEXT } = deps;
   const services = createAppFactoryServices({
     ansiToHTML,
-    createAliasService,
     createApiFetch,
     createAuthService,
     createBoardAnsiBuilders,
@@ -89,8 +84,6 @@ export function initApp(deps) {
     createTerminalStatusManager,
     createTerminalUiCore,
     createThemeService,
-    createVfsService,
-    createWorkspaceService,
     displayWidth,
     isWideChar,
     refs,
@@ -130,7 +123,6 @@ export function initApp(deps) {
     createMyInfoCommandHandler,
     createPostViewCommandHandler,
     createServiceCommandHandler,
-    createVfsCommandHandler,
     refs,
     screens,
     services,

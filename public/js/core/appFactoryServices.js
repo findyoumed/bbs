@@ -6,7 +6,6 @@ import { createRankingAnsiBuilders } from './rankingAnsiBuilders.js';
 export function createAppFactoryServices(deps) {
   const {
     ansiToHTML,
-    createAliasService,
     createApiFetch,
     createAuthService,
     createBoardAnsiBuilders,
@@ -26,8 +25,6 @@ export function createAppFactoryServices(deps) {
     createTerminalStatusManager,
     createTerminalUiCore,
     createThemeService,
-    createVfsService,
-    createWorkspaceService,
     displayWidth,
     isWideChar,
     refs,
@@ -77,28 +74,9 @@ export function createAppFactoryServices(deps) {
     setTheme: settingsService.setTheme
   });
 
-  const workspaceService = createWorkspaceService({
-    state,
-    logger,
-    routingModule: { updateURL: (...args) => refs.updateURL(...args) },
-    saveWorkspaces: settingsService.saveWorkspaces
-  });
-  workspaceService.init();
-
-  const statusManager = createTerminalStatusManager({
-    state,
-    workspaceService
-  });
+  const statusManager = createTerminalStatusManager({ state });
   statusManager.init();
 
-  const aliasService = createAliasService({
-    state,
-    saveAliases: settingsService.saveAliases
-  });
-  const vfsService = createVfsService({
-    state,
-    settingsService
-  });
   const networkService = createNetworkService();
 
   const { apiFetch } = createApiFetch({
@@ -144,7 +122,6 @@ export function createAppFactoryServices(deps) {
   const rankingAnsiBuilders = createRankingAnsiBuilders({ ansiBuilderUtils });
 
   return {
-    aliasService,
     ansiToHTML,
     apiFetch,
     authService,
@@ -173,8 +150,6 @@ export function createAppFactoryServices(deps) {
     systemAnsiBuilders,
     terminalUiCore,
     applyTheme,
-    toggleTheme,
-    vfsService,
-    workspaceService
+    toggleTheme
   };
 }

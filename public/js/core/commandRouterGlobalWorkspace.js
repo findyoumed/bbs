@@ -1,3 +1,8 @@
+// [LOG_ID: 20260714_1700] ALIAS/WS/TRACE(가짜 셸 알리어스·워크스페이스 전환·스크립트 추적)
+// 명령을 제거했다 — 사용자 결정: 1990년대 PC통신에 없던 기능이고 도움말에도 노출되지
+// 않아 실사용자가 쓸 일이 없었다. SET/UNSET/ENV는 SET LEVEL(도움말 표시 등급)/
+// SET HOME(초기 화면 지정)/SET THEME(나우누리 테마)/SET PROMPT(프롬프트 문자열) 같은
+// 실제 사이트 기능의 기반이라 그대로 남긴다.
 export function createGlobalWorkspaceCommandHandler(deps) {
   const {
     state,
@@ -25,130 +30,8 @@ export function createGlobalWorkspaceCommandHandler(deps) {
     // [LOG_ID: 20260711_2340] cmd는 dispatcher가 정규화한 "입력 전체" 문자열이라('SET PROMPT X'),
     // 전체 일치(cmd === 'SET')로는 인자가 붙는 순간 어떤 명령도 매칭되지 않았다(회귀 — 아래에서
     // splitCommand(rawCmd)로 인자를 파싱하는 설계 자체가 원래 첫 토큰 비교였음을 보여준다).
-    // 인자를 받는 명령(ALIAS/WS/SET/UNSET/TRACE)은 첫 토큰으로 비교한다.
+    // 인자를 받는 명령(SET/UNSET)은 첫 토큰으로 비교한다.
     const head = String(cmd || '').trim().split(/\s+/)[0];
-
-    if (head === 'ALIAS') {
-      const parts = splitCommand(rawCmd);
-      const sub = (parts[1] || '').toUpperCase();
-      const { aliasService } = deps;
-
-      if (!aliasService) {
-        return false;
-      }
-
-      if (!sub || sub === 'LIST' || sub === 'L') {
-        const aliases = aliasService.getAliases();
-        const keys = Object.keys(aliases);
-        if (keys.length === 0) {
-          setHint('등록된 알리어스가 없습니다. (ALIAS [이름] [대상 명령])');
-        } else {
-          const list = keys.map((key) => `[${key}] -> ${aliases[key]}`).join('\n');
-          setHint(`알리어스 목록:\n${list}\n(ALIAS RM [이름] 으로 삭제 가능)`);
-        }
-        setDefaultPrompt();
-        return true;
-      }
-
-      if (sub === 'RM' || sub === 'DEL') {
-        const name = parts[2];
-        if (!name) {
-          setHint('삭제할 알리어스 이름을 입력해 주세요. (예: ALIAS RM T)');
-        } else if (aliasService.removeAlias(name)) {
-          setHint(`알리어스 [${name.toUpperCase()}]가 삭제되었습니다.`);
-        } else {
-          setHint(`알리어스 [${name.toUpperCase()}]를 찾을 수 없습니다.`);
-        }
-        setDefaultPrompt();
-        return true;
-      }
-
-      if (sub === 'CLR' || sub === 'CLEAR') {
-        aliasService.clearAliases();
-        setHint('모든 알리어스가 삭제되었습니다.');
-        setDefaultPrompt();
-        return true;
-      }
-
-      const name = sub;
-      const target = parts.slice(2).join(' ');
-      if (!target) {
-        const aliases = aliasService.getAliases();
-        if (aliases[name]) {
-          setHint(`알리어스 [${name}] -> ${aliases[name]}`);
-        } else {
-          setHint('사용법: ALIAS [이름] [명령]\n예: ALIAS T GO TOP\n예: ALIAS B1 GO BOARD1');
-        }
-      } else if (aliasService.setAlias(name, target)) {
-        setHint(`알리어스 [${name}] -> ${target} 가 등록되었습니다.`);
-      } else {
-        setHint(`알리어스 [${name}]를 등록할 수 없습니다.`);
-      }
-      setDefaultPrompt();
-      return true;
-    }
-
-    if (head === 'WS') {
-      const parts = splitCommand(rawCmd);
-      const sub = (parts[1] || '').toUpperCase();
-      const value = parts[2];
-      const { workspaceService } = deps;
-
-      if (!workspaceService) {
-        return false;
-      }
-
-      if (sub === 'LIST' || sub === 'L' || !sub) {
-        const list = workspaceService.getWorkspaces().map((workspace) =>
-          `${workspace.active ? '*' : ' '} [${workspace.id}] ${workspace.name}`
-        ).join('\n');
-        setHint(`워크스페이스 목록:\n${list}\n(WS ADD [이름], WS SW [ID], WS RM [ID])`);
-        setDefaultPrompt();
-        return true;
-      }
-
-      if (sub === 'ADD' || sub === 'A') {
-        const newWorkspace = workspaceService.addWorkspace(parts.slice(2).join(' '));
-        if (newWorkspace) {
-          setHint(`새 워크스페이스 [${newWorkspace.id}] ${newWorkspace.name} 가 생성되었습니다.`);
-          await workspaceService.switchWorkspace(newWorkspace.id);
-        } else {
-          setHint('더 이상 워크스페이스를 생성할 수 없습니다. (최대 9개)');
-        }
-        setDefaultPrompt();
-        return true;
-      }
-
-      if (sub === 'SW' || sub === 'S') {
-        if (!value) {
-          setHint('이동할 워크스페이스 ID를 입력해 주세요. (예: WS SW 2)');
-          setDefaultPrompt();
-          return true;
-        }
-        const success = await workspaceService.switchWorkspace(value);
-        if (!success) {
-          setHint(`워크스페이스 [${value}]를 찾을 수 없습니다.`);
-        }
-        setDefaultPrompt();
-        return true;
-      }
-
-      if (sub === 'RM' || sub === 'R') {
-        if (!value) {
-          setHint('삭제할 워크스페이스 ID를 입력해 주세요. (예: WS RM 2)');
-          setDefaultPrompt();
-          return true;
-        }
-        const success = workspaceService.removeWorkspace(value);
-        if (!success) {
-          setHint(`워크스페이스 [${value}]를 삭제할 수 없습니다. (최소 1개 유지)`);
-        } else {
-          setHint(`워크스페이스 [${value}]가 삭제되었습니다.`);
-        }
-        setDefaultPrompt();
-        return true;
-      }
-    }
 
     if (cmd === 'ENV' || cmd === 'VARS') {
       const vars = state.envVars || {};
@@ -214,23 +97,6 @@ export function createGlobalWorkspaceCommandHandler(deps) {
       if (settingsService) {
         settingsService.saveEnvVars(envVars);
       }
-      return true;
-    }
-
-    if (head === 'TRACE') {
-      const parts = splitCommand(rawCmd);
-      const sub = (parts[1] || '').toUpperCase();
-
-      if (sub === 'ON') {
-        state.trace = true;
-        setHint('스크립트 추적(TRACE) 모드가 활성화되었습니다.');
-      } else if (sub === 'OFF') {
-        state.trace = false;
-        setHint('스크립트 추적(TRACE) 모드가 비활성화되었습니다.');
-      } else {
-        setHint(`현재 TRACE 상태: ${state.trace ? 'ON' : 'OFF'}\n사용법: TRACE [ON|OFF]`);
-      }
-      setDefaultPrompt();
       return true;
     }
 

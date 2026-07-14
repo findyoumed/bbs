@@ -21,6 +21,10 @@ export function createAuthService(deps) {
     if (typeof apiFetch !== 'function' || state.user?.isGuest !== false) {
       return;
     }
+    // [LOG_ID: 20260714_2100] 원전 MSG 명령(메시지수신 ON/OFF)으로 이 알림을 끌 수 있게 한다.
+    if (String(state.envVars?.MSG || 'ON').toUpperCase() === 'OFF') {
+      return;
+    }
     try {
       const result = await apiFetch('/api/memos/unread/count', { silent: true });
       const count = Number(result?.count || 0);

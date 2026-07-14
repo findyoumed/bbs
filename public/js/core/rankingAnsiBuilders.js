@@ -1,6 +1,10 @@
 // [LOG: 20260622_2301] rankingAnsiBuilders 구현 — 랭킹 ANSI 빌더
 // [LOG: 20260623_0100] 80컬럼 오버플로우 교정 — 각 열을 조립 후 fitCell로 고정폭 클램프하여
 // 한글/영문 혼용 시에도 가로 80칸을 절대 넘지 않도록 보장(구조적 차단).
+// [LOG_ID: 20260715_1300] 본문에 하드코딩됐던 "[1]레벨 [2]글수 [3]추천 [4]조회 | [M]오락실
+// [T]대문" 안내줄을 제거 — 표준 하단 힌트바(commandFooterText.js의 rankingSummary/
+// rankingDetail 카테고리)로 흡수했다. 여론광장(ACRO) 화면에서 발견된 동일 유형의 중복
+// 문제(20260715_1100)를 다른 화면에도 전수 점검하다 찾음.
 export function createRankingAnsiBuilders(deps) {
   const {
     ansiColor,
@@ -33,11 +37,46 @@ export function createRankingAnsiBuilders(deps) {
   }
 
   // 1. 종합 랭킹 화면 빌더 (Top 10을 3단으로 표시)
+  // [LOG_ID: 20260715_1900] 모바일(44칸)에서 3단 레이아웃(칸당 25칸)이 그대로 나가 실측
+  // 80칸까지 오버플로우됐다(사용자 요청 "모바일화면에서도 ui가 올바른지 확인해줘"로 발견).
+  // 44/3≈14칸으로는 "순위. 아이디(닉네임) 점수"가 절대 안 들어가므로, 모바일에서는 3개
+  // 카테고리를 세로로 순서대로 스택한다.
   function buildRankingSummaryAnsi(data) {
     const header = buildTopHeader(['오락실', '게시판 종합 랭킹']);
     const levels = data.levelRanking || [];
     const posts = data.postRanking || [];
     const recommends = data.recommendRanking || [];
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isMobile) {
+      const MOBILE_COL = 44;
+      const MOBILE_NAME = 26; // rank(3)+' '+name(26)+' '+score(≤5) = 36 ≤ 44
+      const sections = [
+        { label: '[ 레벨 TOP10 ]', tail: 'LV', list: levels, color: 15, scoreFn: (u) => String(u.level).padStart(4, ' ') },
+        { label: '[ 글작성 TOP10 ]', tail: '글수', list: posts, color: 14, scoreFn: (u) => String(u.count).padStart(5, ' ') },
+        { label: '[ 받은추천 TOP10 ]', tail: '추천', list: recommends, color: 10, scoreFn: (u) => String(u.count).padStart(5, ' ') }
+      ];
+
+      let mobileContent = '';
+      sections.forEach((section, sectionIdx) => {
+        mobileContent += ` ${ansiColor(11)}${fitCell(section.label, MOBILE_COL).trimEnd()}${ANSI_RESET}\n`;
+        mobileContent += `${ansiColor(7)}${fitCell('순위 아이디(닉네임)', 30)}${fitCell(section.tail, 14, 'right')}${ANSI_RESET}\n`;
+        mobileContent += ansiHLine(MOBILE_COL, 8) + '\n';
+
+        const top10 = section.list.slice(0, 10);
+        if (!top10.length) {
+          mobileContent += `${ansiColor(8)} 랭킹 데이터가 없습니다.${ANSI_RESET}\n`;
+        } else {
+          top10.forEach((user, i) => {
+            mobileContent += ansiColor(section.color) + buildCell(i + 1, user, section.scoreFn(user), MOBILE_COL, MOBILE_NAME, 2) + ANSI_RESET + '\n';
+          });
+        }
+        mobileContent += ansiHLine(MOBILE_COL, 8) + '\n';
+        if (sectionIdx < sections.length - 1) mobileContent += '\n';
+      });
+
+      return header + mobileContent;
+    }
 
     const labelLine =
       ' ' +
@@ -75,14 +114,40 @@ export function createRankingAnsiBuilders(deps) {
     }
 
     content += ansiHLine(80, 8) + '\n';
-    content += ` ${ansiColor(14)}[1]레벨 [2]글수 [3]추천 [4]조회 | [M]오락실 [T]대문${ANSI_RESET}\n`;
 
     return header + content;
   }
 
   // 2. 상세 랭킹 화면 빌더 (Top 40을 2단으로 표시)
+  // [LOG_ID: 20260715_1900] 모바일에서 2단 레이아웃(칸당 37칸)도 44/2≈21칸으론 부족해
+  // 세로로 스택한다. 데스크톱의 "1~20위(밝은색)/21~40위(진한색)" 색 구분 의미는 유지.
   function buildRankingDetailAnsi(list, title, unit = '') {
     const header = buildTopHeader(['오락실', `랭킹 상세 - ${title}`]);
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isMobile) {
+      const MOBILE_COL = 44;
+      const MOBILE_NAME = 24; // rank(4)+' '+name(24)+' '+score(≤7,단위포함) = 37 ≤ 44
+
+      let mobileContent = '';
+      mobileContent += ` ${ansiColor(11)}[ ${title} TOP 40 ]${ANSI_RESET}\n`;
+      mobileContent += `${ansiColor(7)}${fitCell('순위 아이디(닉네임)', 34)}${fitCell('점수', 10, 'right')}${ANSI_RESET}\n`;
+      mobileContent += ansiHLine(MOBILE_COL, 8) + '\n';
+
+      const hasAny = list.some(Boolean);
+      if (!hasAny) {
+        mobileContent += `${ansiColor(8)} 랭킹 데이터가 없습니다.${ANSI_RESET}\n`;
+      } else {
+        for (let i = 0; i < Math.min(list.length, 40); i += 1) {
+          const user = list[i];
+          if (!user) continue;
+          const color = i < 20 ? ansiColor(15) : ansiColor(14);
+          mobileContent += color + buildCell(i + 1, user, scoreText(user, unit), MOBILE_COL, MOBILE_NAME, 3) + ANSI_RESET + '\n';
+        }
+      }
+      mobileContent += ansiHLine(MOBILE_COL, 8) + '\n';
+      return header + mobileContent;
+    }
 
     const subLine =
       ' ' +
@@ -110,7 +175,6 @@ export function createRankingAnsiBuilders(deps) {
     }
 
     content += ansiHLine(80, 8) + '\n';
-    content += ` ${ansiColor(14)}[B]랭킹메뉴 [1]레벨 [2]글수 [3]추천 [4]조회 | [M]오락실 [T]대문${ANSI_RESET}\n`;
 
     return header + content;
   }

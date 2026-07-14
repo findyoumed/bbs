@@ -3,6 +3,10 @@
  * [LOG: 20260428_1725] Massive Purge Re-applied: Only core BBS functions.
  * [LOG: 20260504_1200] Evolution Mode 38: Restoring and expanding scripting & VFS metadata.
  * [LOG: 20260617_1005] Restore command service factory and priority-ranked matching.
+ * [LOG_ID: 20260714_1700] 스크립팅(IF/WHILE/FOR/FUNC/...)·가상파일시스템(FILES/CAT/CP/...)
+ * 명령 전부 제거 — 1990년대 PC통신에 없던 기능이고 도움말(HELP_TAB_KEYS)에도 노출되지
+ * 않아 실사용자가 쓸 일이 없다는 사용자 판단. SET/UNSET/ENV는 SET LEVEL/HOME/THEME/
+ * PROMPT 같은 실제 사이트 기능의 기반이라 유지.
  */
 
 export const CMD_META = {
@@ -48,6 +52,9 @@ export const CMD_META = {
   LOGIN: { label: '로그인', tip: 'LOGIN', priority: 90, cat: 'AUTH', desc: 'BBS 계정으로 로그인합니다.' },
   PW: { label: '비밀번호', tip: 'PW', priority: 22, cat: 'AUTH', desc: '비밀번호 변경을 수행합니다.' },
   WHO: { label: '회원정보', tip: 'WHO [아이디]', priority: 25, cat: 'AUTH', desc: '특정 사용자의 정보를 확인하거나 접속자 목록을 봅니다.' },
+  // [LOG_ID: 20260714_2100] 원전 UID(총 접속 ID 조회)/MSG(쪽지 수신 알림 ON·OFF) 명령 추가
+  UID: { label: '접속자ID', tip: 'UID', priority: 24, cat: 'AUTH', desc: '현재 접속 중인 전체 이용자 ID 목록을 봅니다.' },
+  MSG: { label: '쪽지알림', tip: 'MSG, MSG ON/OFF, MSG R', priority: 24, cat: 'AUTH', desc: '접속 시 새 쪽지 도착 알림을 켜거나 끕니다. MSG R로 받은쪽지함을 바로 확인합니다.' },
   PF: { label: '프로필', tip: 'PF', priority: 25, cat: 'AUTH', desc: '사용자의 프로필 정보를 확인합니다.' },
   HI: { label: '내정보', tip: 'HI, MYINFO', priority: 20, cat: 'AUTH', desc: '나의 회원 정보를 확인하거나 수정합니다.' },
   MYINFO: { label: '내정보', tip: 'HI, MYINFO', priority: 20, cat: 'AUTH', desc: '나의 회원 정보를 확인하거나 수정합니다.' },
@@ -72,47 +79,10 @@ export const CMD_META = {
   // [LOG_ID: 20260712_0030] 라벨을 '연속읽기'로 통일(사용자 결정). 뉴스의 클립보드 복사 동작은 desc에만 남긴다.
   PR: { label: '연속읽기', tip: 'PR [번호]', priority: 15, cat: 'SYS', desc: '게시판: 해당 번호부터 엔터로 글을 이어서 읽습니다. 뉴스: 본문 전체를 한 화면에 펼치고 클립보드에 복사합니다.' },
 
-  // VFS (Virtual File System)
-  FILES: { label: '파일목록', tip: 'FILES, DIR', priority: 30, cat: 'VFS', desc: '가상 파일 시스템의 파일 목록을 보여줍니다.' },
-  DIR: { label: '파일목록', tip: 'FILES, DIR', priority: 30, cat: 'VFS', desc: '가상 파일 시스템의 파일 목록을 보여줍니다.' },
-  CAT: { label: '파일내용', tip: 'CAT [이름]', priority: 28, cat: 'VFS', desc: '파일의 내용을 화면에 출력합니다.' },
-  TYPE: { label: '파일내용', tip: 'TYPE [이름]', priority: 28, cat: 'VFS', desc: '파일의 내용을 화면에 출력합니다.' },
-  EDIT: { label: '파일편집', tip: 'EDIT [이름]', priority: 25, cat: 'VFS', desc: '내장 에디터로 파일을 생성하거나 수정합니다.' },
-  WRITE: { label: '파일저장', tip: 'WRITE [이름] [내용]', priority: 25, cat: 'VFS', desc: '파일에 내용을 즉시 기록합니다.' },
-  DEL: { label: '파일삭제', tip: 'DEL [이름]', priority: 20, cat: 'VFS', desc: '파일을 삭제합니다.' },
-  INFO: { label: '파일정보', tip: 'INFO [이름]', priority: 15, cat: 'VFS', desc: '파일의 메타데이터를 확인합니다.' },
-  CP: { label: '파일복사', tip: 'CP [원본] [대상]', priority: 10, cat: 'VFS', desc: '파일을 다른 이름으로 복사합니다.' },
-  MV: { label: '파일이동', tip: 'MV [원본] [대상]', priority: 10, cat: 'VFS', desc: '파일을 이동하거나 이름을 변경합니다.' },
-  TOUCH: { label: '시간갱신', tip: 'TOUCH [이름]', priority: 5, cat: 'VFS', desc: '파일의 수정 시간을 현재로 갱신합니다.' },
-  WC: { label: '글자세기', tip: 'WC [이름]', priority: 10, cat: 'VFS', desc: '파일의 줄, 단어, 글자 수를 셉니다.' },
-  GREP: { label: '문자검색', tip: 'GREP [패턴]', priority: 20, cat: 'VFS', desc: '파일이나 입력에서 특정 패턴을 검색합니다.' },
-  SORT: { label: '줄정렬', tip: 'SORT [이름]', priority: 10, cat: 'VFS', desc: '파일 내용을 알파벳 순으로 정렬합니다.' },
-  UNIQ: { label: '중복제거', tip: 'UNIQ [이름]', priority: 10, cat: 'VFS', desc: '연속된 중복 줄을 제거합니다.' },
-  HEAD: { label: '앞줄보기', tip: 'HEAD [-n] [이름]', priority: 15, cat: 'VFS', desc: '파일의 앞부분 일부를 출력합니다.' },
-  TAIL: { label: '뒷줄보기', tip: 'TAIL [-n] [이름]', priority: 15, cat: 'VFS', desc: '파일의 뒷부분 일부를 출력합니다.' },
-  DIFF: { label: '내용비교', tip: 'DIFF [파일1] [파일2]', priority: 10, cat: 'VFS', desc: '두 파일의 내용 차이를 비교합니다.' },
-  TEE: { label: '입력복사', tip: 'TEE [파일]', priority: 10, cat: 'VFS', desc: '표준 입력을 화면과 파일에 동시에 출력합니다.' },
-
-  // Scripting & Advanced Control
-  SET: { label: '변수설정', tip: 'SET [이름] [값]', priority: 10, cat: 'SYS', desc: '환경 변수를 설정합니다.' },
+  // Environment & Preferences (SET LEVEL/HOME/THEME/PROMPT의 기반)
+  SET: { label: '변수설정', tip: 'SET [이름] [값]', priority: 10, cat: 'SYS', desc: '환경 변수를 설정합니다. (예: SET LEVEL 초급, SET HOME 게시판, SET THEME NOWNURI)' },
   UNSET: { label: '변수삭제', tip: 'UNSET [이름]', priority: 10, cat: 'SYS', desc: '환경 변수를 제거합니다.' },
   ENV: { label: '환경변수', tip: 'ENV', priority: 10, cat: 'SYS', desc: '현재 설정된 모든 환경 변수를 보여줍니다.' },
-  MATH: { label: '산술연산', tip: 'MATH [변수] [수식]', priority: 10, cat: 'SYS', desc: '수식을 계산하여 변수에 저장합니다.' },
-  READ: { label: '입력받기', tip: 'READ [변수] [메시지]', priority: 10, cat: 'SYS', desc: '사용자로부터 입력을 받아 변수에 저장합니다.' },
-  IF: { label: '조건문', tip: 'IF [조건] [명령]', priority: 10, cat: 'SYS', desc: '조건이 참일 경우 명령을 실행합니다.' },
-  WHILE: { label: '반복문', tip: 'WHILE [조건] [명령]', priority: 10, cat: 'SYS', desc: '조건이 참인 동안 명령을 반복합니다.' },
-  FOR: { label: '범위반복', tip: 'FOR [변수] [시작] [끝] [명령]', priority: 10, cat: 'SYS', desc: '지정된 범위만큼 명령을 반복합니다.' },
-  REPEAT: { label: '단순반복', tip: 'REPEAT [횟수] [명령]', priority: 10, cat: 'SYS', desc: '명령을 지정된 횟수만큼 반복합니다.' },
-  FUNC: { label: '함수정의', tip: 'FUNC [이름] ([명령])', priority: 10, cat: 'SYS', desc: '여러 명령을 묶어 함수로 정의합니다.' },
-  CALL: { label: '함수호출', tip: 'CALL [이름] [인자]', priority: 10, cat: 'SYS', desc: '정의된 함수를 호출합니다.' },
-  SOURCE: { label: '스크립트로드', tip: 'SOURCE [파일]', priority: 10, cat: 'SYS', desc: '외부 스크립트 파일을 현재 컨텍스트에 로드합니다.' },
-  RUN: { label: '스크립트실행', tip: 'RUN [파일] [인자]', priority: 10, cat: 'SYS', desc: '스크립트 파일을 새로운 컨텍스트에서 실행합니다.' },
-  TRACE: { label: '추적모드', tip: 'TRACE [ON|OFF]', priority: 10, cat: 'SYS', desc: '스크립트 실행 과정을 실시간으로 추적합니다.' },
-  TRY: { label: '예외처리', tip: 'TRY (명령) CATCH (명령)', priority: 10, cat: 'SYS', desc: '명령 실행 중 발생하는 오류를 처리합니다.' },
-  TRAP: { label: '시그널핸들러', tip: 'TRAP (명령) [SIGNAL]', priority: 10, cat: 'SYS', desc: '특정 시그널 발생 시 실행할 명령을 등록합니다.' },
-  WAITPID: { label: '프로세스대기', tip: 'WAITPID [PID]', priority: 10, cat: 'SYS', desc: '백그라운드 프로세스가 종료될 때까지 대기합니다.' },
-  JOBS: { label: '작업목록', tip: 'JOBS', priority: 10, cat: 'SYS', desc: '현재 실행 중인 백그라운드 작업 목록을 표시합니다.' },
-  KILL: { label: '작업종료', tip: 'KILL [PID]', priority: 10, cat: 'SYS', desc: '백그라운드 작업을 강제로 종료합니다.' },
   // [LOG_ID: 20260713_1000] 갈무리(CAP) 기능 메타데이터 추가
   CAP: { label: '갈무리', tip: 'CAP, 갈무리', priority: 15, cat: 'SYS', desc: '화면 갈무리를 시작하거나 종료합니다.' },
 };

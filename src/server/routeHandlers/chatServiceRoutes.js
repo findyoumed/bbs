@@ -19,6 +19,9 @@ class ChatServiceRouter extends BaseRouter {
       },
       { method: 'POST', pattern: '/api/chat/rooms/:roomNo/join', handler: 'handleRoomJoin', needContext: true, needBody: true },
       { method: 'POST', pattern: '/api/chat/rooms/:roomNo/leave', handler: 'handleRoomLeave', needContext: true, needBody: true },
+      // [LOG_ID: 20260714_2200] 원전 /OUT(강퇴)·/E TITLE·/E USER(방 설정 변경) 재현
+      { method: 'POST', pattern: '/api/chat/rooms/:roomNo/kick', handler: 'handleRoomKick', needContext: true, needBody: true },
+      { method: 'POST', pattern: '/api/chat/rooms/:roomNo/settings', handler: 'handleRoomSettings', needContext: true, needBody: true },
       { method: 'GET', pattern: '/api/chat/rooms/:roomNo/messages', handler: 'listChatMessages' },
       { 
         method: 'POST', 
@@ -61,6 +64,22 @@ class ChatServiceRouter extends BaseRouter {
     const body = await this.getBody();
     const context = await this.getContext();
     return this.send(200, await this.deps.chatRoomRepository.leave(roomNo, body || {}, context));
+  }
+
+  async handleRoomKick(params) {
+    const roomNo = Number(params.roomNo);
+    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const body = await this.getBody();
+    const context = await this.getContext();
+    return this.send(200, await this.deps.chatRoomRepository.kick(roomNo, body?.targetUserId, context));
+  }
+
+  async handleRoomSettings(params) {
+    const roomNo = Number(params.roomNo);
+    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const body = await this.getBody();
+    const context = await this.getContext();
+    return this.send(200, await this.deps.chatRoomRepository.updateRoom(roomNo, body || {}, context));
   }
 
   async listChatMessages(params) {
