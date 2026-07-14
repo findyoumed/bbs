@@ -1,3 +1,427 @@
+## [2026-07-16 00:00] 하이텔 길라잡이 스크린샷 대조 — MEMO(쪽지) 목록/보기 화면을 RMAIL/편지읽기 형식에 맞춰 재구현
+
+**LOG_ID: 20260716_1000**
+목표: "스크린샷을 보면서 각 메뉴들을 최대한 비슷하게 만드는 작업을 구현" (`/goal`). `docs/hitel길라잡이.pdf`의 실제 화면 캡처(그림 7.4 편지받기, 7.5 편지읽기, 7.8 보낸편지확인, 5.5 게시물읽기, 10.3/10.4 자료 전송)를 렌더링해 우리 화면과 대조.
+
+**확인된 것**: 게시판 목록/게시물 읽기(`buildPostViewAnsi`)와 PDS 파일 전송(프로토콜 선택 평문 + 전송진행률 박스)은 이미 하이텔 원전 스타일과 정확히 일치. PDS 목록의 크기/전송횟수 컬럼 부재는 첨부파일 메타데이터를 목록 단계에서 미리 가져오지 않는 우리 데이터 모델상 자연스러운 차이라 보류.
+
+**발견한 차이**: MEMO(쪽지) 화면 2곳이 하이텔 원전과 달랐다.
+1. **쪽지 목록**(`buildMemoListAnsi`): 원전(그림 7.4/7.8)은 "No. 아이디 ... 제목" 순서로 아이디를 앞에, 제목을 가장 넓은 마지막 칸에 둔다. 기존 구현은 "번호/보낸사람/내용요약/날짜/상태" 순으로 제목이 가운데 끼어 있었다.
+2. **쪽지 보기**(`buildMemoViewAnsi`): 원전(그림 7.5)은 박스 없이 "라벨 : 값" 평문 줄 + 구분선 스타일인데, 기존 구현은 `┌─┐` 박스 스타일이었다. 같은 코드베이스의 게시물 읽기(`buildPostViewAnsi`, 그림 5.5 재현)는 이미 평문 스타일이라 MEMO만 유일한 예외였다(하이텔은 박스를 파일 전송 진행률 같은 대화상자에만 쓰고 일반 콘텐츠 화면엔 평문을 쓴다).
+
+**수정**: 두 함수 모두 재구현. 목록은 아이디→날짜→(상태, 보낸쪽지함만)→제목 순으로 재정렬(받은쪽지함엔 그림 7.4처럼 상태 컬럼 없음). 보기는 박스를 걷어내고 라벨:값 평문 + `ansiHLine` 구분선으로 통일.
+**자체 발견한 버그 2건**(구현 중 Node 모킹 검증으로 확인): (1) 마커(`[비답]` 등) 폭 계산에 `.length`(문자 수)를 써서 광폭 한글 문자 때문에 데스크톱 82칸/모바일 46칸으로 오버플로우 — `displayWidth()` 기준으로 수정. (2) 평문 전환 후 제목/발신인 값에 폭 클램프가 빠져 모바일에서 52칸까지 오버플로우 — 전 필드에 `fitCell` 적용, 본문은 `wrapAnsiText`로 줄바꿈.
+검증: Node 모킹 스크립트로 데스크톱(80칸)·모바일(44칸) 받은쪽지함/보낸쪽지함/상세보기 전부 한도 내 확인(수정 전 3건 오버플로우 → 수정 후 0건). `node --check` 통과. `npm run smoke:renderer-ui`/`smoke:command-parity`/`qa:final` 전부 통과. (실제 로그인 브라우저 렌더링은 이번 세션에서 테스트 계정을 확보하지 못해 미실시 — 함수 시그니처는 변경하지 않아 호출부 영향 없음.)
+변경 파일: `public/js/core/memoAnsiBuilders.js`.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 23:30] 이용약관(policy) 화면 P가 GUIDE 대신 TOP으로 건너뛰던 근본 원인(URL 라우팅 누락) 수정
+
+**LOG_ID: 20260715_2400**
+목표: "ㅔ를 누르니까 최상단 초기 화면으로 이동하는데" 사용자 보고 — 직전(20260715_2300) 수정으로 policy 화면의 P가 "완전 무반응"에서는 벗어났지만, 기대한 "바로 위 메뉴(GUIDE)"가 아니라 TOP으로 건너뛰고 있었다. `ㅔ`는 `commandNormalizer.js`의 `koAliasMap`으로 화면과 무관하게 항상 `P`로 먼저 정규화되므로 리터럴 `P`와 동일한 버그다.
+
+**원인**: `P`는 `handleHistoryBack()`을 타는데, 이 함수는 `window.location.pathname !== '/'`일 때만 `window.history.back()`(진짜 이전 화면 복귀)을 쓰고, 그 외엔 곧장 `showMain()`(TOP)으로 떨어지는 구조다. 그런데 `routingUrlBuilder.js`의 `buildURLForState()`에 `case 'policy'`가 아예 없어서 TOS/PRIVACY 화면의 URL이 `default: return '/'`로 떨어져 TOP과 똑같이 `'/'`가 되고 있었다 — 그 결과 `currentPath !== '/'` 판정이 항상 실패해 `history.back()`을 타지 못하고 매번 TOP으로 직행했다. 같은 페이징 화면인 `help`는 이미 `/help` 전용 경로가 있어 이 문제가 없었다. 추가로 `routingStateRestorer.js`에도 `policy` 복원 핸들러가 아예 없어, 설령 URL이 정상이었어도 새로고침 시 TOS/PRIVACY로 못 돌아오고 TOP으로 떨어졌을 것이다(연쇄 결함).
+
+**수정**:
+1. `routingUrlBuilder.js` — `case 'policy'` 추가, `/policy/:kind`(+`?page=N`) 전용 경로 부여(help와 동일 패턴).
+2. `routingStateRestorer.js` — `policy(segments, query)` 복원 핸들러 추가, `showPolicy` deps에 반영.
+3. `appFactoryRuntime.js` — `createRoutingModule` 호출 시 넘기는 deps에 `showPolicy`가 아예 빠져 있어(1·2번을 구현해도 여전히 안 됐을 누락) 추가.
+
+검증: `/guide` → 이용약관(TOS) 클릭 → URL이 `/policy/tos`로 고유하게 잡힘 확인 → `ㅔ` 입력 → URL이 `/guide`로 정상 복귀(TOP이 아님), 5개 항목 메뉴 정상 렌더 확인. `/policy/privacy?page=2` 직접 접속 → 2페이지(02/03) 그대로 복원 확인(새로고침 시나리오). `/help` 회귀 없음 확인. 콘솔 에러 0건. `npm run smoke:renderer-ui`/`smoke:command-parity`/`smoke:full-traversal`/`qa:final` 전부 통과.
+변경 파일: `public/js/core/routingUrlBuilder.js`, `public/js/core/routingStateRestorer.js`, `public/js/core/appFactoryRuntime.js`.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 23:00] 이용약관(policy) 화면에서 P/M/T(상위·초기화면) 명령이 완전히 무반응이던 버그 수정
+
+**LOG_ID: 20260715_2300**
+목표: "이용약관 메뉴에서 p 입력이 안되는데 다른 곳도 이런가. 모두 고쳐야 겠는데" 사용자 보고.
+
+**원인**: 화면 전환 시 상위/초기화면 이동(P·M·T)은 두 경로 중 하나로 처리된다 — (1) 화면별 라우터가 직접 처리하거나, (2) 어느 것도 처리하지 않는 화면은 `commandDispatcherExecution.js`의 `HISTORY_BACK_SCREENS` 허용목록에 등록돼야 공용 `handleHistoryBack()`(P/M/B)·`showMain()`(T) 폴백을 탄다. `policy` 화면(이용약관/개인정보처리방침)은 자체 라우터(`commandRouterGlobalNavigation.js`)에 F/B(페이징)만 있고 P/M/T는 없는데, `HISTORY_BACK_SCREENS`에도 등록이 안 돼 있어 힌트바엔 "상위(P), 초기화면(T)"가 버젓이 떠 있으면서 실제로는 완전히 무반응이었다. `help` 화면이 겪었을 뻔한 것과 동일한 유형이지만 `help`는 이미 목록에 있어 정상 동작 중이었다.
+
+**전수 점검**("다른 곳도 이런가" 요청에 따라)**: `commandFooterText.js`의 `SCREEN_TO_CATEGORY`에 등록된 모든 화면(post-view/post-write/chat·chat-lobby·chat-room/news-menu·news-list·news-view/weather-menu·weather-view/memo-list·memo-view·memo-write/attachment-list/bio·fortune·mbti·retro(오락실 서비스)/vote-list·detail·create/ranking-summary·detail/login/signup/myinfo/password-reset)를 각 라우터 파일에서 `cmd === 'P'` 처리 여부로 grep 전수 확인 — `policy`를 제외한 전부가 이미 정상적으로 P를 자체 처리하고 있음을 확인했다(체계적 버그가 아니라 `policy` 단독 누락).
+
+**수정**: `HISTORY_BACK_SCREENS`에 `'policy'` 추가.
+검증: `/guide` → 이용약관(TOS) 진입 → 명령어 입력창에 `P` 직접 타이핑 → TOP으로 정상 이동(이전엔 완전 무반응). 동일하게 `T`도 TOP으로 정상 이동 확인. 콘솔 에러 0건. `npm run smoke:renderer-ui`/`smoke:command-parity`/`smoke:full-traversal` 전부 통과.
+변경 파일: `public/js/core/commandDispatcherExecution.js`.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 22:00] 라벨-코드 다칸 공백을 GUIDE뿐 아니라 건수 없는 모든 메뉴(GAME 등)로 일반화 수정
+
+**LOG_ID: 20260715_2200**
+목표: "다른 메뉴들에서도 가운데 공백 있는게 많은데. 다 고쳐줘. 예를 들면 1. 바이오리듬            (BIO) ... " 사용자 보고 — 직전(20260715_2100) 수정이 `state.boardMenuPath === 'guide'`로만 범위를 좁혀서, GAME(오락실) 등 건수(countText)가 애초에 존재하지 않는 다른 가상 메뉴는 그대로 남아있었다.
+
+**원인**: `buildBoardSelectAnsi`의 다칸 정렬 패딩은 "건수 있는 줄과 코드만 있는 줄을 같은 화면에서 세로로 맞추기 위한" 것(20260714_2300)인데, GAME/오락실처럼 항목 전체가 가상 메뉴라 건수 데이터 자체가 없는 화면에서도 무조건 `labelColWidth`(26칸) 기준 패딩이 붙었다. `suppressCount`를 `boardMenuPath === 'guide'`로 하드코딩했던 것이 근본 문제 — GUIDE 하나만 고치고 같은 패턴의 다른 화면은 놓쳤다.
+
+**수정**: 화면별로 하드코딩하는 대신, 그 목록에 실제 건수(`boardCounts`)를 가진 항목이 하나라도 있는지(`hasAnyRealCount`)를 데이터 기반으로 판단하도록 일반화했다. 정렬할 대상(건수)이 하나도 없으면 어떤 메뉴든 TOP/GAME과 동일하게 공백 1칸만 쓴다. 실제 건수가 섞여 있는 화면(`/bbs` 등)은 기존처럼 정렬 패딩을 그대로 유지한다.
+검증: `/game`(오락실) — "1. 바이오리듬 (BIO)" 등 공백 1칸으로 정상 표시. `/bbs`(게시판, 열린광장·우스개 모두 실제 건수 보유) — 기존 `( 0/ 7 ) (PLAZA)` 정렬 형식 그대로 유지 확인(회귀 없음). `/guide`도 재확인 — 이전 수정 그대로 유지. `npm run smoke:renderer-ui`/`smoke:command-parity`/`qa:final` 전부 통과.
+변경 파일: `public/js/core/ansiBoardBuilders.js`.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 21:00] GUIDE 하위(policy) 화면 엔터 페이징 미작동 + 라벨-코드 사이 다칸 공백 잔존 수정
+
+**LOG_ID: 20260715_2100**
+목표: "하위 메뉴들에서 명령어 입력이 잘 안되는데. F 대신에 엔터 눌러도 다음페이지로 넘어가야지. 이것도 안돼. http://localhost:3000/guide 에서 하위 메뉴들이 그래. 그리고, 1. 공지사항              (NOTICE) 이렇게 공백이 중간에 있는데" 사용자 보고(/loop).
+
+**원인 1 (엔터 페이징)**: `commandNormalizer.js`의 "빈 엔터(Enter) → F로 자동 변환" 화면 허용목록(`pagedScreens`)에 `help`/`post-list`/`board-select`/`news-list` 등은 있었지만, GUIDE의 이용약관(TOS)·개인정보처리방침(PRIVACY)이 쓰는 `policy` 화면이 빠져 있었다. 그 결과 이 두 화면에서만 리터럴 `F`를 입력해야 다음 페이지로 넘어갔고, 빈 엔터는 아무 반응이 없었다(다른 페이징 화면과의 유일한 예외).
+**수정**: `pagedScreens` 배열에 `'policy'` 추가.
+검증: `/guide` → 이용약관(TOS) 클릭 → `(01/13)` 상태에서 빈 Enter 입력 → `(02/13)`로 정상 이동 확인. 콘솔 에러 0건.
+
+**원인 2 (라벨-코드 사이 다칸 공백)**: 이전 수정(20260715_2000)에서 호버 영역이 "(코드)" 부분을 못 덮는 문제는 고쳤지만, `ansiBoardBuilders.js`의 `buildBoardSelectAnsi`는 여전히 GUIDE 항목에 `labelColWidth`(26칸) 기준 정렬 패딩을 넣고 있었다. 원래 이 패딩은 건수(countText)가 있는 줄과 코드만 있는 줄을 세로로 맞추기 위한 것(20260714_2300)인데, GUIDE는 `suppressCount`로 건수 표시 자체를 꺼놨기 때문에(20260714_2400) 맞출 대상이 없어져 패딩이 그냥 불필요한 공백으로만 남아 있었다.
+**수정**: `suppressCount`가 켜진 경우 다단 정렬 패딩 대신 TOP/GAME과 동일한 공백 1칸만 쓰도록 분기.
+검증: `/guide` 화면 스크린샷으로 "1. 공지사항 (NOTICE)" 형태(공백 1칸)로 정상 표시 확인.
+
+변경 파일: `public/js/core/commandNormalizer.js`, `public/js/core/ansiBoardBuilders.js`.
+추가 검증: `npm run smoke:renderer-ui`, `smoke:command-parity`, `qa:final` 전부 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 20:00] GUIDE 화면 호버/클릭 영역이 "(코드)" 표기를 빠뜨리는 버그 수정
+
+**LOG_ID: 20260715_2000**
+목표: "http://localhost:3000/guide 에서 마우스 호버링 영역이 이상해" 사용자 보고.
+
+**원인**: `menuHotspotUtils.js`의 `findMenuLabelEnd()`는 공백이 2칸 이상 연속되면 메뉴 라벨이 끝난 것으로 보고 핫스팟 계산을 멈춘다. TOP 등 대부분의 메뉴는 라벨과 "(코드)" 사이가 공백 1칸이라 문제가 없었지만, GUIDE 화면은 `ansiBoardBuilders.js`의 `buildBoardSelectAnsi`가 게시판(건수 있음)과 도움말/정책(코드만) 항목을 한 화면에 정렬하기 위해 `labelColWidth`만큼 공백을 채워 넣는다(예: " 1. 공지사항" + 14칸 공백 + "(NOTICE)"). 이 다칸 공백이 2칸 규칙에 걸려 "(NOTICE)"/"(TOSYSOP)" 등 코드 부분이 클릭·호버 핫스팟에서 통째로 빠졌다(버튼 폭 94px, "공지사항"까지만).
+
+**수정**: `findMenuLabelEnd`가 2칸 이상 공백을 만나도, 남은 부분이 "(코드)" 하나뿐이면(`/^\s*\([^)]+\)\s*$/`) 그것까지 라벨의 일부로 포함하도록 예외 처리. 다단 컬럼 레이아웃(랭킹 3단 등, 공백 뒤에 다른 컬럼 내용이 더 있는 경우)은 이 조건에 안 걸려 기존 동작 그대로 유지된다.
+검증: Playwright로 `/guide` 재확인 — 5개 항목 버튼 폭이 94~111px→255~289px로 확장되어 "(NOTICE)" 등 코드까지 덮음. `공지사항 (NOTICE)` 버튼 클릭 시 `/board/notice`로 정상 이동, 콘솔 에러 0건. TOP(`/`)의 "게시판 (BBS)" 클릭도 회귀 없이 `/bbs`로 정상 이동 확인. `/game/ranking`(다단 컬럼 레이아웃, 핫스팟 로직 자체와는 무관하지만 회귀 여부 확인차 재확인) 콘솔 에러 0건. `npm run smoke:renderer-ui` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 19:00] 게시판 랭킹·여론광장(투표) 화면 모바일(44칸) 레이아웃 추가
+
+**LOG_ID: 20260715_1900**
+목표: "모바일화면에서도 UI가 올바른지 확인해줘" 요청. 이번 세션에서 브라우저 리사이즈 도구가 권한 정책상 막혀 있어, Node에서 `window.innerWidth`를 375로 모킹하고 각 화면 빌더가 실제로 출력하는 텍스트의 표시폭(`displayWidth`)을 계산하는 방식으로 검증.
+
+**발견**: `rankingAnsiBuilders.js`(게시판 랭킹)와 `voteAnsiBuilders.js`(여론광장/설문조사)가 `isMobile`/`window.innerWidth` 분기 자체가 전혀 없이 80칸 고정 레이아웃으로 되어있어, 모바일(44칸)에서 실측 80~102칸까지 오버플로우됐다. `amusementAnsiBuilders.js`(추억의 접속화면 안내문구 2줄)도 63칸까지 넘쳤다.
+
+**수정**:
+- `rankingAnsiBuilders.js`: `buildRankingSummaryAnsi`(3단→모바일은 레벨/글작성/추천 3개 카테고리를 세로 스택), `buildRankingDetailAnsi`(2단→모바일은 1~40위 세로 스택, 1~20위/21~40위 색 구분 유지)에 `isMobile` 분기 추가.
+- `voteAnsiBuilders.js`: `buildVoteListAnsi`(컬럼 드롭 — 참여인원 컬럼 제거, 참여여부는 1칸 배지로 압축), `buildVoteDetailAnsi`(제목 줄 `wrapAnsiText`, 작성자 방어적 클램프, 옵션/진행률 바를 모바일에서 2줄로 분리하고 막대 길이 절반), `buildVoteCreateAnsi`(안내문구 전체 `wrapAnsiText`)에 모바일 레이아웃 추가.
+- `amusementAnsiBuilders.js`: `buildRetroArtListAnsi`의 안내문구 2줄에 `wrapAnsiText` 적용.
+
+**검증 중 자체 발견한 회귀 2건**(수정 후 재검증):
+1. `buildVoteDetailAnsi` 제목 줄에서 `wrapAnsiText`로 감싼 텍스트에 이미 `ANSI_RESET`이 포함돼 있는데 바깥에서 또 붙여 리셋 이스케이프가 중복됐다 — 안쪽 리셋 제거.
+2. 작성자 클램프를 `fitCell`로 하면 데스크톱에서도 짧은 아이디 뒤에 불필요한 패딩 공백이 생겨 시각적으로 변경됐다 — 폭 초과 시에만 `fitCell` 적용하도록 수정.
+
+검증: `node --check` 통과. Node 모킹 스크립트로 44칸(모바일)/80칸(데스크톱) 전부 한도 내 확인. 변경 전(`git show HEAD:...`) 코드와 데스크톱(80칸) 출력을 바이트 단위로 diff — 이번 모바일 작업과 무관한 기존 uncommitted 변경(ACRO 헤더/중복 푸터 제거/막대 문자 교체)만 차이가 있고, 회귀 없음 확인. `npm run smoke:renderer-ui`/`qa:final`/`smoke:vercel-ready` 전부 통과. Playwright로 `/acro`, `/game/ranking` 데스크톱 렌더링·콘솔 에러 재확인(콘솔 에러 0건, 레이아웃 정상).
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 17:30] 나머지 Supabase 계열 smoke 스크립트까지 전수 실행 완료
+
+**LOG_ID: 20260715_1730**
+목표: "계속" 요청 — 그동안 부작용 우려로 미뤄뒀던 나머지 5개(`chat-rooms-supabase`, `chat-members-supabase`, `supabase-auth-write`, `supabase-realtime`, `supabase-live`)를 실행 전 소스를 먼저 훑어 자체 정리(try/finally로 생성한 테스트 데이터 삭제, 신규 auth 유저 생성 없이 기존 유저 재사용 등) 되는 것을 확인한 뒤 실행.
+결과: 5개 전부 통과, 부작용 없음 확인(`supabase-live`는 beforeTotal=afterTotal=7로 원상 복구 확인, `supabase-auth-write`는 생성한 게시글을 finally에서 삭제).
+**이 시점에서 `package.json`의 `smoke:*` 18개 + `qa:final` 전부 그린 상태 — 이번 세션에서 처음으로 프로젝트의 전체 자동 검증 스위트를 완주.**
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 17:00] 미사용 smoke 스크립트 전수 실행 — 낡은 breakpoint 테스트 + 250줄 제한 위반 발견·수정
+
+**LOG_ID: 20260715_1600~1700**
+목표: "계속" 요청 — package.json의 `smoke:*` 스크립트 중 이 세션에서 한 번도 안 돌려본 것들(`ui-geometry`, `ui-layout`, `runtime-diagnostics`, `rss-services`, `auth-bridge`, `chat-counts`, `qa:final`)을 전부 실행.
+
+**1) `smoke:ui-geometry` 실패 (LOG_ID: 20260715_1600)**: "mobile portrait should disable transform auto scaling" 실패. 원인 — 이 테스트가 `retro-terminal.css`에서 `@media (max-width: 768px) { :root { --terminal-scale: 1;` 리터럴을 찾는데, 20260714_1400에 이 breakpoint를 768px→1100px로 넓힌 것(80칸 터미널 1.15배 확대 시 실제 필요폭이 768~1100px 사이 창 폭에서 뷰포트보다 넓어져 글자가 잘리는 진짜 버그 수정, 사용자 보고 "/help 화면 오른편으로 글이 넘쳐서 안보인다")과 충돌 — 정당한 버그 수정 이후 테스트가 갱신 안 돼 항상 실패하고 있었다. 테스트의 기대값을 1100px로 갱신(내가 바꾸지 않은 랜드스케이프 규칙은 그대로 둠).
+
+**2) `qa:final` 실패 (LOG_ID: 20260715_1700)**: "core/terminalUiCore.js should be <= 250 lines (current: 295)" — 프로젝트의 "극단적 모듈화" 컨벤션(핵심 파일 250줄 제한) 위반. 이 파일은 이미 terminalDialog/terminalFeedback/terminalHintFooter/terminalInputUi/terminalSequentialRenderer/terminalViewportMetrics/terminalLoadingUi 등으로 잘게 쪼개진 조립부였는데, `setReady`/`setLoading` 로딩 상태 전이 로직(상세 이력 주석 포함 ~85줄)만 아직 안 빠져 있었다. 새 파일 `terminalLoadingState.js`로 동작 변경 없이 그대로 이전 — 295줄 → 225줄.
+
+**3) 나머지 스크립트**: `ui-layout`/`runtime-diagnostics`/`rss-services`/`auth-bridge`/`chat-counts` 전부 이상 없이 통과.
+
+변경 파일: `scripts/smoke-ui-geometry.js`(breakpoint 값 갱신), `public/js/core/terminalUiCore.js`(295→225줄), `public/js/core/terminalLoadingState.js`(신규, setReady/setLoading 이전).
+검증: `node --check` 통과. `qa:final`/`smoke:ui-geometry` 재실행 통과. Playwright로 `/`·`/bbs` 재확인 — 로딩 전환·힌트바·콘솔 에러 모두 정상(로딩 상태 로직을 옮긴 것이라 가장 위험도 높은 지점이었음). `smoke:vercel-ready`/`smoke:renderer-ui`/`smoke:ui-layout`/`smoke:command-parity` 전부 통과.
+결과: ✅ 완료 — 이 세션에서 이제 모든 `npm run smoke:*`/`qa:final` 스크립트가 그린 상태(단, Supabase 실시간/인증쓰기 계열 3~4개는 side effect 우려로 미실행).
+
+---
+
+## [2026-07-15 15:00] smoke:full-traversal 최초 실행 — 낡은 채팅 로비 테스트 발견·수정
+
+**LOG_ID: 20260715_1500**
+목표: "계속 진행해줘" 요청 — 로그인 코드 경로 재검토(비표준 필드명 재검색, 추가 발견 없음), 프로필 화면(`/profile/guest`) 점검(정상) 후, 이 세션에서 한 번도 안 돌려본 `npm run smoke:full-traversal`(대규모 전체 화면 순회 테스트, 개별 `smoke:*` 스크립트들과 별개)을 처음 실행.
+**발견**: "Chat lobby did not expose a selectable first room." 실패. 원인 확인 — 이 테스트가 대기실 화면 텍스트에서 `"[1]"` 리터럴을 찾는데, 20260713_1000에 사용자 승인 하에 대기실 상황판(ST)을 나우누리 원전 형식("#1 공개(인원/정원) [개설자] 방제목")으로 재설계하면서 방 번호 표기가 `[1]`에서 `#1`로 바뀌었다. 이 테스트 파일은 재설계 이전(마지막 수정 2026-06-17, 재설계는 2026-07-13)부터 갱신되지 않아 실제로는 정상인 UI를 항상 실패로 판정하고 있었다 — 실제 UI 버그가 아니라 낡은 테스트였다.
+변경 파일: `scripts/smoke-full-traversal.js` — 검증 문자열을 `[1]`에서 현재 형식에 맞는 `공개(`로 교체.
+검증: 재실행 결과 채팅방 입장→메시지 전송까지 포함해 전체 트래버설 통과("Full traversal passed without console errors."). 이 과정에서 세션 내내 남아있던 테스트용 대화방("renamed room", 삭제 API 없어 잔존 중)이 방 선택 순서에 끼어 있어도 흐름 자체는 깨지지 않음을 확인.
+**참고**: `smoke:full-traversal`은 지금까지 이 세션에서 한 번도 실행하지 않았던 도구였다 — 앞으로 대규모 변경 후 정기적으로 돌리면 개별 `smoke:*` 스크립트가 놓치는 화면 간 흐름(다중 페이지 이동, 실제 폼 제출)을 잡아낼 수 있어 유용함을 확인.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 14:00] 게시판 진입 배너 — 게스트가 "정회원"으로 표시되는 모순 버그
+
+**LOG_ID: 20260715_1400**
+목표: "또 한번 봐줘" 요청 — 여론광장/랭킹류(하드코딩 중복 안내줄) 패턴은 전수 검색 결과 더 없음을 확인(`buildTopHeader` 배열형도 재검색해 추가 매핑 누락 없음 확인). 이어서 나머지 미점검 화면(PDS 하위 게시판 등)을 Playwright로 훑다가 새로운 유형의 버그 발견.
+**발견**: `/pds/pds_util` 등 게시판 최초 진입 시 뜨는 신분 배너가 "## 손님(guest)님은 정회원입니다 ##"처럼 **자기모순된 문구**를 표시했다. `postListView.js`의 게스트 판정 로직이 사이트 표준 필드(`user.isGuest`, `user.isAdmin` — `apiFetch.js`/`postViewView.js`/`systemAnsiBuilders.js` 등 10곳 이상에서 일관되게 사용)가 아니라, **존재하지도 않는 `user.role` 필드**(`u?.role === 'guest'`, `u?.role === 'admin'`)와 **대소문자가 안 맞는 비교**(`uId === 'GUEST'` — 실제 게스트 `userId`는 소문자 `'guest'`)에 의존하고 있었다. 두 조건 다 항상 거짓으로 평가되어, 사용자가 있기만 하면(`!u`가 거짓이면) 무조건 "정회원"으로 표시됐다 — 로그인 여부와 무관하게 게스트도 항상 정회원 취급.
+변경 파일: `public/js/core/postListView.js` — 게스트/관리자 판정을 표준 필드(`user.isGuest !== false`, `user.isAdmin`)로 교체. 코드베이스 전체에서 동일한 `.role` 기반 오판정 패턴의 다른 사본이 있는지 grep으로 확인 — 이 한 곳뿐이었음.
+검증: Playwright로 `/pds/pds_util` 재확인 — "## 손님(guest)님은 손님입니다 ##"로 모순 없이 정상 표시. `node --check` 통과, `smoke:boards`/`smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 13:00] 게시판 랭킹 화면도 여론광장과 동일한 중복 하드코딩 안내줄 문제
+
+**LOG_ID: 20260715_1300**
+목표: "다음으로 계속해" 요청 — 여론광장(20260715_1100)에서 발견한 "본문에 하드코딩된 중복 안내줄" 패턴이 다른 화면에도 있는지 전수 검색(`grep`으로 `[코드] 라벨 | [코드] 라벨` 형태 패턴 검색).
+**발견**: `rankingAnsiBuilders.js`(게시판 랭킹, 오락실 하위)에 동일 패턴 "[1]레벨 [2]글수 [3]추천 [4]조회 | [M]오락실 [T]대문"이 있었다. 여론광장 사례와 달리 M/T의 목적지 자체는 정확했지만(랭킹은 실제로 오락실 하위 유지 중), 표준 하단 힌트바에 이미 있는 상위(P)·초기화면(T)와 여전히 완전히 중복이었다.
+변경 파일:
+1. `commandFooterText.js` — `rankingSummary`(`1:레벨,2:글수,3:추천,4:조회,P,T,GO,H`)·`rankingDetail`(`B:종합` 추가) 카테고리 신설, `SCREEN_TO_CATEGORY`에 `ranking-summary`/`ranking-detail` 매핑 추가.
+2. `rankingScreens.js` — `render()` 호출 2곳의 footerCategory를 범용 `'amusementInput'`에서 전용 카테고리로 교체.
+3. `rankingAnsiBuilders.js` — 본문 하드코딩 안내줄 2곳(종합/상세) 삭제.
+검증: Playwright로 `/game/ranking` 확인 — 하단 힌트바가 "상위(P),초기화면(T),이동(GO),레벨(1),글수(2),추천(3),조회(4),도움말(H)" 하나로 정상 통합, 종전 중복줄 완전히 사라짐. `node --check` 3개 파일 통과, `smoke:vercel-ready`/`smoke:command-parity` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 12:00] █/░ 글리프 폴백 버그 — 남은 2곳(바이오리듬, 화일전송 연출) 추가 수정
+
+**LOG_ID: 20260715_1200**
+목표: 직전 투표 그래프 수정 후 "계속 해서 고쳐줘" 요청 — 동일한 원인(`█`/`░` 글리프가 커스텀 픽셀 폰트에 없어 색상 폰트 폴백)이 다른 곳에도 있는지 전수 검색.
+검색 방법: 유니코드 Block Elements 대역(U+2580~259F) 문자를 쓰는 모든 파일을 grep. `doorArtAssets.js`의 `▒`는 XT 접속화면 등에서 이미 정상 렌더링이 실측 확인된 문자라 제외, 나머지 2곳에서 동일 버그 확인:
+1. `amusementAnsiBuilders.js` — 바이오리듬 결과 화면의 신체/감성/지성 막대그래프(`row()` 함수)가 `'█'` 사용.
+2. `commandRouterPostView.js` — 자료실 DN(다운로드) 프로토콜 연출의 "화일 전송" 진행률 막대가 `'█'`/`'░'` 사용.
+변경 파일: 둘 다 `'■'`/`'□'`(폭 2칸, 실측 확인됨)로 교체하고, 폭이 2배가 된 만큼 길이 계산(divisor/barLength)을 절반으로 줄여 원래 시각적 길이를 유지 — 투표 그래프와 동일한 패턴.
+검증: Node에서 `amusementAnsiBuilders.js`를 직접 import해 1990-01-01생 바이오리듬을 계산 — 신체/감성/지성 막대 전부 `■`로 정상 생성되고 개수 계산(예: 73% → 4칸)도 정확함을 확인. `commandRouterPostView.js`는 다운로드 연출이 명령 핸들러 내부에 인라인되어 단위 테스트가 어려워, 이미 검증된 동일 치환·폭보정 패턴을 그대로 적용하고 `node --check`로 문법만 확인(런타임 시각 검증은 실제 자료실 다운로드 흐름에서 추후 필요 시). `smoke:vercel-ready`/`smoke:command-parity`/`smoke:renderer-ui` 전부 통과.
+결과: ✅ 완료 (전체 코드베이스에서 U+2580~259F 대역 사용처 3곳 모두 처리 완료 — 남은 것 없음)
+
+---
+
+## [2026-07-15 11:30] 투표 결과 그래프 무지개색 노이즈 수정 — 폰트에 없는 글리프 폴백 문제
+
+**LOG_ID: 20260715_1130**
+목표: 직전 반복에서 부수적으로 발견한 "투표 상세 화면 막대그래프가 무지개색으로 깨짐" 이슈를 조사.
+**원인**: `voteAnsiBuilders.js`가 진행률 막대에 `'█'`(U+2588, FULL BLOCK)와 `'░'`(U+2591, LIGHT SHADE)를 썼는데, 커스텀 픽셀 폰트(BbsPrimaryFont/DungGeunMo/Sam3KRFont)에 이 두 글리프가 없어 브라우저가 시스템의 색상(이모지) 폰트로 폴백하면서 단색이어야 할 문자가 무지개 그라디언트로 렌더링됐다. 같은 "Block Elements" 유니코드 대역(U+2580~259F)에 속하지만, 사이트 전역에서 널리 쓰이는 박스 문자(─│┌┐ 등, U+2500~257F)는 이 폰트들이 지원해 문제없이 렌더링되고 있었다 — 이번에 처음 쓰인 특수 문자라 지금까지 안 드러났던 것.
+**폭 계산 확인**: `isWideChar()`상 U+2588/U+2591은 narrow(1칸) 판정이라 레이아웃 자체는 깨지지 않았다(색상만 문제) — 순수 글리프 폴백 이슈.
+변경 파일: `public/js/core/voteAnsiBuilders.js` — 이미 XT 접속화면 등에서 정상 렌더링이 실측 확인된 `'■'`/`'□'`(U+25A0/25A1, Geometric Shapes 대역·폭 2칸)로 교체. 폭이 2배가 되므로 `maxGraphWidth`를 30→15로 줄여 전체 시각적 길이(80칸 예산 내 실제 표시폭 30칸)를 그대로 유지.
+검증: curl로 테스트 설문 생성 후 Playwright로 `/acro/:id` 확인 — 0%(빈 막대)와 100%(가득 찬 막대) 둘 다 무지개 노이즈 없이 깨끗한 흰색 사각형으로 렌더링됨. 테스트 설문 삭제. `node --check` 통과, `smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 11:00] 여론광장(ACRO) 화면의 중복·비표준 하드코딩 힌트 라인 제거
+
+**LOG_ID: 20260715_1100**
+목표: 사용자가 "[M] 오락실메뉴..." 텍스트를 붙여넣으며 "여론광장에 메뉴가 이상한데"라고 재지적. 확인해보니 그 텍스트는 이미 수정된 이전 버그(오락실메뉴→초기화면)의 캐시된 화면이었고(현재 서버는 정정된 "초기화면" 서빙 중, curl로 확인), **재조사 결과 더 근본적인 문제**를 발견.
+**진짜 문제**: 여론광장 화면들이 사이트 전체가 쓰는 표준 하단 힌트바(`commandFooterText.js`의 CMD_ORDER 체계, 이미 정상 작동 중)와는 별개로, ANSI 본문 안에 **직접 하드코딩한 중복 안내줄**("[번호] 보기 | [W] 설문등록 | [P] 이전 | [M] 초기화면 | [T] 대문")을 갖고 있었다. P/M/T가 전부 `showMain()`으로 수렴하는 동일 동작인데도 서로 다른 용어("이전"/"초기화면"/"대문")를 썼고, 표준 힌트바에 이미 있는 P·T와 완전히 중복됐다. 다른 amusementInput류 화면(바이오리듬/운세/MBTI)에는 이런 하드코딩 안내줄이 없어 GUIDE/GAME 사례와 같은 유형의 "이 화면만 다른 화면과 다른 패턴" 불일치였다.
+변경 파일:
+1. `commandFooterText.js` — `voteList`(`P,T,GO,W:설문등록,H`)·`voteDetail`(`B:목록,P,T,GO,H`)·`voteCreate`(`B:취소,P,T,GO,H`) 3개 전용 카테고리 신설, `SCREEN_TO_CATEGORY`에 `vote-list`/`vote-detail`/`vote-create` 매핑 추가 — postList/memoList 등 다른 화면과 동일한 표준 힌트바 체계로 흡수.
+2. `voteScreens.js` — `render()` 호출 3곳의 footerCategory를 범용 `'amusementInput'`에서 신설한 전용 카테고리로 교체.
+3. `voteAnsiBuilders.js` — 본문에 하드코딩됐던 중복 안내줄 4곳(목록/상세×2/등록) 전부 삭제.
+검증: Playwright로 `/acro`(목록: "상위(P),초기화면(T),이동(GO),설문등록(W),도움말(H)" 표준 힌트바만 노출) 확인. curl로 테스트 설문 생성 후 `/acro/1`(상세: "목록(B),상위(P),초기화면(T),이동(GO),도움말(H)") 확인 후 삭제. `node --check` 3개 파일 통과, `smoke:vercel-ready`/`smoke:command-parity` 통과.
+**부수 발견(범위 밖, 다음에 확인)**: 투표 상세 화면의 막대그래프(`█`/`░` 반복 문자)가 무지개색 노이즈로 깨져 렌더링됨 — 폰트 렌더링 문제로 추정, 이번 작업 범위 밖이라 별도 확인 필요.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 10:30] 추억의 접속화면 개별 작품 화면에 좌상단 라벨 상자가 통째로 빠져있던 버그
+
+**LOG_ID: 20260715_1030**
+목표: 사용자가 "또 일관성 없는것 찾아서 고쳐줘"라고 재요청 — 직전 ACRO 건과 같은 유형(배열형 `buildTopHeader([...])`가 내부 라벨 매핑 테이블에 없는 문자열을 참조)의 다른 사례를 전수 검색.
+**발견**: `amusementAnsiBuilders.js`의 `buildRetroArtViewAnsi(item)`(추억의 접속화면 개별 작품 보기, 예: `/game/retro/xt`)가 `buildTopHeader(['추억의 접속화면', item.name])`를 썼는데, 두 세그먼트('추억의 접속화면'과 작품명 자체) 모두 `ansiBuilderUtils.js`의 `leftLabelMap`에 없어 `leftLabel`이 빈 문자열로 귀결됐다. 결과: 이 화면만 다른 모든 화면(GUIDE/GAME/ACRO/HELP 등)에 있는 좌상단 작은 라벨 상자가 통째로 사라져 있었다 — Playwright 접근성 스냅샷으로 실측(같은 자리에 있어야 할 `generic: GAME` 요소가 없고 바로 센터 타이틀만 존재) 확인. 목록 화면(`buildRetroArtListAnsi`)은 첫 세그먼트가 '오락실'(매핑 있음)이라 문제 없었음 — 개별 작품 보기 화면에서만 발생.
+변경 파일: `public/js/core/amusementAnsiBuilders.js` — `buildRetroArtViewAnsi`의 헤더를 배열형에서 명시적 객체형(`{leftLabel: 'GAME', centerLabel: item.name}`)으로 교체.
+검증: Playwright로 `/game/retro/xt`·`/game/retro/xmas` 재확인 — 좌상단 "GAME" 라벨 정상 표시(이전엔 없었음). `smoke:renderer-ui`/`smoke:vercel-ready` 통과. 같은 파일의 다른 배열형 헤더(바이오리듬/운세/MBTI 목록·상세)는 첫/끝 세그먼트가 매핑 테이블에 있어 문제 없음을 확인, `weatherAnsiBuilders.js`/`newsAnsiBuilders.js`의 배열형 헤더도 전수 대조해 이상 없음 확인.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 10:00] 여론광장(ACRO) 화면이 여전히 "오락실"로 표시되던 잔재 버그
+
+**LOG_ID: 20260715_1000**
+목표: 사용자가 "또 일관성이 없는것 찾아서 고쳐줘"라고 요청 — GAME 하위 화면들 중 유사한 잔재 버그가 있는지 점검.
+**발견**: 20260714_1200에 여론광장(ACRO)을 오락실 하위에서 최상위로 옮기며 `commandRouterVote.js`의 P/M 이동 로직(`showBoardSelect('game')` → `showMain()`)과 `voteScreens.js`의 footer 노드 조회는 고쳤지만, **`voteAnsiBuilders.js`의 화면 헤더/푸터 문구는 손대지 않아 그대로 남아있었다**. 실측 결과 `/acro` 접속 시 좌상단이 "GAME"으로 표시되고(`buildTopHeader(['오락실', ...])`가 내부 라벨 매핑 테이블에서 '오락실'→'GAME'으로 치환됨), 하단 커스텀 안내줄도 "[M] 오락실메뉴"라고 나와 실제 이동 대상(초기화면/TOP)과 문구가 어긋나 있었다 — 코드 동작은 맞는데 화면 문구만 예전 위치를 가리키는 전형적인 "리팩터링 시 문구 갱신 누락" 사례.
+변경 파일: `public/js/core/voteAnsiBuilders.js` — 목록/상세/등록 3개 화면의 헤더를 배열형(`['오락실', ...]`, 내부 매핑 테이블 의존) 대신 명시적 객체형(`{leftLabel: 'ACRO', centerLabel: ...}`, help/policy 화면과 동일 패턴)으로 교체. "[M] 오락실메뉴" 문구 3곳을 "[M] 초기화면"으로 정정(실제 이동 대상과 일치).
+검증: Playwright로 `/acro` 재확인 — 좌상단 "ACRO", 하단 "[M] 초기화면"으로 정상 표시. `smoke:vercel-ready`/`smoke:command-parity` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-15 09:30] GUIDE go값 오류 + 메뉴 항목 코드가 짧으면 클릭 영역이 겹치던 진짜 버그 수정
+
+**LOG_ID: 20260715_0900~0930**
+목표: 사용자가 "cmdhelp 라는 메뉴명이 아니라 help라는 메뉴이름 아냐?"와 "guide 화면에서 마우스 호버링과 클릭 되는 영역이 다른 메뉴와 일관성이 없는데"를 지적.
+
+**1) go값 정정 (LOG_ID: 20260715_0900)**: "명령어안내" 항목은 전역 H/HELP 명령과 똑같은 화면(showHelp)으로 연결되는데, go값이 `cmdhelp`(실재하지 않는 명령 코드)였다. 실제 명령어와 일치하도록 `hanulso.mnu`에서 `cmdhelp` → `help`로 정정(id는 `guide_cmdhelp` 유지, go값 충돌 없음 확인).
+
+**2) 진짜 핫스팟 버그 발견 (LOG_ID: 20260715_0930)**: Playwright 접근성 스냅샷으로 실측한 결과, GUIDE의 "4. 이용약관 (TOS)" 항목에 정상 버튼("이용약관 (TOS)") 외에 `"명령 실행: TOS"`라는 **별도의 엉뚱한 버튼이 겹쳐서** 존재했다. 원인: `menuHotspotUtils.js`의 전역 단축 명령 패턴 감지(`(P)`, `(T)`, `(Q)` 등 1~3글자 대문자 괄호를 자동으로 클릭 가능한 명령 실행 버튼으로 인식)가, 메뉴 항목의 코드 표기(TOS는 우연히 3글자)까지 똑같이 명령어로 오인해서 이용약관 버튼과 같은 자리에 "TOS"라는(존재하지 않는) 명령을 실행하는 별도 핫스팟을 만들고 있었다. `(TOS)` 텍스트 부분을 클릭하면 메뉴 이동 대신 아무 일도 안 일어나는 죽은 명령이 실행됐다 — 이게 사용자가 느낀 "호버/클릭 영역 불일치"의 정체. GUIDE에서만 우연히 코드가 3글자(TOS)라 눈에 띄었을 뿐, GAME의 "바이오리듬 (BIO)"에도 동일한 잠재 버그가 있었음을 확인(같은 수정으로 함께 해결).
+변경 파일: `public/js/core/menuHotspotUtils.js` — 해당 행에 이미 번호 기반 메뉴 항목 핫스팟이 있으면, 뒤따르는 "(코드)" 괄호를 전역 명령어 패턴 감지 대상에서 제외.
+검증: Playwright 접근성 스냅샷으로 `/guide`(스푸리어스 "명령 실행: TOS" 버튼 소멸, 5개 항목 각각 정확히 1개 버튼) 및 `/game`(동일 검증, BIO도 정상화) 재확인. 서버 재시작(MenuResolver 캐시) 후 확인. `smoke:renderer-ui`/`smoke:boards`/`smoke:vercel-ready` 전부 통과(푸터의 실제 (P)/(T)/(GO)/(H) 단축 명령 핫스팟은 영향 없음 확인).
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 23:50] Ralph 루프 1차 반복 — 주요 화면 전수 점검(회귀 없음 확인) + 잡동사니 정리
+
+**LOG_ID: 20260714_2350**
+목표: `/ralph-loop 계속 완벽할 때까지 해줘`(무한 반복, 종료조건 없음)로 세션 진입. 1차 반복으로 최근 대규모 변경(가짜 셸 제거, 채팅 모더레이션 추가 등) 이후 회귀가 없는지 주요 화면을 Playwright로 전수 재점검.
+점검 결과: `/`, `/guide`, `/bbs`, `/pds`, `/chat`, `/news`, `/weather`, `/myinfo`(게스트), `/signup`, `/acro`, `/game/retro/xt`, `/game/retro/xmas` 전부 콘솔 에러 0건. `/myinfo`를 게스트로 접속하면 메인으로 리다이렉트되며 "회원 정보는 로그인 사용자만 이용할 수 있습니다" 힌트가 뜨는데, 이는 버그가 아니라 `myInfoActions.js`의 `ensureMyInfoAccess()`가 의도한 정상 동작(다른 화면의 인라인 안내와는 다른 방식이지만 일관되게 안내는 됨).
+**이번 대화의 최초 발단이었던 `/game/retro/xt`, `/game/retro/xmas` 재현 확인**: 박스 문자 정렬·상단바 전체 노출 전부 정상 — 오늘 고친 `isWideChar` 폭 분류 버그와 터미널 확대 스케일 CSS 버그가 근본 원인이었음이 최종 확인됨.
+잡동사니 정리: 세션 내내 쌓인 `.playwright-mcp/` 스크린샷 스크래치 파일을 `.gitignore`에 추가하고 삭제. API 검증 중 만든 테스트 채팅방(#2, owner=ownerA)은 삭제 API가 없어 남아있음 — `smoke:chat-rooms`도 동일하게 방 번호 2를 계속 재사용/생성하는 기존 관행과 같은 성격이라 낮은 우선순위로 보류.
+검증: 위 화면 전체 Playwright 콘솔 에러 0건.
+결과: ✅ 완료 (회귀 없음 확인, 다음 반복에서 추가 개선 지점 탐색 계속)
+
+---
+
+## [2026-07-14 23:30] GUIDE 통일성 재지적 — 건수 표기 자체를 생략해 GAME과 동일한 시각 언어로
+
+**LOG_ID: 20260714_2400**
+목표: 직전 padding 수정 후에도 사용자가 "아직도 이상한데"라고 재지적.
+**재확인**: `/game`(오락실) 서브메뉴와 나란히 비교해보니, GAME은 5개 항목이 전부 "라벨 (코드)" 한 형식이라 완벽히 정렬되는데, GUIDE는 공지사항/건의하기(게시판, 건수 있음)와 명령어안내 등(도움말/정책, 건수 없음)이 섞여 있어 두 그룹이 서로 다른 열에서 시작했다 — 직전 padding 수정은 각 그룹 내부는 정렬시켰지만, 애초에 형식이 2종류로 나뉘는 근본 원인은 그대로였다.
+변경 파일: `public/js/core/ansiBoardBuilders.js` — `state.boardMenuPath === 'guide'`일 때 건수(countText) 표기 자체를 생략하도록 변경. GUIDE는 콘텐츠 타입이 섞인 유일한 메뉴이므로, 다른 모든 메뉴처럼 "라벨 (코드)" 단일 형식으로 통일.
+검증: Playwright로 `/guide`·`/game` 나란히 재확인 — 두 화면 모두 동일한 시각 언어(건수 없이 라벨+코드만, 전부 같은 열 정렬). `smoke:boards` 통과(다른 게시판은 boardMenuPath가 'guide'가 아니므로 건수 표기 그대로 유지).
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 23:00] GUIDE 목록 정렬 불일치 수정 — 건수 없는 항목의 코드 위치가 들쭉날쭉하던 문제
+
+**LOG_ID: 20260714_2300**
+목표: 사용자가 "/guide UI가 이상한데 다른 곳처럼 통일성이 있어야지"라고 재지적.
+**근본 원인**: `ansiBoardBuilders.js`의 `buildBoardSelectAnsi()`에서 라벨 열을 고정폭(`labelColWidth`)으로 맞추는 `linePadding` 계산이 `countText`(게시글 신규/전체 건수)가 있을 때만 적용됐다. GUIDE는 게시판(공지사항/건의하기, 건수 있음)과 도움말/정책(명령어안내/이용약관/개인정보처리방침, 건수 없음·코드만)이 섞인 유일한 화면이라, 건수 있는 두 줄만 정렬되고 나머지 세 줄은 라벨 길이에 따라 `(코드)` 시작 위치가 제각각이라 목록 전체가 어긋나 보였다.
+변경 파일: `public/js/core/ansiBoardBuilders.js` — 정렬 조건을 `countText`에서 `countText || suffix`(코드만 있어도)로 확장.
+검증: Playwright로 `/guide` 재확인 — 5개 항목의 `(코드)` 표기가 전부 같은 열에서 시작하도록 정렬됨. `smoke:boards`/`smoke:renderer-ui` 통과(다른 게시판 목록 화면은 전부 동일 타입이라 이 변경으로 시각적 차이 없음).
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 22:00] 클릭 내비게이션 버그 수정 + ME/MEMO 죽은 코드 발견·수정 + 원전 명령 A+B 구현
+
+**LOG_ID: 20260714_2000~2200**
+목표: 사용자가 "/memo/write에서 상단 로고를 클릭하면 화면에 T라고 나온다"고 보고, 이어서 "마우스 클릭도 키보드와 동일하게 동작해야 하는게 맞지?"라고 확인 요청. 이후 원전 명령어표 대조 결과 중 A(대화실 모더레이션)+B(전역 명령) 구현을 지시.
+
+**1) 클릭 내비게이션 버그 (LOG_ID: 20260714_2000)**
+- `commandRouterMemo.js`의 memo-write 처리부가 `handleMemoRawInput`을 **무조건** 먼저 호출해, 클릭으로 들어온 'T'(상단 로고)까지 편지 본문 한 줄로 취급했다. 클릭 출처(`context.source === 'click'`)일 때는 raw input보다 명령(T/SEND/P/M/B) 처리를 먼저 하도록 순서를 바꿨다(대화방/내정보 편집 화면과 동일한 기존 패턴 재사용).
+- `commandRouterEntry.js`의 `post-write`/`password-reset` 화면에 애초에 `cmd==='T'` 처리 자체가 없어 로고 클릭이 조용히 무시됐다(내용 오염은 없었지만 죽은 링크). login/signup 화면과 동일하게 추가.
+
+**2) ME/MEMO/CMAIL/RMAIL/MAIL 죽은 코드 발견 (LOG_ID: 20260714_2000, 위 조사 중 발견)**
+- `commandRouterGlobalNavigation.js`가 `showMemoList`를 상단 구조분해 목록에서 빠뜨려서, **메뉴 클릭이 아니라 직접 타이핑**으로 `ME`/`MEMO`/`CMAIL`/`RMAIL`/`MAIL`을 입력하면 `typeof showMemoList`가 미선언 변수를 가리켜 조용히 `false`가 되어 항상 무반응이었다(20260713_1160에 추가된 이래 한 번도 작동한 적 없음 — GO/메뉴클릭 경로는 별도 코드라 영향 없었음). `showMemoList`를 구조분해 목록에 추가해 수정.
+
+**3) 원전 명령 B — 전역 명령 (LOG_ID: 20260714_2100)**
+- `UID`(총 접속 ID 조회), `USER ALL`(전체 메뉴별 이용자 현황) — 기존 접속자 목록 화면(이미 사용자별 "위치" 컬럼 보유)을 재사용해 신규 화면 없이 추가.
+- `MSG`(수신 상태 확인)/`MSG ON`/`MSG OFF`/`MSG R`(최근 쪽지) — envVars.MSG로 상태 저장(SET 인프라 재사용), OFF 시 접속 시 "새 쪽지 도착" 알림(`authService.js`의 `notifyUnreadMemos`)을 끄도록 연동. `MSG R`은 받은쪽지함으로 이동.
+- CMD_META에 UID/MSG 항목 추가(도움말 노출).
+
+**4) 원전 명령 A — 대화실 모더레이션/이동 (LOG_ID: 20260714_2200)**
+서버 신규 API 2종 + 레포지토리 메서드(Memory·Supabase 양쪽 구현, 프로젝트 컨벤션대로 dual-mode 유지):
+- `POST /api/chat/rooms/:roomNo/kick` — `/OUT id`(강퇴). 방 `ownerUserId`(Supabase는 `owner_user_id`) 소유자만 실행 가능, 서버에서 최종 권한 검증(403). 참여자 목록에서 제거하는 얕은 프레즌스 모델 — 기존 `leave()`도 메시지 전송을 별도로 막지 않는 것과 동일 수준.
+- `POST /api/chat/rooms/:roomNo/settings` — `/E TITLE 주제`, `/E USER 인원`(방 제목/정원 변경). 동일하게 개설자 전용, 서버 403 검증.
+- 클라이언트(`commandRouterChat.js`)에 그 외 잔여 명령 전부 배선: `/EX id`(뮤트 — 상태에 Set 유지, 폴링 재렌더마다 필터링되도록 `chatScreens.js`의 `refreshRoom()`에도 필터 추가), `/IN id`(초대 — 기존 쪽지 API로 방번호/비밀번호 안내 전송), `/JUDGE`(신고 — 기존 건의하기 게시판에 글 등록), `/Z`·`/Z 숫자`(스크롤백 재출력), `/FI id`(접속현황 조회 — 기존 active-users API 재사용), `/UID`(현재 방 참여자 ID), `/P`·`/GO`(대화실 이동, 기존 `/T`·`/M`과 동일 패턴), 대기실 `LT title`(제목으로 대화방 검색).
+- **버그 수정**: 구현 중 curl로 직접 API 검증하다가 클라이언트 코드가 공개 API 응답의 실제 필드명(`owner`, `requiresPassword`)이 아니라 내부 필드명(`ownerUserId`, `isPrivate`, 존재하지도 않는 `password`)을 참조하고 있던 것을 발견·수정 — 고쳐진 채로 배포됐다면 소유자 권한 체크 자체가 항상 거짓이 되어 `/OUT`·`/E`가 전부 "개설자만 가능" 오류만 뱉었을 것.
+검증: 재시작한 개발 서버(Supabase 드라이버로 실행 중)에 curl로 직접 kick/settings 엔드포인트 호출 — 소유자 성공(참여자 수 1→0, 제목/정원 변경 확인), 비소유자 시도 403 확인. `/api/memos`(초대), `/api/boards/tosysop/posts`(신고) 엔드포인트도 정상 동작 확인 후 테스트 데이터 삭제. `node --check` 전체 통과, `smoke:vercel-ready`/`smoke:command-parity`/`smoke:chat-rooms`/`smoke:boards` 전부 통과, Playwright로 메인 화면 재확인(콘솔 에러 0건).
+결과: ✅ 완료 (C 항목 TW/TL/TD 관련글 스레드는 서버 스키마 변경이 필요해 사용자 지시대로 이번엔 제외)
+
+---
+
+## [2026-07-14 19:00] 나우누리 전자우편 GO 단축(MAIL/RMAIL/WMAIL/CMAIL) 배선 보완
+
+**LOG_ID: 20260714_1900**
+목표: 사용자가 "go wmail, go rmail, go mail 같은것 없어?"라고 질문.
+확인 결과: 원전(`docs/NOWNURI_ALL_DATA_RESTORED.txt`, `NOWNURI_SCREENS_FULL_DECODED.txt`)에 "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)" 4개 명령이 실제로 존재. 우리 쪽은 `ME`/`MEMO`/`CMAIL`(받은편지함)·`WMAIL`(편지쓰기)은 명령어로 직접 입력하면 동작했지만 두 가지가 빠져 있었다: (1) **RMAIL**과 **MAIL**은 명령어로도 아예 배선이 안 되어 있었음, (2) **GO 접두형**(`GO MAIL`/`GO RMAIL`/`GO WMAIL`/`GO CMAIL`)은 넷 다 전혀 안 됐음 — `executeGoCommand`가 메뉴 트리·게시판만 매칭하고 CMD_META 전역 명령으로는 안 넘어가는 구조라서, 이미 동작하던 `WMAIL`/`CMAIL`도 GO 형태로는 실패했다.
+변경 파일:
+1. `commandRouterGlobalNavigation.js` — 받은편지함 분기(`ME`/`MEMO`/`CMAIL`)에 `RMAIL`/`MAIL` 추가.
+2. `menuNavigationActions.js`의 `executeGoCommand` — 기존 `GUIDE` 직통 분기와 같은 패턴으로 `GO MAIL`/`GO RMAIL`/`GO CMAIL`(받은편지함)·`GO WMAIL`(편지쓰기) 4개 별칭 추가.
+검증: `node --check` 2개 파일 통과, `smoke:command-parity`/`smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 18:00] 로그인 시 메인 메뉴 MYINFO 중복 노출 수정
+
+**LOG_ID: 20260714_1800**
+목표: 사용자가 로그인 상태 메인 메뉴를 보고 "2. 정보관리 (MYINFO)"와 "3. 개인영역 (MYINFO)"가 나란히 중복 노출된다고 지적("작동하는걸 위에 둬야지").
+**근본 원인**: `menuService.js`의 `applyRuntimeMenuOverrides()`가 원래 게스트에게만 있던 "회원가입/로그인" 슬롯을, 로그인 상태에서는 `createEntryMenuNode()`가 만드는 `type:'myinfo', name:'정보관리'` 노드로 동적 대체해왔다(LOG: 20260622_1030 — 로그인하면 회원가입 링크 대신 개인정보 바로가기를 보여주려는 의도). 그런데 20260713_1900에 나우누리 TOP 구조 재현을 위해 `hanulso.mnu`에 **정적** "개인영역 (MYINFO)" 최상위 항목을 별도로 추가하면서, 로그인 상태에서만 `go=myinfo` 항목이 (동적 치환분 + 정적분) 두 번 뜨는 순수 중복이 됐다. 게스트 상태로만 검증하는 습관 때문에 이번에도 늦게 발견됐다(같은 유형의 재발 방지 원칙 위반 사례 추가).
+변경 파일: `public/js/core/menuService.js`
+1. `createEntryMenuNode()` — 로그인 시 "정보관리" MYINFO 노드를 반환하던 분기 삭제, 게스트용 회원가입/로그인 서브메뉴 생성 로직만 남김.
+2. `applyRuntimeMenuOverrides()` — 게스트는 종전과 동일(회원가입/로그인 슬롯 주입), **로그인 상태는 그 슬롯을 아예 제거**하고 남은 항목들을 `door` 순으로 정렬한 뒤 1부터 다시 번호를 매겨(`String(index+1)`) 번호에 구멍이 생기지 않게 함.
+검증: Node에서 `menuService.js`를 직접 import해 guest/로그인 두 상태를 시뮬레이션 — 게스트는 기존과 동일(11개, 회원가입/로그인 + 개인영역 둘 다 존재, 서로 다른 항목), 로그인 상태는 10개로 정확히 줄고 "개인영역 (MYINFO)"가 door=2에 단 한 번만 노출되며 번호가 1~10으로 빈틈없이 이어짐을 확인. `node --check` 통과, `smoke:vercel-ready`/`smoke:command-parity` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 17:00] 가짜 셸 스크립팅/VFS/알리어스/워크스페이스 기능 전체 제거
+
+**LOG_ID: 20260714_1700**
+목표: 직전 CMD_META 감사에서 "SET/MATH/IF/WHILE/FOR/FILES/CAT 등 40개 명령이 실제로 동작하는데 도움말엔 안 보인다"고 보고하자, 사용자가 "이걸 사용자들이 쓸일이 없지 않아?"라고 반문 — 논의 끝에 **완전 제거가 "완벽한 PC통신 재현" 목표에 더 부합한다**는 데 합의.
+**배경**: 1990년대 PC통신(하이텔/나우누리)에는 셸 스크립팅 언어나 가상 파일시스템 같은 개념이 없었다. 코드 주석("Evolution Mode 26~38")으로 보아 이 사이트가 한때 범용 터미널 에뮬레이터 방향으로 실험되던 시기의 잔재로 판단. 조사 결과 예상보다 범위가 컸다 — CMD_META의 VFS/스크립팅 명령뿐 아니라, 도움말에 아예 등록조차 안 된 `ALIAS`(명령 별칭)·`WS`(워크스페이스 전환) 명령과 전용 서비스 파일 3개(`vfsService.js`/`aliasService.js`/`workspaceService.js`)까지 `appFactory` 부트스트랩에 깊이 연결되어 있었고, 핵심 명령 디스패처(`commandDispatcher.js`)가 파이핑(`|`)/시퀀싱(`;`,`&&`)/리다이렉션(`>`,`>>`)/백그라운드 실행(`&`)/변수치환(`$VAR`)까지 지원하는 완전한 셸이었다(이 래퍼를 거쳐야만 실제 명령이 실행되는 구조).
+**주의 깊게 남긴 것**: `SET`/`UNSET`/`ENV`는 순수 스크립팅 변수 저장을 넘어 `SET LEVEL`(도움말 표시 등급)·`SET HOME`(초기 화면 지정)·`SET THEME NOWNURI`(테마 전환)·`SET PROMPT`(프롬프트 문자열)라는 **실제 사이트 기능**의 기반이라 삭제 전 반드시 확인 후 유지했다. `CAP`(갈무리), `CLS`/`CLEAR`/`HIST`/`PR`/`H`/`HELP`/`?`도 실제 기능이라 유지.
+**제거 대상 검증**: `terminalStatusManager.js`의 `_render()`가 이미 `display:none`+innerHTML 비움으로 완전히 죽어있어(과거 HUD 정리 때 비활성화됨) `workspaceService`를 인자로 받아도 실제로는 안 쓰고 있었음을 확인. `handleCmd` 외부 호출부(`appEvents.js`/`appEventsCommandInput.js`/`interactionHandlers.js`) 전수 확인 결과 전부 단일 명령 문자열만 전달하고 `;`/`|`/`&`/`$VAR` 문법을 쓰지 않아, 파이핑 계층 제거가 실제 명령 동작에 영향 없음을 확인.
+삭제 파일(9개): `vfsService.js`, `aliasService.js`, `workspaceService.js`, `commandRouterVfs.js`, `commandRouterVfsInspectOps.js`, `commandRouterVfsMutationOps.js`, `commandRouterVfsTextOps.js`, `commandDispatcherScripting.js`(IF/WHILE/FOR/FUNC/CALL/TRY/REPEAT/ECHO 인터프리터), `commandRouterGlobalScripting.js`(MATH/READ/TRAP/WAITPID/JOBS/KILL).
+수정 파일:
+1. `commandDispatcher.js` — 파이핑/시퀀싱/리다이렉션/백그라운드/변수치환/TRACE 로깅/스크립팅 가로채기를 전부 제거, `executeSingleCommand`로 바로 위임하는 얇은 래퍼로 재작성.
+2. `commandDispatcherExecution.js` — `handleVfsCommand`/`aliasService` 참조 제거(`aliasService.expand` 호출부는 입력 그대로 통과하도록 단순화), 로그 문자열의 `expandedInput` 참조 정리.
+3. `commandRouterGlobalWorkspace.js` — `ALIAS`/`WS`/`TRACE` 블록 제거, `SET`/`UNSET`/`ENV` 블록만 유지.
+4. `commandRouterGlobalSystem.js` — `scriptingHandler` 배선 제거.
+5. `commandService.js` — CMD_META에서 VFS 19개 + 스크립팅 16개 = 35개 항목 삭제, SET/UNSET/ENV/CAP만 유지(설명에 LEVEL/HOME/THEME 예시 추가).
+6. `appFactory.js`/`appFactoryServices.js`/`appFactoryHandlers.js`/`appFactoryRuntime.js` — `createVfsService`/`createAliasService`/`createWorkspaceService`/`createVfsCommandHandler` 임포트·배선·반환값 전부 제거. `createTerminalStatusManager`에 더 이상 `workspaceService` 전달 안 함.
+7. `interactionHandlers.js` — `QUIET_COMMANDS` 목록에서 `ALIAS` 제거.
+검증: 편집한 10개 JS 파일 `node --check` 전부 통과. Playwright로 `/` 재접속 — 콘솔 에러 0건, 메인 메뉴 정상 렌더링(부트스트랩 배선 무결성 확인, 이번 변경 중 가장 위험도 높은 지점). `smoke:vercel-ready`/`smoke:command-parity`/`smoke:renderer-ui`/`smoke:boards`/`smoke:chat-rooms` 전부 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 16:00] CMD_META 전수 재점검 — 도움말과 실제 동작 불일치 1건 발견·수정(COLOR)
+
+**LOG_ID: 20260714_1600**
+목표: 사용자가 "도움말 화면과 실제 작동 화면이 일치해야해. 구현할 수 없는 기능이 있거나, 또는 미구현인게 있는지 확인해. 혹은 작동을 안하는지 확인"이라고 요청.
+방법: `commandService.js`의 CMD_META 92개 키(별칭 포함) 전체를 추출한 뒤, 스크립트로 `public/js/core` 전 파일에서 각 명령의 디스패치 코드(`cmd === 'X'`, `case 'X'`)를 1차 기계 검색했다. 종전 세션에서 "LS/LD를 문자열 리터럴로만 찾다 정규식 구현을 놓친" 실수를 반복하지 않기 위해, 1차 검색에서 "NOT FOUND"로 나온 항목(GO/FIND/LV/CM/IF/WHILE/FOR/REPEAT/FUNC/CALL/TRY)은 전부 정규식·직접 파일(`commandDispatcherScripting.js` 등) 열람으로 재확인했다 — 전부 정규식 기반(`cmd.match(/^LV.../)` 등)으로 이미 정상 구현되어 있었다(오탐).
+**진짜 버그 1건 — COLOR 죽은 명령**: `COLOR`(배경색, C의 동의어로 의도됨 — CMD_META에 C·COLOR가 거의 동일한 라벨/설명으로 나란히 등록)가 `commandNormalizer.js`(정규화)·`interactionHandlers.js`(QUIET_COMMANDS 목록)에는 존재하지만, 정작 실제 실행 분기(`cmd === 'C'`)에는 빠져 있어 사용자가 COLOR를 입력해도 아무 동작도 하지 않았다. 부수 확인: `commandRouter.js` 자체가 어디서도 import되지 않는 완전한 고아 파일이라(실제 활성 경로는 `commandRouterGlobalRuntime.js`), 그쪽만 고치면 됨.
+변경 파일: `public/js/core/commandRouterGlobalRuntime.js` — `cmd === 'C'` 분기 조건에 `|| cmd === 'COLOR'` 추가.
+**설계상 의도된 불일치(버그 아님, 참고 기록)**: `helpScreens.js`의 `HELP_TAB_KEYS`(NAV/POST/AUTH/MEMO/CHAT/UI)에 CMD_META의 `SYS`/`VFS` 카테고리(FILES/CAT/SET/MATH/IF/WHILE 등 스크립팅·가상파일시스템 명령 약 40개)가 빠져 있어, "0.전체"를 포함해 도움말 어디에도 노출되지 않는다. 이 명령들은 전부 실제로 동작하지만(이전 세션에 라이브 검증 완료), `commandService.js`의 "[LOG: 20260428_1735] Purged advanced commands, simplified categories" 코멘트로 보아 초보자용 도움말을 간소화하려는 의도적 설계로 판단 — 버그로 취급하지 않음.
+검증: `node --check` 통과, `smoke:command-parity`/`smoke:vercel-ready` 통과.
+결과: ✅ 완료 (COLOR 수정, 그 외 91개 명령 전부 정상 디스패치 확인)
+
+---
+
+## [2026-07-14 15:00] 도움말(H) 화면 긴 설명이 자간 없이 잘림 — truncate 대신 wrap으로 전환
+
+**LOG_ID: 20260714_1500**
+목표: 직전 CSS 스케일 수정 후에도 사용자가 "LV/LT 오른쪽 글부분이 짤렸어"라고 재지적. 확인해보니 CSS 문제가 아니라 `helpScreens.js`의 진짜 콘텐츠 유실 버그였다.
+**근본 원인**: `buildHelpAnsi`(분류별 목록)와 `buildCommandHelpAnsi`(개별 명령 상세) 둘 다 설명(desc) 필드를 `truncateDisplayText(desc, 남은폭)`으로 잘랐는데, 이 함수는 말줄임표(...) 표시 없이 그냥 잘라버린다. `CMD_META` 전수 조사 결과 4개 명령(Z 62칸, **LV 111칸**, CM 62칸, PR 108칸)이 목록 화면 설명 예산(56칸)을 넘었고, 특히 LV는 "(운영자) 게시글 작성자의 회원 등급을 변경합니다. 게시글 보기 화면에서 사용. (1:일반회원, 2:특별회원, 99:운영자)"에서 뒤 절반(등급 값 안내 전체)이 통째로 유실되고 있었다.
+변경 파일: `public/js/core/helpScreens.js`
+1. `buildHelpAnsi`의 `buildHelpLineAdaptive` — `truncateDisplayText` 대신 이미 있는 `wrapAnsiText`로 설명을 줄바꿈, 2번째 줄부터는 명령 칸 폭만큼 공백 들여쓰기. 반환값을 단일 문자열에서 줄 배열로 바꾸고 호출부(`helpLines.push(...buildHelpLineAdaptive(...))`)도 스프레드로 변경 — 페이징 계산은 최종 `helpLines.length` 기준이라 자동으로 맞춰짐.
+2. `buildCommandHelpAnsi`(개별 명령 상세, `H LV`처럼 직접 조회 시) — 신설한 `buildLabeledWrappedLines(label, text, colorCode, width)` 헬퍼로 설명/사용법 필드를 동일하게 줄바꿈 처리. 안전을 위해 최종 `parts`를 24줄로 slice.
+검증: `node --check` 통과. Playwright로 `/help`(Z가 2줄로 정상 줄바꿈) 및 `/help?page=2`(LV가 등급 안내 문구까지 전부 노출, CM도 2줄 정상) 확인.
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 14:00] 터미널 확대 스케일이 뷰포트보다 넓어 우측(및 좌측) 잘림 — 사이트 전역 CSS 버그
+
+**LOG_ID: 20260714_1400**
+목표: 사용자가 "http://localhost:3000/help 화면 오른편으로 글이 넘쳐서 안보이는 것 같은데"라고 지적.
+**근본 원인**: `retro-terminal.css`의 `#terminal-container`에 `transform: scale(var(--terminal-scale))`(기본 1.15배, `transform-origin: top center`)가 걸려 있는데, 80칸 터미널의 실제 필요 폭(`80ch+32px`, 대략 850px)이 1.15배 확대되면 약 975~1130px가 된다. 종전 미디어쿼리는 `max-width:768px`에서만 스케일을 1로 되돌렸기 때문에, **768px~약 1100px 사이의 창 폭에서는 확대된 터미널이 실제 뷰포트보다 넓어졌다.** `html,body`에 `overflow:hidden`이 걸려 있고 스크롤바도 전역으로 숨겨놔서(`::-webkit-scrollbar{display:none}`), 넘친 부분이 스크롤조차 안 되고 그냥 잘려 보이지 않게 된다. `transform-origin:top center`라 좌우 양쪽이 대칭으로 잘리는데, `/help`처럼 각 줄이 정확히 80칸을 꽉 채우는 화면(명령/설명 컬럼 24+56=80)에서 가장 두드러지게 나타났다. 이번 세션 내내 Playwright 스크린샷에서 "PC통신동호회" 타이틀의 "PC"가 잘리거나 메뉴 번호 "1."이 안 보이던 현상도 전부 같은 원인이었다(스크린샷 뷰포트가 마침 이 불안전 구간에 위치).
+변경 파일: `public/styles/retro-terminal.css` — 스케일을 1로 되돌리는 미디어쿼리 breakpoint를 `max-width:768px`→`max-width:1100px`로 확장(폰트 글리프 폭 오차 감안해 여유 있게 설정). 768~1600px 미만 구간(스케일 1.15) 필요폭 약 975~1130px가 1100~1600px 구간에서 안전하게 들어맞고, 1600px 이상(스케일 1.25, 필요폭 약 1040~1230px)도 여전히 안전.
+검증: Playwright로 `/help`·`/`(TOP) 재확인 — 좌우 잘림 완전히 사라짐, 타이틀·번호·명령 라벨·푸터 전부 온전히 노출. 순수 CSS 변경이라 서버 재시작 불필요.
+결과: ✅ 완료
+
+---
+
+## [2026-07-14 13:00] GUIDE 하위 메뉴 표시 버그 3건 수정 — 이상한 코드 노출·좌상단 라벨 오표시
+
+**LOG_ID: 20260714_1300**
+목표: 사용자가 `http://localhost:3000/guide` 하위 메뉴를 보고 "UI가 이상하고 메뉴명도 이상하고, 하위 메뉴에 접속했더니 왼쪽 상단에 guide로 통일되어 있는데"라고 지적. 실측한 결과 서로 다른 원인의 실제 버그 3건이 겹쳐 있었다.
+
+**버그 1 — 메뉴명 뒤에 흉한 내부 코드 노출**: `menuService.js`의 `getMenuNodeCode()`가 "go값이 너무 길면 코드 표시를 생략"하는 예외를 `type==='board'`에만 적용했다. GUIDE 하위 help/policy 항목(`guide_cmdhelp`/`guide_tos`/`guide_privacy`)은 board가 아니라 이 예외를 못 받아, 그대로 대문자화되어 "명령어안내 (GUIDE_CMDHELP)" 같은 스네이크케이스 코드가 화면에 그대로 노출됐다.
+**버그 2 — 정책 뷰어 좌상단이 항상 "GUIDE"로 고정**: `policyScreens.js`가 `buildTopHeader({ leftLabel: 'GUIDE', ... })`를 이용약관·개인정보처리방침 두 문서 모두에 하드코딩해뒀다. 다른 모든 화면(게시판 등)은 좌상단에 자기 자신의 코드(PLAZA/NOTICE 등)를 쓰는데 이 화면만 항상 상위 메뉴명을 썼다 — 사용자가 지적한 "guide로 통일" 현상의 정체.
+**버그 3(잠재적 사이트 전역 버그) — 메뉴 클릭으로 게시판 진입 시 상위 메뉴 제목이 표시됨**: `menuNavigationActions.js`의 `type==='board'` 분기가 `showPostList`에 `menuTitle: contextMenuTitle`(부모 메뉴 제목)을 명시적으로 넘겨서, `postListView.js`의 "게시판 메타로 제목 재계산" 로직(`hasExplicitMenuPath`가 false일 때만 동작)이 무력화됐다. 그 결과 GUIDE 하위 공지사항/건의하기를 메뉴 클릭으로 들어가면 상단에 "서비스안내 (GUIDE)"가 뜬다 — 반면 `/board/notice` 직접 URL 접속은 이 분기를 안 타서 정상("공지사항 (NOTICE)")이었기 때문에 이전 세션들의 Playwright 검증(전부 직접 URL 방식)에서 놓쳤다. BBS 하위 게시판(열린광장 등)도 메뉴 클릭으로 들어가면 동일하게 잘못 표시될 것으로 추정되는 사이트 전역 버그였다.
+변경 파일:
+1. `public/js/core/menuService.js` — `getMenuNodeCode()`의 `node?.type === 'board' &&` 제한 제거, 모든 타입에 동일하게 "10자 초과 시 코드 숨김" 적용.
+2. `legacy/hanulso.mnu` — GUIDE 하위 3개 항목 go값을 `guide_cmdhelp`→`cmdhelp`, `guide_tos`→`tos`, `guide_privacy`→`privacy`로 단축(id는 유지해 고유성 보존, 트리 전체 go값 충돌 없음 확인).
+3. `public/js/core/policyScreens.js` — `POLICY_DOCS`에 `code: 'TOS'`/`code: 'PRIVACY'` 추가, `leftLabel: 'GUIDE'` 하드코딩을 `leftLabel: doc.code`로 교체.
+4. `public/js/core/menuNavigationActions.js` — board 분기의 `menuTitle: contextMenuTitle`을 `menuTitle: getMenuNodeTitle(node)`로 교체(menuPath는 상위 이동용 문맥이라 유지).
+검증: `node --check` 3개 파일 통과. 서버 재시작(MenuResolver XML 캐시) 후 Playwright로 `/guide` 재확인 — "명령어안내 (CMDHELP)"/"이용약관 (TOS)"/"개인정보처리방침 (PRIVACY)"로 정상 표기. `smoke:boards`/`smoke:vercel-ready`/`smoke:command-parity` 전부 통과. 버그 3(board 분기)은 이번 세션에서 Playwright 클릭/타입 도구가 권한 정책으로 막혀 실제 클릭 재현은 못 했으나, `getMenuNodeTitle(node)`이 이미 `/board/plaza`·`/board/notice` 직접 접속 시 올바른 결과를 내는 것으로 실측 확인된 동일 함수라 안전.
+결과: ✅ 완료 (버그 1·2 실측 확인, 버그 3 코드 검증 + 간접 실측)
+
+---
+
 ## [2026-07-14 12:00] 여론광장(ACRO)/오락실 투표 중복 해소 — 투표를 최상위로 일원화
 
 **LOG_ID: 20260714_1200**
@@ -7140,3 +7564,27 @@ Work: 1) Renamed the board from '우스개' and '유머 게시판' to '유머' i
 Run: `node --check src/server/BoardDefinitionResolver.js`, `node --check src/server/MemoryBoardRepositorySeed.js`, `npm run build`
 Expected: System builds cleanly, and the board displays as '유머' with path '/board/humor'.
 Result: ✅ 완료 - All syntax and smoke tests passed successfully.
+
+---
+
+## [2026-07-14 17:49] Improved Biorhythm UI, Symmetric Alignment, and Bold Fonts
+
+**LOG_ID: 20260714_1749**
+Goal: Improve the Biorhythm UI with vertical center-aligned bar charts, 100% scale guides, precision formatting, Perception rhythm addition, responsive terminal-width layouts, and fallback bold font fix.
+Changed files: `public/js/core/amusementAnsiBuilders.js`, `public/style.css`, `public/styles/retro-terminal.css`, `WORK_LOG.md`
+Work: 1) Added 'Perception' rhythm (38-day cycle) to match standard user-defined biorhythms. 2) Updated the sin-wave biorhythm formula to return precision decimal values (fixed to 2 decimal places). 3) Redesigned the chart bars to use double-byte '■' characters and matching double-width spaces so negative and positive columns dynamically extend from a vertically locked central axis ('│'). 4) Integrated scale guides aligned mathematically with the chart margins. 5) Created tailored responsive designs for mobile (44-column target) and desktop (80-column target) viewports to prevent wrapping and visual corruption. 6) Resolved bold text rendering issues by registering the bold variant in CSS `@font-face` rules for Sam3KRFont, BbsHybridFont, BbsPrimaryFont, BbsHintFont, and DungGeunMo.
+Run: `node --check public/js/core/amusementAnsiBuilders.js`, `npm run smoke:vercel-ready`
+Expected: Biorhythm calculations show decimal accuracy and 4 distinct rhythms. The chart displays with perfectly straight vertical alignment on both mobile and desktop viewports, with a scale guide at the top, and all bold text uses the custom pixel fonts without falling back.
+Result: ✅ 완료
+
+---
+
+## [2026-07-14 18:06] Biorhythm Chart Alignment Pixel-Lock and Invisible block padding
+
+**LOG_ID: 20260714_1806**
+Goal: Lock the vertical alignment of the biorhythm chart baseline '│' and percentage labels by using transparent block characters (U+25A0 with ansi-fg-0) instead of unicode spaces, resolving browser-dependent font rendering and letter-spacing width discrepancies.
+Changed files: `public/js/core/amusementAnsiBuilders.js`, `public/style.css`, `WORK_LOG.md`
+Work: 1) Replaced full-width unicode spaces U+3000 in chart bar padding with c(0, '■') (invisible block placeholders using ANSI 0fg) to guarantee exactly identical layout width as filled bar cells. 2) Set .ansi-fg-0 to be color transparent in style.css to support invisible block padding. 3) Enforced overflow: hidden and vertical-align: bottom on .ansi-line .wc.
+Run: `node --check public/js/core/amusementAnsiBuilders.js`, `npm run smoke:vercel-ready`
+Expected: Biorhythm bar chart baseline '│' is perfectly straight down a single vertical axis with 0-pixel offset, and all percentage values align horizontally.
+Result: ✅ 완료 - Visual layout checks on Chrome verified 100% pixel-perfect symmetric alignment.

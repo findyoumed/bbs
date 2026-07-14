@@ -1,6 +1,7 @@
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 import { DOOR_ART } from './doorArtAssets.js';
 
+// [LOG_ID: 20260714_1749] Improved Biorhythm UI with Perception rhythm, clean vertical alignment, scale guide, and responsive layouts.
 // [LOG_ID: 20260623_1300] Restored GAME builders for biorhythm, fortune, and MBTI.
 const MBTI_TYPES = [
   ['ISTJ', '청렴결백한 논리주의자', '사실에 근거해 책임감 있게 일을 처리하는 현실주의자입니다.'],
@@ -26,27 +27,95 @@ export function createAmusementAnsiBuilders(deps) {
   const { ANSI_BOLD, ANSI_RESET, ansiColor, buildTopHeader, fitCell, wrapAnsiText } = createAnsiBuilderUtils(deps);
   const c = (tone, text) => `${ansiColor(tone)}${text}${ANSI_RESET}`;
   const dateText = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const rhythm = (days, period) => Math.round(Math.sin((Math.PI * 2 * days) / period) * 100);
-  const row = (name, value) => {
-    const count = Math.round(Math.abs(value) / 10);
-    const bar = value >= 0 ? `│${'█'.repeat(count)}` : `${'█'.repeat(count)}│`;
+  const rhythm = (days, period) => Number((Math.sin((Math.PI * 2 * days) / period) * 100).toFixed(2));
+  
+  const row = (name, value, isMobile = false) => {
+    const limit = isMobile ? 33.3 : 20;
+    const count = Math.round(Math.abs(value) / limit);
+    const maxCount = isMobile ? 3 : 5;
+    
+    // [LOG: 20260714_1806] 빈 눈금 셀은 .ansi-fg-0(투명)이 적용된 '■' 기호로 대체하여 
+    // 브라우저 텍스트 자간/렌더링 엔진 편차와 무관하게 100% 동일한 물리 픽셀 너비를 유지하도록 강제한다.
+    const emptyColor = 0;
+    const fillColor = value >= 0 ? 11 : 13;
+    
+    const fillStr = '■';
+    const emptyStr = '■';
+    
+    let leftBar = '';
+    let rightBar = '';
+    
+    if (value > 0) {
+      leftBar = c(emptyColor, emptyStr.repeat(maxCount));
+      rightBar = c(fillColor, fillStr.repeat(count)) + c(emptyColor, emptyStr.repeat(maxCount - count));
+    } else if (value < 0) {
+      leftBar = c(emptyColor, emptyStr.repeat(maxCount - count)) + c(fillColor, fillStr.repeat(count));
+      rightBar = c(emptyColor, emptyStr.repeat(maxCount));
+    } else {
+      leftBar = c(emptyColor, emptyStr.repeat(maxCount));
+      rightBar = c(emptyColor, emptyStr.repeat(maxCount));
+    }
+    
+    // 기준선 '│'는 채우기 컬러와 동일하게 렌더링
+    const bar = `${leftBar}${c(fillColor, '│')}${rightBar}`;
+    
     const status = value >= 80 ? '최고조 ▲' : value <= -80 ? '최저조 ▼' : Math.abs(value) < 15 ? '전환기 ◇' : value > 0 ? '상승 △' : '하강 ▽';
-    return `  ${c(14, fitCell(name, 4))} ${c(value >= 0 ? 11 : 13, fitCell(bar, 14))} ${c(15, `${value > 0 ? '+' : ''}${value}%`)} ${c(8, status)}`;
+    const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+    
+    return `  ${c(14, fitCell(name, isMobile ? 3 : 4))} ${bar} ${c(15, fitCell(formattedValue, 8))} ${c(8, status)}`;
   };
 
   function buildBiorhythmIntroAnsi() {
-    return [buildTopHeader(['오락실', '바이오리듬']), c(15, '  태어난 날부터의 주기로 오늘의 컨디션을 가늠해 봅니다.'), c(8, '  신체 23일 · 감성 28일 · 지성 33일 주기'), '', c(14, '  생년월일을 입력하세요.'), c(11, '  입력 예) 1990-01-01 또는 19900101')].join('\n');
+    return [
+      buildTopHeader(['오락실', '바이오리듬']), 
+      c(15, '  태어난 날부터의 주기로 오늘의 컨디션을 가늠해 봅니다.'), 
+      c(8, '  신체 23일 · 감성 28일 · 지성 33일 · 지각 38일 주기'), 
+      '', 
+      c(14, '  생년월일을 입력하세요.'), 
+      c(11, '  입력 예) 1990-01-01 또는 19900101')
+    ].join('\n');
   }
+  
   function buildBiorhythmAnsi(birth, target = new Date()) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const days = Math.round((target.getTime() - birth.getTime()) / 86400000);
-    const parts = [buildTopHeader(['오락실', '바이오리듬']), c(11, `${ANSI_BOLD}  ${dateText(birth)} 생${ANSI_RESET}  ${ansiColor(8)}오늘로 ${days.toLocaleString()}일째${ANSI_RESET}`), '', row('신체', rhythm(days, 23)), row('감성', rhythm(days, 28)), row('지성', rhythm(days, 33)), '', c(14, '  ── 향후 7일 추이 ──')];
+    
+    const scaleGuide = isMobile 
+      ? c(8, '      -100% 0     +100%') 
+      : c(8, '       -100%     0         +100%');
+      
+    const parts = [
+      buildTopHeader(['오락실', '바이오리듬']), 
+      c(11, `${ANSI_BOLD}  ${dateText(birth)} 생${ANSI_RESET}  ${ansiColor(8)}오늘로 ${days.toLocaleString()}일째${ANSI_RESET}`), 
+      '', 
+      scaleGuide,
+      row('신체', rhythm(days, 23), isMobile), 
+      row('감성', rhythm(days, 28), isMobile), 
+      row('지성', rhythm(days, 33), isMobile), 
+      row('지각', rhythm(days, 38), isMobile), 
+      '', 
+      c(14, '  ── 향후 7일 추이 ──')
+    ];
+    
     for (let i = 0; i < 7; i += 1) {
       const date = new Date(target.getTime() + i * 86400000);
       const d = days + i;
-      parts.push(c(i === 0 ? 15 : 8, `  ${dateText(date).slice(5)}  신체 ${String(rhythm(d, 23)).padStart(4)}  감성 ${String(rhythm(d, 28)).padStart(4)}  지성 ${String(rhythm(d, 33)).padStart(4)}`));
+      const phy = rhythm(d, 23);
+      const emo = rhythm(d, 28);
+      const int = rhythm(d, 33);
+      const per = rhythm(d, 38);
+      
+      if (isMobile) {
+        const formatVal = (v) => `${v >= 0 ? '+' : ''}${Math.round(v)}%`;
+        parts.push(c(i === 0 ? 15 : 8, `  ${dateText(date).slice(5)}  신:${formatVal(phy)} 감:${formatVal(emo)} 지:${formatVal(int)} 각:${formatVal(per)}`));
+      } else {
+        const formatVal = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+        parts.push(c(i === 0 ? 15 : 8, `  ${dateText(date).slice(5)}  신체: ${fitCell(formatVal(phy), 8)}  감성: ${fitCell(formatVal(emo), 8)}  지성: ${fitCell(formatVal(int), 8)}  지각: ${fitCell(formatVal(per), 8)}`));
+      }
     }
     return parts.join('\n');
   }
+  
   function buildFortuneIntroAnsi() {
     return [buildTopHeader(['오락실', '오늘의 운세']), c(15, '  태어난 해의 띠와 오늘의 일진을 풀어 운세를 봅니다.'), c(8, '  십이지의 삼합·육합·육충·육해 관계를 사용합니다.'), '', c(14, '  태어난 연도(4자리)를 입력하세요.'), c(11, '  입력 예) 1990')].join('\n');
   }
@@ -60,7 +129,12 @@ export function createAmusementAnsiBuilders(deps) {
     return parts.join('\n');
   }
   function buildMbtiListAnsi() {
-    const parts = [buildTopHeader(['오락실', 'MBTI']), c(15, '  성격유형을 선택하면 특징을 보여드립니다.'), c(8, '  번호(1~16) 또는 유형코드(예: INFP)를 입력하세요.'), ''];
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    const parts = [buildTopHeader(['오락실', 'MBTI']), c(15, '  성격유형을 선택하면 특징을 보여드립니다.')];
+    wrapAnsiText('번호(1~16) 또는 유형코드(예: INFP)를 입력하세요.', targetCols - 2)
+      .forEach((line) => parts.push(c(8, `  ${line}`)));
+    parts.push('');
     MBTI_TYPES.forEach(([code, nick], index) => parts.push(`  ${c(14, `${String(index + 1).padStart(2, ' ')}.`)} ${c(11, fitCell(code, 5))}${c(15, nick)}`));
     return parts.join('\n');
   }
@@ -70,17 +144,27 @@ export function createAmusementAnsiBuilders(deps) {
     return MBTI_TYPES[index] ? { code: MBTI_TYPES[index][0], nick: MBTI_TYPES[index][1], desc: MBTI_TYPES[index][2] } : null;
   }
   function buildMbtiDetailAnsi(type) {
-    return [buildTopHeader(['오락실', `MBTI ${type.code}`]), c(11, `${ANSI_BOLD}  ${type.code}${ANSI_RESET}  ${ansiColor(14)}${type.nick}${ANSI_RESET}`), c(8, `  ${'─'.repeat(52)}`), ...wrapAnsiText(type.desc, 70).map((line) => c(15, `  ${line}`)), '', c(8, '  다른 유형을 보려면 번호/코드를 입력하세요.')].join('\n');
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    return [buildTopHeader(['오락실', `MBTI ${type.code}`]), c(11, `${ANSI_BOLD}  ${type.code}${ANSI_RESET}  ${ansiColor(14)}${type.nick}${ANSI_RESET}`), c(8, `  ${'─'.repeat(targetCols - 28)}`), ...wrapAnsiText(type.desc, targetCols - 10).map((line) => c(15, `  ${line}`)), '', c(8, '  다른 유형을 보려면 번호/코드를 입력하세요.')].join('\n');
   }
-  // [LOG_ID: 20260711_1400] 추억의 접속화면 — olddos-bbs(hanulso) txt/door 원본 아트 목록/뷰어.
   function buildRetroArtListAnsi() {
-    const rows = DOOR_ART.map((item, index) => `  ${c(14, `${index + 1}.`)} ${c(15, fitCell(item.name, 24))} ${c(8, item.desc)}`);
-    return [buildTopHeader(['오락실', '추억의 접속화면']), c(15, '  90년대 PC통신·도스 시절 접속 화면을 원본 그대로 보여드립니다.'), c(8, `  (하늘소·나우누리 원본 수록분, ${DOOR_ART.length}종)`), '', ...rows, '', c(11, '  번호를 입력하세요.')].join('\n');
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    const nameWidth = isMobile ? 14 : 24;
+    const descWidth = isMobile ? 0 : 44;
+    const rows = DOOR_ART.map((item, index) => {
+      const nameCell = `  ${c(14, `${index + 1}.`)} ${c(15, fitCell(item.name, nameWidth))}`;
+      return descWidth > 0 ? `${nameCell} ${c(8, fitCell(item.desc, descWidth))}` : nameCell;
+    });
+    const introLines = wrapAnsiText('90년대 PC통신·도스 시절 접속 화면을 원본 그대로 보여드립니다.', targetCols - 2)
+      .map((line) => c(15, `  ${line}`));
+    const subLines = wrapAnsiText(`(하늘소·나우누리 원본 수록분, ${DOOR_ART.length}종)`, targetCols - 2)
+      .map((line) => c(8, `  ${line}`));
+    return [buildTopHeader(['오락실', '추억의 접속화면']), ...introLines, ...subLines, '', ...rows, '', c(11, '  번호를 입력하세요.')].join('\n');
   }
   function buildRetroArtViewAnsi(item) {
-    // [LOG_ID: 20260713_1250] 하단 설명줄 제거 — 아트 최대 18줄 + 상단바 6줄 = 24줄 예산에
-    // 맞춰 세로 잘림(스크롤)을 없앤다. 이동 안내는 힌트바가 담당한다.
-    return [buildTopHeader(['추억의 접속화면', item.name]), item.art].join('\n');
+    return [buildTopHeader({ leftLabel: 'GAME', centerLabel: item.name }), item.art].join('\n');
   }
   return { buildBiorhythmIntroAnsi, buildBiorhythmAnsi, buildFortuneIntroAnsi, buildFortuneAnsi, buildMbtiListAnsi, buildMbtiDetailAnsi, findMbtiType, buildRetroArtListAnsi, buildRetroArtViewAnsi };
 }

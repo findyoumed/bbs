@@ -17,12 +17,27 @@
     font-style: normal;
     font-display: block;
 }
+@font-face {
+    font-family: 'Sam3KRFont';
+    src: url('/fonts/Sam3KRFont.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+    font-display: block;
+}
 
 @font-face {
     font-family: 'BbsHybridFont';
     src: url('/fonts/DungGeunMo.woff') format('woff');
     unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F;
     font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+@font-face {
+    font-family: 'BbsHybridFont';
+    src: url('/fonts/DungGeunMo.woff') format('woff');
+    unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F;
+    font-weight: bold;
     font-style: normal;
     font-display: block;
 }
@@ -34,11 +49,25 @@
     font-style: normal;
     font-display: block;
 }
+@font-face {
+    font-family: 'BbsPrimaryFont';
+    src: url('/fonts/DungGeunMo.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+    font-display: block;
+}
 
 @font-face {
     font-family: 'BbsHintFont';
     src: url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+@font-face {
+    font-family: 'BbsHintFont';
+    src: url('/fonts/DungGeunMo.woff') format('woff');
+    font-weight: bold;
     font-style: normal;
     font-display: block;
 }
@@ -1057,6 +1086,8 @@ body.theme-nownuri .write-field textarea {
     display: inline-block;
     width: 2ch;
     text-align: center;
+    overflow: hidden;
+    vertical-align: bottom;
 }
 
 #terminal-screen .retro-topbar--ansi {
@@ -1541,6 +1572,10 @@ body[data-print-view="true"] .ansi-screen {
 .ansi-fg-8, .ansi-fg-9, .ansi-fg-10, .ansi-fg-11, .ansi-fg-12, .ansi-fg-13, .ansi-fg-14, .ansi-fg-15,
 .ansi-black, .ansi-red, .ansi-green, .ansi-yellow, .ansi-blue, .ansi-magenta, .ansi-cyan, .ansi-white { 
     color: #ffffff !important; 
+}
+
+.ansi-fg-0 { 
+    color: transparent !important; 
 }
 
 .ansi-bg-0 { background-color: transparent !important; }
