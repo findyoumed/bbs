@@ -356,12 +356,34 @@ export function createBrowseCommandHandler(deps) {
         return true;
       }
 
-      const ltMatch = cmd.match(/^LT\s+(.+)$/);
+      // [LOG_ID: 20260718_1900] 제목 검색: LT/GL/SUBJ [검색어]
+      const ltMatch = cmd.match(/^(?:LT|GL|SUBJ)\s+(.+)$/i);
       if (ltMatch) {
         await showPostList(state.board.id, 1, {
           menuPath: state.boardMenuPath,
           menuTitle: state.boardMenuTitle,
           searchParams: { lt: ltMatch[1].trim() }
+        });
+        return true;
+      }
+
+      // [LOG_ID: 20260718_1900] 내용 검색: GA/BODY [검색어]
+      const lcMatch = cmd.match(/^(?:GA|BODY)\s+(.+)$/i);
+      if (lcMatch) {
+        await showPostList(state.board.id, 1, {
+          menuPath: state.boardMenuPath,
+          menuTitle: state.boardMenuTitle,
+          searchParams: { lc: lcMatch[1].trim() }
+        });
+        return true;
+      }
+
+      // [LOG_ID: 20260718_1900] 새 글 보기: NEW/NW (최근 3일 게시글 필터링)
+      if (cmd === 'NEW' || cmd === 'NW') {
+        await showPostList(state.board.id, 1, {
+          menuPath: state.boardMenuPath,
+          menuTitle: state.boardMenuTitle,
+          searchParams: { recent: '3' }
         });
         return true;
       }
@@ -491,15 +513,23 @@ export function createBrowseCommandHandler(deps) {
         return true;
       }
 
-      if (cmd === 'LT' || cmd === 'LI') {
+      // [LOG_ID: 20260718_1900] 검색 모드 진입 명령어 확장
+      if (cmd === 'LT' || cmd === 'GL' || cmd === 'SUBJ' || cmd === 'LI' || cmd === 'GA' || cmd === 'BODY') {
+        const type = (cmd === 'GL' || cmd === 'SUBJ') ? 'lt' : (cmd === 'GA' || cmd === 'BODY') ? 'lc' : cmd.toLowerCase();
         state._pendingSearch = {
-          type: cmd.toLowerCase(),
+          type,
           boardId: state.board.id,
           menuPath: state.boardMenuPath,
           menuTitle: state.boardMenuTitle
         };
-        setHint(cmd === 'LT' ? UI_TEXT.SEARCH_TITLE_PROMPT : UI_TEXT.SEARCH_AUTHOR_PROMPT);
-        setPrompt(cmd === 'LT' ? UI_TEXT.SEARCH_KEYWORD : UI_TEXT.SEARCH_AUTHOR_ID);
+        const hintText = (type === 'lt') ? UI_TEXT.SEARCH_TITLE_PROMPT 
+                       : (type === 'lc') ? UI_TEXT.SEARCH_CONTENT_PROMPT 
+                       : UI_TEXT.SEARCH_AUTHOR_PROMPT;
+        const promptText = (type === 'lt') ? UI_TEXT.SEARCH_KEYWORD 
+                         : (type === 'lc') ? UI_TEXT.SEARCH_KEYWORD 
+                         : UI_TEXT.SEARCH_AUTHOR_ID;
+        setHint(hintText);
+        setPrompt(promptText);
         return true;
       }
 

@@ -52,6 +52,11 @@ function applySupabaseSearch(queryBuilder, capabilities, search) {
         return queryBuilder.or(`title.ilike.%${escaped}%,content.ilike.%${escaped}%,${nickNameField}.ilike.%${escaped}%`);
       }
       return queryBuilder.or(`title.ilike.%${escaped}%,content.ilike.%${escaped}%,${userIdField}.ilike.%${escaped}%,${nickNameField}.ilike.%${escaped}%`);
+    case 'recent': {
+      const days = Number(query) || 3;
+      const cutoff = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString();
+      return queryBuilder.gte('created_at', cutoff);
+    }
     default:
       return queryBuilder;
   }

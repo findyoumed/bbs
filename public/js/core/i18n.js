@@ -35,6 +35,7 @@ export const UI_TEXT = {
   
   SEARCH_TITLE_PROMPT: '제목 검색어를 입력해 주세요. (예: LT 안녕)',
   SEARCH_AUTHOR_PROMPT: '작성자 아이디를 입력해 주세요. (예: LI admin)',
+  SEARCH_CONTENT_PROMPT: '내용 검색어를 입력해 주세요. (예: GA 안녕)',
   SEARCH_KEYWORD: '검색어 >>',
   SEARCH_AUTHOR_ID: '아이디 >>',
 

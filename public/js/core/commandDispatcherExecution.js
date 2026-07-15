@@ -33,12 +33,17 @@ function normalizePendingSearchInput(searchType, rawInput) {
   }
 
   if (searchType === 'lt') {
-    const match = input.match(/^LT\s+(.+)$/i);
+    const match = input.match(/^(?:LT|GL|SUBJ)\s+(.+)$/i);
     return match ? match[1].trim() : input;
   }
 
   if (searchType === 'li') {
     const match = input.match(/^LI\s+(.+)$/i);
+    return match ? match[1].trim() : input;
+  }
+
+  if (searchType === 'lc') {
+    const match = input.match(/^(?:GA|BODY)\s+(.+)$/i);
     return match ? match[1].trim() : input;
   }
 

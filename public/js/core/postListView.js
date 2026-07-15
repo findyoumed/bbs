@@ -106,6 +106,8 @@ export function createPostListView(deps) {
     let displayTitle = state.boardMenuTitle;
     if (searchParams.lt) displayTitle += ` [제목검색: ${searchParams.lt}]`;
     if (searchParams.li) displayTitle += ` [작성자검색: ${searchParams.li}]`;
+    if (searchParams.lc) displayTitle += ` [내용검색: ${searchParams.lc}]`;
+    if (searchParams.recent) displayTitle += ` [새글만보기: ${searchParams.recent}일]`;
     // [LOG_ID: 20260713_1020] 상단바에 주제어검색 텍스트 추가
     if (searchParams.k) displayTitle += ` [주제어검색: ${searchParams.k}]`;
 

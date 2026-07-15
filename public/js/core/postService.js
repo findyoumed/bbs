@@ -36,6 +36,8 @@ export function createPostService(deps) {
     let key = `${boardId}_${page}`;
     if (searchParams.lt) key += `_lt_${searchParams.lt}`;
     if (searchParams.li) key += `_li_${searchParams.li}`;
+    if (searchParams.lc) key += `_lc_${searchParams.lc}`;
+    if (searchParams.recent) key += `_recent_${searchParams.recent}`;
     return key;
   }
 
@@ -53,6 +55,8 @@ export function createPostService(deps) {
     let url = `/api/boards/${encodeURIComponent(boardId)}?page=${page}&pageSize=15`;
     if (searchParams.lt) url += `&lt=${encodeURIComponent(searchParams.lt)}`;
     if (searchParams.li) url += `&li=${encodeURIComponent(searchParams.li)}`;
+    if (searchParams.lc) url += `&lc=${encodeURIComponent(searchParams.lc)}`;
+    if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
 
     const data = normalizePostListResponse(await apiFetch(url), page);
     

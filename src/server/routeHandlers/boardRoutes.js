@@ -86,6 +86,7 @@ class BoardRouter extends BaseRouter {
       lc: this.requestUrl.searchParams.get('lc') || '',
       ln: this.requestUrl.searchParams.get('ln') || '',
       la: this.requestUrl.searchParams.get('la') || '',
+      recent: this.requestUrl.searchParams.get('recent') || '',
       context
     });
 

@@ -30,7 +30,7 @@ function normalizeSearchOptions(options = {}) {
   if (directMode && directQuery) {
     search = { mode: directMode, query: directQuery };
   } else {
-    const modes = ['lt', 'li', 'lc', 'ln', 'la'];
+    const modes = ['lt', 'li', 'lc', 'ln', 'la', 'recent'];
     for (const mode of modes) {
       const query = String(options[mode] || '').trim().slice(0, MAX_QUERY_LENGTH);
       if (query) {
@@ -95,6 +95,11 @@ function filterPostsBySearch(posts, search) {
                containsIgnoreCase(post.content, query) || 
                containsIgnoreCase(post.userId, query) || 
                containsIgnoreCase(post.nickName, query);
+      case 'recent': {
+        const days = Number(query) || 3;
+        const ts = Date.now() - (days * 24 * 60 * 60 * 1000);
+        return new Date(post.createdAt || post.created_at).getTime() >= ts;
+      }
       default:
         return true;
     }
