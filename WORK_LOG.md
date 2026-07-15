@@ -28,6 +28,14 @@
 - 보류: 원본 "방장이 나가면 방 자동 종료"는 미구현 유지 — 우리 모델은 방장을 userId로 저장하는데 **게스트는 모두 userId 'guest'라 방장 판별이 안 돼**(게스트 방에서 아무나 나가도 닫히는 위험), sessionKey 기반 소유권 추적이라는 더 큰 변경 + 다중 사용자 검증이 필요. 우리 chat footer는 자동 종료를 약속하지 않으므로 위반은 아니다.
 - 검증: 스모크 7종 통과, 브라우저 로비 렌더 정상(게스트: 방 목록 정렬 표 + P/T/GO/H). 추가 변경 파일: `public/js/core/commandFooterText.js`.
 
+**후속2(20260718_1800) — "방장이 나가면 방 자동 종료" 구현(사용자 요청 "원본과 같이")**:
+직전에 보류했던 원본 규칙을 **sessionKey 기반 소유권**으로 안전하게 구현. 원본은 방을 방장의 프로세스/포트에 묶는데, 우리 등가물은 sessionKey다 — userId로 판별하면 게스트가 전부 'guest'라 오판되지만, sessionKey는 세션마다 고유해 충돌이 없다.
+- **서버(양 드라이버)**: 방에 `ownerSessionKey` 추가. 개설자(userId===ownerUserId)의 **첫 입장**에서 한 번만 기록(개설 직후 개설자가 가장 먼저 입장하므로 게스트라도 보장). `leave`에서 그 세션이 나가면 방을 통째로 삭제(기본방 #1은 제외). Memory=`this.rooms` 필터, Supabase=`chat_rooms` DB delete + 인메모리 Map 정리. (`ChatRoomRepositoryMemory.js`, `ChatRoomRepositorySupabase.js`)
+- **클라이언트**: 종전엔 `/Q`만 leave를 호출하고 `/T·/M·/P·/GO`·로고 클릭은 폴링만 끄고 나가 방장이 그 경로로 나가면 방이 안 닫혔다. `leaveCurrentRoom()` 헬퍼로 **모든 퇴장 경로가 leave 통지**를 보내게 통일. (`commandRouterChat.js`)
+- **남은 참여자 이탈**: 방장이 방을 닫으면 남은 참여자의 폴링이 messages 404를 받는다 — 이를 감지해 "방장이 나가 대화방이 종료되었습니다" 안내와 함께 대기실로 내보낸다. (`chatScreens.js`)
+- **검증(실 DB E2E, 2세션)**: 방장(세션 OWNER)+참여자(세션 GUEST2) → 참여자 퇴장 시 방 유지 → 방장 퇴장 시 자동 종료 확인. **게스트 충돌 안전성**: 두 게스트(둘 다 userId 'guest', 세션 GA/GB) → 비방장 GB 퇴장 시 방 유지, 방장 GA 퇴장 시에만 종료 확인. 기본방 #1은 leave해도 보호됨 확인. **브라우저**: 방 개설(개설자 입장) → `/T` 퇴장 → 방 자동 종료 확인. `smoke:chat-rooms`(새 규칙 반영해 참여자→방장 순 퇴장으로 갱신)/`smoke:renderer-ui`/`smoke:command-parity`/`smoke:menu-wiring`/`smoke:boards`/`smoke:vercel-ready`/`qa:final` 전부 통과.
+- 추가 변경 파일: `src/server/ChatRoomRepositoryMemory.js`, `src/server/ChatRoomRepositorySupabase.js`, `public/js/core/commandRouterChat.js`, `public/js/core/chatScreens.js`, `scripts/smoke-chat-rooms.js`.
+
 ---
 
 ## [2026-07-18 14:00] 3원전(하이텔·나우누리·천리안) 전 화면 브라우저 스윕 — 버그 3건 발견·수정

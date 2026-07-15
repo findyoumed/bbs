@@ -28,33 +28,62 @@ async function main() {
     userId: 'guest',
     nickName: '손님'
   });
-  const sessionKey = `smoke-session-${Date.now()}`;
+  const sessionOwner = `smoke-owner-${Date.now()}`;
+  const sessionParticipant = `smoke-participant-${Date.now()}`;
 
   try {
-    const joined = await repository.join(created.no, {
-      sessionKey,
+    // Owner joins first to lock ownerSessionKey
+    const joinedOwner = await repository.join(created.no, {
+      sessionKey: sessionOwner,
       password: '1234'
     }, {
       userId: 'guest',
       nickName: '손님'
     });
+
+    // Participant joins next
+    const joinedParticipant = await repository.join(created.no, {
+      sessionKey: sessionParticipant,
+      password: '1234'
+    }, {
+      userId: 'guest',
+      nickName: '손님'
+    });
+
     const afterJoin = await repository.list();
-    const left = await repository.leave(created.no, { sessionKey });
-    const afterLeave = await repository.list();
+
+    // Participant leaves (room should remain)
+    const leftParticipant = await repository.leave(created.no, { sessionKey: sessionParticipant });
+    const afterParticipantLeave = await repository.list();
+
+    // Owner/Host leaves (room should be auto-closed)
+    const leftOwner = await repository.leave(created.no, { sessionKey: sessionOwner });
+    const afterOwnerLeave = await repository.list();
 
     assert(created.no > 0, 'created room should expose room number');
     assert(created.roomId.startsWith('room-') || created.roomId === 'lobby', 'created room should expose public room key');
     assert(created.requiresPassword === true, 'created room should require password');
-    assert(joined.userCount === 1, 'joined room should report hybrid occupancy count');
-    assert(joined.authUserCount === 0, 'guest join should not increment auth occupancy');
-    assert(joined.guestSessionCount === 1, 'guest join should increment guest session count');
-    assert(joined.sessionCount === 1, 'guest join should increment session count');
-    assert(joined.countMode === 'hybrid-occupancy', 'joined room should expose hybrid occupancy mode');
-    assert(left.userCount === 0, 'leave should clear hybrid occupancy count');
-    assert(left.guestSessionCount === 0, 'leave should clear guest session count');
-    assert(left.sessionCount === 0, 'leave should clear session count');
+    
+    assert(joinedOwner.userCount === 1, 'owner join should report 1 user');
+    assert(joinedParticipant.userCount === 2, 'participant join should report 2 users');
+    assert(joinedParticipant.guestSessionCount === 2, 'two guest sessions should be recorded');
+    
+    assert(leftParticipant.userCount === 1, 'participant leave should leave 1 user');
+
     assert(afterJoin.some((room) => room.no === created.no), 'created room should be present in supabase-backed list');
-    assert(afterLeave.some((room) => room.no === created.no), 'room metadata should persist after leave');
+    assert(afterParticipantLeave.some((room) => room.no === created.no), 'room should persist after non-owner leaves');
+    assert(!afterOwnerLeave.some((room) => room.no === created.no), 'room should be auto-deleted after owner leaves');
+
+    // Verify listMessages throws a 404 for the closed room
+    let throwCheck = false;
+    try {
+      await repository.listMessages(created.no);
+    } catch (e) {
+      if (e.status === 404) {
+        throwCheck = true;
+      }
+    }
+    assert(throwCheck, 'listMessages on deleted room should throw a 404 error');
 
     console.log(JSON.stringify({
       ok: true,
@@ -63,7 +92,8 @@ async function main() {
       createdRoomNo: created.no,
       createdRoomId: created.roomId,
       afterJoinCount: afterJoin.length,
-      afterLeaveCount: afterLeave.length
+      afterParticipantLeaveCount: afterParticipantLeave.length,
+      afterOwnerLeaveCount: afterOwnerLeave.length
     }, null, 2));
   } finally {
     await client

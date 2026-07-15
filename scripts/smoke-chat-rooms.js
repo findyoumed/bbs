@@ -173,14 +173,17 @@ async function main() {
       fullErrorStatus = error.status || 0;
     }
 
+    // [LOG_ID: 20260718_1800] olddos 원본 규칙 "방장이 나가면 방 자동 종료" 반영. session-1이
+    // 개설자(userId 'guest' === owner)의 첫 입장이라 방장 세션이다. 참여자(session-2) 퇴장을
+    // 먼저 확인(방 유지)하고, 방장(session-1) 퇴장을 마지막에 둬 방 자동 종료를 검증한다.
     await request(base, `/api/chat/rooms/${createdRoom.no}/leave`, {
       method: 'POST',
-      body: { sessionKey: 'session-1' }
+      body: { sessionKey: 'session-2' }
     });
     const listedAfterOneLeave = await request(base, '/api/chat/rooms');
     await request(base, `/api/chat/rooms/${createdRoom.no}/leave`, {
       method: 'POST',
-      body: { sessionKey: 'session-2' }
+      body: { sessionKey: 'session-1' }
     });
     const listedAfterAllLeave = await request(base, '/api/chat/rooms');
 
@@ -205,8 +208,8 @@ async function main() {
     assert(Array.isArray(listedMessages) && listedMessages.length === 1, 'chat message list should return sent messages');
     assert(listedMessages[0].content === '안녕하세요 채팅 스모크', 'chat message list should preserve message content');
     assert(fullErrorStatus === 409, 'full room should reject extra users');
-    assert(listedAfterOneLeave.some((room) => room.no === createdRoom.no && room.userCount === 1 && room.guestSessionCount === 1), 'room should remain while users stay');
-    assert(!listedAfterAllLeave.some((room) => room.no === createdRoom.no), 'empty ephemeral room should be removed');
+    assert(listedAfterOneLeave.some((room) => room.no === createdRoom.no && room.userCount === 1 && room.guestSessionCount === 1), 'room should remain after a non-owner participant leaves');
+    assert(!listedAfterAllLeave.some((room) => room.no === createdRoom.no), 'room should auto-close when the owner session leaves');
 
     console.log(JSON.stringify({
       ok: true,

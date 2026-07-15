@@ -18,6 +18,24 @@ export function createChatCommandHandler(deps) {
     state
   } = deps;
 
+  // [LOG_ID: 20260718_1800] 대화방 퇴장 공통 처리 — 폴링 중단 + 서버에 leave 통지.
+  // leave 통지가 있어야 방장 세션 퇴장 시 서버가 방을 자동 종료할 수 있다(원본 규칙).
+  // 종전엔 /Q 계열만 leave를 호출하고 /T·/M·로고 클릭은 폴링만 끄고 나가, 방장이 그 경로로
+  // 나가면 방이 안 닫혔다. 모든 퇴장 경로가 이 헬퍼를 쓴다.
+  async function leaveCurrentRoom() {
+    if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+    if (state._chatRoomId) {
+      try {
+        await apiFetch(`/api/chat/rooms/${encodeURIComponent(state._chatRoomId)}/leave`, {
+          method: 'POST',
+          body: JSON.stringify({ sessionKey: state._chatSessionKey })
+        });
+      } catch (error) {
+        // 퇴장 통지 실패는 화면 이동을 막지 않는다.
+      }
+    }
+  }
+
   // [LOG_ID: 20260718_1600] 비공개방 입장 공통 처리(olddos-bbs 원본: 방번호 입력 → 비번 프롬프트 → 접속).
   // 내가 개설자면 비번 없이 바로 들어가고, 아니면 비번 단계로 넘긴다.
   async function enterRoom(room) {
@@ -203,7 +221,7 @@ export function createChatCommandHandler(deps) {
       // [LOG: 20260707_1224] 상단바 로고 등 클릭으로 들어온 'T'는 메시지가 아니라 초기화면 이동 의도다.
       // (기존에는 "T"라는 메시지가 대화방에 전송되는 결함이 있었다. /T와 동일하게 처리한다.)
       if (context?.source === 'click' && cmd === 'T') {
-        if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+        await leaveCurrentRoom();
         await showMain();
         return true;
       }
@@ -240,19 +258,13 @@ export function createChatCommandHandler(deps) {
         const slashCmd = cmd.substring(1); // '/' 제외한 명령
 
         if (slashCmd === 'Q' || slashCmd === 'QUIT' || slashCmd === 'OUT' || slashCmd === 'EXIT' || slashCmd === 'BYE' || slashCmd === 'X') {
-          if (state._chatPollTimer) clearInterval(state._chatPollTimer);
-          if (state._chatRoomId) {
-            await apiFetch(`/api/chat/rooms/${encodeURIComponent(state._chatRoomId)}/leave`, {
-              method: 'POST',
-              body: JSON.stringify({ sessionKey: state._chatSessionKey })
-            });
-          }
+          await leaveCurrentRoom();
           await showChatLobby();
           return true;
         }
 
         if (slashCmd === 'T' || slashCmd === 'TOP' || slashCmd === 'M') {
-          if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+          await leaveCurrentRoom();
           await showMain();
           return true;
         }
@@ -427,12 +439,12 @@ export function createChatCommandHandler(deps) {
 
         // /P, /GO - 대화실에서 이동 명령(/T, /M은 위에서 이미 처리)
         if (slashCmd === 'P') {
-          if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+          await leaveCurrentRoom();
           await showChatLobby();
           return true;
         }
         if (slashCmd === 'GO' || slashCmd.startsWith('GO ')) {
-          if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+          await leaveCurrentRoom();
           await showMain();
           return true;
         }

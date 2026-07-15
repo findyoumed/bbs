@@ -69,6 +69,11 @@ class MemoryChatRoomRepository {
       greeting: greeting.slice(0, 120),
       ownerUserId: normalizeText(context.userId, 'guest'),
       ownerName: normalizeText(context.nickName, '손님'),
+      // [LOG_ID: 20260718_1800] olddos-bbs 원본 규칙 "방장이 나가면 방 자동 종료" 재현.
+      // 원본은 방을 방장의 프로세스/포트에 묶어, 그 세션이 끊기면 방이 닫힌다. 우리 등가물은
+      // sessionKey다. userId로 방장을 판별하면 게스트가 전부 'guest'라 오판되므로, 개설자가
+      // 개설 직후 첫 입장할 때(join) 그 sessionKey를 ownerSessionKey로 못박는다.
+      ownerSessionKey: '',
       maxUser: normalizeMaxUser(payload.maxUser, 10),
       password,
       isPrivate,
@@ -113,6 +118,13 @@ class MemoryChatRoomRepository {
       room.participants.push(participant);
     }
 
+    // [LOG_ID: 20260718_1800] 방장 세션 못박기 — 개설자(userId === ownerUserId)의 첫 입장에서
+    // 한 번만 기록한다. 개설 직후 개설자가 가장 먼저 입장하므로(create→showChatRoom) 게스트라도
+    // 최초 입장자=개설자가 보장된다. 이미 정해졌으면 덮어쓰지 않는다.
+    if (!room.ownerSessionKey && participant.userId === room.ownerUserId) {
+      room.ownerSessionKey = sessionKey;
+    }
+
     return publicRoom(room, summarizeParticipantCounts(room.participants));
   }
 
@@ -120,6 +132,15 @@ class MemoryChatRoomRepository {
     this._cleanup();
     const room = this._findRoom(roomNo);
     const sessionKey = payload.sessionKey ? normalizeSessionKey(payload.sessionKey) : '';
+
+    // [LOG_ID: 20260718_1800] 방장 세션이 나가면 방을 통째로 종료한다(원본 규칙). 남은 참여자는
+    // 다음 폴링에서 방이 사라진 것을 보고 대기실로 돌아간다.
+    if (sessionKey && room.ownerSessionKey && sessionKey === room.ownerSessionKey) {
+      this.messagesByRoomNo.delete(Number(room.no || 0));
+      this.rooms = this.rooms.filter((entry) => entry.no !== room.no);
+      return publicRoom({ ...room, participants: [], _closed: true }, summarizeParticipantCounts([]));
+    }
+
     if (sessionKey) {
       room.participants = room.participants.filter((entry) => entry.sessionKey !== sessionKey);
     }

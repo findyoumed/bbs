@@ -13,6 +13,7 @@ export function createChatScreens(deps) {
     getMenuNodeByKey,
     renderScreenSequential,
     screenEl,
+    setHint,
     setPrompt,
     state,
     updateURL
@@ -161,7 +162,21 @@ export function createChatScreens(deps) {
         clearInterval(state._chatPollTimer);
         return;
       }
-      await syncChatMessages({ silent: true, throwOnError: false });
+      // [LOG_ID: 20260718_1800] 방장이 나가면 서버가 방을 삭제한다 — 남은 참여자의 폴링은
+      // messages 조회에서 404를 받는다. 이를 감지해 "방장이 나가 대화방이 종료되었습니다"
+      // 안내와 함께 대기실로 내보낸다(olddos 원본: 방장 퇴장 시 방 자동 종료).
+      try {
+        await syncChatMessages({ silent: true, throwOnError: true });
+      } catch (error) {
+        if (/찾을 수 없|not found|404/i.test(String(error?.message || ''))) {
+          clearInterval(state._chatPollTimer);
+          state._chatRoomId = null;
+          await showChatLobby();
+          setHint('방장이 나가 대화방이 종료되었습니다.');
+          return;
+        }
+        // 그 외 일시적 오류는 무시하고 폴링을 계속한다.
+      }
       await refreshRoom();
     }, 3000);
   }
