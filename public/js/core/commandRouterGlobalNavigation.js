@@ -23,7 +23,8 @@ export function createGlobalNavigationCommandHandler(deps) {
     showConfirm,
     showMemoList,
     showMemoWrite,
-    settingsService
+    settingsService,
+    apiFetch
   } = deps;
 
   function setDefaultPrompt() {
@@ -378,6 +379,65 @@ export function createGlobalNavigationCommandHandler(deps) {
       state._exitConfirm = true;
       setHint('* 끝내시려면 \'Y\' 를 누르고 엔터키를 누르십시오');
       setPrompt('-> ');
+      return true;
+    }
+
+    // [LOG_ID: 20260718_1950] MSG (쪽지수신상태 토글 및 MSG R 최근쪽지출력) 명령어 구현
+    if (cmd === 'MSG' || cmd.startsWith('MSG ')) {
+      const parts = rawCmd.trim().split(/\s+/);
+      const arg = (parts[1] || '').toUpperCase();
+      
+      if (arg === 'R') {
+        if (state.user?.isGuest) {
+          setHint('로그인 후 이용할 수 있는 기능입니다.');
+          return true;
+        }
+        setHint('최근 쪽지를 가져오는 중입니다..');
+        apiFetch('/api/memos?box=inbox')
+          .then((res) => {
+            const memos = (Array.isArray(res) ? res : []).slice(0, 10);
+            if (memos.length > 0) {
+              const listStr = memos.map(m => `[${m.senderUserId}] ${String(m.content || '').replace(/\n/g, ' ').slice(0, 40)}`).join('\n');
+              setHint(`[최근 받은 쪽지 10개]\n${listStr}`);
+            } else {
+              setHint('받은 쪽지가 없습니다.');
+            }
+          })
+          .catch((err) => {
+            setHint(`쪽지 목록 가져오기 실패: ${err.message}`);
+          });
+        return true;
+      }
+
+      if (!state.envVars) state.envVars = {};
+      const current = state.envVars.MSG || 'ON';
+      let next = current === 'ON' ? 'OFF' : 'ON';
+      if (arg === 'ON' || arg === 'OFF') {
+        next = arg;
+      }
+      state.envVars.MSG = next;
+      if (deps.settingsService) {
+        deps.settingsService.saveEnvVars(state.envVars);
+      }
+      setHint(`[쪽지수신] 상태가 [${next}]으로 설정되었습니다.`);
+      return true;
+    }
+
+    // [LOG_ID: 20260718_1950] ANSI (ANSI 화면 제어코드 표현 설정) 명령어 구현
+    if (cmd === 'ANSI' || cmd.startsWith('ANSI ')) {
+      const parts = rawCmd.trim().split(/\s+/);
+      const arg = (parts[1] || '').toUpperCase();
+      if (!state.envVars) state.envVars = {};
+      const current = state.envVars.ANSI || 'ON';
+      let next = current === 'ON' ? 'OFF' : 'ON';
+      if (arg === 'ON' || arg === 'OFF') {
+        next = arg;
+      }
+      state.envVars.ANSI = next;
+      if (deps.settingsService) {
+        deps.settingsService.saveEnvVars(state.envVars);
+      }
+      setHint(`[ANSI 제어] 상태가 [${next}]으로 설정되었습니다.`);
       return true;
     }
 

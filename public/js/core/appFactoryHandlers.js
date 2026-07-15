@@ -156,7 +156,8 @@ export function createAppFactoryHandlers(deps) {
     // settingsService.saveEnvVars 경로 — 서비스 자체가 주입되지 않아 저장이 항상 건너뛰어졌다.
     settingsService: services.settingsService,
     performanceService: services.performanceService,
-    handleCmd: handleCmdRef
+    handleCmd: handleCmdRef,
+    apiFetch: services.apiFetch
   };
 
   return {
