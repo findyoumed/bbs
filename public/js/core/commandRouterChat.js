@@ -296,10 +296,23 @@ export function createChatCommandHandler(deps) {
           return true;
         }
 
-        if (slashCmd.startsWith('FI ')) {
-          const targetId = rawCmd.substring(4).trim();
+        if (slashCmd === 'USER') {
+          try {
+            const users = await apiFetch('/api/system/active-users');
+            const ids = (Array.isArray(users) ? users : []).map((u) => u.userId).filter(Boolean);
+            setHint(ids.length ? `현재 전체 접속자 ID: ${ids.join(', ')} (총 ${ids.length}명)` : '접속자 정보를 확인할 수 없습니다.');
+          } catch (e) {
+            setHint('접속자 목록 조회에 실패했습니다.');
+          }
+          return true;
+        }
+
+        const whoMatch = slashCmd.match(/^(FI|WHO|WH|PF)\s+(.+)$/i);
+        if (whoMatch) {
+          const cmdName = whoMatch[1].toUpperCase();
+          const targetId = whoMatch[2].trim();
           if (!targetId) {
-            setHint('사용법: /FI id');
+            setHint(`사용법: /${cmdName} id`);
             return true;
           }
           try {
@@ -310,6 +323,27 @@ export function createChatCommandHandler(deps) {
               : `[${targetId}]님의 접속 정보를 찾을 수 없습니다.`);
           } catch (e) {
             setHint('조회에 실패했습니다.');
+          }
+          return true;
+        }
+
+        if (slashCmd.startsWith('LT ')) {
+          const query = rawCmd.substring(4).trim().toLowerCase();
+          if (!query) {
+            setHint('사용법: /LT 단어');
+            return true;
+          }
+          try {
+            const rooms = await apiFetch('/api/chat/rooms');
+            const matched = (Array.isArray(rooms) ? rooms : []).filter(r => r.title.toLowerCase().includes(query));
+            if (matched.length > 0) {
+              const listStr = matched.map(r => `#${r.no} ${r.title} (${r.userCount}/${r.maxUser})`).join(', ');
+              setHint(`검색된 대화방: ${listStr}`);
+            } else {
+              setHint('검색된 대화방이 없습니다.');
+            }
+          } catch (e) {
+            setHint('대화방 검색에 실패했습니다.');
           }
           return true;
         }
