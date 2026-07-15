@@ -72,7 +72,12 @@ export function createChatScreens(deps) {
       screenEl,
       renderScreenSequential,
       afterBodyRender: async () => {
-        await applyCommandFooter(getMenuNodeByKey('chat')?.footer, getCommandFooterText('chat'));
+        // [LOG_ID: 20260718_1700] 로비 힌트바에 개설(O:방만들기)이 안 보이던 문제. 원인: txt 애셋
+        // (cmd_chat_footer.txt="번호/명령(H,P,T,GO,HI,Z,X)", O 없음)이 chatLobby 카테고리를
+        // 덮어썼다. 애셋 대신 카테고리를 직접 써서 로그인 사용자에게 방만들기(O)가 노출되게 한다
+        // (O는 login 전용이라 게스트에겐 여전히 숨는다). 방 안 화면(line 146)은 명령 집합이 달라
+        // 계속 txt 애셋을 쓴다.
+        await applyCommandFooter('', getCommandFooterText('chatLobby'));
       }
     });
 
@@ -80,7 +85,7 @@ export function createChatScreens(deps) {
     if (screenEl?.parentElement) screenEl.parentElement.classList.remove('is-loading');
   }
 
-  async function showChatRoom(roomId, fromHistory = false) {
+  async function showChatRoom(roomId, fromHistory = false, password = '') {
     state.screen = 'chat-room';
     state._chatRoomId = roomId;
     if (!fromHistory) {
@@ -93,9 +98,13 @@ export function createChatScreens(deps) {
       state._chatSessionKey = `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     }
 
+    // [LOG_ID: 20260718_1600] 비공개방 입장 시 비밀번호를 join에 실어 보낸다(olddos-bbs 원본 참고).
+    // 서버는 password가 틀리면 403을 낸다 — 호출부(commandRouterChat)가 잡아 재입력을 유도한다.
+    const joinBody = { sessionKey: state._chatSessionKey };
+    if (password) joinBody.password = password;
     const joinedRoom = await apiFetch(`/api/chat/rooms/${encodeURIComponent(roomId)}/join`, {
       method: 'POST',
-      body: JSON.stringify({ sessionKey: state._chatSessionKey })
+      body: JSON.stringify(joinBody)
     });
 
     const room = (state._chatRooms || []).find((entry) => String(entry.id) === String(roomId) || String(entry.no) === String(roomId))

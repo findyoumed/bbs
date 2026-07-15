@@ -19,7 +19,7 @@ let state = {
   cmdHistoryIndex: -1,
   cmdHistoryTemp: '',
   _prQueue: [],
-  _memberBannerShown: {},
+  // [LOG_ID: 20260717_1900] _memberBannerShown 제거 — 게시판 신분 배너를 없애면서 쓰이지 않는다.
   commandGrade: 'middle', // Default helpbar grade
   _sessionStartTime: Date.now(),
 };

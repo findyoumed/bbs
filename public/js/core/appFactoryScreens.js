@@ -189,7 +189,9 @@ export function createAppFactoryScreens(deps) {
   const menuIndexScreens = createMenuIndexScreens({
     ...screenDeps,
     getMenuChildren: menuService.getMenuChildren,
-    getMenuNodeLabel: menuService.getMenuNodeLabel
+    getMenuNodeLabel: menuService.getMenuNodeLabel,
+    // [LOG_ID: 20260718_1400] /index URL 직접 진입 시 메뉴 트리가 없어 목록이 비던 문제 — 선로드용.
+    loadMenuTree: menuService.loadMenuTree
   });
   const profileScreens = createProfileScreens({ ...screenDeps, apiFetch, buildProfileAnsi: systemAnsiBuilders.buildProfileAnsi });
   // [LOG_ID: 20260716_1400] 이용자검색 — 검색은 기존 authService.searchMember(/api/members/search),

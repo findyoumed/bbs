@@ -115,31 +115,25 @@ export function createPostListView(deps) {
     // 낡은 내용인 채) 노출되는 순서 역행을 만들었다.
     setReady(true);
 
-    // [LOG_ID: 20260712_2200] 게시판 최초 진입 시 회원 신분 배너 노출 결정 및 세션 플래그 설정
-    // [LOG_ID: 20260715_1400] 게스트 판정이 존재하지 않는 필드(u.role === 'guest')와 대소문자가
-    // 안 맞는 비교(uId === 'GUEST', 실제 게스트 userId는 소문자 'guest')에 의존해 항상
-    // 거짓으로 평가됐다 — 실제 게스트도 "정회원입니다"로 표시되는 모순된 배너가 나왔다
-    // (사용자 실측 보고: "## 손님(guest)님은 정회원입니다 ##"). 사이트 전역에서 쓰는
-    // 표준 필드(user.isGuest/user.isAdmin, 예: systemAnsiBuilders.js)로 맞춘다.
-    let memberBanner = null;
-    if (boardKey && !state._memberBannerShown[boardKey]) {
-      const u = state.user;
-      const uId = String(u?.userId || 'GUEST').trim();
-      const uNick = String(u?.nickName || '손님').trim();
-      const isGuest = !u || u.isGuest !== false;
-      let roleLabel = '손님';
-      if (!isGuest) {
-        roleLabel = u?.isAdmin ? '시삽' : '정회원';
-      }
-      memberBanner = `## ${uNick}(${uId})님은 ${roleLabel}입니다 ##`;
-      state._memberBannerShown[boardKey] = true;
-    }
+    // [LOG_ID: 20260717_1900] 회원 신분 배너("## OOO님은 손님입니다 ##")를 제거했다.
+    //
+    // 출처는 docs/hitel_upgrade_plan.txt P1-3("동호회식 신분 배너", 길라잡이 p.152 인용)이었으나,
+    // 사용자 지적("하이텔 나우누리 원본에 이런건 없는데")대로 우리 게시판/자료실에 붙일 근거가
+    // 약하다 — 원전의 그 배너는 동호회(FORUM)/자료실에서 "그 모임에서의 내 신분"을 알려주는
+    // 것이지, 일반 게시판 목록마다 뜨는 줄이 아니다.
+    //
+    // 게다가 구현 결과가 게스트에게 `## 손님(guest)님은 손님입니다 ##` 라는 말이 안 되는
+    // 문장을 냈다 — 게스트는 닉네임도 '손님'이고 신분 라벨도 '손님'이라 같은 말이 두 번
+    // 나온다. (20260715_1400에 게스트 판정 버그를 고쳤지만, 고치고 나니 이 중복이 드러났다.)
+    //
+    // 동호회 기능이 실제로 생기면 그때 그 화면에서 되살린다. state._memberBannerShown 플래그도
+    // 더 이상 쓰지 않는다.
 
     // [LOG: 20260426_1450] Evolve Mode: Sequential rendering for post list
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const footerAssetPath = String(state.board?.footerFile || '').trim();
     const rendered = await renderAnsiScreenWithTopbarSequential({
-      ansiText: buildPostListAnsi(state.board, state.posts, state.page, state.totalPages, state.totalCount, displayTitle, searchParams, memberBanner),
+      ansiText: buildPostListAnsi(state.board, state.posts, state.page, state.totalPages, state.totalCount, displayTitle, searchParams),
       ansiToHTML,
       screenEl,
       renderScreenSequential,

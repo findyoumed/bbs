@@ -107,7 +107,7 @@ export function createCommandDispatcherExecution(deps) {
     // 클릭으로 들어온 명령(context.source === 'click', 상단바 로고 등)은 내비게이션 의도이므로 기존 순서를 따른다.
     const isClickSource = context?.source === 'click';
     const rawTextEntryScreen = screen === 'chat-room'
-      || (screen === 'chat-lobby' && state._chatRoomCreateStage)
+      || (screen === 'chat-lobby' && (state._chatRoomCreateStage || state._chatRoomJoinStage))
       || (screen === 'myinfo' && String(state._myInfoMode || 'view').trim().toLowerCase() !== 'view');
     const domainTextFirst = rawTextEntryScreen && !isClickSource;
 
@@ -148,7 +148,7 @@ export function createCommandDispatcherExecution(deps) {
       async () => {
         if (input) return false;
         return (await handleBrowseCommand({ s: screen, input, cmd, rawCmd: normalized, context }))
-          || (await handleServiceCommand({ s: screen, cmd, rawCmd: normalized, context }))
+          || (await handleServiceCommand({ s: screen, input, cmd, rawCmd: normalized, context }))
           || (await handleGlobalCommand({ s: screen, cmd, rawCmd: normalized, context }));
       },
       // [LOG: 20260707_1224] raw-text 컨텍스트의 타이핑 입력은 도메인 핸들러가 최우선으로 소비한다.
@@ -160,7 +160,7 @@ export function createCommandDispatcherExecution(deps) {
       // [LOG: 20260506_1315] Screen-local navigation commands like B/F must win
       // over global command handling so page navigation does not leak into menu navigation.
       async () => await handleBrowseCommand({ s: screen, input, cmd, rawCmd: normalized, context }),
-      async () => await handleServiceCommand({ s: screen, cmd, rawCmd: normalized, context }),
+      async () => await handleServiceCommand({ s: screen, input, cmd, rawCmd: normalized, context }),
       // [LOG: 20260623_0013] vote/ranking 화면 명령 라우팅 (origin/main 포팅)
       async () => await handleVoteCommand({ s: screen, cmd, rawCmd: normalized, context }),
       async () => await handleRankingCommand({ s: screen, cmd, rawCmd: normalized, context }),

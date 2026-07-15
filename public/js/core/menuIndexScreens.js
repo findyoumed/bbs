@@ -21,6 +21,7 @@ export function createMenuIndexScreens(deps) {
     getMenuChildren,
     getMenuNodeLabel,
     isWideChar,
+    loadMenuTree,
     renderScreenSequential,
     screenEl,
     state,
@@ -105,6 +106,14 @@ export function createMenuIndexScreens(deps) {
     const requestedPage = pageOrFromHistory === true ? 1 : pageOrFromHistory;
 
     state.screen = 'menu-index';
+
+    // [LOG_ID: 20260718_1400] /index 로 URL 직접 진입하면 TOP을 거치지 않아 state.menuTree가
+    // 아직 없다 — 그 경우 안내줄만 뜨고 메뉴 목록이 통째로 비어 나왔다(브라우저 실측). 트리는
+    // loadMenuTree()가 state.menuTree에 채우고 캐시하므로, 없을 때만 먼저 부른다.
+    if (!state.menuTree && typeof loadMenuTree === 'function') {
+      await loadMenuTree();
+    }
+
     const view = buildMenuIndexAnsi(requestedPage);
     state.page = view.page;
     state.menuIndexTotalPages = view.totalPages;

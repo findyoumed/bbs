@@ -22,7 +22,10 @@ export const CMD_ORDER = {
   postView: ['L:목록', 'N', 'A', 'P', 'T', 'GO', 'RE:답장', 'E:수정', 'D:삭제', 'V:추천', 'U:첨부', 'LT:제목검색', 'LI:ID검색', 'H'],
   postWrite: ['P:취소', 'S:저장', 'H'],
   chat: ['P', 'T', 'GO', 'O:방만들기', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
-  chatLobby: ['P', 'T', 'GO', 'O:방만들기', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
+  // [LOG_ID: 20260718_1700] O(방만들기)는 CMD_META에서 login:true라 게스트 힌트바에선
+  // 의도적으로 숨는다(로그인 시 노출). 원본의 "참여(번호)"는 힌트바 토큰이 아니라 프롬프트가
+  // 안내한다 — 토큰 파서(terminalHintMarkup)는 ASCII 명령만 받으므로 한글 토큰은 못 쓴다.
+  chatLobby: ['P', 'T', 'GO', 'O:방만들기', 'H'],
   memoList: ['P', 'T', 'GO', 'W:쓰기', 'H'],
   // [LOG_ID: 20260716_1800] K:보관 — 하이텔 (10)-5 편지보관함(mbox).
   memoView: ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'K:보관', 'DD:삭제', 'H'],

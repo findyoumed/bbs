@@ -18,8 +18,47 @@ export function createChatCommandHandler(deps) {
     state
   } = deps;
 
+  // [LOG_ID: 20260718_1600] 비공개방 입장 공통 처리(olddos-bbs 원본: 방번호 입력 → 비번 프롬프트 → 접속).
+  // 내가 개설자면 비번 없이 바로 들어가고, 아니면 비번 단계로 넘긴다.
+  async function enterRoom(room) {
+    if (!room) return;
+    const myId = String(state.user?.userId || '').trim();
+    const ownerId = String(room.owner || room.ownerId || '').trim();
+    if (room.requiresPassword && myId && ownerId && myId !== ownerId) {
+      state._chatRoomJoinStage = { no: room.no };
+      setPrompt('비밀번호 >>');
+      setHint('비공개 대화방입니다. 비밀번호를 입력해 주십시오. (취소: /M)');
+      return;
+    }
+    await showChatRoom(room.no);
+  }
+
   return async function handleChatCommand({ input, rawCmd, cmd, context }) {
     if (state.screen === 'chat-lobby') {
+      // [LOG_ID: 20260718_1600] 비공개방 비밀번호 입력 단계 — 틀리면 서버 403을 잡아 재입력을 유도한다.
+      if (state._chatRoomJoinStage) {
+        const pw = String(input || '').trim();
+        if (cmd === '/M') {
+          state._chatRoomJoinStage = null;
+          setHint('입장을 취소했습니다.');
+          setPrompt('선택 >>');
+          return true;
+        }
+        if (!pw) {
+          setHint('비밀번호를 입력해 주십시오. (취소: /M)');
+          return true;
+        }
+        const targetNo = state._chatRoomJoinStage.no;
+        state._chatRoomJoinStage = null;
+        try {
+          await showChatRoom(targetNo, false, pw);
+        } catch (error) {
+          await showChatLobby();
+          setHint('비밀번호가 올바르지 않습니다. 다시 시도해 주십시오.');
+        }
+        return true;
+      }
+
       if (state._chatRoomCreateStage) {
         const textInput = String(input || '');
         if (cmd === '/M') {
@@ -42,6 +81,39 @@ export function createChatCommandHandler(deps) {
 
         if (state._chatRoomCreateStage === 'greeting') {
           state._chatRoomDraft.greeting = textInput.trim() || '환영합니다';
+          // [LOG_ID: 20260718_1600] olddos-bbs 원본 개설 흐름 참고(주제→환영→공개/비공개→비번→최대인원):
+          // 서버(ChatRoomRepository)는 visibility='private'+password(4자↑)로 비공개방을 이미 지원하는데,
+          // 클라이언트 개설 흐름에 이 단계가 없어 UI로는 비공개방을 만들 수 없었다. 단계를 추가한다.
+          state._chatRoomCreateStage = 'visibility';
+          setPrompt('대화방 종류 (1.공개  2.비공개) [기본: 1] >>');
+          return true;
+        }
+
+        if (state._chatRoomCreateStage === 'visibility') {
+          const choice = textInput.trim() || '1';
+          if (choice !== '1' && choice !== '2') {
+            setHint('1(공개) 또는 2(비공개)를 입력해 주십시오. (취소: /M)');
+            return true;
+          }
+          if (choice === '2') {
+            state._chatRoomDraft.visibility = 'private';
+            state._chatRoomCreateStage = 'password';
+            setPrompt('대화방 비밀번호(4자 이상) >>');
+            return true;
+          }
+          state._chatRoomDraft.visibility = 'public';
+          state._chatRoomCreateStage = 'maxUser';
+          setPrompt('최대 인원(1~99) [기본: 10] >>');
+          return true;
+        }
+
+        if (state._chatRoomCreateStage === 'password') {
+          const pw = textInput.trim();
+          if (pw.length < 4) {
+            setHint('비밀번호는 4자 이상이어야 합니다. (취소: /M)');
+            return true;
+          }
+          state._chatRoomDraft.password = pw;
           state._chatRoomCreateStage = 'maxUser';
           setPrompt('최대 인원(1~99) [기본: 10] >>');
           return true;
@@ -54,6 +126,10 @@ export function createChatCommandHandler(deps) {
             : 10;
           state._chatRoomDraft.maxUser = maxUser;
           state._chatRoomCreateStage = null;
+          // [LOG_ID: 20260718_1600] 개설 직후 입장에 쓸 비밀번호를 잡아둔다 — 서버는 비공개방
+          // 입장 시 개설자에게도 비밀번호를 요구하므로(join 403), 개설자가 바로 못 들어가고
+          // TOP으로 튕기던 문제(브라우저 실측)를 막는다.
+          const createdPassword = String(state._chatRoomDraft.password || '');
 
           try {
             const room = await apiFetch('/api/chat/rooms', {
@@ -67,7 +143,7 @@ export function createChatCommandHandler(deps) {
             }
             await showChatLobby();
             if (room.no) {
-              await showChatRoom(room.no);
+              await showChatRoom(room.no, false, createdPassword);
             }
           } catch (error) {
             setHint('대화방 개설 중 오류가 발생했습니다.');
@@ -92,7 +168,7 @@ export function createChatCommandHandler(deps) {
         const roomNo = parseInt(jMatch[1], 10);
         const room = state._chatRooms?.find((r) => r.no === roomNo);
         if (room) {
-          await showChatRoom(room.no);
+          await enterRoom(room);
         } else {
           setHint(`해당 방번호(#${roomNo})의 방이 존재하지 않습니다.`);
         }
@@ -101,7 +177,7 @@ export function createChatCommandHandler(deps) {
 
       const selectedRoom = parseInt(cmd, 10);
       if (selectedRoom >= 1 && state._chatRooms?.[selectedRoom - 1]) {
-        await showChatRoom(state._chatRooms[selectedRoom - 1].no);
+        await enterRoom(state._chatRooms[selectedRoom - 1]);
         return true;
       }
 
@@ -112,7 +188,7 @@ export function createChatCommandHandler(deps) {
         const matches = (state._chatRooms || []).filter((r) =>
           String(r.title || r.name || '').toLowerCase().includes(keyword));
         if (matches.length === 1) {
-          await showChatRoom(matches[0].no);
+          await enterRoom(matches[0]);
         } else if (matches.length > 1) {
           setHint(`검색 결과: ${matches.map((r) => `#${r.no} ${r.title || r.name}`).join(', ')}`);
         } else {

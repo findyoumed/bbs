@@ -77,8 +77,8 @@ class BoardRouter extends BaseRouter {
     const boardId = params.boardId;
     const options = this.getQueryOptions({ pageSize: 15 });
     const context = await this.getContext();
-    
-    return this.send(200, await this.deps.boardRepository.listPosts(boardId, {
+
+    const result = await this.deps.boardRepository.listPosts(boardId, {
       ...options,
       category: this.requestUrl.searchParams.get('category') || this.requestUrl.searchParams.get('header') || '',
       lt: this.requestUrl.searchParams.get('lt') || '',
@@ -87,7 +87,52 @@ class BoardRouter extends BaseRouter {
       ln: this.requestUrl.searchParams.get('ln') || '',
       la: this.requestUrl.searchParams.get('la') || '',
       context
-    }));
+    });
+
+    await this.enrichWithAttachmentSummaries(boardId, result);
+    return this.send(200, result);
+  }
+
+  // [LOG_ID: 20260718_1200] 자료실(PDS) 목록 화면은 원전처럼 파일명/크기/전송(다운로드 수)을
+  // 보여줘야 한다. 이 정보는 attachments 테이블에 있는데 목록 조회(listPosts)는 게시글만
+  // 가져오므로, 자료실 게시판일 때만 페이지의 글들에 대표(첫) 첨부 요약을 한 번에 붙인다.
+  //
+  // 게이팅 기준은 attachment_enabled가 아니라 **자료실 여부(menu_path='pds' 또는 board_id
+  // 'pds'/'pds_*')**다 — 실측하니 열린광장·유머 등 일반 게시판도 attachment_enabled=true라,
+  // 그걸로 가르면 일반 게시판 목록까지 파일 컬럼으로 바뀐다. 파일 컬럼은 자료실 전용이다.
+  isPdsBoard(board) {
+    if (!board) return false;
+    const id = String(board.boardId || board.id || '').trim();
+    const menuPath = String(board.menuPath || '').trim();
+    return menuPath === 'pds' || id === 'pds' || id.startsWith('pds_');
+  }
+
+  async enrichWithAttachmentSummaries(boardId, result) {
+    const board = result && result.board;
+    const items = result && Array.isArray(result.items) ? result.items : [];
+    if (!this.isPdsBoard(board) || !items.length) {
+      return;
+    }
+    const attachmentRepository = this.deps.attachmentRepository;
+    if (!attachmentRepository || typeof attachmentRepository.summariesForPosts !== 'function') {
+      return;
+    }
+
+    try {
+      const postIds = items.map((item) => item.id).filter((id) => id != null);
+      const summaries = await attachmentRepository.summariesForPosts(boardId, postIds);
+      for (const item of items) {
+        const summary = summaries[Number(item.id)];
+        if (summary) {
+          item.fileName = summary.name;
+          item.fileSize = summary.size;
+          item.downloadCount = summary.downloadCount;
+        }
+      }
+    } catch (error) {
+      // 첨부 요약은 부가 정보다 — 실패해도 목록 자체는 그대로 내려준다.
+      this.deps.logger?.warn?.('첨부 요약 조회 실패', { boardId, error: error.message });
+    }
   }
 
   async createPost(params) {

@@ -94,6 +94,28 @@ class AttachmentRepository {
       .sort((left, right) => left.id - right.id);
   }
 
+  // [LOG_ID: 20260718_1200] Supabase 드라이버와 동일 의미 — 자료실 목록용 글당 대표(첫) 첨부 요약.
+  summariesForPosts(boardId, postIds) {
+    this._assertStorageAvailable();
+    const ids = new Set((postIds || []).map((id) => Number(id)));
+    const sorted = this.index.attachments
+      .filter((entry) => entry.boardId === boardId && ids.has(Number(entry.postId)))
+      .map(normalizeEntry)
+      .sort((left, right) => left.id - right.id);
+
+    const byPost = {};
+    for (const entry of sorted) {
+      const key = Number(entry.postId);
+      if (byPost[key]) continue;
+      byPost[key] = {
+        name: String(entry.originalName || entry.filename || ''),
+        size: Number(entry.size || entry.fileSize || 0),
+        downloadCount: Number(entry.downloadCount || 0)
+      };
+    }
+    return byPost;
+  }
+
   add(boardId, postId, payload, context = {}) {
     this._assertStorageAvailable();
     const { originalName, mimeType, buffer } = decodeAttachmentPayload(payload, this.maxBytes);

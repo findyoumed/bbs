@@ -2,7 +2,7 @@
  * [LOG: 20260426_0210] 시스템 관련 화면 처리 (Who is online 등)
  */
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
-import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential, renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
 
 export function createSystemScreens(deps) {
   const {
@@ -11,6 +11,7 @@ export function createSystemScreens(deps) {
     applyCommandFooter,
     buildActiveUsersAnsi,
     buildSystemDiagnosticsAnsi,
+    esc,
     getCommandFooterText,
     getSupportedFooterText,
     renderScreenSequential,
@@ -34,8 +35,25 @@ export function createSystemScreens(deps) {
     await renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTML, screenEl, renderScreenSequential, afterBodyRender });
   }
 
+  // [LOG_ID: 20260718_1400] 종전엔 상단바(로고 박스+시계) 없는 "오류" bbs-box만 그려서, 게스트가
+  // 이용현황(/account)에 들어오면 정상적인 "로그인 필요" 안내가 에러 화면처럼 보였다(브라우저 실측).
+  // memo 화면(renderMemoStatus, 20260708_1030)과 동일하게 표준 상단바를 갖춘 화면으로 렌더한다.
+  // 게스트 안내처럼 오류가 아닌 경우는 leftLabel/centerLabel을 그대로 쓰고 빨간색을 안 입힌다.
+  function renderSystemInfo(message, options = {}) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const safe = esc ? esc(String(message || '')) : String(message || '');
+    const colorClass = options.isError === false ? '' : ' ansi-red';
+    renderRawHtmlScreenWithTopbar({
+      leftLabel: options.leftLabel || 'INFO',
+      centerLabel: options.centerLabel || '안내',
+      bodyHtml: `<div class="ansi-line${colorClass}">${safe}</div>`,
+      screenEl,
+      isMobile
+    });
+  }
+
   function renderSystemError(message) {
-    screenEl.innerHTML = `<div class="bbs-box"><div class="bbs-title">오류</div><div style="padding:20px">${message}</div></div>`;
+    renderSystemInfo(message, { leftLabel: 'ERR', centerLabel: '오류' });
   }
 
   async function showActiveUsers(fromHistory = false) {
@@ -101,10 +119,16 @@ export function createSystemScreens(deps) {
       const { buildMyStatsAnsi } = deps;
       await renderSystemAnsiScreen(buildMyStatsAnsi(stats), applyFooter);
     } catch (e) {
-      // 게스트는 서버가 401을 낸다 — 로그인 안내로 바꿔 보여준다.
-      renderSystemError(state.user?.isGuest
-        ? '이용 현황은 로그인 후 확인하실 수 있습니다.'
-        : `이용 현황을 가져오지 못했습니다. ${String(e?.message || '')}`);
+      // 게스트는 서버가 401을 낸다 — 오류가 아니라 "로그인 필요" 안내로(상단바 포함) 보여준다.
+      if (state.user?.isGuest) {
+        renderSystemInfo('이용 현황은 로그인 후 확인하실 수 있습니다.', {
+          leftLabel: 'ACCT', centerLabel: '이용 현황 (ACCOUNT)', isError: false
+        });
+      } else {
+        renderSystemInfo(`이용 현황을 가져오지 못했습니다. ${String(e?.message || '')}`, {
+          leftLabel: 'ACCT', centerLabel: '이용 현황 (ACCOUNT)'
+        });
+      }
       await applyFooter();
     }
     if (shouldAutoFocusCommandInput()) {

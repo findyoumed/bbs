@@ -82,37 +82,41 @@ export function createChatAnsiBuilders(deps) {
 
     parts.push(ansiHLine(targetCols, 8));
 
-    // 방 목록 세로 리스팅 (#번호 공개/비밀(인원) [개설자] 방제목)
+    // [LOG_ID: 20260718_1600] 방 목록을 olddos-bbs 원본의 정렬된 표로 재구성:
+    //   `번호  방장(닉네임)  인원(n/m)  공개/비공개  주제`
+    // 종전엔 "#번호 공개(인원) [개설자] 제목"을 한 줄에 욱여넣어 정렬이 안 맞고 개설자가
+    // 아이디([guest])로 나왔다. 원본은 방장을 닉네임으로, 공개여부를 별도 칸으로 보여준다.
+    // 방장 닉네임은 room.ownerNick(있으면)·없으면 owner를 쓴다.
+    const roomCol = isMobile
+      ? { no: 4, owner: 0, occ: 6, pub: 0 }
+      : { no: 4, owner: 12, occ: 7, pub: 8 };
+    const roomTitleWidth = targetCols
+      - (roomCol.no + 1 + (roomCol.owner ? roomCol.owner + 1 : 0) + roomCol.occ + 1 + (roomCol.pub ? roomCol.pub + 1 : 0));
+
+    // 방 목록 헤더
+    let roomHeader = ansiColor(14) + fitCell('번호', roomCol.no, 'right') + ' ';
+    if (roomCol.owner) roomHeader += fitCell('방장', roomCol.owner) + ' ';
+    roomHeader += fitCell('인원', roomCol.occ, 'right') + ' ';
+    if (roomCol.pub) roomHeader += fitCell('공개', roomCol.pub) + ' ';
+    roomHeader += fitCell('주제', roomTitleWidth) + ANSI_RESET;
+    parts.push(roomHeader);
+
     const maxRoomsToShow = isMobile ? 4 : 6;
     if (!rooms || !rooms.length) {
       parts.push(ansiColor(8) + '   개설된 대화방이 없습니다.' + ANSI_RESET);
     } else {
       rooms.slice(0, maxRoomsToShow).forEach((room) => {
-        const roomNoStr = `#${room.no}`;
-        const visibilityStr = room.visibility === '비밀방' ? '비밀' : '공개';
-        const occupancyStr = `(${room.userCount}/${room.maxUser})`;
-        const ownerStr = `[${room.owner || 'guest'}]`;
-        const titleStr = room.title || '대화방';
+        const ownerNick = String(room.ownerName || room.ownerNick || room.owner || 'guest');
+        const pubStr = room.visibility === '비밀방' ? '비공개' : '공개';
+        const occStr = `${room.userCount}/${room.maxUser}`;
+        const titleStr = room.title || room.name || '대화방';
 
-        if (isMobile) {
-          const roomMeta = fitCell(`${roomNoStr} ${visibilityStr}${occupancyStr}`, 15);
-          const roomTitle = fitCell(titleStr, 27);
-          parts.push(
-            ansiColor(10) + roomMeta + ' ' +
-            ansiColor(15) + roomTitle +
-            ANSI_RESET
-          );
-        } else {
-          const roomMeta = fitCell(`${roomNoStr} ${visibilityStr}${occupancyStr}`, 16);
-          const roomOwner = fitCell(ownerStr, 15);
-          const roomTitle = fitCell(titleStr, 45);
-          parts.push(
-            ansiColor(10) + roomMeta + ' ' +
-            ansiColor(11) + roomOwner + ' ' +
-            ansiColor(15) + roomTitle +
-            ANSI_RESET
-          );
-        }
+        let line = ansiColor(15) + fitCell(String(room.no), roomCol.no, 'right') + ' ';
+        if (roomCol.owner) line += ansiColor(11) + fitCell(ownerNick, roomCol.owner) + ' ';
+        line += ansiColor(10) + fitCell(occStr, roomCol.occ, 'right') + ' ';
+        if (roomCol.pub) line += ansiColor(room.visibility === '비밀방' ? 13 : 8) + fitCell(pubStr, roomCol.pub) + ' ';
+        line += ansiColor(15) + fitCell(titleStr, roomTitleWidth) + ANSI_RESET;
+        parts.push(line);
       });
     }
 

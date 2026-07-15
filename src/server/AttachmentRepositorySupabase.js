@@ -47,6 +47,41 @@ class SupabaseAttachmentRepository extends BaseRepository {
     return (data || []).map(normalizeEntry);
   }
 
+  // [LOG_ID: 20260718_1200] 자료실(PDS) 목록에 파일명/크기/전송을 붙이기 위한 배치 조회.
+  // 글마다 list()를 부르면 페이지당 15번 왕복이라, post_id IN (...) 한 번으로 끝낸다.
+  // 글당 첫 첨부(id 오름차순 첫 행)만 대표로 쓴다. 반환: { [postId]: {name,size,downloadCount} }.
+  summariesForPosts(boardId, postIds) {
+    return this._summariesForPosts(boardId, postIds);
+  }
+
+  async _summariesForPosts(boardId, postIds) {
+    const ids = (postIds || []).map((id) => Number(id)).filter((id) => Number.isFinite(id));
+    if (!ids.length) return {};
+
+    const { data, error } = await this.client
+      .from(this.table)
+      .select('post_id, original_filename, filename, file_size, download_count, id')
+      .eq('board_id', boardId)
+      .in('post_id', ids)
+      .order('id', { ascending: true });
+
+    if (error) {
+      this._throwError('첨부 요약 조회', error, { table: this.table });
+    }
+
+    const byPost = {};
+    for (const row of data || []) {
+      const key = Number(row.post_id);
+      if (byPost[key]) continue; // 첫(가장 이른) 첨부만
+      byPost[key] = {
+        name: String(row.original_filename || row.filename || ''),
+        size: Number(row.file_size || 0),
+        downloadCount: Number(row.download_count || 0)
+      };
+    }
+    return byPost;
+  }
+
   get(boardId, postId, attachmentId) {
     return this._get(boardId, postId, attachmentId);
   }

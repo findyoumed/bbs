@@ -36,7 +36,7 @@ export function createServiceCommandHandler(deps) {
     };
   }
 
-  return async function handleServiceCommand({ s, cmd, rawCmd, context }) {
+  return async function handleServiceCommand({ s, input, cmd, rawCmd, context }) {
     // [LOG_ID: 20260709_1643] 임시 오류/경고 힌트가 노출된 상태에서 사용자가 새 입력을 입력하면 즉시 지워 잔상을 제거한다.
     const isWarningHint = lastCommandServiceHint.includes('불러올 수 없는')
       || lastCommandServiceHint.includes('기사가 없습니다');
@@ -59,7 +59,11 @@ export function createServiceCommandHandler(deps) {
     if (s === 'member-search') {
       if (cmd === 'T') { await showMain(); return true; }
       if (['P', 'M', 'B'].includes(cmd)) { await showBoardSelect('guide'); return true; }
-      const raw = String(rawCmd || '').trim();
+      // [LOG_ID: 20260718_1400] 검색어는 정규화(대문자화)된 rawCmd가 아니라 **원본 input**을 쓴다.
+      // 터미널 파이프라인이 입력을 대문자로 정규화해 "sysop"→"SYSOP"가 되면서, 소문자로 저장된
+      // 아이디(getMember는 대소문자 구분)를 못 찾았다(브라우저 실측: "'SYSOP' 이용자를 찾을 수
+      // 없습니다"). 닉네임도 대문자화되면 안 되므로 원본 그대로 넘긴다.
+      const raw = String(input || '').trim();
       const byId = raw.match(/^BYID\s+(.+)$/i);
       if (byId) return await findMember(byId[1], 'byid');
       const byName = raw.match(/^BYNAME\s+(.+)$/i);
