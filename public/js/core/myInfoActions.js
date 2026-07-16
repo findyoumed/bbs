@@ -89,7 +89,7 @@ export function createMyInfoActions(deps) {
         resetMyInfoState();
         setMessage(message, 'error');
         setHint('');
-        setPrompt('>>');
+        setPrompt('>> ');
         await renderMyInfo(true);
         return false;
     }
@@ -102,7 +102,7 @@ export function createMyInfoActions(deps) {
         resetMyInfoState();
         await showMain();
         setHint('회원 정보는 로그인 사용자만 이용할 수 있습니다.');
-        setPrompt('>>');
+        setPrompt('>> ');
         return false;
     }
 
@@ -149,7 +149,7 @@ export function createMyInfoActions(deps) {
         setMode('nickname');
         setStage('idle');
         setHint('새 닉네임을 명령줄에 입력한 뒤 ENTER를 누르십시오.');
-        setPrompt('새 닉네임 >>');
+        setPrompt('새 닉네임 >> ');
         await renderMyInfo(true);
     }
 
@@ -217,7 +217,7 @@ export function createMyInfoActions(deps) {
         setStage('email-current');
         appendTranscriptLine({ prompt: '본인 확인을 위해 현재 비밀번호를 입력해 주십시오.', value: '' });
         setHint('');
-        setPrompt('현재 비밀번호 >>');
+        setPrompt('현재 비밀번호 >> ');
         await renderMyInfo(true);
     }
 
@@ -270,7 +270,7 @@ export function createMyInfoActions(deps) {
             setMode('email');
             setStage('email-new');
             setHint('');
-            setPrompt('새 이메일 >>');
+            setPrompt('새 이메일 >> ');
             await renderMyInfo(true);
             return true;
         }
@@ -336,7 +336,7 @@ export function createMyInfoActions(deps) {
                 setMode('email');
                 setStage('email-current');
                 setHint('');
-                setPrompt('현재 비밀번호 >>');
+                setPrompt('현재 비밀번호 >> ');
                 await renderMyInfo(true);
                 return false;
             }
@@ -377,7 +377,7 @@ export function createMyInfoActions(deps) {
         setStage('password-current');
         appendTranscriptLine({ prompt: '본인 확인을 위해 현재 비밀번호를 입력해 주십시오.', value: '' });
         setHint('');
-        setPrompt('현재 비밀번호 >>');
+        setPrompt('현재 비밀번호 >> ');
         await renderMyInfo(true);
     }
 
@@ -429,7 +429,7 @@ export function createMyInfoActions(deps) {
             setMode('password');
             setStage('password-new');
             setHint('새 비밀번호를 입력한 뒤 ENTER를 누르십시오.');
-            setPrompt('새 비밀번호 >>');
+            setPrompt('새 비밀번호 >> ');
             await renderMyInfo(true);
             return true;
         }
@@ -448,7 +448,7 @@ export function createMyInfoActions(deps) {
             clearMessage();
             setStage('password-confirm');
             setHint('새 비밀번호 확인을 입력한 뒤 ENTER를 누르십시오.');
-            setPrompt('새 비밀번호 확인 >>');
+            setPrompt('새 비밀번호 확인 >> ');
             await renderMyInfo(true);
             return true;
         }
@@ -501,7 +501,7 @@ export function createMyInfoActions(deps) {
                         await doLogout({ localOnly: true });
                         await showMain();
                         setHint('비밀번호는 변경되었지만 세션 갱신에 실패했습니다. 새 비밀번호로 다시 로그인해 주십시오.');
-                        setPrompt('>>');
+                        setPrompt('>> ');
                         return true;
                     }
                 }
@@ -521,7 +521,7 @@ export function createMyInfoActions(deps) {
             resetMyInfoState();
             await showMain();
             setHint('비밀번호가 성공적으로 변경되었습니다.');
-            setPrompt('>>');
+            setPrompt('>> ');
             return true;
         }
 
@@ -540,7 +540,7 @@ export function createMyInfoActions(deps) {
         setStage('delete-password');
         appendTranscriptLine({ prompt: '본인 확인을 위해 현재 비밀번호를 입력해 주십시오.', value: '' });
         setHint('');
-        setPrompt('비밀번호 >>');
+        setPrompt('비밀번호 >> ');
         await renderMyInfo(true);
     }
 
@@ -636,7 +636,7 @@ export function createMyInfoActions(deps) {
                 setStage('delete-complete');
                 state._maskCommandInput = false;
                 setHint('');
-                setPrompt('>>');
+                setPrompt('>> ');
                 await renderMyInfo(true);
                 return true;
             } else if (answer === 'n') {
@@ -644,7 +644,7 @@ export function createMyInfoActions(deps) {
                 resetPasswordFailureCount('delete-password');
                 resetMyInfoState();
                 setHint('');
-                setPrompt('>>');
+                setPrompt('>> ');
                 await renderMyInfo(true);
                 return true;
             } else {
@@ -664,7 +664,7 @@ export function createMyInfoActions(deps) {
         resetPasswordFailureCount();
         resetMyInfoState();
         setHint('');
-        setPrompt('>>');
+        setPrompt('>> ');
         await renderMyInfo(true);
     }
 

@@ -1,3 +1,16 @@
+## [2026-07-16 18:45] Fix prompt spacing alignment in myinfo submenus
+
+**LOG_ID: 20260716_1845**
+목표: 회원 정보 수정(/myinfo) 하위 메뉴들(닉네임, 이메일, 비밀번호 등)의 입력 프롬프트 '>>' 우측 공백이 다른 메뉴들과 다르게 들쭉날쭉하거나 공백이 좁아지는 불일치 현상 수정.
+추가/변경 사항:
+1. `public/js/core/myInfoRenderer.js` 및 `public/js/core/myInfoActions.js` 파일 내의 모든 `setPrompt` 호출 시 `'>>'` 대신 `'>> '` (후행 공백 추가)로 형식을 통일하여 입력 필드 시작점의 1ch 공백 갭을 다른 메뉴와 일관되게 보장.
+2. `myInfoRenderer.js`의 `buildPromptTranscriptHtml` 함수 내에서 `line.prompt` 렌더링 시 후행 공백을 제거(`trimEnd()`)하고 삽입하도록 보장하여 트랜스크립트(히스토리) 출력 시 공백이 중복(`  `)으로 표시되지 않도록 안전 장치 마련.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/myInfoRenderer.js`, `public/js/core/myInfoActions.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 18:22] Fix password confirm prompt from '선택 >>' to '>>' in signup email stages
 
 **LOG_ID: 20260716_1822**

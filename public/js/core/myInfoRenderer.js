@@ -82,10 +82,11 @@ export function createMyInfoRenderer(deps) {
 
     function buildPromptTranscriptHtml() {
         const html = getTranscript().map((line) => {
+            const prompt = String(line.prompt || '').trimEnd();
             if (line.isHtml) {
-                return `<div class="myinfo-password-line">${line.prompt} ${esc(line.value)}</div>`;
+                return `<div class="myinfo-password-line">${prompt} ${esc(line.value)}</div>`;
             }
-            return `<div class="myinfo-password-line">${esc(`${line.prompt} ${line.value}`.trim())}</div>`;
+            return `<div class="myinfo-password-line">${esc(`${prompt} ${line.value}`.trim())}</div>`;
         }).join('');
         return `<div class="myinfo-password-block">${html}<div class="myinfo-password-prompt-host" data-myinfo-prompt-host></div></div>`;
     }
@@ -235,7 +236,7 @@ export function createMyInfoRenderer(deps) {
             restorePromptRow?.();
             state._maskCommandInput = false;
             setHint('새 닉네임을 입력한 뒤 ENTER를 누르십시오.');
-            setPrompt('새 닉네임 >>');
+            setPrompt('새 닉네임 >> ');
             return;
         }
 
@@ -245,12 +246,12 @@ export function createMyInfoRenderer(deps) {
             if (stage === 'email-new') {
                 state._maskCommandInput = false;
                 mountMyInfoPromptRow();
-                setPrompt('새 이메일 >>');
+                setPrompt('새 이메일 >> ');
                 return;
             }
             state._maskCommandInput = true;
             mountMyInfoPromptRow();
-            setPrompt('현재 비밀번호 >>');
+            setPrompt('현재 비밀번호 >> ');
             return;
         }
 
@@ -267,14 +268,14 @@ export function createMyInfoRenderer(deps) {
                 return;
             }
             if (stage === 'password-current') {
-                setPrompt('현재 비밀번호 >>');
+                setPrompt('현재 비밀번호 >> ');
                 return;
             }
             if (stage === 'password-confirm') {
-                setPrompt('새 비밀번호 확인 >>');
+                setPrompt('새 비밀번호 확인 >> ');
                 return;
             }
-            setPrompt('새 비밀번호 >>');
+            setPrompt('새 비밀번호 >> ');
             return;
         }
 
@@ -296,7 +297,7 @@ export function createMyInfoRenderer(deps) {
             if (stage === 'delete-complete') {
                 // [LOG: 20260509_1146] 탈퇴 완료 화면은 Enter 입력을 한 번 기다린 뒤 초기화면으로 이동한다.
                 state._maskCommandInput = false;
-                setPrompt('>>');
+                setPrompt('>> ');
                 if (cmdInput) {
                     cmdInput.value = '';
                     focusCommandInputAtEnd();
@@ -304,7 +305,7 @@ export function createMyInfoRenderer(deps) {
                 return;
             } else {
                 state._maskCommandInput = true;
-                setPrompt('비밀번호 >>');
+                setPrompt('비밀번호 >> ');
             }
         }
     }
