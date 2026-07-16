@@ -65,7 +65,7 @@ const CONFIRM_FIELD_IDS = {
   '5': 'signup-email'
 };
 const SIGNUP_CANCEL_LINE = '입력란에 /x 를 입력하면 가입을 중단합니다.';
-const ENGLISH_KEYBOARD_STAGE_IDS = new Set(['signup-userid', 'signup-password', 'signup-password-confirm']);
+const ENGLISH_KEYBOARD_STAGE_IDS = new Set(['signup-userid', 'signup-password', 'signup-password-confirm', 'signup-email']);
 const HANGUL_INITIAL_KEYS = ['r', 'R', 's', 'e', 'E', 'f', 'a', 'q', 'Q', 't', 'T', 'd', 'w', 'W', 'c', 'z', 'x', 'v', 'g'];
 const HANGUL_MEDIAL_KEYS = ['k', 'o', 'i', 'O', 'j', 'p', 'u', 'P', 'h', 'hk', 'ho', 'hl', 'y', 'n', 'nj', 'np', 'nl', 'b', 'm', 'ml', 'l'];
 const HANGUL_FINAL_KEYS = ['', 'r', 'R', 'rt', 's', 'sw', 'sg', 'e', 'f', 'fr', 'fa', 'fq', 'ft', 'fx', 'fv', 'fg', 'a', 'q', 'qt', 't', 'T', 'd', 'w', 'c', 'z', 'x', 'v', 'g'];
@@ -126,6 +126,9 @@ function sanitizeEnglishKeyboardInput(fieldId, value) {
   }
   if (fieldId === 'signup-password' || fieldId === 'signup-password-confirm') {
     return converted.replace(/[^\x21-\x7E]/g, '');
+  }
+  if (fieldId === 'signup-email') {
+    return converted.replace(/[^A-Za-z0-9_@.-]/g, '');
   }
   return String(value || '');
 }

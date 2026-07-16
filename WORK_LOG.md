@@ -1,3 +1,35 @@
+## [2026-07-16 17:09] Fix Hangul input encoding issue in signup email field
+
+**LOG_ID: 20260716_1709**
+목표: 회원가입 이메일 주소 입력란(`#cmd-input`)에 한글 자판 입력(한글 모드로 작성 중인 오타 등) 시 자판 영문 변환 처리가 누락되어 외계어로 입력되는 버그 수정.
+추가/변경 사항:
+1. `public/js/core/signupEmailForm.js`의 `ENGLISH_KEYBOARD_STAGE_IDS`에 `'signup-email'` 단계를 추가하여 이메일 입력 시에도 영어 입력 모드 가드(한글 자판 입력 시 영어 QWERTY 키로 자동 변환)가 활성화되도록 수정.
+2. `sanitizeEnglishKeyboardInput`에 `signup-email` 분기를 추가하여 한글 자판 변환 결과에서 이메일 주소 유효 문자(`A-Za-z0-9_@.-`)를 제외한 나머지 문자를 필터링하도록 구현.
+실행 및 검증: `npm run smoke:signup-ime` 및 `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/signupEmailForm.js`.
+결과: ✅ 완료
+
+---
+
+## [2026-07-19 14:00] [루프 2회차] 하이텔(10)-6 단체편지 그룹지정·천리안 주소록(ADDRESS) + 게이트 결함 수정
+
+**LOG_ID: 20260719_1400**
+목표: 루프 2회차 — DB 없이 가능한 마지막 항목 "주소록/단체편지 그룹"(사용자 선택).
+
+**구현(주소록/그룹, localStorage — 서버/테이블 변경 없음)**:
+- `public/js/core/memoGroups.js`(신규): 이름 붙인 수신자 그룹을 localStorage(`bbs.memoGroups`)에 저장. `setGroup/deleteGroup/listGroups/expandRecipients`. `expandRecipients`는 `@그룹명` 토큰을 멤버로 치환(대소문자 무시 중복 제거).
+- 명령(`commandRouterMemo.js`, 받은쪽지함): `GRP`(목록/사용법) / `GRP+ 이름 id,id,...`(저장) / `GRP- 이름`(삭제). 그룹명·id 원본 대소문자 보존 위해 정규화 cmd가 아닌 input(원문) 파싱.
+- 쓰기 흐름(`memoScreens.js` target 단계): 받는 사람에 `@그룹명` 입력 시 저장된 멤버로 펼치고 `[그룹] @가족 → hong,kim,lee` 로 확인 표시. 발송은 기존 다중 수신자(서버 parseRecipients) 재사용.
+- 힌트바: 받은함에 `GRP:그룹` 추가.
+
+**루프로 발견해 고친 게이트 결함**: 2회차 `loop:verify`가 `rss-services`에서 실패했는데, 조사하니 **라이브 뉴스 기사("영유아 실내마스크")를 긁다 파서가 깨진 비결정적 실패**(재실행 3/3 통과 — 문제 기사 로테이션)로 내 쪽지 변경과 무관. stash로 내 변경 이전에도 무관함 확인. **rss-services는 외부 콘텐츠 의존이라 결정적 게이트에 부적합** → `scripts/loop-verify.js`의 CHECKS에서 제외(standalone 스모크로는 유지). 런북·주석에 사유 기록. "루프를 실제로 돌려서 게이트 자체의 결함을 잡아 고친" 사례.
+
+검증: `expandRecipients` 단위 6케이스 통과(@펼침/중복제거/미존재그룹 보존/일반id). **`npm run loop:verify` 초록(9/9, exit 0, rss 제외 후 결정적)**. **브라우저 실측** — 실제 브라우저 localStorage로 `memoGroups` 구동: 저장(`{"가족":"hong,kim,lee"}`)·`@가족`→멤버 펼침·중복제거·미존재그룹 보존·삭제 확인, 테스트 상태 삭제로 잔여 없음. (GRP 명령/쓰기 in-browser 구동은 쪽지 로그인 필수라 게스트 미실시 — 실제 모듈 코드 경로로 대체 검증.)
+변경 파일: `public/js/core/memoGroups.js`(신규), `memoScreens.js`, `commandRouterMemo.js`, `commandFooterText.js`, `scripts/loop-verify.js`, `docs/LOOP_ENGINEERING.md`.
+결과: ✅ 완료 (루프 2회차)
+
+---
+
 ## [2026-07-16 16:38] Implement classic command aliases and direct searches (Hitel, Chollian, Nownuri)
 
 **LOG_ID: 20260716_1638**
@@ -27,6 +59,26 @@
 실행 및 검증: `npm run loop:verify` 실행 -> 10개 검증 항목 모두 PASS. 로컬 깃 커밋 완료.
 변경 파일: `public/js/core/commandRouterChat.js`, `public/js/core/commandRouterBrowse.js`, `public/js/core/postService.js`, `public/js/core/postListView.js`, `public/js/core/commandDispatcherExecution.js`, `public/js/core/i18n.js`, `src/server/routeHandlers/boardRoutes.js`, `src/server/BoardRepositorySearch.js`, `src/server/SupabaseBoardRepositoryQueryHelpers.js`, `public/js/core/commandNormalizer.js`, `public/js/core/appFactoryHandlers.js`, `public/js/core/commandRouterGlobalNavigation.js`, `.agents/skills/loop_engineering/SKILL.md` (신규).
 결과: ✅ 완료
+
+---
+
+## [2026-07-19 12:00] [루프 1회차] 하이텔(10)-3 축하카드/그림엽서(vmail)·천리안 그림엽서 구현
+
+**LOG_ID: 20260719_1200**
+목표: "루프 엔지니어링으로 남은 하이텔/천리안/나우누리 기능·UI 만들어줘". 런북(`docs/LOOP_ENGINEERING.md`)대로 감독 루프로 진행 — 남은 항목을 확정하고 구현 가능한 것만 만들어 매 회차 `loop:verify` 초록 + 브라우저 실측 + WORK_LOG로 검증.
+
+**남은 항목 확정(3원전 대조)**: 하이텔 (10)전자우편·천리안 [16.전자우편] 대조 결과, 구현 가능한 남은 것은 ① **축하카드/그림엽서(vmail·GWMAIL)** — 이번 회차 ② 주소록/단체편지 그룹지정(ADDRESS·group, localStorage 가능) ③ 토론의광장(CONF, 새 DB 테이블 필요→보류). FAX·무선호출·인터넷메일은 외부 서비스라 불가.
+
+**구현(1회차 = 축하카드)**: 기존 쪽지 시스템을 확장 — **새 테이블 없음**. 카드 아트는 내가 창작(빈 껍데기 아님).
+- `public/js/core/memoCardAssets.js`(신규): ASCII 카드 4종(생일/축하/감사/성탄). 이모지는 터미널 폰트 폭 불안정이라 배제, ASCII·박스문자만. 최대 아트폭 29칸(모바일 44 안전).
+- 저장: 쪽지 `content` 맨 앞 `[CARD:key]` 마커(스키마 변경 없음). 편지 종류 태그(20260713_1620)와 동일한 마커 방식.
+- 쓰기 흐름(`memoScreens.js`): `WC` 명령 → 카드 선택 단계(`card_select`) → 받는 사람 → 인사말 → `/s` 발송(카드는 편지 종류 선택 건너뜀). `createMemoWriteFlow(target, cardMode)` 확장.
+- 보기(`memoAnsiBuilders.js` `buildMemoViewAnsi`): `[CARD:key]` 감지 → 카드 아트 가운데 정렬 렌더 + 마커 제거 후 인사말 본문 이어 출력.
+- 배선: `commandRouterMemo.js`(WC), `commandFooterText.js`(받은함 힌트 `WC:축하카드`).
+
+검증(루프 게이트): **`npm run loop:verify` 초록(10/10, exit 0)**. 카드 아트 최대폭 29칸 측정(모바일 안전). **브라우저 실측** — 실제 클라이언트 코드(`buildMemoViewAnsi`+`memoCardAssets`)를 페이지에서 구동해 카드 아트가 가운데 정렬 렌더·`[CARD:]` 마커 제거·인사말 이어짐 확인. API로 마커 저장 라운드트립 확인 후 **테스트 쪽지 삭제 정리**. (쓰기 흐름 in-browser 구동은 쪽지 기능이 로그인 필수라 게스트로 미실시 — 흐름 로직은 코드 검증 + 마커 저장 확인으로 대체.)
+변경 파일: `public/js/core/memoCardAssets.js`(신규), `memoScreens.js`, `memoAnsiBuilders.js`, `commandRouterMemo.js`, `commandFooterText.js`.
+결과: ✅ 완료 (루프 1회차)
 
 ---
 
