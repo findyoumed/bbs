@@ -129,23 +129,9 @@ export function createHelpScreens(deps) {
       }
     });
 
-    // [LOG_ID: 20260713_1230] 분류 목차 줄 — 숫자 입력으로 분류를 골라 본다 (나우누리 GUIDE식)
-    const tabShortNames = { NAV: '이동', POST: '글', AUTH: '계정', MEMO: '쪽지', CHAT: '대화', UI: '화면' };
-    const activeTabIndex = currentTab === 'all' ? 0 : HELP_TAB_KEYS.indexOf(currentTab) + 1;
-    const tabTokens = ['0.전체', ...HELP_TAB_KEYS.map((key, i) => `${i + 1}.${tabShortNames[key]}`)];
-    const renderTabToken = (token, index) => (index === activeTabIndex
-      ? ansiColor(14) + token + ANSI_RESET
-      : ansiColor(8) + token + ANSI_RESET);
-    const tabHeaderLines = isMobile
-      ? [
-        ansiColor(11) + '분류선택: ' + ANSI_RESET + tabTokens.slice(0, 3).map(renderTabToken).join(' '),
-        '          ' + tabTokens.slice(3).map((token, i) => renderTabToken(token, i + 3)).join(' ')
-      ]
-      : [ansiColor(11) + '분류선택: ' + ANSI_RESET + tabTokens.map(renderTabToken).join('  ')];
-
     // 3. 페이징 계산 (제목/분류 목차 제외 본문 줄 수만큼 끊음)
     // [LOG: 20260623_1236] 세로 스크롤바 방지 예산(총 23줄) 유지 — 분류 목차 줄만큼 차감
-    const linesPerPage = 19 - tabHeaderLines.length;
+    const linesPerPage = 19;
     const totalPages = Math.max(1, Math.ceil(helpLines.length / linesPerPage));
     const finalPage = Math.max(1, Math.min(requestedPage, totalPages));
 
@@ -153,7 +139,6 @@ export function createHelpScreens(deps) {
 
     const parts = [
       buildTopHeader({ leftLabel: 'HELP', centerLabel: UI_TEXT.HELP }, buildPageLabel(finalPage, totalPages), targetCols),
-      ...tabHeaderLines,
       ...pageSlice
     ];
 

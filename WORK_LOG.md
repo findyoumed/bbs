@@ -1,3 +1,49 @@
+## [2026-07-16 23:24] Fix P command pagination bug in help/policy screens
+
+**LOG_ID: 20260716_2324**
+목표: /help 등 HISTORY_BACK_SCREENS에 속한 화면에서 페이징 후 상위(P) 명령 입력 시 이전 페이지(B)처럼 작동하는 버그 수정.
+원인: P/M/B 명령이 모두 handleHistoryBack()을 호출하도록 묶여 있어, history.pushState로 페이징 처리된 화면(help 등)에서 P를 누르면 브라우저 히스토리 스택의 이전 페이지로 돌아가는 현상 발생.
+구현: commandDispatcherExecution.js에서 B 명령만 handleHistoryBack()을 유지하고, P/M/T는 메인 화면(showMain())으로 즉시 복귀하도록 분리 배선.
+변경 파일: public/js/core/commandDispatcherExecution.js
+결과: ✅ 완료
+
+---
+
+## [2026-07-16 23:26] 이용약관(policy) 및 도움말(help) 페이징 화면에서 한국어 이전/다음페이지 명령어 매핑 및 힌트바 표시 지원
+
+**LOG_ID: 20260716_2326**
+목표: http://localhost:3000/policy/tos 등 페이징 화면에서 '이전', '이전페이지', '다음페이지' 한국어 명령어가 동작하도록 지원하고 하단 힌트바에 해당 명령어(이전페이지, 다음페이지)가 표시되도록 구현.
+원인: 
+1. commandNormalizer.js의 koAliasMap에 한국어 매핑 중 '상위', '다음', '앞' 등은 있었으나 '이전', '이전페이지', '다음페이지'가 누락되어 있어 한국어로 입력 시 해당 페이지가 정상 페이징되지 않음.
+2. commandFooterText.js의 policy 힌트바 구성에 F와 B가 기본 라벨('다음쪽', '이전쪽')을 쓰도록 지정되어 있어 '다음페이지', '이전페이지'로 명시적 표기되지 않음.
+수정:
+- public/js/core/commandNormalizer.js — koAliasMap에 '이전': 'B', '이전페이지': 'B', '다음페이지': 'F' 매핑 추가.
+- public/js/core/commandFooterText.js — policy 힌트바 구성을 ['F:다음페이지', 'B:이전페이지', 'P', 'T', 'GO', 'H']로 수정하여 명시적 라벨 오버라이딩 적용.
+검증:
+- 임시 .mjs 파일 복사 후 node --check 문법 검증 완료 (이상 없음).
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 전체 스모크 및 QA 스크립트 실행 완료 (전부 통과).
+결과: ✅ 완료
+
+---
+
+## [2026-07-16 23:20] Remove tab header from help screen
+
+**LOG_ID: 20260716_2320**
+목표: /help 화면 상단의 분류선택 메뉴 제거
+구현: helpScreens.js에서 tabHeaderLines 렌더링 코드 제거
+결과: ✅ 완료
+
+---
+
+## [2026-07-16 23:18] Fix help screen tab header overlap
+
+**LOG_ID: 20260716_2318**
+목표: /help 화면 텍스트 겹침 완화
+변경 파일: public/js/core/helpScreens.js
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 22:30] MyInfo 검증 중 대기 캐럿 노출 수정 — is-command-pending CSS가 인라인 display:none을 override
 
 **LOG_ID: 20260716_2230**
