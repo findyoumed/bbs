@@ -24,9 +24,9 @@
 작업은 **아래 셋이 모두 충족될 때만** "완료"다:
 
 1. **`npm run loop:verify` 초록** — 증거 기반 자동 완료 판정.
-   빠른 게이트(오프라인 스모크 9종 + `qa:final`)를 순차 실행해 전부 통과해야 exit 0.
-   포함: boards, command-parity, menu-wiring, signup-ime, renderer-ui, chat-rooms, rss-services, auth-bridge, vercel-ready, qa:final.
-   제외(느림·외부 의존, 배포 직전 수동 실행): `smoke:full-traversal`, `smoke:supabase-live`/`realtime`/`auth-write`.
+   빠른 게이트(결정적 스모크 8종 + `qa:final`)를 순차 실행해 전부 통과해야 exit 0.
+   포함: boards, command-parity, menu-wiring, signup-ime, renderer-ui, chat-rooms, auth-bridge, vercel-ready, qa:final.
+   제외(비결정적·느림, 게이트 부적합 → 수동 실행): `smoke:rss-services`(라이브 뉴스 콘텐츠 의존 — 20260719_1400 루프 실행 중 발견해 게이트에서 제외), `smoke:full-traversal`, `smoke:supabase-live`/`realtime`/`auth-write`.
 2. **변경 기능의 실측 확인** — 화면/흐름이 있으면 브라우저(Playwright)나 실제 API로 직접 구동해 눈으로 확인. (테스트 통과만으로 끝내지 않는다.)
 3. **`WORK_LOG.md` 기록** — `LOG_ID`(YYYYMMDD_HHMM)와 함께 목표·원인·수정·검증·결과.
 

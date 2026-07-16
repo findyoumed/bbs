@@ -88,7 +88,8 @@ export function createCommandDispatcherExecution(deps) {
       handlePostViewCommand,
       handleLogCommand,
       handleVoteCommand,
-      handleRankingCommand
+      handleRankingCommand,
+      handleConfCommand
     },
     screens: {
       showMain,
@@ -169,6 +170,8 @@ export function createCommandDispatcherExecution(deps) {
       // [LOG: 20260623_0013] vote/ranking 화면 명령 라우팅 (origin/main 포팅)
       async () => await handleVoteCommand({ s: screen, cmd, rawCmd: normalized, context }),
       async () => await handleRankingCommand({ s: screen, cmd, rawCmd: normalized, context }),
+      // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 화면 명령 라우팅
+      async () => await handleConfCommand({ s: screen, cmd, rawCmd: normalized, context }),
       async () => input && await handleGlobalCommand({ cmd, rawCmd: normalized, context }),
       async () => await handleEntryCommand({ s: screen, cmd, context }),
       async () => HISTORY_BACK_SCREENS.has(screen) && ['P', 'M', 'B'].includes(cmd) && (await handleHistoryBack(), true),

@@ -40,6 +40,12 @@ export function createRoutingStateRestorer(deps) {
     showVoteList,
     showVoteDetail,
     showVoteCreate,
+    // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 복구 액션
+    showConfRooms,
+    showConfAgendas,
+    showConfAgenda,
+    showConfRoomCreate,
+    showConfAgendaNew,
     showRanking,
     showRankingDetail,
     showBiorhythm,
@@ -310,6 +316,23 @@ export function createRoutingStateRestorer(deps) {
         if (typeof showVoteDetail === 'function') return await showVoteDetail(Number(sub), true);
       }
       if (typeof showVoteList === 'function') return await showVoteList(true);
+      return await showMain(true);
+    },
+    // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 라우트 — /conf, /conf/open, /conf/:roomNo,
+    // /conf/:roomNo/new, /conf/agenda/:agendaId.
+    async conf(segments) {
+      const [, sub, param] = segments;
+      if (sub === 'open') {
+        if (typeof showConfRoomCreate === 'function') return await showConfRoomCreate(true);
+      } else if (sub === 'agenda' && param) {
+        if (typeof showConfAgenda === 'function') return await showConfAgenda(Number(param), true);
+      } else if (sub) {
+        if (param === 'new' && typeof showConfAgendaNew === 'function') {
+          return await showConfAgendaNew(Number(sub), true);
+        }
+        if (typeof showConfAgendas === 'function') return await showConfAgendas(Number(sub), true);
+      }
+      if (typeof showConfRooms === 'function') return await showConfRooms(true);
       return await showMain(true);
     },
     // [LOG: 20260623_0013] game(ranking) 라우트 복구 핸들러 (origin/main 포팅)

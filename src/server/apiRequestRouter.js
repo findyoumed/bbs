@@ -9,6 +9,8 @@ const handleBoardRoutes = require('./routeHandlers/boardRoutes');
 // [LOG: 20260623_0013] origin/main에서 vote/ranking 라우트 포팅
 const handleVoteRoutes = require('./routeHandlers/voteRoutes');
 const handleRankingRoutes = require('./routeHandlers/rankingRoutes');
+// [LOG_ID: 20260719_1600] 토론의 광장(CONF) 라우트
+const handleConfRoutes = require('./routeHandlers/confRoutes');
 
 const API_ROUTE_HANDLERS = [
   handleSystemRoutes,
@@ -18,7 +20,8 @@ const API_ROUTE_HANDLERS = [
   handleChatServiceRoutes,
   handleBoardRoutes,
   handleVoteRoutes,
-  handleRankingRoutes
+  handleRankingRoutes,
+  handleConfRoutes
 ];
 
 async function handleApiRequest(routeContext) {

@@ -1,4 +1,6 @@
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
+// [LOG_ID: 20260719_1200] 하이텔 (10)-3 축하카드(vmail) — content 맨 앞 [CARD:key] 마커의 아트.
+import { getMemoCard } from './memoCardAssets.js';
 
 // [LOG_ID: 20260713_1660] 편지 종류(1-8) 태그는 제목 앞 대괄호로 인코딩되어 있다(memoScreens.js
 // buildMemoTitleTag와 동일 형식). 목록/보기 화면에서 공통으로 파싱해 표시하기 위한 헬퍼.
@@ -158,7 +160,23 @@ export function createMemoAnsiBuilders(deps) {
     }
     parts.push(ansiHLine(targetCols, 8));
 
-    String(memo.content || '').split('\n').forEach((line) => {
+    // [LOG_ID: 20260719_1200] 축하카드: content 맨 앞이 [CARD:key]면 카드 아트를 가운데 정렬해 렌더하고,
+    // 마커 줄을 뺀 나머지를 인사말 본문으로 이어 보여준다.
+    let bodyText = String(memo.content || '');
+    const cardMatch = bodyText.match(/^\[CARD:([a-z0-9_]+)\]\n?/i);
+    if (cardMatch) {
+      const card = getMemoCard(cardMatch[1]);
+      bodyText = bodyText.slice(cardMatch[0].length);
+      if (card) {
+        card.art.forEach((artLine) => {
+          const pad = Math.max(0, Math.floor((targetCols - displayWidth(artLine)) / 2));
+          parts.push(ansiColor(card.color || 15) + ' '.repeat(pad) + artLine + ANSI_RESET);
+        });
+        parts.push(ansiHLine(targetCols, 8));
+      }
+    }
+
+    bodyText.split('\n').forEach((line) => {
       wrapAnsiText(line, targetCols).forEach((wrapped) => {
         parts.push(ansiColor(15) + wrapped + ANSI_RESET);
       });

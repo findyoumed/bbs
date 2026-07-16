@@ -28,6 +28,7 @@ function createAppRuntime(options = {}) {
     runtimeConfig: services.runtimeConfig,
     memberRepository: services.memberRepository,
     voteRepository: services.voteRepository, // [LOG: 20260623_0013] origin/main 포팅
+    confRepository: services.confRepository, // [LOG_ID: 20260719_1600] 토론의 광장
 
     repositoryDiagnostics: services.repositoryDiagnostics,
     errorTracker: services.errorTracker,

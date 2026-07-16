@@ -1,5 +1,6 @@
 // [LOG: 20260623_0013] origin/main에서 vote/ranking command handler 포팅 (self-contained import)
 import { createVoteCommandHandler } from './commandRouterVote.js';
+import { createConfCommandHandler } from './commandRouterConf.js';
 import { createRankingCommandHandler } from './commandRouterRanking.js';
 
 export function createAppFactoryHandlers(deps) {
@@ -106,6 +107,11 @@ export function createAppFactoryHandlers(deps) {
     ...handlerDeps,
     ...screens.rankingScreens
   });
+  // [LOG_ID: 20260719_1600] 토론의 광장(CONF) command handler
+  const handleConfCommand = createConfCommandHandler({
+    ...handlerDeps,
+    ...screens.confScreens
+  });
 
   const handleCmdRef = (...args) => {
     if (typeof refs.handleCmd === 'function') {
@@ -172,6 +178,7 @@ export function createAppFactoryHandlers(deps) {
     handleServiceCommand,
     // [LOG: 20260623_0013] vote/ranking command handler 리턴 (origin/main 포팅)
     handleVoteCommand,
-    handleRankingCommand
+    handleRankingCommand,
+    handleConfCommand
   };
 }

@@ -128,7 +128,7 @@ function sanitizeEnglishKeyboardInput(fieldId, value) {
     return converted.replace(/[^\x21-\x7E]/g, '');
   }
   if (fieldId === 'signup-email') {
-    return converted.replace(/[^A-Za-z0-9_@.-]/g, '');
+    return value.replace(/[^A-Za-z0-9_@.-]/g, '');
   }
   return String(value || '');
 }

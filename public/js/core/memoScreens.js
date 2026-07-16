@@ -1,5 +1,9 @@
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 import { renderAnsiScreenWithTopbarSequential, renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
+// [LOG_ID: 20260719_1200] 하이텔 (10)-3 축하카드(vmail)·천리안 그림엽서 — 카드 아트.
+import { MEMO_CARDS, MEMO_CARD_KEYS } from './memoCardAssets.js';
+// [LOG_ID: 20260719_1400] 하이텔 (10)-6 단체편지 그룹·천리안 주소록 — @그룹명 → 멤버 펼침.
+import { expandRecipients } from './memoGroups.js';
 
 // [LOG_ID: 20260713_1620] 하이텔 원전(길라잡이 p.105) 편지 종류 8종 — 비밀/답장요망/지연
 // 3개 속성의 조합. 서버 스키마 변경 없이 제목 앞 대괄호 태그로 인코딩한다.
@@ -210,11 +214,28 @@ export function createMemoScreens(deps) {
         state._memoWriteFlow = null;
     }
 
-    function createMemoWriteFlow(targetUserId) {
+    function createMemoWriteFlow(targetUserId, cardMode = false) {
         const target = String(targetUserId || '').trim();
         const transcript = [
-            { prompt: '[안내]', value: '쪽지 보내기를 시작합니다.' }
+            { prompt: '[안내]', value: cardMode ? '축하카드 보내기를 시작합니다.' : '쪽지 보내기를 시작합니다.' }
         ];
+
+        // [LOG_ID: 20260719_1200] 축하카드(vmail) 모드: 카드 디자인 선택부터 시작한다.
+        if (cardMode) {
+            transcript.push({ prompt: '[카드 선택]', value: '' });
+            MEMO_CARD_KEYS.forEach((key, i) => {
+                transcript.push({ prompt: `  ${i + 1}.`, value: MEMO_CARDS[key].label });
+            });
+            return {
+                target,
+                bodyLines: [],
+                transcript,
+                stage: 'card_select',
+                cardMode: true,
+                cardKey: '',
+                sending: false
+            };
+        }
 
         if (target) {
             transcript.push({ prompt: '받는 사람 >>', value: target });
@@ -269,13 +290,19 @@ export function createMemoScreens(deps) {
             isMobile
         });
 
-        setHint('전송(/s 또는 SEND), 취소(/q, P, M, B)');
-        setPrompt(flow.stage === 'target' ? '받는 사람 >>' : '내용 >>');
+        // [LOG_ID: 20260719_1200] 축하카드 선택 단계 프롬프트 추가.
+        if (flow.stage === 'card_select') {
+            setHint(`보낼 축하카드 번호를 고르세요. (1-${MEMO_CARD_KEYS.length}, 취소: /q)`);
+            setPrompt(`카드 번호 (1-${MEMO_CARD_KEYS.length}) >>`);
+        } else {
+            setHint('전송(/s 또는 SEND), 취소(/q, P, M, B)');
+            setPrompt(flow.stage === 'target' ? '받는 사람 >>' : '내용 >>');
+        }
         setReady?.(true);
         focusCommandInput();
     }
 
-    async function showMemoWrite(targetUserId = '') {
+    async function showMemoWrite(targetUserId = '', cardMode = false) {
         state.screen = 'memo-write';
         state._memoTarget = String(targetUserId || '').trim();
         state._memoDeleteConfirm = null;
@@ -284,7 +311,7 @@ export function createMemoScreens(deps) {
         }
         updateURL(true);
 
-        state._memoWriteFlow = createMemoWriteFlow(state._memoTarget);
+        state._memoWriteFlow = createMemoWriteFlow(state._memoTarget, cardMode);
 
         // [LOG_ID: 20260713_1100] 전달받은 원본 내용이 있을 경우 본문에 미리 채워넣고 복제
         if (state._forwardMemoContent) {
@@ -310,9 +337,9 @@ export function createMemoScreens(deps) {
             ? myId 
             : String(flow?.target || state._memoTarget || '').trim();
             
-        const content = Array.isArray(flow?.bodyLines) ? flow.bodyLines.join('\n').trim() : '';
+        const bodyText = Array.isArray(flow?.bodyLines) ? flow.bodyLines.join('\n').trim() : '';
 
-        if (!targetUserId || !content) {
+        if (!targetUserId || !bodyText) {
             appendMemoWriteLine('[안내]', '받는 사람과 내용을 모두 입력해 주세요.');
             renderMemoWriteScreen();
             return false;
@@ -322,16 +349,21 @@ export function createMemoScreens(deps) {
             if (flow) {
                 flow.sending = true;
             }
-            setHint('쪽지를 발송하는 중입니다..');
+            setHint(flow?.cardKey ? '축하카드를 발송하는 중입니다..' : '쪽지를 발송하는 중입니다..');
             const saveToSent = choice !== 1;
             // [LOG_ID: 20260713_1620] 편지 종류 태그(예: [비밀·답장요망]) 제목 앞에 부착
             const typeTag = buildMemoTitleTag(flow?.letterType, flow?.delayMinutes);
+
+            // [LOG_ID: 20260719_1200] 축하카드는 content 맨 앞에 [CARD:key] 마커로 저장한다(스키마 변경
+            // 없음). 쪽지 보기(buildMemoViewAnsi)가 이 마커를 감지해 카드 아트를 렌더하고 마커는 지운다.
+            const content = flow?.cardKey ? `[CARD:${flow.cardKey}]\n${bodyText}` : bodyText;
+            const titlePrefix = flow?.cardKey ? `[축하카드] ${MEMO_CARDS[flow.cardKey].label} ` : typeTag;
 
             const res = await apiFetch('/api/memos', {
                 method: 'POST',
                 body: JSON.stringify({
                     recipientUserId: targetUserId,
-                    title: `${typeTag}${content.substring(0, 20)}...`,
+                    title: `${titlePrefix}${bodyText.substring(0, 20)}...`,
                     content,
                     saveToSent
                 })
@@ -393,6 +425,35 @@ export function createMemoScreens(deps) {
         const trimmed = line.trim();
         const cmd = trimmed.toUpperCase();
         const isCancel = trimmed === '/q' || cmd === 'P' || cmd === 'M' || cmd === 'B';
+
+        // [LOG_ID: 20260719_1200] 축하카드(vmail) 카드 선택 단계 — 카드 고르면 받는 사람 입력으로 넘어간다.
+        if (flow.stage === 'card_select') {
+            appendMemoWriteLine('카드 번호 >>', line);
+            if (isCancel) {
+                renderMemoWriteScreen();
+                return await cancelMemoWrite();
+            }
+            const cardIdx = parseInt(trimmed, 10);
+            const cardKey = MEMO_CARD_KEYS[cardIdx - 1];
+            if (!cardKey) {
+                appendMemoWriteLine('[안내]', `잘못된 선택입니다. 1~${MEMO_CARD_KEYS.length} 중 하나를 입력해 주세요.`);
+                renderMemoWriteScreen();
+                return true;
+            }
+            flow.cardKey = cardKey;
+            appendMemoWriteLine('[확인]', `${MEMO_CARDS[cardKey].label} 카드 선택됨`);
+            // 받는 사람이 이미 지정돼 있으면 본문으로, 아니면 받는 사람 입력으로.
+            if (flow.target) {
+                flow.stage = 'body';
+                appendMemoWriteLine('받는 사람 >>', flow.target);
+                appendMemoWriteLine('[안내]', '카드에 담을 인사말을 한 줄씩 입력하세요. /s 전송, /q 취소');
+            } else {
+                flow.stage = 'target';
+                appendMemoWriteLine('[안내]', '받는 사람 아이디를 입력하세요.');
+            }
+            renderMemoWriteScreen();
+            return true;
+        }
 
         // [LOG_ID: 20260713_1620] 편지 종류(1-8) 선택 가로채기
         if (flow.stage === 'letter_type') {
@@ -482,8 +543,13 @@ export function createMemoScreens(deps) {
                 return true;
             }
 
-            flow.target = trimmed;
-            state._memoTarget = trimmed;
+            // [LOG_ID: 20260719_1400] @그룹명을 저장된 멤버로 펼친다(주소록/단체편지 그룹).
+            const expanded = expandRecipients(trimmed);
+            if (expanded !== trimmed) {
+                appendMemoWriteLine('[그룹]', `${trimmed} → ${expanded}`);
+            }
+            flow.target = expanded;
+            state._memoTarget = expanded;
             flow.stage = 'body';
             appendMemoWriteLine('[안내]', '내용을 한 줄씩 입력하세요. /s 또는 SEND 전송, /q 취소');
             renderMemoWriteScreen();
@@ -498,6 +564,13 @@ export function createMemoScreens(deps) {
 
         if (trimmed === '/s' || cmd === 'SEND') {
             appendMemoWriteLine('내용 >>', line);
+            // [LOG_ID: 20260719_1200] 축하카드는 편지 종류(비밀/지연 등) 선택을 건너뛰고 바로 발송한다
+            // (카드 자체가 편지 종류다). 일반 쪽지만 편지 종류 선택 단계로 넘어간다.
+            if (flow.cardMode) {
+                appendMemoWriteLine('[안내]', '축하카드를 발송합니다..');
+                await handleMemoSubmitWithOptions(3);
+                return true;
+            }
             flow.stage = 'letter_type';
             // [LOG_ID: 20260713_1660] 편지 종류(1-8)를 DN 프로토콜 선택처럼 번호별 한 줄씩
             // 세로로 나열해 실제로 눈에 보이는 선택 목록(메뉴)으로 만든다.

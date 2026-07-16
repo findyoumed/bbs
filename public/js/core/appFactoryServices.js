@@ -2,6 +2,8 @@
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 import { createVoteAnsiBuilders } from './voteAnsiBuilders.js';
 import { createRankingAnsiBuilders } from './rankingAnsiBuilders.js';
+// [LOG_ID: 20260719_1600] 토론의 광장(CONF) ansi 빌더
+import { createConfAnsiBuilders } from './confAnsiBuilders.js';
 
 export function createAppFactoryServices(deps) {
   const {
@@ -120,6 +122,7 @@ export function createAppFactoryServices(deps) {
   const ansiBuilderUtils = createAnsiBuilderUtils({ isWideChar, displayWidth });
   const voteAnsiBuilders = createVoteAnsiBuilders({ ansiBuilderUtils });
   const rankingAnsiBuilders = createRankingAnsiBuilders({ ansiBuilderUtils });
+  const confAnsiBuilders = createConfAnsiBuilders({ ansiBuilderUtils }); // [LOG_ID: 20260719_1600]
 
   return {
     ansiToHTML,
@@ -144,6 +147,7 @@ export function createAppFactoryServices(deps) {
     serviceAnsiBuilders,
     voteAnsiBuilders,
     rankingAnsiBuilders,
+    confAnsiBuilders,
     settingsService,
     soundService,
     statusManager,

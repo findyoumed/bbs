@@ -15,6 +15,8 @@ const { createActivityRepository } = require('./ActivityRepository');
 const ActivityRepositorySupabase = require('./ActivityRepositorySupabase');
 // [LOG: 20260623_0013] origin/main에서 vote 시스템 포팅
 const { createVoteRepositoryFromEnv } = require('./VoteRepository');
+// [LOG_ID: 20260719_1600] 토론의 광장(CONF) 시스템
+const { createConfRepositoryFromEnv } = require('./ConfRepository');
 const { resolveLegacyPaths } = require('./projectPaths');
 
 /**
@@ -130,6 +132,8 @@ class RepositoryRegistry {
 
     // 7. Vote Repository [LOG: 20260623_0013] env 기반 Supabase/Memory 분기 (origin/main 포팅)
     this.register('vote', createVoteRepositoryFromEnv(this.env));
+    // 8. Conf Repository [LOG_ID: 20260719_1600] 토론의 광장
+    this.register('conf', createConfRepositoryFromEnv(this.env));
 
     return this.repositories;
   }

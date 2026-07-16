@@ -150,6 +150,13 @@ export function createMenuNavigationActions(deps) {
       await refs.showRanking();
       return true;
     }
+    // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 메뉴 타입 진입
+    if (node.type === 'conf' && typeof refs.showConfRooms === 'function') {
+      state.boardMenuPath = contextMenuPath;
+      state.boardMenuTitle = contextMenuTitle;
+      await refs.showConfRooms();
+      return true;
+    }
     // [LOG_ID: 20260623_1300] Restore GAME utilities from origin/main.
     if (node.type === 'biorhythm' && typeof refs.showBiorhythm === 'function') { await refs.showBiorhythm(); return true; }
     if (node.type === 'fortune' && typeof refs.showFortune === 'function') { await refs.showFortune(); return true; }

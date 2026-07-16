@@ -6,6 +6,8 @@ const { createMemoRepositoryFromEnv } = require('./MemoRepository');
 const { createMemberRepositoryFromEnv } = require('./MemberRepository');
 // [LOG: 20260623_0013] origin/main에서 vote 시스템 포팅 — route 핸들러에 voteRepository 노출
 const { createVoteRepositoryFromEnv } = require('./VoteRepository');
+// [LOG_ID: 20260719_1600] 토론의 광장(CONF) — route 핸들러에 confRepository 노출
+const { createConfRepositoryFromEnv } = require('./ConfRepository');
 
 const logger = require('./logger');
 
@@ -41,6 +43,7 @@ function createRequestHandlerRuntime(options = {}) {
     repositoryDiagnostics: options.repositoryDiagnostics || null,
     activityRepository: options.activityRepository || createActivityRepository(),
     voteRepository: options.voteRepository || createVoteRepositoryFromEnv(env),
+    confRepository: options.confRepository || createConfRepositoryFromEnv(env), // [LOG_ID: 20260719_1600]
     menuResolver: options.menuResolver,
     rssService: options.rssService,
     authBridge: options.authBridge,
@@ -66,6 +69,7 @@ function createRouteContext(runtime, req, res, requestUrl, requestId) {
     memberRepository: runtime.memberRepository,
     activityRepository: runtime.activityRepository,
     voteRepository: runtime.voteRepository,
+    confRepository: runtime.confRepository, // [LOG_ID: 20260719_1600] 토론의 광장
     registry: runtime.registry,
     menuResolver: runtime.menuResolver,
     rssService: runtime.rssService,

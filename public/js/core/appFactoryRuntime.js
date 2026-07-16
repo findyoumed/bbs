@@ -21,6 +21,7 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.authScreens,
     ...screens.voteScreens,
     ...screens.rankingScreens,
+    ...screens.confScreens,
     ...screens.amusementScreens,
     // [LOG_ID: 20260713_1700] refs에 빠져 있어 refs.showMemoList가 항상 undefined였다 —
     // 메인 메뉴에 쪽지함 진입점이 없던 문제(menuNavigationActions type='memo')와
@@ -164,6 +165,7 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.memoScreens,
     ...screens.voteScreens,
     ...screens.rankingScreens,
+    ...screens.confScreens,
     ...screens.amusementScreens,
     getAuthLeafRoutePath: services.menuService.getAuthLeafRoutePath,
     getMenuNodeByKey: services.menuService.getMenuNodeByKey,
@@ -213,7 +215,8 @@ export function initializeAppFactoryRuntime(deps) {
       handleLogCommand: screens.systemLogScreens.handleLogCommand,
       // [LOG: 20260623_0013] vote/ranking command handler 연결 (origin/main 포팅)
       handleVoteCommand: handlers.handleVoteCommand,
-      handleRankingCommand: handlers.handleRankingCommand
+      handleRankingCommand: handlers.handleRankingCommand,
+      handleConfCommand: handlers.handleConfCommand
     },
     screens: {
       showMain: screens.showMain,

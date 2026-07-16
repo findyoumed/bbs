@@ -132,6 +132,15 @@
 			<footer>txt/cmd_menu_footer.txt</footer>
 		</item>
 
+		<!-- [LOG_ID: 20260719_1600] 토론의 광장 (CONF) — 하이텔 (12)여론광장-1.토론의 광장 재현.
+		     회의실을 열고 안건을 발의·재청하는 여론 수렴 기능. type="conf" 라우팅은
+		     menuNavigationActions에서 refs.showConfRooms()로 진입. -->
+		<item type="conf" go="conf" id="conf" door="12" access_level="1">
+			<name>토론의 광장 (CONF)</name>
+			<header></header>
+			<footer>txt/cmd_menu_footer.txt</footer>
+		</item>
+
 		<!-- 10. 뉴스/인물 -->
 		<item type="news" go="news" door="10" access_level="1">
 			<name>뉴스/인물 (NEWS)</name>

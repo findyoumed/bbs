@@ -1,5 +1,6 @@
 // [LOG: 20260623_0013] origin/main에서 vote/ranking 스크린 포팅 (self-contained import)
 import { createVoteScreens } from './voteScreens.js';
+import { createConfScreens } from './confScreens.js';
 import { createRankingScreens } from './rankingScreens.js';
 import { createAmusementScreens } from './amusementScreens.js';
 // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색(member/byid/byname)
@@ -53,7 +54,8 @@ export function createAppFactoryScreens(deps) {
     systemAnsiBuilders,
     terminalUiCore,
     voteAnsiBuilders,
-    rankingAnsiBuilders
+    rankingAnsiBuilders,
+    confAnsiBuilders
   } = services;
 
   const screenDeps = {
@@ -227,6 +229,15 @@ export function createAppFactoryScreens(deps) {
     buildRankingDetailAnsi: rankingAnsiBuilders.buildRankingDetailAnsi,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
+  // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 스크린
+  const confScreens = createConfScreens({
+    ...screenDeps,
+    apiFetch,
+    buildConfRoomListAnsi: confAnsiBuilders.buildConfRoomListAnsi,
+    buildConfAgendaListAnsi: confAnsiBuilders.buildConfAgendaListAnsi,
+    buildConfAgendaViewAnsi: confAnsiBuilders.buildConfAgendaViewAnsi,
+    getMenuNodeByKey: menuService.getMenuNodeByKey
+  });
   const amusementScreens = createAmusementScreens({
     ...screenDeps,
     buildBiorhythmIntroAnsi: serviceAnsiBuilders.buildBiorhythmIntroAnsi,
@@ -260,6 +271,7 @@ export function createAppFactoryScreens(deps) {
     serviceScreens,
     voteScreens,
     rankingScreens,
+    confScreens,
     amusementScreens,
     showBoardSelect,
     showMain,

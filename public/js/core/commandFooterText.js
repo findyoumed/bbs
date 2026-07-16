@@ -65,6 +65,12 @@ export const CMD_ORDER = {
   voteList: ['P', 'T', 'GO', 'W:설문등록', 'H'],
   voteDetail: ['B:목록', 'P', 'T', 'GO', 'H'],
   voteCreate: ['B:취소', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 하단 힌트바
+  confRooms: ['O:회의실개설', 'P', 'T', 'GO', 'H'],
+  confAgendas: ['N:안건발의', 'B:회의실', 'C:닫기', 'P', 'T', 'GO', 'H'],
+  confAgenda: ['R:재청', 'P:목록', 'T', 'GO', 'H'],
+  confRoomCreate: ['P:취소', 'T', 'GO', 'H'],
+  confAgendaNew: ['P:취소', 'T', 'GO', 'H'],
   // [LOG_ID: 20260715_1300] 게시판 랭킹 화면도 여론광장과 동일한 유형의 중복 하드코딩
   // 안내줄("[1]레벨 [2]글수 [3]추천 [4]조회 | [M]오락실 [T]대문")을 본문에 갖고 있었다.
   // 여기선 M/T 목적지 자체는 정확했지만(랭킹은 실제로 오락실 하위), 표준 힌트바의
@@ -110,6 +116,8 @@ const SCREEN_TO_CATEGORY = {
   'retro-list': 'amusementInput', 'retro-view': 'amusementView',
   'vote-list': 'voteList', 'vote-detail': 'voteDetail', 'vote-create': 'voteCreate',
   'ranking-summary': 'rankingSummary', 'ranking-detail': 'rankingDetail',
+  'conf-rooms': 'confRooms', 'conf-agendas': 'confAgendas', 'conf-agenda': 'confAgenda',
+  'conf-room-create': 'confRoomCreate', 'conf-agenda-new': 'confAgendaNew',
   login: 'login',
   signup: 'authMenu'
 };
@@ -141,7 +149,8 @@ export function createCommandFooterTextUtils(deps) {
       } else if (state._memoBox === 'sent') {
         order = ['P', 'T', 'GO', 'I:받은쪽지', 'MB:보관함', 'CM:발송취소', 'K:보관', 'H'];
       } else {
-        order = ['P', 'T', 'GO', 'W:쓰기', 'S:보낸쪽지', 'MB:보관함', 'K:보관', 'H'];
+        // [LOG_ID: 20260719_1200] WC:축하카드(vmail). [LOG_ID: 20260719_1400] GRP:그룹(주소록).
+        order = ['P', 'T', 'GO', 'W:쓰기', 'WC:축하카드', 'GRP:그룹', 'S:보낸쪽지', 'MB:보관함', 'K:보관', 'H'];
       }
     }
 

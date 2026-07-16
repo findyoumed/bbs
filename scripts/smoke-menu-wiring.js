@@ -44,6 +44,7 @@ const REFS_BY_TYPE = {
   weather: 'showWeatherMenu',
   vote: 'showVoteList',
   ranking: 'showRanking',
+  conf: 'showConfRooms',
   biorhythm: 'showBiorhythm',
   fortune: 'showFortune',
   mbti: 'showMbti',

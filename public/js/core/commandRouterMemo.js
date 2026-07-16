@@ -1,3 +1,5 @@
+import { listGroups, setGroup, deleteGroup } from './memoGroups.js';
+
 export function createMemoCommandHandler(deps) {
     const {
         apiFetch,
@@ -108,6 +110,41 @@ export function createMemoCommandHandler(deps) {
             }
             if (cmd === 'W') {
                 await showMemoWrite();
+                return true;
+            }
+            // [LOG_ID: 20260719_1200] 하이텔 (10)-3 축하카드/그림엽서(vmail) 쓰기 — 카드 선택부터 시작.
+            if (cmd === 'WC') {
+                await showMemoWrite('', true);
+                return true;
+            }
+            // [LOG_ID: 20260719_1400] 하이텔 (10)-6 단체편지 그룹지정·천리안 주소록(ADDRESS).
+            // GRP(목록) / GRP+ 이름 id,id,...(저장) / GRP- 이름(삭제). 그룹명·id는 원본 대소문자를
+            // 보존해야 하므로 정규화된 cmd가 아니라 input(원문)으로 파싱한다.
+            const grpMatch = String(input || '').trim().match(/^GRP\s*([+-])?\s*(.*)$/i);
+            if (grpMatch) {
+                const op = grpMatch[1];
+                const rest = grpMatch[2].trim();
+                if (op === '+') {
+                    const sp = rest.indexOf(' ');
+                    const name = sp === -1 ? '' : rest.slice(0, sp).trim();
+                    const members = sp === -1 ? '' : rest.slice(sp + 1).trim();
+                    const saved = name && members ? setGroup(name, members) : null;
+                    setHint(saved
+                        ? `그룹 '${name}' 저장됨 (${saved.length}명: ${saved.join(', ')}). 쓰기에서 받는사람에 @${name} 로 씁니다.`
+                        : '사용법: GRP+ 그룹명 아이디1,아이디2,...');
+                    return true;
+                }
+                if (op === '-') {
+                    setHint(rest && deleteGroup(rest)
+                        ? `그룹 '${rest}' 삭제됨.`
+                        : (rest ? `그룹 '${rest}'을(를) 찾을 수 없습니다.` : '사용법: GRP- 그룹명'));
+                    return true;
+                }
+                const groups = listGroups();
+                const names = Object.keys(groups);
+                setHint(names.length
+                    ? `저장된 그룹: ${names.map((n) => `@${n}(${groups[n].split(',').length})`).join(', ')} · GRP+ 이름 id,id 저장 / GRP- 이름 삭제`
+                    : '저장된 그룹이 없습니다. GRP+ 가족 hong,kim,lee 처럼 만드세요.');
                 return true;
             }
             // [LOG_ID: 20260713_1000] 보낸쪽지함/받는쪽지함 토글 처리

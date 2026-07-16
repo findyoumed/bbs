@@ -146,6 +146,18 @@ export function createRoutingUrlBuilder(deps) {
       case 'ranking-detail':
         return `/game/ranking/${encodeURIComponent(serviceData?.category || '')}`;
 
+      // [LOG_ID: 20260719_1600] 토론의 광장(CONF) URL
+      case 'conf-rooms':
+        return '/conf';
+      case 'conf-room-create':
+        return '/conf/open';
+      case 'conf-agendas':
+        return `/conf/${encodeURIComponent(serviceData?.roomNo || '')}`;
+      case 'conf-agenda-new':
+        return `/conf/${encodeURIComponent(serviceData?.roomNo || '')}/new`;
+      case 'conf-agenda':
+        return `/conf/agenda/${encodeURIComponent(serviceData?.agendaId || '')}`;
+
       case 'help': {
         // [LOG: 20260429_0355] Keep later help pages addressable so reload/history
         // restores the same /help page instead of collapsing to page 1.

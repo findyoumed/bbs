@@ -70,6 +70,7 @@ function createAppServices(rootDir, env = process.env) {
   const attachmentRepository = registry.get('attachment');
   const activityRepository = registry.get('activity');
   const voteRepository = registry.get('vote'); // [LOG: 20260623_0013] origin/main 포팅
+  const confRepository = registry.get('conf'); // [LOG_ID: 20260719_1600] 토론의 광장
 
   const repositoryDiagnostics = applyRuntimeRepositoryMeta(preflightDiagnostics, {
     board: boardRepository,
@@ -98,6 +99,7 @@ function createAppServices(rootDir, env = process.env) {
     memberRepository,
     activityRepository,
     voteRepository,
+    confRepository,
     menuResolver: new MenuResolver(legacyPaths.menuFilePath),
     rssService: new RssService({
       newsMenuPath: legacyPaths.newsMenuPath,
