@@ -128,7 +128,11 @@ function sanitizeEnglishKeyboardInput(fieldId, value) {
     return converted.replace(/[^\x21-\x7E]/g, '');
   }
   if (fieldId === 'signup-email') {
-    return value.replace(/[^A-Za-z0-9_@.-]/g, '');
+    // [LOG_ID: 20260716_1709] 이메일도 다른 영문 단계(userid)와 동일하게 한글 자판 입력을
+    // QWERTY로 되돌린 뒤(converted) 이메일 허용 문자만 남긴다. 종전엔 raw value를 바로
+    // 필터링해, 한글 IME 모드로 이메일을 치면 눌린 영문키(예: "gmail"→"ㅎ마일")가 변환되지
+    // 못하고 통째로 지워지거나 이상하게 남았다("한글 입력 시 이상하게 표기" 보고).
+    return converted.replace(/[^A-Za-z0-9_@.-]/g, '');
   }
   return String(value || '');
 }

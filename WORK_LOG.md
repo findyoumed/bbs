@@ -1,3 +1,33 @@
+## [2026-07-16 20:10] [루프 3회차] 토론의 광장(CONF) — 하이텔 (12)여론광장-1 재현 (서버+클라이언트 완성)
+
+**LOG_ID: 20260716_2010**
+목표: 루프 3회차 — 회의실을 열고 안건을 발의·재청하는 여론 수렴 기능(CONF) 신설. 서버(3a)는 앞서 완성·검증했고, 이번에 클라이언트(3b)와 메뉴/라우팅 배선을 완성.
+
+**서버(3a, 앞 세션)**: `supabase/migrations/0019_conf_system.sql`(conf_rooms/conf_agendas/conf_seconds), `ConfRepositoryMemory.js`/`ConfRepositorySupabase.js`/`ConfRepository.js`, `routeHandlers/confRoutes.js`(GET/POST rooms·agendas·second·close), RepositoryRegistry·createAppServices·createAppRuntime·requestHandlerRuntime(런타임 조립 2지점)·apiRequestRouter 배선.
+
+**클라이언트(3b, 이번)**:
+- 신규 3파일: `confAnsiBuilders.js`(회의실목록/안건목록/안건보기 ANSI, 모바일44·데스크톱80), `confScreens.js`(화면9: 목록·보기·개설·발의·재청·닫기, 안건 순번 no→id 매핑), `commandRouterConf.js`(번호=입장, O=개설, N=발의, R=재청, C=닫기, /s·/c 다중행 발의).
+- 배선: `appFactoryServices.js`(빌더 생성)→`appFactoryScreens.js`(화면 생성)→`appFactoryHandlers.js`(핸들러)→`appFactoryRuntime.js`(refs·routingModule·dispatcher 3중 노출)→`commandDispatcherExecution.js`(파이프라인)→`menuNavigationActions.js`(type="conf")→`legacy/hanulso.mnu`(최상위 "토론의 광장(CONF)" 노드)→`commandFooterText.js`(힌트바 5종+화면매핑)→`routingUrlBuilder.js`/`routingStateRestorer.js`(/conf 라우트)→`scripts/smoke-menu-wiring.js`(REFS_BY_TYPE.conf).
+
+검증: **`npm run loop:verify` 초록(9/9, exit 0)** — 특히 menu-wiring(type="conf" refs 도달성) + renderer-ui(전체 모듈 그래프 import). **Memory 드라이버(포트 3100) API 실측**: 개설→발의(다중행 본문 보존)→재청(count 1, seconded=true)→중복 재청 409→안건 보기(seconded 사용자 반영)→회의실목록 agendaCount=1→닫기(isOpen=false)→닫힌 방 발의 409→게스트 재청 401. 클라이언트가 부르는 엔드포인트·응답(apiFetch가 envelope의 .data 언래핑, no↔id 매핑 데이터 존재)이 전부 일치. 테스트 서버 종료로 잔여 없음.
+**미완/인계**: 브라우저 UI 실측(확장 미연결로 미실시), `0019_conf_system.sql`은 사용자가 Supabase에 `supabase db push`로 적용 필요(런타임 DDL 불가).
+변경 파일: `public/js/core/confAnsiBuilders.js`·`confScreens.js`·`commandRouterConf.js`(신규), `appFactoryServices.js`, `appFactoryScreens.js`, `appFactoryHandlers.js`, `appFactoryRuntime.js`, `commandDispatcherExecution.js`, `menuNavigationActions.js`, `legacy/hanulso.mnu`, `commandFooterText.js`, `routingUrlBuilder.js`, `routingStateRestorer.js`, `scripts/smoke-menu-wiring.js`.
+결과: ✅ 완료 (루프 3회차, 브라우저 UI 실측만 인계)
+
+---
+
+## [2026-07-16 20:00] Fix signup email field Hangul-mode input being lost
+
+**LOG_ID: 20260716_2000**
+목표: `/log/signup/email` 회원가입 이메일 입력란(`#cmd-input`)에 한글(IME 한글 모드)로 입력 시 이상하게 표기/유실되는 버그 수정.
+원인: `signupEmailForm.js`의 `sanitizeEnglishKeyboardInput`에서 `signup-email` 분기만 다른 영문 단계(userid)와 달리 **한글→QWERTY 변환(`converted`)을 거치지 않고 raw `value`를 바로 필터링**했다. 그래서 한글 모드로 이메일을 치면 사용자가 실제 누른 영문키(예: "gmail"이 "ㅎ마일" 등으로 조합됨)가 되돌려지지 못하고 통째로 제거되거나 이상하게 남았다.
+수정: `return value.replace(...)` → `return converted.replace(/[^A-Za-z0-9_@.-]/g, '')` — userid 단계와 동일하게 변환 후 이메일 허용 문자만 남긴다.
+검증: `npm run loop:verify` 초록(9/9) — signup-ime 스모크(IME 기계 회귀 없음) + renderer-ui 통과. 이미 검증된 userid 단계와 동일한 `converted` 기반을 공유하고 허용 정규식만 다르므로 동작 보장.
+변경 파일: `public/js/core/signupEmailForm.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 19:13] Clear nickname command input immediately upon submission
 
 **LOG_ID: 20260716_1913**
