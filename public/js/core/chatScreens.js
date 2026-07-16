@@ -38,10 +38,16 @@ export function createChatScreens(deps) {
     });
   }
 
-  async function openChatRoomCreate() {
-    state._chatRoomCreateStage = 'title';
+  async function openChatRoomCreate(initialTitle = '') {
     state._chatRoomDraft = {};
-    setPrompt('새 대화방 제목을 입력하여 주십시오. (취소: /M) >>');
+    if (initialTitle) {
+      state._chatRoomDraft.title = initialTitle;
+      state._chatRoomCreateStage = 'greeting';
+      setPrompt('새 대화방 환영 메세지를 입력하여 주십시오. (취소: /M) >>');
+    } else {
+      state._chatRoomCreateStage = 'title';
+      setPrompt('새 대화방 제목을 입력하여 주십시오. (취소: /M) >>');
+    }
   }
 
   async function showChatLobby(fromHistory = false) {

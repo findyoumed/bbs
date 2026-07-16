@@ -283,8 +283,8 @@ export function createBrowseCommandHandler(deps) {
         return true;
       }
 
-      // [LOG_ID: 20260713_1120] PDS 자료 올리기(UP) 커맨드
-      if (cmd === 'UP') {
+      // [LOG_ID: 20260713_1120] PDS 자료 올리기(UP) 커맨드 및 얼라이어스 (UL, UPLOAD, PUT)
+      if (cmd === 'UP' || cmd === 'UL' || cmd === 'UPLOAD' || cmd === 'PUT') {
         const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
         if (isPds) {
           showPostWrite('create');
@@ -292,10 +292,34 @@ export function createBrowseCommandHandler(deps) {
         }
       }
 
-      // [LOG_ID: 20260713_1120] PDS 자료 내려받기(DN [번호]) 커맨드
-      const dnMatch = cmd.match(/^DN(?:\s+(\d+))?$/i);
+      // [LOG_ID: 20260719_1010] PDS 내 검색 (S, SEARCH, FIND) 명령어 및 얼라이어스 구현
+      const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
+      if (isPds) {
+        if (cmd === 'S' || cmd === 'SEARCH' || cmd === 'FIND') {
+          state._pendingSearch = {
+            type: 'lt',
+            boardId: state.board.id,
+            menuPath: state.boardMenuPath,
+            menuTitle: state.boardMenuTitle
+          };
+          setHint('자료실 파일명(제목) 검색어를 입력해 주십시오.');
+          setPrompt('검색어 >>');
+          return true;
+        }
+        const pdsSearchMatch = cmd.match(/^(?:S|SEARCH|FIND)\s+(.+)$/i);
+        if (pdsSearchMatch) {
+          await showPostList(state.board.id, 1, {
+            menuPath: state.boardMenuPath,
+            menuTitle: state.boardMenuTitle,
+            searchParams: { lt: pdsSearchMatch[1].trim() }
+          });
+          return true;
+        }
+      }
+
+      // [LOG_ID: 20260713_1120] PDS 자료 내려받기(DN [번호]) 커맨드 및 얼라이어스 (DL, DOWNLOAD, TR, GET)
+      const dnMatch = cmd.match(/^(?:DN|DL|DOWNLOAD|TR|GET)(?:\s+(\d+))?$/i);
       if (dnMatch) {
-        const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
         if (!isPds) {
           return false;
         }
@@ -503,12 +527,17 @@ export function createBrowseCommandHandler(deps) {
         return true;
       }
 
-      const liMatch = cmd.match(/^LI\s+(.+)$/);
-      if (liMatch) {
+      // [LOG_ID: 20260719_1010] 검색어와 함께 직접 검색 명령어 (LT [query], GL [query], SUBJ [query], LI [query], GA [query], BODY [query]) 실행
+      const directSearchMatch = cmd.match(/^(LT|GL|SUBJ|LI|GA|BODY)\s+(.+)$/i);
+      if (directSearchMatch) {
+        const keyword = directSearchMatch[2].trim();
+        const cmdType = directSearchMatch[1].toUpperCase();
+        const type = (cmdType === 'GL' || cmdType === 'SUBJ' || cmdType === 'LT') ? 'lt' : (cmdType === 'GA' || cmdType === 'BODY') ? 'lc' : 'li';
+        
         await showPostList(state.board.id, 1, {
           menuPath: state.boardMenuPath,
           menuTitle: state.boardMenuTitle,
-          searchParams: { li: liMatch[1].trim() }
+          searchParams: { [type]: keyword }
         });
         return true;
       }

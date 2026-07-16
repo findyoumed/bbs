@@ -180,6 +180,14 @@ export function createChatCommandHandler(deps) {
         return true;
       }
 
+      // [LOG_ID: 20260719_1010] 클래식 대화방 생성 명령어 (/create, /c, /open 및 슬래시 없는 버전) 구현
+      const createMatch = cmd.match(/^(?:\/)?(CREATE|C|OPEN)(?:\s+(.+))?$/i);
+      if (createMatch) {
+        const title = createMatch[2] ? createMatch[2].trim() : '';
+        await openChatRoomCreate(title);
+        return true;
+      }
+
       // [LOG_ID: 20260713_1000] J [방번호] / JOIN [방번호] / /J [방번호] 명령어 배선 추가
       const jMatch = cmd.match(/^(?:\/?J|JOIN)\s+(\d+)$/i);
       if (jMatch) {
@@ -305,6 +313,13 @@ export function createChatCommandHandler(deps) {
           } catch (e) {
             setHint('접속자 목록 조회에 실패했습니다.');
           }
+          return true;
+        }
+
+        // [LOG_ID: 20260719_1010] 대화방 내 참여자 목록 조회 (/W, /WHO) 구현
+        if (slashCmd === 'W' || slashCmd === 'WHO') {
+          const list = (state._chatRoom?.participants || []).map((p) => `${p.nickName || p.userId}(${p.userId})`).filter(Boolean);
+          setHint(list.length ? `대화방 참여자: ${list.join(', ')}` : '참여자 정보를 확인할 수 없습니다.');
           return true;
         }
 
