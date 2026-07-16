@@ -166,10 +166,8 @@ export function createMyInfoActions(deps) {
             return false;
         }
 
-        const cmdInput = document.getElementById('cmd-input');
-        if (cmdInput) {
-            cmdInput.value = '';
-        }
+        // [LOG: 20260716_1932] API 응답 후 화면이 새로 그려지므로 여기서 미리 지우지 않는다.
+        // 미리 지우면 API 대기 중 입력값이 사라져 사용자에게 혼란을 준다.
 
         let updated;
         try {
