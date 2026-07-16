@@ -1,3 +1,15 @@
+## [2026-07-16 17:55] Fix Enter keydown event prevention on main command input
+
+**LOG_ID: 20260716_1755**
+목표: 회원가입 이메일 가입 등의 화면에서 `#cmd-input`에 텍스트 입력 후 엔터 입력 시 제출이 불가능하거나 화면이 먹통이 되는(Enter 미동작) 문제 해결.
+추가/변경 사항:
+1. `public/js/core/appEventsCommandInput.js`의 `handleKeyDown` 함수 내 Enter 처리 분기 직후 `event.preventDefault()` 호출을 추가하여 브라우저의 기본 Enter 동작을 방지하고 입력 처리가 정상적으로 흐르도록 보장. (다른 로그인/입력 화면들은 이미 개별적으로 `preventDefault()`를 명시적으로 호출하고 있었으나 메인 커맨드 라인은 누락되어 있었음)
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/appEventsCommandInput.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 17:09] Fix Hangul input encoding issue in signup email field
 
 **LOG_ID: 20260716_1709**

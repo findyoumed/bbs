@@ -276,6 +276,7 @@ export function bindCommandInputEvents(deps) {
 
     if (handleHistoryNavigation(event)) return;
     if (event.key !== 'Enter') return;
+    event.preventDefault();
 
     // [LOG_ID: 20260709_1210] 한글 자모(ㅜ 등) 입력 중 엔터 시 브라우저 한글 조합(IME) 찌꺼기 잔상이 
     // 터미널 렌더링 영역에 남는 현상을 차단하기 위해, 안전하게 일시적 blur-focus 를 실행하여 한글 조합을 강제 확정(Commit)시킨다.
