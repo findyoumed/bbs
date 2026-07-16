@@ -1,3 +1,18 @@
+## [2026-07-16 16:38] Implement classic command aliases and direct searches (Hitel, Chollian, Nownuri)
+
+**LOG_ID: 20260716_1638**
+목표: 자료실 다운로드/업로드/검색 에일리어스, 대화방 개설 단축키, 대화방 참여자 조회 및 직접 검색어 인수 지원 구현.
+추가/변경 사항:
+1. **자료실 에일리어스**: 다운로드(`DL`, `DOWNLOAD`, `TR`, `GET`), 업로드(`UL`, `UPLOAD`, `PUT`), 검색(`S`, `SEARCH`, `FIND` 검색어 포함/미포함) 에일리어스를 자료실 화면 명령어 라우터에 매핑 (`commandRouterBrowse.js`).
+2. **대화실 개설 단축키**: 대기실에서 `/create [방이름]`, `/c [방이름]`, `/open [방이름]` (슬래시 포함/미포함) 입력 시 방이름을 인수로 받아 개설 단단계를 스킵하고 환영 메시지 단계로 진행할 수 있도록 구현 (`chatScreens.js`, `commandRouterChat.js`).
+3. **대화실 참여자 조회**: 대화실 내에서 `/W` 또는 `/WHO` 입력 시 대화실 참여자를 `별명(ID)` 형식으로 출력하도록 구현 (`commandRouterChat.js`).
+4. **직접 검색 인수 지원**: 게시판 화면에서 `LT [검색어]`, `GL [검색어]`, `SUBJ [검색어]` (제목검색), `GA [검색어]`, `BODY [검색어]` (내용검색), `LI [검색어]` (작성자검색) 입력 시 검색 모드 진입 프롬프트 없이 즉시 검색 결과를 노출하도록 구현 (`commandRouterBrowse.js`).
+실행 및 검증: `npm run loop:verify` 실행 -> 10개 검증 항목 모두 PASS. 로컬 깃 커밋 완료.
+변경 파일: `public/js/core/chatScreens.js`, `public/js/core/commandRouterChat.js`, `public/js/core/commandRouterBrowse.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 16:20] Loop Engineering workspace custom skill setup & classic command enhancements
 
 **LOG_ID: 20260716_1620**
