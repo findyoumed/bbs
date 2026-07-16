@@ -173,7 +173,14 @@ export function createMyInfoActions(deps) {
 
         let updated;
         try {
-            setHint(''); // [LOG: 20260716_1906] API 호출 전 이전 힌트 잔상을 즉시 지우고 힌트바를 비운다.
+            // [LOG: 20260716_1928] setHint('')는 내부에서 syncScreenContext→restorePromptRow를 호출하여
+            // 인라인 프롬프트를 하단으로 복원하고 terminal-footer--prompt-detached를 제거한다.
+            // 이 때문에 숨겨져 있던 하단 푸터(힌트바)가 잠깐 깜빡이며 노출된다.
+            // 힌트 DOM만 직접 비워서 프롬프트 위치를 건드리지 않는다.
+            const hintBarEl = document.getElementById('cmd-hint');
+            if (hintBarEl) {
+                hintBarEl.innerHTML = '';
+            }
             updated = await apiFetch('/api/members/profile', {
                 method: 'POST',
                 body: JSON.stringify({ nickName: newNick })
