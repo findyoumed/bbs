@@ -1,3 +1,16 @@
+## [2026-07-16 18:48] Mount nickname prompt inline on myinfo edit screens
+
+**LOG_ID: 20260716_1848**
+목표: 회원 정보 수정(/myinfo) 중 닉네임 변경(/myinfo/nick) 화면의 입력 프롬프트가 이메일/비밀번호 변경과 달리 하단(푸터) 영역에 분리되어 나타나던 일치성 결함 해결.
+추가/변경 사항:
+1. `public/js/core/myInfoRenderer.js`의 `buildNicknameContent` 레이아웃에 `data-myinfo-prompt-host` 노드를 추가하여 다른 메뉴처럼 프롬프트를 인라인(본문)에 배치할 수 있도록 변경.
+2. `applyHint` 및 `renderMyInfo` 함수에서 `mode === 'nickname'` 상태일 때도 `mountMyInfoPromptRow()`와 `myinfo-password` 최상위 노드 속성을 일치시켜 프롬프트 행이 하단 푸터로 복귀되지 않고 본문 영역에 인라인으로 그려지도록 배선 수정.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/myInfoRenderer.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 18:45] Fix prompt spacing alignment in myinfo submenus
 
 **LOG_ID: 20260716_1845**

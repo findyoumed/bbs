@@ -193,6 +193,7 @@ export function createMyInfoRenderer(deps) {
             { label: '아이디', value: user.userId || 'guest' },
             { label: '현재 닉네임', value: user.nickName || '손님' }
         ])}
+            <div class="myinfo-password-prompt-host" data-myinfo-prompt-host></div>
           </div>`;
     }
 
@@ -233,10 +234,10 @@ export function createMyInfoRenderer(deps) {
         }
 
         if (mode === 'nickname') {
-            restorePromptRow?.();
             state._maskCommandInput = false;
             setHint('새 닉네임을 입력한 뒤 ENTER를 누르십시오.');
             setPrompt('새 닉네임 >> ');
+            mountMyInfoPromptRow();
             return;
         }
 
@@ -316,7 +317,7 @@ export function createMyInfoRenderer(deps) {
         else void updateURL(true);
 
         const user = state.user || {};
-        if (getMode() === 'email' || getMode() === 'password' || getMode() === 'delete') {
+        if (getMode() === 'nickname' || getMode() === 'email' || getMode() === 'password' || getMode() === 'delete') {
             screenEl.innerHTML = `<div class="ansi-screen" data-screen-kind="myinfo-password">${makeMyInfoTopbar()}${buildScreenContent(user)}</div>`;
             restorePromptRow?.();
         } else {
