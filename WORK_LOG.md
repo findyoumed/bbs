@@ -1,3 +1,15 @@
+## [2026-07-16 19:10] Remove changed nickname display from chat hint bar
+
+**LOG_ID: 20260716_1910**
+목표: 대화방에서 대화명 변경(/AL) 시 힌트바 부분에 변경 결과 메시지(`대화명이 [...]으로 변경되었습니다.`)가 출력되지 않도록 노출 제외 처리.
+추가/변경 사항:
+1. `public/js/core/commandRouterChat.js`의 `/AL` 명령어 핸들러 내 `setHint` 호출 부분을 제거하여 대화명 변경 후 변경 성공 메시지가 힌트바에 노출되지 않도록 수정.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/commandRouterChat.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 19:08] Change nickname input prompt to '>> ' for visual consistency
 
 **LOG_ID: 20260716_1908**

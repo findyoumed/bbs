@@ -293,7 +293,7 @@ export function createChatCommandHandler(deps) {
           const newNick = rawCmd.substring(4).trim();
           if (newNick) {
             state.user.nickName = newNick;
-            setHint(`대화명이 [${newNick}]으로 변경되었습니다.`);
+            // [LOG: 20260716_1910] 대화방 대화명(/AL) 변경 시 힌트바 노출 제외 요구사항 반영
           }
           return true;
         }
