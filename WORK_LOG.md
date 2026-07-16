@@ -1,3 +1,16 @@
+## [2026-07-16 18:22] Fix password confirm prompt from '선택 >>' to '>>' in signup email stages
+
+**LOG_ID: 20260716_1822**
+목표: 회원가입 단계 중 비밀번호 확인 입력란에서 다른 필드들처럼 '>>'만 노출되어야 하나, '선택 >>'로 잘못 노출되는 현상을 수정.
+추가/변경 사항:
+1. `public/js/core/signupEmailForm.js`의 `STEP_CONFIG`에서 `signup-password-confirm` 단계의 `prompt` 프로퍼티 값을 `'>>'`에서 `'>> '` (후행 공백 추가)로 수정.
+2. `terminalHintFooter.js`의 `setPrompt` 내부 `'>>'` 전역 센티널 매칭(기본 커맨드 메뉴용 '선택 >>' 대체)에 해당 입력값이 걸려 오작동하던 현상을 방지.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/signupEmailForm.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 18:18] Fix duplicate Enter submission and extra prompt rendering in signup email stages
 
 **LOG_ID: 20260716_1818**

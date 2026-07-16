@@ -22,7 +22,7 @@ const STEP_CONFIG = [
   {
     fieldId: 'signup-password-confirm',
     key: 'passwordConfirm',
-    prompt: '>>',
+    prompt: '>> ',
     masked: true,
     guideLines: [
       '3. 비밀번호 확인을 입력해주세요.'
