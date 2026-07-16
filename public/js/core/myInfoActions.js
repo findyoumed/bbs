@@ -178,6 +178,7 @@ export function createMyInfoActions(deps) {
 
         let updated;
         try {
+            setHint('닉네임 변경 중 입니다..'); // [LOG: 20260716_1854] API 호출 전 힌트를 업데이트하여 이전 힌트 잔상 방지
             updated = await apiFetch('/api/members/profile', {
                 method: 'POST',
                 body: JSON.stringify({ nickName: newNick })
