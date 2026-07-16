@@ -1,3 +1,16 @@
+## [2026-07-16 20:50] MyInfo 프롬프트 텍스트 깜빡임 수정 (새 프롬프트 자리에 직전 프롬프트가 한 프레임 노출)
+
+**LOG_ID: 20260716_2050**
+목표: `/myinfo/pw`(비밀번호 변경)·이메일 변경에서 단계 전환 시, 새 프롬프트("새 이메일 >>"/"새 비밀번호 >>") 자리에 **직전 프롬프트("현재 비밀번호 >>")가 잠깐 보였다가 바뀌는 깜빡임**(사용자 보고). 앞서 관측된 "캐럿이 오른쪽에 밀림"도 이 깜빡임의 한 순간(더 넓은/다른 이전 프롬프트가 노출돼 입력 wrapper가 밀린 프레임)으로 설명됨.
+원인(코드 대조로 확정): `myInfoRenderer.applyHint`에서 **닉네임 단계는 `setHint→setPrompt→mountMyInfoPromptRow`**(setHint가 프롬프트 행을 footer로 되돌린 뒤, 새 텍스트를 정하고, 그 다음 인라인으로 올려 노출 — 깜빡임 없음)인데, **이메일/비밀번호 단계만 `mount→setPrompt`**(이전 텍스트인 채로 인라인에 먼저 노출 → 그 다음 텍스트 교체)라 직전 프롬프트가 한 프레임 노출됐다.
+**진짜 원인(Playwright 재현으로 확정)**: 임시 디버그 훅(app.js에 state/refs 노출, 검증 후 제거)으로 로그인 없이 myinfo를 강제 진입시키고, verify 엔드포인트에 실제 네트워크 지연(250ms)을 모킹해 재현. 결과 — 현재 비밀번호 제출 후 `verifyCurrentPassword` 대기 중 **명령 실행 pending 상태(commandPendingUi, ~80ms 지연)가 submitEmailChange가 `display:none`으로 숨겨둔 프롬프트 행을 다시 노출**시켜, 그 순간 renderer 텍스트가 아직 이전 값("현재 비밀번호 >>")인 채로 새 위치(y=147)에 네트워크 지연만큼(~180ms) 노출됐다. (즉시 응답 mock에선 이 창이 안 열려 재현 안 됨 → 지연이 핵심.)
+수정: `public/js/core/myInfoActions.js`의 submitEmailChange·submitPasswordChange·submitDeleteAccount에서 **`await verifyCurrentPassword` 직전에 `setPrompt('')`로 프롬프트 텍스트를 비운다** — pending이 어떤 타이밍에 행을 다시 보여도 이전 텍스트가 아닌 빈칸이 보이고, 검증 후 renderMyInfo가 올바른 텍스트로 다시 그린다. 부수적으로 `myInfoRenderer.js`의 이메일·비밀번호 단계를 닉네임과 같은 `setPrompt→mount` 순서로 정렬하고 입력 진입 시 `#cmd-input`을 비웠으며, 제출 핸들러의 검증-직후 조기 재노출(`display=''`)도 제거(모두 올바른 개선).
+검증: **Playwright 재현으로 옛 코드=깜빡임 확인, 수정 코드=이메일·비밀번호 각 3회/1회 반복 모두 `sawOldAtNew:false`**(pending 재노출 프레임이 이전 텍스트 대신 빈칸으로 뜸) — 재현 기반으로 확정. `npm run loop:verify` 초록(9/9).
+변경 파일: `public/js/core/myInfoActions.js`, `public/js/core/myInfoRenderer.js`.
+결과: ✅ 완료 (재현·검증)
+
+---
+
 ## [2026-07-16 20:10] [루프 3회차] 토론의 광장(CONF) — 하이텔 (12)여론광장-1 재현 (서버+클라이언트 완성)
 
 **LOG_ID: 20260716_2010**

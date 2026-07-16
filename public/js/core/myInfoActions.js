@@ -248,9 +248,16 @@ export function createMyInfoActions(deps) {
                 promptRow.parentElement.insertBefore(lineDiv, promptRow);
                 promptRow.style.display = 'none';
             }
+            // [LOG_ID: 20260716_2130] 깜빡임의 진짜 원인: 검증(verify) 대기 중 명령 실행 pending
+            // 상태(commandPendingUi, ~80ms 지연)가 숨겨둔 프롬프트 행을 다시 노출시키는 타이밍이 있어,
+            // 그 순간 renderer 텍스트가 아직 이전 값("현재 비밀번호 >>")인 채로 새 위치에 ~네트워크지연만큼
+            // 노출됐다(Playwright+지연 재현으로 확정). display:none만으론 이 재노출을 못 막으므로,
+            // 대기 전에 프롬프트 텍스트 자체를 비워 어떤 타이밍에 행이 보여도 이전 텍스트가 안 보이게 한다.
+            // 검증 성공/실패 후 renderMyInfo가 올바른 텍스트로 다시 그린다.
+            setPrompt('');
 
             const verified = await verifyCurrentPassword(targetUserId, text);
-            if (promptRow) promptRow.style.display = '';
+            // 검증 직후 여기서 프롬프트 행을 다시 보일 필요가 없다 — 아래 renderMyInfo가 새 텍스트로 다시 그린다.
 
             if (!verified) {
                 const failure = recordPasswordFailure('email-current');
@@ -405,11 +412,11 @@ export function createMyInfoActions(deps) {
             if (promptRow) {
                 promptRow.style.display = 'none';
             }
+            // [LOG_ID: 20260716_2130] 검증 대기 중 명령 pending 상태가 숨긴 프롬프트 행을 다시 노출해
+            // 이전 텍스트("현재 비밀번호 >>")가 새 위치에 깜빡이던 문제 — 대기 전에 프롬프트를 비운다.
+            setPrompt('');
 
             const verified = await verifyCurrentPassword(targetUserId, text);
-            if (promptRow) {
-                promptRow.style.display = '';
-            }
 
             if (!verified) {
                 const failure = recordPasswordFailure('password-current');
@@ -568,11 +575,11 @@ export function createMyInfoActions(deps) {
             if (promptRow) {
                 promptRow.style.display = 'none';
             }
+            // [LOG_ID: 20260716_2130] 검증 대기 중 pending 재노출로 이전 텍스트("비밀번호 >>")가
+            // 깜빡이지 않도록 대기 전에 프롬프트를 비운다. 이후 renderMyInfo가 올바른 텍스트로 그린다.
+            setPrompt('');
 
             const verified = await verifyCurrentPassword(targetUserId, password);
-            if (promptRow) {
-                promptRow.style.display = '';
-            }
 
             if (!verified) {
                 const failure = recordPasswordFailure('delete-password');

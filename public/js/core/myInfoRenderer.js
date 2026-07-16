@@ -233,6 +233,17 @@ export function createMyInfoRenderer(deps) {
             return;
         }
 
+        // [LOG_ID: 20260716_2030] 입력 프롬프트(닉네임/이메일/비밀번호) 진입 시 입력창을 반드시 비운다.
+        // signup의 setStagePrompt는 매 단계 cmdInput.value=''로 초기화하는데 myinfo applyHint에는
+        // 이 초기화가 빠져 있었다 — 직전 화면/명령의 잔상(클릭한 메뉴번호, 이전 단계 입력 등)이
+        // 입력창에 남아 캐럿이 우측으로 밀리고(사용자 보고: "캐럿 위치가 오른쪽에 있다"),
+        // 타이핑 시 [잔상+입력값]이 그대로 제출돼 "현재 비밀번호가 올바르지 않습니다"·"이미 등록된
+        // 이메일" 오류가 났다. delete-confirm/complete 단계는 이 뒤에서 자체적으로 value('y'/'')를
+        // 다시 설정하므로 영향받지 않는다.
+        if (cmdInput) {
+            cmdInput.value = '';
+        }
+
         if (mode === 'nickname') {
             state._maskCommandInput = false;
             setHint('새 닉네임을 입력한 뒤 ENTER를 누르십시오.');
@@ -241,18 +252,24 @@ export function createMyInfoRenderer(deps) {
             return;
         }
 
+        // [LOG_ID: 20260716_2050] 프롬프트 텍스트 깜빡임 수정 — 반드시 setPrompt()로 새 텍스트를
+        // 정한 "뒤"에 mountMyInfoPromptRow()로 프롬프트 행을 인라인 위치에 올려 보여준다.
+        // 종전 이메일/비밀번호 단계는 mount(=이전 텍스트로 화면에 노출) → setPrompt(텍스트 교체) 순서라,
+        // 단계 전환 시 새 프롬프트 자리에 직전 프롬프트("현재 비밀번호 >>")가 한 프레임 노출됐다가
+        // 바뀌는 깜빡임이 있었다(사용자 보고: "새 이메일 >> 자리에 잠시 현재 비밀번호 >> 가 보였다가 바뀐다").
+        // 닉네임 단계는 원래 setPrompt→mount 순서라 이 증상이 없었다 — 그 순서로 통일한다.
         if (mode === 'email') {
             const stage = getStage();
             setHint('');
             if (stage === 'email-new') {
                 state._maskCommandInput = false;
-                mountMyInfoPromptRow();
                 setPrompt('새 이메일 >> ');
+                mountMyInfoPromptRow();
                 return;
             }
             state._maskCommandInput = true;
-            mountMyInfoPromptRow();
             setPrompt('현재 비밀번호 >> ');
+            mountMyInfoPromptRow();
             return;
         }
 
@@ -260,23 +277,26 @@ export function createMyInfoRenderer(deps) {
             state._maskCommandInput = true;
             setHint('');
             const stage = getStage();
-            mountMyInfoPromptRow();
             if (stage === 'password-saving') {
                 // [LOG: 20260509_1024] 확인 입력 제출 후 API 처리 중에는 세 번째 확인 프롬프트를 그리지 않는다.
                 state._maskCommandInput = false;
                 setPrompt('');
+                mountMyInfoPromptRow();
                 setMyInfoPromptRowVisible(false);
                 return;
             }
             if (stage === 'password-current') {
                 setPrompt('현재 비밀번호 >> ');
+                mountMyInfoPromptRow();
                 return;
             }
             if (stage === 'password-confirm') {
                 setPrompt('새 비밀번호 확인 >> ');
+                mountMyInfoPromptRow();
                 return;
             }
             setPrompt('새 비밀번호 >> ');
+            mountMyInfoPromptRow();
             return;
         }
 

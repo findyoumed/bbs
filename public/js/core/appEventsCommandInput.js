@@ -6,6 +6,7 @@ import {
   trackCommandExecution
 } from './commandExecutionState.js';
 import { cancelCommandPending, getPendingCommandValue, isCommandPending, trackCommandPending } from './commandPendingUi.js';
+import { toAsciiPasswordInput } from './hangulKeyboard.js';
 
 export function bindCommandInputEvents(deps) {
   const {
@@ -39,6 +40,26 @@ export function bindCommandInputEvents(deps) {
     return state?._maskCommandInput === true;
   }
 
+  // [LOG_ID: 20260716_2200] 마스킹(비밀번호, * 표시) 입력은 영문 전용으로 강제한다.
+  // 한글 IME 모드로 쳐도 실제 누른 QWERTY 문자만 들어가고 한글은 제거된다(모든 비밀번호 입력창 공통:
+  // 로그인·회원가입·내정보 비밀번호/이메일 확인·탈퇴). 조합 중(isComposing)에는 건드리지 않고
+  // 조합이 끝난 뒤 정리한다 — 조합 기준이 발밑에서 바뀌어 글자가 씹히는 것을 막기 위함.
+  function sanitizeMaskedInput() {
+    if (!cmdInput || !isSensitiveCommandInput()) return;
+    const before = cmdInput.value || '';
+    const after = toAsciiPasswordInput(before);
+    if (after === before) return;
+    const selStart = typeof cmdInput.selectionStart === 'number' ? cmdInput.selectionStart : after.length;
+    cmdInput.value = after;
+    if (typeof cmdInput.setSelectionRange === 'function') {
+      const nextCaret = Math.max(0, Math.min(after.length, selStart + after.length - before.length));
+      cmdInput.setSelectionRange(nextCaret, nextCaret);
+    }
+    if (typeof CustomEvent === 'function') {
+      cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
+    }
+  }
+
   function isCommandExecutionLocked() {
     return isCommandPending() || isExecutionLocked(state);
   }
@@ -53,6 +74,11 @@ export function bindCommandInputEvents(deps) {
       }
       event.preventDefault?.();
       return;
+    }
+
+    // 마스킹 입력은 영문 전용 — 조합이 끝난 입력에 대해 한글을 QWERTY로 되돌리고 ASCII만 남긴다.
+    if (isSensitiveCommandInput() && !(event && event.isComposing)) {
+      sanitizeMaskedInput();
     }
 
     if (interruptRendering) interruptRendering();
@@ -368,6 +394,13 @@ export function bindCommandInputEvents(deps) {
 
   cmdInput.addEventListener('input', handleInput);
   cmdInput.addEventListener('keydown', handleKeyDown);
+  // [LOG_ID: 20260716_2200] 한글 조합이 확정되는 compositionend 시점에 마스킹 입력을 영문으로 정리한다.
+  // 크롬은 compositionend에서 아직 확정 문자를 value에 못 넣은 경우가 있어 다음 틱에 한 번 더 정리한다.
+  cmdInput.addEventListener('compositionend', () => {
+    if (!isSensitiveCommandInput()) return;
+    sanitizeMaskedInput();
+    window.setTimeout(sanitizeMaskedInput, 0);
+  });
 
   return {
     moveCaretToEnd
