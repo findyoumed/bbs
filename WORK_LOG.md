@@ -3,8 +3,8 @@
 **LOG_ID: 20260716_1709**
 목표: 회원가입 이메일 주소 입력란(`#cmd-input`)에 한글 자판 입력(한글 모드로 작성 중인 오타 등) 시 자판 영문 변환 처리가 누락되어 외계어로 입력되는 버그 수정.
 추가/변경 사항:
-1. `public/js/core/signupEmailForm.js`의 `ENGLISH_KEYBOARD_STAGE_IDS`에 `'signup-email'` 단계를 추가하여 이메일 입력 시에도 영어 입력 모드 가드(한글 자판 입력 시 영어 QWERTY 키로 자동 변환)가 활성화되도록 수정.
-2. `sanitizeEnglishKeyboardInput`에 `signup-email` 분기를 추가하여 한글 자판 변환 결과에서 이메일 주소 유효 문자(`A-Za-z0-9_@.-`)를 제외한 나머지 문자를 필터링하도록 구현.
+1. `public/js/core/signupEmailForm.js`의 `ENGLISH_KEYBOARD_STAGE_IDS`에 `'signup-email'` 단계를 추가하여 영어 전용 모드를 활성화.
+2. `sanitizeEnglishKeyboardInput`에 `signup-email` 분기를 추가하여 한글 자판 변환(converted)을 수행하지 않고, 입력값(value)에서 이메일 주소 유효 문자(`A-Za-z0-9_@.-`)를 제외한 한글 등의 문자를 즉시 필터링(차단/제거)하도록 수정.
 실행 및 검증: `npm run smoke:signup-ime` 및 `npm run loop:verify` 실행 -> 모든 검증 PASS.
 변경 파일: `public/js/core/signupEmailForm.js`.
 결과: ✅ 완료
