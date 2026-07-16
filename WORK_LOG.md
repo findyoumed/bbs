@@ -1,3 +1,16 @@
+## [2026-07-16 18:52] Fix missing error handling for nickname change in myinfo
+
+**LOG_ID: 20260716_1852**
+목표: 회원 정보 수정(/myinfo) 중 닉네임 변경(/myinfo/nick) 시 중복된 닉네임이나 잘못된 값 입력으로 API 호출이 실패할 때 화면에 아무 오류도 발생하지 않고 힌트 문구만 초기화되어 동작 여부를 확인하기 어렵던 현상 해결.
+추가/변경 사항:
+1. `public/js/core/myInfoActions.js`의 `submitNicknameChange` 함수 내 `apiFetch` 호출 부에 `catch (error)` 블록을 추가하여 API 오류 발생 시 예외가 상위로 그냥 전파되어 화면 갱신이 누락되는 현상 방지.
+2. 예외 발생 시 `setMessage(error.message, 'error')` 및 `renderMyInfo(true)`를 호출하여 빨간색 경고 텍스트(예: "이미 등록된 닉네임입니다.")가 사용자 패널에 즉시 노출되도록 개선.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/myInfoActions.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 18:48] Mount nickname prompt inline on myinfo edit screens
 
 **LOG_ID: 20260716_1848**

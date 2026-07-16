@@ -182,6 +182,10 @@ export function createMyInfoActions(deps) {
                 method: 'POST',
                 body: JSON.stringify({ nickName: newNick })
             });
+        } catch (error) {
+            setMessage(error.message || '닉네임을 변경하지 못했습니다.', 'error');
+            await renderMyInfo(true);
+            return false;
         } finally {
             if (processingMsg && processingMsg.parentNode) {
                 processingMsg.parentNode.removeChild(processingMsg);
