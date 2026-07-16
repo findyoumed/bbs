@@ -1,3 +1,37 @@
+## [2026-07-16 16:20] Loop Engineering workspace custom skill setup & classic command enhancements
+
+**LOG_ID: 20260716_1620**
+목표: 클래식 PC통신 검색 에일리어스, 새글(최근 3일) 필터, 대화실 귓속말(say, whisper) 및 전역 MSG/ANSI 명령어 구현 후 루프 엔지니어링 커스텀 스킬 구축.
+추가/변경 사항:
+1. **대화방 슬래시 명령어**: `/USER`, `/WHO`, `/WH`, `/PF`, `/LT` 명령어 구현 (`commandRouterChat.js`).
+2. **검색 및 새글 필터**: `GL`/`SUBJ` (제목검색 에일리어스), `GA`/`BODY` (내용검색 에일리어스, `lc` 파라미터 매핑), `NEW`/`NW` (최근 3일 글 필터링, `recent: '3'`) 명령어 및 UI 헤더 표시기 구현 (`commandRouterBrowse.js`, `postService.js`, `postListView.js`, `BoardRepositorySearch.js`, `SupabaseBoardRepositoryQueryHelpers.js`, `boardRoutes.js`).
+3. **한글 명령어 매핑**: `상위`, `도움말`, `이동`, `/종료` 등 한글 원어 명령어 에일리어스 매핑 (`commandNormalizer.js`).
+4. **귓속말 처리**: 대화방 내 슬래시 없는 `say`, `whisper` 및 슬래시 포함 `/say`, `/whisper` 명령어 매핑 (`commandRouterChat.js`).
+5. **전역 설정 명령어**: `MSG`, `MSG R` (최근 받은 쪽지 10개 출력), `ANSI` 전역 명령어 구현 (`commandRouterGlobalNavigation.js`, `appFactoryHandlers.js`).
+6. **루프 엔지니어링 커스텀 스킬**: `.agents/skills/loop_engineering/SKILL.md` 신규 생성 및 검증 가이드 수립.
+실행 및 검증: `npm run loop:verify` 실행 -> 10개 검증 항목 모두 PASS. 로컬 깃 커밋 완료.
+변경 파일: `public/js/core/commandRouterChat.js`, `public/js/core/commandRouterBrowse.js`, `public/js/core/postService.js`, `public/js/core/postListView.js`, `public/js/core/commandDispatcherExecution.js`, `public/js/core/i18n.js`, `src/server/routeHandlers/boardRoutes.js`, `src/server/BoardRepositorySearch.js`, `src/server/SupabaseBoardRepositoryQueryHelpers.js`, `public/js/core/commandNormalizer.js`, `public/js/core/appFactoryHandlers.js`, `public/js/core/commandRouterGlobalNavigation.js`, `.agents/skills/loop_engineering/SKILL.md` (신규).
+결과: ✅ 완료
+
+---
+
+## [2026-07-19 10:00] Loop Engineering 완료 게이트 + 런북 구축 (증거 기반 완료 판정)
+
+**LOG_ID: 20260719_1000**
+목표: 루프 엔지니어링 영상('코딩알려주는누나')을 보고 이 저장소에 같은 방식을 세팅 — 영상의 핵심인 "증거 기반 완료 판정" 게이트가 빠져 있었다(전 스모크+QA를 한 번에 돌려 단일 pass/fail을 내는 명령 부재, 감독 반복 상한 미문서화). 하네스(settings.json 훅 3종)·루프(/ralph-loop·/loop)·에이전트(bbs-coder)·스모크 ~20종은 이미 있었으므로 **빠진 4가지만** 추가(플랜 승인 범위, PRD·새 에이전트 팀 제외).
+
+**추가한 것**:
+1. **`scripts/loop-verify.js`(신규, `npm run loop:verify`)** — 오프라인 스모크 9종 + `qa:final`을 **순차 서브프로세스**로 돌려 단일 pass/fail 집계. 각 스모크가 실패 시 throw/`exit(1)`로 끝나므로 종료코드 기반 집계가 신뢰 가능. 결과 표(항목·PASS/FAIL·소요) + 실패 항목 stderr 증거 + `{ok,passed,failed,total}` JSON. 전부 통과 exit 0 / 하나라도 실패 exit 1. 느림·외부의존(full-traversal, supabase-live/realtime/auth-write)은 제외(빠른 게이트, 사용자 선택).
+2. **`package.json`** — `loop:verify` 등록.
+3. **`docs/LOOP_ENGINEERING.md`(신규)** — 런북: 개념, 이미 갖춘 하네스 표, 완료 기준 3종(loop:verify 초록+실측+WORK_LOG), 루프 실행법(플랜모드→/ralph-loop 완료조건에 loop:verify 명시→감독 5~10회 상한), 안전규칙(git push 금지·과잉구축 금지·커밋 요청시만), 에이전트 교차검증(bbs-coder+/code-review).
+4. **`.claude/ralph-loop.local.md`** — `max_iterations` 0(무제한)→10(감독 상한). 다른 필드(active/iteration/session_id) 불변.
+
+검증: `node --check` 통과. **`npm run loop:verify` 실행 → 10개 항목 전부 PASS, exit 0, 요약 JSON 확인.** 실패 감지 검증 — 임시로 스모크 하나에 문법오류 주입 → 게이트가 그 항목 FAIL로 잡고 stderr 증거 출력 + **exit 1** 냄을 확인(통과 상태 exit 0 / 실패 상태 exit 1 각각 clean 확인) 후 원복. 런북의 명령·스킬이 실제와 일치함 대조.
+변경 파일: `scripts/loop-verify.js`(신규), `package.json`, `docs/LOOP_ENGINEERING.md`(신규), `.claude/ralph-loop.local.md`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-18 16:00] 대화실을 olddos-bbs 원본 참고로 개선 — 비공개방(비밀번호) 개설·입장, 방 목록 정렬 표
 
 **LOG_ID: 20260718_1600**
