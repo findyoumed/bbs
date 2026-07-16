@@ -1,3 +1,15 @@
+## [2026-07-16 19:06] Clear hint bar completely during nickname change in myinfo
+
+**LOG_ID: 20260716_1906**
+목표: 닉네임 변경 전송 도중 터미널 하단에 `닉네임 변경 중 입니다..` 힌트가 일체 표시되지 않도록 힌트바를 완전히 비우도록 요구사항 수정.
+추가/변경 사항:
+1. `public/js/core/myInfoActions.js`의 `submitNicknameChange` 함수 내 `apiFetch` 호출 전 힌트 변경 코드를 `setHint('닉네임 변경 중 입니다..')`에서 `setHint('')`로 변경하여 어떠한 로딩 문구도 하단 힌트 영역에 나타나지 않도록 수정.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/myInfoActions.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 19:05] Remove duplicate loading message during nickname change in myinfo
 
 **LOG_ID: 20260716_1905**
