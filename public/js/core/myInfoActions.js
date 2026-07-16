@@ -246,7 +246,12 @@ export function createMyInfoActions(deps) {
                 lineDiv.className = 'myinfo-password-line';
                 lineDiv.textContent = '현재 비밀번호 >> ' + '*'.repeat(text.length);
                 promptRow.parentElement.insertBefore(lineDiv, promptRow);
-                promptRow.style.display = 'none';
+                // [LOG_ID: 20260716_2230] is-command-pending CSS(style.css)가 인라인 display:none을
+                // !important로 덮어써(강제 flex+visible) 검증 대기 중 빈 프롬프트에 "_" 대기 캐럿이
+                // 떴다(사용자: "오류 나기 전에 커서가 보인다"). 인라인 !important는 외부 !important를
+                // 이기므로 여기서도 !important로 숨겨 강제 노출을 막는다. 재표시는 setMyInfoPromptRowVisible(true)의
+                // display='' 가 이 속성을 지우므로 정상 동작한다.
+                promptRow.style.setProperty('display', 'none', 'important');
             }
             // [LOG_ID: 20260716_2130] 깜빡임의 진짜 원인: 검증(verify) 대기 중 명령 실행 pending
             // 상태(commandPendingUi, ~80ms 지연)가 숨겨둔 프롬프트 행을 다시 노출시키는 타이밍이 있어,
@@ -307,7 +312,12 @@ export function createMyInfoActions(deps) {
                 lineDiv.className = 'myinfo-password-line';
                 lineDiv.textContent = '새 이메일 >> ' + nextEmail;
                 promptRow.parentElement.insertBefore(lineDiv, promptRow);
-                promptRow.style.display = 'none';
+                // [LOG_ID: 20260716_2230] is-command-pending CSS(style.css)가 인라인 display:none을
+                // !important로 덮어써(강제 flex+visible) 검증 대기 중 빈 프롬프트에 "_" 대기 캐럿이
+                // 떴다(사용자: "오류 나기 전에 커서가 보인다"). 인라인 !important는 외부 !important를
+                // 이기므로 여기서도 !important로 숨겨 강제 노출을 막는다. 재표시는 setMyInfoPromptRowVisible(true)의
+                // display='' 가 이 속성을 지우므로 정상 동작한다.
+                promptRow.style.setProperty('display', 'none', 'important');
             }
 
             let updated = null;
@@ -410,7 +420,12 @@ export function createMyInfoActions(deps) {
             await renderMyInfo(true);
             const promptRow = document.getElementById('terminal-prompt-row');
             if (promptRow) {
-                promptRow.style.display = 'none';
+                // [LOG_ID: 20260716_2230] is-command-pending CSS(style.css)가 인라인 display:none을
+                // !important로 덮어써(강제 flex+visible) 검증 대기 중 빈 프롬프트에 "_" 대기 캐럿이
+                // 떴다(사용자: "오류 나기 전에 커서가 보인다"). 인라인 !important는 외부 !important를
+                // 이기므로 여기서도 !important로 숨겨 강제 노출을 막는다. 재표시는 setMyInfoPromptRowVisible(true)의
+                // display='' 가 이 속성을 지우므로 정상 동작한다.
+                promptRow.style.setProperty('display', 'none', 'important');
             }
             // [LOG_ID: 20260716_2130] 검증 대기 중 명령 pending 상태가 숨긴 프롬프트 행을 다시 노출해
             // 이전 텍스트("현재 비밀번호 >>")가 새 위치에 깜빡이던 문제 — 대기 전에 프롬프트를 비운다.
@@ -480,7 +495,12 @@ export function createMyInfoActions(deps) {
             await renderMyInfo(true);
             const promptRow = document.getElementById('terminal-prompt-row');
             if (promptRow) {
-                promptRow.style.display = 'none';
+                // [LOG_ID: 20260716_2230] is-command-pending CSS(style.css)가 인라인 display:none을
+                // !important로 덮어써(강제 flex+visible) 검증 대기 중 빈 프롬프트에 "_" 대기 캐럿이
+                // 떴다(사용자: "오류 나기 전에 커서가 보인다"). 인라인 !important는 외부 !important를
+                // 이기므로 여기서도 !important로 숨겨 강제 노출을 막는다. 재표시는 setMyInfoPromptRowVisible(true)의
+                // display='' 가 이 속성을 지우므로 정상 동작한다.
+                promptRow.style.setProperty('display', 'none', 'important');
             }
 
             try {
@@ -573,7 +593,12 @@ export function createMyInfoActions(deps) {
             await renderMyInfo(true);
             const promptRow = document.getElementById('terminal-prompt-row');
             if (promptRow) {
-                promptRow.style.display = 'none';
+                // [LOG_ID: 20260716_2230] is-command-pending CSS(style.css)가 인라인 display:none을
+                // !important로 덮어써(강제 flex+visible) 검증 대기 중 빈 프롬프트에 "_" 대기 캐럿이
+                // 떴다(사용자: "오류 나기 전에 커서가 보인다"). 인라인 !important는 외부 !important를
+                // 이기므로 여기서도 !important로 숨겨 강제 노출을 막는다. 재표시는 setMyInfoPromptRowVisible(true)의
+                // display='' 가 이 속성을 지우므로 정상 동작한다.
+                promptRow.style.setProperty('display', 'none', 'important');
             }
             // [LOG_ID: 20260716_2130] 검증 대기 중 pending 재노출로 이전 텍스트("비밀번호 >>")가
             // 깜빡이지 않도록 대기 전에 프롬프트를 비운다. 이후 renderMyInfo가 올바른 텍스트로 그린다.

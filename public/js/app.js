@@ -30,6 +30,9 @@ const {
   initTooltips, initAuth, restoreStateFromURL, restoreTheme, updateURL, showMain, showPasswordReset, renderInitError, guestUser
 } = initApp({ state, refs, SIGNUP_TOS_TEXT, SIGNUP_PRIVACY_TEXT });
 
+// [TEMP DEBUG 20260716] 재현용 — 확인 후 제거.
+try { if (typeof window !== 'undefined') window.__dbg = { state, refs }; } catch (_) {}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

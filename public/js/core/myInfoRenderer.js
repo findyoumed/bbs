@@ -106,7 +106,13 @@ export function createMyInfoRenderer(deps) {
     function setMyInfoPromptRowVisible(isVisible) {
         const promptRow = document.getElementById('terminal-prompt-row');
         if (promptRow) {
-            promptRow.style.display = isVisible ? '' : 'none';
+            // [LOG_ID: 20260716_2230] 숨길 땐 !important로 — is-command-pending CSS의 display:flex !important가
+            // 인라인 display:none을 덮어써 대기 캐럿이 노출되던 것을 막는다. 보일 땐 ''로 속성을 지운다.
+            if (isVisible) {
+                promptRow.style.display = '';
+            } else {
+                promptRow.style.setProperty('display', 'none', 'important');
+            }
         }
     }
 
