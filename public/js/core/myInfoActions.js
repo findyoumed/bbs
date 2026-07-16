@@ -165,17 +165,6 @@ export function createMyInfoActions(deps) {
             await renderMyInfo(true);
             return false;
         }
-        // [LOG: 20260507_1150] 터미널 프롬프트(입력창) 바로 아래에 처리 중 메시지 동적 추가
-        const footer = document.getElementById('terminal-footer');
-        let processingMsg = null;
-        if (footer) {
-            processingMsg = document.createElement('div');
-            processingMsg.id = 'nickname-processing-msg';
-            processingMsg.textContent = '닉네임 변경 중 입니다.';
-            processingMsg.style.color = '#fff';
-            footer.appendChild(processingMsg);
-        }
-
         let updated;
         try {
             setHint('닉네임 변경 중 입니다..'); // [LOG: 20260716_1854] API 호출 전 힌트를 업데이트하여 이전 힌트 잔상 방지
@@ -187,10 +176,6 @@ export function createMyInfoActions(deps) {
             setMessage(error.message || '닉네임을 변경하지 못했습니다.', 'error');
             await renderMyInfo(true);
             return false;
-        } finally {
-            if (processingMsg && processingMsg.parentNode) {
-                processingMsg.parentNode.removeChild(processingMsg);
-            }
         }
 
         if (!updated) {

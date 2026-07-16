@@ -1,3 +1,16 @@
+## [2026-07-16 19:05] Remove duplicate loading message during nickname change in myinfo
+
+**LOG_ID: 20260716_1905**
+목표: 닉네임 변경 요청 도중 터미널 하단에 `닉네임 변경 중 입니다..` 힌트와 `닉네임 변경 중 입니다.` 수동 DOM 메시지가 동시에 나타나 중복 노출되던 결함 수정.
+추가/변경 사항:
+1. `public/js/core/myInfoActions.js`의 `submitNicknameChange` 함수 내에 존재하던 레거시 수동 DOM 생성/제거 코드(`#nickname-processing-msg`)를 완전히 제거.
+2. 시스템 표준 힌트 노출 방식인 `setHint('닉네임 변경 중 입니다..')`를 활용한 힌트 제어로 통일하여 중복 잔상을 제거하고 UI 일관성을 확보.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/myInfoActions.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 18:54] Clear stale hint during nickname change submission in myinfo
 
 **LOG_ID: 20260716_1854**
