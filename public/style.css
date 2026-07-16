@@ -946,7 +946,9 @@ body.theme-nownuri .write-field textarea {
     line-height: inherit;
 }
 
-#terminal-footer.terminal-footer--prompt-detached {
+#terminal-footer.terminal-footer--prompt-detached,
+#terminal-container.is-command-pending #terminal-footer.terminal-footer--prompt-detached,
+#terminal-container.is-loading #terminal-footer.terminal-footer--prompt-detached {
     display: none !important;
 }
 
