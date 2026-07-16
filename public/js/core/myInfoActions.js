@@ -149,7 +149,7 @@ export function createMyInfoActions(deps) {
         setMode('nickname');
         setStage('idle');
         setHint('새 닉네임을 명령줄에 입력한 뒤 ENTER를 누르십시오.');
-        setPrompt('새 닉네임 >> ');
+        setPrompt('>> ');
         await renderMyInfo(true);
     }
 

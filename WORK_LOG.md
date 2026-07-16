@@ -1,3 +1,15 @@
+## [2026-07-16 19:08] Change nickname input prompt to '>> ' for visual consistency
+
+**LOG_ID: 20260716_1908**
+목표: 닉네임 변경 화면의 입력 프롬프트가 `새 닉네임 >>`이라는 라벨 문구를 표시하고 있어 다른 입력 필드 지침들처럼 직관적인 `>>` 형태로만 노출되도록 통일.
+추가/변경 사항:
+1. `public/js/core/myInfoActions.js` 및 `public/js/core/myInfoRenderer.js`의 닉네임 변경 활성화 로직에서 프롬프트 셋업 문자열을 `'새 닉네임 >> '`에서 `'>> '`로 전면 변경하여 화면 레이아웃에서 불필요한 라벨 접두어가 제거되도록 조치.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/myInfoActions.js`, `public/js/core/myInfoRenderer.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 19:06] Clear hint bar completely during nickname change in myinfo
 
 **LOG_ID: 20260716_1906**

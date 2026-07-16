@@ -236,7 +236,7 @@ export function createMyInfoRenderer(deps) {
         if (mode === 'nickname') {
             state._maskCommandInput = false;
             setHint('새 닉네임을 입력한 뒤 ENTER를 누르십시오.');
-            setPrompt('새 닉네임 >> ');
+            setPrompt('>> ');
             mountMyInfoPromptRow();
             return;
         }
