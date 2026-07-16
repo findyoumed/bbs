@@ -1,3 +1,15 @@
+## [2026-07-16 19:13] Clear nickname command input immediately upon submission
+
+**LOG_ID: 20260716_1913**
+목표: 내 정보(/myinfo) 닉네임 변경 화면에서 변경할 닉네임 입력 후 엔터를 누를 때, API 통신 시간 동안 입력했던 닉네임 텍스트가 입력 행에 `>> [입력한닉네임]` 형태로 남아있던 잔상 문제 해결.
+추가/변경 사항:
+1. `public/js/core/myInfoActions.js`의 `submitNicknameChange` 함수 시작 부분에서 입력값에 대한 기본 유효성 검증 완료 즉시 `cmdInput.value`를 빈 문자열(`''`)로 클리어하도록 조치.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/myInfoActions.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 19:10] Remove changed nickname display from chat hint bar
 
 **LOG_ID: 20260716_1910**

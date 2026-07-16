@@ -165,6 +165,12 @@ export function createMyInfoActions(deps) {
             await renderMyInfo(true);
             return false;
         }
+
+        const cmdInput = document.getElementById('cmd-input');
+        if (cmdInput) {
+            cmdInput.value = '';
+        }
+
         let updated;
         try {
             setHint(''); // [LOG: 20260716_1906] API 호출 전 이전 힌트 잔상을 즉시 지우고 힌트바를 비운다.
