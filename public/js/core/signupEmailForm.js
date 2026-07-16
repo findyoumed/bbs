@@ -601,153 +601,161 @@ export function createSignupEmailHandler(deps) {
   }
 
   async function handleStageInput(rawValue, handlers) {
-    let rawText = String(rawValue || '');
-    let trimmedValue = rawText.trim();
-    let upperCommand = trimmedValue.toUpperCase();
-    let lowerCommand = trimmedValue.toLowerCase();
-
-    if (lowerCommand === '/x' || ['P', 'M', 'B', 'X'].includes(upperCommand)) {
-      leaveSignupToMenu(handlers);
+    if (state._commandInFlight) {
       return;
     }
-
-    if (upperCommand === 'T') {
-      cleanupSignupHandlers();
-      setSignupAgreementAccepted(false);
-      setPendingSignupMethod('');
-      setPendingSignupDraft(null);
-      clearSignupEmailStage();
-      clearSignupEmailTranscript();
-      state._signupFlow = '';
-      state._maskCommandInput = false;
-      restoreSignupEmailPromptRow();
-      await showMain();
-      return;
-    }
-
-    const stageFieldId = getSignupEmailStage() || deriveStageFromDraft(getPendingSignupDraft() || {});
-    const draft = { ...(getPendingSignupDraft() || {}) };
-    if (isEnglishKeyboardStage(stageFieldId)) {
-      rawText = sanitizeEnglishKeyboardInput(stageFieldId, rawText);
-      trimmedValue = rawText.trim();
-      upperCommand = trimmedValue.toUpperCase();
-      lowerCommand = trimmedValue.toLowerCase();
-    }
-
-    // [LOG: 20260508_1625] Empty Enter keeps the current signup prompt without adding transcript lines.
-    if (!trimmedValue) {
-      setStagePrompt(stageFieldId);
-      return;
-    }
-
-    if (stageFieldId === CONFIRM_STAGE_ID) {
-      if (upperCommand === 'N') {
-        appendSignupEmailTranscript(`수정 항목이 있습니까? (번호 1~5 / n) ${trimmedValue || 'n'}`);
-        await completeDraft(handlers, draft);
-        return;
-      }
-
-      if (Object.prototype.hasOwnProperty.call(CONFIRM_FIELD_IDS, trimmedValue)) {
-        const targetFieldId = CONFIRM_FIELD_IDS[trimmedValue];
-        appendSignupEmailTranscript(`수정 항목이 있습니까? (번호 1~5 / n) ${trimmedValue}`);
-        moveToStage(targetFieldId, pruneDraftForField(targetFieldId, draft));
-        return;
-      }
-
-      appendSignupEmailTranscript(`수정 항목이 있습니까? (번호 1~5 / n) ${trimmedValue}`);
-      appendGuideForStage(CONFIRM_STAGE_ID, [
-        '번호를 입력하거나 n으로 진행할 수 있습니다.'
-      ]);
-      renderEmailScreen();
-      setStagePrompt(CONFIRM_STAGE_ID);
-      return;
-    }
-
-    if (stageFieldId === 'signup-userid') {
-      renderSubmittedInput(stageFieldId, trimmedValue);
-      if (!isValidUserId(trimmedValue)) {
-        appendSignupEmailTranscript('회원ID는 영문/숫자/_ 조합 5~40자만 가능합니다.');
-        renderEmailScreen();
-        setStagePrompt(stageFieldId);
-        return;
-      }
-      try {
-        await runFieldAvailabilityCheck(stageFieldId, { userId: trimmedValue });
-      } catch (error) {
-        handleAvailabilityError(error, stageFieldId, { userId: trimmedValue });
-        return;
-      }
-      draft.userId = trimmedValue;
-      moveToStage('signup-password', draft);
-      return;
-    }
-
-    if (stageFieldId === 'signup-password') {
-      appendCurrentInput(stageFieldId, rawText);
-      if (!isStrongPassword(rawText)) {
-        appendSignupEmailTranscript('비밀번호는 6자 이상이며 특수문자를 1자 이상 포함해야 합니다.');
-        renderEmailScreen();
-        setStagePrompt(stageFieldId);
-        return;
-      }
-      draft.password = rawText;
-      draft.passwordConfirmed = false;
-      moveToStage('signup-password-confirm', draft);
-      return;
-    }
-
-    // [LOG: 20260508_1621] Signup password requires a matching second no-echo entry.
-    if (stageFieldId === 'signup-password-confirm') {
-      appendCurrentInput(stageFieldId, rawText);
-      if (rawText !== String(draft.password || '')) {
-        appendSignupEmailTranscript('비밀번호 확인이 일치하지 않습니다.');
-        renderEmailScreen();
-        setStagePrompt(stageFieldId);
-        return;
-      }
-      draft.passwordConfirmed = true;
-      moveToStage('signup-nickname', draft);
-      return;
-    }
-
-    if (stageFieldId === 'signup-nickname') {
-      renderSubmittedInput(stageFieldId, trimmedValue);
-      if (!isValidNickname(trimmedValue)) {
-        appendSignupEmailTranscript('닉네임은 영문 40자, 한글 20자까지 가능합니다.');
-        renderEmailScreen();
-        setStagePrompt(stageFieldId);
-        return;
-      }
-      try {
-        await runFieldAvailabilityCheck(stageFieldId, {
-          userId: draft.userId || '',
-          nickName: trimmedValue
-        });
-      } catch (error) {
-        handleAvailabilityError(error, stageFieldId, { ...draft, nickName: trimmedValue });
-        return;
-      }
-      draft.nickName = trimmedValue;
-      moveToStage('signup-email', draft);
-      return;
-    }
-
-    renderSubmittedInput(stageFieldId, trimmedValue);
-    if (!isValidEmail(trimmedValue)) {
-      appendSignupEmailTranscript('이메일 형식이 올바르지 않습니다.');
-      renderEmailScreen();
-      setStagePrompt(stageFieldId);
-      return;
-    }
-
-    draft.email = trimmedValue;
+    state._commandInFlight = true;
     try {
-      await runFieldAvailabilityCheck(stageFieldId, draft);
-    } catch (error) {
-      handleAvailabilityError(error, stageFieldId, draft);
-      return;
+      let rawText = String(rawValue || '').trim();
+      let trimmedValue = rawText.trim();
+      let upperCommand = trimmedValue.toUpperCase();
+      let lowerCommand = trimmedValue.toLowerCase();
+
+      if (lowerCommand === '/x' || ['P', 'M', 'B', 'X'].includes(upperCommand)) {
+        leaveSignupToMenu(handlers);
+        return;
+      }
+
+      if (upperCommand === 'T') {
+        cleanupSignupHandlers();
+        setSignupAgreementAccepted(false);
+        setPendingSignupMethod('');
+        setPendingSignupDraft(null);
+        clearSignupEmailStage();
+        clearSignupEmailTranscript();
+        state._signupFlow = '';
+        state._maskCommandInput = false;
+        restoreSignupEmailPromptRow();
+        await showMain();
+        return;
+      }
+
+      const stageFieldId = getSignupEmailStage() || deriveStageFromDraft(getPendingSignupDraft() || {});
+      const draft = { ...(getPendingSignupDraft() || {}) };
+      if (isEnglishKeyboardStage(stageFieldId)) {
+        rawText = sanitizeEnglishKeyboardInput(stageFieldId, rawText);
+        trimmedValue = rawText.trim();
+        upperCommand = trimmedValue.toUpperCase();
+        lowerCommand = trimmedValue.toLowerCase();
+      }
+
+      // [LOG: 20260508_1625] Empty Enter keeps the current signup prompt without adding transcript lines.
+      if (!trimmedValue) {
+        setStagePrompt(stageFieldId);
+        return;
+      }
+
+      if (stageFieldId === CONFIRM_STAGE_ID) {
+        if (upperCommand === 'N') {
+          appendSignupEmailTranscript(`수정 항목이 있습니까? (번호 1~5 / n) ${trimmedValue || 'n'}`);
+          await completeDraft(handlers, draft);
+          return;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(CONFIRM_FIELD_IDS, trimmedValue)) {
+          const targetFieldId = CONFIRM_FIELD_IDS[trimmedValue];
+          appendSignupEmailTranscript(`수정 항목이 있습니까? (번호 1~5 / n) ${trimmedValue}`);
+          moveToStage(targetFieldId, pruneDraftForField(targetFieldId, draft));
+          return;
+        }
+
+        appendSignupEmailTranscript(`수정 항목이 있습니까? (번호 1~5 / n) ${trimmedValue}`);
+        appendGuideForStage(CONFIRM_STAGE_ID, [
+          '번호를 입력하거나 n으로 진행할 수 있습니다.'
+        ]);
+        renderEmailScreen();
+        setStagePrompt(CONFIRM_STAGE_ID);
+        return;
+      }
+
+      if (stageFieldId === 'signup-userid') {
+        renderSubmittedInput(stageFieldId, trimmedValue);
+        if (!isValidUserId(trimmedValue)) {
+          appendSignupEmailTranscript('회원ID는 영문/숫자/_ 조합 5~40자만 가능합니다.');
+          renderEmailScreen();
+          setStagePrompt(stageFieldId);
+          return;
+        }
+        try {
+          await runFieldAvailabilityCheck(stageFieldId, { userId: trimmedValue });
+        } catch (error) {
+          handleAvailabilityError(error, stageFieldId, { userId: trimmedValue });
+          return;
+        }
+        draft.userId = trimmedValue;
+        moveToStage('signup-password', draft);
+        return;
+      }
+
+      if (stageFieldId === 'signup-password') {
+        appendCurrentInput(stageFieldId, rawText);
+        if (!isStrongPassword(rawText)) {
+          appendSignupEmailTranscript('비밀번호는 6자 이상이며 특수문자를 1자 이상 포함해야 합니다.');
+          renderEmailScreen();
+          setStagePrompt(stageFieldId);
+          return;
+        }
+        draft.password = rawText;
+        draft.passwordConfirmed = false;
+        moveToStage('signup-password-confirm', draft);
+        return;
+      }
+
+      // [LOG: 20260508_1621] Signup password requires a matching second no-echo entry.
+      if (stageFieldId === 'signup-password-confirm') {
+        appendCurrentInput(stageFieldId, rawText);
+        if (rawText !== String(draft.password || '')) {
+          appendSignupEmailTranscript('비밀번호 확인이 일치하지 않습니다.');
+          renderEmailScreen();
+          setStagePrompt(stageFieldId);
+          return;
+        }
+        draft.passwordConfirmed = true;
+        moveToStage('signup-nickname', draft);
+        return;
+      }
+
+      if (stageFieldId === 'signup-nickname') {
+        renderSubmittedInput(stageFieldId, trimmedValue);
+        if (!isValidNickname(trimmedValue)) {
+          appendSignupEmailTranscript('닉네임은 영문 40자, 한글 20자까지 가능합니다.');
+          renderEmailScreen();
+          setStagePrompt(stageFieldId);
+          return;
+        }
+        try {
+          await runFieldAvailabilityCheck(stageFieldId, {
+            userId: draft.userId || '',
+            nickName: trimmedValue
+          });
+        } catch (error) {
+          handleAvailabilityError(error, stageFieldId, { ...draft, nickName: trimmedValue });
+          return;
+        }
+        draft.nickName = trimmedValue;
+        moveToStage('signup-email', draft);
+        return;
+      }
+
+      renderSubmittedInput(stageFieldId, trimmedValue);
+      if (!isValidEmail(trimmedValue)) {
+        appendSignupEmailTranscript('이메일 형식이 올바르지 않습니다.');
+        renderEmailScreen();
+        setStagePrompt(stageFieldId);
+        return;
+      }
+
+      draft.email = trimmedValue;
+      try {
+        await runFieldAvailabilityCheck(stageFieldId, draft);
+      } catch (error) {
+        handleAvailabilityError(error, stageFieldId, draft);
+        return;
+      }
+      moveToStage(CONFIRM_STAGE_ID, draft);
+    } finally {
+      state._commandInFlight = false;
     }
-    moveToStage(CONFIRM_STAGE_ID, draft);
   }
 
   return function attachEmailEvents(handlers, focusFieldId = '') {

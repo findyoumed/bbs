@@ -1,3 +1,16 @@
+## [2026-07-16 18:18] Fix duplicate Enter submission and extra prompt rendering in signup email stages
+
+**LOG_ID: 20260716_1818**
+목표: 회원가입 단계 진행 시 아이디를 입력하고 엔터를 누르면 비동기 중복 확인(runFieldAvailabilityCheck) 중 중복된 빈 프롬프트(>>)가 화면에 추가로 표시되는 현상(또는 깜빡임)을 수정.
+추가/변경 사항:
+1. `public/js/core/signupEmailForm.js`의 `handleStageInput` 함수 내에 `state._commandInFlight` 플래그를 활용한 전송 락(lock) 처리를 추가.
+2. 입력 완료 이벤트가 비동기로 동작하는 동안 들어오는 추가적인 Enter 키 입력이나 IME 조합 완료 시의 중복 Enter 트리거가 `handleStageInput`을 중복 호출하지 못하도록 원천 차단.
+실행 및 검증: `npm run loop:verify` 실행 -> 모든 검증 PASS.
+변경 파일: `public/js/core/signupEmailForm.js`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 17:55] Fix Enter keydown event prevention on main command input
 
 **LOG_ID: 20260716_1755**
