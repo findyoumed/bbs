@@ -1,3 +1,26 @@
+## [2026-07-16 22:30] MyInfo 검증 중 대기 캐럿 노출 수정 — is-command-pending CSS가 인라인 display:none을 override
+
+**LOG_ID: 20260716_2230**
+목표: 비밀번호/이메일 변경에서 현재 비밀번호를 틀리게 입력했을 때, "현재 비밀번호가 올바르지 않습니다." 오류가 뜨기 **직전에 입력 위치에 커서(빈 프롬프트 + `_` 대기 캐럿)가 잠깐 보이는** 문제. 사용자 요청: 중간 표시 없이 바로 오류가 뜨게.
+**진짜 원인(Playwright 재현+CSS 대조로 확정)**: submitEmailChange/submitPasswordChange/submitDeleteAccount는 검증(verify) 전 프롬프트 행을 `promptRow.style.display='none'`로 숨기는데, `style.css:2632`의 `#terminal-container.is-command-pending #terminal-prompt-row { display:flex !important; visibility:visible !important }`가 명령 실행 중(pending) 이 인라인 display:none을 **override**해 행을 강제로 다시 보이게 하고 `#cmd-input-wrapper::after`의 `_` 대기 캐럿까지 띄웠다. (앞서 20260716_2050의 `setPrompt('')`는 텍스트만 비웠을 뿐 이 강제 노출·캐럿은 못 막았다 — 그래서 커서가 남았다.)
+수정: myinfo의 모든 검증/제출 전 숨김을 **인라인 `!important`**(`promptRow.style.setProperty('display','none','important')`)로 바꿔 외부 스타일시트 `!important`를 이기게 했다(인라인 !important > author !important). `myInfoRenderer.setMyInfoPromptRowVisible(false)`도 동일 적용, 보일 땐 `display=''`로 속성 제거. 이로써 검증 중 행이 확실히 `display:none`으로 숨겨져 대기 캐럿이 안 뜨고, 이전에 못 잡던 텍스트 깜빡임도 함께 근본 해결된다.
+검증: **Playwright 재현(verify 250ms 지연) — 실패/성공 모두 검증 중 `rowDisp=none`(강제 노출·`_`캐럿 없음), 검증 후에만 오류/새 프롬프트 렌더**. `sawOldAtNew:false`. `npm run loop:verify` 초록(9/9, Bash 복구 후 확인).
+변경 파일: `public/js/core/myInfoActions.js`(숨김 5곳), `public/js/core/myInfoRenderer.js`(setMyInfoPromptRowVisible).
+결과: ✅ 완료 (재현·검증)
+
+---
+
+## [2026-07-16 22:00] 모든 마스킹(비밀번호) 입력창 영어 전용 가드
+
+**LOG_ID: 20260716_2200**
+목표: 모든 비밀번호(`*` 마스킹) 입력창(로그인·회원가입·내정보 비밀번호/이메일 확인·탈퇴)에서 한글 입력이 안 되게, 영어만 들어가게.
+구현: `public/js/core/hangulKeyboard.js`(신규) — 완성형/호환 한글을 두벌식 QWERTY 키로 되돌리는 `convertHangulToKeyboardText` + 마스킹용 `toAsciiPasswordInput`(변환 후 출력가능 ASCII만). 중앙 입력 핸들러 `appEventsCommandInput.js`에 **`_maskCommandInput===true`이면 조합 종료 후 입력을 QWERTY로 되돌리고 ASCII만 남기는 가드**를 추가(input 이벤트 비조합 시 + compositionend). 모든 마스킹 입력이 동일 핸들러를 거치므로 한 곳으로 전부 커버.
+검증: **Playwright 실측** — 로그인 비밀번호(signup 가드 없는 순수 케이스)에서 "안녕"→`dkssud`, "비밀번호"→`qlalfqjsgh`, "ㅁㄴㅇㄹ"→`asdf`, `pass123!`→그대로, "한a1!"→`gksa1!`. ID 등 마스킹 아닌 칸은 불변. `npm run loop:verify` 초록(9/9).
+변경 파일: `public/js/core/hangulKeyboard.js`(신규), `public/js/core/appEventsCommandInput.js`.
+결과: ✅ 완료 (실측)
+
+---
+
 ## [2026-07-16 20:50] MyInfo 프롬프트 텍스트 깜빡임 수정 (새 프롬프트 자리에 직전 프롬프트가 한 프레임 노출)
 
 **LOG_ID: 20260716_2050**
