@@ -140,6 +140,15 @@ export function createCommandFooterTextUtils(deps) {
 
   function getCommandFooterText(category) {
     let order = Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category] : [];
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+    if (isMobile) {
+      if (category === 'policy' || category === 'newsList' || category === 'weatherView' || category === 'menuIndex') {
+        order = ['F:다음', 'B:이전', 'P', 'H'];
+      } else if (category === 'help') {
+        order = ['F:다음', 'B:이전', 'P'];
+      }
+    }
 
     // [LOG_ID: 20260713_1230] 쪽지함 상자별 힌트바 — 보낸쪽지함에서는 나우누리 CMAIL식
     // 발송취소(CM)를, 받은쪽지함에서는 보낸쪽지함 전환(S)을 안내한다.

@@ -142,10 +142,13 @@ export function createHelpScreens(deps) {
       ...pageSlice
     ];
 
-    // [LOG: 20260623_1236] 24→23줄로 축소하여 세로 스크롤바 방지
-    while (parts.length < 23) parts.push('');
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < 23) {
+      joinedLines.push('');
+    }
+
     return {
-      text: parts.slice(0, 23).join('\n'),
+      text: joinedLines.slice(0, 23).join('\n'),
       page: finalPage,
       totalPages
     };
@@ -185,9 +188,13 @@ export function createHelpScreens(deps) {
       `${ansiColor(8)}${truncateDisplayText(UI_TEXT.HELP_TOOLTIP_HINT, targetCols - 4)}${ANSI_RESET}`
     ];
 
-    while (parts.length < 24) parts.push('');
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < 24) {
+      joinedLines.push('');
+    }
+
     return {
-      text: parts.slice(0, 24).join('\n'),
+      text: joinedLines.slice(0, 24).join('\n'),
       page: 1,
       totalPages: 1
     };
@@ -216,11 +223,12 @@ export function createHelpScreens(deps) {
       });
     }
 
-    while (parts.length < 24) {
-      parts.push('');
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < 24) {
+      joinedLines.push('');
     }
 
-    return parts.join('\n');
+    return joinedLines.slice(0, 24).join('\n');
   }
 
   async function showHelp(cmdKey = '', pageOrOptions = 1) {

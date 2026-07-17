@@ -1,3 +1,53 @@
+## [2026-07-17 19:21] Fix additional line overflow bugs in help/history/policy screens
+
+**LOG_ID: 20260717_1921**
+목표: 모바일에서 상하 잘림(overflow) 현상이 발생할 수 있는 잠재적 화면들 전수 조사 및 패딩 로직 수정.
+원인: parts.length 배열 개수 기반의 빈 줄 채우기 로직을 사용하는 다른 화면들에서도, 배열 요소 하나가 여러 줄(\n)을 포함할 경우 한계 높이를 초과해 잘리는 동일한 문제가 잠재되어 있었음.
+구현: helpScreens.js의 개별 명령어 도움말(uildCommandHelpAnsi)과 이전화면기록(uildHistoryAnsi), 그리고 policyScreens.js의 이용약관 화면(uildPolicyAnsi)에서 split('\n').length를 기준으로 정확한 줄 수를 세도록 패딩 로직 전면 수정.
+변경 파일: public/js/core/helpScreens.js, public/js/core/policyScreens.js
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:22] 다른 페이징 화면(help, newsList, weatherView, menuIndex) 모바일 힌트바 단축키 잘림 현상 일괄 해결
+
+**LOG_ID: 20260717_1922**
+목표: 도움말(/help), 뉴스 목록(newsList), 날씨 상세(weatherView), 전체 메뉴 안내(menuIndex) 화면에서 모바일(44칸) 접속 시 이전/다음 페이징 단축키가 잘려 노출되지 않는 문제 해결.
+원인: 이 화면들도 가로 폭이 좁은 모바일(352px) 환경에서 토큰들이 한 줄에 들어가지 못해(370px~460px 소요) F와 B가 자동 트림 처리되어 숨겨지게 됨.
+수정:
+- public/js/core/commandFooterText.js — getCommandFooterText 함수 내부에 모바일(window.innerWidth < 768) 예외 처리를 확장 적용. help 카테고리는 ['F:다음', 'B:이전', 'P']로, newsList/weatherView/menuIndex 카테고리는 ['F:다음', 'B:이전', 'P', 'H']로 GO와 T를 제외하고 라벨을 '다음'/'이전'으로 축약한 리스트를 내보내도록 수정.
+검증:
+- 임시 .mjs 파일 복사 후 node --check 문법 검증 완료.
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 전체 테스트 통과 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:20] Fix help/menu screen line overflow on mobile
+
+**LOG_ID: 20260717_1920**
+목표: 모바일 환경에서 도움말(/help) 및 전체 메뉴 안내(INDEX) 화면의 하단이 잘려 보이는 현상 수정.
+원인: uildTopHeader() 함수가 4줄짜리 문자열 1개를 반환하는데, 페이징 패딩(padding) 계산 로직이 이 문자열 1개를 1줄로 계산해 빈 줄을 더 채우는 바람에, 결과적으로 총 26줄이 생성되어 터미널 출력 한계치(23줄 본문 + 힌트바 영역)를 초과하여 넘친 영역이 CSS overflow: hidden에 의해 잘림.
+구현: helpScreens.js와 menuIndexScreens.js의 패딩 로직을 실제 렌더링될 라인 기준(split('\n').length)으로 23줄까지 채우고 자르도록 수정.
+변경 파일: public/js/core/helpScreens.js, public/js/core/menuIndexScreens.js
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:15] 모바일 화면(44칸) 이용약관(policy) 뷰어 하단 힌트바에서 페이징 단축키(다음/이전) 잘림 현상 방지
+
+**LOG_ID: 20260717_1915**
+목표: 모바일 화면(44칸)의 좁은 가로 폭으로 인해 이용약관 뷰어의 F(다음페이지) 및 B(이전페이지) 힌트 토큰이 자동 숨김 처리되던 문제를 수정.
+원인: 모바일 화면의 가로 폭은 44칸(약 352px)인데, '다음페이지', '이전페이지'라는 긴 라벨을 사용하면 GO와 T를 제외하더라도 총합 약 400px에 달해 한 줄에 들어가지 못하고 2줄로 늘어져 자동 트림(trimHintEntriesToFit)에 의해 숨겨지게 됨.
+수정:
+- public/js/core/commandFooterText.js — getCommandFooterText 함수 내부에서 모바일 환경(window.innerWidth < 768)일 때 policy 카테고리의 힌트 토큰 목록을 GO와 T를 제외하고 라벨을 '다음'/'이전'으로 축약한 ['F:다음', 'B:이전', 'P', 'H']로 제공하도록 수정. 이를 통해 모바일 화면에서도 잘림 없이 모두 표시될 수 있게 함.
+검증:
+- 임시 .mjs 파일 복사 후 node --check 문법 검증 완료.
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 전체 테스트 통과 완료.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-16 23:24] Fix P command pagination bug in help/policy screens
 
 **LOG_ID: 20260716_2324**

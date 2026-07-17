@@ -92,9 +92,13 @@ export function createMenuIndexScreens(deps) {
       ...pageSlice
     ];
 
-    while (parts.length < 23) parts.push('');
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < 23) {
+      joinedLines.push('');
+    }
+
     return {
-      text: parts.slice(0, 23).join('\n'),
+      text: joinedLines.slice(0, 23).join('\n'),
       page: finalPage,
       totalPages
     };
