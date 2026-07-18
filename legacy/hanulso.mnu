@@ -126,19 +126,29 @@
 		<!-- [LOG_ID: 20260713_1900] 나우누리 원전 TOP 구조("15. 여론광장"=ACRO) 반영 —
 		     type="vote" 라우팅은 이미 오락실 하위에 존재, 최상위 진입점만 신설(go 값은
 		     기존 game_vote와 충돌 방지 위해 별도 "acro" 사용). 코드 변경 불필요. -->
-		<item type="vote" go="acro" id="acro" door="7" access_level="1">
+		<!-- [LOG_ID: 20260718_2200] 토론의 광장(CONF)을 최상위 12번 door로 따로 신설했었으나
+		     (20260719_1600), 사용자 지적으로 하이텔 원전 구조("(12)여론광장-1.토론의 광장")를
+		     재확인 — CONF는 여론광장의 하위 항목이었다. 20260714_1200에서 이미 "여론 수렴
+		     기능(투표/설문)은 오락실이 아니라 최상위 여론광장에만 둔다"고 정리했던 것과 같은
+		     원칙으로, CONF도 별도 최상위가 아니라 여론광장 산하에 있어야 한다. 여론광장을
+		     오락실(door=9)과 동일하게 type="menu" 컨테이너로 바꾸고 투표/설문·토론의 광장을
+		     하위 door=1/2로 넣는다. go="acro" id="acro"는 컨테이너가 물려받으므로 /acro
+		     라우트·GO ACRO 동작은 그대로 유지된다(진입 시 하위 2개 중 고르는 화면으로 바뀜). -->
+		<item type="menu" go="acro" id="acro" door="7">
 			<name>여론광장 (ACRO)</name>
-			<header></header>
 			<footer>txt/cmd_menu_footer.txt</footer>
-		</item>
 
-		<!-- [LOG_ID: 20260719_1600] 토론의 광장 (CONF) — 하이텔 (12)여론광장-1.토론의 광장 재현.
-		     회의실을 열고 안건을 발의·재청하는 여론 수렴 기능. type="conf" 라우팅은
-		     menuNavigationActions에서 refs.showConfRooms()로 진입. -->
-		<item type="conf" go="conf" id="conf" door="12" access_level="1">
-			<name>토론의 광장 (CONF)</name>
-			<header></header>
-			<footer>txt/cmd_menu_footer.txt</footer>
+			<item type="vote" go="vote" id="vote" door="1" access_level="1">
+				<name>투표/설문</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="conf" go="conf" id="conf" door="2" access_level="1">
+				<name>토론의 광장</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
 		</item>
 
 		<!-- 10. 뉴스/인물 -->

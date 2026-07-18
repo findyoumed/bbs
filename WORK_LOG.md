@@ -1,3 +1,16 @@
+## [2026-07-18 21:55] 토론의 광장(CONF)을 최상위 12번에서 여론광장(ACRO) 산하로 통합
+
+**LOG_ID: 20260718_2155**
+목표: 사용자 지적("토론은 agora 메뉴인데") 반영 — 12번 최상위 도어로 따로 있던 토론의 광장(CONF)을 7번 여론광장(ACRO) 산하 서브메뉴로 옮긴다.
+원인: `20260719_1600`에서 CONF를 추가하며 주석에 "하이텔 (12)여론광장-1.토론의 광장 재현"이라고 적었는데, 이건 하이텔 원전에서 CONF가 여론광장의 하위 1번 항목이라는 뜻이었다. 그런데 실제로는 최상위 12번 door로 따로 떼어 붙여, `20260714_1200`에서 이미 정리했던 원칙("여론 수렴 기능은 최상위 여론광장에만 둔다" — 투표/설문 중복 사고 교훈)과 어긋나는 동일 유형의 실수를 반복했다.
+수정:
+- `legacy/hanulso.mnu` — 7번 door(여론광장/ACRO)를 오락실(door=9)과 같은 `type="menu"` 컨테이너로 변경(go/id는 `acro` 유지, `/acro` 라우트 불변)하고 그 아래 door=1 `투표/설문`(type="vote", go="vote", 기존 최상위 acro 항목을 그대로 이동)과 door=2 `토론의 광장`(type="conf", go="conf", 기존 12번 항목을 그대로 이동)을 서브 항목으로 넣었다. 최상위 12번 CONF 항목은 제거.
+- 코드 변경은 없음 — `menuNavigationActions.js`의 `type="menu"`/`type="vote"`/`type="conf"` 분기, `menuIndexScreens.js`의 depth 0/1 순회, `routingUrlBuilder.js`/`routingStateRestorer.js`의 `/acro`·`/conf` 라우트가 모두 화면 상태 기반이라 메뉴 트리 중첩 여부와 무관하게 그대로 동작한다(오락실 서브메뉴와 동일 패턴).
+검증: `npm run smoke:menu-wiring`(type="conf"/"vote"/"menu" 포함 20개 타입 전부 통과), `npm run smoke:vercel-ready`.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-17 19:53] 전체 메뉴 안내(menu-index) 화면 가이드 안내 문구 제거 및 본문 19줄 예산 확대
 
 **LOG_ID: 20260717_1953**
