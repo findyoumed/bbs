@@ -11,7 +11,6 @@ This file provides guidance to Claude Code (claude.ai/code) and its subagents wh
 ### 1.1 Permission & Approval
 - This repository uses a **YOLO-friendly** policy.
 - `Bash`, `Edit`, and `Write` tools are pre-approved for most tasks.
-- **NEVER** `git push`. This is a hard restriction for all AI tools.
 - Large architectural changes or new npm packages require explicit user confirmation.
 
 ### 1.2 Communication
