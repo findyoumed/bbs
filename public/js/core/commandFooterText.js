@@ -146,7 +146,11 @@ export function createCommandFooterTextUtils(deps) {
       if (category === 'policy' || category === 'newsList' || category === 'weatherView' || category === 'menuIndex') {
         order = ['F:다음', 'B:이전', 'P', 'H'];
       } else if (category === 'help') {
-        order = ['F:다음', 'B:이전', 'P'];
+        // [LOG_ID: 20260718_2330] 페이지가 1쪽뿐인 도움말(F/B가 둘 다 필터링되는 경우)에서
+        // T·GO까지 빠져 있어 상위(P) 토큰 하나만 남아 보였다(사용자 지적: "메뉴 힌트바가 많이
+        // 없어졌는데"). 데스크톱 help 세트(F/B/P/T/GO)와 동일하게 맞춘다 — 안 들어가면 동적
+        // 트림(trimHintEntriesToFit)이 알아서 H 툴팁으로 접는다.
+        order = ['F:다음', 'B:이전', 'P', 'T', 'GO'];
       }
     }
 
