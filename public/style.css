@@ -1066,6 +1066,27 @@ body.theme-nownuri .write-field textarea {
 
 .signup-terminal-prompt-host #cmd-input-wrapper {
     min-height: 1.4em;
+    align-items: baseline;
+}
+
+/* [LOG_ID: 20260718_2350] #cmd-input/#cmd-prompt-renderer는 원래 footer 소속이라 폰트 크기를
+   footer 전용 변수(--cmd-font-size, 모바일 12px 고정)로 그린다. 이 화면은 그 요소를 본문(트랜스크립트,
+   ambient font-size 15px 등 뷰포트별 clamp 값)에 인라인으로 옮겨 붙이는데(mountPromptRow), 변수가
+   안 따라와 입력 글자만 트랜스크립트보다 작게 보이고, ambient 크기를 그대로 따르는 커서(.terminal-cursor,
+   em 단위)만 상대적으로 커 보였다(사용자 지적: "입력창 폰트크기가 이상하고 캐럿위치도 이상한데").
+   ambient font-size를 그대로 물려받게 해 트랜스크립트·입력 글자·커서 세 크기를 통일한다. */
+.signup-terminal-prompt-host #cmd-prompt-renderer,
+.signup-terminal-prompt-host #cmd-input {
+    font-size: inherit !important;
+    line-height: inherit !important;
+    height: 1.4em;
+    min-height: 0;
+    max-height: none;
+}
+
+.signup-terminal-prompt-host .terminal-cursor {
+    height: 1.1em;
+    top: 0.15em;
 }
 
 .myinfo-warning {

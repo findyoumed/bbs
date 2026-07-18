@@ -1,3 +1,14 @@
+## [2026-07-18 23:50] 이메일 가입 화면 입력창 폰트 크기·커서 위치 불일치 수정
+
+**LOG_ID: 20260718_2350**
+목표: 사용자 지적("입력창 폰트크기가 이상하고 캐럿위치도 이상한데") 반영 — 이메일 가입(SIGNUP) 화면에서 아이디를 입력할 때 타이핑된 글자가 위쪽 안내문(트랜스크립트)보다 작게 보이고, 흰 블록 커서가 그에 비해 과하게 커 보이던 문제.
+원인: `#cmd-input`/`#cmd-prompt-renderer`는 원래 하단 고정 footer(`#terminal-footer`) 소속 요소라, 폰트 크기를 footer 전용 CSS 변수 `--cmd-font-size`(모바일 12px 고정)로 그린다. 이메일 가입 화면은 `mountPromptRow()`로 이 요소를 footer에서 떼어내 본문 트랜스크립트 흐름 안(`.signup-terminal-prompt-host`)에 인라인으로 옮겨 붙이는데, 그 본문 텍스트(`.signup-terminal-line`)는 뷰포트별로 동적으로 계산되는 ambient font-size(이 실측 기준 15px)를 그대로 물려받는 반면 `#cmd-input`은 옮겨진 뒤에도 여전히 footer 전용 고정값(12px)을 썼다. 그 결과 입력 글자만 작게 보이고, ambient 크기를 정상적으로 따라가는 커서(`.terminal-cursor`, em 단위)는 상대적으로 커 보였다.
+수정: `public/style.css`의 `.signup-terminal-prompt-host` 하위에 `#cmd-prompt-renderer`/`#cmd-input`이 `font-size: inherit`·`line-height: inherit`으로 ambient 값을 그대로 물려받도록 오버라이드를 추가하고, `.terminal-cursor`의 높이/세로 위치도 이 인라인 컨텍스트에 맞게 재조정했다(로그인 화면의 `.entry-login-prompt-host .terminal-cursor` 스코프 조정과 동일한 패턴).
+검증: `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui` 통과. 로컬 dev 서버에서 Playwright로 412×892 모바일 뷰포트 이메일 가입 아이디 입력 단계 실측 — 수정 전 `#cmd-input` fontSize 12px(트랜스크립트 15px과 불일치, 커서만 15px 기준이라 상대적으로 커 보임)였던 것이, 수정 후 `#cmd-input` fontSize 15px·height 21px로 트랜스크립트 행과 완전히 일치하는 것 확인. `public/index.html`의 `style.css` 캐시 버전도 `?v=20260718_2350`으로 함께 갱신(직전 캐시 누락 재발 방지).
+결과: ✅ 완료
+
+---
+
 ## [2026-07-18 23:45] style.css 캐시 버전 갱신 누락 수정 — HELP 잘림 수정이 배포에 반영 안 되던 문제
 
 **LOG_ID: 20260718_2345**
