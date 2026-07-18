@@ -1,3 +1,14 @@
+## [2026-07-18 23:10] 토론의 광장 빈 상태 문구 모바일 가로폭 오버플로우 수정
+
+**LOG_ID: 20260718_2310**
+목표: 사용자 지적("글이 가로폭을 벗어나고 있어") 반영 — 모바일(44칸)에서 회의실/안건 목록이 비어있을 때 뜨는 안내 문구가 화면 폭을 넘어 잘려 보이던 것을 고친다.
+원인: `confAnsiBuilders.js`의 빈 상태 문구 2곳(`buildConfRoomListAnsi`/`buildConfAgendaListAnsi`)이 이 파일의 다른 모든 텍스트와 달리 `fitCell`/`wrapAnsiText` 없이 원문 그대로 한 줄로 push되고 있었다 — 한글은 2칸 폭이라 "   열린 회의실이 없습니다. O를 눌러 회의실을 여세요."가 44칸을 훌쩍 넘겨 화면 밖으로 잘렸다.
+수정: 두 문구 모두 `wrapAnsiText(text, targetCols)`로 감싸 여러 줄로 나눠 push하도록 변경(안건 보기 화면 본문이 이미 쓰던 방식과 동일).
+검증: `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui` 통과. 로컬 dev 서버에서 Playwright로 412px 모바일 뷰포트 실측 — `document.documentElement.scrollWidth`가 뷰포트 폭(412)과 정확히 일치(가로 오버플로우 없음), 문구가 2줄로 정상 줄바꿈되는 스크린샷으로 확인.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-18 23:00] 토론의 광장 go/id 코드를 "conf"에서 "forum"으로 정정
 
 **LOG_ID: 20260718_2300**

@@ -28,7 +28,10 @@ export function createConfAnsiBuilders(deps) {
 
     const parts = [frame('토론의 광장 (FORUM)', targetCols), '', ansiColor(14) + header + ANSI_RESET, ansiHLine(targetCols, 8)];
     if (!rooms || !rooms.length) {
-      parts.push(ansiColor(8) + '   열린 회의실이 없습니다. O를 눌러 회의실을 여세요.' + ANSI_RESET);
+      // [LOG_ID: 20260718_2310] 모바일(44칸)에서 안내 문구가 폭을 넘어 잘려 보이던 것을
+      // wrapAnsiText로 줄바꿈(사용자 지적: "글이 가로폭을 벗어나고 있어").
+      wrapAnsiText('   열린 회의실이 없습니다. O를 눌러 회의실을 여세요.', targetCols)
+        .forEach((w) => parts.push(ansiColor(8) + w + ANSI_RESET));
     } else {
       rooms.slice(0, 12).forEach((room) => {
         let line = ansiColor(15) + fitCell(String(room.no), COL.no, 'right') + ' ';
@@ -60,7 +63,9 @@ export function createConfAnsiBuilders(deps) {
       '', ansiColor(14) + header + ANSI_RESET, ansiHLine(targetCols, 8)
     ];
     if (!agendas || !agendas.length) {
-      parts.push(ansiColor(8) + '   발의된 안건이 없습니다. N을 눌러 안건을 발의하세요.' + ANSI_RESET);
+      // [LOG_ID: 20260718_2310] 회의실 목록과 동일한 오버플로우 문제 — 안건 목록 빈 상태 문구도 wrap.
+      wrapAnsiText('   발의된 안건이 없습니다. N을 눌러 안건을 발의하세요.', targetCols)
+        .forEach((w) => parts.push(ansiColor(8) + w + ANSI_RESET));
     } else {
       agendas.slice(0, 12).forEach((a) => {
         let line = ansiColor(15) + fitCell(String(a.no), COL.no, 'right') + ' ';
