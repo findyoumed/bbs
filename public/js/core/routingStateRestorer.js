@@ -122,7 +122,16 @@ export function createRoutingStateRestorer(deps) {
         return await showMain(true);
       }
 
-      if (isUnifiedPdsBoardId(boardId)) {
+      // [LOG_ID: 20260717_1925] URL 상의 대문자 boardId를 본래의 boardId(key)로 복구하여 API 호출 및 컴포넌트에 넘깁니다.
+      let resolvedBoardId = boardId;
+      if (typeof findBoardByKey === 'function') {
+        const found = findBoardByKey(boardId);
+        if (found) {
+          resolvedBoardId = found.boardId || found.id || boardId;
+        }
+      }
+
+      if (isUnifiedPdsBoardId(resolvedBoardId)) {
         if (postId && !sub && /^\d+$/.test(postId)) {
           return await showUnifiedPdsPost(postId, page, true);
         }
@@ -132,21 +141,21 @@ export function createRoutingStateRestorer(deps) {
       }
 
       if (postId === 'write') {
-        return await restoreBoardWrite(boardId, page);
+        return await restoreBoardWrite(resolvedBoardId, page);
       }
       if (postId && sub === 'edit') {
-        return await restoreBoardEdit(boardId, postId);
+        return await restoreBoardEdit(resolvedBoardId, postId);
       }
       if (postId && sub === 'reply') {
-        return await restoreBoardReply(boardId, postId);
+        return await restoreBoardReply(resolvedBoardId, postId);
       }
       if (postId && sub === 'files') {
-        return await showAttachmentList(boardId, postId, true);
+        return await showAttachmentList(resolvedBoardId, postId, true);
       }
       if (postId) {
-        return await showPostView(boardId, postId, true);
+        return await showPostView(resolvedBoardId, postId, true);
       }
-      return await showPostList(boardId, page, {}, true);
+      return await showPostList(resolvedBoardId, page, {}, true);
     },
 
     async service(segments, query) {
@@ -434,6 +443,34 @@ export function createRoutingStateRestorer(deps) {
         if (routeNode.type === 'retro-art' && typeof showRetroArt === 'function') return remainingSegments[0] && typeof showRetroArtView === 'function' && await showRetroArtView(remainingSegments[0], true) ? true : await showRetroArt(true);
         // [LOG_ID: 20260713_1700] 쪽지함(전자우편) 메인 메뉴 진입점 — /memo 직접 접속/새로고침 복원
         if (routeNode.type === 'memo' && typeof showMemoList === 'function') return await showMemoList(true);
+      }
+
+      // [LOG_ID: 20260717_1930] /board 접두사 제거 대응: 첫 세그먼트가 게시판 키(대소문자 무관)인 경우 복원
+      const firstSeg = segments[0];
+      if (firstSeg && typeof findBoardByKey === 'function') {
+        const boardObj = findBoardByKey(firstSeg);
+        if (boardObj) {
+          const postId = segments[1];
+          const sub = segments[2];
+          const resolvedBoardId = boardObj.boardId || boardObj.id || firstSeg;
+
+          if (postId === 'write') {
+            return await restoreBoardWrite(resolvedBoardId, page);
+          }
+          if (postId && sub === 'edit') {
+            return await restoreBoardEdit(resolvedBoardId, postId);
+          }
+          if (postId && sub === 'reply') {
+            return await restoreBoardReply(resolvedBoardId, postId);
+          }
+          if (postId && sub === 'files') {
+            return await showAttachmentList(resolvedBoardId, postId, true);
+          }
+          if (postId) {
+            return await showPostView(resolvedBoardId, postId, true);
+          }
+          return await showPostList(resolvedBoardId, page, {}, true);
+        }
       }
 
       const menuNode = getMenuNodeByKey(segments[0] || '');

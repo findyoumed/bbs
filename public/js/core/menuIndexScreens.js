@@ -20,9 +20,11 @@ export function createMenuIndexScreens(deps) {
     getCommandFooterText,
     getMenuChildren,
     getMenuNodeLabel,
+    getMenuNodeKey,
     isWideChar,
     loadMenuTree,
     renderScreenSequential,
+    renderMenuHotspots,
     screenEl,
     state,
     updateURL
@@ -71,24 +73,25 @@ export function createMenuIndexScreens(deps) {
     };
 
     const rows = [];
+    const allNodes = [];
     getMenuChildren(state.menuTree).forEach((top) => {
       rows.push(buildRow(top, 0));
-      getMenuChildren(top).forEach((child) => rows.push(buildRow(child, 1)));
+      allNodes.push(top);
+      getMenuChildren(top).forEach((child) => {
+        rows.push(buildRow(child, 1));
+        allNodes.push(child);
+      });
     });
 
-    const guideLine = isMobile
-      ? `${ansiColor(8)}  코드 입력 시 바로 이동합니다.${ANSI_RESET}`
-      : `${ansiColor(8)}  오른쪽 코드를 입력하면 바로 이동합니다 (GO 없이 코드만 입력).${ANSI_RESET}`;
-
-    // help와 동일한 예산: 세로 스크롤바 방지를 위해 총 23줄, 안내줄 1줄을 뺀 만큼이 본문.
-    const linesPerPage = 19 - 1;
+    // [LOG_ID: 20260717_1953] 가이드라인 문구 제거 요청 반영 및 본문 줄 수를 19줄로 확대
+    const linesPerPage = 19;
     const totalPages = Math.max(1, Math.ceil(rows.length / linesPerPage));
     const finalPage = Math.max(1, Math.min(requestedPage, totalPages));
     const pageSlice = rows.slice((finalPage - 1) * linesPerPage, finalPage * linesPerPage);
+    const pageSliceNodes = allNodes.slice((finalPage - 1) * linesPerPage, finalPage * linesPerPage);
 
     const parts = [
       buildTopHeader({ leftLabel: 'MENU', centerLabel: '전체 메뉴 안내 (INDEX)' }, buildPageLabel(finalPage, totalPages), targetCols),
-      guideLine,
       ...pageSlice
     ];
 
@@ -100,7 +103,8 @@ export function createMenuIndexScreens(deps) {
     return {
       text: joinedLines.slice(0, 23).join('\n'),
       page: finalPage,
-      totalPages
+      totalPages,
+      pageSliceNodes
     };
   }
 
@@ -123,7 +127,7 @@ export function createMenuIndexScreens(deps) {
     state.menuIndexTotalPages = view.totalPages;
     if (!fromHistory) updateURL();
 
-    await renderAnsiScreenWithTopbarSequential({
+    const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: view.text,
       ansiToHTML,
       screenEl,
@@ -132,6 +136,42 @@ export function createMenuIndexScreens(deps) {
         await applyCommandFooter('txt/cmd_menu_footer.txt', getCommandFooterText('menuIndex'));
       }
     });
+
+    // [LOG_ID: 20260717_1939] menu-index 화면 마우스 호버 및 클릭 핫스팟 바인딩 적용
+    if (screenEl && Array.isArray(view.pageSliceNodes)) {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const targetCols = isMobile ? 44 : 80;
+
+      // 상단 헤더가 차지하는 실제 줄 수를 동적으로 계산해 본문 시작 인덱스를 구합니다.
+      const finalPage = view.page;
+      const totalPages = view.totalPages;
+      const headerText = buildTopHeader({ leftLabel: 'MENU', centerLabel: '전체 메뉴 안내 (INDEX)' }, buildPageLabel(finalPage, totalPages), targetCols);
+      const headerLineCount = headerText.split('\n').length;
+      const bodyStartRowIndex = headerLineCount;
+
+      const hotspots = view.pageSliceNodes.map((node, i) => {
+        const rowIndex = i + bodyStartRowIndex;
+        const goVal = toGoCode(node);
+
+        return {
+          row: rowIndex,
+          startCol: 0,
+          endCol: targetCols,
+          // 코드가 존재하면 코드로 직접 이동(예: NOTICE), 없으면 단축 door 번호(예: 1)로 이동하게 설정합니다.
+          // (숫자 단독 입력은 겹침 예외 처리되어 있으므로 코드가 있는 노드들만 실질적 바로가기로 연동됩니다.)
+          inputValue: goVal || node.door || '',
+          nodeKey: typeof getMenuNodeKey === 'function' ? getMenuNodeKey(node) : (node.go || node.id || ''),
+          boardId: node.type === 'board' ? (node.go || node.id || '') : '',
+          menuPath: node.type === 'menu' ? (node.go || node.id || '') : '',
+          label: toLabelText(node)
+        };
+      });
+
+      if (typeof renderMenuHotspots === 'function') {
+        renderMenuHotspots(rendered.screenNode, hotspots);
+      }
+    }
+
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
 

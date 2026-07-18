@@ -129,7 +129,7 @@ async function main() {
       body: { userId: WRITER_ID, nickName: '손님' }
     });
     const attachmentListAfterDelete = await request(base, `/api/boards/plaza/posts/${created.post.id}/attachments`);
-    const routedHtml = await fetch(`${base}/board/plaza`).then((response) => response.text());
+    const routedHtml = await fetch(`${base}/PLAZA`).then((response) => response.text());
 
     assert(noticeBoard.writeSysopOnly === true, 'notice board should inherit writeSysopOnly from menu');
     assert(noticeBoard.replyEnabled === false, 'notice board should inherit replyEnabled from menu');

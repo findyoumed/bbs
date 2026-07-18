@@ -1,3 +1,117 @@
+## [2026-07-17 19:53] 전체 메뉴 안내(menu-index) 화면 가이드 안내 문구 제거 및 본문 19줄 예산 확대
+
+**LOG_ID: 20260717_1953**
+목표: 전체 메뉴 안내(INDEX) 화면에서 군더더기가 되는 "오른쪽 코드를 입력하면 바로 이동합니다..." 가이드라인 문구를 완전히 제거하고, 이를 통해 확보된 1줄 예산을 본문 출력에 환원하여 더 많은 메뉴가 한 화면에 보이도록(18줄 -> 19줄) 개선.
+원인: 마우스 호버 및 클릭이 이미 완벽 지원되므로 가이드 텍스트가 불필요하게 1줄 예산을 낭비할 필요가 없음.
+수정:
+- public/js/core/menuIndexScreens.js — buildMenuIndexAnsi에서 guideLine 문구 선언 및 parts 배열 포함부를 제거하고, linesPerPage 예산을 19줄로 확대. showMenuIndex 에서 핫스팟 바인딩 시 헤더 줄 수만 본문 시작 인덱(bodyStartRowIndex = headerLineCount)로 반영하도록 매핑 공식 수정.
+검증:
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 및 npm run smoke:boards, npm run smoke:full-traversal 전체 검증 성공 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:43] 전체 메뉴 안내(menu-index) 화면의 빈 입력 엔터(Enter) 시 다음 페이지(F) 이동 처리 적용
+
+**LOG_ID: 20260717_1943**
+목표: 전체 메뉴 안내(INDEX) 화면에서 사용자가 키보드로 명령 없이 엔터(Enter)만 입력했을 때 다음 페이지(F)로 넘어가도록 처리.
+원인: commandNormalizer.js의 pagedScreens 목록에 menu-index 화면 식별자가 누락되어, 빈 입력 발생 시 F로 정규화되지 못하고 공백 명령 처리되어 무시되었음.
+수정:
+- public/js/core/commandNormalizer.js — 빈 엔터 자동 페이지 이동을 감지할 pagedScreens 배열에 'menu-index'를 명시적으로 추가.
+검증:
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 및 npm run smoke:boards, npm run smoke:full-traversal 전체 검증 성공 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:39] 전체 메뉴 안내(menu-index) 화면 마우스 호버 및 클릭 핫스팟 바인딩 구현
+
+**LOG_ID: 20260717_1939**
+목표: 전체 메뉴 안내(INDEX) 화면에서도 다른 메뉴 목록들과 마찬가지로 각 행에 마우스 호버(White Outline) 및 클릭 핫스팟을 적용하여 인터랙티브하게 이동하도록 기능 보강.
+원인: menu-index 화면은 순수 ANSI 텍스트만 렌더링하고 클릭 영역(핫스팟)이 별도 바인딩되지 않아 마우스 포인터 반응이 없고 클릭 이동이 불가했음.
+수정:
+- public/js/core/appFactoryScreens.js — createMenuIndexScreens 인스턴스화 시 renderMenuHotspots 및 getMenuNodeKey 의존성 바인딩 추가.
+- public/js/core/menuIndexScreens.js — buildMenuIndexAnsi에서 렌더링된 행(rows)에 정확히 매칭되는 menuTree 노드 슬라이스를 추적(pageSliceNodes)하도록 변경. showMenuIndex 에서 렌더링 완료 후 헤더와 가이드라인이 차지하는 실제 줄 수를 동적으로 계산(bodyStartRowIndex = headerLineCount + guideLineCount)하여, 각 본문 행에 매핑될 핫스팟의 row 인덱스를 정밀 산출합니다. 이렇게 생성된 hotspots(inputValue: 바로가기코드 또는 door번호) 객체를 사용해 renderMenuHotspots를 호출하여 마우스 호버(White Outline) 및 클릭 이동이 본문 줄 위에 한 치의 오차 없이 완벽 매핑 및 활성화되도록 보강.
+검증:
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 및 npm run smoke:boards, npm run smoke:full-traversal 전체 검증 성공 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:37] 전체 메뉴 안내(menu-index) 화면에서의 숫자 단축키 입력 겹침 방지 수정
+
+**LOG_ID: 20260717_1937**
+목표: 전체 메뉴 안내(INDEX) 화면에서 사용자가 키보드로 '1' 등의 숫자 단독 입력 시 대분류 메뉴 등과 번호가 중복되어 엉뚱하게 오작동/이동하는 현상(메뉴 겹침) 수정.
+원인: menu-index 화면은 다중 분류의 수많은 1번/2번 항목들이 나열되므로 숫자 단축 단독 입력은 겹칠 수밖에 없음. 원전과 동일하게 키워드(예: NOTICE, GUIDE)만 직접 이동을 허용하고, 단독 숫자는 무시해야 함.
+수정:
+- public/js/core/commandRouterGlobalNavigation.js — state.screen === 'menu-index' 조건의 라우팅 분기에서, 키워드 바로가기(executeGoCommand) 처리 전 정규식(/^\d+$/)을 사용해 숫자 단독 입력은 가로채서 바로가기를 실행하지 않고 무시하도록 예외 처리 보강.
+검증:
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 및 npm run smoke:boards, npm run smoke:full-traversal 전체 검증 성공 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:35] 전체메뉴/도움말/날씨/뉴스 카테고리의 PC 화면 이전/다음페이지 명령어 라벨 누락 수정
+
+**LOG_ID: 20260717_1935**
+목표: 전체 메뉴 안내(menuIndex), 도움말(help), 날씨 상세(weatherView), 뉴스 목록(newsList) 화면에 대해 데스크톱(PC) 화면에서도 이전페이지(B), 다음페이지(F) 명령이 텍스트로 보이지 않는 현상을 해결하기 위해 명시적인 한글 라벨로 오버라이드.
+원인: CMD_ORDER의 help, weatherView, menuIndex, newsList 힌트바 토큰 설정에 단순 'F', 'B'로만 구성되어 데스크톱 힌트바에서 해당 단축키가 '다음페이지(F)', '이전페이지(B)' 형태의 한글 안내로 보이지 않고 단순 단일 문자로만 출력됨.
+수정:
+- public/js/core/commandFooterText.js — CMD_ORDER의 help, weatherView, menuIndex, newsList 카테고리에 대해 B와 F를 각각 'B:이전페이지', 'F:다음페이지' 명시적 라벨로 변경하여 PC 화면 대응. 모바일 대응 로직은 기존 getCommandFooterText의 단축 분기(['F:다음', 'B:이전', ...])를 통해 모바일 뷰에서도 유려하게 레이아웃이 압축 서빙되도록 유지.
+검증:
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 및 npm run smoke:boards, npm run smoke:full-traversal 전체 검증 성공 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:30] 게시판 URL의 /board 접두사 제거 및 관련 테스트 보완
+
+**LOG_ID: 20260717_1930**
+목표: 게시판 URL에서 불필요한 `/board` 접두사를 제거하여 `/NOTICE` 형태로 직관적으로 표시하고, 대소문자 무관 복원 기능과 기존 E2E 테스트 스위트의 정합성을 동기화.
+원인:
+1. 사용자가 주소창에 `/board` 접두사가 포함된 경로가 부자연스럽다고 지적함.
+2. `/board` 접두사를 지울 경우, 코드 검사 위주의 테스트 스크립트(`smoke-full-traversal.js`) 및 게시물 E2E(`smoke-boards.js`)에 하드코딩된 Assertion이 실패하는 문제 존재.
+3. 대화실 대기실(Chat Lobby) 레이아웃 개편(공개/비공개 표기)으로 인해 `smoke-full-traversal.js` 내부의 `공개(` 문자열 Assertion이 실패하던 누락 발견.
+수정:
+- public/js/core/routingUrlBuilder.js — case 'post-list', 'post-view', 'post-write', 'attachment-list'에서 `/board/` 경로 접두사 제거.
+- public/js/core/routingStateRestorer.js — `restoreStateFromURL` 함수 하단에 첫 세그먼트가 게시판 키(대소문자 무관)인 경우를 직접 감지해 복원하도록 폴백 라우팅 처리 추가. 레거시 세션/테스트용 `/board` 핸들러는 안전을 위해 유지.
+- scripts/smoke-boards.js — fetch 경로를 `/board/plaza`에서 `/PLAZA`로 수정.
+- scripts/smoke-full-traversal.js — URL 빌더 Assertion 문자열을 `/board/`가 제거된 형태에 맞게 정밀 동기화하고, 대화실 '공개(' 검사 어설션을 '공개'로 유연하게 완화.
+검증:
+- npm run smoke:boards 및 npm run smoke:full-traversal 스위트 통과 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:25] 게시판 URL 대문자 변환(정합성 동기화) 및 대소문자 무관 상태 복원 구현
+
+**LOG_ID: 20260717_1925**
+목표: 브라우저 주소창의 게시판 URL을 원전 명세(GO NOTICE 등)에 맞춰 대문자(/board/NOTICE)로 정확하게 표시하고, 새로고침 시에도 대소문자 무관하게 게시판 객체를 정상 복원하도록 수정.
+원인: 
+1. routingUrlBuilder.js가 URL 생성 시 소문자 boardId를 그대로 사용하여 `/board/notice` 형태로 노출됨.
+2. routingStateRestorer.js의 복원 핸들러가 findBoardByKey를 사용하는데, 이 함수가 대소문자를 구분하여 대문자 URL로 들어올 경우 게시판 인덱스 조회가 실패해 정상적인 복원이 되지 않는 잠재적 버그 존재.
+수정:
+- public/js/core/routingUrlBuilder.js — case 'post-list', 'post-view', 'post-write', 'attachment-list'에서 boardId를 .toUpperCase() 처리하여 대문자 URL을 빌드하도록 변경.
+- public/js/core/boardService.js — findBoardByKey 함수가 정확한 대소문자 일치가 실패할 경우 대소문자 무관하게 게시판을 탐색하는 폴백 로직을 지원하도록 보강.
+- public/js/core/routingStateRestorer.js — board 복원 핸들러가 findBoardByKey를 통과시켜 URL의 대문자 boardId를 본래의 boardId(key)로 복원 후 showPostList 및 API 호출에 사용하도록 복원 경로 정규화.
+검증:
+- 임시 .mjs 파일 복사 후 node --check 문법 검증 완료.
+- npm run smoke:vercel-ready, npm run smoke:command-parity, npm run qa:final 전체 스모크 및 QA 테스트 스위트 통과 완료.
+결과: ✅ 완료
+
+---
+
+## [2026-07-17 19:23] Fix final line overflow bugs in memo/chat screens
+
+**LOG_ID: 20260717_1923**
+목표: 전수 조사 결과 추가 발견된 화면들의 오버플로우 버그 완벽 패치.
+원인: parts.length < 24로 패딩하던 memoAnsiBuilders.js와 chatAnsiBuilders.js 역시 동일한 원리의 잘림 버그를 내포하고 있었음.
+구현: 쪽지 보관함/목록(uildMemoListAnsi) 및 대화실 대기실(uildChatLobbyAnsi) 화면에 대해서도 joinedLines.length 기반의 줄 수 계산 패딩 로직을 적용.
+변경 파일: public/js/core/memoAnsiBuilders.js, public/js/core/chatAnsiBuilders.js
+결과: ✅ 완료
+
+---
+
 ## [2026-07-17 19:21] Fix additional line overflow bugs in help/history/policy screens
 
 **LOG_ID: 20260717_1921**

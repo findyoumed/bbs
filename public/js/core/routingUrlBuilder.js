@@ -38,7 +38,8 @@ export function createRoutingUrlBuilder(deps) {
         return boardMenuPath && boardMenuPath !== 'top' ? getMenuNodeRoutePath(boardMenuPath) : '/';
 
       case 'post-list': {
-        const url = isUnifiedPdsBoardId(boardId) ? '/pds' : `/board/${boardId}`;
+        const uppercaseBoardId = String(boardId || '').toUpperCase();
+        const url = isUnifiedPdsBoardId(boardId) ? '/pds' : `/${uppercaseBoardId}`;
         return (page && page > 1) ? `${url}?page=${page}` : url;
       }
 
@@ -49,7 +50,7 @@ export function createRoutingUrlBuilder(deps) {
           const pdsPageQuery = Number(page || 1) > 1 ? `?page=${encodeURIComponent(page)}` : '';
           return `/pds/${post?.id || ''}${pdsPageQuery}`;
         }
-        return `/board/${boardId}/${post?.id || ''}`;
+        return `/${String(boardId || '').toUpperCase()}/${post?.id || ''}`;
 
       case 'weather-menu':
         return '/service/weather';
@@ -219,19 +220,21 @@ export function createRoutingUrlBuilder(deps) {
       case 'memo-write':
         return '/memo/write';
 
-      case 'post-write':
+      case 'post-write': {
+        const uppercaseBoardId = String(boardId || '').toUpperCase();
         if (writeMode === 'edit' && post?.id) {
-          return `/board/${boardId}/${post.id}/edit`;
+          return `/${uppercaseBoardId}/${post.id}/edit`;
         }
         // [LOG: 20260429_0621] Keep reply compose addressable so reload/history
         // restores /board/:boardId/:postId/reply into reply mode, not create mode.
         if (writeMode === 'reply' && post?.id) {
-          return `/board/${boardId}/${post.id}/reply`;
+          return `/${uppercaseBoardId}/${post.id}/reply`;
         }
-        return `/board/${boardId}/write`;
+        return `/${uppercaseBoardId}/write`;
+      }
 
       case 'attachment-list':
-        return `/board/${boardId}/${post?.id || ''}/files`;
+        return `/${String(boardId || '').toUpperCase()}/${post?.id || ''}/files`;
 
       default:
         return '/';

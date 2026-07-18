@@ -214,8 +214,9 @@ export function createGlobalNavigationCommandHandler(deps) {
         return true;
       }
       // P/T(상위·초기화면)는 아래 공용 처리에 맡기고, 그 외 입력은 코드로 간주해 GO로 넘긴다.
+      // 숫자 단독 입력(예: 1, 2)인 경우는 전체 목록의 다른 번호와 겹치므로 무시합니다.
       const keyword = String(rawCmd || '').trim();
-      if (keyword && !['P', 'M', 'B', 'T', 'F', 'H'].includes(cmd)) {
+      if (keyword && !['P', 'M', 'B', 'T', 'F', 'H'].includes(cmd) && !/^\d+$/.test(keyword)) {
         if (typeof executeGoCommand === 'function' && await executeGoCommand(`GO ${keyword}`)) {
           return true;
         }

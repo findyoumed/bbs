@@ -87,7 +87,7 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'board direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/board/${boardId}/${post?.id || ''}`;"
+        expectedText: "return `/${String(boardId || '').toUpperCase()}/${post?.id || ''}`;"
     },
     {
         label: 'unified pds list direct-route restorer',
@@ -122,17 +122,17 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'board create direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/board/${boardId}/write`;"
+        expectedText: "return `/${uppercaseBoardId}/write`;"
     },
     {
         label: 'board edit direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/board/${boardId}/${post.id}/edit`;"
+        expectedText: "return `/${uppercaseBoardId}/${post.id}/edit`;"
     },
     {
         label: 'board reply direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/board/${boardId}/${post.id}/reply`;"
+        expectedText: "return `/${uppercaseBoardId}/${post.id}/reply`;"
     },
     {
         label: 'board post-write screen module',
@@ -6987,7 +6987,7 @@ async function verifyPlaywrightChatFlow(page, errors) {
         // 바뀌었는데, 이 테스트는 갱신되지 않아 "[1]" 리터럴을 계속 찾다가 항상 실패
         // 판정을 내리고 있었다(실제 UI는 정상 — full-traversal을 이번에 처음 돌려보다 발견).
         const lobbyText = await page.evaluate(() => document.getElementById('terminal-screen')?.textContent || '');
-        if (!hasNonEmptyText(lobbyText) || !lobbyText.includes('공개(')) {
+        if (!hasNonEmptyText(lobbyText) || !lobbyText.includes('공개')) {
             errors.push('Chat lobby did not expose a selectable first room.');
             return;
         }

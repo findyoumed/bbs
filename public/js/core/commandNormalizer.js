@@ -11,7 +11,7 @@ export function normalizeCommand(rawCmd, stateScreen) {
   // 화면에서만 빈 엔터가 F로 정규화되지 않았다 — help/post-list 등과 똑같이 F 페이징을 쓰는
   // 화면인데 목록에서 누락됐던 것(사용자 보고: guide 하위 메뉴에서 엔터로 다음쪽 이동 안 됨).
   if (!rawCmd || String(rawCmd).trim() === '') {
-    const pagedScreens = ['help', 'policy', 'post-list', 'board-select', 'news-list', 'memo-list', 'memos-list', 'weather-view', 'news-view'];
+    const pagedScreens = ['help', 'policy', 'post-list', 'board-select', 'news-list', 'memo-list', 'memos-list', 'weather-view', 'news-view', 'menu-index'];
     if (pagedScreens.includes(stateScreen)) {
       return 'F';
     }

@@ -41,7 +41,15 @@ export function createBoardService(deps = {}) {
   function findBoardByKey(boardId) {
     const key = String(boardId || '').trim();
     if (!key) return null;
-    return ensureBoardIndexes().byKey.get(key) || null;
+    const byKey = ensureBoardIndexes().byKey;
+    if (byKey.has(key)) return byKey.get(key);
+
+    // [LOG_ID: 20260717_1925] URL 대문자 복원을 위해 대소문자 구분 없는 탐색 폴백 지원
+    const lowerKey = key.toLowerCase();
+    for (const [k, v] of byKey.entries()) {
+      if (k.toLowerCase() === lowerKey) return v;
+    }
+    return null;
   }
 
   function findBoardByDoor(door) {

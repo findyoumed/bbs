@@ -121,11 +121,12 @@ export function createMemoAnsiBuilders(deps) {
 
     // buildTopHeader의 4줄은 renderAnsiScreenWithTopbar가 본문에서 떼어내므로,
     // 총 24줄(80x24 PC통신 프레임) 예산에 맞춰 나머지를 빈 줄로 채운다.
-    while (parts.length < 24) {
-      parts.push('');
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < 24) {
+      joinedLines.push('');
     }
 
-    return parts.join('\n');
+    return joinedLines.join('\n');
   }
 
   // [LOG_ID: 20260713_1000] 보낸 편지 상세 조회 시 보낸이 대신 '받는이: ID'로 표시하도록 currentUserId 전달받음

@@ -121,12 +121,13 @@ export function createChatAnsiBuilders(deps) {
     }
 
     // 예산(24줄)에 맞게 패딩 줄 추가
-    while (parts.length < 24) {
-      parts.push('');
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < 24) {
+      joinedLines.push('');
     }
 
     return {
-      text: parts.join('\n'),
+      text: joinedLines.slice(0, 24).join('\n'),
       leftLabel: 'CHAT',
       centerLabel: '대기실',
       targetCols
