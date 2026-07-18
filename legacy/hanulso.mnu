@@ -147,7 +147,10 @@
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="conf" go="conf" id="conf" door="2" access_level="1">
+			<!-- [LOG_ID: 20260718_2300] 사용자 지적으로 go/id를 "conf"에서 "forum"으로 정정 —
+			     type="conf"(내부 디스패치 타입, ConfRepository 등 서버 쪽 명칭)는 그대로 두고
+			     화면에 노출되는 go 코드·URL(/forum)·헤더 라벨(FORUM)만 바꿨다(agora와 동일 패턴). -->
+			<item type="conf" go="forum" id="forum" door="2" access_level="1">
 				<name>토론의 광장</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>

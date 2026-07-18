@@ -1,3 +1,18 @@
+## [2026-07-18 23:00] 토론의 광장 go/id 코드를 "conf"에서 "forum"으로 정정
+
+**LOG_ID: 20260718_2300**
+목표: 사용자 지적("conf 이름을 forum으로 해") 반영 — agora와 동일 패턴으로 화면에 노출되는 go 코드/URL/헤더 라벨만 conf→forum으로 바꾼다.
+수정:
+- `legacy/hanulso.mnu` — 여론광장 하위 2번 항목의 `go`/`id`를 `conf` → `forum`으로 변경. `type="conf"`(내부 디스패치 타입)는 그대로 유지 — 서버 쪽 `ConfRepository`/`confRoutes`/`/api/conf/*`/`conf_rooms` 등 테이블·모듈명은 건드리지 않았다(agora 때 type="vote"·VoteRepository·`/api/votes`를 안 건드린 것과 동일 원칙 — 순수 표시 코드만 교체).
+- `public/js/core/routingUrlBuilder.js` — conf-rooms/room-create/agendas/agenda-new/agenda URL을 `/conf*` → `/forum*`로 변경.
+- `public/js/core/routingStateRestorer.js` — 라우트 핸들러 키를 `conf` → `forum`으로 변경.
+- `public/js/core/confAnsiBuilders.js` — 전 화면 공용 헤더 라벨 `'CONF'` → `'FORUM'`, 회의실 목록 화면 타이틀 "토론의 광장 (CONF)" → "(FORUM)".
+- `public/js/core/confScreens.js` — footer 조회용 `getMenuNodeByKey('conf')` → `('forum')`.
+검증: `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready` 통과. 로컬 dev 서버에서 Playwright로 7→2 진입 시 URL이 `/forum`, 헤더 라벨이 "FORUM"으로 뜨는 것 실측 확인.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-18 22:50] 프로덕션 Supabase에 CONF 시스템 마이그레이션(0019) 적용
 
 **LOG_ID: 20260718_2250**

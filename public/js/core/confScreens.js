@@ -42,7 +42,8 @@ export function createConfScreens(deps) {
     await renderAnsiScreenWithTopbarSequential({
       ansiText, ansiToHTML, screenEl, renderScreenSequential,
       afterBodyRender: async () => {
-        await applyCommandFooter(getMenuNodeByKey('conf')?.footer, getCommandFooterText(footerCategory));
+        // [LOG_ID: 20260718_2300] go 코드를 "conf"에서 "forum"으로 정정(사용자 지적).
+        await applyCommandFooter(getMenuNodeByKey('forum')?.footer, getCommandFooterText(footerCategory));
         if (prompt && typeof setPrompt === 'function') setPrompt(prompt);
       }
     });

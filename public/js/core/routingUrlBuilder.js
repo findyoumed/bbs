@@ -149,16 +149,17 @@ export function createRoutingUrlBuilder(deps) {
         return `/game/ranking/${encodeURIComponent(serviceData?.category || '')}`;
 
       // [LOG_ID: 20260719_1600] 토론의 광장(CONF) URL
+      // [LOG_ID: 20260718_2300] go 코드를 "conf"에서 "forum"으로 정정(사용자 지적) — /conf → /forum.
       case 'conf-rooms':
-        return '/conf';
+        return '/forum';
       case 'conf-room-create':
-        return '/conf/open';
+        return '/forum/open';
       case 'conf-agendas':
-        return `/conf/${encodeURIComponent(serviceData?.roomNo || '')}`;
+        return `/forum/${encodeURIComponent(serviceData?.roomNo || '')}`;
       case 'conf-agenda-new':
-        return `/conf/${encodeURIComponent(serviceData?.roomNo || '')}/new`;
+        return `/forum/${encodeURIComponent(serviceData?.roomNo || '')}/new`;
       case 'conf-agenda':
-        return `/conf/agenda/${encodeURIComponent(serviceData?.agendaId || '')}`;
+        return `/forum/agenda/${encodeURIComponent(serviceData?.agendaId || '')}`;
 
       case 'help': {
         // [LOG: 20260429_0355] Keep later help pages addressable so reload/history

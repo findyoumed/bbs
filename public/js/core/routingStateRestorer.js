@@ -328,9 +328,10 @@ export function createRoutingStateRestorer(deps) {
       if (typeof showVoteList === 'function') return await showVoteList(true);
       return await showMain(true);
     },
-    // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 라우트 — /conf, /conf/open, /conf/:roomNo,
-    // /conf/:roomNo/new, /conf/agenda/:agendaId.
-    async conf(segments) {
+    // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 라우트 — /forum, /forum/open, /forum/:roomNo,
+    // /forum/:roomNo/new, /forum/agenda/:agendaId.
+    // [LOG_ID: 20260718_2300] go 코드를 "conf"에서 "forum"으로 정정(사용자 지적).
+    async forum(segments) {
       const [, sub, param] = segments;
       if (sub === 'open') {
         if (typeof showConfRoomCreate === 'function') return await showConfRoomCreate(true);

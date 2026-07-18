@@ -7,7 +7,8 @@ export function createConfAnsiBuilders(deps) {
     deps.ansiBuilderUtils;
 
   function frame(centerLabel, targetCols) {
-    return buildTopHeader({ leftLabel: 'CONF', centerLabel }, '', targetCols);
+    // [LOG_ID: 20260718_2300] go 코드를 "conf"에서 "forum"으로 정정(사용자 지적).
+    return buildTopHeader({ leftLabel: 'FORUM', centerLabel }, '', targetCols);
   }
 
   // 1. 회의실 목록: 번호 / 개설자 / 안건 / 상태 / 제목
@@ -25,7 +26,7 @@ export function createConfAnsiBuilders(deps) {
     if (COL.agenda) header += fitCell('안건', COL.agenda, 'right') + ' ';
     header += fitCell('상태', COL.state) + ' ' + fitCell('회의실 제목', titleWidth);
 
-    const parts = [frame('토론의 광장 (CONF)', targetCols), '', ansiColor(14) + header + ANSI_RESET, ansiHLine(targetCols, 8)];
+    const parts = [frame('토론의 광장 (FORUM)', targetCols), '', ansiColor(14) + header + ANSI_RESET, ansiHLine(targetCols, 8)];
     if (!rooms || !rooms.length) {
       parts.push(ansiColor(8) + '   열린 회의실이 없습니다. O를 눌러 회의실을 여세요.' + ANSI_RESET);
     } else {
