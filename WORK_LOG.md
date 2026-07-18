@@ -1,3 +1,14 @@
+## [2026-07-18 22:50] 프로덕션 Supabase에 CONF 시스템 마이그레이션(0019) 적용
+
+**LOG_ID: 20260718_2250**
+목표: 토론의 광장(CONF) 진입 시 뜨던 "회의실 목록을 가져오지 못했습니다: Internal Server Error"(500) 해결 — `conf_rooms`/`conf_agendas`/`conf_seconds` 테이블이 프로덕션 DB에 없어서 발생.
+작업: 사용자가 제공한 `.env`(Supabase 프로젝트 자격 증명)를 참고해, 이 세션 네트워크가 HTTPS만 허용(직접 Postgres 5432 TCP는 egress 정책상 불가 — `psql` 직접 접속 시도는 실패)하는 걸 확인하고, 대신 **Supabase Management API**(`https://api.supabase.com/v1/projects/{ref}/database/query`, HTTPS)로 `supabase/migrations/0019_conf_system.sql`을 실행했다. 코드 변경 없음 — 순수 DB 스키마 적용.
+검증: `information_schema.tables` 조회로 `conf_agendas`/`conf_rooms`/`conf_seconds` 3개 테이블 생성 확인.
+주의: 자격 증명(서비스 롤 키, DB 비밀번호, Supabase PAT)은 코드/커밋 어디에도 남기지 않았다 — `.env` 파일은 저장소 밖 업로드 파일로만 존재.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-18 22:30] 여론광장 go/id 코드를 "acro"에서 "agora"로 정정
 
 **LOG_ID: 20260718_2230**
