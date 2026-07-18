@@ -2440,7 +2440,12 @@ body[data-print-view="true"] .ansi-screen {
        모바일 세로에 한해 세로 스크롤을 허용한다(키보드 표시 규칙 20260625와 동일 패턴,
        overscroll contain으로 바운스 연쇄 차단). 스크롤 시작 위치는 렌더 완료 시 상단(원점)이다. */
     body[data-screen="news-list"] #terminal-screen,
-    body[data-screen="news-view"] #terminal-screen {
+    body[data-screen="news-view"] #terminal-screen,
+    /* [LOG_ID: 20260718_2340] 도움말(HELP)도 같은 원인(아래 20260711_0950)으로 마지막 줄이
+       잘렸다(사용자 지적: "글씨가일부잘리는데") — 44칸 폭에서 영문 명령 설명이 자주 줄바꿈돼
+       19줄 예산을 자주 꽉 채우는 화면이라 뉴스와 동일 증상. 뉴스에 적용했던 3종 완화를
+       그대로 확장한다. */
+    body[data-screen="help"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
@@ -2458,12 +2463,14 @@ body[data-print-view="true"] .ansi-screen {
           약 37배 + 고정 여백이라 2.5vh면 ~93vh 소비). 긴 화면에서는 기존처럼 4.2vw/15px이
           우선해 변화가 없고, 바닥값 11px 밑의 초소형 뷰포트는 위 스크롤 허용이 안전망. */
     body[data-screen="news-list"] .ansi-line,
-    body[data-screen="news-view"] .ansi-line {
+    body[data-screen="news-view"] .ansi-line,
+    body[data-screen="help"] .ansi-line {
         min-height: 1.32em;
     }
 
     body[data-screen="news-list"] #terminal-container,
-    body[data-screen="news-view"] #terminal-container {
+    body[data-screen="news-view"] #terminal-container,
+    body[data-screen="help"] #terminal-container {
         font-size: clamp(11px, min(4.2vw, 2.5vh), 15px) !important;
     }
 
