@@ -21,7 +21,7 @@ export function createVoteAnsiBuilders(deps) {
   // "컬럼 드롭" 관례(ansiBoardBuilders.js)를 그대로 적용 — 참여인원 컬럼을 드롭하고
   // 참여여부는 1칸 배지로 압축.
   function buildVoteListAnsi(votes, page = 1, totalPages = 1) {
-    const header = buildTopHeader({ leftLabel: 'ACRO', centerLabel: '설문조사 목록' }, `(${page}/${totalPages})`);
+    const header = buildTopHeader({ leftLabel: 'AGORA', centerLabel: '설문조사 목록' }, `(${page}/${totalPages})`);
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
 
@@ -91,7 +91,7 @@ export function createVoteAnsiBuilders(deps) {
   // wrapAnsiText로 감싸고(데스크톱 80칸은 no-op), createdBy는 방어적으로 클램프, 옵션
   // 줄은 모바일에서 라벨/그래프를 2줄로 분리하고 막대 길이를 절반(8칸)으로 줄인다.
   function buildVoteDetailAnsi(vote) {
-    const header = buildTopHeader({ leftLabel: 'ACRO', centerLabel: '설문 상세 결과' });
+    const header = buildTopHeader({ leftLabel: 'AGORA', centerLabel: '설문 상세 결과' });
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
 
@@ -162,7 +162,7 @@ export function createVoteAnsiBuilders(deps) {
   // 감싸기만 하면 됨 — 데스크톱은 targetCols=80이라 사실상 no-op(기존 출력 그대로),
   // 모바일(44칸)에서만 자동 줄바꿈된다. isMobile 분기 자체가 필요 없다.
   function buildVoteCreateAnsi() {
-    const header = buildTopHeader({ leftLabel: 'ACRO', centerLabel: '신규 설문조사 등록' });
+    const header = buildTopHeader({ leftLabel: 'AGORA', centerLabel: '신규 설문조사 등록' });
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
 

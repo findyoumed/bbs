@@ -41,8 +41,9 @@ export function createVoteScreens(deps) {
     await renderAnsiScreenWithTopbarSequential({
       ansiText, ansiToHTML, screenEl, renderScreenSequential,
       afterBodyRender: async () => {
-        // [LOG_ID: 20260714_1200] 여론광장이 오락실 하위에서 최상위(go="acro")로 옮겨져 footer 노드도 변경.
-        await applyCommandFooter(getMenuNodeByKey('acro')?.footer, getCommandFooterText(footerCategory));
+        // [LOG_ID: 20260714_1200] 여론광장이 오락실 하위에서 최상위(go="agora")로 옮겨져 footer 노드도 변경.
+        // [LOG_ID: 20260718_2230] go 코드를 "acro"에서 "agora"로 정정(사용자 지적).
+        await applyCommandFooter(getMenuNodeByKey('agora')?.footer, getCommandFooterText(footerCategory));
         if (prompt && typeof setPrompt === 'function') setPrompt(prompt);
       }
     });

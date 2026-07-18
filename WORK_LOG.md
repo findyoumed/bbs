@@ -1,3 +1,18 @@
+## [2026-07-18 22:30] 여론광장 go/id 코드를 "acro"에서 "agora"로 정정
+
+**LOG_ID: 20260718_2230**
+목표: 사용자 지적("acro가 아니라 agora야") 반영 — 여론광장 메뉴의 go/id 코드와 화면 표기를 전부 ACRO에서 AGORA로 바꾼다.
+수정:
+- `legacy/hanulso.mnu` — 7번 door(여론광장) 컨테이너의 `go`/`id`를 `acro` → `agora`로, `<name>`을 "여론광장 (ACRO)" → "여론광장 (AGORA)"로 변경.
+- `public/js/core/routingUrlBuilder.js` — vote-list/detail/create URL을 `/acro*` → `/agora*`로 변경.
+- `public/js/core/routingStateRestorer.js` — 라우트 핸들러 키를 `acro` → `agora`로 변경(URL 첫 세그먼트와 매칭되는 키라 이름을 맞춰야 라우팅이 동작함).
+- `public/js/core/voteAnsiBuilders.js` — 목록/상세/등록 화면 좌상단 라벨 `'ACRO'` 3곳을 `'AGORA'`로 변경.
+- `public/js/core/voteScreens.js` — 화면 렌더 시 footer를 가져오는 `getMenuNodeByKey('acro')`를 `getMenuNodeByKey('agora')`로 변경.
+검증: `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready` 통과. 로컬 dev 서버에서 Playwright로 7→1 진입 시 URL이 `/agora`로, 화면 좌상단 라벨이 "AGORA"로 뜨는 것 실측 확인.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-18 21:55] 토론의 광장(CONF)을 최상위 12번에서 여론광장(ACRO) 산하로 통합
 
 **LOG_ID: 20260718_2155**

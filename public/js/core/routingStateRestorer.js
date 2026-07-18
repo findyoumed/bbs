@@ -315,9 +315,10 @@ export function createRoutingStateRestorer(deps) {
       state._memoBox = ['inbox', 'sent', 'archive'].includes(box) ? box : 'inbox';
       await showMemoList(true);
     },
-    // [LOG_ID: 20260714_1200] 여론광장(ACRO) 라우트 — 투표/설문. 종전 /game/vote 하위에 있던 것을
-    // 최상위로 옮겼다(오락실 하위 중복 항목 제거와 함께). /acro, /acro/create, /acro/:voteId.
-    async acro(segments) {
+    // [LOG_ID: 20260714_1200] 여론광장(AGORA) 라우트 — 투표/설문. 종전 /game/vote 하위에 있던 것을
+    // 최상위로 옮겼다(오락실 하위 중복 항목 제거와 함께). /agora, /agora/create, /agora/:voteId.
+    // [LOG_ID: 20260718_2230] go 코드를 "acro"에서 "agora"로 정정(사용자 지적).
+    async agora(segments) {
       const [, sub] = segments;
       if (sub === 'create') {
         if (typeof showVoteCreate === 'function') return await showVoteCreate(true);

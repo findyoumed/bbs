@@ -132,10 +132,13 @@
 		     기능(투표/설문)은 오락실이 아니라 최상위 여론광장에만 둔다"고 정리했던 것과 같은
 		     원칙으로, CONF도 별도 최상위가 아니라 여론광장 산하에 있어야 한다. 여론광장을
 		     오락실(door=9)과 동일하게 type="menu" 컨테이너로 바꾸고 투표/설문·토론의 광장을
-		     하위 door=1/2로 넣는다. go="acro" id="acro"는 컨테이너가 물려받으므로 /acro
-		     라우트·GO ACRO 동작은 그대로 유지된다(진입 시 하위 2개 중 고르는 화면으로 바뀜). -->
-		<item type="menu" go="acro" id="acro" door="7">
-			<name>여론광장 (ACRO)</name>
+		     하위 door=1/2로 넣는다. -->
+		<!-- [LOG_ID: 20260718_2230] 사용자 지적으로 go/id를 "acro"에서 "agora"로 정정 —
+		     클라이언트 라우트(/agora)·코드(AGORA)·getMenuNodeByKey('agora') 등 관련 파일도
+		     전부 함께 바꿨다(routingUrlBuilder.js, routingStateRestorer.js, voteScreens.js,
+		     voteAnsiBuilders.js). GO ACRO였던 단축 명령도 GO AGORA로 바뀐다. -->
+		<item type="menu" go="agora" id="agora" door="7">
+			<name>여론광장 (AGORA)</name>
 			<footer>txt/cmd_menu_footer.txt</footer>
 
 			<item type="vote" go="vote" id="vote" door="1" access_level="1">
