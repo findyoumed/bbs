@@ -22,6 +22,58 @@ const MBTI_TYPES = [
   ['ENTJ', '대담한 통솔자', '큰 그림을 그리고 사람들을 결집시키는 타고난 통솔자입니다.']
 ];
 const ZODIAC = ['쥐', '소', '호랑이', '토끼', '용', '뱀', '말', '양', '원숭이', '닭', '개', '돼지'];
+const ZODIAC_HANJA = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
+
+// [LOG_ID: 20260718_2355] "오늘의 운세" 안내 문구가 "십이지의 삼합·육합·육충·육해 관계를 사용합니다"라고
+// 적어놓고도 실제로는 (생년+오늘 날짜) 해시값 하나로 점수를 뽑는 가짜 로직이었다(사용자 지적:
+// "오늘의 운세 정확해?"). 실제 십이지 관계표를 만들어 안내 문구와 동작을 일치시킨다.
+// 인덱스는 ZODIAC 배열과 동일(0=쥐~11=돼지).
+const SAMHAP_GROUPS = [[8, 0, 4], [5, 9, 1], [2, 6, 10], [11, 3, 7]]; // 신자진·사유축·인오술·해묘미
+const YUKHAP_PAIRS = [[0, 1], [2, 11], [3, 10], [4, 9], [5, 8], [6, 7]]; // 자축·인해·묘술·진유·사신·오미
+const YUKCHUNG_PAIRS = [[0, 6], [1, 7], [2, 8], [3, 9], [4, 10], [5, 11]]; // 자오·축미·인신·묘유·진술·사해
+const YUKHAE_PAIRS = [[0, 7], [1, 6], [2, 5], [3, 4], [8, 11], [9, 10]]; // 자미·축오·인사·묘진·신해·유술
+
+// 그레고리력 날짜 → 율리우스일(JDN). Fliegel & Van Flandern 공식(0시 기준, 소수부 없음).
+function toJulianDayNumber(date) {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  const a = Math.floor((14 - m) / 12);
+  const y2 = y + 4800 - a;
+  const m2 = m + 12 * a - 3;
+  return d + Math.floor((153 * m2 + 2) / 5) + 365 * y2 + Math.floor(y2 / 4) - Math.floor(y2 / 100) + Math.floor(y2 / 400) - 32045;
+}
+
+// 오늘의 일진(지지)만 필요하므로 60갑자 전체가 아니라 12지지 순환만 구한다.
+// [LOG_ID: 20260718_2355] 오프셋(+1) 검증: 2026-07-18은 실제 만세력 기준 "계사(癸巳)일"(지지=사=뱀)로
+// 여러 출처(fateengineering.site, 중부일보 2026-07-18자 오늘의 운세 기사)에 공통 기재되어 있다.
+// JDN(2026-07-18)=2461240 → (2461240+1)%12=5=뱀(사) — 정확히 일치, 이 오프셋이 맞다.
+function getDayBranchIndex(date) {
+  const jdn = toJulianDayNumber(date);
+  return ((jdn + 1) % 12 + 12) % 12;
+}
+
+function findPair(pairs, a, b) {
+  return pairs.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+}
+
+function getZodiacRelation(yearBranchIndex, dayBranchIndex) {
+  if (yearBranchIndex === dayBranchIndex) return '비화';
+  if (SAMHAP_GROUPS.some((group) => group.includes(yearBranchIndex) && group.includes(dayBranchIndex))) return '삼합';
+  if (findPair(YUKHAP_PAIRS, yearBranchIndex, dayBranchIndex)) return '육합';
+  if (findPair(YUKCHUNG_PAIRS, yearBranchIndex, dayBranchIndex)) return '육충';
+  if (findPair(YUKHAE_PAIRS, yearBranchIndex, dayBranchIndex)) return '육해';
+  return '평운';
+}
+
+const ZODIAC_RELATION_INFO = {
+  삼합: { score: 5, summary: '삼합(대길) — 귀인의 도움으로 만사가 순조롭게 풀리는 길일입니다.' },
+  육합: { score: 4, summary: '육합(길) — 협력과 화합이 잘 되어 무난히 좋은 하루입니다.' },
+  평운: { score: 3, summary: '평운 — 특별한 충돌 없이 무난하게 흘러가는 하루입니다.' },
+  비화: { score: 3, summary: '비화 — 오늘은 본래 성향이 그대로 드러나는 평이한 날입니다.' },
+  육충: { score: 2, summary: '육충(주의) — 다툼과 조급함을 조심해야 하는 날입니다.' },
+  육해: { score: 1, summary: '육해(흉) — 구설수와 오해에 휘말리지 않도록 조심하세요.' }
+};
 
 export function createAmusementAnsiBuilders(deps) {
   const { ANSI_BOLD, ANSI_RESET, ansiColor, buildTopHeader, fitCell, wrapAnsiText } = createAnsiBuilderUtils(deps);
@@ -120,11 +172,29 @@ export function createAmusementAnsiBuilders(deps) {
     return [buildTopHeader(['오락실', '오늘의 운세']), c(15, '  태어난 해의 띠와 오늘의 일진을 풀어 운세를 봅니다.'), c(8, '  십이지의 삼합·육합·육충·육해 관계를 사용합니다.'), '', c(14, '  태어난 연도(4자리)를 입력하세요.'), c(11, '  입력 예) 1990')].join('\n');
   }
   function buildFortuneAnsi(year, target = new Date()) {
-    const animal = ZODIAC[((year - 4) % 12 + 12) % 12];
-    const seed = (year * 31 + target.getFullYear() * 13 + target.getMonth() + target.getDate()) % 5;
-    const scores = ['총운', '애정운', '금전운', '건강운'].map((label, index) => 1 + ((seed + index * 2) % 5));
+    const yearBranchIndex = ((year - 4) % 12 + 12) % 12;
+    const animal = ZODIAC[yearBranchIndex];
+    // [LOG_ID: 20260718_2355] 띠(연지)와 오늘의 일진(일지) 사이의 실제 십이지 관계(삼합·육합·
+    // 육충·육해·비화·평운)로 운세 등급을 정한다 — 예전엔 안내 문구만 이렇게 써놓고 실제로는
+    // (생년+오늘 날짜) 해시 하나로 점수를 뽑는 가짜 로직이었다(사용자 지적: "오늘의 운세 정확해?").
+    const dayBranchIndex = getDayBranchIndex(target);
+    const relation = getZodiacRelation(yearBranchIndex, dayBranchIndex);
+    const { score: baseScore, summary } = ZODIAC_RELATION_INFO[relation];
+    const seed = year * 31 + target.getFullYear() * 13 + target.getMonth() + target.getDate();
     const messages = ['새로운 시작보다 마무리에 집중하세요.', '서두르지 않으면 무난하게 흘러갑니다.', '작은 행운이 숨어 있는 하루입니다.', '결단을 내리기 좋은 날입니다.', '귀인의 도움으로 일이 풀립니다.'];
-    const parts = [buildTopHeader(['오락실', '오늘의 운세']), c(11, `${ANSI_BOLD}  ${year}년생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${dateText(target)}${ANSI_RESET}`), ''];
+    // 총운/애정운/금전운/건강운은 관계로 정해진 기본 점수를 중심으로 날짜별 편차(-1~+1)만 준다 —
+    // 네 항목이 서로 무관한 값이 아니라 오늘의 실제 관계를 중심으로 갈리도록.
+    const scores = ['총운', '애정운', '금전운', '건강운'].map((label, index) => {
+      const variation = ((seed + index * 7) % 3) - 1;
+      return Math.min(5, Math.max(1, baseScore + variation));
+    });
+    const parts = [
+      buildTopHeader(['오락실', '오늘의 운세']),
+      c(11, `${ANSI_BOLD}  ${year}년생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${dateText(target)}${ANSI_RESET}`),
+      c(14, `  오늘의 일진: ${ZODIAC[dayBranchIndex]}(${ZODIAC_HANJA[dayBranchIndex]})날 — ${animal}띠와 ${relation}`),
+      c(15, `  ${summary}`),
+      ''
+    ];
     ['총운', '애정운', '금전운', '건강운'].forEach((label, index) => parts.push(`  ${c(14, fitCell(label, 7))}${c(14, '★'.repeat(scores[index]))}${c(8, '☆'.repeat(5 - scores[index]))}  ${c(15, messages[scores[index] - 1])}`));
     return parts.join('\n');
   }
