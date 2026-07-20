@@ -157,16 +157,20 @@ export function createContactSysopScreen(deps) {
   }
 
   async function showContactSysop(fromHistory = false) {
-    state.screen = 'contact-sysop';
-
+    // [LOG_ID: 20260721_0345] 보안/코드 점검 중 발견: 게스트 분기가 state.screen·URL을 먼저
+    // 바꾼 뒤에야 걸려서, 실제로는 화면 내용(직전 GUIDE 목록)이 그대로 남은 채 URL만
+    // /guide/tosysop으로 바뀌는 불일치가 있었다. 다른 로그인 필요 기능들(쪽지·투표·CONF 등)은
+    // 전부 라우터 단계에서 아예 화면 전환 전에 게스트를 막는 것과 다른 패턴이었다. 게스트
+    // 체크를 화면 전환보다 먼저 하도록 순서를 바꿔 같은 관례를 따른다 — 게스트는 현재 화면에
+    // 그대로 머물고 힌트만 뜬다.
     if (state.user?.isGuest) {
       setHint('건의하기는 로그인 후 이용하실 수 있습니다.');
       setPrompt('>>');
       setReady?.(true);
-      if (!fromHistory) updateURL();
       return;
     }
 
+    state.screen = 'contact-sysop';
     if (!fromHistory) updateURL();
 
     state._contactSysopFlow = {

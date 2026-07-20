@@ -1,3 +1,22 @@
+## [2026-07-21 00:45] 보안 점검 2라운드 — 건의하기(TOSYSOP) 게스트 화면/URL 불일치 수정 + 나머지 영역 스팟체크
+
+**LOG_ID: 20260721_0345**
+목표: "코드수정 보안해줘" 루프 계속 진행 — 관리자 권한 상승 건(직전 항목) 외 나머지 영역 스팟체크.
+점검 및 결과:
+- **XSS**: 전체 렌더링이 `ansiRenderUtils.js`의 `escCell`(문자 단위 `&`/`</>` 이스케이프)을 공용으로 거치는 중앙 파이프라인 확인. `authScreens.js`/`contactSysopScreen.js` 등 ANSI 파이프라인을 안 쓰는 직접 innerHTML 조립 화면들도 표본 확인 결과 `esc()`를 일관되게 사용 — 문제 없음.
+- **게시글 수정/삭제 권한(IDOR)**: `BoardRepositoryAccess.js`의 `assertPostMutable`이 작성자 본인 또는 관리자만 허용 — 정상.
+- **쪽지(memo) 열람 권한(IDOR)**: `MemoRepositoryShared.js`의 `canAccessMemo`가 발신자/수신자/관리자만 허용 — 정상.
+- **첨부파일 경로 조작**: `AttachmentRepositoryShared.js`의 `buildStoredName`이 원본 파일명을 신뢰하지 않고 확장자만 정제해서 뽑고 나머지는 랜덤 문자열로 저장 — path traversal 불가능, 정상.
+- **SQL/NoSQL 인젝션**: 서버 전역에 Supabase 클라이언트의 파라미터화된 쿼리 빌더(`.eq()`/`.select()` 등)만 사용, 원시 문자열 조합 없음 — 정상.
+- **신규 기능(건의하기→시삽 이메일)**: `SysopMailService.js`가 Resend SDK의 구조화 API(`emails.send({from,to,subject,text})`)를 쓰고 `to`/`from`은 서버 env 고정값이라 오픈릴레이·헤더 인젝션 위험 없음. 다만 `ensureAuthenticated`만 요구하고 별도 요청 빈도 제한이 없어 로그인 사용자가 반복 호출로 Resend 쿼터를 소진시킬 수 있음(경미, 이번엔 미수정 — 별도 rate-limit 인프라가 필요한 기능 추가라 이번 루프 범위 밖으로 판단).
+- **로그인 무차별 대입**: 로컬 비밀번호 검증(`memberRepository.verifyPassword`) 경로에 시도 횟수 제한이 전혀 없음(Supabase Auth 경로만 자체 보호 있음). 마찬가지로 rate-limit 인프라가 필요한 더 큰 작업이라 이번엔 기록만 남기고 미수정.
+- **발견·수정한 버그**: `contactSysopScreen.js`의 `showContactSysop`가 게스트 분기보다 `state.screen`/`updateURL()`을 먼저 실행해, 게스트가 "2.건의하기"를 누르면 화면 내용(직전 GUIDE 목록)은 그대로인데 URL만 `/guide/tosysop`으로 바뀌는 불일치가 있었다. 다른 로그인 필요 기능(쪽지/투표/CONF 등)은 전부 라우터 단계에서 화면 전환 자체를 막는 것과 다른 패턴 — 게스트 체크를 화면 전환보다 먼저 하도록 순서를 바꿔 동일 관례로 맞췄다.
+검증: `npm run smoke:vercel-ready`, `npm run smoke:menu-wiring` 통과. 로컬 dev 서버에서 Playwright로 게스트 상태에서 "2"(건의하기) 입력 전후 URL이 그대로(`/guide`) 유지되고 힌트("건의하기는 로그인 후 이용하실 수 있습니다.")만 뜨는 것 확인. 새 게시판 8종(횡설수설/묻고답하기/가입인사/지역소식/연예오락/자동차함께타기/불가사의/컴퓨터초보시절)도 모바일에서 오버플로우·JS 에러 없이 정상 출력되는 것 확인.
+남은 항목(다음 라운드 또는 별도 작업 후보): 로그인 무차별 대입 방지, 건의하기 요청 빈도 제한 — 둘 다 새 인프라(시도 카운터·저장소)가 필요해 "버그 수정" 범위를 넘는 기능 추가에 가까움.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-21 00:30] [보안 심각] 비밀번호 변경 API로 자기 자신을 관리자로 승격시킬 수 있던 권한 상승 취약점 수정
 
 **LOG_ID: 20260721_0330**
