@@ -1,3 +1,21 @@
+## [2026-07-20 18:00] 오목 게임 방향키 이동 및 Enter 착수 조작 기능 제거 및 힌트 문구 교정
+
+**LOG_ID: 20260720_1800**
+목표: 오목 게임(/game/omok) 내 키보드 방향키 이동 및 Enter 착수 가로채기 기능을 영구 제외하고, 하단 프롬프트 및 우측 판넬 힌트 가이드의 방향키 관련 내용을 갱신.
+변경 파일:
+- `public/js/core/arcadeScreens.js`
+- `public/js/core/arcadeAnsiBuilders.js`
+수행 작업:
+1. `public/js/core/arcadeScreens.js`에서 오목 플레이 중 window `keydown` 이벤트를 가로채 방향키와 Enter/Space 입력으로 커서를 움직이고 착수시키던 키다운 리스너 코드를 완전히 제거.
+2. `arcadeScreens.js` 내 `showOmok`, `omokMove`, `omokResign`의 하단 프롬프트 인자값에서 `'방향키+Enter'` 관련 설명 문구를 일괄적으로 제거하여 `'좌표 입력, 클릭 (예: H8) >> '` 로 단일화.
+3. `public/js/core/arcadeAnsiBuilders.js` 내 `buildOmokAnsi` 우측 안내판의 8번 라인 도움말 문구를 `'방향키 이동, Enter 착수, 클릭 가능'`에서 `'마우스 클릭 착수 가능'`으로 변경.
+4. `npm run smoke:vercel-ready` 빌드 무결성 스모크 테스트 통과 완료.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 성공 및 오목 방향키 조작 제외 완료
+결과: ✅ 완료
+
+---
+
 ## [2026-07-20 17:40] PC통신 3사 핵심 UI 및 메뉴 단축키 테마 종속성 해제 및 전역 기능 통합
 
 **LOG_ID: 20260720_1740**

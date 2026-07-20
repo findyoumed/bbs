@@ -68,28 +68,7 @@ export function createArcadeScreens(deps) {
   // 버그가 있었다(실측: 타이핑 후 Enter가 텍스트를 무시하고 커서 위치에 착수). 빈 입력에서만
   // 방향키/Enter가 보드 커서를 조작하고, 한 글자라도 타이핑을 시작하면 원래의 텍스트 입력·
   // 이력탐색·제출 동작으로 돌아간다.
-  if (cmdInput) {
-    window.addEventListener('keydown', (event) => {
-      if (state.screen !== 'omok-play' || cmdInput.value.length > 0) return;
-      const game = sd('omok');
-      if (!game || game.status !== 'play') return;
-      const key = event.key;
-      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(key)) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (!game.cursor) game.cursor = { x: game.last ? game.last.x : 7, y: game.last ? game.last.y : 7 };
-      if (key === 'ArrowUp') game.cursor.y = Math.max(0, game.cursor.y - 1);
-      else if (key === 'ArrowDown') game.cursor.y = Math.min(OMOK_SIZE - 1, game.cursor.y + 1);
-      else if (key === 'ArrowLeft') game.cursor.x = Math.max(0, game.cursor.x - 1);
-      else if (key === 'ArrowRight') game.cursor.x = Math.min(OMOK_SIZE - 1, game.cursor.x + 1);
-      else {
-        const colLetter = String.fromCharCode(65 + game.cursor.x);
-        omokMove(colLetter, game.cursor.y + 1);
-        return;
-      }
-      renderOmok(game, 'arcadePlay', '좌표 입력, 방향키+Enter, 클릭 (예: H8) >> ');
-    }, true);
-  }
+  // [LOG_ID: 20260720_1800] 사용자의 오목 방향키+Enter 착수 조작 제외 요청에 따라 window keydown 가로채기 리스너 영구 삭제
 
   // ── 오목 ──
   // [LOG_ID: 20260720_1700] 오목판 키보드/마우스 입력은 표준 명령 파이프라인(commandExecutionState의
@@ -103,7 +82,7 @@ export function createArcadeScreens(deps) {
     state.screen = 'omok-play';
     state.serviceData = { kind: 'omok', ...createOmokState(), cursor: { x: 7, y: 7 } };
     if (!fromHistory) updateURL();
-    await renderOmok(state.serviceData, 'arcadePlay', '좌표 입력, 방향키+Enter, 클릭 (예: H8) >> ');
+    await renderOmok(state.serviceData, 'arcadePlay', '좌표 입력, 클릭 (예: H8) >> ');
   }
   async function omokMove(colLetter, row) {
     if (omokMoveLock) return true;
@@ -130,7 +109,7 @@ export function createArcadeScreens(deps) {
         if (omokCheckWin(game.board, cpu.x, cpu.y)) game.status = 'lose';
         else if (game.board.every((v) => v !== 0)) game.status = 'draw';
       }
-      await renderOmok(game, 'arcadePlay', '좌표 입력, 방향키+Enter, 클릭 (예: H8) >> ');
+      await renderOmok(game, 'arcadePlay', '좌표 입력, 클릭 (예: H8) >> ');
       return true;
     } finally {
       omokMoveLock = false;
@@ -141,7 +120,7 @@ export function createArcadeScreens(deps) {
     const game = sd('omok');
     if (!game) { await showOmok(); return true; }
     if (game.status === 'play') game.status = 'resigned';
-    await renderOmok(game, 'arcadePlay', '좌표 입력, 방향키+Enter, 클릭 (예: H8) >> ');
+    await renderOmok(game, 'arcadePlay', '좌표 입력, 클릭 (예: H8) >> ');
     return true;
   }
 

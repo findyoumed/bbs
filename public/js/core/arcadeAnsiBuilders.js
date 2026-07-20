@@ -25,7 +25,7 @@ export function createArcadeAnsiBuilders(deps) {
       3: c(8, `진행: ${st.moves}수`),
       5: st.lastCpu ? c(11, `컴퓨터 착수: ${coordText(st.lastCpu.x, st.lastCpu.y)}`) : '',
       7: c(8, '입력 예) H8'),
-      8: c(8, '방향키 이동, Enter 착수, 클릭 가능'),
+      8: c(8, '마우스 클릭 착수 가능'),
       9: c(8, 'L: 새 게임'),
       // [LOG_ID: 20260720_1600] 천리안 원전 그림179 우측 패널("/Q : 게임포기") 재현.
       10: c(8, 'Q: 게임포기')
