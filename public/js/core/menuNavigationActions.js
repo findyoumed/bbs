@@ -173,6 +173,11 @@ export function createMenuNavigationActions(deps) {
     if (node.type === 'baseball' && typeof refs.showBaseball === 'function') { await refs.showBaseball(); return true; }
     if (node.type === 'hangman' && typeof refs.showHangman === 'function') { await refs.showHangman(); return true; }
     if (node.type === 'puzzle15' && typeof refs.showPuzzle15 === 'function') { await refs.showPuzzle15(); return true; }
+    if (node.type === 'scramble' && typeof refs.showScramble === 'function') { await refs.showScramble(); return true; }
+    if (node.type === 'wp' && typeof refs.showWp === 'function') { await refs.showWp(); return true; }
+    if (node.type === 'typing' && typeof refs.showTyping === 'function') { await refs.showTyping(); return true; }
+    if (node.type === 'quiz' && typeof refs.showQuiz === 'function') { await refs.showQuiz(); return true; }
+    if (node.type === 'battle' && typeof refs.showBattle === 'function') { await refs.showBattle(); return true; }
     if (node.type === 'chatt' && typeof refs.showChatLobby === 'function') {
       await refs.showChatLobby();
       return true;

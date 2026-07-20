@@ -36,6 +36,17 @@ export function createServiceCommandHandler(deps) {
     hangmanResign,
     showPuzzle15,
     puzzle15Move,
+    showScramble,
+    scrambleGuess,
+    showWp,
+    wpGuess,
+    showTyping,
+    typingGuess,
+    showQuiz,
+    quizGuess,
+    showBattle,
+    battleMove,
+    battleResign,
     findMember,
     state,
     showToast
@@ -89,6 +100,11 @@ export function createServiceCommandHandler(deps) {
     if (s === 'oth-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showOthello(); return true; } const m = cmd.match(/^([A-H])\s*([1-8])$/); if (m) return await othelloMove(m[1], Number(m[2])); return false; }
     if (s === 'base-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showBaseball(); return true; } if (/^\d{3}$/.test(cmd)) return await baseballGuess(cmd); return false; }
     if (s === 'puzzle15-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showPuzzle15(); return true; } if (/^(1[0-5]|[1-9])$/.test(cmd)) return await puzzle15Move(Number(cmd)); return false; }
+    if (s === 'scramble-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showScramble(); return true; } if (rawCmd) return await scrambleGuess(rawCmd); return false; }
+    if (s === 'wp-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showWp(); return true; } if (rawCmd) return await wpGuess(rawCmd); return false; }
+    if (s === 'typing-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showTyping(); return true; } if (input) return await typingGuess(input); return false; }
+    if (s === 'quiz-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showQuiz(); return true; } if (/^[1-4]$/.test(cmd)) return await quizGuess(cmd); return false; }
+    if (s === 'battle-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showBattle(); return true; } if (cmd === 'Q') return await battleResign(); const m = cmd.match(/^([A-J])\s*(10|[1-9])$/); if (m) return await battleMove(cmd); return false; }
     // 행맨은 진행 중엔 단일 알파벳이 전부 "추측"이다(T/P/L 포함 — 화면·힌트바에 0:포기만 안내).
     // 게임이 끝난 뒤에야 표준 내비게이션(T/P/M/B/L)이 살아난다.
     if (s === 'hangman-play') {

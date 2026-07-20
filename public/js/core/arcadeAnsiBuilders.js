@@ -165,5 +165,279 @@ export function createArcadeAnsiBuilders(deps) {
     ].join('\n');
   }
 
-  return { buildOmokAnsi, buildOthelloAnsi, buildBaseballAnsi, buildHangmanAnsi, buildPuzzle15Ansi };
+  // ── 6. 스크램블 (Scramble) ──
+  function buildScrambleAnsi(st) {
+    const divider = c(8, '  +---+---+---+---+');
+    const rows = [divider];
+    for (let y = 0; y < 4; y++) {
+      let line = `  ${c(8, '|')}`;
+      for (let x = 0; x < 4; x++) {
+        const char = st.grid[y * 4 + x];
+        line += ` ${c(15, char)} ${c(8, '|')}`;
+      }
+      rows.push(line);
+      rows.push(divider);
+    }
+    
+    const timeLimit = 60;
+    const currentElapsed = Math.min(timeLimit, Math.floor((Date.now() - st.startTime) / 1000));
+    const remains = Math.max(0, timeLimit - (st.status === 'end' ? st.elapsed : currentElapsed));
+    
+    const statusLine = st.status === 'end'
+      ? c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`)
+      : `  ${c(14, '남은시간:')} ${c(11, `${remains}초`)}   ${c(14, '점수:')} ${c(11, `${st.score}점`)}`;
+      
+    return [
+      buildTopHeader(['오락실', '스크램블']),
+      c(15, '  정사각형 글자판 속 알파벳들을 조합하여 유효한 영어 단어를 만드세요.'),
+      c(8, '  (2글자 이상, 단어 입력 후 엔터. 예: PONY)'),
+      ...rows,
+      `  ${c(14, '찾은 단어들 :')} ${c(15, `[${st.found.join(', ')}]`)}`,
+      '',
+      statusLine
+    ].join('\n');
+  }
+
+  // ── 7. 영어단어/숙어 학습게임 (WP) ──
+  function buildWpAnsi(st) {
+    if (st.status === 'end') {
+      return [
+        buildTopHeader(['오락실', '영어 학습게임']),
+        '',
+        c(11, `${ANSI_BOLD}  게임이 완료되었습니다!${ANSI_RESET}`),
+        c(15, `  귀하의 최종 점수: ${st.score}점 / 100점`),
+        '',
+        c(8, '  L을 누르면 새 게임이 시작됩니다.')
+      ].join('\n');
+    }
+    
+    const current = st.questions[st.currentIdx];
+    const word = current[0];
+    const meaning = current[1];
+    
+    // 오답 횟수에 따른 힌트 마스킹 문자열 생성
+    let masked = '';
+    for (let i = 0; i < word.length; i++) {
+      const ch = word[i];
+      if (ch === ' ') {
+        masked += '  ';
+      } else if (st.tries === 0) {
+        masked += '_ ';
+      } else if (st.tries === 1) {
+        // 첫 번째 철자만 공개
+        masked += (i === 0 ? `${ch} ` : '_ ');
+      } else {
+        // 첫 번째 철자와 마지막 철자 공개
+        masked += (i === 0 || i === word.length - 1 ? `${ch} ` : '_ ');
+      }
+    }
+    
+    return [
+      buildTopHeader(['오락실', '영어 학습게임']),
+      c(15, '  제시된 뜻을 가진 알맞은 영어 단어/숙어를 입력하세요.'),
+      '',
+      `  ${c(14, `[문제 ${st.currentIdx + 1} / 5]`)}`,
+      `  ${c(14, '뜻   :')} ${c(15, meaning)}`,
+      `  ${c(14, '단어 :')} ${c(11, `${ANSI_BOLD}${masked}${ANSI_RESET}`)} ${c(8, `(${word.length}글자)`)}`,
+      '',
+      `  ${c(14, '틀린 횟수 :')} ${c(9, `${st.tries} / ${st.maxTries}`)}   ${c(14, '현재 점수 :')} ${c(11, `${st.score}점`)}`,
+      c(8, '  정답을 맞춰보세요. (대소문자 무관)')
+    ].join('\n');
+  }
+
+  // ── 8. 타자 연습/게임 (Typing) ──
+  function buildTypingAnsi(st) {
+    if (st.status === 'end') {
+      const parts = [
+        buildTopHeader(['오락실', '타자 연습/게임']),
+        '',
+        c(11, `${ANSI_BOLD}  연습이 완료되었습니다! 결과 요약:${ANSI_RESET}`),
+        ''
+      ];
+      
+      let sumCpm = 0, sumAcc = 0;
+      st.results.forEach((res, i) => {
+        parts.push(`  ${i + 1}번 문장: ${c(15, `${res.cpm} CPM`)}  정확도: ${c(11, `${res.accuracy}%`)}`);
+        sumCpm += res.cpm;
+        sumAcc += res.accuracy;
+      });
+      
+      const avgCpm = Math.floor(sumCpm / st.results.length);
+      const avgAcc = Math.floor(sumAcc / st.results.length);
+      
+      parts.push(
+        '',
+        `  ${c(14, '평균 타수 :')} ${c(11, `${avgCpm} CPM`)}   ${c(14, '평균 정확도 :')} ${c(11, `${avgAcc}%`)}`,
+        '',
+        c(8, '  L을 누르면 새 게임이 시작됩니다.')
+      );
+      return parts.join('\n');
+    }
+    
+    const target = st.sentences[st.currentIdx];
+    const parts = [
+      buildTopHeader(['오락실', '타자 연습/게임']),
+      c(15, '  제시된 문장과 완전히 동일하게 입력창에 타이핑하세요.'),
+      '',
+      `  ${c(14, `[문장 ${st.currentIdx + 1} / 3]`)}`,
+      `  ${c(14, '제시 :')} ${c(11, `${ANSI_BOLD}${target}${ANSI_RESET}`)}`,
+      ''
+    ];
+    
+    if (st.results.length > 0) {
+      const prev = st.results[st.results.length - 1];
+      parts.push(`  ${c(8, `이전 결과: ${prev.cpm} CPM  정확도: ${prev.accuracy}%`)}`, '');
+    }
+    
+    parts.push(c(8, '  아래 입력창에 문장을 똑같이 써주세요.'));
+    return parts.join('\n');
+  }
+
+  // ── 9. 퀴즈박사 (Quiz) ──
+  function buildQuizAnsi(st) {
+    if (st.status === 'end') {
+      let grade = '초보';
+      if (st.score >= 100) grade = '퀴즈박사';
+      else if (st.score >= 80) grade = '우수자';
+      else if (st.score >= 60) grade = '중수';
+      
+      return [
+        buildTopHeader(['오락실', '퀴즈박사']),
+        '',
+        c(11, `${ANSI_BOLD}  퀴즈 완료!${ANSI_RESET}`),
+        c(15, `  최종 점수 : ${st.score}점`),
+        c(14, `  획득 등급 : ${grade}`),
+        '',
+        c(8, '  L을 누르면 새 게임이 시작됩니다.')
+      ].join('\n');
+    }
+    
+    const current = st.questions[st.currentIdx];
+    const parts = [
+      buildTopHeader(['오락실', '퀴즈박사']),
+      c(15, '  상식 퀴즈를 풀어보세요. 정답 번호(1~4)를 입력하세요.'),
+      '',
+      `  ${c(14, `[문제 ${st.currentIdx + 1} / 5]`)}`,
+      `  ${c(15, `${ANSI_BOLD}Q. ${current.q}${ANSI_RESET}`)}`,
+      ''
+    ];
+    
+    current.options.forEach((opt) => {
+      parts.push(`  ${c(14, opt)}`);
+    });
+    
+    parts.push('', `  ${c(14, '현재 점수 :')} ${c(11, `${st.score}점`)}`);
+    
+    if (st.answers.length > 0) {
+      const prevQIdx = st.currentIdx - 1;
+      const prevQ = st.questions[prevQIdx];
+      const prevAns = st.answers[st.answers.length - 1];
+      const isCorrect = prevAns === prevQ.a;
+      parts.push(
+        `  ${isCorrect ? c(11, '이전 문제: 정답입니다!') : c(9, `이전 문제: 오답입니다! (정답: ${prevQ.a})`)}`
+      );
+    }
+    
+    return parts.join('\n');
+  }
+
+  // ── 10. 전투 게임 (Battle - Battleship) ──
+  function buildBattleAnsi(st) {
+    const colLabels = '  1 2 3 4 5 6 7 8 9 10';
+    const rowLabels = 'ABCDEFGHIJ';
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    
+    const parts = [
+      buildTopHeader(['오락실', '전투 게임 (Battleship)']),
+      c(15, '  격자판 좌표(예: G3)를 입력해 적의 숨겨진 군장비(12칸)를 폭격하세요!'),
+      ''
+    ];
+    
+    if (isMobile) {
+      // 모바일 좁은 화면: 상대 해역만 크게 렌더링하고 아군 정보는 정보 패널로 대체
+      parts.push(c(14, '  [적의 해역 포격 현황]'), c(8, `   ${colLabels}`));
+      for (let y = 0; y < 10; y++) {
+        let line = `  ${c(8, rowLabels[y])} `;
+        for (let x = 0; x < 10; x++) {
+          const shot = st.userShots[y * 10 + x];
+          if (shot === 2) line += c(11, '★ ');
+          else if (shot === 1) line += c(8, 'X ');
+          else line += c(8, '· ');
+        }
+        parts.push(line);
+      }
+      parts.push(
+        '',
+        `  ${c(14, '귀하 명중:')} ${c(11, `${st.userHits}/12`)}   ${c(14, '컴퓨터 명중:')} ${c(9, `${st.cpuHits}/12`)}`
+      );
+    } else {
+      // 데스크톱 넓은 화면: 좌우 나란히 렌더링
+      parts.push(
+        `     ${c(14, '<< 상대 해역 포격 현황 >>')}           ${c(11, '<< 아군 해역 배치 및 현황 >>')}`,
+        `   ${c(8, colLabels)}         ${c(8, colLabels)}`
+      );
+      
+      for (let y = 0; y < 10; y++) {
+        // 좌측: 상대 해역 포격
+        let leftLine = `  ${c(8, rowLabels[y])} `;
+        for (let x = 0; x < 10; x++) {
+          const shot = st.userShots[y * 10 + x];
+          if (shot === 2) leftLine += c(11, '★ ');
+          else if (shot === 1) leftLine += c(8, 'X ');
+          else leftLine += c(8, '· ');
+        }
+        
+        // 우측: 아군 배치 및 컴퓨터 포격 현황
+        let rightLine = `  ${c(8, rowLabels[y])} `;
+        for (let x = 0; x < 10; x++) {
+          const idx = y * 10 + x;
+          const ship = st.userBoard[idx];
+          const shot = st.cpuShots[idx];
+          
+          if (shot === 2) rightLine += c(9, '★ '); // 아군 피격 명중
+          else if (shot === 1) rightLine += c(8, 'X '); // 빗나감
+          else if (ship !== 0) rightLine += c(14, `${ship[0]} `); // 함선 존재
+          else rightLine += c(8, '· ');
+        }
+        
+        parts.push(`${leftLine}     ${rightLine}`);
+      }
+    }
+    
+    // 최근 포격 피드백 정보
+    parts.push('');
+    if (st.lastUserShot) {
+      const res = st.lastUserShot.hit ? c(11, `명중! (${st.lastUserShot.target})`) : c(8, '빗나감');
+      parts.push(`  귀하 공격 : (${String.fromCharCode(65 + st.lastUserShot.x)} ${st.lastUserShot.y + 1}) - ${res}`);
+    }
+    if (st.lastCpuShot) {
+      const res = st.lastCpuShot.hit ? c(9, `피격 명중! (${st.lastCpuShot.target})`) : c(8, '빗나감');
+      parts.push(`  적군 보복 : (${String.fromCharCode(65 + st.lastCpuShot.x)} ${st.lastCpuShot.y + 1}) - ${res}`);
+    }
+    
+    // 승패/진행 상태
+    parts.push('');
+    if (st.status === 'win') {
+      parts.push(c(11, `${ANSI_BOLD}  작전 성공! 귀하의 완벽한 승리입니다! L을 누르면 다시 시작합니다.${ANSI_RESET}`));
+    } else if (st.status === 'lose') {
+      parts.push(c(9, `  함대가 전멸했습니다... 작전 실패. L을 눌러 다시 도전하세요.`));
+    } else {
+      parts.push(c(15, '  공격할 좌표를 입력하세요. 입력 예) G3'), c(8, '  Q: 게임포기'));
+    }
+    
+    return parts.join('\n');
+  }
+
+  return {
+    buildOmokAnsi,
+    buildOthelloAnsi,
+    buildBaseballAnsi,
+    buildHangmanAnsi,
+    buildPuzzle15Ansi,
+    buildScrambleAnsi,
+    buildWpAnsi,
+    buildTypingAnsi,
+    buildQuizAnsi,
+    buildBattleAnsi
+  };
 }

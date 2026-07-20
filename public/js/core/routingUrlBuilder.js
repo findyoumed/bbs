@@ -140,6 +140,11 @@ export function createRoutingUrlBuilder(deps) {
       case 'base-play': return getMenuNodeRoutePath('base');
       case 'hangman-play': return getMenuNodeRoutePath('hangman');
       case 'puzzle15-play': return getMenuNodeRoutePath('16p');
+      case 'scramble-play': return getMenuNodeRoutePath('scramble');
+      case 'wp-play': return getMenuNodeRoutePath('wp');
+      case 'typing-play': return getMenuNodeRoutePath('typing');
+      case 'quiz-play': return getMenuNodeRoutePath('quiz');
+      case 'battle-play': return getMenuNodeRoutePath('battle');
       // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
       case 'retro-list': return getMenuNodeRoutePath('retro');
       case 'retro-view': return `${getMenuNodeRoutePath('retro')}/${encodeURIComponent(serviceData?.artKey || '')}`;

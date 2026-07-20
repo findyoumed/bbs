@@ -293,3 +293,408 @@ export function puzzle15Apply(st, num) {
   if (puzzle15IsSolved(st.tiles)) st.status = 'win';
   return true;
 }
+
+// [LOG: 20260720_2000] 신규 오락실 게임 5종 (스크램블 / 영어학습 WP / 타자게임 / 퀴즈박사 / 배틀쉽 Battle)
+
+// ── 6. 스크램블 (Scramble) ──────────────────────────────────────────────────
+export function createScrambleState() {
+  // 영어단어 맞추기 단어 풀에서 하나 골라 글자판 베이스로 삼는다
+  const wordPair = HANGMAN_WORDS[Math.floor(Math.random() * HANGMAN_WORDS.length)];
+  const baseWord = wordPair[0];
+  const grid = new Array(16);
+  
+  // 단어 글자들을 그리드에 흩뿌린다
+  const chars = [...baseWord];
+  const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for (let i = 0; i < 16; i++) {
+    if (chars.length > 0) {
+      grid[i] = chars.pop();
+    } else {
+      grid[i] = alpha[Math.floor(Math.random() * alpha.length)];
+    }
+  }
+  
+  // 뒤섞는다
+  for (let i = grid.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = grid[i];
+    grid[i] = grid[j];
+    grid[j] = temp;
+  }
+  
+  return {
+    grid,
+    startTime: Date.now(),
+    elapsed: 0,
+    found: [],
+    score: 0,
+    status: 'play'
+  };
+}
+
+export function scrambleApply(st, inputWord) {
+  const word = String(inputWord || '').trim().toUpperCase();
+  if (st.status !== 'play') return 'end';
+  
+  // 시간 경과 체크 (제한시간 60초)
+  const elapsed = Math.floor((Date.now() - st.startTime) / 1000);
+  st.elapsed = elapsed;
+  if (elapsed >= 60) {
+    st.status = 'end';
+    return 'end';
+  }
+  
+  if (word.length < 2) return 'invalid';
+  if (st.found.includes(word)) return 'already';
+  
+  // 그리드에 있는 글자 개수 내에서 구성되는가
+  const gridCounts = {};
+  for (const ch of st.grid) {
+    gridCounts[ch] = (gridCounts[ch] || 0) + 1;
+  }
+  
+  const wordCounts = {};
+  for (const ch of word) {
+    wordCounts[ch] = (wordCounts[ch] || 0) + 1;
+    if (!gridCounts[ch] || wordCounts[ch] > gridCounts[ch]) {
+      return 'invalid';
+    }
+  }
+  
+  // 실제 사전(단어 풀)에 있는 유효한 단어인가
+  const isValidWord = HANGMAN_WORDS.some(pair => pair[0] === word);
+  if (!isValidWord) return 'invalid';
+  
+  // 성공 처리
+  st.found.push(word);
+  // 글자 수에 비례한 점수 획득
+  st.score += word.length * 10;
+  return 'hit';
+}
+
+// ── 7. 영어단어/숙어 학습게임 (WP) ──────────────────────────────────────────
+export const WP_WORDS = [
+  ['APPLE', '사과'], ['BANANA', '바나나'], ['SCHOOL', '학교'], ['TEACHER', '선생님'],
+  ['COMPUTER', '컴퓨터'], ['LIBRARY', '도서관'], ['BREAKFAST', '아침식사'], ['YESTERDAY', '어제'],
+  ['IN FRONT OF', '~앞에'], ['BY THE WAY', '그런데'], ['TAKE CARE OF', '~를 돌보다'],
+  ['LOOK FOR', '~를 찾다'], ['LOOK AFTER', '~를 돌보다'], ['GET UP', '일어나다'],
+  ['GO TO BED', '잠자리에 들다'], ['GOOD MORNING', '좋은 아침'], ['THANK YOU', '고맙습니다']
+];
+
+export function createWpState() {
+  // 무작위 5문제를 선정해 뒤섞는다
+  const shuffled = [...WP_WORDS].sort(() => Math.random() - 0.5);
+  const questions = shuffled.slice(0, 5);
+  return {
+    questions,
+    currentIdx: 0,
+    score: 0,
+    tries: 0,
+    maxTries: 3,
+    status: 'play'
+  };
+}
+
+export function wpApply(st, guess) {
+  if (st.status !== 'play') return 'end';
+  const current = st.questions[st.currentIdx];
+  const cleanedGuess = String(guess || '').trim().toUpperCase();
+  const answer = current[0];
+  
+  if (cleanedGuess === answer) {
+    st.score += 20; // 5문제 총점 100점
+    st.currentIdx++;
+    st.tries = 0;
+    if (st.currentIdx >= st.questions.length) {
+      st.status = 'end';
+    }
+    return 'correct';
+  } else {
+    st.tries++;
+    if (st.tries >= st.maxTries) {
+      st.currentIdx++;
+      st.tries = 0;
+      if (st.currentIdx >= st.questions.length) {
+        st.status = 'end';
+      }
+      return 'incorrect-next';
+    }
+    return 'incorrect';
+  }
+}
+
+// ── 8. 타자 연습/게임 (Typing) ─────────────────────────────────────────────
+export const TYPING_SENTENCES = [
+  '동해물과 백두산이 마르고 닳도록',
+  '여기는 PC통신 천리안입니다.',
+  '하늘소 동호회에 오신 것을 환영합니다.',
+  'A quick brown fox jumps over the lazy dog.',
+  'Boys, be ambitious.',
+  '인생은 짧고 예술은 길다.',
+  '정직이 최선의 방책이다.'
+];
+
+export function createTypingState() {
+  const shuffled = [...TYPING_SENTENCES].sort(() => Math.random() - 0.5);
+  const sentences = shuffled.slice(0, 3); // 3문장 연습
+  return {
+    sentences,
+    currentIdx: 0,
+    startTime: Date.now(),
+    results: [],
+    status: 'play'
+  };
+}
+
+// 레벤슈타인 거리 알고리즘을 통한 텍스트 정확도 계산
+function getLevenshteinDistance(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+export function typingApply(st, input) {
+  if (st.status !== 'play') return null;
+  const target = st.sentences[st.currentIdx];
+  const typed = String(input || '').trim();
+  const elapsedMs = Math.max(100, Date.now() - st.startTime);
+  
+  // 정확도 계산
+  const dist = getLevenshteinDistance(target, typed);
+  const maxLen = Math.max(target.length, typed.length, 1);
+  const accuracy = Math.max(0, Math.floor(((maxLen - dist) / maxLen) * 100));
+  
+  // 타수(CPM) 계산 (분당 문자수)
+  const minutes = elapsedMs / 60000;
+  const cpm = Math.floor(typed.length / minutes);
+  
+  st.results.push({ cpm, accuracy });
+  st.currentIdx++;
+  
+  if (st.currentIdx >= st.sentences.length) {
+    st.status = 'end';
+  } else {
+    st.startTime = Date.now(); // 타이머 리셋
+  }
+  
+  return { cpm, accuracy };
+}
+
+// ── 9. 퀴즈박사 (Quiz) ──────────────────────────────────────────────────────
+export const QUIZ_QUESTIONS = [
+  {
+    q: '우리나라 최초의 철도는 무엇인가?',
+    options: ['1. 경인선', '2. 경부선', '3. 경의선', '4. 호남선'],
+    a: 1
+  },
+  {
+    q: '빛의 속도는 진공에서 초속 약 몇 km인가?',
+    options: ['1. 15만km', '2. 30만km', '3. 45만km', '4. 60만km'],
+    a: 2
+  },
+  {
+    q: '컴퓨터 하드웨어의 5대 장치에 해당하지 않는 것은?',
+    options: ['1. 제어장치', '2. 연산장치', '3. 입력장치', '4. 전송장치'],
+    a: 4
+  },
+  {
+    q: '조선시대 정밀 지도인 대동여지도를 제작한 인물은?',
+    options: ['1. 김정호', '2. 장영실', '3. 이황', '4. 정약용'],
+    a: 1
+  },
+  {
+    q: '다음 중 태양계 행성 중 가장 큰 행성은?',
+    options: ['1. 지구', '2. 토성', '3. 목성', '4. 화성'],
+    a: 3
+  },
+  {
+    q: '물(H2O)의 어는점은 섭씨 몇 도인가?',
+    options: ['1. 0도', '2. 10도', '3. -5도', '4. 100도'],
+    a: 1
+  },
+  {
+    q: '조선시대 4대 사화 중 첫 번째 사화는?',
+    options: ['1. 기묘사화', '2. 무오사화', '3. 을사사화', '4. 갑자사화'],
+    a: 2
+  }
+];
+
+export function createQuizState() {
+  const shuffled = [...QUIZ_QUESTIONS].sort(() => Math.random() - 0.5);
+  const questions = shuffled.slice(0, 5); // 5문제
+  return {
+    questions,
+    currentIdx: 0,
+    score: 0,
+    answers: [],
+    status: 'play'
+  };
+}
+
+export function quizApply(st, ansStr) {
+  if (st.status !== 'play') return false;
+  const ansNum = parseInt(String(ansStr).trim(), 10);
+  const current = st.questions[st.currentIdx];
+  st.answers.push(ansNum);
+  
+  const isCorrect = ansNum === current.a;
+  if (isCorrect) {
+    st.score += 20;
+  }
+  
+  st.currentIdx++;
+  if (st.currentIdx >= st.questions.length) {
+    st.status = 'end';
+  }
+  return isCorrect;
+}
+
+// ── 10. 전투 게임 (Battle - Battleship) ────────────────────────────────────
+export function createBattleState() {
+  const size = 10;
+  const userBoard = new Array(size * size).fill(0); // 0=바다, 함선종류: 'C'(4), 'B1'(3), 'B2'(3), 'P'(2)
+  const cpuBoard = new Array(size * size).fill(0);
+  const userShots = new Array(size * size).fill(0); // 0=안 쏨, 1=빗나감, 2=명중
+  const cpuShots = new Array(size * size).fill(0);
+  
+  // 함선 목록 배치용
+  const ships = [
+    { type: 'C', len: 4 },
+    { type: 'B1', len: 3 },
+    { type: 'B2', len: 3 },
+    { type: 'P', len: 2 }
+  ];
+  
+  function placeShipsRandomly(board) {
+    for (const ship of ships) {
+      let placed = false;
+      while (!placed) {
+        const isVert = Math.random() < 0.5;
+        const x = Math.floor(Math.random() * (isVert ? size : size - ship.len + 1));
+        const y = Math.floor(Math.random() * (isVert ? size - ship.len + 1 : size));
+        
+        // 충돌 검사
+        let conflict = false;
+        for (let i = 0; i < ship.len; i++) {
+          const idx = isVert ? (y + i) * size + x : y * size + (x + i);
+          if (board[idx] !== 0) {
+            conflict = true;
+            break;
+          }
+        }
+        
+        if (!conflict) {
+          for (let i = 0; i < ship.len; i++) {
+            const idx = isVert ? (y + i) * size + x : y * size + (x + i);
+            board[idx] = ship.type;
+          }
+          placed = true;
+        }
+      }
+    }
+  }
+  
+  placeShipsRandomly(userBoard);
+  placeShipsRandomly(cpuBoard);
+  
+  return {
+    userBoard,
+    cpuBoard,
+    userShots,
+    cpuShots,
+    userHits: 0,
+    cpuHits: 0,
+    status: 'play',
+    lastUserShot: null, // { x, y, hit }
+    lastCpuShot: null,
+    turn: 'user'
+  };
+}
+
+export function battleApply(st, x, y) {
+  if (st.status !== 'play') return 'end';
+  const idx = y * 10 + x;
+  if (st.userShots[idx] !== 0) return 'already';
+  
+  // 1. 사용자 사격
+  const cell = st.cpuBoard[idx];
+  if (cell !== 0) {
+    st.userShots[idx] = 2; // 명중
+    st.userHits++;
+    st.lastUserShot = { x, y, hit: true, target: cell };
+    if (st.userHits >= 12) {
+      st.status = 'win';
+      return 'hit';
+    }
+  } else {
+    st.userShots[idx] = 1; // 빗나감
+    st.lastUserShot = { x, y, hit: false };
+  }
+  
+  // 2. 컴퓨터 사격 (상태가 play인 경우에만 바로 보복 사격)
+  if (st.status === 'play') {
+    let cpuIdx = -1;
+    // 단순 AI: 마지막 명중 위치 상하좌우를 우선 노려본다
+    const lastHitIdx = st.cpuShots.lastIndexOf(2);
+    if (lastHitIdx !== -1) {
+      const hx = lastHitIdx % 10, hy = Math.floor(lastHitIdx / 10);
+      const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+      const candidates = [];
+      for (const [dx, dy] of dirs) {
+        const cx = hx + dx, cy = hy + dy;
+        if (cx >= 0 && cx < 10 && cy >= 0 && cy < 10) {
+          const cIdx = cy * 10 + cx;
+          if (st.cpuShots[cIdx] === 0) {
+            candidates.push(cIdx);
+          }
+        }
+      }
+      if (candidates.length > 0) {
+        cpuIdx = candidates[Math.floor(Math.random() * candidates.length)];
+      }
+    }
+    
+    // 만약 타겟팅할 곳이 없으면 무작위 포격
+    if (cpuIdx === -1) {
+      const free = [];
+      for (let i = 0; i < 100; i++) {
+        if (st.cpuShots[i] === 0) free.push(i);
+      }
+      cpuIdx = free[Math.floor(Math.random() * free.length)];
+    }
+    
+    const cpuCell = st.userBoard[cpuIdx];
+    const cx = cpuIdx % 10, cy = Math.floor(cpuIdx / 10);
+    if (cpuCell !== 0) {
+      st.cpuShots[cpuIdx] = 2;
+      st.cpuHits++;
+      st.lastCpuShot = { x: cx, y: cy, hit: true, target: cpuCell };
+      if (st.cpuHits >= 12) {
+        st.status = 'lose';
+      }
+    } else {
+      st.cpuShots[cpuIdx] = 1;
+      st.lastCpuShot = { x: cx, y: cy, hit: false };
+    }
+  }
+  
+  return cell !== 0 ? 'hit' : 'miss';
+}

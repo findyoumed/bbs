@@ -265,6 +265,11 @@ export function createAppFactoryScreens(deps) {
     buildBaseballAnsi: serviceAnsiBuilders.buildBaseballAnsi,
     buildHangmanAnsi: serviceAnsiBuilders.buildHangmanAnsi,
     buildPuzzle15Ansi: serviceAnsiBuilders.buildPuzzle15Ansi,
+    buildScrambleAnsi: serviceAnsiBuilders.buildScrambleAnsi,
+    buildWpAnsi: serviceAnsiBuilders.buildWpAnsi,
+    buildTypingAnsi: serviceAnsiBuilders.buildTypingAnsi,
+    buildQuizAnsi: serviceAnsiBuilders.buildQuizAnsi,
+    buildBattleAnsi: serviceAnsiBuilders.buildBattleAnsi,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
 

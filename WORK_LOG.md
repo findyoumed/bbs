@@ -1,3 +1,25 @@
+## [2026-07-20 17:15] 신규 오락실 게임 5종 전체 통합 및 메뉴 배선·라우팅 복원 연동 완료
+
+**LOG_ID: 20260720_1715**
+목표: 신규 5종 오락실 게임(스크램블, 영어 단어 학습, 타자 연습, 퀴즈 박사, 배틀쉽)의 BBS 전체 통합, 메뉴 배선 추가, 라우팅 복원 처리 완료 및 검증.
+변경 파일:
+- `legacy/hanulso.mnu` (14~18번 게임 노드 추가)
+- `scripts/smoke-menu-wiring.js` (신규 5종 화면 매핑 추가)
+- `public/js/core/menuNavigationActions.js` (노드 타입 매핑 추가)
+- `public/js/core/routingStateRestorer.js` (라우팅 복원 분기 추가)
+- `public/js/core/routingUrlBuilder.js` (게임별 URL 매핑 추가)
+수행 작업:
+1. `legacy/hanulso.mnu` 오락실(GAME) 하위에 14~18번 게임(스크램블/영어 단어 학습/타자 연습/퀴즈 박사/배틀쉽) 노드 신설 및 `go` 단축 코드 설정.
+2. `scripts/smoke-menu-wiring.js` 내 `REFS_BY_TYPE`에 5종 게임의 화면 호출 함수(`showScramble`, `showWp`, `showTyping`, `showQuiz`, `showBattle`) 맵핑 정보 추가.
+3. `public/js/core/menuNavigationActions.js`에서 노드 클릭/진입 시 refs의 스크린 표시 함수로 분기 처리 완료.
+4. `public/js/core/routingStateRestorer.js`에서 브라우저 새로고침이나 직접 딥링크를 타고 들어왔을 때 오락실 게임의 원칙에 따라 무리한 히스토리 복원 대신 깔끔한 새 게임 화면으로 분기 및 진입하는 상태 복원 로직 추가.
+5. `public/js/core/routingUrlBuilder.js`에서 각 게임 화면 상태에 알맞은 URL 맵핑 추가.
+실행: `node scripts/smoke-menu-wiring.js` 및 `npm run smoke:vercel-ready`
+기대: 모든 검증 스크립트 성공 및 33개 메뉴 배선 테스트 완벽 통과.
+결과: ✅ 완료 (로컬 개발 서버 재시작 및 브라우저 subagent 테스트를 통한 스크램블/배틀쉽 정상 진입 및 새로고침 정상 유지 검증 완료)
+
+---
+
 ## [2026-07-20 16:47] GitHub Push 대용량 PDF 파일 차단 문제 해결 및 Git LFS 도입
 
 **LOG_ID: 20260720_1647**

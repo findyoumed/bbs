@@ -123,6 +123,9 @@ const SCREEN_TO_CATEGORY = {
   // [LOG_ID: 20260720_1358] 오락실 게임 5종 (오목/오델로/숫자야구/영어단어맞추기/숫자판맞추기)
   'omok-play': 'arcadePlay', 'oth-play': 'arcadePlay', 'base-play': 'arcadePlay',
   'hangman-play': 'hangmanPlay', 'puzzle15-play': 'arcadePlay',
+  'scramble-play': 'arcadePlay', 'wp-play': 'arcadePlay',
+  'typing-play': 'arcadePlay', 'quiz-play': 'arcadePlay',
+  'battle-play': 'arcadePlay',
   'vote-list': 'voteList', 'vote-detail': 'voteDetail', 'vote-create': 'voteCreate',
   'ranking-summary': 'rankingSummary', 'ranking-detail': 'rankingDetail',
   'conf-rooms': 'confRooms', 'conf-agendas': 'confAgendas', 'conf-agenda': 'confAgenda',

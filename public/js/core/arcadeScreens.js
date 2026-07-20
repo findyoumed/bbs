@@ -3,7 +3,12 @@ import {
   OTH_SIZE, createOthelloState, othelloFlipsFor, othelloLegalMoves, othelloApply, othelloBestMove, othelloCount,
   BASEBALL_MAX_TRIES, createBaseballState, baseballJudge,
   createHangmanState, hangmanApply,
-  createPuzzle15State, puzzle15Apply
+  createPuzzle15State, puzzle15Apply,
+  createScrambleState, scrambleApply,
+  createWpState, wpApply,
+  createTypingState, typingApply,
+  createQuizState, quizApply,
+  createBattleState, battleApply
 } from './arcadeGameLogic.js';
 import { createServiceUiUtils } from './serviceUiUtils.js';
 
@@ -14,6 +19,7 @@ import { createServiceUiUtils } from './serviceUiUtils.js';
 export function createArcadeScreens(deps) {
   const {
     buildOmokAnsi, buildOthelloAnsi, buildBaseballAnsi, buildHangmanAnsi, buildPuzzle15Ansi,
+    buildScrambleAnsi, buildWpAnsi, buildTypingAnsi, buildQuizAnsi, buildBattleAnsi,
     render, setHint, state, updateURL, cmdInput, displayWidth
   } = deps;
 
@@ -232,11 +238,149 @@ export function createArcadeScreens(deps) {
     return true;
   }
 
+  // ── 스크램블 ──
+  async function showScramble(fromHistory = false) {
+    state.screen = 'scramble-play';
+    state.serviceData = { kind: 'scramble', ...createScrambleState() };
+    if (!fromHistory) updateURL();
+    await render(buildScrambleAnsi(state.serviceData), 'arcadePlay', '단어 입력 >> ');
+  }
+  async function scrambleGuess(word) {
+    const game = sd('scramble');
+    if (!game) { await showScramble(); return true; }
+    if (game.status !== 'play') { setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.'); return true; }
+    
+    const res = scrambleApply(game, word);
+    if (res === 'end') {
+      await render(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
+      return true;
+    }
+    if (res === 'already') { setHint('이미 찾은 단어입니다.'); return true; }
+    if (res === 'invalid') { setHint('유효하지 않은 단어이거나 글자판에 없는 단어입니다.'); return true; }
+    
+    await render(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
+    return true;
+  }
+
+  // ── 영어단어/숙어 학습게임 (WP) ──
+  async function showWp(fromHistory = false) {
+    state.screen = 'wp-play';
+    state.serviceData = { kind: 'wp', ...createWpState() };
+    if (!fromHistory) updateURL();
+    await render(buildWpAnsi(state.serviceData), 'arcadePlay', '정답 단어 입력 >> ');
+  }
+  async function wpGuess(guess) {
+    const game = sd('wp');
+    if (!game) { await showWp(); return true; }
+    if (game.status !== 'play') { setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.'); return true; }
+    
+    const res = wpApply(game, guess);
+    if (res === 'correct') {
+      setHint('정답입니다!');
+    } else if (res === 'incorrect') {
+      setHint('틀렸습니다! 다시 시도하세요.');
+    } else if (res === 'incorrect-next') {
+      setHint('기회를 모두 잃었습니다. 다음 문제로 넘어갑니다.');
+    }
+    
+    await render(buildWpAnsi(game), 'arcadePlay', '정답 단어 입력 >> ');
+    return true;
+  }
+
+  // ── 타자 연습/게임 ──
+  async function showTyping(fromHistory = false) {
+    state.screen = 'typing-play';
+    state.serviceData = { kind: 'typing', ...createTypingState() };
+    if (!fromHistory) updateURL();
+    await render(buildTypingAnsi(state.serviceData), 'arcadePlay', '문장 입력 >> ');
+  }
+  async function typingGuess(input) {
+    const game = sd('typing');
+    if (!game) { await showTyping(); return true; }
+    if (game.status !== 'play') { setHint('연습이 끝났습니다. L을 누르면 새 연습을 시작합니다.'); return true; }
+    
+    const res = typingApply(game, input);
+    if (res) {
+      setHint(`결과: ${res.cpm} CPM / 정확도 ${res.accuracy}%`);
+    }
+    
+    await render(buildTypingAnsi(game), 'arcadePlay', '문장 입력 >> ');
+    return true;
+  }
+
+  // ── 퀴즈박사 ──
+  async function showQuiz(fromHistory = false) {
+    state.screen = 'quiz-play';
+    state.serviceData = { kind: 'quiz', ...createQuizState() };
+    if (!fromHistory) updateURL();
+    await render(buildQuizAnsi(state.serviceData), 'arcadePlay', '답 입력 (1~4) >> ');
+  }
+  async function quizGuess(ans) {
+    const game = sd('quiz');
+    if (!game) { await showQuiz(); return true; }
+    if (game.status !== 'play') { setHint('퀴즈가 완료되었습니다. L을 누르면 새 퀴즈를 시작합니다.'); return true; }
+    
+    const isCorrect = quizApply(game, ans);
+    setHint(isCorrect ? '정답입니다!' : '오답입니다!');
+    
+    await render(buildQuizAnsi(game), 'arcadePlay', '답 입력 (1~4) >> ');
+    return true;
+  }
+
+  // ── 전투 게임 ──
+  async function showBattle(fromHistory = false) {
+    state.screen = 'battle-play';
+    state.serviceData = { kind: 'battle', ...createBattleState() };
+    if (!fromHistory) updateURL();
+    await render(buildBattleAnsi(state.serviceData), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+  }
+  async function battleMove(coord) {
+    const game = sd('battle');
+    if (!game) { await showBattle(); return true; }
+    if (game.status !== 'play') { setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.'); return true; }
+    
+    const cleaned = String(coord).trim().toUpperCase();
+    if (!/^[A-J](10|[1-9])$/.test(cleaned)) {
+      setHint('올바른 격자 좌표를 입력하세요. (A~J + 1~10, 예: G3)');
+      return true;
+    }
+    
+    const y = cleaned.charCodeAt(0) - 65;
+    const x = parseInt(cleaned.slice(1), 10) - 1;
+    
+    const res = battleApply(game, x, y);
+    if (res === 'already') {
+      setHint('이미 공격한 좌표입니다. 다른 곳을 공격하세요.');
+      return true;
+    }
+    
+    if (res === 'hit') {
+      setHint('적 함선에 명중했습니다!');
+    } else if (res === 'miss') {
+      setHint('빗나갔습니다.');
+    }
+    
+    await render(buildBattleAnsi(game), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+    return true;
+  }
+  async function battleResign() {
+    const game = sd('battle');
+    if (!game) { await showBattle(); return true; }
+    if (game.status === 'play') game.status = 'lose';
+    await render(buildBattleAnsi(game), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+    return true;
+  }
+
   return {
     showOmok, omokMove, omokResign,
     showOthello, othelloMove,
     showBaseball, baseballGuess,
     showHangman, hangmanGuess, hangmanResign,
-    showPuzzle15, puzzle15Move
+    showPuzzle15, puzzle15Move,
+    showScramble, scrambleGuess,
+    showWp, wpGuess,
+    showTyping, typingGuess,
+    showQuiz, quizGuess,
+    showBattle, battleMove, battleResign
   };
 }

@@ -64,7 +64,12 @@ export function createRoutingStateRestorer(deps) {
     showOthello,
     showBaseball,
     showHangman,
-    showPuzzle15
+    showPuzzle15,
+    showScramble,
+    showWp,
+    showTyping,
+    showQuiz,
+    showBattle
   } = deps;
 
   // [LOG: 20260429_0206] Restore board write/edit URLs into the actual post-write
@@ -404,6 +409,21 @@ export function createRoutingStateRestorer(deps) {
       if (sub === '16p') {
         if (typeof showPuzzle15 === 'function') return await showPuzzle15(true);
       }
+      if (sub === 'scramble') {
+        if (typeof showScramble === 'function') return await showScramble(true);
+      }
+      if (sub === 'wp') {
+        if (typeof showWp === 'function') return await showWp(true);
+      }
+      if (sub === 'typing') {
+        if (typeof showTyping === 'function') return await showTyping(true);
+      }
+      if (sub === 'quiz') {
+        if (typeof showQuiz === 'function') return await showQuiz(true);
+      }
+      if (sub === 'battle') {
+        if (typeof showBattle === 'function') return await showBattle(true);
+      }
       // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
       if (sub === 'retro') {
         if (param && typeof showRetroArtView === 'function') {
@@ -495,6 +515,11 @@ export function createRoutingStateRestorer(deps) {
         if (routeNode.type === 'baseball' && typeof showBaseball === 'function') return await showBaseball(true);
         if (routeNode.type === 'hangman' && typeof showHangman === 'function') return await showHangman(true);
         if (routeNode.type === 'puzzle15' && typeof showPuzzle15 === 'function') return await showPuzzle15(true);
+        if (routeNode.type === 'scramble' && typeof showScramble === 'function') return await showScramble(true);
+        if (routeNode.type === 'wp' && typeof showWp === 'function') return await showWp(true);
+        if (routeNode.type === 'typing' && typeof showTyping === 'function') return await showTyping(true);
+        if (routeNode.type === 'quiz' && typeof showQuiz === 'function') return await showQuiz(true);
+        if (routeNode.type === 'battle' && typeof showBattle === 'function') return await showBattle(true);
         // [LOG_ID: 20260713_1700] 쪽지함(전자우편) 메인 메뉴 진입점 — /memo 직접 접속/새로고침 복원
         if (routeNode.type === 'memo' && typeof showMemoList === 'function') return await showMemoList(true);
       }

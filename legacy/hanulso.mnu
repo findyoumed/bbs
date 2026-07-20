@@ -339,6 +339,36 @@
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
+
+			<item type="scramble" go="scramble" id="game_scramble" door="14" access_level="1">
+				<name>스크램블</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="wp" go="wp" id="game_wp" door="15" access_level="1">
+				<name>영어 단어 학습</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="typing" go="typing" id="game_typing" door="16" access_level="1">
+				<name>타자 연습</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="quiz" go="quiz" id="game_quiz" door="17" access_level="1">
+				<name>퀴즈 박사</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="battle" go="battle" id="game_battle" door="18" access_level="1">
+				<name>배틀쉽</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
 		</item>
 
 	</item>
