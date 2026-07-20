@@ -30,6 +30,8 @@ export function createMenuNavigationActions(deps) {
 
     const target = match[1].trim();
     const normalized = normalizeSearchKey(target);
+    // [LOG_ID: 20260720_2320] GL은 PDS(자료실)의 별칭 — GO GL도 자료실로 이동
+    if (normalized === 'GL') return await executeGoCommand('GO PDS');
     if (normalized === 'TOP') {
       await showMain();
       return true;

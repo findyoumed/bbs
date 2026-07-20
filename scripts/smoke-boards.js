@@ -87,8 +87,9 @@ async function main() {
     const plaza = await request(base, '/api/boards/plaza?page=1');
     // [LOG: 20260408_1000] '답글'은 plaza seed에 없으므로 실제 존재하는 '샘플'로 교체
     const plazaSearch = await request(base, `/api/boards/plaza?page=1&lt=${encodeURIComponent('샘플')}`);
-    // [LOG: 20260408_1000] bbs_pds_prog_os → pds_prog (현재 board ID 기준)
-    const prog = await request(base, '/api/boards/pds_prog?page=1');
+    // [LOG_ID: 20260720_2230] 자료실이 pds_prog 등 6개 하위 게시판에서 통합 게시판(pds)
+    // 하나로 바뀌었다 — BoardVirtualBoards.js의 가상 게시판을 그대로 조회한다.
+    const prog = await request(base, '/api/boards/pds?page=1');
     const firstPostId = plaza.items[0].id;
     const firstPost = await request(base, `/api/boards/plaza/posts/${firstPostId}?view=1&userId=guest`);
     const noticeBoard = boards.find((board) => board.boardId === 'notice') || {};

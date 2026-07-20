@@ -114,12 +114,77 @@
 			</item>
 
 			<!-- [LOG_ID: 20260714_1100] 20260713_1930(나우누리 14종)·20260714_1000(하이텔/천리안
-			     6종)에 추가했던 게시판 20개를 전부 제거했다. 사용자 지적("실제로 내가 구현
-			     가능한 것만 메뉴로 만들어야지") — 실측 결과 추가한 20개 전부 글 0건인 빈
-			     껍데기였다(열린광장 7건, 우스개 1건만 실제 콘텐츠 보유). "원전에 있으니까"를
-			     이유로 기계적으로 베낀 것으로, 20260713_2300의 GUIDE 중복 사건과 같은 실수였다.
-			     게시판은 콘텐츠가 있어야 존재 의미가 있으므로, 실제 글이 쌓이거나 시드 데이터를
-			     넣을 근거가 생길 때만 추가한다. 재제안 금지. -->
+			     6종)에 추가했던 게시판 20개를 전부 제거했었다. 사용자 지적("실제로 내가 구현
+			     가능한 것만 메뉴로 만들어야지") — 당시 실측 결과 추가한 20개 전부 글 0건인 빈
+			     껍데기였다(열린광장 7건, 우스개 1건만 실제 콘텐츠 보유).
+			     [LOG_ID: 20260720_2200] 그중 8종(횡설수설/묻고답하기/가입인사/지역소식/연예오락/
+			     자동차함께타기/불가사의/컴퓨터초보시절)은 Supabase boards 테이블에 레코드가 그대로
+			     남아있었고, MemoryBoardRepositorySeed.js에도 이미 콘텐츠가 준비돼 있었다 — 메뉴에서만
+			     빠졌을 뿐 "글이 쌓일 근거"가 이미 있던 상태였다. 각 게시판에 실제 글을 채워 넣은 뒤
+			     재등록한다(사용자 확인 후 진행, door는 Supabase 기존 레코드와 동일하게 3~10 사용). -->
+			<item type="board" go="say" id="bbs_say" door="3" access_level="1">
+				<name>횡설수설</name>
+				<attachment>no</attachment>
+				<reply>yes</reply>
+				<header></header>
+				<footer>txt/cmd_board_footer.txt</footer>
+			</item>
+
+			<item type="board" go="qna" id="bbs_qna" door="4" access_level="1">
+				<name>묻고답하기</name>
+				<attachment>yes</attachment>
+				<reply>yes</reply>
+				<header></header>
+				<footer>txt/cmd_board_footer.txt</footer>
+			</item>
+
+			<item type="board" go="newface" id="bbs_newface" door="5" access_level="1">
+				<name>가입인사</name>
+				<attachment>no</attachment>
+				<reply>yes</reply>
+				<header></header>
+				<footer>txt/cmd_board_footer.txt</footer>
+			</item>
+
+			<item type="board" go="locnews" id="bbs_locnews" door="6" access_level="1">
+				<name>지역소식</name>
+				<attachment>yes</attachment>
+				<reply>yes</reply>
+				<header></header>
+				<footer>txt/cmd_board_footer.txt</footer>
+			</item>
+
+			<item type="board" go="entertain" id="bbs_entertain" door="7" access_level="1">
+				<name>연예/오락</name>
+				<attachment>yes</attachment>
+				<reply>yes</reply>
+				<header></header>
+				<footer>txt/cmd_board_footer.txt</footer>
+			</item>
+
+			<item type="board" go="carpool" id="bbs_carpool" door="8" access_level="1">
+				<name>자동차함께타기</name>
+				<attachment>yes</attachment>
+				<reply>yes</reply>
+				<header></header>
+				<footer>txt/cmd_board_footer.txt</footer>
+			</item>
+
+			<item type="board" go="mystery" id="bbs_mystery" door="9" access_level="1">
+				<name>불가사의</name>
+				<attachment>yes</attachment>
+				<reply>yes</reply>
+				<header></header>
+				<footer>txt/cmd_board_footer.txt</footer>
+			</item>
+
+			<item type="board" go="novice" id="bbs_novice" door="10" access_level="1">
+				<name>컴퓨터초보시절</name>
+				<attachment>no</attachment>
+				<reply>yes</reply>
+				<header></header>
+				<footer>txt/cmd_board_footer.txt</footer>
+			</item>
 		</item>
 
 		<!-- 07. 여론광장 -->
@@ -172,60 +237,20 @@
 		</item>
 
 		<!-- 08. 공개자료실 -->
-		<item type="menu" go="pds" door="8">
+		<!-- [LOG_ID: 20260714_1100] 20260714_1000에 추가했던 자료실 3종(초보자료실/추천자료실/
+		     문서자료)도 게시판 20종과 같은 이유로 제거 — 전부 자료 0건인 빈 껍데기였다.
+		     [LOG_ID: 20260720_2230] 사용자 요청으로 하위 6개 카테고리(전체보기/유틸리티/게임/
+		     그래픽사진/음악사운드/프로그래밍) 메뉴를 없애고 자료실 하나로 통일했다. 카테고리
+		     게시판 자체(pds_all 등)와 그 안의 글은 그대로 남겨두고, BoardVirtualBoards.js에
+		     이미 구현돼 있던 통합 가상 게시판(boardId="pds", 6개 카테고리를 한 목록으로
+		     합쳐서 보여주고 새 글은 pds_all에 저장)을 메뉴에 연결하는 방식으로 처리했다 —
+		     새 기능을 만들 필요 없이 기존 코드를 메뉴에 배선만 하면 됐다. -->
+		<item type="board" go="pds" id="bbs_pds" door="8" access_level="1">
 			<name>자료실 (PDS)</name>
-			<footer>txt/cmd_menu_footer.txt</footer>
-
-			<item type="board" go="pds_all" id="bbs_pds_all" door="1" access_level="1">
-				<name>전체보기</name>
-				<attachment>yes</attachment>
-				<reply>no</reply>
-				<header></header>
-				<footer>txt/cmd_board_footer.txt</footer>
-			</item>
-
-			<item type="board" go="pds_util" id="bbs_pds_util" door="2" access_level="1">
-				<name>유틸리티</name>
-				<attachment>yes</attachment>
-				<reply>no</reply>
-				<header></header>
-				<footer>txt/cmd_board_footer.txt</footer>
-			</item>
-
-			<item type="board" go="pds_game" id="bbs_pds_game" door="3" access_level="1">
-				<name>게임</name>
-				<attachment>yes</attachment>
-				<reply>no</reply>
-				<header></header>
-				<footer>txt/pds_game.txt</footer>
-			</item>
-
-			<item type="board" go="pds_graphic" id="bbs_pds_graphic" door="4" access_level="1">
-				<name>그래픽/사진</name>
-				<attachment>yes</attachment>
-				<reply>no</reply>
-				<header></header>
-				<footer>txt/cmd_board_footer.txt</footer>
-			</item>
-
-			<item type="board" go="pds_sound" id="bbs_pds_sound" door="5" access_level="1">
-				<name>음악/사운드</name>
-				<attachment>yes</attachment>
-				<reply>no</reply>
-				<header></header>
-				<footer>txt/pds_sound.txt</footer>
-			</item>
-
-			<item type="board" go="pds_prog" id="bbs_pds_prog" door="6" access_level="1">
-				<name>프로그래밍</name>
-				<attachment>yes</attachment>
-				<reply>no</reply>
-				<header></header>
-				<footer>txt/pds_prog.txt</footer>
-			</item>
-
-			<!-- [LOG_ID: 20260714_1100] 20260714_1000에 추가했던 자료실 3종(초보자료실/추천자료실/
-			     문서자료)도 게시판 20종과 같은 이유로 제거 — 전부 자료 0건인 빈 껍데기였다. -->
+			<attachment>yes</attachment>
+			<reply>no</reply>
+			<header></header>
+			<footer>txt/cmd_board_footer.txt</footer>
 		</item>
 
 		<!-- 06. 대화실 -->
