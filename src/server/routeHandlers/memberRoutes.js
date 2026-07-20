@@ -357,16 +357,16 @@ class MemberRouter extends BaseRouter {
     if (!context?.isAdmin && context?.userId !== targetUserId) this.forbidden('권한이 없습니다.');
     const nextPassword = String(body?.password || '').trim();
 
+    // [LOG_ID: 20260721_0330] 보안 점검 중 발견: 이 엔드포인트는 ensureAuthenticated만 요구해
+    // 관리자가 아니어도 "본인 비밀번호 변경"으로 통과한다. 그런데 요청 바디의 nickNameHint/
+    // emailHint/isAdminHint를 그대로 defaults로 넘기고, 레포지토리(setPassword)는
+    // `defaults.isAdmin ?? existing.isAdmin`으로 병합해 기존 값 위에 그대로 덮어쓴다 —
+    // 즉 아무 로그인 사용자나 자기 비밀번호 변경 요청에 { isAdminHint: true }만 끼워 보내면
+    // 스스로를 관리자(레벨 99)로 승격시킬 수 있었다(권한 상승 취약점). 실제 클라이언트 코드
+    // 어디서도 이 세 Hint를 setPassword에 보내지 않는다(레벨 변경용 nickNameHint는 별도의
+    // ensureAdmin 전용 /level 엔드포인트에서만 쓰임) — 즉 순수 공격 표면이었다. 비밀번호
+    // 변경은 비밀번호만 바꿔야 하므로 defaults 없이 호출해 기존 프로필 값을 그대로 보존한다.
     const defaults = {};
-    if (Object.prototype.hasOwnProperty.call(body || {}, 'nickNameHint')) {
-      defaults.nickName = body?.nickNameHint;
-    }
-    if (Object.prototype.hasOwnProperty.call(body || {}, 'emailHint')) {
-      defaults.email = body?.emailHint;
-    }
-    if (Object.prototype.hasOwnProperty.call(body || {}, 'isAdminHint')) {
-      defaults.isAdmin = body?.isAdminHint === true;
-    }
 
     const authPasswordSync = await this.updateAuthPasswordForMember(authBridge, {
       context,

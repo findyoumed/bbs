@@ -1,3 +1,15 @@
+## [2026-07-21 00:30] [보안 심각] 비밀번호 변경 API로 자기 자신을 관리자로 승격시킬 수 있던 권한 상승 취약점 수정
+
+**LOG_ID: 20260721_0330**
+목표: 사용자 요청("코드수정 보안해줘")으로 진행한 보안 점검 중 발견 — `POST /api/members/:userId/password`(본인 비밀번호 변경, `ensureAuthenticated`만 요구하고 관리자 권한은 불필요)가 요청 바디의 `isAdminHint` 필드를 그대로 신뢰해 `defaults.isAdmin`으로 넘겼고, 레포지토리 계층(`MemberRepositorySupabase.js`/`MemberRepositoryMemory.js` 둘 다)의 `setPassword`는 `defaults.isAdmin ?? existing.isAdmin`으로 병합해 **기존 값 위에 그대로 덮어썼다**.
+**공격 시나리오**: 로그인만 되어 있으면 아무나 자기 자신의 비밀번호 변경 요청 바디에 `{ password: "...", isAdminHint: true }`만 끼워 보내면 스스로를 `isAdmin: true`(Supabase 드라이버는 `level: 99`까지)로 승격시킬 수 있었다. `ensureAdmin` 미들웨어는 오직 `ctx.isAdmin`만 검사하므로(`BaseRouterContext.js:45`), 이 한 줄로 회원 목록 조회·회원 삭제 등 모든 관리자 전용 API에 접근 가능해진다.
+**클라이언트 사용 여부 확인**: `nickNameHint`/`emailHint`/`isAdminHint` 세 필드 중 실제 프런트엔드가 `setPassword`로 보내는 건 하나도 없었다(닉네임 힌트는 별도의 `ensureAdmin` 전용 `/level` 엔드포인트에서만 쓰임) — 즉 순수한 공격 표면이었고 제거해도 기능 손실이 없다.
+수정: `routeHandlers/memberRoutes.js`의 `setPassword` 핸들러에서 세 Hint 필드 처리를 전부 제거, `defaults`를 항상 빈 객체로 고정 — 비밀번호 변경은 비밀번호만 바꾸고 기존 프로필(닉네임/이메일/관리자 여부)은 그대로 보존한다.
+검증: `npm run smoke:vercel-ready`, `npm run smoke:auth-bridge`(32건) 통과. `MemberRepositoryMemory`를 직접 호출하는 재현 스크립트로 확인 — 수정된 라우트가 하는 대로 `defaults={}`로 호출하면 `isAdmin`이 `false`로 유지됨(안전)을 확인했고, 대조군으로 `{isAdmin:true}`를 레포지토리에 직접 넘기면 실제로 승격됨을 재현해 취약점 메커니즘 자체도 검증했다(레포지토리 계층은 자체 가드가 없고 라우트 계층이 방어선임을 확인 — 향후 이 계층에 새 엔드포인트를 추가할 때 동일 실수 주의).
+결과: ✅ 완료 — 배포 시급 권장(운영 중인 프로덕션에 노출되어 있던 실사용 가능한 권한 상승 취약점).
+
+---
+
 ## [2026-07-20 20:20] 오락실 게임 10종 점검 — 스크램블/영어학습/타자 게임에서 GO 명령이 먹통이던 버그 수정
 
 **LOG_ID: 20260720_2020**
