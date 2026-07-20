@@ -112,7 +112,7 @@ export function createAnsiBuilderUtils(deps) {
       '게시판': 'BOARD',
       '글읽기': 'READ',
       '글쓰기': 'WRITE',
-      '뉴스/인물': 'NEWS',
+      '뉴스': 'NEWS',
       '기사 읽기': 'READ',
       '날씨': 'WEATHER',
       '공개자료실': 'PDS',

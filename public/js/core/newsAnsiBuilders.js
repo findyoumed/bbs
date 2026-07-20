@@ -289,7 +289,7 @@ export function createNewsAnsiBuilders(deps) {
     const pageLabel = fullView ? '(전체)' : buildPageLabel(currentPage, pageCount);
 
     // Pass targetCols to top header
-    parts.push(buildTopHeader(topic ? ['뉴스/인물', topic, '기사 읽기'] : ['뉴스/인물', '기사 읽기'], pageLabel, targetCols));
+    parts.push(buildTopHeader(topic ? ['뉴스', topic, '기사 읽기'] : ['뉴스', '기사 읽기'], pageLabel, targetCols));
 
     titleLines.forEach((line, index) => {
       const label = index === 0 ? '제목: ' : '      ';
