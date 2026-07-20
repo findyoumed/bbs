@@ -31,3 +31,11 @@ loop_system/response_cycle_*.txt
 
 # Playwright MCP 스크린샷 스크래치 (검증용 임시 캡처, 추적 불필요)
 .playwright-mcp/
+
+# 대용량 PDF 파일 (GitHub 용량 제한으로 제외)
+docs/책_hitel길라잡이.pdf
+docs/책_여기는pc통신천리안입니다_ocr.pdf
+"docs/책_할수있다 pc통신에서 인터넷까지-일부_OCR.pdf"
+"docs/책_할수있다 pc통신에서 인터넷까지.pdf"
+"docs/책_할수있다 나우누리에서 인터넷까지_일부_OCR.pdf"
+"docs/책_할수있다 나우누리에서 인터넷까지.pdf"
