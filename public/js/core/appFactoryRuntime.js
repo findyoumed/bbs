@@ -41,6 +41,8 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.menuIndexScreens,
     // [LOG_ID: 20260716_2200] 이용 현황(menuNavigationActions type='my-stats').
     showMyStats: screens.systemScreens.showMyStats,
+    // [LOG_ID: 20260720_2300] 건의하기(menuNavigationActions type='contact-sysop').
+    ...screens.contactSysopScreens,
     showSignup: screens.signupModule.showSignup,
     showMain: screens.showMain,
     showBoardSelect: screens.showBoardSelect,
@@ -183,6 +185,8 @@ export function initializeAppFactoryRuntime(deps) {
     showMemberSearch: screens.memberSearchScreens.showMemberSearch,
     // [LOG_ID: 20260716_1600] /index URL 라우팅용.
     showMenuIndex: screens.menuIndexScreens.showMenuIndex,
+    // [LOG_ID: 20260720_2300] /tosysop URL 라우팅용.
+    showContactSysop: screens.contactSysopScreens.showContactSysop,
     // [LOG_ID: 20260716_2200] /account URL 라우팅용.
     showMyStats: screens.systemScreens.showMyStats,
     showMyInfo: screens.myInfoScreens.showMyInfo,

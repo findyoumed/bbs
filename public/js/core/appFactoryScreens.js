@@ -7,6 +7,8 @@ import { createAmusementScreens } from './amusementScreens.js';
 import { createMemberSearchScreens } from './memberSearchScreens.js';
 // [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 메뉴안내·인덱스안내(menu/index)
 import { createMenuIndexScreens } from './menuIndexScreens.js';
+// [LOG_ID: 20260720_2300] GUIDE 건의하기 — 게시판 대신 시삽 이메일 발송.
+import { createContactSysopScreen } from './contactSysopScreen.js';
 
 export function createAppFactoryScreens(deps) {
   const {
@@ -167,6 +169,12 @@ export function createAppFactoryScreens(deps) {
     getMenuNodeByKey: menuService.getMenuNodeByKey,
     showMain
   });
+  // [LOG_ID: 20260720_2300] GUIDE 건의하기 — 시삽 이메일 발송 화면.
+  const contactSysopScreens = createContactSysopScreen({
+    ...screenDeps,
+    apiFetch,
+    showBoardSelect
+  });
   // [LOG_ID: 20260713_2100] GUIDE 화면 이용약관/개인정보처리방침 뷰어.
   const policyScreens = createPolicyScreens({
     ...screenDeps,
@@ -276,6 +284,7 @@ export function createAppFactoryScreens(deps) {
   return {
     authScreens,
     chatScreens,
+    contactSysopScreens,
     getBoardSelectTitle,
     handleHistoryBack,
     helpScreens,
