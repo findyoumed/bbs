@@ -1,3 +1,15 @@
+## [2026-07-21 01:15] [보안 심각] 인증 없이 아무 회원 비밀번호나 무제한 대입 가능했던 오라클 2건 차단
+
+**LOG_ID: 20260721_0415**
+목표: "코드수정 보안해줘" 루프 4라운드 — 로그인 흐름 재점검 중 발견(직접 로그인은 브라우저에서 Supabase Auth `signInWithPassword`를 바로 호출해 이 앱 서버를 거치지 않는다는 걸 확인하는 과정에서, 이 앱 자체 로컬 비밀번호 저장소를 검사하는 보조 엔드포인트 두 개가 완전히 무방비였다는 걸 발견).
+발견: `POST /api/members/:userId/password/verify`와 `POST /api/members/:userId/email` 둘 다 미들웨어가 전혀 없어 **로그인 여부와 무관하게** 임의의 `userId`+`password` 조합을 계속 시도할 수 있는 "비밀번호 오라클"이었다. `/verify`는 `{verified:true|false}`를 그대로 반환하고, `/email`도 실패 시 `{verified:false,...}`를 반환해 둘 다 무차별 대입에 그대로 쓸 수 있었다. 로컬 비밀번호 최소 길이가 4자뿐이라(앞서 확인한 `setPassword`의 검증 로직) 실효성 있는 공격이었다. `/api/*` 전역 레이트리밋(분당 60회, 프로덕션 기준)만 유일한 방어선이었는데 IP 분산으로 쉽게 우회 가능.
+**클라이언트 사용 패턴 확인**: `myInfoActions.js`의 세 호출부 전부 `targetUserId`를 `state.user?.userId`(로그인한 본인)에서만 가져온다 — 즉 실제 제품 기능은 항상 "내 계정 본인 확인" 용도였고, 임의 계정을 대상으로 삼는 정당한 사용처는 없었다.
+수정: 두 라우트에 `middlewares: ['ensureAuthenticated']` 추가, 핸들러 내부에 `setPassword`와 동일한 본인/관리자 제한(`context.userId === targetUserId || context.isAdmin`)을 추가 — 이제 로그인한 사용자가 자기 자신의 비밀번호만 확인할 수 있다(무차별 대입의 전제인 "임의 계정을 대상으로 무제한 시도"가 원천 차단됨).
+검증: `npm run smoke:vercel-ready`, `npm run smoke:auth-bridge`(32건) 통과. curl로 실측 — 수정 전 미인증 `/password/verify` 호출이 200으로 검증 결과를 그대로 반환했던 것을, 수정 후 401(로그인 필요)로 차단되는 것 확인.
+결과: ✅ 완료 — 이번 루프에서 발견한 3번째 보안 수정(1: 관리자 권한 상승, 2: 시스템 진단 정보 노출, 3: 이번 건).
+
+---
+
 ## [2026-07-21 01:00] [보안] 비로그인 사용자에게 서버 내부 진단 정보가 노출되던 SYSINFO/DIAG API 잠금
 
 **LOG_ID: 20260721_0400**

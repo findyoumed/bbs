@@ -34,10 +34,18 @@ class MemberRouter extends BaseRouter {
       },
       { method: 'GET', pattern: '/api/members/:userId', handler: 'getMember', needContext: true },
       { method: 'DELETE', pattern: '/api/members/:userId', handler: 'deleteMember', middlewares: ['ensureAuthenticated'] },
+      // [LOG_ID: 20260721_0415] 보안 점검 중 발견: 두 엔드포인트 다 미들웨어가 전혀 없어
+      // 로그인조차 없이 아무 userId·password 조합으로 호출 가능한 "비밀번호 오라클"이었다 —
+      // /verify는 맞았는지 여부를, /email은 틀리면 {verified:false}를 그대로 알려줘 둘 다
+      // 무제한 무차별 대입에 쓸 수 있었다(로컬 비밀번호 최소 길이가 4자뿐이라 실효성도 있었다).
+      // 실제 클라이언트(myInfoActions.js)는 항상 state.user.userId(로그인한 본인)만 넘기므로
+      // ensureAuthenticated + 본인/관리자 제한을 걸어도 기존 기능은 그대로 동작한다.
       {
         method: 'POST',
         pattern: '/api/members/:userId/password/verify',
         handler: 'verifyPassword',
+        middlewares: ['ensureAuthenticated'],
+        needContext: true,
         needBody: true,
         validate: {
           body: {
@@ -49,6 +57,8 @@ class MemberRouter extends BaseRouter {
         method: 'POST',
         pattern: '/api/members/:userId/email',
         handler: 'setEmail',
+        middlewares: ['ensureAuthenticated'],
+        needContext: true,
         needBody: true,
         validate: {
           body: {
@@ -287,6 +297,8 @@ class MemberRouter extends BaseRouter {
 
   async verifyPassword(params) {
     const targetUserId = params.userId;
+    const context = await this.getContext();
+    if (!context?.isAdmin && context?.userId !== targetUserId) this.forbidden('권한이 없습니다.');
     const body = await this.getBody();
     const password = String(body?.password || '').trim();
     const result = await this.verifyMemberPassword(targetUserId, password);
@@ -298,6 +310,8 @@ class MemberRouter extends BaseRouter {
   async setEmail(params) {
     const { memberRepository, authBridge } = this.deps;
     const targetUserId = params.userId;
+    const context = await this.getContext();
+    if (!context?.isAdmin && context?.userId !== targetUserId) this.forbidden('권한이 없습니다.');
     const body = await this.getBody();
     const password = String(body?.password || '').trim();
     const nextEmailValue = validateEmail(body?.email || '');
