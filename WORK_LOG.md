@@ -1,3 +1,15 @@
+## [2026-07-21 01:00] [보안] 비로그인 사용자에게 서버 내부 진단 정보가 노출되던 SYSINFO/DIAG API 잠금
+
+**LOG_ID: 20260721_0400**
+목표: "코드수정 보안해줘" 루프 3라운드 — 관리자 전용(`ensureAdmin`) 라우트 전수 점검 중 발견.
+발견: `GET /api/system/info`(호스트명·Node 버전·플랫폼/아키텍처·메모리·디스크 사용량·저장소 드라이버 종류 및 경고·`supabaseReady`/`supabasePartialConfig` 등 내부 인프라 진단 정보 반환)에 미들웨어가 전혀 없어 로그인 여부와 무관하게 아무나 호출 가능했다. 클라이언트도 마찬가지로 `SYSINFO`/`DIAG` 명령이 `commandRouterGlobalRuntime.js`에서 관리자 확인 없이 바로 `showSystemDiagnostics()`를 호출했고, 이 명령은 `CMD_META`에 등록조차 안 돼 있어(도움말에 안 나옴) "숨겨진 기능"으로만 존재했다 — 즉 클라이언트·서버 양쪽 다 접근 제어가 없었다.
+**의도된 공개 기능과 구분**: `UID`(접속자 목록, `getActiveUsers`)는 `CMD_META`에 `login` 플래그가 없어 게스트 공개가 명시적으로 의도된 기능(원전 PC통신 "누가 접속해 있는지" 관행)임을 확인했다 — 이건 그대로 둔다. `system/info`는 그런 문서화된 공개 의도가 없는 순수 누락이었다.
+수정: `routeHandlers/systemRoutes.js`의 `/api/system/info` 라우트에 `middlewares: ['ensureAdmin']` 추가.
+검증: `npm run smoke:vercel-ready`, `npm run smoke:menu-wiring` 통과. 로컬 dev 서버에서 curl로 실측 — 수정 전 비로그인 요청이 200으로 정보를 그대로 반환했던 것을, 수정 후 403으로 차단되는 것 확인. 동시에 의도된 공개 엔드포인트(`active-users`/`activity-summary`/`stats`)는 여전히 200으로 정상 동작하는 것도 함께 확인해 과잉 차단이 없음을 검증.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-21 00:45] 보안 점검 2라운드 — 건의하기(TOSYSOP) 게스트 화면/URL 불일치 수정 + 나머지 영역 스팟체크
 
 **LOG_ID: 20260721_0345**

@@ -17,7 +17,13 @@ class SystemRouter extends BaseRouter {
       { method: 'GET', pattern: '/api/auth/config', handler: 'getAuthConfig' },
       { method: 'GET', pattern: '/api/runtime-config', handler: 'getRuntimeConfig' },
       { method: 'GET', pattern: '/api/auth/session', handler: 'getSession' },
-      { method: 'GET', pattern: '/api/system/info', handler: 'getSystemInfo' },
+      // [LOG_ID: 20260721_0400] 보안 점검 중 발견: SYSINFO/DIAG 명령(클라이언트 CMD_META에
+      // 등록조차 안 된 비공식 명령)이 이 API를 로그인 여부와 무관하게 호출했다 — 호스트명·Node
+      // 버전·메모리/디스크 사용량·저장소 드라이버 및 경고·Supabase 설정 여부 같은 내부 인프라
+      // 정보가 아무나에게 노출되고 있었다. UID(접속자 목록)는 CMD_META에 login 플래그가 없어
+      // 게스트 공개가 의도된 기능이지만, 이 진단 정보는 그런 의도된 공개 기능이 아니라 순수
+      // 누락이었다 — ensureAdmin으로 막는다.
+      { method: 'GET', pattern: '/api/system/info', handler: 'getSystemInfo', middlewares: ['ensureAdmin'] },
       { method: 'GET', pattern: '/api/system/active-users', handler: 'getActiveUsers' },
       { method: 'GET', pattern: '/api/system/activity-summary', handler: 'getActivitySummary' },
       { method: 'GET', pattern: '/api/menu', handler: 'getMenu' }
