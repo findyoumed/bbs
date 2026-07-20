@@ -73,7 +73,8 @@ const REFS_BY_TYPE = {
   policy: 'showPolicy',
   'member-search': 'showMemberSearch',
   'menu-index': 'showMenuIndex',
-  'my-stats': 'showMyStats'
+  'my-stats': 'showMyStats',
+  'contact-sysop': 'showContactSysop'
 };
 
 const usedTypes = [...new Set(

@@ -20,10 +20,12 @@
 				<footer></footer>
 			</item>
 
-			<item type="board" go="tosysop" id="bbs_suggest" door="2" access_level="1">
+			<!-- [LOG_ID: 20260720_2300] 건의하기: 아무도 안 보는 빈 게시판 대신, 작성 즉시
+			     시삽 이메일(postnews@daum.net)로 발송되는 기능으로 교체 (사용자 요청).
+			     contactSysopScreen.js가 화면을, src/server/routeHandlers/contactRoutes.js +
+			     SysopMailService.js(Resend API)가 발송을 담당한다. -->
+			<item type="contact-sysop" go="tosysop" id="bbs_suggest" door="2" access_level="1">
 				<name>건의하기</name>
-				<attachment>yes</attachment>
-				<reply>yes</reply>
 				<header></header>
 				<footer></footer>
 			</item>

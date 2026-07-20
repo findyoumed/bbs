@@ -247,6 +247,11 @@ export function createMenuNavigationActions(deps) {
       await refs.showMyStats();
       return true;
     }
+    // [LOG_ID: 20260720_2300] 건의하기 — 시삽 이메일 발송 화면.
+    if (node.type === 'contact-sysop' && typeof refs.showContactSysop === 'function') {
+      await refs.showContactSysop();
+      return true;
+    }
     return false;
   }
 

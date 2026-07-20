@@ -7,6 +7,7 @@ const AssetManager = require('../core/AssetManager');
 const MenuResolver = require('./MenuResolver');
 const RssService = require('./RssService');
 const AuthBridge = require('./AuthBridge');
+const { createSysopMailServiceFromEnv } = require('./SysopMailService');
 const RepositoryRegistry = require('./RepositoryRegistry');
 const { createErrorTrackerFromEnv } = require('./ErrorTracker');
 const { resolveLegacyRuntimeConfig } = require('./LegacyRuntimeConfig');
@@ -114,6 +115,8 @@ function createAppServices(rootDir, env = process.env) {
       adminEmails: env.BBS_ADMIN_EMAILS,
       memberRepository
     }),
+    // [LOG_ID: 20260720_2300] 건의하기 → 시삽 이메일 발송(Resend API).
+    mailService: createSysopMailServiceFromEnv(env),
     runtimeConfig,
     repositoryDiagnostics,
     errorTracker,

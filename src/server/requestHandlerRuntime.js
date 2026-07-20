@@ -47,6 +47,7 @@ function createRequestHandlerRuntime(options = {}) {
     menuResolver: options.menuResolver,
     rssService: options.rssService,
     authBridge: options.authBridge,
+    mailService: options.mailService,
     runtimeConfig: options.runtimeConfig || { ...DEFAULT_RUNTIME_CONFIG },
     errorTracker: options.errorTracker || null,
     assetStatsCache: options.assetStatsCache || createAssetStatsCache()
@@ -74,6 +75,7 @@ function createRouteContext(runtime, req, res, requestUrl, requestId) {
     menuResolver: runtime.menuResolver,
     rssService: runtime.rssService,
     authBridge: runtime.authBridge,
+    mailService: runtime.mailService,
     runtimeConfig: runtime.runtimeConfig,
     assetStatsCache: runtime.assetStatsCache,
     repositoryDiagnostics: runtime.repositoryDiagnostics,
