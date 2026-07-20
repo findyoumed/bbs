@@ -248,9 +248,23 @@ export function createAppFactoryScreens(deps) {
     buildFortuneAnsi: serviceAnsiBuilders.buildFortuneAnsi,
     buildMbtiListAnsi: serviceAnsiBuilders.buildMbtiListAnsi,
     buildMbtiDetailAnsi: serviceAnsiBuilders.buildMbtiDetailAnsi,
+    buildBloodIntroAnsi: serviceAnsiBuilders.buildBloodIntroAnsi,
+    buildBloodAnsi: serviceAnsiBuilders.buildBloodAnsi,
+    findBloodType: serviceAnsiBuilders.findBloodType,
+    buildCompatIntroAnsi: serviceAnsiBuilders.buildCompatIntroAnsi,
+    buildCompatIntro2Ansi: serviceAnsiBuilders.buildCompatIntro2Ansi,
+    buildCompatAnsi: serviceAnsiBuilders.buildCompatAnsi,
+    buildTojeongIntroAnsi: serviceAnsiBuilders.buildTojeongIntroAnsi,
+    buildTojeongAnsi: serviceAnsiBuilders.buildTojeongAnsi,
     buildRetroArtListAnsi: serviceAnsiBuilders.buildRetroArtListAnsi,
     buildRetroArtViewAnsi: serviceAnsiBuilders.buildRetroArtViewAnsi,
     findMbtiType: serviceAnsiBuilders.findMbtiType,
+    // [LOG_ID: 20260720_1358] 오락실 게임 5종 (오목/오델로/숫자야구/영어단어맞추기/숫자판맞추기)
+    buildOmokAnsi: serviceAnsiBuilders.buildOmokAnsi,
+    buildOthelloAnsi: serviceAnsiBuilders.buildOthelloAnsi,
+    buildBaseballAnsi: serviceAnsiBuilders.buildBaseballAnsi,
+    buildHangmanAnsi: serviceAnsiBuilders.buildHangmanAnsi,
+    buildPuzzle15Ansi: serviceAnsiBuilders.buildPuzzle15Ansi,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
 

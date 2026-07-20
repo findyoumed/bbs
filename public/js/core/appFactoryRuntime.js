@@ -314,6 +314,15 @@ export function initializeAppFactoryRuntime(deps) {
     restoreTheme: services.restoreTheme,
     showMain: screens.showMain,
     showPasswordReset: screens.authScreens.showPasswordReset,
-    updateURL: refs.updateURL
+    updateURL: refs.updateURL,
+    // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 "자동접속 차단시간"(SET IDLE) — app.js의 유휴 타이머가
+    // 시간 초과 시 호출한다. 텍스트 입력 컨텍스트(대화실 메시지 등)를 거치는 handleCmd 파이프라인을
+    // 타지 않고 로그아웃+리다이렉트를 직접 수행해, "BYE"가 채팅 메시지로 전송되는 오작동을 피한다.
+    forceExit: async () => {
+      if (!state.user?.isGuest) {
+        await services.authService.doLogout();
+      }
+      window.location.assign('/');
+    }
   };
 }

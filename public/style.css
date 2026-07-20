@@ -1113,6 +1113,18 @@ body.theme-nownuri .write-field textarea {
     vertical-align: bottom;
 }
 
+/* [LOG_ID: 20260720_1545] 오목/오델로 돌(●/○) 확대 표시 — 이 폰트의 원본 글리프가 작아
+   굵게(font-weight)만으로는 잘 안 보인다는 실측 지적. transform:scale은 순수 시각 효과라
+   레이아웃(줄 높이·칸 폭)에 영향을 주지 않는다 — 폭은 여전히 1ch로 고정해 격자 정렬을
+   그대로 유지하면서 글자만 확대해 인접한 괘선에 살짝 걸치게 한다(실제 바둑판에서 돌이
+   교차점을 덮는 모습과 비슷해 자연스럽다). */
+.ansi-line .stone {
+    display: inline-block;
+    width: 1ch;
+    text-align: center;
+    transform: scale(1.6);
+}
+
 #terminal-screen .retro-topbar--ansi {
     background: var(--bgcolor, #000) !important;
     color: var(--color, #fff) !important;

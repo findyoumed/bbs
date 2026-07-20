@@ -161,8 +161,18 @@ export function createMenuNavigationActions(deps) {
     if (node.type === 'biorhythm' && typeof refs.showBiorhythm === 'function') { await refs.showBiorhythm(); return true; }
     if (node.type === 'fortune' && typeof refs.showFortune === 'function') { await refs.showFortune(); return true; }
     if (node.type === 'mbti' && typeof refs.showMbti === 'function') { await refs.showMbti(); return true; }
+    // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현 — 혈액형 성격진단/궁합/토정비결.
+    if (node.type === 'blood' && typeof refs.showBlood === 'function') { await refs.showBlood(); return true; }
+    if (node.type === 'compat' && typeof refs.showCompat === 'function') { await refs.showCompat(); return true; }
+    if (node.type === 'tojeong' && typeof refs.showTojeong === 'function') { await refs.showTojeong(); return true; }
     // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
     if (node.type === 'retro-art' && typeof refs.showRetroArt === 'function') { await refs.showRetroArt(); return true; }
+    // [LOG_ID: 20260720_1358] 천리안 원전 6.14.1 "컴퓨터와 게임을" — 오락실 게임 5종.
+    if (node.type === 'omok' && typeof refs.showOmok === 'function') { await refs.showOmok(); return true; }
+    if (node.type === 'othello' && typeof refs.showOthello === 'function') { await refs.showOthello(); return true; }
+    if (node.type === 'baseball' && typeof refs.showBaseball === 'function') { await refs.showBaseball(); return true; }
+    if (node.type === 'hangman' && typeof refs.showHangman === 'function') { await refs.showHangman(); return true; }
+    if (node.type === 'puzzle15' && typeof refs.showPuzzle15 === 'function') { await refs.showPuzzle15(); return true; }
     if (node.type === 'chatt' && typeof refs.showChatLobby === 'function') {
       await refs.showChatLobby();
       return true;

@@ -49,9 +49,36 @@ export function createGlobalWorkspaceCommandHandler(deps) {
       const envVars = ensureEnvVars();
 
       if (head === 'SET' && !name) {
-        setHint('사용법: SET [이름] [값]\n예: SET PROMPT BBS >\n예: SET SYSTEM_NAME MyBBS');
+        setHint('사용법: SET [이름] [값]\n예: SET PROMPT BBS >\n예: SET SYSTEM_NAME MyBBS\n예: SET IDLE 5 (유휴 자동종료, 1~30분)\n예: SET SORT OLD (게시물 오래된순 정렬, 기본: NEW)\n예: SET TAG 여행 좋아하는 사람 (대화방 덧말, 메시지마다 자동 첨부)');
         setDefaultPrompt();
         return true;
+      }
+
+      // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "자동접속 차단시간" 재현 — 1~30분 범위로 제한.
+      if (head === 'SET' && name === 'IDLE' && value) {
+        const minutes = Number(value);
+        if (!Number.isFinite(minutes) || minutes < 1 || minutes > 30) {
+          setHint('IDLE 값은 1~30(분) 사이의 숫자여야 합니다. 예: SET IDLE 5');
+          setDefaultPrompt();
+          return true;
+        }
+      }
+
+      // [LOG_ID: 20260719_2200] 대화방 덧말(태그라인) — 메시지 스팸 방지를 위해 길이 제한.
+      if (head === 'SET' && name === 'TAG' && value.length > 20) {
+        setHint('TAG는 20자 이내로 입력해 주십시오.');
+        setDefaultPrompt();
+        return true;
+      }
+
+      // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "목록 출력방식" 재현 — NEW/OLD만 허용.
+      if (head === 'SET' && name === 'SORT' && value) {
+        const sortValue = value.trim().toUpperCase();
+        if (sortValue !== 'NEW' && sortValue !== 'OLD') {
+          setHint('SORT 값은 NEW(최신순) 또는 OLD(오래된순)만 가능합니다. 예: SET SORT OLD');
+          setDefaultPrompt();
+          return true;
+        }
       }
       if (head === 'UNSET' && !name) {
         setHint('사용법: UNSET [이름]\n예: UNSET SYSTEM_NAME');

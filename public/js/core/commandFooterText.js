@@ -31,7 +31,8 @@ export const CMD_ORDER = {
   // [LOG_ID: 20260716_1800] K:보관 — 하이텔 (10)-5 편지보관함(mbox).
   memoView: ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'K:보관', 'DD:삭제', 'H'],
   memoWrite: ['P:취소', 'SEND:전송', 'H'],
-  profile: ['P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260719_2300] ME:쪽지쓰기 — 나우로 웹프리 ID수첩("아이디 클릭 → 바로 쪽지 보내기") 재현.
+  profile: ['P', 'T', 'GO', 'ME:쪽지쓰기', 'H'],
   // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색 — 원전의 byid/byname 두 하위 항목을
   // 별도 화면이 아니라 한 화면의 두 명령으로 흡수했다(그냥 입력하면 아이디→이름 순 검색).
   memberSearch: ['BYID:아이디로', 'BYNAME:이름으로', 'P', 'T', 'GO', 'H'],
@@ -78,7 +79,11 @@ export const CMD_ORDER = {
   // 상위(P)·초기화면(T)와 여전히 중복이었다 — 진짜 추가 정보(1~4 분류 전환, B)만
   // 표준 체계로 흡수한다.
   rankingSummary: ['1:레벨', '2:글수', '3:추천', '4:조회', 'P', 'T', 'GO', 'H'],
-  rankingDetail: ['B:종합', '1:레벨', '2:글수', '3:추천', '4:조회', 'P', 'T', 'GO', 'H']
+  rankingDetail: ['B:종합', '1:레벨', '2:글수', '3:추천', '4:조회', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260720_1358] 오락실 게임 5종 — 진행/종료 공용(arcadePlay). 행맨은 진행 중
+  // 단일 알파벳이 전부 추측으로 소비되므로 내비게이션 키를 안내하지 않는다(hangmanPlay).
+  arcadePlay: ['L:새게임', 'P', 'T', 'GO', 'H'],
+  hangmanPlay: ['0:포기']
 };
 
 const SCREEN_TO_CATEGORY = {
@@ -115,6 +120,9 @@ const SCREEN_TO_CATEGORY = {
   'fortune-input': 'amusementInput', 'fortune-result': 'amusementView',
   'mbti-list': 'amusementInput', 'mbti-detail': 'amusementView',
   'retro-list': 'amusementInput', 'retro-view': 'amusementView',
+  // [LOG_ID: 20260720_1358] 오락실 게임 5종 (오목/오델로/숫자야구/영어단어맞추기/숫자판맞추기)
+  'omok-play': 'arcadePlay', 'oth-play': 'arcadePlay', 'base-play': 'arcadePlay',
+  'hangman-play': 'hangmanPlay', 'puzzle15-play': 'arcadePlay',
   'vote-list': 'voteList', 'vote-detail': 'voteDetail', 'vote-create': 'voteCreate',
   'ranking-summary': 'rankingSummary', 'ranking-detail': 'rankingDetail',
   'conf-rooms': 'confRooms', 'conf-agendas': 'confAgendas', 'conf-agenda': 'confAgenda',

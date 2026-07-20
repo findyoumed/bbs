@@ -55,6 +55,8 @@ export const CMD_META = {
   // [LOG_ID: 20260714_2100] 원전 UID(총 접속 ID 조회)/MSG(쪽지 수신 알림 ON·OFF) 명령 추가
   UID: { label: '접속자ID', tip: 'UID', priority: 24, cat: 'AUTH', desc: '현재 접속 중인 전체 이용자 ID 목록을 봅니다.' },
   MSG: { label: '쪽지알림', tip: 'MSG, MSG ON/OFF, MSG R', priority: 24, cat: 'AUTH', desc: '접속 시 새 쪽지 도착 알림을 켜거나 끕니다. MSG R로 받은쪽지함을 바로 확인합니다.' },
+  // [LOG_ID: 20260719_2200] 나우누리 원전 대화실 /BUDDY(접속 알림) 재현 — UID/WHO 접속자 목록에서 강조 표시
+  BUDDY: { label: '버디목록', tip: 'BUDDY [id], BUDDY DEL [id]', priority: 24, cat: 'AUTH', desc: '관심 있는 사용자를 버디로 등록합니다. UID/WHO 접속자 목록에서 ★로 강조됩니다.' },
   PF: { label: '프로필', tip: 'PF', priority: 25, cat: 'AUTH', desc: '사용자의 프로필 정보를 확인합니다.' },
   HI: { label: '내정보', tip: 'HI, MYINFO', priority: 20, cat: 'AUTH', desc: '나의 회원 정보를 확인하거나 수정합니다.' },
   MYINFO: { label: '내정보', tip: 'HI, MYINFO', priority: 20, cat: 'AUTH', desc: '나의 회원 정보를 확인하거나 수정합니다.' },

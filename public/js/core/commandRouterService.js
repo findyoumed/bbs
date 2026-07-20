@@ -14,8 +14,28 @@ export function createServiceCommandHandler(deps) {
     showFortuneResult,
     showMbti,
     showMbtiDetail,
+    showBlood,
+    showBloodResult,
+    showCompat,
+    showCompatStep2,
+    showCompatResult,
+    showTojeong,
+    showTojeongResult,
     showRetroArt,
     showRetroArtView,
+    // [LOG_ID: 20260720_1358] 오락실 게임 5종 (오목/오델로/숫자야구/영어단어맞추기/숫자판맞추기)
+    showOmok,
+    omokMove,
+    omokResign,
+    showOthello,
+    othelloMove,
+    showBaseball,
+    baseballGuess,
+    showHangman,
+    hangmanGuess,
+    hangmanResign,
+    showPuzzle15,
+    puzzle15Move,
     findMember,
     state,
     showToast
@@ -52,8 +72,37 @@ export function createServiceCommandHandler(deps) {
     if (s === 'fortune-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{4}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
     if (s === 'fortune-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showFortune(); return true; } if (/^\d{4}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
     if (s === 'mbti-list' || s === 'mbti-detail') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (s === 'mbti-detail' && cmd === 'L') { await showMbti(); return true; } if (/^(1[0-6]|[1-9]|[EI][SN][TF][JP])$/.test(cmd)) { await showMbtiDetail(cmd); return true; } return false; }
+    // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현 — 혈액형 성격진단/궁합/토정비결.
+    if (s === 'blood-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^(A|B|O|AB)$/i.test(cmd)) { await showBloodResult(cmd); return true; } return false; }
+    if (s === 'blood-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showBlood(); return true; } if (/^(A|B|O|AB)$/i.test(cmd)) { await showBloodResult(cmd); return true; } return false; }
+    if (s === 'compat-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showCompatStep2(rawCmd); return true; } return false; }
+    if (s === 'compat-input2') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showCompatResult(rawCmd); return true; } return false; }
+    if (s === 'compat-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showCompat(); return true; } return false; }
+    if (s === 'tojeong-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showTojeongResult(rawCmd); return true; } return false; }
+    if (s === 'tojeong-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showTojeong(); return true; } if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showTojeongResult(rawCmd); return true; } return false; }
     // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
     if (s === 'retro-list' || s === 'retro-view') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (s === 'retro-view' && cmd === 'L') { await showRetroArt(); return true; } if (/^\d+$/.test(cmd)) { return await showRetroArtView(cmd); } return false; }
+    // [LOG_ID: 20260720_1358] 천리안 원전 6.14.1 "컴퓨터와 게임을" — 오락실 게임 5종.
+    // 좌표(H8)·숫자는 반드시 숫자를 포함하므로 단일 문자 내비게이션(T/P/M/B/L)과 충돌하지 않는다.
+    // [LOG_ID: 20260720_1600] 천리안 원전 그림179 "/Q : 게임포기" 재현.
+    if (s === 'omok-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showOmok(); return true; } if (cmd === 'Q') return await omokResign(); const m = cmd.match(/^([A-O])\s*(1[0-5]|[1-9])$/); if (m) return await omokMove(m[1], Number(m[2])); return false; }
+    if (s === 'oth-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showOthello(); return true; } const m = cmd.match(/^([A-H])\s*([1-8])$/); if (m) return await othelloMove(m[1], Number(m[2])); return false; }
+    if (s === 'base-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showBaseball(); return true; } if (/^\d{3}$/.test(cmd)) return await baseballGuess(cmd); return false; }
+    if (s === 'puzzle15-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showPuzzle15(); return true; } if (/^(1[0-5]|[1-9])$/.test(cmd)) return await puzzle15Move(Number(cmd)); return false; }
+    // 행맨은 진행 중엔 단일 알파벳이 전부 "추측"이다(T/P/L 포함 — 화면·힌트바에 0:포기만 안내).
+    // 게임이 끝난 뒤에야 표준 내비게이션(T/P/M/B/L)이 살아난다.
+    if (s === 'hangman-play') {
+      const playing = state.serviceData?.kind === 'hangman' && state.serviceData?.status === 'play';
+      if (playing) {
+        if (cmd === '0') return await hangmanResign();
+        if (/^[A-Z]$/.test(cmd)) return await hangmanGuess(cmd);
+        return false;
+      }
+      if (cmd === 'T') { await showMain(); return true; }
+      if (['P', 'M', 'B'].includes(cmd)) return goGame();
+      if (cmd === 'L') { await showHangman(); return true; }
+      return false;
+    }
     // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색 — 아이디/이름으로 회원을 찾아 프로필로 연결.
     // 상위(P)는 이 항목이 속한 GUIDE로 간다(바이오리듬 등이 오락실로 돌아가는 것과 같은 방식).
     if (s === 'member-search') {

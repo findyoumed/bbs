@@ -1,4 +1,5 @@
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
+import { isBuddy } from './chatBuddies.js';
 
 /**
  * [LOG: 20260426_0200] 시스템 관련 ANSI 빌더 (Who is online 등)
@@ -163,19 +164,22 @@ export function createSystemAnsiBuilders(deps) {
       parts.push(`\n${ansiColor(8)}  접속 중인 사용자가 없습니다.${ANSI_RESET}`);
     } else {
       users.forEach((user, idx) => {
+        // [LOG_ID: 20260719_2200] 버디 강조(★) — ★는 이 폰트에서 광폭(2칸) 문자라 기존 leading
+        // 공백 두 칸("  ")과 폭이 정확히 같으므로 그대로 치환해도 컬럼 정렬이 흐트러지지 않는다.
+        const buddyPrefix = isBuddy(user.userId) ? `${ansiColor(11)}★${ANSI_RESET}` : '  ';
         if (isMobile) {
           const id = fitCell(user.userId || 'guest', 12);
           const nick = fitCell(user.nickName || '손님', 12);
           const path = fitCell(user.path || '/', 15);
           const color = user.isAdmin ? 13 : (user.isGuest ? 8 : 15);
-          parts.push(`  ${ansiColor(color)}${id} ${nick} ${ansiColor(14)}${path}${ANSI_RESET}`);
+          parts.push(`${buddyPrefix}${ansiColor(color)}${id} ${nick} ${ansiColor(14)}${path}${ANSI_RESET}`);
         } else {
           const id = fitCell(user.userId || 'guest', 15);
           const nick = fitCell(user.nickName || '손님', 16);
           const path = fitCell(user.path || '/', 24);
           const time = (user.lastSeenAt || '').split('T')[1]?.split('.')[0] || '--:--:--';
           const color = user.isAdmin ? 13 : (user.isGuest ? 8 : 15);
-          parts.push(`  ${ansiColor(color)}${id} ${nick} ${ansiColor(14)}${path} ${ansiColor(7)}${time}${ANSI_RESET}`);
+          parts.push(`${buddyPrefix}${ansiColor(color)}${id} ${nick} ${ansiColor(14)}${path} ${ansiColor(7)}${time}${ANSI_RESET}`);
         }
       });
     }

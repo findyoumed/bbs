@@ -101,6 +101,9 @@ export function createCommandDispatcherExecution(deps) {
   } = deps;
 
   async function executeSingleCommand(rawInput, context = {}) {
+    // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "자동접속 차단시간"(SET IDLE) 재현을 위한
+    // 유휴 시간 기준점 — 모든 명령 실행마다 갱신되며, app.js의 유휴 타이머가 이 값을 읽는다.
+    state._lastActivityTime = Date.now();
     const input = String(rawInput || '').trim();
     const sensitiveInput = isSensitiveCommandInput(state);
     const normalized = normalizeCommand(input, state.screen);

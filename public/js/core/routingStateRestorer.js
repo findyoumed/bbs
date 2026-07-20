@@ -54,8 +54,17 @@ export function createRoutingStateRestorer(deps) {
     showFortuneResult,
     showMbti,
     showMbtiDetail,
+    showBlood,
+    showCompat,
+    showTojeong,
     showRetroArt,
-    showRetroArtView
+    showRetroArtView,
+    // [LOG_ID: 20260720_1358] 오락실 게임 5종 (오목/오델로/숫자야구/영어단어맞추기/숫자판맞추기)
+    showOmok,
+    showOthello,
+    showBaseball,
+    showHangman,
+    showPuzzle15
   } = deps;
 
   // [LOG: 20260429_0206] Restore board write/edit URLs into the actual post-write
@@ -348,6 +357,12 @@ export function createRoutingStateRestorer(deps) {
     },
     // [LOG: 20260623_0013] game(ranking) 라우트 복구 핸들러 (origin/main 포팅)
     async game(segments) {
+      // [LOG_ID: 20260720_1450] /game/* 딥링크가 loadMenuTree() 를 거치지 않고 바로 showX(true)를
+      // 호출해 state.menuLookup 이 빈 채로 남는 버그 수정 — 이후 이 화면 안에서 updateURL()이 다시
+      // 불리면(예: 오목 L, 바이오리듬 재입력) getMenuNodeRoutePath 가 노드를 못 찾아 "/game/bio" 대신
+      // "/bio"로 떨어졌다(실측 확인, bio에서도 재현되는 기존 버그 — 이 game() 핸들러 자체의 결함).
+      // loadMenuTree()는 이미 로드됐으면 즉시 반환하므로(state.menuTree 캐시) 비용이 없다.
+      await loadMenuTree();
       const [, sub, param] = segments;
       // [LOG_ID: 20260623_1630] Restore local GAME utility routes that share /game/* with vote/ranking.
       if (sub === 'bio' || sub === 'biorhythm') {
@@ -361,6 +376,33 @@ export function createRoutingStateRestorer(deps) {
           return await showMbtiDetail(decodeURIComponent(param), true);
         }
         if (typeof showMbti === 'function') return await showMbti(true);
+      }
+      // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현 — 결과는 바이오리듬/오늘의운세와
+      // 동일하게 URL로 복원하지 않고 입력 화면으로 되돌린다.
+      if (sub === 'blood') {
+        if (typeof showBlood === 'function') return await showBlood(true);
+      }
+      if (sub === 'compat') {
+        if (typeof showCompat === 'function') return await showCompat(true);
+      }
+      if (sub === 'tojeong') {
+        if (typeof showTojeong === 'function') return await showTojeong(true);
+      }
+      // [LOG_ID: 20260720_1358] 오락실 게임 5종 — 진행 상태는 URL로 복원하지 않고 새 게임으로 시작한다.
+      if (sub === 'omok') {
+        if (typeof showOmok === 'function') return await showOmok(true);
+      }
+      if (sub === 'oth') {
+        if (typeof showOthello === 'function') return await showOthello(true);
+      }
+      if (sub === 'base') {
+        if (typeof showBaseball === 'function') return await showBaseball(true);
+      }
+      if (sub === 'hangman') {
+        if (typeof showHangman === 'function') return await showHangman(true);
+      }
+      if (sub === '16p') {
+        if (typeof showPuzzle15 === 'function') return await showPuzzle15(true);
       }
       // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
       if (sub === 'retro') {
@@ -441,8 +483,18 @@ export function createRoutingStateRestorer(deps) {
         if (routeNode.type === 'biorhythm' && typeof showBiorhythm === 'function') return await showBiorhythm(true);
         if (routeNode.type === 'fortune' && typeof showFortune === 'function') return await showFortune(true);
         if (routeNode.type === 'mbti' && typeof showMbti === 'function') return remainingSegments[0] && typeof showMbtiDetail === 'function' ? await showMbtiDetail(remainingSegments[0], true) : await showMbti(true);
+        // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현
+        if (routeNode.type === 'blood' && typeof showBlood === 'function') return await showBlood(true);
+        if (routeNode.type === 'compat' && typeof showCompat === 'function') return await showCompat(true);
+        if (routeNode.type === 'tojeong' && typeof showTojeong === 'function') return await showTojeong(true);
         // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
         if (routeNode.type === 'retro-art' && typeof showRetroArt === 'function') return remainingSegments[0] && typeof showRetroArtView === 'function' && await showRetroArtView(remainingSegments[0], true) ? true : await showRetroArt(true);
+        // [LOG_ID: 20260720_1358] 오락실 게임 5종 — 새로고침/딥링크 시 새 게임으로 시작
+        if (routeNode.type === 'omok' && typeof showOmok === 'function') return await showOmok(true);
+        if (routeNode.type === 'othello' && typeof showOthello === 'function') return await showOthello(true);
+        if (routeNode.type === 'baseball' && typeof showBaseball === 'function') return await showBaseball(true);
+        if (routeNode.type === 'hangman' && typeof showHangman === 'function') return await showHangman(true);
+        if (routeNode.type === 'puzzle15' && typeof showPuzzle15 === 'function') return await showPuzzle15(true);
         // [LOG_ID: 20260713_1700] 쪽지함(전자우편) 메인 메뉴 진입점 — /memo 직접 접속/새로고침 복원
         if (routeNode.type === 'memo' && typeof showMemoList === 'function') return await showMemoList(true);
       }

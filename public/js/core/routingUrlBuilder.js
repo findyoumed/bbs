@@ -126,6 +126,20 @@ export function createRoutingUrlBuilder(deps) {
       case 'fortune-result': return getMenuNodeRoutePath('fortune');
       case 'mbti-list': return getMenuNodeRoutePath('mbti');
       case 'mbti-detail': return `${getMenuNodeRoutePath('mbti')}/${encodeURIComponent(state._mbtiCode || '')}`;
+      // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현
+      case 'blood-input':
+      case 'blood-result': return getMenuNodeRoutePath('blood');
+      case 'compat-input':
+      case 'compat-input2':
+      case 'compat-result': return getMenuNodeRoutePath('compat');
+      case 'tojeong-input':
+      case 'tojeong-result': return getMenuNodeRoutePath('tojeong');
+      // [LOG_ID: 20260720_1358] 오락실 게임 5종 — 진행 상태는 URL로 복원하지 않는다(새로고침=새 게임).
+      case 'omok-play': return getMenuNodeRoutePath('omok');
+      case 'oth-play': return getMenuNodeRoutePath('oth');
+      case 'base-play': return getMenuNodeRoutePath('base');
+      case 'hangman-play': return getMenuNodeRoutePath('hangman');
+      case 'puzzle15-play': return getMenuNodeRoutePath('16p');
       // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
       case 'retro-list': return getMenuNodeRoutePath('retro');
       case 'retro-view': return `${getMenuNodeRoutePath('retro')}/${encodeURIComponent(serviceData?.artKey || '')}`;

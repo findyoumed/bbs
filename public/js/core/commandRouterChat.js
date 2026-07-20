@@ -1,5 +1,20 @@
 import { renderAnsiScreenWithTopbar } from './ansiTopbarScreen.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
+import { isBuddy } from './chatBuddies.js';
+
+// [LOG_ID: 20260719_2200] "할 수 있다: PC통신에서 인터넷까지" 대조 — 천리안 원전 대화실
+// 표현명령어(/V로 목록, 예: 웃다/박수/인사) 재현. 서버 데이터 없이 고정 문구만 조합하는
+// 자족적 콘텐츠라 GAME 메뉴의 혈액형/궁합/토정비결과 같은 리스크 없는 패턴이다.
+const EMOTE_ACTIONS = {
+  '미소': '웃습니다',
+  '박수': '박수를 칩니다',
+  '인사': '인사를 합니다',
+  '윙크': '윙크를 합니다',
+  '한숨': '한숨을 쉽니다',
+  '눈물': '눈물을 흘립니다',
+  '춤': '춤을 춥니다',
+  '만세': '만세를 부릅니다'
+};
 
 export function createChatCommandHandler(deps) {
   const {
@@ -308,7 +323,11 @@ export function createChatCommandHandler(deps) {
         if (slashCmd === 'USER') {
           try {
             const users = await apiFetch('/api/system/active-users');
-            const ids = (Array.isArray(users) ? users : []).map((u) => u.userId).filter(Boolean);
+            // [LOG_ID: 20260719_2200] BUDDY로 등록한 아이디는 ★ 표시로 강조한다.
+            const ids = (Array.isArray(users) ? users : [])
+              .map((u) => u.userId)
+              .filter(Boolean)
+              .map((id) => (isBuddy(id) ? `★${id}` : id));
             setHint(ids.length ? `현재 전체 접속자 ID: ${ids.join(', ')} (총 ${ids.length}명)` : '접속자 정보를 확인할 수 없습니다.');
           } catch (e) {
             setHint('접속자 목록 조회에 실패했습니다.');
@@ -499,6 +518,43 @@ export function createChatCommandHandler(deps) {
           return true;
         }
 
+        // [LOG_ID: 20260719_2200] 표현명령어(이모트) 목록 안내
+        if (slashCmd === 'V' || slashCmd === 'EMOTE') {
+          const list = Object.keys(EMOTE_ACTIONS).map((keyword) => `/${keyword}`).join(', ');
+          setHint(`사용 가능한 표현명령어: ${list}`);
+          return true;
+        }
+
+        // [LOG_ID: 20260719_2200] 표현명령어(이모트) 실행 — 일반 메시지 전송과 동일한 API를
+        // 재사용하되, 내용만 "OOO님이 웃습니다" 형태의 3인칭 문구로 대체한다.
+        if (EMOTE_ACTIONS[slashCmd]) {
+          const nick = state.user?.nickName || '나';
+          const emoteText = `☆ ${nick}님이 ${EMOTE_ACTIONS[slashCmd]} ☆`;
+          apiFetch(`/api/chat/rooms/${encodeURIComponent(state._chatRoomId)}/messages`, {
+            method: 'POST',
+            body: JSON.stringify({ content: emoteText, sessionKey: state._chatSessionKey })
+          })
+          .then(() => {
+            state._chatMessages = state._chatMessages || [];
+            state._chatMessages.push({
+              userId: state.user?.userId || 'me',
+              nickName: nick,
+              content: emoteText,
+              createdAt: new Date().toISOString()
+            });
+            const muted = state._chatMutedUserIds;
+            const visibleMessages = muted && muted.size
+              ? (state._chatMessages || []).filter((m) => !muted.has(m.userId))
+              : (state._chatMessages || []);
+            const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick, state.user?.userId);
+            renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });
+          })
+          .catch((err) => {
+            setHint(`전송 실패: ${err.message}`);
+          });
+          return true;
+        }
+
         // [LOG: 20260507_1500] Unknown chat slash commands are ignored without footer noise.
         setHint('');
         return true;
@@ -508,7 +564,12 @@ export function createChatCommandHandler(deps) {
       if (input) {
         // [LOG: 20260429_0005] 일반 채팅 메시지는 명령 정규화 결과가 아니라
         // 사용자가 입력한 원문을 그대로 보내야 Playwright/실제 UI와 일치한다.
-        const messageText = String(input || '').trim();
+        // [LOG_ID: 20260719_2200] SET TAG로 등록한 덧말(태그라인)을 매 메시지 끝에 자동 첨부한다
+        // (새롬 데이타맨 프로 "덧말" 개념 — 원본은 로컬 클라이언트 UI 기능이라 그대로 이식할 대상이
+        // 없지만, 결과물인 "메시지마다 짧은 문구가 자동으로 붙는다"는 기존 SET envVar로 재현 가능).
+        const typedText = String(input || '').trim();
+        const tag = String(state.envVars?.TAG || '').trim();
+        const messageText = tag ? `${typedText} (${tag})` : typedText;
 
         // [LOG: 20260411_2330] 메시지 전송 후 즉시 화면 갱신 (Optimistic UI)
         try {

@@ -5,7 +5,11 @@ export function isWideChar(ch) {
   if (!ch) return false;
   const cp = ch.codePointAt(0);
   // [LOG: 20260713_1300] ◎, ●, ☎는 이 폰트에서 1칸(반각)이므로 광폭 문자 판정에서 제외한다.
-  if (cp === 0x25CE || cp === 0x25CF || cp === 0x260E) return false;
+  // [LOG_ID: 20260720_1530] ○(U+25CB, 오목/오델로 백돌)도 실측 결과 이 폰트에서 1칸이다 — 짝인
+  // ●만 제외 목록에 있고 ○는 빠져 있어서, CSS(.wc { width:2ch })가 억지로 2칸 상자에 가운데
+  // 정렬시키는 바람에 돌이 작고 흐릿하게 보이고 그 칸부터 가로줄 정렬이 밀려 삐뚤어져 보였다
+  // (사용자 실측 지적: "동그라미가 잘 안보이고 선이 삐뚤게 되어 있어").
+  if (cp === 0x25CE || cp === 0x25CF || cp === 0x25CB || cp === 0x260E) return false;
   // [LOG: 20260427_1150] CJK Unified Ideographs (Hanja) + Hangul + Full-width Symbols
   // [LOG: 20260428_2225] Include CJK Extension A / Compatibility Ideographs so titles like "李" occupy 2 cells
   // [LOG: 20260610_1423] Include CJK Enclosed Letters and Months (U+3200-U+32FF) like ㈜ to display as wide chars
@@ -45,11 +49,24 @@ function isMainStatsLine(text) {
   return source.includes('[nummembers]') || source.includes('[numarticles]');
 }
 
+// [LOG_ID: 20260720_1545] 오목/오델로 돌(●U+25CF/○U+25CB)이 폰트 원본 글리프 자체가 작아
+// 굵게(bold)만으로는 여전히 잘 안 보인다는 실측 지적(2차) — 폭은 그대로 1칸으로 두되
+// 글자 크기만 CSS로 키운다(.stone, style.css). isWideChar처럼 "2칸으로 세는" 방식이 아니라
+// 시각적으로만 커 보이게 하는 것이라 displayWidth/커서·핫스팟 좌표 계산에는 영향이 없다.
+// 이 두 글자는 escCell을 타는 다른 화면에서 쓰이지 않는다(확인됨 — 전부 주석이거나 DOM
+// textContent 직접 대입이라 이 함수를 거치지 않음), 그래서 전역 공유 함수를 안전하게 바꿀 수 있다.
+function isStoneChar(ch) {
+  const cp = ch?.codePointAt(0);
+  return cp === 0x25CF || cp === 0x25CB;
+}
+
 function escCell(text) {
   let result = '';
   for (const ch of String(text || '')) {
     const escaped = ch === '&' ? '&amp;' : ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : ch;
-    if (isWideChar(ch)) {
+    if (isStoneChar(ch)) {
+      result += `<span class="stone">${escaped}</span>`;
+    } else if (isWideChar(ch)) {
       result += `<span class="wc">${escaped}</span>`;
     } else {
       result += escaped;

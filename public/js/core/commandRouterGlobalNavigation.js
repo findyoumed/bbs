@@ -1,4 +1,5 @@
 import { CMD_META } from './commandService.js';
+import { listBuddies, addBuddy, removeBuddy } from './chatBuddies.js';
 
 export function createGlobalNavigationCommandHandler(deps) {
   const {
@@ -275,6 +276,24 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260719_2300] "할 수 있다: 나우누리에서 인터넷까지" 대조 — 나우로 웹프리
+    // 클라이언트의 ID수첩("아이디를 클릭 → 바로 쪽지/편지 보내기") 재현. 프로필 화면은
+    // HISTORY_BACK_SCREENS(P/M/T/B만 지원)에 있어 여기서 W/ME/MEMO를 가로채지 않으면 아래
+    // 전역 ME/MEMO 분기가 항상 받은편지함으로 보내버려, 프로필에서 본 상대에게 쪽지를 쓰려면
+    // 아이디를 다시 손으로 입력해야 했다.
+    if (state.screen === 'profile' && (cmd === 'W' || cmd === 'ME' || cmd === 'MEMO')) {
+      if (state.user?.isGuest) {
+        setHint('쪽지 기능은 로그인 후 사용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+      if (typeof showMemoWrite === 'function') {
+        await showMemoWrite(state._profileUserId || '');
+        return true;
+      }
+      return false;
+    }
+
     // [LOG_ID: 20260713_1160] 전역 ME / MEMO / CMAIL 명령어 배선 추가 (나우누리 편지함 조회)
     // [LOG_ID: 20260714_1900] RMAIL(편지읽기)/MAIL(전자우편 진입) 추가 — 원전(NOW_MENU.DAT)의
     // "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)" 4개 명령
@@ -337,6 +356,34 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260719_2200] 나우누리 원전 대화실 /BUDDY(접속 알림) 재현 — 실시간 푸시가 없어
+    // "즉시 알림"까지는 못 가지만, UID/WHO 접속자 목록에서 버디를 강조 표시하는 조회형으로 스코프를
+    // 좁혔다(buildActiveUsersAnsi에서 isBuddy 참조). 인자는 아이디 대소문자를 보존해야 하므로
+    // 전부 대문자로 바뀐 cmd가 아니라 rawCmd에서 뽑는다.
+    if (cmd === 'BUDDY' || cmd.startsWith('BUDDY ')) {
+      const arg = String(rawCmd || '').replace(/^BUDDY\s*/i, '').trim();
+      if (!arg) {
+        const buddies = listBuddies();
+        setHint(buddies.length
+          ? `버디 목록: ${buddies.join(', ')}\n사용법: BUDDY [id](등록), BUDDY DEL [id](삭제)`
+          : '등록된 버디가 없습니다.\n사용법: BUDDY [id]');
+        setDefaultPrompt();
+        return true;
+      }
+      const delMatch = arg.match(/^DEL\s+(.+)$/i);
+      if (delMatch) {
+        const targetId = delMatch[1].trim();
+        const removed = removeBuddy(targetId);
+        setHint(removed ? `[${targetId}]님을 버디 목록에서 삭제했습니다.` : `[${targetId}]님은 버디 목록에 없습니다.`);
+        setDefaultPrompt();
+        return true;
+      }
+      addBuddy(arg);
+      setHint(`[${arg}]님을 버디로 등록했습니다. (UID/WHO 목록에서 ★로 표시됩니다)`);
+      setDefaultPrompt();
+      return true;
+    }
+
     if (cmd === 'CLS' || cmd === 'CLEAR') {
       if (typeof deps.renderScreenSequential === 'function') {
         await deps.renderScreenSequential('', { clear: true });
@@ -375,7 +422,20 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'Q' || cmd === 'EXIT' || cmd === 'BYE' || cmd === 'X' || cmd === 'LOGOUT') {
+    // [LOG_ID: 20260719_1600] 천리안 원전 6.4.2 재현 — BYE는 확인 없이 즉시 종료, X는 확인 후 종료로
+    // 구분된다(원전: "X 명령을 사용하여 접속을 끝마칠 경우에는 정말로 접속을 종료할 것인지를
+    // 물어오지만 BYE 명령을 사용하여 접속을 종료한다면 접속종료 여부를 묻지 않고 즉시 접속을
+    // 종료하게 된다"). Q/EXIT/LOGOUT은 기존처럼 확인 절차를 유지한다.
+    if (cmd === 'BYE') {
+      setHint('안녕히 가십시오.');
+      await new Promise((r) => setTimeout(r, 400));
+      if (!state.user?.isGuest) {
+        await doLogout();
+      }
+      window.location.assign('/');
+      return true;
+    }
+    if (cmd === 'Q' || cmd === 'EXIT' || cmd === 'X' || cmd === 'LOGOUT') {
       // [LOG_ID: 20260713_1130] 하이텔식 종료 확인 시퀀스로 전환
       state._exitConfirm = true;
       setHint('* 끝내시려면 \'Y\' 를 누르고 엔터키를 누르십시오');

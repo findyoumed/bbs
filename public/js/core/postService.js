@@ -5,6 +5,14 @@ export function createPostService(deps) {
   const listCache = new Map();
   const postCache = new Map();
 
+  // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "목록 출력방식"(SET SORT) 재현.
+  // 서버는 최신순(내림차순)으로 페이지 단위를 내려주므로, OLD 설정 시 현재 페이지 안에서만
+  // 순서를 뒤집는다(페이지 경계를 다시 계산하는 서버 정렬 파라미터까지는 이번 스코프가 아니다).
+  function applySortOrder(items) {
+    const sort = String(state.envVars?.SORT || '').trim().toUpperCase();
+    return sort === 'OLD' ? [...items].reverse() : items;
+  }
+
   function normalizePostListResponse(data, fallbackPage) {
     return {
       board: data?.board || null,
@@ -45,7 +53,7 @@ export function createPostService(deps) {
     const cacheKey = buildListCacheKey(boardId, page, searchParams);
     if (listCache.has(cacheKey)) {
       const cached = listCache.get(cacheKey);
-      state.posts = cached.items;
+      state.posts = applySortOrder(cached.items);
       state.totalCount = cached.totalCount;
       state.totalPages = cached.totalPages;
       state.page = cached.page;
@@ -63,7 +71,7 @@ export function createPostService(deps) {
     // 결과 캐싱
     listCache.set(cacheKey, data);
     
-    state.posts = data.items;
+    state.posts = applySortOrder(data.items);
     state.totalCount = data.totalCount;
     state.totalPages = data.totalPages;
     state.page = data.page;

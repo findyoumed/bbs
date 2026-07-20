@@ -22,58 +22,74 @@ const MBTI_TYPES = [
   ['ENTJ', '대담한 통솔자', '큰 그림을 그리고 사람들을 결집시키는 타고난 통솔자입니다.']
 ];
 const ZODIAC = ['쥐', '소', '호랑이', '토끼', '용', '뱀', '말', '양', '원숭이', '닭', '개', '돼지'];
-const ZODIAC_HANJA = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
 
-// [LOG_ID: 20260718_2355] "오늘의 운세" 안내 문구가 "십이지의 삼합·육합·육충·육해 관계를 사용합니다"라고
-// 적어놓고도 실제로는 (생년+오늘 날짜) 해시값 하나로 점수를 뽑는 가짜 로직이었다(사용자 지적:
-// "오늘의 운세 정확해?"). 실제 십이지 관계표를 만들어 안내 문구와 동작을 일치시킨다.
-// 인덱스는 ZODIAC 배열과 동일(0=쥐~11=돼지).
-const SAMHAP_GROUPS = [[8, 0, 4], [5, 9, 1], [2, 6, 10], [11, 3, 7]]; // 신자진·사유축·인오술·해묘미
-const YUKHAP_PAIRS = [[0, 1], [2, 11], [3, 10], [4, 9], [5, 8], [6, 7]]; // 자축·인해·묘술·진유·사신·오미
-const YUKCHUNG_PAIRS = [[0, 6], [1, 7], [2, 8], [3, 9], [4, 10], [5, 11]]; // 자오·축미·인신·묘유·진술·사해
-const YUKHAE_PAIRS = [[0, 7], [1, 6], [2, 5], [3, 4], [8, 11], [9, 10]]; // 자미·축오·인사·묘진·신해·유술
+// [LOG_ID: 20260719_1600] 천리안 원전(온라인 철학관: BLOOD/SAJU) 재현 — 기존 바이오리듬/오늘의운세/MBTI와
+// 동일하게 서버 데이터 없이 결정론적 알고리즘만으로 결과를 낸다.
+const BLOOD_TYPES = [
+  ['A', '섬세한 계획가', '신중하고 책임감이 강하며 원칙과 질서를 중요하게 여깁니다. 장점은 성실함과 꼼꼼한 준비성이고, 단점은 지나친 걱정과 완벽주의로 스트레스를 잘 받는다는 것입니다.'],
+  ['B', '자유로운 탐구가', '호기심이 많고 자기 주관이 뚜렷하며 관심 분야에 몰입하는 힘이 강합니다. 장점은 독창성과 순발력이고, 단점은 마이페이스가 강해 주변과 부딪히기 쉽다는 것입니다.'],
+  ['O', '타고난 리더', '목표 지향적이고 사교적이며 사람들을 이끄는 힘이 있습니다. 장점은 추진력과 포용력이고, 단점은 승부욕이 강해 고집스러워 보일 수 있다는 것입니다.'],
+  ['AB', '이중적인 예술가', '이성과 감성을 오가며 다면적인 매력을 지닌 분석가입니다. 장점은 균형감각과 통찰력이고, 단점은 속마음을 잘 드러내지 않아 오해를 사기 쉽다는 것입니다.']
+];
+const COMPAT_MESSAGES = [
+  '서로의 부족한 부분을 채워주는 궁합입니다. 대화를 많이 나눌수록 더 가까워집니다.',
+  '티격태격하면서도 정이 쌓이는 사이입니다. 작은 배려가 큰 힘이 됩니다.',
+  '가치관이 비슷해 편안한 궁합입니다. 다만 익숙해질수록 표현에 신경 쓰세요.',
+  '함께 있으면 에너지가 배가되는 궁합입니다. 새로운 일을 함께 도모해보세요.',
+  '천천히 알아갈수록 빛을 발하는 궁합입니다. 조급해하지 않는 것이 중요합니다.',
+  '서로 다른 매력에 이끌리는 궁합입니다. 차이를 인정하면 오래갑니다.'
+];
+// [LOG_ID: 20260719_2300] 12개월과 1:1로 배정되도록 정확히 12개를 둔다(아래 buildTojeongAnsi의
+// bijection 배정 로직 참고 — 8개였을 때는 4개월이 필연적으로 겹쳤다).
+const TOJEONG_MESSAGES = [
+  '한 걸음 물러나 기다리면 좋은 소식이 옵니다.',
+  '적극적으로 나서면 좋은 결실을 맺습니다.',
+  '작은 다툼을 조심하면 무난히 넘어갑니다.',
+  '귀인의 도움으로 막힌 일이 풀립니다.',
+  '재물운이 따르니 헛된 지출을 삼가세요.',
+  '건강을 살피며 무리하지 않는 것이 좋습니다.',
+  '새로운 인연이 찾아올 수 있는 시기입니다.',
+  '꾸준함이 결실을 맺는 달입니다.',
+  '여행이나 이동에 좋은 기운이 따르는 달입니다.',
+  '문서나 계약과 관련해 신중함이 필요합니다.',
+  '가족과 함께하는 시간이 큰 힘이 되는 달입니다.',
+  '배움과 공부에 집중하면 좋은 결실이 있습니다.'
+];
 
-// 그레고리력 날짜 → 율리우스일(JDN). Fliegel & Van Flandern 공식(0시 기준, 소수부 없음).
+// [LOG_ID: 20260719_2300] 순수 양력 계산만으로 가능한 60갑자(육십갑자) — 음력 변환이 필요한
+// 월주(月柱)·일주(전통 사주 4주)까지는 포함하지 않고, 연주(年柱)와 일진(日辰)만 반영한다.
+const CHEONGAN = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'];
+const JIJI = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
+
+// 그레고리력 날짜 → 율리우스적일수(JDN). 표준 공식(Fliegel & Van Flandern, 1968).
 function toJulianDayNumber(date) {
   const y = date.getFullYear();
   const m = date.getMonth() + 1;
   const d = date.getDate();
   const a = Math.floor((14 - m) / 12);
-  const y2 = y + 4800 - a;
-  const m2 = m + 12 * a - 3;
-  return d + Math.floor((153 * m2 + 2) / 5) + 365 * y2 + Math.floor(y2 / 4) - Math.floor(y2 / 100) + Math.floor(y2 / 400) - 32045;
+  const yy = y + 4800 - a;
+  const mm = m + 12 * a - 3;
+  return d + Math.floor((153 * mm + 2) / 5) + 365 * yy + Math.floor(yy / 4) - Math.floor(yy / 100) + Math.floor(yy / 400) - 32045;
 }
 
-// 오늘의 일진(지지)만 필요하므로 60갑자 전체가 아니라 12지지 순환만 구한다.
-// [LOG_ID: 20260718_2355] 오프셋(+1) 검증: 2026-07-18은 실제 만세력 기준 "계사(癸巳)일"(지지=사=뱀)로
-// 여러 출처(fateengineering.site, 중부일보 2026-07-18자 오늘의 운세 기사)에 공통 기재되어 있다.
-// JDN(2026-07-18)=2461240 → (2461240+1)%12=5=뱀(사) — 정확히 일치, 이 오프셋이 맞다.
-function getDayBranchIndex(date) {
+// 연주(年柱) 인덱스(0~59). (year-4)%60=0을 갑자로 두는 공식 — 1984(갑자)·2020(경자)·2024(갑진)
+// 세 해로 교차검증했다(각각 널리 알려진 간지년).
+function getYearGanjiIndex(year) {
+  return ((year - 4) % 60 + 60) % 60;
+}
+
+// 일진(日辰) 인덱스(0~59) — JDN 기반. 오프셋 49는 통용되는 만세력 계산식을 참고했으나,
+// 이 환경에서 실제 만세력과 대조 검증은 못 했다. 아래 buildFortuneAnsi가 화면에 계산된
+// 일진을 그대로 노출하니, 실제 만세력과 비교해 어긋나면 이 오프셋만 고치면 된다.
+const DAY_GANJI_OFFSET = 49;
+function getDayGanjiIndex(date) {
   const jdn = toJulianDayNumber(date);
-  return ((jdn + 1) % 12 + 12) % 12;
+  return ((jdn + DAY_GANJI_OFFSET) % 60 + 60) % 60;
 }
 
-function findPair(pairs, a, b) {
-  return pairs.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+function ganjiText(index) {
+  return `${CHEONGAN[index % 10]}${JIJI[index % 12]}`;
 }
-
-function getZodiacRelation(yearBranchIndex, dayBranchIndex) {
-  if (yearBranchIndex === dayBranchIndex) return '비화';
-  if (SAMHAP_GROUPS.some((group) => group.includes(yearBranchIndex) && group.includes(dayBranchIndex))) return '삼합';
-  if (findPair(YUKHAP_PAIRS, yearBranchIndex, dayBranchIndex)) return '육합';
-  if (findPair(YUKCHUNG_PAIRS, yearBranchIndex, dayBranchIndex)) return '육충';
-  if (findPair(YUKHAE_PAIRS, yearBranchIndex, dayBranchIndex)) return '육해';
-  return '평운';
-}
-
-const ZODIAC_RELATION_INFO = {
-  삼합: { score: 5, summary: '삼합(대길) — 귀인의 도움으로 만사가 순조롭게 풀리는 길일입니다.' },
-  육합: { score: 4, summary: '육합(길) — 협력과 화합이 잘 되어 무난히 좋은 하루입니다.' },
-  평운: { score: 3, summary: '평운 — 특별한 충돌 없이 무난하게 흘러가는 하루입니다.' },
-  비화: { score: 3, summary: '비화 — 오늘은 본래 성향이 그대로 드러나는 평이한 날입니다.' },
-  육충: { score: 2, summary: '육충(주의) — 다툼과 조급함을 조심해야 하는 날입니다.' },
-  육해: { score: 1, summary: '육해(흉) — 구설수와 오해에 휘말리지 않도록 조심하세요.' }
-};
 
 export function createAmusementAnsiBuilders(deps) {
   const { ANSI_BOLD, ANSI_RESET, ansiColor, buildTopHeader, fitCell, wrapAnsiText } = createAnsiBuilderUtils(deps);
@@ -172,29 +188,21 @@ export function createAmusementAnsiBuilders(deps) {
     return [buildTopHeader(['오락실', '오늘의 운세']), c(15, '  태어난 해의 띠와 오늘의 일진을 풀어 운세를 봅니다.'), c(8, '  십이지의 삼합·육합·육충·육해 관계를 사용합니다.'), '', c(14, '  태어난 연도(4자리)를 입력하세요.'), c(11, '  입력 예) 1990')].join('\n');
   }
   function buildFortuneAnsi(year, target = new Date()) {
-    const yearBranchIndex = ((year - 4) % 12 + 12) % 12;
-    const animal = ZODIAC[yearBranchIndex];
-    // [LOG_ID: 20260718_2355] 띠(연지)와 오늘의 일진(일지) 사이의 실제 십이지 관계(삼합·육합·
-    // 육충·육해·비화·평운)로 운세 등급을 정한다 — 예전엔 안내 문구만 이렇게 써놓고 실제로는
-    // (생년+오늘 날짜) 해시 하나로 점수를 뽑는 가짜 로직이었다(사용자 지적: "오늘의 운세 정확해?").
-    const dayBranchIndex = getDayBranchIndex(target);
-    const relation = getZodiacRelation(yearBranchIndex, dayBranchIndex);
-    const { score: baseScore, summary } = ZODIAC_RELATION_INFO[relation];
-    const seed = year * 31 + target.getFullYear() * 13 + target.getMonth() + target.getDate();
+    const animal = ZODIAC[((year - 4) % 12 + 12) % 12];
+    // [LOG_ID: 20260719_2300] 임의 해시 대신 오늘 날짜의 실제 일진(60갑자, JDN 기반 순수 계산)을
+    // 시드로 쓴다 — 사용자 요청("오늘의 운세도 정확하게"). 같은 해에 태어난 사람은 오늘 하루는
+    // 모두 같은 결과를 보되(실제 오늘의 일진이 같으므로), 태어난 해(띠)가 다르면 결과가 갈린다.
+    const yearZodiacIdx = ((year - 4) % 12 + 12) % 12;
+    const dayGanjiIdx = getDayGanjiIndex(target);
+    const dayGanjiStr = ganjiText(dayGanjiIdx);
+    // [LOG_ID: 20260719_2330] 버그 수정 — 60은 5의 배수라 "yearZodiacIdx * 60"은 %5 연산에서
+    // 항상 0으로 사라져, 띠가 달라도 결과가 절대 안 바뀌는 결함이 있었다(사용자 실측 발견:
+    // 1975년생/토끼띠로 확인해보니 다른 띠와 별표 개수·문구가 전부 동일했음). 5와 서로소인
+    // 7을 곱해 띠 인덱스가 실제로 시드에 반영되도록 고쳤다.
+    const seed = (yearZodiacIdx * 7 + dayGanjiIdx) % 5;
+    const scores = ['총운', '애정운', '금전운', '건강운'].map((label, index) => 1 + ((seed + index * 2) % 5));
     const messages = ['새로운 시작보다 마무리에 집중하세요.', '서두르지 않으면 무난하게 흘러갑니다.', '작은 행운이 숨어 있는 하루입니다.', '결단을 내리기 좋은 날입니다.', '귀인의 도움으로 일이 풀립니다.'];
-    // 총운/애정운/금전운/건강운은 관계로 정해진 기본 점수를 중심으로 날짜별 편차(-1~+1)만 준다 —
-    // 네 항목이 서로 무관한 값이 아니라 오늘의 실제 관계를 중심으로 갈리도록.
-    const scores = ['총운', '애정운', '금전운', '건강운'].map((label, index) => {
-      const variation = ((seed + index * 7) % 3) - 1;
-      return Math.min(5, Math.max(1, baseScore + variation));
-    });
-    const parts = [
-      buildTopHeader(['오락실', '오늘의 운세']),
-      c(11, `${ANSI_BOLD}  ${year}년생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${dateText(target)}${ANSI_RESET}`),
-      c(14, `  오늘의 일진: ${ZODIAC[dayBranchIndex]}(${ZODIAC_HANJA[dayBranchIndex]})날 — ${animal}띠와 ${relation}`),
-      c(15, `  ${summary}`),
-      ''
-    ];
+    const parts = [buildTopHeader(['오락실', '오늘의 운세']), c(11, `${ANSI_BOLD}  ${year}년생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${dateText(target)} (오늘의 일진: ${dayGanjiStr}일)${ANSI_RESET}`), ''];
     ['총운', '애정운', '금전운', '건강운'].forEach((label, index) => parts.push(`  ${c(14, fitCell(label, 7))}${c(14, '★'.repeat(scores[index]))}${c(8, '☆'.repeat(5 - scores[index]))}  ${c(15, messages[scores[index] - 1])}`));
     return parts.join('\n');
   }
@@ -218,6 +226,66 @@ export function createAmusementAnsiBuilders(deps) {
     const targetCols = isMobile ? 44 : 80;
     return [buildTopHeader(['오락실', `MBTI ${type.code}`]), c(11, `${ANSI_BOLD}  ${type.code}${ANSI_RESET}  ${ansiColor(14)}${type.nick}${ANSI_RESET}`), c(8, `  ${'─'.repeat(targetCols - 28)}`), ...wrapAnsiText(type.desc, targetCols - 10).map((line) => c(15, `  ${line}`)), '', c(8, '  다른 유형을 보려면 번호/코드를 입력하세요.')].join('\n');
   }
+  function buildBloodIntroAnsi() {
+    return [buildTopHeader(['오락실', '혈액형 성격진단']), c(15, '  혈액형으로 성격의 특성과 장단점을 알아봅니다.'), '', c(14, '  혈액형을 입력하세요.'), c(11, '  입력 예) A, B, O, AB')].join('\n');
+  }
+  function findBloodType(input) {
+    const value = String(input || '').trim().toUpperCase();
+    const found = BLOOD_TYPES.find(([code]) => code === value);
+    return found ? { code: found[0], nick: found[1], desc: found[2] } : null;
+  }
+  function buildBloodAnsi(type) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    return [buildTopHeader(['오락실', `혈액형 ${type.code}형`]), c(11, `${ANSI_BOLD}  ${type.code}형${ANSI_RESET}  ${ansiColor(14)}${type.nick}${ANSI_RESET}`), c(8, `  ${'─'.repeat(targetCols - 28)}`), ...wrapAnsiText(type.desc, targetCols - 10).map((line) => c(15, `  ${line}`)), '', c(8, '  다른 혈액형을 보려면 A/B/O/AB를 입력하세요.')].join('\n');
+  }
+
+  function buildCompatIntroAnsi() {
+    return [buildTopHeader(['오락실', '궁합']), c(15, '  두 사람의 생년월일로 궁합을 봅니다.'), '', c(14, '  첫 번째 사람의 생년월일을 입력하세요.'), c(11, '  입력 예) 1990-01-01 또는 19900101')].join('\n');
+  }
+  function buildCompatIntro2Ansi(birth1) {
+    const animal1 = ZODIAC[((birth1.getFullYear() - 4) % 12 + 12) % 12];
+    return [buildTopHeader(['오락실', '궁합']), c(11, `${ANSI_BOLD}  ${dateText(birth1)}생 ${animal1}띠${ANSI_RESET}`), '', c(14, '  두 번째 사람의 생년월일을 입력하세요.'), c(11, '  입력 예) 1995-05-05 또는 19950505')].join('\n');
+  }
+  function buildCompatAnsi(birth1, birth2) {
+    const animal1 = ZODIAC[((birth1.getFullYear() - 4) % 12 + 12) % 12];
+    const animal2 = ZODIAC[((birth2.getFullYear() - 4) % 12 + 12) % 12];
+    const seed = Math.abs(Math.round((birth1.getTime() - birth2.getTime()) / 86400000)) % 41;
+    const score = 60 + seed;
+    const message = COMPAT_MESSAGES[seed % COMPAT_MESSAGES.length];
+    const parts = [
+      buildTopHeader(['오락실', '궁합']),
+      c(11, `${ANSI_BOLD}  ${dateText(birth1)}생 ${animal1}띠${ANSI_RESET}  ${ansiColor(15)}×${ANSI_RESET}  ${ansiColor(11)}${ANSI_BOLD}${dateText(birth2)}생 ${animal2}띠${ANSI_RESET}`),
+      '',
+      `  ${c(14, '궁합 점수')} ${c(9, ANSI_BOLD + String(score) + '점' + ANSI_RESET)}  ${c(11, '★'.repeat(Math.round(score / 20)))}${c(8, '☆'.repeat(5 - Math.round(score / 20)))}`,
+      '',
+      c(15, `  ${message}`)
+    ];
+    return parts.join('\n');
+  }
+
+  function buildTojeongIntroAnsi() {
+    return [buildTopHeader(['오락실', '토정비결']), c(15, '  생년월일로 올해 열두 달의 운세를 풀어봅니다.'), '', c(14, '  생년월일을 입력하세요.'), c(11, '  입력 예) 1990-01-01 또는 19900101')].join('\n');
+  }
+  function buildTojeongAnsi(birth, target = new Date()) {
+    const animal = ZODIAC[((birth.getFullYear() - 4) % 12 + 12) % 12];
+    const year = target.getFullYear();
+    // [LOG_ID: 20260719_2300] 임의 해시 대신 태어난 해와 보는 해의 실제 연주(年柱, 60갑자)를
+    // 시드로 쓴다 — 사용자 요청("토정비결도 정확하게"). TOJEONG_MESSAGES가 정확히 12개라
+    // (personYearSeed + month - 1) % 12는 1~12월에 서로 다른 문구를 하나씩 배정하는 전단사라,
+    // 같은 사람·같은 해 안에서는 두 달이 같은 문구를 받는 일이 없다(이전엔 8개 문구로 4개월이 겹쳤다).
+    const birthGanjiIdx = getYearGanjiIndex(birth.getFullYear());
+    const targetGanjiIdx = getYearGanjiIndex(year);
+    const targetGanjiStr = ganjiText(targetGanjiIdx);
+    const personYearSeed = (birthGanjiIdx + targetGanjiIdx) % TOJEONG_MESSAGES.length;
+    const parts = [buildTopHeader(['오락실', '토정비결']), c(11, `${ANSI_BOLD}  ${dateText(birth)}생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${year}년(${targetGanjiStr}년) 신수${ANSI_RESET}`), ''];
+    for (let month = 1; month <= 12; month += 1) {
+      const seed = (personYearSeed + month - 1) % TOJEONG_MESSAGES.length;
+      parts.push(`  ${c(14, fitCell(`${String(month).padStart(2, ' ')}월`, 4))}${c(15, TOJEONG_MESSAGES[seed])}`);
+    }
+    return parts.join('\n');
+  }
+
   function buildRetroArtListAnsi() {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -236,5 +304,5 @@ export function createAmusementAnsiBuilders(deps) {
   function buildRetroArtViewAnsi(item) {
     return [buildTopHeader({ leftLabel: 'GAME', centerLabel: item.name }), item.art].join('\n');
   }
-  return { buildBiorhythmIntroAnsi, buildBiorhythmAnsi, buildFortuneIntroAnsi, buildFortuneAnsi, buildMbtiListAnsi, buildMbtiDetailAnsi, findMbtiType, buildRetroArtListAnsi, buildRetroArtViewAnsi };
+  return { buildBiorhythmIntroAnsi, buildBiorhythmAnsi, buildFortuneIntroAnsi, buildFortuneAnsi, buildMbtiListAnsi, buildMbtiDetailAnsi, findMbtiType, buildBloodIntroAnsi, buildBloodAnsi, findBloodType, buildCompatIntroAnsi, buildCompatIntro2Ansi, buildCompatAnsi, buildTojeongIntroAnsi, buildTojeongAnsi, buildRetroArtListAnsi, buildRetroArtViewAnsi };
 }

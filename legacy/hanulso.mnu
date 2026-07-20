@@ -272,15 +272,70 @@
 			     20260713_2300, 빈 게시판 20260714_1100에 이은 같은 유형의 세 번째 실수).
 			     사용자 결정: 투표/설문은 오락이 아니라 여론 수렴 기능이므로 최상위 여론광장에만
 			     둔다(나우누리 ACRO·하이텔 여론광장 모두 최상위). 이하 door 번호 재배치. -->
-			<item type="ranking" go="ranking" id="game_ranking" door="4" access_level="1">
+
+			<!-- [LOG_ID: 20260719_1600] 천리안 원전 6.14.6 "온라인 철학관"(BLOOD/SAJU) 재현 —
+			     기존 바이오리듬/오늘의운세/MBTI와 동일하게 서버 데이터·콘텐츠 시딩이 필요 없는
+			     결정론적 알고리즘 화면이라 "빈 껍데기" 리스크가 없다. -->
+			<item type="blood" go="blood" id="game_blood" door="4" access_level="1">
+				<name>혈액형 성격진단</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="compat" go="compat" id="game_compat" door="5" access_level="1">
+				<name>궁합</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="tojeong" go="tojeong" id="game_tojeong" door="6" access_level="1">
+				<name>토정비결</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="ranking" go="ranking" id="game_ranking" door="7" access_level="1">
 				<name>게시판 랭킹</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
 			<!-- [LOG_ID: 20260711_1400] olddos-bbs txt/door 원본 아트 이식 -->
-			<item type="retro-art" go="retro" id="game_retro" door="5" access_level="1">
+			<item type="retro-art" go="retro" id="game_retro" door="8" access_level="1">
 				<name>추억의 접속화면</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<!-- [LOG_ID: 20260720_1358] 천리안 원전 6.14.1 "컴퓨터와 게임을" 재현 — 오목/오델로/
+			     숫자야구/영어단어맞추기/숫자판맞추기. 온라인 철학관과 동일하게 서버 데이터·콘텐츠
+			     시딩이 필요 없는 클라이언트 로직 게임이라 "빈 껍데기" 리스크가 없다. -->
+			<item type="omok" go="omok" id="game_omok" door="9" access_level="1">
+				<name>오목</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="othello" go="oth" id="game_oth" door="10" access_level="1">
+				<name>오델로</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="baseball" go="base" id="game_base" door="11" access_level="1">
+				<name>숫자야구</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="hangman" go="hangman" id="game_hangman" door="12" access_level="1">
+				<name>영어단어 맞추기</name>
+				<header></header>
+				<footer>txt/cmd_menu_footer.txt</footer>
+			</item>
+
+			<item type="puzzle15" go="16p" id="game_16p" door="13" access_level="1">
+				<name>숫자판 맞추기</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>

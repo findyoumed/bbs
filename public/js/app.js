@@ -27,8 +27,38 @@ let state = {
 const refs = {};
 
 const {
-  initTooltips, initAuth, restoreStateFromURL, restoreTheme, updateURL, showMain, showPasswordReset, renderInitError, guestUser
+  initTooltips, initAuth, restoreStateFromURL, restoreTheme, updateURL, showMain, showPasswordReset, renderInitError, guestUser, forceExit
 } = initApp({ state, refs, SIGNUP_TOS_TEXT, SIGNUP_PRIVACY_TEXT });
+
+// [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "자동접속 차단시간"(SET IDLE [분]) 재현.
+// 종량제 PC통신 시절, 일정 시간 무입력 시 자동으로 접속을 끊던 동작. 기본값은 없음(off)이며
+// SET IDLE 1~30 으로 설정해야 활성화된다(settingsService가 저장한 envVars.IDLE에서 읽음).
+let idleExitInFlight = false;
+setInterval(() => {
+  if (idleExitInFlight) return;
+  const idleMinutes = Number(state.envVars?.IDLE);
+  if (!Number.isFinite(idleMinutes) || idleMinutes <= 0) return;
+  const lastActivity = Number(state._lastActivityTime) || 0;
+  if (!lastActivity) return;
+  if (Date.now() - lastActivity < idleMinutes * 60000) return;
+
+  idleExitInFlight = true;
+  (async () => {
+    try {
+      showIdleExitHint();
+      await wait(600);
+      await forceExit();
+    } catch (error) {
+      console.warn('유휴 자동 종료 실패:', error.message);
+      idleExitInFlight = false;
+    }
+  })();
+}, 15000);
+
+function showIdleExitHint() {
+  const hintEl = document.getElementById('cmd-hint');
+  if (hintEl) hintEl.textContent = '* 장시간 무입력으로 접속을 종료합니다.';
+}
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
