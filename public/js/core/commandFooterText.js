@@ -22,14 +22,14 @@ export const CMD_ORDER = {
   postList: ['F', 'B', 'L', 'P', 'T', 'GO', 'W:글쓰기', 'PR:연속읽기', 'LS:번호점프', 'LD:날짜점프', 'K:주제어검색', 'KW:주제어목록', 'LT:제목검색', 'LI:ID검색', 'H'],
   postView: ['L:목록', 'N', 'A', 'P', 'T', 'GO', 'RE:답장', 'E:수정', 'D:삭제', 'V:추천', 'U:첨부', 'LT:제목검색', 'LI:ID검색', 'H'],
   postWrite: ['P:취소', 'S:저장', 'H'],
-  chat: ['P', 'T', 'GO', 'O:방만들기', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
+  chat: ['P', 'T', 'GO', 'O:방만들기', 'EAR:귓속말', 'ST:상황판', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
   // [LOG_ID: 20260718_1700] O(방만들기)는 CMD_META에서 login:true라 게스트 힌트바에선
   // 의도적으로 숨는다(로그인 시 노출). 원본의 "참여(번호)"는 힌트바 토큰이 아니라 프롬프트가
   // 안내한다 — 토큰 파서(terminalHintMarkup)는 ASCII 명령만 받으므로 한글 토큰은 못 쓴다.
-  chatLobby: ['P', 'T', 'GO', 'O:방만들기', 'H'],
-  memoList: ['P', 'T', 'GO', 'W:쓰기', 'H'],
+  chatLobby: ['P', 'T', 'GO', 'O:방만들기', 'EAR:귓속말', 'ST:상황판', 'H'],
+  memoList: ['P', 'T', 'GO', 'W:쓰기', 'WMAIL:올리기', 'H'],
   // [LOG_ID: 20260716_1800] K:보관 — 하이텔 (10)-5 편지보관함(mbox).
-  memoView: ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'K:보관', 'DD:삭제', 'H'],
+  memoView: ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'WMAIL:전달', 'K:보관', 'DD:삭제', 'H'],
   memoWrite: ['P:취소', 'SEND:전송', 'H'],
   // [LOG_ID: 20260719_2300] ME:쪽지쓰기 — 나우로 웹프리 ID수첩("아이디 클릭 → 바로 쪽지 보내기") 재현.
   profile: ['P', 'T', 'GO', 'ME:쪽지쓰기', 'H'],
@@ -174,21 +174,12 @@ export function createCommandFooterTextUtils(deps) {
       } else if (state._memoBox === 'sent') {
         order = ['P', 'T', 'GO', 'I:받은쪽지', 'MB:보관함', 'CM:발송취소', 'K:보관', 'H'];
       } else {
-        // [LOG_ID: 20260719_1200] WC:축하카드(vmail). [LOG_ID: 20260719_1400] GRP:그룹(주소록).
-        order = ['P', 'T', 'GO', 'W:쓰기', 'WC:축하카드', 'GRP:그룹', 'S:보낸쪽지', 'MB:보관함', 'K:보관', 'H'];
+        // [LOG_ID: 20260720_1740] WMAIL:올리기(나우누리), WC:축하카드(vmail), GRP:그룹(주소록) 3사 기능 힌트 전역 통합
+        order = ['P', 'T', 'GO', 'W:쓰기', 'WMAIL:올리기', 'WC:축하카드', 'GRP:그룹', 'S:보낸쪽지', 'MB:보관함', 'K:보관', 'H'];
       }
     }
 
-    // [LOG_ID: 20260713_1160] 나우누리 테마 시 대화방/쪽지함 힌트바 토큰 동적 오버라이드
-    if (state && state.theme === 'nownuri') {
-      if (category === 'chat' || category === 'chatLobby') {
-        order = ['P', 'T', 'GO', 'O:방만들기', 'EAR:귓속말', 'ST:상황판', 'H'];
-      } else if (category === 'memoList') {
-        order = ['P', 'T', 'GO', 'WMAIL:올리기', 'H'];
-      } else if (category === 'memoView') {
-        order = ['L:목록', 'P', 'T', 'GO', 'RE:답장', 'WMAIL:전달', 'DD:삭제', 'H'];
-      }
-    }
+    // [LOG_ID: 20260720_1740] 테마 구분 없이 3사 기능이 힌트바에 통합되어 나우누리 전용 오버라이드 제거
 
     return formatCommandFooter(order);
   }

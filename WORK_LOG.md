@@ -1,3 +1,23 @@
+## [2026-07-20 17:40] PC통신 3사 핵심 UI 및 메뉴 단축키 테마 종속성 해제 및 전역 기능 통합
+
+**LOG_ID: 20260720_1740**
+목표: PC통신 3사(나우누리, 하이텔, 천리안)의 기능을 특정 테마(nownuri 등)에 구속하지 않고, 기본 테마를 포함한 전역 BBS 환경에서 통합 사용할 수 있도록 데스크톱/가이드/단축키/힌트바 테마-게이트 로직 분리 및 통합.
+변경 파일:
+- `public/js/core/commandRouterBrowse.js`
+- `public/js/core/ansiBoardBuilders.js`
+- `public/js/core/commandFooterText.js`
+수행 작업:
+1. `public/js/core/commandRouterBrowse.js`에서 대문 화면(`main`) 입력 처리 시 `state.theme === 'nownuri'` 검사를 걷어내어 기본 테마에서도 `1`, `11`, `12`, `13`, `16` 등 나우누리식 서비스 단축키 라우팅이 항시 작동하도록 통합.
+2. `commandRouterBrowse.js` 가이드 서브메뉴 가로채기에서도 테마 체크를 배제하여 `guide` 경로에서는 항시 작동하도록 수정하고, 선언 없이 ReferenceError를 낼 수 있었던 `setDefaultPrompt()`를 `setPrompt('선택 >>')`로 안전하게 변경.
+3. `public/js/core/ansiBoardBuilders.js`에서 가이드(`guide`) 게시판 목록 렌더링 시 테마 검사(`state.theme === 'nownuri'`)를 제거하여, 기본 테마에서도 `guide` 메뉴 진입 시 나우누리식 전용 가이드 화면(`buildNownuriGuideAnsi`)이 항상 정상 출력되도록 수정.
+4. `public/js/core/commandFooterText.js`에서 나우누리 전용 힌트바 오버라이드를 제거하고, 기본 `CMD_ORDER` 및 `getCommandFooterText` 구조에 귓속말(`EAR`), 상황판(`ST`), 편지올리기(`WMAIL`) 등의 토큰을 통합하여 기본 테마 환경에서도 3사 특화 힌트를 언제든 확인할 수 있도록 함.
+5. `npm run smoke:vercel-ready`를 실행하여 3사 기능 통합 및 리팩토링 후 빌드에 정합성 오류가 없음을 완벽히 통과 확인.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 성공 및 테마 분기 해제 완료
+결과: ✅ 완료
+
+---
+
 ## [2026-07-20 17:24] GitHub Push 스크립트 충돌 대처 로직 개선 및 LFS 매핑 최종 검증
 
 **LOG_ID: 20260720_1724**

@@ -101,48 +101,47 @@ export function createBrowseCommandHandler(deps) {
     }
 
     if (s === 'main') {
-      // [LOG_ID: 20260713_1155] 나우누리 테마 시 전용 번호 매핑 분기
-      if (state.theme === 'nownuri') {
-        const num = String(rawCmd || '').trim();
-        if (num === '1') {
-          if (typeof showBoardSelect === 'function') {
-            await showBoardSelect('guide', '서비스 안내');
-          }
-          return true;
+      // [LOG_ID: 20260720_1740] 나우누리 전용 번호 매핑 통합 (테마 종속 해제)
+      const num = String(rawCmd || '').trim();
+      if (num === '1') {
+        if (typeof showBoardSelect === 'function') {
+          await showBoardSelect('guide', '서비스 안내');
         }
-        if (num === '11') {
-          if (state.user?.isGuest) {
-            setHint('편지함은 로그인 후 사용하실 수 있습니다.');
-            setDefaultPrompt();
-          } else if (typeof showMemoList === 'function') {
-            state._memoBox = 'inbox';
-            await showMemoList();
-          }
-          return true;
+        return true;
+      }
+      if (num === '11') {
+        if (state.user?.isGuest) {
+          setHint('편지함은 로그인 후 사용하실 수 있습니다.');
+          setPrompt('선택 >>');
+        } else if (typeof showMemoList === 'function') {
+          state._memoBox = 'inbox';
+          await showMemoList();
         }
-        if (num === '12') {
-          if (typeof showBoardSelect === 'function') {
-            await showBoardSelect('top', '게시판 목록');
-          }
-          return true;
+        return true;
+      }
+      if (num === '12') {
+        if (typeof showBoardSelect === 'function') {
+          await showBoardSelect('top', '게시판 목록');
         }
-        if (num === '13') {
-          if (typeof showChatLobby === 'function') {
-            await showChatLobby();
-          }
-          return true;
+        return true;
+      }
+      if (num === '13') {
+        if (typeof showChatLobby === 'function') {
+          await showChatLobby();
         }
-        if (num === '16') {
-          if (typeof showPostList === 'function') {
-            await showPostList('pds', 1, { menuPath: 'top', menuTitle: '자료실' });
-          }
-          return true;
+        return true;
+      }
+      if (num === '16') {
+        if (typeof showPostList === 'function') {
+          await showPostList('pds', 1, { menuPath: 'top', menuTitle: '자료실' });
         }
-        if (/^\d+$/.test(num)) {
-          setHint('준비 중인 서비스입니다.');
-          setDefaultPrompt();
-          return true;
-        }
+        return true;
+      }
+      // 나우누리 테마 활성화 상태인 경우에만 나머지 번호에 대해 '준비 중인 서비스' 안내 출력
+      if (state.theme === 'nownuri' && /^\d+$/.test(num)) {
+        setHint('준비 중인 서비스입니다.');
+        setPrompt('선택 >>');
+        return true;
       }
 
       const visibleEntries = Array.isArray(state.boardMenuEntries) && state.boardMenuEntries.length
@@ -158,8 +157,8 @@ export function createBrowseCommandHandler(deps) {
     }
 
     if (s === 'board-select') {
-      // [LOG_ID: 20260713_1165] 나우누리 가이드 서브메뉴 번호 가로채기
-      if (state.theme === 'nownuri' && state.boardMenuPath === 'guide') {
+      // [LOG_ID: 20260720_1740] 가이드 서브메뉴 번호 가로채기 (테마 종속 해제)
+      if (state.boardMenuPath === 'guide') {
         const num = String(rawCmd || '').trim();
         if (num === '14') {
           if (typeof showAlert === 'function') {
