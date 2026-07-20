@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 echo ============================================
 echo   GitHub Push - findyoumed/bbs
 echo ============================================
@@ -36,21 +35,21 @@ if exist ".git\rebase-merge" git rebase --abort
 if exist ".git\rebase-apply" git rebase --abort
 echo.
 echo ==============================================================
-echo   [!] 충돌 해결 가이드 (Conflict Resolution Guide)
+echo   [!] Conflict Resolution Guide
 echo ==============================================================
-echo   로컬 변경사항과 원격 저장소의 파일이 충돌하여 동기화할 수 없습니다.
-echo   로컬 코드가 유실되지 않도록 임시 rebase 상태는 취소되었습니다.
+echo   Local changes conflict with remote repository.
+echo   Rebase has been aborted to prevent local code loss.
 echo.
-echo   안전하게 충돌을 해결하려면 아래 단계를 수동으로 실행하세요:
-echo   1. 수동으로 병합[Merge] 시도:
+echo   Please resolve conflicts manually:
+echo   1. Try merge pull:
 echo      git pull origin main
-echo   2. 충돌이 발생한 파일들을 에디터로 열어 충돌 마커를 정리합니다.
-echo      [충돌 표시 기호 제거 및 최종 코드 선택]
-echo   3. 충돌 수정 완료 후 스테이징:
-echo      git add [파일명]
-echo   4. 병합 커밋 완료:
+echo   2. Open conflicted files in editor and resolve merge markers.
+echo      (Remove conflict symbols and keep desired code)
+echo   3. Stage resolved files:
+echo      git add [filename]
+echo   4. Commit merge:
 echo      git commit -m "merge: resolve conflicts with origin/main"
-echo   5. 이 배치 스크립트[push_github.bat]를 재실행하거나 직접 푸시합니다:
+echo   5. Re-run push_github.bat or push directly:
 echo      git push origin main
 echo ==============================================================
 pause
