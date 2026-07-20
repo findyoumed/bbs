@@ -1,3 +1,20 @@
+## [2026-07-20 20:10] 오목(OMOK) 모바일 화면 글자 잘림 수정 — 우측 패널 가로 오버플로우 + 세로 클리핑
+
+**LOG_ID: 20260720_2010**
+목표: 사용자 스크린샷 지적("omok 글씨가 잘리는데") 반영 — 오목 화면에서 우측 정보 패널("귀하: ●(흑" 등)이 화면 오른쪽으로 잘려 보이고, 반상 아래 상태줄("기회이 소기의 니다..." 식으로 깨져 보임)도 잘려 보이던 문제.
+원인:
+1. **가로 잘림**: `buildOmokAnsi`(15×15 반상, 폭 35칸)가 데스크톱 전제로 매 반상 줄 오른쪽에 정보 패널(귀하/컴퓨터 표시, 진행 수, 컴퓨터 착수 좌표, 조작법 등)을 항상 나란히 붙였다. 반상+패널이면 60여 칸인데 모바일은 44칸이라 패널 텍스트가 화면 밖으로 잘렸다. 오델로(8×8)·전투게임(Battleship)은 이미 모바일 전용 축소 레이아웃이 있는데 오목만 빠져 있었다.
+2. **세로 잘림**: 반상(15줄)만으로도 총 21줄인데, 모바일에서 패널을 반상 아래로 내리면(가로 수정) 총 29줄까지 늘어 기존 23~24줄 고정 프레임 예산을 넘는다 — 뉴스/도움말 화면에서 이미 겪었던 것과 같은 원인(`.ansi-line{min-height:24px}` 고정 + `overflow:hidden`)으로 마지막 줄이 잘렸다.
+수정:
+- `arcadeAnsiBuilders.js`의 `buildOmokAnsi` — 모바일에서는 패널을 반상 옆이 아니라 반상+상태줄 아래 별도 줄로 뺀다(전투게임과 동일 패턴). 데스크톱 레이아웃은 그대로 유지.
+- `public/style.css` — 뉴스/도움말에 적용했던 3종 완화(overflow-y:auto 안전망, `.ansi-line` 실제 줄높이 축소, 폰트 세로 상한 2.5vh)를 `body[data-screen="omok-play"]`에도 확장.
+- `public/index.html`의 style.css 캐시 버전을 `?v=20260720_2010`으로 갱신.
+검증: `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`, `npm run smoke:menu-wiring` 통과. 로컬 dev 서버에서 Playwright 412×700 모바일 뷰포트로 실측 — 진입 직후와 실제 착수(H8) 후 둘 다 `document.documentElement.scrollWidth === clientWidth`(가로 오버플로우 없음) 확인, 패널·상태줄 전부 잘림 없이 표시되는 것 스크린샷으로 확인.
+참고: 이 방 자체(오목/오델로/숫자야구 등 오락실 게임 10종, `arcadeAnsiBuilders.js`/`arcadeGameLogic.js`/`arcadeScreens.js`)는 이 세션이 만든 게 아니라 사용자가 로컬(Windows, push_github.bat)에서 직접 개발해 origin/main에 푸시한 것을 이번에 pull해 받았다 — 이번 커밋은 그 위에 오목 모바일 레이아웃만 수정.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-20 18:07] push_github.bat 내 모든 메시지 영문 전환을 통한 cmd.exe 파싱 오류 원천 차단
 
 **LOG_ID: 20260720_1807**

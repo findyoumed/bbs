@@ -17,22 +17,28 @@ export function createArcadeAnsiBuilders(deps) {
 
   // ── 오목 ──
   function buildOmokAnsi(st) {
+    // [LOG_ID: 20260720_2010] 반상(15줄, 폭 35칸)에 우측 정보 패널을 항상 나란히 붙였는데,
+    // 모바일(44칸)에서는 반상만으로도 이미 35칸이라 패널까지 붙이면 60여 칸으로 화면 폭을
+    // 넘어 글자가 잘려 보였다(사용자 스크린샷: "귀하: ●(흑"에서 끊김). 전투 게임(Battleship)이
+    // 이미 쓰는 패턴대로, 모바일에서는 패널을 반상 옆이 아니라 아래 별도 줄로 뺀다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const colLabels = '     ' + Array.from({ length: OMOK_SIZE }, (_, i) => String.fromCharCode(65 + i)).join(' ');
     const lastCpuIdx = st.lastCpu ? st.lastCpu.y * OMOK_SIZE + st.lastCpu.x : -1;
     const cursorIdx = st.cursor && st.status === 'play' ? st.cursor.y * OMOK_SIZE + st.cursor.x : -1;
-    const panel = {
-      1: c(15, '귀하: ● (흑)  컴퓨터: ○ (백)'),
-      3: c(8, `진행: ${st.moves}수`),
-      5: st.lastCpu ? c(11, `컴퓨터 착수: ${coordText(st.lastCpu.x, st.lastCpu.y)}`) : '',
-      7: c(8, '입력 예) H8'),
-      8: c(8, '마우스 클릭 착수 가능'),
-      9: c(8, 'L: 새 게임'),
+    const panelLines = [
+      c(15, '귀하: ● (흑)  컴퓨터: ○ (백)'),
+      c(8, `진행: ${st.moves}수`),
+      st.lastCpu ? c(11, `컴퓨터 착수: ${coordText(st.lastCpu.x, st.lastCpu.y)}`) : '',
+      c(8, '입력 예) H8'),
+      c(8, '마우스 클릭 착수 가능'),
+      c(8, 'L: 새 게임'),
       // [LOG_ID: 20260720_1600] 천리안 원전 그림179 우측 패널("/Q : 게임포기") 재현.
-      10: c(8, 'Q: 게임포기')
+      c(8, 'Q: 게임포기')
       // [LOG_ID: 20260720_1800] 33/44 금수 규칙 제거(자유오목) — 사용자 판단: 컴퓨터에는
       // 적용 안 되면서 흑에게만 33이 걸리는 게 오히려 불공평했고, 44는 아예 안 막혀서
       // 컴퓨터가 이중 열린4로 이기는 사례가 나왔다. 반쪽 규칙 대신 순수 5목으로 되돌린다.
-    };
+    ];
+    const panel = isMobile ? {} : { 1: panelLines[0], 3: panelLines[1], 5: panelLines[2], 7: panelLines[3], 8: panelLines[4], 9: panelLines[5], 10: panelLines[6] };
     // [LOG_ID: 20260720_1500] 점만 흩어진 모습이 아니라 실제 바둑판처럼 보이도록, 같은 행의
     // 교점끼리 가로 괘선(-)으로 잇는다(빈 교점=+, 돌은 그 위에 놓인 모양). ASCII 문자만 써서
     // 16퍼즐에서 겪은 박스문자 폭 어긋남(실측 확인)을 처음부터 피한다. 세로 괘선은 24행 예산상
@@ -60,7 +66,11 @@ export function createArcadeAnsiBuilders(deps) {
       : st.status === 'draw' ? c(14, '  바둑판이 가득 차 무승부입니다.')
       : st.lastCpu ? c(15, `  컴퓨터가 ${coordText(st.lastCpu.x, st.lastCpu.y)} 에 놓았습니다. 다음 수를 입력하세요. (${st.moves}수)`)
       : c(15, '  귀하가 흑(●) 선공입니다. 놓을 좌표를 입력하세요.');
-    return [buildTopHeader(['오락실', '오목']), c(8, colLabels), ...rows, statusLine].join('\n');
+    const parts = [buildTopHeader(['오락실', '오목']), c(8, colLabels), ...rows, statusLine];
+    if (isMobile) {
+      parts.push('', ...panelLines.filter(Boolean).map((line) => `  ${line}`));
+    }
+    return parts.join('\n');
   }
 
   // ── 오델로 ──

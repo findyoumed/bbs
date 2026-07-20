@@ -2478,7 +2478,11 @@ body[data-print-view="true"] .ansi-screen {
        잘렸다(사용자 지적: "글씨가일부잘리는데") — 44칸 폭에서 영문 명령 설명이 자주 줄바꿈돼
        19줄 예산을 자주 꽉 채우는 화면이라 뉴스와 동일 증상. 뉴스에 적용했던 3종 완화를
        그대로 확장한다. */
-    body[data-screen="help"] #terminal-screen {
+    body[data-screen="help"] #terminal-screen,
+    /* [LOG_ID: 20260720_2010] 오목(15x15 반상)도 같은 증상 — 모바일에서 우측 패널을 반상 아래로
+       내리면서(가로 잘림 수정) 총 줄 수가 29줄까지 늘어나 기본 23~24줄 예산을 넘는다.
+       뉴스/도움말과 동일한 완화를 확장한다(사용자 지적: "omok 글씨가 잘리는데"). */
+    body[data-screen="omok-play"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
@@ -2497,13 +2501,15 @@ body[data-print-view="true"] .ansi-screen {
           우선해 변화가 없고, 바닥값 11px 밑의 초소형 뷰포트는 위 스크롤 허용이 안전망. */
     body[data-screen="news-list"] .ansi-line,
     body[data-screen="news-view"] .ansi-line,
-    body[data-screen="help"] .ansi-line {
+    body[data-screen="help"] .ansi-line,
+    body[data-screen="omok-play"] .ansi-line {
         min-height: 1.32em;
     }
 
     body[data-screen="news-list"] #terminal-container,
     body[data-screen="news-view"] #terminal-container,
-    body[data-screen="help"] #terminal-container {
+    body[data-screen="help"] #terminal-container,
+    body[data-screen="omok-play"] #terminal-container {
         font-size: clamp(11px, min(4.2vw, 2.5vh), 15px) !important;
     }
 
