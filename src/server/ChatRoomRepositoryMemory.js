@@ -69,11 +69,6 @@ class MemoryChatRoomRepository {
       greeting: greeting.slice(0, 120),
       ownerUserId: normalizeText(context.userId, 'guest'),
       ownerName: normalizeText(context.nickName, '손님'),
-      // [LOG_ID: 20260718_1800] olddos-bbs 원본 규칙 "방장이 나가면 방 자동 종료" 재현.
-      // 원본은 방을 방장의 프로세스/포트에 묶어, 그 세션이 끊기면 방이 닫힌다. 우리 등가물은
-      // sessionKey다. userId로 방장을 판별하면 게스트가 전부 'guest'라 오판되므로, 개설자가
-      // 개설 직후 첫 입장할 때(join) 그 sessionKey를 ownerSessionKey로 못박는다.
-      ownerSessionKey: '',
       maxUser: normalizeMaxUser(payload.maxUser, 10),
       password,
       isPrivate,
@@ -118,13 +113,6 @@ class MemoryChatRoomRepository {
       room.participants.push(participant);
     }
 
-    // [LOG_ID: 20260718_1800] 방장 세션 못박기 — 개설자(userId === ownerUserId)의 첫 입장에서
-    // 한 번만 기록한다. 개설 직후 개설자가 가장 먼저 입장하므로(create→showChatRoom) 게스트라도
-    // 최초 입장자=개설자가 보장된다. 이미 정해졌으면 덮어쓰지 않는다.
-    if (!room.ownerSessionKey && participant.userId === room.ownerUserId) {
-      room.ownerSessionKey = sessionKey;
-    }
-
     return publicRoom(room, summarizeParticipantCounts(room.participants));
   }
 
@@ -133,17 +121,26 @@ class MemoryChatRoomRepository {
     const room = this._findRoom(roomNo);
     const sessionKey = payload.sessionKey ? normalizeSessionKey(payload.sessionKey) : '';
 
-    // [LOG_ID: 20260718_1800] 방장 세션이 나가면 방을 통째로 종료한다(원본 규칙). 남은 참여자는
-    // 다음 폴링에서 방이 사라진 것을 보고 대기실로 돌아간다.
-    if (sessionKey && room.ownerSessionKey && sessionKey === room.ownerSessionKey) {
+    const leavingParticipant = sessionKey
+      ? room.participants.find((entry) => entry.sessionKey === sessionKey)
+      : null;
+    const remainingParticipants = sessionKey
+      ? room.participants.filter((entry) => entry.sessionKey !== sessionKey)
+      : room.participants;
+
+    // [LOG_ID: 20260721_0500] 방장이 여러 세션(다중 탭/기기)으로 입장했을 때, 방장의 "첫" 세션이
+    // room.ownerSessionKey에 못박혀 있어 그 세션만 나가도 방장이 다른 세션으로 여전히 남아있는데도
+    // 방 전체가 종료되던 버그(smoke:chat-counts 실패 원인) — 남은 참여자 중 방장(userId 기준)이
+    // 하나도 없을 때만 방을 통째로 종료하도록 수정한다(원본 규칙: "방장이 나가면 종료"는 유지하되
+    // 방장의 마지막 세션이 나갈 때로 판정 기준을 옮김).
+    const ownerHasOtherSession = remainingParticipants.some((entry) => entry.userId === room.ownerUserId);
+    if (leavingParticipant && leavingParticipant.userId === room.ownerUserId && !ownerHasOtherSession) {
       this.messagesByRoomNo.delete(Number(room.no || 0));
       this.rooms = this.rooms.filter((entry) => entry.no !== room.no);
       return publicRoom({ ...room, participants: [], _closed: true }, summarizeParticipantCounts([]));
     }
 
-    if (sessionKey) {
-      room.participants = room.participants.filter((entry) => entry.sessionKey !== sessionKey);
-    }
+    room.participants = remainingParticipants;
     this._removeIfDisposable(room);
     return publicRoom(room, summarizeParticipantCounts(room.participants));
   }

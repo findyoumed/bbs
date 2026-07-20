@@ -16,9 +16,6 @@ class SupabaseChatRoomRepository extends BaseRepository {
     this.defaultRoom = options.defaultRoom !== false;
     this.participantsByRoomNo = new Map();
     this.messagesByRoomNo = new Map();
-    // [LOG_ID: 20260718_1800] 방장 세션 추적(방번호→sessionKey). 그 세션이 나가면 방을 종료한다
-    // (olddos 원본 규칙). userId가 아니라 sessionKey 기준이라 게스트 'guest' 충돌이 없다.
-    this.ownerSessionByRoomNo = new Map();
     this.defaultRoomPromise = null;
     this.memberPersistence = new ChatRoomMemberPersistence({ client: this.client, membersTable: this.membersTable, participantTtlMs: this.participantTtlMs });
     this.queries = new ChatRoomRepositorySupabaseQueries(this.client, this.table);
@@ -80,11 +77,6 @@ class SupabaseChatRoomRepository extends BaseRepository {
     if (!existing && nextSummary.userCount > normalizeMaxUser(room.max_user, 99)) throw createHttpError(409, '정원 초과');
     if (existing) Object.assign(existing, p); else participants.push(p);
     this.participantsByRoomNo.set(Number(room.room_no), participants);
-    // [LOG_ID: 20260718_1800] 개설자(userId===owner_user_id)의 첫 입장에서 방장 세션을 못박는다.
-    // 개설 직후 개설자가 가장 먼저 입장하므로 게스트라도 최초 입장자=개설자가 보장된다.
-    if (!this.ownerSessionByRoomNo.get(Number(room.room_no)) && p.userId === room.owner_user_id) {
-      this.ownerSessionByRoomNo.set(Number(room.room_no), sessionKey);
-    }
     await this.memberPersistence.persistJoin(room, p); await this._touch(room.room_no);
     room.last_activity_at = now; return this._toPublicRoom(room, nextSummary);
   }
@@ -93,18 +85,22 @@ class SupabaseChatRoomRepository extends BaseRepository {
     await this._ensureDefaultRoom(); await this._cleanup();
     const room = await this.queries.findRoomByNo(roomNo), sessionKey = payload.sessionKey ? normalizeSessionKey(payload.sessionKey) : '';
 
-    // [LOG_ID: 20260718_1800] 방장 세션이 나가면 방을 종료한다(원본 규칙). 기본방(#1)은 제외한다.
-    // 남은 참여자는 다음 폴링에서 방이 사라진 것을 보고 대기실로 돌아간다.
-    const ownerSession = this.ownerSessionByRoomNo.get(Number(room.room_no));
-    if (sessionKey && ownerSession && sessionKey === ownerSession && Number(room.room_no) !== 1) {
+    const participants = this._participantsForRoom(room.room_no);
+    const leaving = sessionKey ? participants.find(p => p.sessionKey === sessionKey) : null;
+    const filtered = participants.filter(p => p.sessionKey !== sessionKey);
+
+    // [LOG_ID: 20260721_0500] 방장이 여러 세션(다중 탭/기기)으로 입장했을 때 방장의 "첫" 세션만
+    // ownerSessionByRoomNo에 못박혀 있어, 그 세션만 나가도 방장이 다른 세션으로 여전히 남아있는데
+    // 방 전체가 종료되던 버그(Memory 드라이버와 동일 패턴) — 남은 참여자 중 방장(userId 기준)이
+    // 하나도 없을 때만 방을 종료하도록 수정. 기본방(#1)은 계속 예외.
+    const ownerHasOtherSession = filtered.some(p => p.userId === room.owner_user_id);
+    if (leaving && leaving.userId === room.owner_user_id && !ownerHasOtherSession && Number(room.room_no) !== 1) {
       this.participantsByRoomNo.delete(Number(room.room_no));
       this.messagesByRoomNo.delete(Number(room.room_no));
-      this.ownerSessionByRoomNo.delete(Number(room.room_no));
       await this.client.from(this.table).delete().eq('room_no', room.room_no);
       return this._toPublicRoom({ ...room, _closed: true }, summarizeParticipantCounts([]));
     }
 
-    const filtered = this._participantsForRoom(room.room_no).filter(p => p.sessionKey !== sessionKey);
     if (filtered.length) this.participantsByRoomNo.set(Number(room.room_no), filtered); else this.participantsByRoomNo.delete(Number(room.room_no));
     await this.memberPersistence.persistLeave(room, payload, context, filtered);
     const authCount = await this.memberPersistence.loadActiveAuthMemberCount(room.id);
