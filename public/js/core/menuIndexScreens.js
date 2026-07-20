@@ -142,15 +142,14 @@ export function createMenuIndexScreens(deps) {
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
       const targetCols = isMobile ? 44 : 80;
 
-      // 상단 헤더가 차지하는 실제 줄 수를 동적으로 계산해 본문 시작 인덱스를 구합니다.
-      const finalPage = view.page;
-      const totalPages = view.totalPages;
-      const headerText = buildTopHeader({ leftLabel: 'MENU', centerLabel: '전체 메뉴 안내 (INDEX)' }, buildPageLabel(finalPage, totalPages), targetCols);
-      const headerLineCount = headerText.split('\n').length;
-      const bodyStartRowIndex = headerLineCount;
-
+      // [LOG_ID: 20260720_2130] renderAnsiScreenWithTopbarSequential이 ansiText 앞 4줄(헤더)을
+      // stripLeadingAnsiLines로 잘라내 별도 상단바 DOM(.retro-topbar, .ansi-line 아님)으로 대체하므로,
+      // .ansi-screen-body 안의 .ansi-line은 헤더 없이 본문 0번째 줄부터 시작한다. 여기서 헤더 줄 수를
+      // 다시 더해 행 번호를 계산했더니 모든 핫스팟이 4줄씩 아래로 밀려 그려졌다 — 예를 들어 페이지의
+      // 13번째 줄(0-based) 항목의 버튼이 17번째 줄(오델로) 위에 덮여, 오델로를 눌러도 13번째 줄 항목
+      // (토정비결)으로 이동하는 버그가 있었다(사용자 보고: "/index?page=2 오델로 클릭 -> 토정비결").
       const hotspots = view.pageSliceNodes.map((node, i) => {
-        const rowIndex = i + bodyStartRowIndex;
+        const rowIndex = i;
         const goVal = toGoCode(node);
 
         return {
