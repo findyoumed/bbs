@@ -1,3 +1,14 @@
+## [2026-07-21 08:05] [보안 라운드] 서버 라우트 전수 점검(게시판/쪽지/CONF/투표/첨부/랭킹/가입) — 새 취약점은 없었고, 기본 대화방 삭제 위험 하나를 방어적으로 굳힘
+
+**LOG_ID: 20260721_0805**
+목표: "계속 수정"(코드수정 보안 루프 연속) — 앞선 대화방 세션 버그 수정 후, 서버 라우트 전체를 다시 훑어 놓친 권한/IDOR 문제가 없는지 점검.
+점검 범위와 결과(전부 정상 확인, 수정 불필요): `boardRoutes.js`(updatePost/deletePost → `assertPostMutable`이 작성자/관리자만 허용), `memoRoutes.js`(getMemo/setArchived/markRead/deleteMemo 전부 Memory·Supabase 양쪽에서 수신자/발신자만 접근 가능), `confRoutes.js`(closeRoom이 개설자/관리자만), `voteRoutes.js`(castVote가 Memory는 배열 검사, Supabase는 DB unique 제약(23505)으로 중복 투표 차단; deleteVote는 소유자 확인), `chatServiceRoutes.js`(kick/updateRoom이 리포지토리에서 ownerUserId 대조, context.userId는 `RequestIdentityHelpers`가 프로덕션에서 body/header 위조를 막아줘 신뢰 가능), 첨부파일(`AttachmentRepositoryLocal.js`의 storedName이 랜덤 hex+sanitize된 확장자라 경로 조작 불가, ensureAttachmentWritable이 작성자 전용), `authRoutes.js`(register/oauthRegister 모두 level/isAdmin을 클라이언트 입력과 무관하게 고정, oauthRegister는 Supabase 토큰 실제 검증), CORS(Bearer 토큰 인증이라 쿠키 기반 CSRF 노출 없음, 자격증명 헤더 미설정으로 `*` 오리진 허용도 안전).
+추가로 발견해 방어적으로 굳힌 것 1건: `ChatRoomRepositoryMemory.js`의 기본 로비방(#1, `persistent:true`)이 "방장이 나가면 방 종료" 규칙에서 제외되는 근거가 시드 방장 `ownerUserId`가 'system'이라 아무도 못 쓸 값이라는 암묵적 가정뿐이었다 — Supabase 드라이버는 `room_no !== 1`로 명시 제외하는데 Memory는 그렇지 않았다. 만약 관리자가 userId 'system'으로 가입해 로비를 드나들면 영구방이 삭제될 수 있는 잠재 결함이라, `leave()`에 `!room.persistent` 조건을 추가해 Supabase와 동일하게 명시적으로 방어했다.
+검증: `node --check`, `npm run smoke:chat-counts`, `npm run smoke:chat-rooms`, `npm run loop:verify`(9종) 전부 통과.
+결과: ✅ 완료 — 이번 라운드는 새 취약점 없음(전수 점검 결과 클린), 잠재적 방어 결함 1건만 선제 조치.
+
+---
+
 ## [2026-07-21 07:48] 대화방 개설자가 다중 세션(멀티탭/기기)일 때 첫 세션만 나가도 방 전체가 종료되던 버그 수정
 
 **LOG_ID: 20260721_0748**

@@ -133,8 +133,13 @@ class MemoryChatRoomRepository {
     // 방 전체가 종료되던 버그(smoke:chat-counts 실패 원인) — 남은 참여자 중 방장(userId 기준)이
     // 하나도 없을 때만 방을 통째로 종료하도록 수정한다(원본 규칙: "방장이 나가면 종료"는 유지하되
     // 방장의 마지막 세션이 나갈 때로 판정 기준을 옮김).
+    // [LOG_ID: 20260721_0810] 기본방(#1, persistent:true)은 방장 판정과 무관하게 항상 살아남아야
+    // 한다 — Supabase 드라이버는 room_no!==1로 명시 제외하는데 Memory 드라이버는 시드 방장
+    // userId('system')가 실제로는 아무도 못 쓸 값이라는 가정에만 기대고 있었다. 관리자가 만약
+    // userId 'system'으로 가입해 이 방에 드나들면 그 가정이 깨져 로비가 삭제될 수 있었다 —
+    // Supabase와 동일하게 persistent 플래그로 명시 제외한다.
     const ownerHasOtherSession = remainingParticipants.some((entry) => entry.userId === room.ownerUserId);
-    if (leavingParticipant && leavingParticipant.userId === room.ownerUserId && !ownerHasOtherSession) {
+    if (!room.persistent && leavingParticipant && leavingParticipant.userId === room.ownerUserId && !ownerHasOtherSession) {
       this.messagesByRoomNo.delete(Number(room.no || 0));
       this.rooms = this.rooms.filter((entry) => entry.no !== room.no);
       return publicRoom({ ...room, participants: [], _closed: true }, summarizeParticipantCounts([]));
