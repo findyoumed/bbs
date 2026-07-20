@@ -327,8 +327,8 @@ export function createBoardAnsiBuilders(deps) {
   }
 
   function buildBoardSelectAnsi(boards, titleOrOptions) {
-    // [LOG_ID: 20260720_1740] 가이드(GUIDE) 메뉴 전용 렌더링 스위칭 (테마 종속 해제)
-    if (state && state.boardMenuPath === 'guide') {
+    // [LOG_ID: 20260720_1802] 가이드(GUIDE) 메뉴 렌더링 시 나우누리 테마인 경우만 전용 안내를 띄우도록 복원 (천리안 등 타 테마 깨짐 해결)
+    if (state && state.theme === 'nownuri' && state.boardMenuPath === 'guide') {
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
       const targetCols = isMobile ? 44 : 80;
       return buildNownuriGuideAnsi(targetCols);

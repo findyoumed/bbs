@@ -1,3 +1,19 @@
+## [2026-07-20 18:02] 직접 진입 (/guide) 시 비-나우누리 테마에서의 가이드 화면 깨짐 현상 교정
+
+**LOG_ID: 20260720_1802**
+목표: `http://localhost:3000/guide`로 직접 접속 시 기본 천리안 테마 등에서 가이드 화면이 강제로 나우누리 레이아웃으로 로드되어 깨지던 버그를 가드 조건 복원으로 해결.
+변경 파일:
+- `public/js/core/ansiBoardBuilders.js`
+수행 작업:
+1. `public/js/core/ansiBoardBuilders.js` 내 `buildBoardSelectAnsi` 에서 나우누리 전용 가이드(`buildNownuriGuideAnsi`)를 그리는 가드 조건문에 `state.theme === 'nownuri'` 검사를 다시 복구 적용.
+2. 이로써 나우누리 이외의 다른 테마(천리안 등)에서는 원래의 깨지지 않는 파란색/초록색 메뉴 리스트 레이아웃으로 원복되어 정상 노출됨을 보장.
+3. `npm run smoke:vercel-ready` 빌드 무결성 스모크 테스트 통과 완료.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 성공 및 각 테마별 가이드 메뉴 렌더링 복구
+결과: ✅ 완료
+
+---
+
 ## [2026-07-20 18:00] 오목 게임 방향키 이동 및 Enter 착수 조작 기능 제거 및 힌트 문구 교정
 
 **LOG_ID: 20260720_1800**
