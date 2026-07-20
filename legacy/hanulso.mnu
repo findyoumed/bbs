@@ -157,9 +157,9 @@
 			</item>
 		</item>
 
-		<!-- 10. 뉴스/인물 -->
+		<!-- 10. 뉴스 -->
 		<item type="news" go="news" door="10" access_level="1">
-			<name>뉴스/인물 (NEWS)</name>
+			<name>뉴스 (NEWS)</name>
 			<header></header>
 			<footer>txt/cmd_menu_footer.txt</footer>
 		</item>
