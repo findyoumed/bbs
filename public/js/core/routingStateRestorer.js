@@ -29,6 +29,7 @@ export function createRoutingStateRestorer(deps) {
     showMemberSearch,
     showMenuIndex,
     showMyStats,
+    showContactSysop,
     showProfile,
     showSignup,
     showUnifiedPdsList,
@@ -522,6 +523,8 @@ export function createRoutingStateRestorer(deps) {
         if (routeNode.type === 'battle' && typeof showBattle === 'function') return await showBattle(true);
         // [LOG_ID: 20260713_1700] 쪽지함(전자우편) 메인 메뉴 진입점 — /memo 직접 접속/새로고침 복원
         if (routeNode.type === 'memo' && typeof showMemoList === 'function') return await showMemoList(true);
+        // [LOG_ID: 20260720_2300] 건의하기(시삽 이메일 발송) — /tosysop 직접 접속/새로고침 복원
+        if (routeNode.type === 'contact-sysop' && typeof showContactSysop === 'function') return await showContactSysop(true);
       }
 
       // [LOG_ID: 20260717_1930] /board 접두사 제거 대응: 첫 세그먼트가 게시판 키(대소문자 무관)인 경우 복원

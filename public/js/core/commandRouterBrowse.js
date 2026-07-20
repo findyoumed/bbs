@@ -157,7 +157,10 @@ export function createBrowseCommandHandler(deps) {
     }
 
     if (s === 'board-select') {
-      // [LOG_ID: 20260720_1740] 가이드 서브메뉴 번호 가로채기 (테마 종속 해제)
+      // [LOG_ID: 20260720_2035] 가이드 서브메뉴 번호 가로채기 (테마 종속 해제, 실제 메뉴 항목 우선 처리로 회귀 수정)
+      // b18bb2c에서 테마 조건(state.theme === 'nownuri')이 빠지면서, 실제 항목이 있는
+      // 1~8번(공지사항~이용 현황)까지 실제 메뉴 해석 전에 전부 "준비 중"으로 가로채던 회귀 버그.
+      // 실제 메뉴 해석을 먼저 시도하고, 매칭되는 항목이 없을 때만 안내 문구를 보여준다.
       if (state.boardMenuPath === 'guide') {
         const num = String(rawCmd || '').trim();
         if (num === '14') {
@@ -176,6 +179,10 @@ export function createBrowseCommandHandler(deps) {
           return true;
         }
         if (/^\d+$/.test(num)) {
+          const guideNode = resolveMenuNodeTarget(rawCmd, state.boardMenuEntries);
+          if (guideNode && await executeMenuNodeAction(guideNode, state.boardMenuPath, state.boardMenuTitle)) {
+            return true;
+          }
           setHint('준비 중인 가이드 서비스입니다.');
           setPrompt('선택 >>');
           return true;

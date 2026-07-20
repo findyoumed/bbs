@@ -152,14 +152,8 @@ export function createMenuNavigation(deps) {
       void updateURL();
     }
 
-    let noticeText = null;
-    if (noticeData && (noticeData.items?.length > 0 || noticeData.posts?.length > 0)) {
-      const noticePost = noticeData.items?.[0] || noticeData.posts?.[0];
-      if (noticePost && noticePost.title) {
-        // [LOG_ID: 20260713_1060] (GO NOTICE) 클릭 가능 토큰을 포함한 텍스트로 보완
-        noticeText = `[작은공지] ${noticePost.title} (GO NOTICE)`;
-      }
-    }
+    // [LOG_ID: 20260720_2323] 작은공지 라인 사용 안 함 — 항상 null
+    const noticeText = null;
 
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({

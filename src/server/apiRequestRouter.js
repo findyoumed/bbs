@@ -11,6 +11,8 @@ const handleVoteRoutes = require('./routeHandlers/voteRoutes');
 const handleRankingRoutes = require('./routeHandlers/rankingRoutes');
 // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 라우트
 const handleConfRoutes = require('./routeHandlers/confRoutes');
+// [LOG_ID: 20260720_2300] 건의하기 → 시삽 이메일 발송 라우트
+const handleContactRoutes = require('./routeHandlers/contactRoutes');
 
 const API_ROUTE_HANDLERS = [
   handleSystemRoutes,
@@ -21,7 +23,8 @@ const API_ROUTE_HANDLERS = [
   handleBoardRoutes,
   handleVoteRoutes,
   handleRankingRoutes,
-  handleConfRoutes
+  handleConfRoutes,
+  handleContactRoutes
 ];
 
 async function handleApiRequest(routeContext) {

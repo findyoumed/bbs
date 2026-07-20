@@ -219,6 +219,10 @@ export function createRoutingUrlBuilder(deps) {
       case 'my-stats':
         return '/account';
 
+      // [LOG_ID: 20260720_2300] 건의하기(시삽 이메일 발송).
+      case 'contact-sysop':
+        return getMenuNodeRoutePath('tosysop');
+
       case 'myinfo': {
         const myInfoMode = String(_myInfoMode || 'view').trim().toLowerCase();
         if (myInfoMode === 'nickname') return '/myinfo/nick';

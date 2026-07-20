@@ -30,6 +30,8 @@ export function createMenuNavigationActions(deps) {
 
     const target = match[1].trim();
     const normalized = normalizeSearchKey(target);
+    // [LOG_ID: 20260720_2320] GL은 PDS(자료실)의 별칭 — GO GL도 자료실로 이동
+    if (normalized === 'GL') return await executeGoCommand('GO PDS');
     if (normalized === 'TOP') {
       await showMain();
       return true;
@@ -243,6 +245,11 @@ export function createMenuNavigationActions(deps) {
     // [LOG_ID: 20260716_2200] 하이텔 (1)-25 접속통계 계열 — 내 이용 현황.
     if (node.type === 'my-stats' && typeof refs.showMyStats === 'function') {
       await refs.showMyStats();
+      return true;
+    }
+    // [LOG_ID: 20260720_2300] 건의하기 — 시삽 이메일 발송 화면.
+    if (node.type === 'contact-sysop' && typeof refs.showContactSysop === 'function') {
+      await refs.showContactSysop();
       return true;
     }
     return false;

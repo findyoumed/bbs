@@ -34,7 +34,10 @@
       "PowerShell($conn = Get-NetTCPConnection -LocalPort 3112 -State Listen -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force -Confirm:$false; \"stopped\" } else { \"no listener\" })",
       "PowerShell($conn = Get-NetTCPConnection -LocalPort 3113 -State Listen -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force -Confirm:$false; \"stopped\" } else { \"no listener\" })",
       "PowerShell($conn = Get-NetTCPConnection -LocalPort 3114 -State Listen -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force -Confirm:$false; \"stopped\" } else { \"no listener\" })",
-      "PowerShell($conn = Get-NetTCPConnection -LocalPort 3115 -State Listen -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force -Confirm:$false; \"stopped\" } else { \"no listener\" })"
+      "PowerShell($conn = Get-NetTCPConnection -LocalPort 3115 -State Listen -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force -Confirm:$false; \"stopped\" } else { \"no listener\" })",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell($conn = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force -Confirm:$false; \"stopped\" } else { \"no listener\" })"
     ]
   },
   "enabledMcpjsonServers": [

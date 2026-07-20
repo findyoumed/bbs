@@ -554,7 +554,7 @@ export function createNewsScreens(deps) {
     }));
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({
-      ansiText: buildBoardSelectAnsi(items, { titlePath: ['뉴스/인물'] }),
+      ansiText: buildBoardSelectAnsi(items, { titlePath: ['뉴스'] }),
       ansiToHTML,
       screenEl,
       renderScreenSequential,

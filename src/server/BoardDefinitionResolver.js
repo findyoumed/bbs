@@ -6,14 +6,14 @@ const logger = require('./logger');
 
 const PLAZA_POST_HEADERS = ['\uAC00\uC785\uC778\uC0AC', '\uD6A1\uC124\uC218\uC124', '\uBB3B\uACE0\uB2F5\uD558\uAE30', '\uCEF4\uD4E8\uD130\uCD08\uBCF4\uC2DC\uC808'];
 
+// [LOG_ID: 20260720_2205] welcome/membership/market/te99는 지금의 hanulso.mnu 기반 메뉴
+// 시스템 이전의 레거시 하드코딩 잔재였다 — 현재 메뉴 어디에도 연결되지 않고(door 2/3/52/53는
+// 옛 TOP 번호 체계), Supabase boards 테이블에도 레코드가 없으며, 시드 콘텐츠도 전혀 없었다
+// ("실제로 있는 메뉴만 보여줘" 검토 중 사용자 지적으로 발견, 완전한 죽은 코드라 삭제).
 const DEFAULT_BOARDS = [
   { boardId: 'notice', name: '공지사항', menuPath: 'top', door: '1', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' },
-  { boardId: 'welcome', name: '가입인사', menuPath: 'top', door: '2', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' },
-  { boardId: 'membership', name: '특선회원신청', menuPath: 'top', door: '3', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' },
   { boardId: 'tosysop', name: '건의하기', menuPath: 'top', door: '4', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' },
   { boardId: 'plaza', name: '자유 게시판', menuPath: 'top', door: '51', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '', postHeaders: PLAZA_POST_HEADERS },
-  { boardId: 'market', name: '장터 게시판', menuPath: 'top', door: '52', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' },
-  { boardId: 'te99', name: '질문 게시판', menuPath: 'top', door: '53', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' },
   { boardId: 'humor', name: '유머', menuPath: 'top', door: '54', accessLevel: 1, writeSysopOnly: false, replyEnabled: true, attachmentEnabled: false, headerFile: '', footerFile: '' }
 ];
 

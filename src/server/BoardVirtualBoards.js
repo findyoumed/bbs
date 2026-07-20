@@ -13,7 +13,7 @@ const VIRTUAL_BOARD_DEFINITIONS = Object.freeze([
     boardId: 'pds',
     name: '\uC790\uB8CC\uC2E4',
     menuPath: 'top',
-    door: '6',
+    door: '8',
     accessLevel: 1,
     writeSysopOnly: false,
     replyEnabled: true,
