@@ -202,7 +202,10 @@ function safeResolve(basePath, requestPath) {
   // [LOG: 20260425_2031] Normalize the base path first so trailing separators do not break subtree checks.
   const relativePath = String(requestPath || '').replace(/^\/+/, '');
   const resolved = path.resolve(normalizedBasePath, relativePath);
-  if (resolved === normalizedBasePath || resolved.startsWith(`${normalizedBasePath}${path.sep}`)) {
+  // [LOG_ID: 20260721_1720] 윈도우 환경 드라이브 문자 대소문자 불일치(d:\ vs D:\) 방지를 위해 소문자화 후 매칭
+  const lowerResolved = resolved.toLowerCase();
+  const lowerBase = normalizedBasePath.toLowerCase();
+  if (lowerResolved === lowerBase || lowerResolved.startsWith(`${lowerBase}${path.sep}`)) {
     return resolved;
   }
   return '';

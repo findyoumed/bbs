@@ -193,6 +193,8 @@ export function initializeAppFactoryRuntime(deps) {
     showProfile: screens.profileScreens.showProfile,
     showSignup: screens.signupModule.showSignup,
     showSystemLog: screens.systemLogScreens.showSystemLog,
+    // [LOG_ID: 20260721_1715] URL 대소문자 무관 복원을 위한 findBoardByKey 의존성 주입 추가
+    findBoardByKey: services.boardService.findBoardByKey,
     state,
     statusManager: services.statusManager,
     logger: services.logger

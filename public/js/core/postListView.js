@@ -53,7 +53,7 @@ export function createPostListView(deps) {
     const scale = screenRect.width / (screenNode.offsetWidth || 1);
     let searchFrom = 0;
     posts.forEach((post) => {
-      const idToken = String(post.localId ?? post.id || '').trim();
+      const idToken = String((post.localId ?? post.id) || '').trim();
       if (!idToken) return;
       let lineNode = null;
       for (let i = searchFrom; i < lineNodes.length; i++) {
@@ -231,7 +231,7 @@ export function createPostListView(deps) {
 
         const userId = fitCell(post.userId || post.authorUserId || '', 8);
         const date = fitCell(formatShortDate(post.createdAt).slice(0, 5), 5);
-        const postId = fitCell(String(post.localId ?? post.id || ''), 6, 'right');
+        const postId = fitCell(String((post.localId ?? post.id) || ''), 6, 'right');
 
         return ansiColor(15) + postId + ' ' +
           ansiColor(11) + userId + ' ' +
@@ -254,7 +254,7 @@ export function createPostListView(deps) {
       const pageCount = Math.max(1, Math.ceil(wrapLines.length / 16));
       const pages = fitCell(String(pageCount), 2, 'right');
 
-      const postId = fitCell(String(post.id || ''), 6, 'right');
+      const postId = fitCell(String((post.localId ?? post.id) || ''), 6, 'right');
 
       return ansiColor(15) + postId + ' ' +
         ansiColor(15) + author + ' ' +

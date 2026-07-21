@@ -1,3 +1,19 @@
+## [2026-07-21 17:35] 프론트엔드 연산자 우선순위 구문 오류 수정 및 데스크톱 글번호 localId 누락 보완
+
+**LOG_ID: 20260721_1735**
+목표: `localId ?? post.id || ''` 등 괄호가 누락된 연산자 혼용으로 인한 브라우저 `SyntaxError`를 수정하여 공지사항이 렌더링되지 않던 런타임 버그를 차단하고, 데스크톱 뷰포트에서 localId가 아닌 PK가 표시되던 부분을 보완한다.
+변경 파일:
+1. `public/js/core/postListView.js`
+2. `public/js/core/ansiBoardBuilders.js`
+3. `public/js/core/commandRouterBrowse.js`
+수행 작업:
+1. **괄호 적용을 통한 SyntaxError 제거**: `(post.localId ?? post.id) || ''`와 같이 괄호로 묶어 자바스크립트 스펙상 널 병합(`??`)과 논리합(`||`) 연산자가 모호함 없이 올바르게 해석되도록 교정.
+2. **데스크톱 일련번호 localId 누락 보완**: `postListView.js` 257라인의 데스크톱 일괄 출력(`PT` 명령어 결과물) 포맷에서 여전히 localId가 아닌 `post.id`를 가져오고 있던 레거시를 찾아 localId 기반으로 교체.
+3. **검증**: `npm run smoke:vercel-ready`로 빌드 상태를 검증하고, 브라우저 서브에이전트로 `http://localhost:3000/NOTICE` 및 상세 페이지 `/NOTICE/1`을 직접 로딩하여 `SyntaxError` 없이 1번 글과 줄바꿈 정돈된 본문이 완벽하게 렌더링됨을 시각 검증 완료.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-21 16:58] 공지사항 본문 내용 정돈 및 다듬기 2차 반영
 
 **LOG_ID: 20260721_1658**

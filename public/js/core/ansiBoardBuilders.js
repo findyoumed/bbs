@@ -163,7 +163,7 @@ export function createBoardAnsiBuilders(deps) {
       };
 
       const pdsLine = (post) => {
-        let line = ansiColor(15) + fitCell(String(post.localId ?? post.id || ''), P.no, 'right') + ' ';
+        let line = ansiColor(15) + fitCell(String((post.localId ?? post.id) || ''), P.no, 'right') + ' ';
         if (P.id) line += ansiColor(11) + fitCell(post.userId || post.authorUserId || '', P.id) + ' ';
         if (P.date) line += ansiColor(8) + fitCell(formatShortDate(post.createdAt).slice(3), P.date) + ' ';
         line += ansiColor(15) + fitCell(String(post.fileName || ''), P.file) + ' '
@@ -232,7 +232,7 @@ export function createBoardAnsiBuilders(deps) {
       const highlightedTitle = highlightText(rawTitle, highlightTerm, 14, 15);
       const title = fitCell(highlightedTitle, titleWidth);
 
-      const postId = fitCell(String(post.localId ?? post.id || ''), COL.no, 'right');
+      const postId = fitCell(String((post.localId ?? post.id) || ''), COL.no, 'right');
       const userId = fitCell(post.userId || post.authorUserId || '', COL.id);
       // formatShortDate → "YY/MM/DD". 원전은 연도를 안 쓰므로 앞 3글자("YY/")를 떼어 MM/DD로 쓴다.
       const date = fitCell(formatShortDate(post.createdAt).slice(3), COL.date);
@@ -285,7 +285,7 @@ export function createBoardAnsiBuilders(deps) {
     // 늘 비어 있었다(자료실은 목록을 먼저 불러오지만 게시판은 안 한다). 모르는 값을 '?'로 찍느니
     // 아예 빼는 게 낫다 — 원전에도 없는 표기다. (이전/다음글은 서버가 주는 _postNavigation
     // 폴백으로 동작하므로 기능상 문제는 없다.)
-    const metaNumber = totalCount ? `#${post?.localId ?? post?.id || ''}/${totalCount}` : `#${post?.localId ?? post?.id || ''}`;
+    const metaNumber = totalCount ? `#${(post?.localId ?? post?.id) || ''}/${totalCount}` : `#${(post?.localId ?? post?.id) || ''}`;
     const metaDate = isMobile ? formatShortDate(post?.createdAt || '') : formatLongDate(post?.createdAt || '');
     const metaHits = `조회:${post?.hit || post?.views || 0}`;
     const metaRecom = `추천:${post?.recommend || post?.recommends || 0}`;

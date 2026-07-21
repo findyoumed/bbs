@@ -40,7 +40,7 @@ export function createBrowseCommandHandler(deps) {
     }
 
     const posts = Array.isArray(state.posts) ? state.posts : [];
-    const byPostId = posts.find((post) => String(post?.localId ?? post?.id || '').trim() === value);
+    const byPostId = posts.find((post) => String((post?.localId ?? post?.id) || '').trim() === value);
     if (byPostId) {
       return byPostId;
     }

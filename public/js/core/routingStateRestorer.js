@@ -37,6 +37,8 @@ export function createRoutingStateRestorer(deps) {
     showWeatherMenu,
     showWeatherView,
     isUnifiedPdsBoardId,
+    // [LOG_ID: 20260721_1715] URL 대소문자 무관 복원을 위한 findBoardByKey 의존성 주입 추가
+    findBoardByKey,
     // [LOG: 20260623_0013] vote/ranking 스크린 복구 액션 (origin/main 포팅)
     showVoteList,
     showVoteDetail,
