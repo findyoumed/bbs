@@ -115,7 +115,15 @@ function publicRoom(room, counts = 0) {
     maxUser: normalizeMaxUser(room.maxUser, 99),
     visibility: visibilityLabel(room),
     requiresPassword: Boolean(room.password || room.isPrivate),
-    createdAt: room.createdAt || new Date().toISOString()
+    createdAt: room.createdAt || new Date().toISOString(),
+    // [LOG_ID: 20260721_2350] ST/W/WHO/UID(대화방 참여자 조회) 명령이 클라이언트에서
+    // state._chatRoom.participants를 읽는데, 이 함수는 지금까지 인원 "수"(counts)만 내려주고
+    // 실제 참여자 목록은 한 번도 내려준 적이 없어 그 명령들이 전부 "참여자 정보를 확인할 수
+    // 없습니다"만 뜨는 죽은 기능이었다(라이브 테스트로 확인) — sessionKey 등 내부 상관 토큰은
+    // 빼고 표시에 필요한 userId/nickName만 내려준다.
+    participants: Array.isArray(room.participants)
+      ? room.participants.map((p) => ({ userId: p.userId, nickName: p.nickName }))
+      : []
   };
 }
 

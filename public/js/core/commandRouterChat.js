@@ -275,13 +275,14 @@ export function createChatCommandHandler(deps) {
           return true;
         }
         if (cmd === 'ST') {
-          try {
-            const usersData = await apiFetch(`/api/chat/active-users`);
-            const names = (Array.isArray(usersData) ? usersData : []).map(u => u.nickName || u.userId).join(', ');
-            setHint(`현재 접속자: ${names || '없음'}`);
-          } catch (e) {
-            setHint('접속자 정보를 가져오지 못했습니다.');
-          }
+          // [LOG_ID: 20260721_2350] "실제로 확인해줘" 요청으로 라이브 테스트하다 발견: 존재하지 않는
+          // /api/chat/active-users를 호출하고 있어(서버에 그 경로가 없음, SPA 폴백 HTML이 200으로
+          // 돌아와 apiFetch가 JSON 파싱에 실패) ST는 항상 "접속자 정보를 가져오지 못했습니다"만
+          // 떴다 — 즉 실서비스에서 완전히 죽어 있었다. /W·/WHO(대화방 참여자 조회)가 이미 같은
+          // 정보를 클라이언트에 캐시된 state._chatRoom.participants로 정확히 보여주고 있어(별도
+          // API 호출 불필요), 그 방식을 그대로 재사용한다.
+          const list = (state._chatRoom?.participants || []).map((p) => p.nickName || p.userId).filter(Boolean);
+          setHint(list.length ? `현재 접속자: ${list.join(', ')}` : '참여자 정보를 확인할 수 없습니다.');
           return true;
         }
       }
@@ -331,13 +332,10 @@ export function createChatCommandHandler(deps) {
         }
 
         if (slashCmd === 'ST' || slashCmd === 'STATUS') {
-          try {
-            const usersData = await apiFetch(`/api/chat/active-users`);
-            const names = (Array.isArray(usersData) ? usersData : []).map(u => u.nickName || u.userId).join(', ');
-            setHint(`현재 접속자: ${names || '없음'}`);
-          } catch (e) {
-            setHint('접속자 정보를 가져오지 못했습니다.');
-          }
+          // [LOG_ID: 20260721_2350] 위 클릭 컨텍스트 ST와 동일한 사유로 수정 — 존재하지 않는
+          // /api/chat/active-users 대신 /W·/WHO와 동일하게 state._chatRoom.participants를 쓴다.
+          const list = (state._chatRoom?.participants || []).map((p) => p.nickName || p.userId).filter(Boolean);
+          setHint(list.length ? `현재 접속자: ${list.join(', ')}` : '참여자 정보를 확인할 수 없습니다.');
           return true;
         }
 

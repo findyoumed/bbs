@@ -171,7 +171,7 @@ class SupabaseChatRoomRepository extends BaseRepository {
 
   _toPublicRoom(row, summary = null) {
     const n = Number(row.room_no || 0);
-    return publicRoom({ no: n, roomId: normalizeText(row.room_key, roomKeyForNo(n)), title: row.name, greeting: row.description, ownerUserId: row.owner_user_id, ownerName: row.owner_name, maxUser: row.max_user, password: row.password, isPrivate: row.is_private, createdAt: row.created_at }, summary || summarizeParticipantCounts(this._participantsForRoom(n), 0));
+    return publicRoom({ no: n, roomId: normalizeText(row.room_key, roomKeyForNo(n)), title: row.name, greeting: row.description, ownerUserId: row.owner_user_id, ownerName: row.owner_name, maxUser: row.max_user, password: row.password, isPrivate: row.is_private, createdAt: row.created_at, participants: this._participantsForRoom(n) }, summary || summarizeParticipantCounts(this._participantsForRoom(n), 0));
   }
 
   _participantsForRoom(no) {
