@@ -243,10 +243,47 @@ export function createChatCommandHandler(deps) {
     if (state.screen === 'chat-room') {
       // [LOG: 20260707_1224] 상단바 로고 등 클릭으로 들어온 'T'는 메시지가 아니라 초기화면 이동 의도다.
       // (기존에는 "T"라는 메시지가 대화방에 전송되는 결함이 있었다. /T와 동일하게 처리한다.)
-      if (context?.source === 'click' && cmd === 'T') {
-        await leaveCurrentRoom();
-        await showMain();
-        return true;
+      // [LOG_ID: 20260721_1830] 이 우회를 T 하나에만 두고 있었는데, 정작 대화방 풋터
+      // (commandFooterText.js의 'chat' 카테고리: P, T, GO, O:방만들기, ST:상황판, H)가 클릭하라고
+      // 보여주는 다른 토큰들은 전부 슬래시 없는 채로 들어와 아래 "/"로 시작해야만 인식하는
+      // 명령 블록에 안 걸리고, 그대로 채팅 메시지("P", "O", "ST" 등)로 전송되고 있었다
+      // (appEvents.js의 executeCommandFromClick이 클릭 컨텍스트를 안 넘기던 버그와 겹쳐 있었음 —
+      // 그 버그는 별도로 고쳤지만, 그것만으로는 여기서 슬래시 요구 때문에 여전히 안 풀렸다).
+      // 클릭으로 들어온 나머지 이동/조회 명령도 같은 방식으로 슬래시 없이 처리한다. GO는
+      // "/GO 인자"에서 인자를 그냥 버리는 기존 동작(위 슬래시 블록)과 동일하게 맞춘다.
+      // EAR(귓속말)처럼 인자(대상+메시지)가 반드시 필요한 명령은 클릭 한 번으로 완성할 수
+      // 없어 풋터에서 아예 뺐다(아래 commandFooterText.js 수정) — 타이핑으로는 그대로 동작한다.
+      if (context?.source === 'click') {
+        if (cmd === 'T' || cmd === 'M') {
+          await leaveCurrentRoom();
+          await showMain();
+          return true;
+        }
+        if (cmd === 'P') {
+          await leaveCurrentRoom();
+          await showChatLobby();
+          return true;
+        }
+        if (cmd === 'GO') {
+          await leaveCurrentRoom();
+          await showMain();
+          return true;
+        }
+        if (cmd === 'O') {
+          await leaveCurrentRoom();
+          await openChatRoomCreate();
+          return true;
+        }
+        if (cmd === 'ST') {
+          try {
+            const usersData = await apiFetch(`/api/chat/active-users`);
+            const names = (Array.isArray(usersData) ? usersData : []).map(u => u.nickName || u.userId).join(', ');
+            setHint(`현재 접속자: ${names || '없음'}`);
+          } catch (e) {
+            setHint('접속자 정보를 가져오지 못했습니다.');
+          }
+          return true;
+        }
       }
 
       // [LOG: 20260411_2345] 대화방 내 명령어는 반드시 '/'로 시작해야 함

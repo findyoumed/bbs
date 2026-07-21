@@ -122,8 +122,18 @@ export function bindAppEvents(deps) {
       return false;
     }
 
+    // [LOG_ID: 20260721_1830] interactionHandlers.js의 executeCommand()는 클릭 의도를 구분하려고
+    // handleCmd(text, { source: 'click' })로 호출하는데(주석: "typed → message" vs "clicked →
+    // navigation"), 여기(풋터의 data-cmd/data-cmd-fill 토큰 클릭 경로)는 그 컨텍스트 없이
+    // handleCmd(text)만 호출하고 있었다 — commandDispatcherExecution.js가 context.source==='click'
+    // 여부로 raw-text 입력 화면(대화방 등)에서 "타이핑한 메시지"와 "클릭한 명령"을 가르는데,
+    // 이 경로로 들어오면 항상 타이핑 취급되어 대화방 풋터의 P/T/O/ST 등을 클릭하면 명령이
+    // 실행되는 대신 그 글자 그대로가 채팅 메시지로 전송되는 결함이 있었다(사용자 지적:
+    // "다른 화면도 명령어 감사해줘" 조사로 발견 — commandRouterChat.js의 기존
+    // "context?.source === 'click' && cmd === 'T'" 분기가 상단바 로고 클릭에서는 동작했지만
+    // 풋터 클릭에서는 이 누락 때문에 무력화돼 있었다).
     const token = beginCommandExecution(state);
-    const result = handleCmd(text);
+    const result = handleCmd(text, { source: 'click' });
     trackCommandExecution(state, result, token);
     clearPendingWhenSettled(result, text);
     return true;

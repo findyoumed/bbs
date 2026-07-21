@@ -104,7 +104,15 @@ export function createConfCommandHandler(deps) {
         return true;
       }
       if (state.confAgendaStep === 1) {
-        if (trimmed === '/c') { await showConfAgendas(state.serviceData?.roomNo); return true; }
+        // [LOG_ID: 20260721_1830] 이 화면의 풋터(commandFooterText.js confAgendaNew)는 항상
+        // "P:취소"를 보여주는데, 정작 여기(본문 입력 단계)는 /c 만 취소로 인식해 P를 치면
+        // 본문 줄로 그대로 들어가 버렸다(사용자 지적: "다른 화면도 명령어 감사해줘" 조사로
+        // 발견). 다른 화면들의 글쓰기 취소 관례(P/M/B/T)와 맞춰, 여기서도 동일하게 취소로
+        // 받아들인다 — 기존 /c도 그대로 유지(하위 호환).
+        if (trimmed === '/c' || cmd === 'P' || cmd === 'M' || cmd === 'B' || cmd === 'T') {
+          await showConfAgendas(state.serviceData?.roomNo);
+          return true;
+        }
         if (trimmed === '/s') {
           const content = state.confAgendaData.contentLines.join('\n').trim();
           if (!content) { setHint('안건 내용을 한 줄 이상 입력해 주세요.'); return true; }
