@@ -415,14 +415,17 @@ export function createArcadeAnsiBuilders(deps) {
     }
     
     // 최근 포격 피드백 정보
+    // [LOG_ID: 20260721_0900] 좌표 표기 순서 버그 — 격자는 행(y)=문자, 열(x)=숫자(예: G3 → y=6,x=2)로
+    // 입력·렌더링되는데, 이 피드백 줄만 x를 문자로 y를 숫자로 뒤집어 써서 "G3를 공격"해도
+    // "(C 7)"처럼 완전히 다른 좌표로 표시됐다. rowLabels[y]/x+1로 바로잡는다.
     parts.push('');
     if (st.lastUserShot) {
       const res = st.lastUserShot.hit ? c(11, `명중! (${st.lastUserShot.target})`) : c(8, '빗나감');
-      parts.push(`  귀하 공격 : (${String.fromCharCode(65 + st.lastUserShot.x)} ${st.lastUserShot.y + 1}) - ${res}`);
+      parts.push(`  귀하 공격 : (${rowLabels[st.lastUserShot.y]}${st.lastUserShot.x + 1}) - ${res}`);
     }
     if (st.lastCpuShot) {
       const res = st.lastCpuShot.hit ? c(9, `피격 명중! (${st.lastCpuShot.target})`) : c(8, '빗나감');
-      parts.push(`  적군 보복 : (${String.fromCharCode(65 + st.lastCpuShot.x)} ${st.lastCpuShot.y + 1}) - ${res}`);
+      parts.push(`  적군 보복 : (${rowLabels[st.lastCpuShot.y]}${st.lastCpuShot.x + 1}) - ${res}`);
     }
     
     // 승패/진행 상태
