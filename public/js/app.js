@@ -97,51 +97,6 @@ async function waitForPrimaryFonts(timeoutMs = 2500) {
   }
 }
 
-// [LOG_ID: 20260713_1030] 90년대 모뎀 접속 연출 (ATDT 01410 -> CONNECT)
-async function showConnectSequence() {
-  const container = document.getElementById('terminal-screen');
-  if (!container) return;
-
-  const originalContent = container.innerHTML;
-  // [LOG_ID: 20260721_1330] class="loading"가 빠져 있어 style.css의
-  // "#terminal-container.is-loading #terminal-screen > :not(.loading):not(.ansi-screen) { display:none }"
-  // 규칙에 걸려 이 연출 전체(약 3.5초, 글자 타이핑 애니메이션)가 화면에 전혀 보이지 않은 채로만
-  // 시간이 흘렀다 — "연결하는 중입니다가 뜨기 전이 너무 길다"는 사용자 체감의 실제 원인이었다.
-  // is-loading 상태에서도 보여야 하는 콘텐츠는 .loading 클래스로 예외 처리하는 기존 관례를 따른다.
-  container.innerHTML = '<div id="connect-seq" class="loading" style="padding:20px; font-family:\'Sam3KRFont\',\'DungGeunMo\',\'GulimChe\',monospace; font-size:17px; color:#ffffff; line-height:1.6; white-space:pre-wrap;"></div>';
-  const seqEl = document.getElementById('connect-seq');
-
-  // [LOG_ID: 20260713_1155] 나우누리 테마 시 전용 모뎀 번호 및 접속 멘트 분기
-  const isNownuri = state.theme === 'nownuri';
-  const targetNumber = isNownuri ? '01411' : '01410';
-  const targetLabel = isNownuri ? 'NOWNURI' : 'HiTEL';
-
-  const lines = [
-    `ATDT ${targetNumber}`,
-    'DIALING...',
-    `CONNECT 14400 / ${targetLabel}`
-  ];
-
-  const delay = (ms) => new Promise(r => setTimeout(r, ms));
-
-  for (const line of lines) {
-    if (line.startsWith('ATDT') || line.startsWith('CONNECT')) {
-      for (let i = 0; i < line.length; i++) {
-        seqEl.textContent += line[i];
-        await delay(50);
-      }
-      seqEl.textContent += '\n';
-      await delay(300);
-    } else {
-      seqEl.textContent += line + '\n';
-      await delay(800);
-    }
-  }
-
-  await delay(500);
-  container.innerHTML = originalContent;
-}
-
 async function init() {
   restoreTheme(); // [LOG: 20260424_1755] 저장된 테마 즉시 복원
   await waitForPrimaryFonts();
@@ -175,11 +130,6 @@ async function init() {
     if (window.location.pathname !== '/') {
       await restoreStateFromURL();
     } else {
-      try {
-        await showConnectSequence();
-      } catch (err) {
-        console.warn('접속 연출 실패:', err.message);
-      }
       await showMain();
     }
   } catch (e) {

@@ -1,3 +1,14 @@
+## [2026-07-21 13:55] [성능 심각] 접속 초기 로딩이 외부 jsdelivr CDN(Supabase JS SDK) 응답 대기에 완전히 발목 잡히던 구조적 문제 해결
+
+**LOG_ID: 20260721_1355**
+목표: 직전 커밋(모뎀 연출 CSS 가림 수정) 직후 사용자가 "이런 시간이 지연되는 효과는 필요없어"라고 해 연출 자체를 완전히 제거 — 그런데 제거하고 실측해보니 "연결하는 중입니다" 이전 대기시간이 거의 그대로(약 13초)였다. 진짜 원인을 다시 조사.
+발견: `index.html`이 `<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">`를 `<script type="module" src="/js/app.js">` **앞에** 두고 있었다. HTML 표준상 defer 클래식 스크립트와 async가 아닌 module 스크립트는 "문서 순서대로 실행"되는 같은 목록에 묶여, 앞선 CDN 스크립트가 성공/실패 상관없이 완전히 결판날 때까지 뒤의 app.js는 로컬 모듈이 전부 이미 받아져 있어도 **실행 자체를 시작하지 못한다.** 이 순서는 실수가 아니라 `authServiceBootstrap.js`의 `initAuth()`가 `window.supabase`를 재시도 없이 딱 한 번만 확인하기 때문에 필요한 것이었다 — 문제는 외부 CDN 요청이 네트워크 상태에 따라 몇 초~수십 초씩 걸리거나 아예 실패할 수 있는데, 그동안 앱 전체가 "연결하는 중입니다" 같은 로딩 문구조차 못 띄운 채 완전히 멈춰 있었다는 것. Playwright로 요청 타임라인을 전부 캡처해 확정: 로컬 정적 자산(JS/CSS/폰트)은 전부 500ms 안에 끝나는데, `cdn.jsdelivr.net` 요청만 **12.9초 뒤에 `ERR_CONNECTION_RESET`으로 실패**하고, 그 즉시 `/api/auth/config` 등 나머지 초기화가 한꺼번에 쏟아지듯 이어졌다 — 즉 app.js의 실행 자체가 그 12.9초 동안 통째로 안 되고 있었다.
+수정: 이미 이 프로젝트가 폰트를 CDN에서 자체 호스팅(`/fonts/*.woff`)으로 옮긴 전례와 동일한 방향으로, `node_modules/@supabase/supabase-js/dist/umd/supabase.js`(UMD 번들, `window.supabase` 전역 노출은 CDN 버전과 동일)를 `public/vendor/supabase.js`로 복사해 자체 호스팅했다. `initAuth()`가 요구하는 "module 스크립트 실행 전 완료 보장" 순서는 그대로 유지하면서, 외부 네트워크 왕복을 로컬 정적 자산 수준(수십 ms)으로 줄였다. 더는 안 쓰는 `cdn.jsdelivr.net`을 `staticRequestHandler.js`의 CSP(`script-src`/`font-src`)에서도 제거해 허용 출처를 좁혔다.
+검증: Playwright로 요청 타임라인 재측정 — 전체 초기화(첫 힌트 텍스트가 뜨기까지) **13,026ms → 444ms**(약 29배). `node --check`, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — "연결하는 중입니다가 뜨기 전이 길다"는 원 질문의 진짜 근본 원인이었다. 앞선 모뎀 연출 CSS 수정(LOG_ID 20260721_1320)은 그 자체로도 유효한 결함이었지만 체감 지연의 대부분을 설명하진 못했고, 사용자 요청대로 그 연출은 이번에 완전히 제거했다.
+
+---
+
 ## [2026-07-21 13:20] [버그] 접속 시 모뎀 다이얼링 연출(ATDT/DIALING/CONNECT)이 CSS에 가려 완전히 안 보인 채 3.5초를 그냥 흘려보내던 결함 수정
 
 **LOG_ID: 20260721_1320**
