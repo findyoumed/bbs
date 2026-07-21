@@ -26,7 +26,7 @@ export function createTerminalUiCore(deps) {
   } = deps;
   let outputListener = null;
   const terminalFooter = document.getElementById('terminal-footer');
-  const { syncVisualViewportMetrics } = createTerminalViewportMetrics({ screenEl });
+  const { syncVisualViewportMetrics, resetStableViewportHeight } = createTerminalViewportMetrics({ screenEl });
 
   function setOutputListener(callback) {
     outputListener = callback;
@@ -207,6 +207,12 @@ export function createTerminalUiCore(deps) {
     window.visualViewport.addEventListener('resize', _onResize);
     window.visualViewport.addEventListener('scroll', _onResize);
   }
+  // [LOG_ID: 20260721_1500] 화면 회전은 키보드 개폐와 달리 실제로 기준 높이가 바뀌는 경우라,
+  // 고정해둔 --stable-vh를 강제로 다시 읽는다(모니터링만 하는 위 resize는 더 큰 값만 채택하는
+  // monotonic-max라 회전으로 더 작아진 새 방향에는 자동으로 안 좁혀지기 때문).
+  window.addEventListener('orientationchange', () => {
+    window.setTimeout(resetStableViewportHeight, 150);
+  });
   // [LOG_ID: 20260711_1320] VirtualKeyboard API(Chromium Android): 가상 키보드를 오버레이 모드로
   // 전환해 키보드 개폐 시 브라우저의 레이아웃/시각 뷰포트 리사이즈(이중 리플로우·점프)를 없앤다.
   // 이 모드에서는 visualViewport 높이가 줄지 않으므로 키보드 높이는 geometrychange 이벤트와

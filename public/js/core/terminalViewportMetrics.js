@@ -1,9 +1,30 @@
 // [LOG: 20260617_1005] Mobile visual viewport metrics split from terminalUiCore.js.
 export function createTerminalViewportMetrics({ screenEl }) {
   let mobileKeyboardVisible = false;
+  let stableViewportHeight = 0;
+
+  // [LOG_ID: 20260721_1500] 모바일 폰트 크기 clamp가 순정 vh 단위를 썼는데, 이 기기/브라우저
+  // 설정에서는 vh가 소프트웨어 키보드가 열릴 때마다 줄어들어(VirtualKeyboard 오버레이 모드가
+  // 안 먹는 경우) 화면 전체 글자 크기가 키보드 열고 닫을 때마다 눈에 띄게 출렁였다(사용자 실측
+  // 스크린샷: "회원 ID" 라벨까지도 크기가 달랐음 — 개별 요소가 아니라 화면 전체가 같이 줄어든
+  // 것). 사용자가 명시적으로 "폰트 크기 고정, 대신 가려진 내용은 스크롤로" 선택 — 키보드 때문에
+  // 줄어드는 순간의 높이는 무시하고, 관측된 값 중 가장 큰(=키보드 닫힌) 높이만 기준으로 남긴다.
+  // 화면 회전은 폭이 바뀌므로 별도로 강제 갱신한다(아래 forceReset).
+  function syncStableViewportHeight(forceReset) {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const root = document.documentElement;
+    const currentHeight = Math.max(window.innerHeight || 0, document.documentElement?.clientHeight || 0);
+    if (currentHeight <= 0) return;
+    if (forceReset || !stableViewportHeight || currentHeight > stableViewportHeight) {
+      stableViewportHeight = currentHeight;
+      root.style.setProperty('--stable-vh', `${Math.round(stableViewportHeight)}px`);
+    }
+  }
 
   function syncVisualViewportMetrics() {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    syncStableViewportHeight(false);
 
     const root = document.documentElement;
     const body = document.body;
@@ -49,5 +70,9 @@ export function createTerminalViewportMetrics({ screenEl }) {
     mobileKeyboardVisible = keyboardVisible;
   }
 
-  return { syncVisualViewportMetrics };
+  function resetStableViewportHeight() {
+    syncStableViewportHeight(true);
+  }
+
+  return { syncVisualViewportMetrics, resetStableViewportHeight };
 }

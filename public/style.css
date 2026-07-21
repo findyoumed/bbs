@@ -2125,10 +2125,12 @@ body[data-print-view="true"] .ansi-screen {
 @media (max-width: 768px) and (orientation: portrait) {
 
     /* [LOG: 20260426_2250] 모바일 세로 본문 크기를 화면별 분기 없이 공통값으로 통일한다 */
+    /* [LOG_ID: 20260721_1500] 순정 2.7vh 대신 --stable-vh(키보드 개폐에 반응하지 않는 고정 기준
+       높이, terminalViewportMetrics.js)를 쓴다 — 사용자 선택(1번: 폰트 크기 고정, 대신 스크롤). */
     #terminal-container,
     .ansi-screen,
     .ansi-line {
-        font-size: clamp(12px, min(4.2vw, 2.7vh), 16px);
+        font-size: clamp(12px, min(4.2vw, calc(var(--stable-vh, 100vh) * 0.027)), 16px);
         line-height: 1.32;
     }
 
@@ -2508,7 +2510,7 @@ body[data-print-view="true"] .ansi-screen {
         flex: 0 1 auto !important;
         display: flex !important;
         flex-direction: column !important;
-        font-size: clamp(12px, min(4.2vw, 2.7vh), 15px) !important;
+        font-size: clamp(12px, min(4.2vw, calc(var(--stable-vh, 100vh) * 0.027)), 15px) !important;
         line-height: 1.32 !important;
     }
 
@@ -2576,7 +2578,7 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="help"] #terminal-container,
     body[data-screen="omok-play"] #terminal-container,
     body[data-screen="post-view"] #terminal-container {
-        font-size: clamp(11px, min(4.2vw, 2.5vh), 15px) !important;
+        font-size: clamp(11px, min(4.2vw, calc(var(--stable-vh, 100vh) * 0.025)), 15px) !important;
     }
 
     .ansi-screen,
