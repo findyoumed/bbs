@@ -1,3 +1,14 @@
+## [2026-07-21 13:45] [모바일] 게시글 보기(post-view) 화면 본문 아래쪽이 잘리던 결함 수정
+
+**LOG_ID: 20260721_1345**
+목표: 사용자 스크린샷 제보 — 공지사항 게시글 본문 마지막 줄이 구분선/풋터 위에서 잘림.
+원인: 이 세션에서 이미 여러 차례 반복된 동일 계열 버그(모바일 "터미널 한 프레임" 고정 높이가 기본 23~24줄 예산을 넘으면 아래쪽이 잘리는 문제) — `style.css`의 뉴스목록/뉴스기사/도움말/오목 4개 화면에 적용된 3종 완화(`#terminal-screen{overflow-y:auto}`, `.ansi-line{min-height:1.32em}`, `#terminal-container{font-size:clamp(11px,min(4.2vw,2.5vh),15px)}`)가 게시글 보기(`post-view`) 화면에는 아직 확장되지 않았다. 게시글 본문은 글마다 길이가 가변적이라 긴 글에서 특히 잘 드러난다.
+수정: `body[data-screen="post-view"]`를 위 3개 CSS 규칙 그룹에 동일하게 추가.
+검증: Playwright로 모바일 뷰포트(390x700)에서 게시글 보기 진입 후 `#terminal-screen`의 computed style 확인 — `overflow-y:auto`, `.ansi-line{min-height:19.8px}`(15px 폰트의 1.32em), `#terminal-container{font-size:15px}` 전부 정상 적용 확인. `public/index.html`의 `style.css?v=` 캐시버스팅 버전도 갱신(이 세션 초반에 깜빡했다가 사용자 재보고로 배웠던 교훈 — 이번엔 처음부터 함께 갱신). `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
 ## [2026-07-21 13:55] [성능 심각] 접속 초기 로딩이 외부 jsdelivr CDN(Supabase JS SDK) 응답 대기에 완전히 발목 잡히던 구조적 문제 해결
 
 **LOG_ID: 20260721_1355**
