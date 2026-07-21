@@ -8,6 +8,7 @@ const {
   sameText,
   toPublicMember
 } = require('./MemberRepositoryShared');
+const { hashPassword, isHashedPassword, verifyPasswordHash } = require('./PasswordHashing');
 
 const { buildPaginationMetadata } = require('./queryUtils');
 
@@ -15,8 +16,8 @@ class MemoryMemberRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'memory' });
     this.members = new Map([
-      ['guest', { userId: 'guest', nickName: '손님', email: '', birthday: '', sex: 'M', level: 1, isOpen: true, isAdmin: false, registrationDateTime: '', lastLoginDateTime: '', password: '' }],
-      ['sysop', { userId: 'sysop', nickName: '시스옵', email: '', birthday: '', sex: 'M', level: 99, isOpen: true, isAdmin: true, registrationDateTime: '', lastLoginDateTime: '', password: '123456' }]
+      ['guest', { userId: 'guest', nickName: '손님', email: '', birthday: '', sex: 'M', level: 1, isOpen: true, isAdmin: false, registrationDateTime: '', lastLoginDateTime: '', password: hashPassword('') }],
+      ['sysop', { userId: 'sysop', nickName: '시스옵', email: '', birthday: '', sex: 'M', level: 99, isOpen: true, isAdmin: true, registrationDateTime: '', lastLoginDateTime: '', password: hashPassword('123456') }]
     ]);
   }
 
@@ -41,7 +42,16 @@ class MemoryMemberRepository extends BaseRepository {
 
   async verifyPassword(userId, password) {
     const member = this.members.get(normalizeLookup(userId)) || null;
-    return Boolean(member && String(member.password || '') === String(password || ''));
+    if (!member) {
+      return false;
+    }
+    const ok = verifyPasswordHash(password, member.password);
+    // 레거시 평문 비밀번호로 성공한 로그인은 즉시 해시로 조용히 마이그레이션한다(재로그인/계정
+    // 잠김 없이). 신규 계정은 setPassword가 이미 해시를 저장하므로 여기 걸릴 일이 없다.
+    if (ok && !isHashedPassword(member.password)) {
+      member.password = hashPassword(password);
+    }
+    return ok;
   }
 
   async ensureMember(input = {}) {
@@ -73,7 +83,7 @@ class MemoryMemberRepository extends BaseRepository {
       nickName: defaults.nickName,
       email: defaults.email,
       isAdmin: defaults.isAdmin,
-      password
+      password: hashPassword(password)
     });
     this.members.set(next.userId, next);
     return toPublicMember(next);

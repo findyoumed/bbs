@@ -101,6 +101,7 @@ async function getPost(repo, boardId, postId, options = {}) {
   if (!board) {
     throw createHttpError(404, '게시판을 찾을 수 없습니다.');
   }
+  assertBoardAccessible(board, options.context, repo.levelAliases);
 
   const capabilities = await ensureCapabilities(repo);
   let post = await fetchPostByLocalId(repo, boardId, postId);

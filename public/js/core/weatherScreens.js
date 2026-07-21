@@ -196,12 +196,19 @@ export function createWeatherScreens(deps) {
       const regionName = feed?.region?.title || region?.title || region?.province || '';
       state.serviceData = {
         regionDoor, region: regionName, items: regions,
-        weatherItems: feed?.items || [], dailyItems: feed?.daily || []
+        weatherItems: feed?.items || [], dailyItems: feed?.daily || [],
+        unavailable: !!feed?.unavailable, unavailableMessage: feed?.message || ''
       };
     }
 
     const weatherResult = buildWeatherAnsi(
-      { region: state.serviceData.region, items: state.serviceData.weatherItems, daily: state.serviceData.dailyItems },
+      {
+        region: state.serviceData.region,
+        items: state.serviceData.weatherItems,
+        daily: state.serviceData.dailyItems,
+        unavailable: state.serviceData.unavailable,
+        message: state.serviceData.unavailableMessage
+      },
       requestedPageNo
     );
     state.serviceData.pageNo = weatherResult.pageNo;

@@ -14,6 +14,7 @@ const {
 } = require('./MemberRepositoryShared');
 
 const { buildPaginationMetadata } = require('./queryUtils');
+const { hashPassword, isHashedPassword, verifyPasswordHash } = require('./PasswordHashing');
 
 class SupabaseMemberRepository extends BaseRepository {
   constructor(options = {}) {
@@ -94,7 +95,23 @@ class SupabaseMemberRepository extends BaseRepository {
         this._throwError('회원 비밀번호 확인', error, { table: this.table });
       }
 
-      return Boolean(data && String(data.password || '') === String(password || ''));
+      if (!data) {
+        return false;
+      }
+
+      const ok = verifyPasswordHash(password, data.password);
+      // 레거시 평문 비밀번호로 성공한 로그인은 즉시 해시로 조용히 마이그레이션한다.
+      if (ok && !isHashedPassword(data.password)) {
+        const { error: migrateError } = await this.client
+          .from(this.table)
+          .update({ password: hashPassword(password) })
+          .eq('user_id', normalizedUserId);
+        if (migrateError) {
+          this._throwError('회원 비밀번호 마이그레이션', migrateError, { table: this.table });
+        }
+      }
+
+      return ok;
     });
   }
 
@@ -157,8 +174,8 @@ class SupabaseMemberRepository extends BaseRepository {
   async setPassword(userId, password, defaults = {}) {
     const normalizedUserId = normalizeLookup(userId);
     const normalizedPassword = String(password || '').trim();
-    if (normalizedPassword.length < 4) {
-      throw createHttpError(400, '비밀번호는 4자 이상이어야 합니다.');
+    if (normalizedPassword.length < 6) {
+      throw createHttpError(400, '비밀번호는 6자 이상이어야 합니다.');
     }
 
     const existing = await this.getMember(normalizedUserId);
@@ -171,7 +188,7 @@ class SupabaseMemberRepository extends BaseRepository {
       isAdmin: defaults.isAdmin ?? existing?.isAdmin ?? false,
       registrationDateTime: existing?.registrationDateTime ?? '',
       lastLoginDateTime: existing?.lastLoginDateTime ?? '',
-      password: normalizedPassword,
+      password: hashPassword(normalizedPassword),
       level: (defaults.isAdmin ?? existing?.isAdmin ?? false) ? 99 : normalizeLevel(existing?.level, 1)
     });
 

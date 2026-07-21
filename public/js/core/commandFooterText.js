@@ -126,6 +126,12 @@ const SCREEN_TO_CATEGORY = {
   'fortune-input': 'amusementInput', 'fortune-result': 'amusementView',
   'mbti-list': 'amusementInput', 'mbti-detail': 'amusementView',
   'retro-list': 'amusementInput', 'retro-view': 'amusementView',
+  // [LOG_ID: 20260721_2010] blood/compat/tojeong 7개 화면이 SCREEN_TO_CATEGORY에 아예 없어
+  // 힌트바가 완전히 비어 있었다(getSupportedFooterText가 category를 못 찾고 '' 반환) —
+  // 다른 철학관 입력/결과 화면과 동일하게 amusementInput/amusementView로 매핑한다.
+  'blood-input': 'amusementInput', 'blood-result': 'amusementView',
+  'compat-input': 'amusementInput', 'compat-input2': 'amusementInput', 'compat-result': 'amusementView',
+  'tojeong-input': 'amusementInput', 'tojeong-result': 'amusementView',
   // [LOG_ID: 20260720_1358] 오락실 게임 5종 (오목/오델로/숫자야구/영어단어맞추기/숫자판맞추기)
   'omok-play': 'arcadePlay', 'oth-play': 'arcadePlay', 'base-play': 'arcadePlay',
   'hangman-play': 'hangmanPlay', 'puzzle15-play': 'arcadePlay',

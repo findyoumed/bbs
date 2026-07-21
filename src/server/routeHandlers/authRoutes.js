@@ -79,7 +79,10 @@ class AuthRouter extends BaseRouter {
           body: {
             userId: { required: true, pattern: /^[a-zA-Z0-9_]{3,20}$/ },
             nickName: { required: true, minLength: 2, maxLength: 20 },
-            password: { required: true, minLength: 4 }
+            // [LOG_ID: 20260721_1900] 가입 시에만 4자 이상으로 느슨해서, 브라우저 UI(6자 이상,
+            // signupFlowSubmit.js)를 우회해 API를 직접 호출하면 비밀번호 변경(memberRoutes.js,
+            // 6자 이상)보다 약한 4~5자 비밀번호로 가입할 수 있었다 — 정책을 6자로 통일.
+            password: { required: true, minLength: 6 }
           }
         }
       },
@@ -89,15 +92,18 @@ class AuthRouter extends BaseRouter {
         handler: 'signupPrecheck',
         validate: {
           body: {
-            userId: { pattern: /^[a-zA-Z0-9_]{3,40}$/ },
+            // [LOG_ID: 20260721_1900] {3,40}이라 21~40자 아이디는 사전 확인(precheck)에서
+            // "사용 가능"으로 뜨지만 실제 가입(register, 위 {3,20})에서는 거절됐다 — 실제 제한과
+            // 통일.
+            userId: { pattern: /^[a-zA-Z0-9_]{3,20}$/ },
             nickName: { minLength: 2, maxLength: 20 },
             email: {}
           }
         }
       },
-      { 
-        method: 'POST', 
-        pattern: '/api/members/oauth-register', 
+      {
+        method: 'POST',
+        pattern: '/api/members/oauth-register',
         handler: 'oauthRegister',
         validate: {
           body: {

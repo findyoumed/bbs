@@ -106,7 +106,7 @@ export function createPostViewCommandHandler(deps) {
                 await showPostList(state.board.id, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
               }
             } else if (typeof showAttachmentList === 'function') {
-              await showAttachmentList(file.postId);
+              await showAttachmentList(state.board.id, file.postId);
             }
           };
 

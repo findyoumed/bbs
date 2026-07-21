@@ -87,6 +87,21 @@ class MemberRouter extends BaseRouter {
 
   // --- Profile & Search ---
 
+  // [LOG_ID: 20260721_2020] 보안 감사 중 발견: getMember(/api/members/:userId)와
+  // search(/api/members/search)는 미들웨어가 없어 로그인 없이 누구나 호출할 수 있는데,
+  // toPublicMember는 password/id/authUserId만 걷어내고 email/birthday/sex/
+  // lastLoginDateTime은 그대로 남겨둔다 — 즉 아이디만 알면 아무나 다른 회원의 이메일·생일·
+  // 성별·최근 접속시각을 그대로 조회할 수 있었다(개인정보 유출). 클라이언트 어디에도 이
+  // 필드들을 화면에 표시하는 곳이 없어(프로필/검색 화면은 닉네임·레벨·가입일만 씀) 기존
+  // 기능을 깨지 않고 본인/관리자가 아닌 조회에서만 이 필드들을 제거한다.
+  _toDirectoryMember(member, context, targetUserId) {
+    if (!member) return member;
+    const isSelfOrAdmin = Boolean(context?.isAdmin) || context?.userId === (targetUserId ?? member.userId);
+    if (isSelfOrAdmin) return member;
+    const { email, birthday, sex, lastLoginDateTime, ...rest } = member;
+    return rest;
+  }
+
   async listMembers() {
     const { memberRepository } = this.deps;
     const options = this.getQueryOptions({ orderBy: 'user_id' });
@@ -102,6 +117,7 @@ class MemberRouter extends BaseRouter {
 
   async search() {
     const { memberRepository } = this.deps;
+    const context = await this.getContext();
     const userId = this.requestUrl.searchParams.get('userId') || '';
     const nickName = this.requestUrl.searchParams.get('nickName') || '';
     const email = this.requestUrl.searchParams.get('email') || '';
@@ -123,6 +139,7 @@ class MemberRouter extends BaseRouter {
       this.notFound('회원 정보를 찾을 수 없습니다.');
     }
 
+    member = this._toDirectoryMember(member, context, member.userId);
     if (allowMissing) return this.send(200, { found: true, member });
     return this.send(200, member);
   }
@@ -271,6 +288,7 @@ class MemberRouter extends BaseRouter {
       if (allowMissing) return this.send(200, { found: false, member: null });
       this.notFound('회원 정보를 찾을 수 없습니다.');
     }
+    member = this._toDirectoryMember(member, context, targetUserId);
     if (allowMissing) return this.send(200, { found: true, member });
     return this.send(200, member);
   }

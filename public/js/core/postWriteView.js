@@ -418,7 +418,7 @@ export function createPostWriteView(deps) {
     }
 
     const boardId = state.board.id;
-    const postId = state.post?.id;
+    const postId = state.post?.localId ?? state.post?.id;
     const storedTitle = buildStoredTitle(title, selectedHeader, headerOptions);
 
     if (state.writeMode === 'edit' && state.post && !canEditPost(state.post)) {

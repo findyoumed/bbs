@@ -200,7 +200,10 @@ export function createPostListView(deps) {
 
     const boardKey = String(state.board?.id || '').trim();
     const url = `/api/boards/${encodeURIComponent(boardKey)}?page=1&pageSize=100`;
-    const responseData = await apiFetch(url).catch(() => null);
+    // [LOG_ID: 20260721_2040] 실패를 null로 삼켜 "지정 번호 이후의 글이 없습니다"와 구분이 안 됐다
+    // (사용자에겐 둘 다 빈 화면으로 보임) — 실패 사유를 별도로 표시한다.
+    let fetchError = null;
+    const responseData = await apiFetch(url).catch((error) => { fetchError = error; return null; });
 
     setReady(true);
 
@@ -272,7 +275,9 @@ export function createPostListView(deps) {
       ansiHLine(targetCols, 8)
     ];
 
-    if (!filtered.length) {
+    if (fetchError) {
+      lines.push(ansiColor(9) + ` 목록을 불러오지 못했습니다: ${fetchError.message || '알 수 없는 오류'}` + ANSI_RESET);
+    } else if (!filtered.length) {
       lines.push(ansiColor(8) + ' 지정 번호 이후의 글이 없습니다.' + ANSI_RESET);
     } else {
       filtered.forEach(post => {

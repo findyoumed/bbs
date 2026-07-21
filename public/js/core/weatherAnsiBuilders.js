@@ -71,6 +71,15 @@ export function createWeatherAnsiBuilders(deps) {
     const pageLabel = buildPageLabel(currentPage, pageCount);
     parts.push(buildTopHeader(region ? ['날씨', region] : ['날씨'], pageLabel, targetCols));
 
+    // [LOG_ID: 20260721_2030] data.unavailable를 반영하지 않아 지역 날씨 조회 실패 시 빈 표만
+    // 렌더링되던 문제 — 원인/메시지를 안내 문구로 표시한다(내 위치 날씨의 buildLocalWeatherAnsi는
+    // 이미 이렇게 처리하고 있었는데 지역 날씨 쪽만 빠져 있었다).
+    if (data?.unavailable) {
+      parts.push('');
+      parts.push(`  ${ansiColor(12)}${data.message || '날씨 정보를 불러올 수 없습니다.'}${ANSI_RESET}`);
+      return { text: parts.join('\n'), pageNo: 1, pageCount: 1 };
+    }
+
     if (info.type === 'summary') {
       if (isMobile) {
         parts.push(

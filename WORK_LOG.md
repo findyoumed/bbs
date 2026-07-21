@@ -1,3 +1,31 @@
+## [2026-07-21 21:00] [보안/버그 수정] "다른화면전수점검" — 4개 서브에이전트 전수 감사 결과 반영: 평문 비밀번호 저장(치명), 게시글 수정/답글 깨짐(치명), 게시판 열람권한 우회, 회원 개인정보 무인증 유출, 혈액형 'B' 입력 충돌 등 9건 수정
+
+**LOG_ID: 20260721_2100**
+목표: 사용자 요청 — "다른화면전수점검"(직전 화면별 명령어 감사에 이어, 남은 전체 화면을 빠짐없이 점검). 철학관(오락실 산하)/뉴스·날씨·자료실·복고 화면/게시판 목록·조회·글쓰기 핵심 로직/로그인·가입·내정보·회원검색 보안, 4개 영역을 백그라운드 서브에이전트 4개로 병렬 조사한 뒤, 심각도 순으로 직접 코드를 재확인하며 수정했다.
+
+**[치명] 회원 비밀번호 평문 저장**: `MemberRepositoryMemory.js`(인메모리 모드)와 `MemberRepositorySupabase.js`(Supabase 모드) 둘 다 `password` 컬럼에 평문을 그대로 저장·비교하고 있었다 — DB 백업 접근이나 서비스 롤 키 유출 시 전체 회원 비밀번호가 그대로 노출되는 구조. bcrypt 등 신규 npm 패키지는 승인이 필요해(CLAUDE.md) Node 내장 `crypto.scryptSync` 기반 신규 유틸 `src/server/PasswordHashing.js`를 작성(저장 형식 `scrypt$<salt-hex>$<key-hex>`, `timingSafeEqual`로 비교). 두 저장소의 `verifyPassword`/`setPassword`를 이 유틸로 교체했고, 기존 평문 계정은 로그인 성공 시점에 조용히 해시로 자동 마이그레이션되도록 했다(계정 잠김 없음, `isHashedPassword`로 형식 판별 후 레거시면 평문 비교→성공 시 즉시 재저장). 겸사겸사 발견한 연관 버그도 정정: `authRoutes.js` 회원가입의 비밀번호 최소 길이가 4자였는데(비밀번호 변경 라우트는 이미 6자) 6자로 통일, `signup-precheck`의 아이디 정규식이 `{3,40}`이라 실제 가입 제한(`{3,20}`)보다 넓어 21~40자 아이디가 "사용 가능"으로 잘못 안내된 뒤 실제 가입에서 거부되던 불일치도 함께 정정.
+
+**[치명] 게시글 수정/답글이 병합된 local_id 체계에서 깨짐**: 다른(병렬) 세션이 게시판을 전역 `id` 대신 게시판별 순번 `local_id`로 이전했고 목록·조회·삭제·추천·첨부 등 거의 모든 호출부가 `post.localId ?? post.id`로 갱신됐는데, `postWriteView.js`의 글쓰기 제출 함수만 누락되어 여전히 `state.post?.id`(전역 PK)를 그대로 API에 넘기고 있었다 — Supabase 배포(local_id 사용 중인 실서비스)에서 **거의 모든 글의 수정·답글이 엉뚱한 postId로 요청되어 실패**하는 상태였다. `state.post?.localId ?? state.post?.id`로 수정.
+
+**[높음] 게시판 열람권한(레벨) 우회**: `SupabaseBoardRepositoryPostReads.js`의 `getPost()`가 게시판 존재 여부만 확인하고 `listPosts()`와 달리 `assertBoardAccessible()` 호출이 아예 빠져 있었다 — 목록에서는 레벨 제한이 걸려도, 글 번호(postId)를 직접 알면 접근 레벨 미달 사용자도 `GET /api/boards/:boardId/posts/:postId`로 본문을 그대로 읽을 수 있었다. 호출 추가.
+
+**[높음] 첨부파일 목록 화면 인자 오류**: `commandRouterPostView.js`의 다운로드 완료 후 복귀 분기가 `showAttachmentList(file.postId)`를 1개 인자로만 호출 — 함수 시그니처는 `(boardId, postId, ...)`라 실제로는 `boardId` 자리에 postId가 들어가고 `postId`는 `undefined`가 되어 자료실에서 다운로드 후 복귀 시 목록이 깨졌다. `showAttachmentList(state.board.id, file.postId)`로 수정.
+
+**[높음] 회원 개인정보 무인증 유출**: `GET /api/members/:userId`, `GET /api/members/search` 두 엔드포인트에 인증 미들웨어가 전혀 없고, 응답을 만드는 `toPublicMember()`는 password/id/authUserId만 제거할 뿐 email/birthday/sex/lastLoginDateTime은 그대로 남겨둬 — **로그인 없이 아이디만 알면 아무 회원의 이메일·생일·성별·최근 접속시각을 그대로 조회**할 수 있었다(클라이언트 화면 어디에도 이 필드들을 표시하는 곳은 없어 순수 API 레벨 유출). 본인/관리자가 아닌 조회에서만 이 4개 필드를 제거하는 `_toDirectoryMember()`를 추가해 두 핸들러에 적용 — 프로필/검색 화면은 이 필드를 안 써서 기존 기능 그대로 동작.
+
+**[높음] 혈액형 'B' 입력이 게임방 이동 단축키와 충돌**: `commandRouterService.js`의 모든 서비스 화면이 P/M/B를 오락실 이동 단축키로 먼저 검사하는데, 혈액형 진단(`blood-input`/`blood-result`)만은 실제 입력값(A/B/O/AB)에도 'B'가 있어 **혈액형 B를 입력하면 항상 오락실로 튕겨나가고 결과를 볼 수 없었다**(A/O/AB는 정상 동작). 두 화면에 한해 혈액형 패턴 검사를 P/M/B 내비게이션 검사보다 먼저 하도록 순서를 바꾸고, 'B' 자체는 더 이상 내비게이션으로 안 쓰이므로 두 화면의 내비게이션 단축키에서 제거(P/M만 유지, 원래도 풋터엔 B가 안내된 적 없음).
+
+**[높음] 철학관 7개 화면 풋터(힌트바) 완전 누락**: `commandFooterText.js`의 `SCREEN_TO_CATEGORY`에 `blood-input/result`, `compat-input/input2/result`, `tojeong-input/result` 7개 화면이 아예 없어 `getSupportedFooterText()`가 매칭 카테고리를 못 찾고 빈 문자열을 반환 — 이 7개 화면은 하단 명령 힌트바가 통째로 안 보이고 있었다. 같은 계열의 bio/fortune/mbti 화면과 동일하게 `amusementInput`/`amusementView`로 매핑.
+
+**[중간] 날씨 조회 실패가 빈 화면으로만 나타남**: `weatherScreens.js`가 지역 날씨 피드 로드 실패 시 `feed.unavailable`/`feed.message`를 `buildWeatherAnsi()`에 아예 전달하지 않았고(내 위치 날씨 쪽은 이미 처리돼 있었는데 지역 날씨만 빠짐), `buildWeatherAnsi()`도 이 필드를 검사하지 않아 실패 시 헤더만 있는 빈 표가 그려졌다 — 둘 다 연결해 실패 사유 문구를 표시하도록 수정.
+**[중간] PT(제목 일괄출력) 조회 실패가 "결과 없음"과 구분 안 됨**: `postListView.js`의 `showPtResult()`가 `apiFetch(...).catch(() => null)`로 실패를 완전히 삼켜, 네트워크 오류든 진짜로 지정 번호 이후 글이 없든 사용자에게는 똑같이 보였다 — 실패 사유를 별도로 저장해 "목록을 불러오지 못했습니다: <사유>"로 구분 표시.
+
+검증: `hashPassword`/`verifyPasswordHash` 왕복(정상/오답/레거시 평문 호환) 4개 어서션 통과. `commandRouterService.js`를 Node ESM으로 직접 임포트해 혈액형 B/A 입력이 `showBloodResult`로 가고 P는 여전히 게임 이동으로 가는지 등 5개 어서션으로 확인. 회원 API PII 제거는 코드 리뷰로 확인(순수 구조분해 제거라 로직 단순). `node --check` 수정 파일 전체(13개) 통과. `npm run loop:verify`(boards/command-parity/menu-wiring/signup-ime/renderer-ui/chat-rooms/auth-bridge/vercel-ready/qa:final 9종) 전체 통과 — 특히 boards/auth-bridge가 통과해 비밀번호 해싱·local_id 수정이 기존 가입/로그인/글쓰기 스모크를 깨지 않았음을 확인.
+남은 항목(이번엔 손대지 않음, 아키텍처 영향 커서 사용자 확인 필요): 인메모리(Supabase 미연동) 배포 모드는 로그인이 클라이언트에서 `state.supabase.auth.signInWithPassword`로만 이뤄져 서버 자체 로그인 라우트가 없다 — Supabase 없이는 로그인 자체가 불가능한 구조적 공백(세션 발급 방식 설계가 필요해 이번 배치엔 미포함). 회원 탈퇴가 게시글/쪽지/대화방 멤버십에 연쇄(cascade)되지 않음. `MemoryBoardRepositoryCore.js`가 아직 전역 `id` 체계라 local_id 이전에서 빠져 있음. 답글 들여쓰기가 깊이에 비례하지 않고, 원글 삭제 시 답글이 고아로 남음. MyInfo 닉네임에 20자 클라이언트 측 상한 표시가 없음(서버는 이미 20자로 검증함). `newsScreens.js`도 피드 unavailable 상태를 버림(날씨와 같은 유형, 우선순위 낮음).
+결과: ✅ 완료 — 치명 2건(평문 비밀번호, 글수정/답글 깨짐)과 높음 4건(권한 우회, 첨부목록 인자오류, 회원정보 유출, 혈액형B 충돌+풋터 누락)을 포함해 9개 이슈를 수정했다. 오락실 게임 9종/신규 게시판 8개/N+1·에러 핸들링 등은 이전 세션에서 이미 점검 완료된 항목이라 이번 범위에서 제외했다(TaskList #1~#3 참조).
+
+---
+
 ## [2026-07-21 18:30] [버그 수정] 화면별 로컬 명령어 감사 — 대화방 풋터 클릭이 명령 대신 채팅 메시지로 전송되던 핵심 버그 수정, 회의실 안건 작성 취소 버그 수정, 죽은 풋터 토큰 2건 제거
 
 **LOG_ID: 20260721_1830**
