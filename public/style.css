@@ -2590,14 +2590,20 @@ body[data-print-view="true"] .ansi-screen {
         position: static !important;
         height: auto !important;
         min-height: var(--mobile-visual-viewport-height, 100dvh) !important;
-        overflow: visible !important;
+        /* [LOG_ID: 20260721_1600] 세로만 풀어준다. 가로까지 visible로 풀면 topbar의 긴 '─' 구분선
+           문자열(개별적으로는 overflow:hidden으로 잘려 보이지만 원본 텍스트 폭은 뷰포트보다 큼)이
+           document.documentElement.scrollWidth를 밀어올려 본문 전체가 왼쪽으로 쏠려 보이는
+           가로 스크롤 버그를 일으켰다. */
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
     }
 
     body[data-screen="post-view"] .app-shell {
         position: static !important;
         height: auto !important;
         min-height: var(--mobile-visual-viewport-height, 100dvh) !important;
-        overflow: visible !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
     }
 
     body[data-screen="post-view"] #terminal-wrapper {
@@ -2605,7 +2611,8 @@ body[data-print-view="true"] .ansi-screen {
     }
 
     body[data-screen="post-view"] #terminal-screen {
-        overflow: visible !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
     }
 
     /* [LOG_ID: 20260711_0950] 뉴스 목록/기사가 모바일 세로에서 뷰포트를 넘쳐 스크롤이 생기던

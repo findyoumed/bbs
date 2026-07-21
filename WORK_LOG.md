@@ -1,3 +1,14 @@
+## [2026-07-21 16:00] [버그 회귀 수정] post-view 페이지 스크롤 전환의 부작용 — 가로 스크롤로 본문이 왼쪽으로 쏠려 보이던 문제 해결
+
+**LOG_ID: 20260721_1600**
+목표: 사용자 재보고(스크린샷, 상단바 타임스탬프 15:37:30) — "글이 왼쪽으로 치우쳐있어". 직전 수정(20260721_1545)으로 post-view의 세로 잘림/내부 스크롤박스는 해결됐지만, 새로운 시각적 결함이 생겼다.
+원인: `body[data-screen="post-view"]`/`.app-shell`/`#terminal-screen`을 `overflow: visible`(가로+세로 모두)로 풀면서, 그동안 `body`의 `overflow:hidden`이 가려주던 **가로 오버플로우**까지 함께 드러났다. 상단바의 구분선(`.retro-topbar-line`, `.retro-topbar-hr`)은 `buildTopbarHtml()`이 만드는 긴 `─` 문자열을 담고 있는데, 각 요소 자체는 `overflow:hidden`으로 시각적으로는 잘려 보이지만(`offsetWidth` 28px/330px) 원본 텍스트의 고유 폭(~600px, 뷰포트 390px보다 큼)은 그대로 조상 요소의 `scrollWidth` 계산에 반영된다. 이전엔 `body{overflow:hidden}`이 이를 가려 뷰포트 밖으로는 아무것도 안 보였지만, post-view만 이 안전망을 걷어내면서 `document.documentElement.scrollWidth`가 689px(뷰포트 390px)까지 벌어졌고, 이 가로 오버플로우가 화면 전체를 왼쪽으로 쏠려 보이게 만드는 원인이었다.
+수정: `overflow: visible !important` 블랑켓 규칙을 축 분리 — `body[data-screen="post-view"]`, `.app-shell`, `#terminal-screen` 세 곳 모두 `overflow-x: hidden !important; overflow-y: visible !important;`로 변경. 가로는 계속 잘라내 상단바 구분선이 밖으로 새지 않게 하고, 세로만 풀어 직전 수정의 "브라우저 기본 페이지 스크롤로 긴 글 전체 보기" 목적은 그대로 유지.
+검증: Playwright에 실제 모바일 컨텍스트(`isMobile:true, hasTouch:true`, Android UA, 390×844)로 post-view 상태(topbar 구분선 + 80줄 긴 본문)를 재현 — 수정 전 `scrollWidth:689 vs clientWidth:390`(오버플로우 있음)이었던 것이 수정 후 `scrollWidth:390 === clientWidth:390`(오버플로우 없음)으로 확인, `.ansi-line`의 `getBoundingClientRect().left`가 정확히 0으로 왼쪽 쏠림 없이 정렬됨을 확인. 세로 성장은 그대로 유지되는지도 재확인(`docScrollHeight:1677 > viewportHeight:844`, `canScrollVertically:true`) — 직전 수정을 되돌리지 않았음을 검증. `npm run loop:verify`(9종) 전체 통과.
+결과: ✅ 완료 — post-view는 이제 가로 오버플로우 없이(본문이 왼쪽으로 쏠리지 않고) 세로만 자연스럽게 페이지 스크롤된다.
+
+---
+
 ## [2026-07-21 15:45] [설계 변경] 게시글 보기(post-view)를 "한 프레임 고정" 모델에서 완전히 빼고 자연스러운 페이지 스크롤로 전환
 
 **LOG_ID: 20260721_1545**
