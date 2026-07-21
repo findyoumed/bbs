@@ -189,6 +189,25 @@ class MemoryChatRoomRepository {
     return publicRoom(room, summarizeParticipantCounts(room.participants));
   }
 
+  // [LOG_ID: 20260722_0100] Supabase 드라이버와 동일한 정책 — 회원탈퇴 시 그 회원이 방장인
+  // 대화방을 정리한다(기본방#1 제외). 자세한 사유는 ChatRoomRepositorySupabase.js 참고.
+  closeRoomsOwnedBy(userId) {
+    this._cleanup();
+    const target = normalizeText(userId, '');
+    if (!target) return 0;
+
+    const closingNos = this.rooms
+      .filter((room) => !room.persistent && room.ownerUserId === target)
+      .map((room) => room.no);
+
+    if (!closingNos.length) return 0;
+
+    closingNos.forEach((no) => this.messagesByRoomNo.delete(no));
+    this.rooms = this.rooms.filter((room) => !closingNos.includes(room.no));
+
+    return closingNos.length;
+  }
+
   // [LOG: 20260428_2332] Memory chat driver must preserve the same message APIs
   // as the Supabase driver so local/default environments do not 500 on chat send/list.
   sendMessage(roomNo, payload = {}, context = {}) {

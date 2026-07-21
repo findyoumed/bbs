@@ -147,6 +147,36 @@ class SupabaseChatRoomRepository extends BaseRepository {
     return this._toPublicRoom(data);
   }
 
+  // [LOG_ID: 20260722_0100] 회원탈퇴 시 그 회원이 방장인 대화방이 정리되지 않으면, 다시는
+  // 로그인할 수 없는 아이디가 owner_user_id로 영원히 남아 그 방의 설정변경(/E)·강퇴(/OUT) 같은
+  // 방장 전용 기능이 영구적으로 막힌다. 기존 leave()가 "방장이 나가면 방 종료"하는 정책과
+  // 동일하게, 탈퇴 시점에도 같은 정책을 적용한다(기본방#1은 leave()와 동일하게 예외).
+  async closeRoomsOwnedBy(userId) {
+    const target = normalizeText(userId, '');
+    if (!target) return 0;
+
+    const { data: rooms, error } = await this.client
+      .from(this.table)
+      .select('room_no')
+      .eq('owner_user_id', target)
+      .neq('room_no', 1);
+
+    if (error) throw createHttpError(502, `방 조회 실패: ${error.message}`);
+
+    const roomNos = (rooms || []).map((row) => Number(row.room_no)).filter((n) => Number.isFinite(n));
+    if (!roomNos.length) return 0;
+
+    roomNos.forEach((no) => {
+      this.participantsByRoomNo.delete(no);
+      this.messagesByRoomNo.delete(no);
+    });
+
+    const { error: deleteError } = await this.client.from(this.table).delete().in('room_no', roomNos);
+    if (deleteError) throw createHttpError(502, `방 삭제 실패: ${deleteError.message}`);
+
+    return roomNos.length;
+  }
+
   async sendMessage(roomNo, payload = {}, context = {}) {
     const num = Number(roomNo);
     const messages = this.messagesByRoomNo.get(num) || [];

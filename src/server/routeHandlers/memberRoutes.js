@@ -294,7 +294,7 @@ class MemberRouter extends BaseRouter {
   }
 
   async deleteMember(params) {
-    const { memberRepository } = this.deps;
+    const { memberRepository, chatRoomRepository } = this.deps;
     const targetUserId = params.userId;
     const context = await this.getContext();
 
@@ -302,6 +302,20 @@ class MemberRouter extends BaseRouter {
     if (!context.isAdmin && !isSelf) this.forbidden('본인 계정만 탈퇴할 수 있습니다.');
 
     const deletedMember = await memberRepository.deleteMember(targetUserId);
+
+    // [LOG_ID: 20260722_0100] "반드시 필요한 작업만" — 게시글/쪽지는 손대지 않되(다른 회원의
+    // 콘텐츠에 영향을 주는 삭제/익명화는 별도 정책 결정이 필요), 탈퇴 회원이 방장인 대화방만
+    // 정리한다. 정리하지 않으면 다시는 로그인할 수 없는 아이디가 owner_user_id로 영원히 남아
+    // 그 방의 설정변경(/E)·강퇴(/OUT)가 영구적으로 막히는 실질적 결함이 있었다. 회원 삭제
+    // 자체는 이미 끝났으므로 방 정리 실패는 탈퇴 자체를 막지 않고 경고만 남긴다.
+    if (chatRoomRepository && typeof chatRoomRepository.closeRoomsOwnedBy === 'function') {
+      try {
+        await chatRoomRepository.closeRoomsOwnedBy(targetUserId);
+      } catch (error) {
+        logger.warn('탈퇴 회원 소유 대화방 정리 실패', { component: 'MemberRouter', targetUserId, error: error.message });
+      }
+    }
+
     let authDeleted = false;
     let authDeleteError = '';
 
