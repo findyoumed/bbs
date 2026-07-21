@@ -1132,6 +1132,17 @@ body.theme-nownuri .write-field textarea {
     top: 0.15em;
 }
 
+/* [LOG_ID: 20260721_1410] 엔터를 쳐서 ID/비밀번호가 확정되는 순간 폰트 크기가 바뀌던 결함
+   (사용자 지적: "엔터를 치면 폰트크기가 바뀌어"). appendCommittedIdLine/appendCommittedPasswordLine이
+   만드는 확정 줄의 <input>은 인라인 style="font:inherit"를 쓰는데, 위 20260615_1538 규칙이
+   ".entry-login-committed-row input"을 footer 전용 폰트 크기 변수(--cmd-font-size, 17px 고정)로
+   !important 강제해 그 inherit를 덮어썼다 — 입력 중(라이브)엔 앰비언트 크기, 확정 후(커밋 줄)엔
+   17px로 바뀌어 보였다. 같은 선택자를 여기서 다시 선언(소스 순서상 나중 규칙이 이겨 inherit로
+   되돌림)해 라이브 입력과 동일하게 앰비언트 폰트 크기를 따르게 한다. */
+.entry-login-committed-row input {
+    font-size: inherit !important;
+}
+
 .myinfo-warning {
     margin-bottom: 12px;
     padding: 8px 10px;

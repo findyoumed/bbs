@@ -1,3 +1,14 @@
+## [2026-07-21 14:10] [모바일] 로그인 화면에서 엔터로 ID/비밀번호를 확정하는 순간 폰트 크기가 다시 어긋나던 결함 수정
+
+**LOG_ID: 20260721_1410**
+목표: 직전 수정(라이브 입력창 폰트 크기 통일) 확인 중 사용자 지적 — "엔터를 치면 폰트크기가 바뀌어".
+원인: `authScreens.js`의 `appendCommittedIdLine`/`appendCommittedPasswordLine`이 엔터로 확정된 줄을 `readonly <input style="font:inherit">`로 트랜스크립트에 追加하는데, `style.css`의 `#terminal-footer label, #cmd-prompt-renderer, #cmd-input, ..., .entry-login-committed-row input, ...` 규칙(20260615_1538)이 `.entry-login-committed-row input`을 footer 전용 `var(--cmd-font-size, 17px)`로 `!important` 강제하고 있었다. 스타일시트의 `!important` 선언은 인라인 style(비-important)보다 항상 이기므로, 확정 줄의 `font:inherit`가 무시되고 17px로 고정됐다 — 라이브 입력(앰비언트 15px, 직전 수정으로 통일됨)과 확정 후(17px)가 서로 달라 보였다.
+수정: `.entry-login-committed-row input { font-size: inherit !important; }`를 스타일시트 뒤쪽에 다시 선언 — 동일 선택자·동일 detailedness라 소스 순서상 나중 규칙이 이겨 inherit(앰비언트 크기)로 되돌아간다.
+검증: Playwright로 로그인 ID를 입력→엔터 후 트랜스크립트에 남은 확정 줄의 `<input>` computed font-size가 `#terminal-container`와 동일한 15px임을 확인(수정 전엔 17px 고정이었을 것). `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — 로그인 화면의 라이브 입력·확정 후 표시가 이제 모두 앰비언트 크기로 일관됨.
+
+---
+
 ## [2026-07-21 13:55] [모바일] 로그인 화면 ID 입력 글자 폰트/자간이 어긋나던 결함 수정
 
 **LOG_ID: 20260721_1355**
