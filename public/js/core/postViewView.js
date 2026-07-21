@@ -24,7 +24,9 @@ export function createPostViewView(deps) {
   async function showPostView(boardId, postId, fromHistory = false) {
     state.screen = 'post-view';
     state._postNavigation = null;
-    if (!state.post || String(state.post.id) !== String(postId)) state.post = { id: postId };
+    if (!state.post || String(state.post.localId ?? state.post.id) !== String(postId)) {
+      state.post = { id: postId, localId: postId };
+    }
     if (!fromHistory) updateURL();
     setLoading('연결하는 중입니다..');
     const boardKey = String(boardId || '').trim();
@@ -88,7 +90,7 @@ export function createPostViewView(deps) {
     const idx = currentPosts.findIndex((p) => String(p.id) === String(state.post?.id));
     if (idx >= 0) {
       const next = currentPosts[idx + direction];
-      if (next) { await showPostView(state.board.id, next.id); return true; }
+      if (next) { await showPostView(state.board.id, next.localId ?? next.id); return true; }
     }
     const navigationTargetId = direction > 0 ? state._postNavigation?.nextId : state._postNavigation?.prevId;
     if (navigationTargetId) {
@@ -97,11 +99,11 @@ export function createPostViewView(deps) {
     }
     if (direction > 0 && state.page < state.totalPages) {
       await showPostList(state.board.id, state.page + 1, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
-      if (state.posts[0]) { await showPostView(state.board.id, state.posts[0].id); return true; }
+      if (state.posts[0]) { await showPostView(state.board.id, state.posts[0].localId ?? state.posts[0].id); return true; }
     }
     if (direction < 0 && state.page > 1) {
       await showPostList(state.board.id, state.page - 1, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
-      if (state.posts.length) { await showPostView(state.board.id, state.posts[state.posts.length - 1].id); return true; }
+      if (state.posts.length) { await showPostView(state.board.id, state.posts[state.posts.length - 1].localId ?? state.posts[state.posts.length - 1].id); return true; }
     }
     return false;
   }

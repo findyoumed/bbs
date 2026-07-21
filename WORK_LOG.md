@@ -1,3 +1,30 @@
+## [2026-07-21 16:58] 공지사항 본문 내용 정돈 및 다듬기 2차 반영
+
+**LOG_ID: 20260721_1658**
+목표: 사용자가 전달해 준 최종 다듬어진 공지사항 텍스트 문안을 80칼럼 규격에 맞춰 단락 정돈 및 DB 업데이트 반영
+변경 사항: 데이터베이스 마이그레이션 (id: 45) 적용
+수행 작업:
+1. **최종 공지사항 문안 반영**: 사용자가 새로 다듬은 텍스트(횡설수설/가입인사/불가사의/컴퓨터초보시절 언급 축소 등)를 기반으로 줄바꿈 폭을 이쁘게 맞춰 `posts` 테이블의 id 45번 공지사항 본문 갱신.
+2. **검증**: `npm run smoke:vercel-ready` 검사 실행 및 헬스 체크 통과 확인.
+결과: ✅ 완료
+
+---
+
+## [2026-07-21 16:56] 공지사항 텍스트 줄바꿈 개선, 전체 글번호 재정렬 및 뷰포트 스케일 클릭 오류 수정
+
+**LOG_ID: 20260721_1656**
+목표: 공지사항 텍스트의 어색한 줄바꿈 현상 개선, 전체 게시글 번호(ID)의 1번부터 순차 정렬화, 반응형 화면 확대(transform: scale)로 인한 마우스 클릭 어긋남 오류 수정
+변경 파일: public/js/core/postListView.js
+수행 작업:
+1. **공지사항 줄바꿈 교정**: 공지사항(notice) 글 본문의 횡설수설 단락과 단어 쪼개짐(예: `자유롭게 이\n용해`, `자동차함께타기\n/불가사의/`)을 80칼럼 폭에 완벽하게 맞물리도록 수동 포맷을 다듬어 DB 갱신.
+2. **글번호 1번부터 재정렬**: `posts` 테이블의 ID가 누락되거나 건너뛴 흔적 때문에 288번부터 시작하여 공지사항이 351번으로 표시되던 것을 `created_at` 정렬 순서에 맞추어 1번부터 45번까지 일련번호로 재지정.
+3. **답글 관계 갱신**: `family_id`가 부모 게시글을 올바르게 참조할 수 있도록 매핑 업데이트를 동시 진행.
+4. **뷰포트 배율 클릭 오차 수정 (`public/js/core/postListView.js`)**: `.ansi-screen` 화면에 걸린 반응형 줌인/줌아웃(transform: scale) 배율로 인해 클릭 좌표가 약 44픽셀씩 밑으로 치우쳐 렌더링되던 더블 스케일링 버그를 감지하여, 뷰포트 확대비율(`scale = screenRect.width / screenNode.offsetWidth`)로 나눈 보정값을 적용해 마우스 클릭 영역이 텍스트 줄에 정확히 정렬되도록 수정.
+5. **검증**: `npm run smoke:vercel-ready` 검사 수행으로 빌드 무결성 확인 완료.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-21 08:05] [보안 라운드] 서버 라우트 전수 점검(게시판/쪽지/CONF/투표/첨부/랭킹/가입) — 새 취약점은 없었고, 기본 대화방 삭제 위험 하나를 방어적으로 굳힘
 
 **LOG_ID: 20260721_0805**
@@ -9407,3 +9434,28 @@ Work: 1) Replaced full-width unicode spaces U+3000 in chart bar padding with c(0
 Run: `node --check public/js/core/amusementAnsiBuilders.js`, `npm run smoke:vercel-ready`
 Expected: Biorhythm bar chart baseline '│' is perfectly straight down a single vertical axis with 0-pixel offset, and all percentage values align horizontally.
 Result: ✅ 완료 - Visual layout checks on Chrome verified 100% pixel-perfect symmetric alignment.
+
+---
+
+## [2026-07-21 17:05] 게시판별 순차적인 로컬 일련번호(local_id) 도입 및 연동 개편
+
+**LOG_ID: 20260721_1700**
+목표: BBS 시스템을 글로벌 chronological ID 구조에서 게시판별 독립적인 1번부터 시작하는 순차적인 일련번호(local_id) 체계로 전환하여 클래식 PC통신(하이텔/나우누리)의 게시판 번호 동작을 완벽히 재현한다.
+변경 파일:
+1) `src/server/BoardRepositoryShared.js`
+2) `src/server/SupabaseBoardRepositoryPostReads.js`
+3) `src/server/SupabaseBoardRepositoryWriteOps.js`
+4) `public/js/core/ansiBoardBuilders.js`
+5) `public/js/core/postListView.js`
+6) `public/js/core/postViewView.js`
+7) `public/js/core/routingStateRestorer.js`
+8) `public/js/core/commandRouterPostView.js`
+9) `public/js/core/commandRouterBrowse.js`
+수행 작업:
+1) [데이터베이스 스키마 및 마이그레이션] `posts` 테이블에 `local_id` 컬럼을 생성하고, 게시판별로 1부터 시작하는 순차 일련번호를 기존 글에 부여하는 마이그레이션을 실행. `BEFORE INSERT` 트리거를 구축하여 신규 글 작성 시 게시판별로 순차적 자동 증가 처리.
+2) [서버 저장소 개편] `BoardRepositoryShared`의 포스트 행 매핑에 `localId` 필드 연결. `SupabaseBoardRepositoryPostReads`의 `getPost` 및 `getNavigation`이 `local_id`를 기반으로 글을 식별하도록 수정하고, 상세/인접 조회를 위한 `fetchPostByLocalId` 구현. `SupabaseBoardRepositoryWriteOps`의 글 변경 작업(답글, 수정, 삭제, 추천)이 `local_id` 파라미터를 받아 내부 DB PK(`id`)로 치환하여 변조 작업을 수행하도록 배선 수정.
+3) [프론트엔드 연동] 게시판 목록 및 게시물 보기 화면의 헤더, 글 번호 노출 로직을 `post.id`에서 `post.localId`로 개편.
+4) [라우팅 및 명령어 처리] URL 복원기(`routingStateRestorer`)가 `/board/:boardId/:localId` 형태로 동작하도록 변경. 글보기 단축키 핸들러(`commandRouterPostView`) 및 탐색 핸들러(`commandRouterBrowse`)에서 글 검색(LS/LD/PR), 삭제(D), 수정(E), 다운로드(DN), 조회 번호 입력 시 `localId`를 우선 조회하고 매칭하도록 리팩토링.
+실행: `node --check`를 통한 수정 서버 코드 구문 에러 검증 및 `npm run smoke:vercel-ready` 검사
+기대: 게시판마다 1번부터 순차적으로 게시물 번호가 시작되며, 목록 조회, 개별 게시글 조회, 답글 작성, 수정, 삭제, 추천 및 이전/다음 이동이 로컬 일련번호 기반으로 오류 없이 오차 없이 통합 작동한다.
+결과: ✅ 완료

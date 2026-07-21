@@ -120,7 +120,7 @@ export function createPostViewCommandHandler(deps) {
       }
 
       if (cmd === 'P' || cmd === 'M' || cmd === 'B') {
-        await showPostView(state.board.id, state.post.id);
+        await showPostView(state.board.id, state.post.localId ?? state.post.id);
         return true;
       }
       if (cmd === 'T') {
@@ -133,7 +133,7 @@ export function createPostViewCommandHandler(deps) {
         // [LOG_ID: 20260713_1030] 파일 다운로드 즉시 실행 대신 프로토콜 선택 단계 개시
         state._pendingDownload = {
           boardId: state.board.id,
-          postId: state.post.id,
+          postId: state.post.localId ?? state.post.id,
           fileId: file.id,
           fileName: file.originalFilename || file.filename,
           fileSize: file.fileSize
@@ -279,8 +279,8 @@ export function createPostViewCommandHandler(deps) {
         setHint(UI_TEXT.LOGIN_REQUIRED);
         return true;
       }
-      await recommendPost(state.board.id, state.post.id);
-      await showPostView(state.board.id, state.post.id);
+      await recommendPost(state.board.id, state.post.localId ?? state.post.id);
+      await showPostView(state.board.id, state.post.localId ?? state.post.id);
       return true;
     }
 
@@ -294,7 +294,7 @@ export function createPostViewCommandHandler(deps) {
         const confirmed = await deps.showConfirm(UI_TEXT.POST_DELETE_CONFIRM);
         if (confirmed) {
           try {
-            await deletePost(state.board.id, state.post.id);
+            await deletePost(state.board.id, state.post.localId ?? state.post.id);
             await showPostList(state.board.id, state.page, {
               menuPath: state.boardMenuPath,
               menuTitle: state.boardMenuTitle,
@@ -312,7 +312,7 @@ export function createPostViewCommandHandler(deps) {
     }
 
     if (cmd === 'U') {
-      await showAttachmentList(state.board.id, state.post.id);
+      await showAttachmentList(state.board.id, state.post.localId ?? state.post.id);
       return true;
     }
 

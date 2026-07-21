@@ -40,7 +40,7 @@ export function createBrowseCommandHandler(deps) {
     }
 
     const posts = Array.isArray(state.posts) ? state.posts : [];
-    const byPostId = posts.find((post) => String(post?.id || '').trim() === value);
+    const byPostId = posts.find((post) => String(post?.localId ?? post?.id || '').trim() === value);
     if (byPostId) {
       return byPostId;
     }
@@ -63,7 +63,7 @@ export function createBrowseCommandHandler(deps) {
   function beginDeleteConfirm(post) {
     state._deleteConfirmStage = {
       boardId: state.board?.id,
-      postId: post.id,
+      postId: post.localId ?? post.id,
       postTitle: post.title || '',
       page: state.page,
       menuPath: state.boardMenuPath,
@@ -71,7 +71,7 @@ export function createBrowseCommandHandler(deps) {
       searchParams: { ...(state.searchParams || {}) },
       returnScreen: 'post-list'
     };
-    setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || post.id}`);
+    setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
     setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [Y]:`);
   }
 
@@ -352,12 +352,12 @@ export function createBrowseCommandHandler(deps) {
       async function startPdsDownloadSequence(post) {
         setHint('첨부파일 정보를 확인하는 중입니다..');
         try {
-          const attachments = await apiFetch(`/api/boards/${state.board.id}/posts/${post.id}/attachments`);
+          const attachments = await apiFetch(`/api/boards/${state.board.id}/posts/${post.localId ?? post.id}/attachments`);
           if (Array.isArray(attachments) && attachments.length > 0) {
             const file = attachments[0];
             state._pendingDownload = {
               boardId: state.board.id,
-              postId: post.id,
+              postId: post.localId ?? post.id,
               fileId: file.id,
               fileName: file.originalFilename || file.filename,
               fileSize: file.fileSize
@@ -426,7 +426,7 @@ export function createBrowseCommandHandler(deps) {
         apiFetch(`/api/boards/${state.board.id}?page=1&pageSize=9999`)
           .then((res) => {
             const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
-            const idx = posts.findIndex((p) => Number(p.id) === targetPostId);
+            const idx = posts.findIndex((p) => Number(p.localId ?? p.id) === targetPostId);
             if (idx >= 0) {
               const targetPage = Math.floor(idx / 15) + 1;
               setHint(`[목록 점프] #${targetPostId} 글이 있는 ${targetPage}페이지로 이동합니다.`);
@@ -641,16 +641,16 @@ export function createBrowseCommandHandler(deps) {
           const low = Math.min(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10));
           const high = Math.max(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10));
           targets = state.posts
-            .filter((post) => { const id = parseInt(post.id, 10); return id >= low && id <= high; })
-            .sort((left, right) => parseInt(left.id, 10) - parseInt(right.id, 10))
+            .filter((post) => { const id = parseInt(post.localId ?? post.id, 10); return id >= low && id <= high; })
+            .sort((left, right) => parseInt(left.localId ?? left.id, 10) - parseInt(right.localId ?? right.id, 10))
             .slice(0, 10);
         } else if (spec.includes(',')) {
           const ids = spec.split(',').map((token) => token.trim()).filter(Boolean).slice(0, 10);
           targets = ids
-            .map((idToken) => state.posts.find((post) => String(post.id) === idToken))
+            .map((idToken) => state.posts.find((post) => String(post.localId ?? post.id) === idToken))
             .filter(Boolean);
         } else if (spec) {
-          const single = state.posts.find((post) => String(post.id) === spec)
+          const single = state.posts.find((post) => String(post.localId ?? post.id) === spec)
             || state.posts[parseInt(spec, 10) - 1];
           if (single) targets = [single];
         } else {
@@ -666,20 +666,20 @@ export function createBrowseCommandHandler(deps) {
         const [first, ...rest] = targets;
         state._continuousRead = {
           boardId: state.board.id,
-          queue: rest.map((post) => post.id)
+          queue: rest.map((post) => post.localId ?? post.id)
         };
-        await showPostView(state.board.id, first.id);
+        await showPostView(state.board.id, first.localId ?? first.id);
         setHint(rest.length
           ? `연속읽기(${targets.length}건): [엔터] 다음 글 · 다른 명령 입력 시 종료`
           : '연속읽기: [엔터] 다음 글 · 다른 명령 입력 시 종료');
         return true;
       }
 
-      const byPostId = state.posts.find((post) => String(post.id) === rawCmd);
-      if (byPostId) { await showPostView(state.board.id, byPostId.id); return true; }
+      const byPostId = state.posts.find((post) => String(post.localId ?? post.id) === rawCmd);
+      if (byPostId) { await showPostView(state.board.id, byPostId.localId ?? byPostId.id); return true; }
 
       const n = parseInt(rawCmd, 10);
-      if (n >= 1 && state.posts[n - 1]) { await showPostView(state.board.id, state.posts[n - 1].id); return true; }
+      if (n >= 1 && state.posts[n - 1]) { await showPostView(state.board.id, state.posts[n - 1].localId ?? state.posts[n - 1].id); return true; }
 
       return false;
     }

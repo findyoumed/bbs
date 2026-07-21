@@ -103,7 +103,7 @@ async function getPost(repo, boardId, postId, options = {}) {
   }
 
   const capabilities = await ensureCapabilities(repo);
-  let post = await fetchPost(repo, boardId, postId);
+  let post = await fetchPostByLocalId(repo, boardId, postId);
   if (!post) {
     throw createHttpError(404, '게시글을 찾을 수 없습니다.');
   }
@@ -115,7 +115,7 @@ async function getPost(repo, boardId, postId, options = {}) {
         [capabilities.hit]: post.hit + 1
       })
       .eq('board_id', post.boardId)
-      .eq('id', Number(postId))
+      .eq('id', post.id)
       .select('*')
       .single();
 
@@ -164,27 +164,39 @@ async function fetchPost(repo, boardId, postId) {
   return mapPostRow(data);
 }
 
+async function fetchPostByLocalId(repo, boardId, localId) {
+  let query = repo.client
+    .from(repo.tables.posts)
+    .select('*');
+
+  query = applyBoardFilter(query, boardId);
+
+  const { data, error } = await query
+    .eq('local_id', Number(localId))
+    .maybeSingle();
+
+  if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
+  return mapPostRow(data);
+}
+
 async function getNavigation(repo, boardId, postId) {
   const capabilities = await ensureCapabilities(repo);
   const pid = Number(postId);
 
-  const latestQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('id'), boardId);
+  const post = await fetchPost(repo, boardId, pid);
+  if (!post) {
+    return { latestId: null, prevId: null, nextId: null };
+  }
+  const localPid = Number(post.localId || post.id);
+
+  const latestQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
   const { data: latestData } = await applyPostOrdering(latestQuery, repo, capabilities).limit(1).maybeSingle();
 
   if (capabilities.threaded) {
-    const post = await fetchPost(repo, boardId, pid);
-    if (!post) {
-      return {
-        latestId: latestData ? Number(latestData.id) : null,
-        prevId: null,
-        nextId: null
-      };
-    }
-
     const familyId = Number(post.family || 0);
     const sortOrder = Number(post.orderby || 0);
 
-    let prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('id'), boardId);
+    let prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
     prevQuery = prevQuery
       .or(`family_id.gt.${familyId},and(family_id.eq.${familyId},sort_order.lt.${sortOrder})`)
       .order('family_id', { ascending: true })
@@ -192,7 +204,7 @@ async function getNavigation(repo, boardId, postId) {
       .limit(1);
     const { data: prevData } = await prevQuery.maybeSingle();
 
-    let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('id'), boardId);
+    let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
     nextQuery = nextQuery
       .or(`family_id.lt.${familyId},and(family_id.eq.${familyId},sort_order.gt.${sortOrder})`)
       .order('family_id', { ascending: false })
@@ -201,24 +213,24 @@ async function getNavigation(repo, boardId, postId) {
     const { data: nextData } = await nextQuery.maybeSingle();
 
     return {
-      latestId: latestData ? Number(latestData.id) : null,
-      prevId: prevData ? Number(prevData.id) : null,
-      nextId: nextData ? Number(nextData.id) : null
+      latestId: latestData ? Number(latestData.local_id) : null,
+      prevId: prevData ? Number(prevData.local_id) : null,
+      nextId: nextData ? Number(nextData.local_id) : null
     };
   }
 
   // [LOG: 20260429_0508] Non-threaded boards render in descending id order,
   // so previous/next ids must follow that visible order instead of numeric order.
-  const prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('id'), boardId);
-  const { data: prevData } = await prevQuery.gt('id', pid).order('id', { ascending: true }).limit(1).maybeSingle();
+  const prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
+  const { data: prevData } = await prevQuery.gt('local_id', localPid).order('local_id', { ascending: true }).limit(1).maybeSingle();
 
-  const nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('id'), boardId);
-  const { data: nextData } = await nextQuery.lt('id', pid).order('id', { ascending: false }).limit(1).maybeSingle();
+  const nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
+  const { data: nextData } = await nextQuery.lt('local_id', localPid).order('local_id', { ascending: false }).limit(1).maybeSingle();
 
   return {
-    latestId: latestData ? Number(latestData.id) : null,
-    prevId: prevData ? Number(prevData.id) : null,
-    nextId: nextData ? Number(nextData.id) : null
+    latestId: latestData ? Number(latestData.local_id) : null,
+    prevId: prevData ? Number(prevData.local_id) : null,
+    nextId: nextData ? Number(nextData.local_id) : null
   };
 }
 
@@ -255,6 +267,7 @@ module.exports = {
   listBoardCounts,
   fetchPagedPosts,
   fetchPost,
+  fetchPostByLocalId,
   getNavigation,
   getPost,
   listHotPosts,

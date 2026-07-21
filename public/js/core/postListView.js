@@ -37,6 +37,7 @@ export function createPostListView(deps) {
     displayWidth
   } = createAnsiBuilderUtils(deps);
 
+  // [LOG: 20260721_1656] transform: scale 반응형 뷰포트 확대 대응 좌표 오차 수정
   function renderPostHotspots(screenNode, posts) {
     if (!screenNode || !posts.length) return;
     const layer = document.createElement('div');
@@ -49,9 +50,10 @@ export function createPostListView(deps) {
     // 인덱스 가정 대신 각 게시물 번호(postLine의 첫 토큰)로 실제 줄을 찾아 붙인다 — 헤더 줄 수가
     // 바뀌어도 어긋나지 않는다.
     const screenRect = screenNode.getBoundingClientRect();
+    const scale = screenRect.width / (screenNode.offsetWidth || 1);
     let searchFrom = 0;
     posts.forEach((post) => {
-      const idToken = String(post.id || '').trim();
+      const idToken = String(post.localId ?? post.id || '').trim();
       if (!idToken) return;
       let lineNode = null;
       for (let i = searchFrom; i < lineNodes.length; i++) {
@@ -65,10 +67,12 @@ export function createPostListView(deps) {
       if (!lineNode) return;
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'ansi-hotspot post-hotspot';
-      btn.dataset.postid = String(post.id); btn.setAttribute('aria-label', post.title || '');
+      btn.dataset.postid = String(post.localId ?? post.id); btn.setAttribute('aria-label', post.title || '');
       const rect = lineNode.getBoundingClientRect();
-      btn.style.left = '0'; btn.style.top = `${rect.top - screenRect.top}px`;
-      btn.style.width = '100%'; btn.style.height = `${rect.height || 16}px`;
+      const topVal = (rect.top - screenRect.top) / scale;
+      const heightVal = (rect.height || 16) / scale;
+      btn.style.left = '0'; btn.style.top = `${topVal}px`;
+      btn.style.width = '100%'; btn.style.height = `${heightVal}px`;
       layer.appendChild(btn);
     });
     if (layer.childElementCount > 0) screenNode.appendChild(layer);
@@ -202,7 +206,7 @@ export function createPostListView(deps) {
 
     const posts = Array.isArray(responseData?.items) ? responseData.items : (responseData?.posts || []);
     const filtered = posts
-      .filter(post => Number(post.id) >= (state._ptStartNum || 1))
+      .filter(post => Number(post.localId ?? post.id) >= (state._ptStartNum || 1))
       .slice(0, 100);
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -227,7 +231,7 @@ export function createPostListView(deps) {
 
         const userId = fitCell(post.userId || post.authorUserId || '', 8);
         const date = fitCell(formatShortDate(post.createdAt).slice(0, 5), 5);
-        const postId = fitCell(String(post.id || ''), 6, 'right');
+        const postId = fitCell(String(post.localId ?? post.id || ''), 6, 'right');
 
         return ansiColor(15) + postId + ' ' +
           ansiColor(11) + userId + ' ' +

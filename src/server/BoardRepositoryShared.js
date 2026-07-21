@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const {
   createHttpError,
@@ -135,6 +135,7 @@ function mapPostRow(row) {
 
   return withSafeHtmlFields({
     id: Number(row.id),
+    localId: Number(row.local_id ?? row.localId ?? row.id),
     boardId: row.board_id ?? row.boardId,
     family: Number(row.family_id ?? row.family ?? row.familyId ?? row.id ?? 0),
     orderby: Number(row.sort_order ?? row.orderby ?? row.orderBy ?? row.id ?? 0),

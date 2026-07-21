@@ -70,7 +70,7 @@ async function replyToPost(repo, boardId, parentPostId, input, context = {}) {
   assertAuthenticatedBoardUser(context);
 
   const capabilities = await ensureCapabilities(repo);
-  const parent = await readOps.fetchPost(repo, boardId, parentPostId);
+  const parent = await readOps.fetchPostByLocalId(repo, boardId, parentPostId);
   if (!parent) {
     throw createHttpError(404, 'Parent post was not found.');
   }
@@ -112,7 +112,7 @@ async function updatePost(repo, boardId, postId, input, context = {}) {
   const board = await readOps.getBoard(repo, boardId);
   assertBoardAccessible(board, context, repo.levelAliases);
 
-  const post = await readOps.fetchPost(repo, boardId, postId);
+  const post = await readOps.fetchPostByLocalId(repo, boardId, postId);
   assertPostMutable(post, context);
 
   const patch = sanitizePostPatch(input, post);
@@ -121,7 +121,7 @@ async function updatePost(repo, boardId, postId, input, context = {}) {
     post: await mutation.updateMappedPost(
       repo,
       post.boardId,
-      postId,
+      post.id,
       {
         title: patch.title,
         content: patch.content,
@@ -136,10 +136,10 @@ async function deletePost(repo, boardId, postId, context = {}) {
   const board = await readOps.getBoard(repo, boardId);
   assertBoardAccessible(board, context, repo.levelAliases);
 
-  const post = await readOps.fetchPost(repo, boardId, postId);
+  const post = await readOps.fetchPostByLocalId(repo, boardId, postId);
   assertPostMutable(post, context);
 
-  await mutation.deletePostRecord(repo, post.boardId, postId);
+  await mutation.deletePostRecord(repo, post.boardId, post.id);
 
   return {
     board,
@@ -161,7 +161,7 @@ async function recommendPost(repo, boardId, postId, context = {}) {
     throw createHttpError(400, 'Recommendations are not supported by this storage.');
   }
 
-  const post = await readOps.fetchPost(repo, boardId, postId);
+  const post = await readOps.fetchPostByLocalId(repo, boardId, postId);
   if (!post) {
     throw createHttpError(404, 'Post was not found.');
   }
@@ -173,17 +173,17 @@ async function recommendPost(repo, boardId, postId, context = {}) {
     throw createHttpError(400, 'You cannot recommend your own post.');
   }
 
-  const existingRecommendation = await mutation.findRecommendation(repo, postId, userId);
+  const existingRecommendation = await mutation.findRecommendation(repo, post.id, userId);
   if (existingRecommendation) {
     throw createHttpError(409, 'Post already recommended.');
   }
 
   const now = new Date().toISOString();
-  await mutation.insertRecommendation(repo, postId, userId, now);
+  await mutation.insertRecommendation(repo, post.id, userId, now);
 
   return {
     board,
-    post: await mutation.updateRecommendationCount(repo, post.boardId, postId, capabilities, post, now)
+    post: await mutation.updateRecommendationCount(repo, post.boardId, post.id, capabilities, post, now)
   };
 }
 
