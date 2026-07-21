@@ -121,10 +121,15 @@ class BoardRouter extends BaseRouter {
     }
 
     try {
-      const postIds = items.map((item) => item.id).filter((id) => id != null);
+      // [LOG_ID: 20260721_2300] local_id 이전 후 첨부 라우트(addAttachment 등)는 클라이언트가
+      // 보내는 postId(=local_id ?? id)를 그대로 attachments.post_id에 저장하는데, 여기서만
+      // item.id(전역 PK)로 조회해 두 값이 일치하지 않는 게시판(id!=local_id, 실서비스 전부 해당)에서
+      // 자료실 목록의 파일명/용량/다운로드수 요약이 항상 빈 채로 나오는 버그였다 — 실제 첨부가 아직
+      // 하나도 없어 지금까지 드러나지 않았을 뿐(Supabase 직접 조회로 id/local_id 발산 확인).
+      const postIds = items.map((item) => item.localId ?? item.id).filter((id) => id != null);
       const summaries = await attachmentRepository.summariesForPosts(boardId, postIds);
       for (const item of items) {
-        const summary = summaries[Number(item.id)];
+        const summary = summaries[Number(item.localId ?? item.id)];
         if (summary) {
           item.fileName = summary.name;
           item.fileSize = summary.size;

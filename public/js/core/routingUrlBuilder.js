@@ -247,19 +247,24 @@ export function createRoutingUrlBuilder(deps) {
 
       case 'post-write': {
         const uppercaseBoardId = String(boardId || '').toUpperCase();
-        if (writeMode === 'edit' && post?.id) {
-          return `/${uppercaseBoardId}/${post.id}/edit`;
+        const editPostId = post?.localId ?? post?.id;
+        // [LOG_ID: 20260721_2310] local_id 이전 후 GET /posts/:postId가 local_id로 조회하는데
+        // (id != local_id인 실서비스 게시판 전부) 여기만 여전히 전역 id로 URL을 만들어, 수정/답글
+        // 작성 화면에서 새로고침하거나 뒤로가기/링크 공유로 그 URL을 다시 열면 엉뚱한 글이 뜨거나
+        // 404가 나는 상태였다.
+        if (writeMode === 'edit' && editPostId) {
+          return `/${uppercaseBoardId}/${editPostId}/edit`;
         }
         // [LOG: 20260429_0621] Keep reply compose addressable so reload/history
         // restores /board/:boardId/:postId/reply into reply mode, not create mode.
-        if (writeMode === 'reply' && post?.id) {
-          return `/${uppercaseBoardId}/${post.id}/reply`;
+        if (writeMode === 'reply' && editPostId) {
+          return `/${uppercaseBoardId}/${editPostId}/reply`;
         }
         return `/${uppercaseBoardId}/write`;
       }
 
       case 'attachment-list':
-        return `/${String(boardId || '').toUpperCase()}/${post?.id || ''}/files`;
+        return `/${String(boardId || '').toUpperCase()}/${(post?.localId ?? post?.id) || ''}/files`;
 
       default:
         return '/';

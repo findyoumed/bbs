@@ -1,3 +1,15 @@
+## [2026-07-21 23:10] [버그 수정] local_id 이전 여파로 새로 발견된 실서비스 버그 2건 — 자료실 첨부 요약 항상 빈 값, 글수정/답글/첨부목록 URL이 새로고침·공유 시 엉뚱한 글로 연결
+
+**LOG_ID: 20260721_2310**
+목표: "루프로 내일 아침 7시까지 계속 수정해" — 야간 자가 페이싱 루프 첫 사이클. 원래는 `MemoryBoardRepositoryCore.js`가 local_id 체계로 이전 안 된 걸 손보려 했으나, 조사 중 로컬(인메모리) 쪽은 `findPostRecord`가 여전히 전역 id로만 조회해 lookup 자체가 일관돼 있고(별도 localId 필드가 아예 없어 `?? post.id` 폴백이 항상 안전하게 작동) 오히려 지금 손대면 delete/update/navigation을 전부 동기화해야 하는 위험한 리팩터라 보류했다. 대신 "id/local_id 불일치"라는 같은 유형의 버그가 다른 곳에도 있는지 코드베이스 전체를 훑었고, **실서비스(Supabase)에 영향을 주는 진짜 버그 2건**을 새로 발견·수정했다.
+
+1. **[높음] 자료실(PDS) 목록의 첨부 요약이 항상 빈 값**: `boardRoutes.js`의 `enrichWithAttachmentSummaries()`가 `postIds = items.map(item => item.id)`(전역 PK)로 첨부 요약을 조회하는데, 첨부 라우트(`addAttachment` 등)는 클라이언트가 URL에 실어 보내는 `postId`(=`localId ?? id`, 즉 게시판별 순번)를 그대로 `attachments.post_id`에 저장한다 — id와 local_id가 다른 게시판(local_id 이전 후의 실서비스 전부)에서는 두 값이 절대 안 맞아 파일명·용량·다운로드수 열이 항상 비어 있었다. 프로덕션 Supabase에 직접 조회해 `pds_util` 게시판의 `id`(32,33,34…)와 `local_id`(1,2,3…)가 실제로 발산함을 확인했고, 첨부가 아직 하나도 없어(`attachments` 테이블 count=0) 지금까지 겉으로 드러나지 않았을 뿐임도 확인했다. `item.localId ?? item.id`로 수정.
+2. **[높음] 글수정/답글/첨부목록 화면 URL이 새로고침·뒤로가기·링크 공유 시 다른 글로 연결**: `routingUrlBuilder.js`의 `buildURLForState()`가 'post-write'(edit/reply)와 'attachment-list' 케이스에서 URL에 `post.id`(전역 PK)를 그대로 넣고 있었는데, 그 URL을 다시 파싱하는 `routingStateRestorer.js`는 `GET /api/boards/:boardId/posts/:postId`를 그대로 호출하고 서버(Supabase 모드)는 그 postId를 local_id로 조회한다(`fetchPostByLocalId`) — 즉 URL 생성 쪽만 여전히 전역 id를 쓰고 있어, 글 수정/답글 작성/첨부목록 화면에서 새로고침하거나 그 URL을 다시 열면(뒤로가기, 링크 공유, 북마크) id와 local_id가 우연히 같지 않은 한 엉뚱한 글이 열리거나 404가 났다. `post.localId ?? post.id`로 수정(localId가 없는 경우 기존처럼 id로 자연 폴백).
+검증: 프로덕션 Supabase에 서비스 롤 키로 직접 질의해 `pds_util` 게시판 3개 글의 `id`(32/33/34)와 `local_id`(1/2/3) 발산을 확인(문제가 실재함을 코드 읽기가 아니라 실데이터로 증명). `routingUrlBuilder.js`를 Node ESM으로 직접 임포트해 edit/reply/attachment-list 3개 화면 모두 localId(1)를 쓰고 전역 id(32)를 안 쓰는지, localId가 없는 경우엔 기존처럼 id로 안전하게 폴백하는지 4개 어서션으로 확인. `node --check` 통과, `npm run loop:verify`(9종) 재통과.
+결과: ✅ 완료 — 애초 목표였던 MemoryBoardRepositoryCore 리팩터는 위험도 대비 실익이 낮아 보류하고, 같은 유형의 실서비스 영향 버그 2건을 대신 찾아 고쳤다. MemoryBoardRepositoryCore.js는 계속 보류 상태(사용자 확인 없이 findPostRecord/deletePost/_getNavigation 동시 변경은 회귀 위험이 커서 미룸).
+
+---
+
 ## [2026-07-21 22:20] [보안/버그 수정 후속] 직전 전수점검에서 낮은 우선순위로 미룬 항목 3건 마저 반영 — 뉴스 피드 실패 시 빈 목록만 뜨던 문제, 닉네임 20자 상한 클라이언트 미고지 2건 수정
 
 **LOG_ID: 20260721_2220**
