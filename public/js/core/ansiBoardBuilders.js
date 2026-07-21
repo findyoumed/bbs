@@ -270,6 +270,12 @@ export function createBoardAnsiBuilders(deps) {
 
   function buildPostViewAnsi(board, post, totalCount, canEdit, isGuest, searchParams = {}) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    // [LOG_ID: 20260721_1735] 실기기 폰트 실측 기반 동적 컬럼 계산(measureMobileTargetCols)을
+    // 시도했으나, 헤드리스/실기기 간 캔버스 텍스트 측정 오차가 예상보다 커서 컬럼 수를
+    // 과대추정하면 실제 문장이 화면 밖으로 잘려 유실되는(스크린샷으로 직접 확인) 더 심각한
+    // 회귀가 발생했다 — 원래 버그(우측 여백)보다 텍스트 유실이 훨씬 나쁘므로 되돌린다.
+    // 대신 style.css의 가운데 정렬로 "쏠림"을 해결한다(폭을 늘리는 대신 남는 여백을 좌우로
+    // 고르게 분산).
     const targetCols = isMobile ? 44 : 80;
 
     const boardName = getBoardDisplayName(board);
