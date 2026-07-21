@@ -12,6 +12,7 @@ export function createBoardAnsiBuilders(deps) {
     ANSI_RESET,
     ansiColor,
     buildPageLabel,
+    buildThreadPrefix,
     buildTopHeader,
     ansiHLine,
     displayWidth,
@@ -227,7 +228,7 @@ export function createBoardAnsiBuilders(deps) {
     }
 
     function postLine(post) {
-      const titlePrefix = Number(post.step || 0) > 0 ? '└ ' : '';
+      const titlePrefix = buildThreadPrefix(post.step);
       const rawTitle = titlePrefix + String(post.title || '');
       const highlightedTitle = highlightText(rawTitle, highlightTerm, 14, 15);
       const title = fitCell(highlightedTitle, titleWidth);

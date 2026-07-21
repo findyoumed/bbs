@@ -29,6 +29,7 @@ export function createPostListView(deps) {
   const {
     ANSI_RESET,
     ansiColor,
+    buildThreadPrefix,
     buildTopHeader,
     ansiHLine,
     fitCell,
@@ -228,7 +229,7 @@ export function createPostListView(deps) {
 
     function postLine(post) {
       if (isMobile) {
-        const titlePrefix = Number(post.step || 0) > 0 ? '└ ' : '';
+        const titlePrefix = buildThreadPrefix(post.step);
         const rawTitle = titlePrefix + String(post.title || '');
         const title = fitCell(rawTitle, 22);
 
@@ -243,7 +244,7 @@ export function createPostListView(deps) {
           ANSI_RESET;
       }
 
-      const titlePrefix = Number(post.step || 0) > 0 ? '└ ' : '';
+      const titlePrefix = buildThreadPrefix(post.step);
       const rawTitle = titlePrefix + String(post.title || '');
       const title = fitCell(rawTitle, 36);
 

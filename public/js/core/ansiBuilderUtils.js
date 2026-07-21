@@ -362,11 +362,22 @@ export function createAnsiBuilderUtils(deps) {
     return Math.max(1, Math.ceil(lineCount / linesPerPage));
   }
 
+  // [LOG_ID: 20260721_2340] step(답글 깊이)과 무관하게 항상 '└ ' 한 종류만 붙어 3단・4단 답글이
+  // 1단 답글과 구분 안 되던 문제 — 깊이당 2칸씩 들여쓰기를 더한다(과도한 폭 낭비를 막기 위해
+  // 4단부터는 더 늘리지 않고 고정). fitCell이 어차피 열 폭에 맞춰 잘라내므로 열 오버플로는 없다.
+  function buildThreadPrefix(step) {
+    const depth = Math.max(0, Number(step) || 0);
+    if (depth <= 0) return '';
+    const indentLevels = Math.min(depth - 1, 3);
+    return '  '.repeat(indentLevels) + '└ ';
+  }
+
   return {
     ANSI_BOLD,
     ANSI_RESET,
     ansiColor,
     buildPageLabel,
+    buildThreadPrefix,
     buildTopHeader,
     ansiHLine,
     displayWidth,
