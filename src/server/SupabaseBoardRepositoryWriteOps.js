@@ -139,6 +139,44 @@ async function deletePost(repo, boardId, postId, context = {}) {
   const post = await readOps.fetchPostByLocalId(repo, boardId, postId);
   assertPostMutable(post, context);
 
+  // [LOG_ID: 20260722_0010] 원글을 지우면 답글들이 존재하지 않는 family를 가리키는 채로 남아
+  // 목록에 맥락 없이 떠 있었다("원글 삭제 시 답글 고아" — 사용자 확인 후 진행). 완전 삭제 대신,
+  // "원글"(step===0)이면서 같은 family에 다른 글(답글)이 남아있는 경우에만 제목/본문을
+  // 자리표시자로 바꿔 스레드 구조를 보존한다. 답글(step>0)은 이 데이터 모델에 명시적 부모
+  // 추적이 없어 "그 답글에 딸린 항목"이라는 개념 자체가 없으므로 항상 기존대로 완전 삭제한다
+  // (family에 다른 멤버가 있다고 무조건 자리표시자로 바꾸면 답글 삭제까지 과잉 적용된다).
+  // 스레드 개념이 없는(비-threaded) 게시판은 family_id 컬럼 자체가 없어 항상 완전 삭제로 폴백한다.
+  const capabilities = await ensureCapabilities(repo);
+  if (capabilities.threaded && post.step === 0) {
+    const { count, error } = await repo.client
+      .from(repo.tables.posts)
+      .select('id', { count: 'exact', head: true })
+      .eq('board_id', post.boardId)
+      .eq('family_id', post.family)
+      .neq('id', post.id);
+
+    if (error) {
+      throw createHttpError(502, `답글 확인 실패: ${error.message}`);
+    }
+
+    if (count > 0) {
+      return {
+        board,
+        post: await mutation.updateMappedPost(
+          repo,
+          post.boardId,
+          post.id,
+          {
+            title: '[삭제된 글입니다]',
+            content: '',
+            updated_at: new Date().toISOString()
+          },
+          'Post delete (tombstone) failed'
+        )
+      };
+    }
+  }
+
   await mutation.deletePostRecord(repo, post.boardId, post.id);
 
   return {

@@ -94,7 +94,21 @@ class MemoryBoardRepository {
     const board = await this.getBoard(boardId); assertBoardAccessible(board, context, this.levelAliases);
     const idx = this.posts.findIndex((post) => { const sourceBoardId = this.resolveMutationBoardId(boardId, post.boardId); return sourceBoardId === String(post.boardId || '').trim() && post.id === Number(postId); });
     if (idx === -1) throw createHttpError(404, '글 없음');
-    assertPostMutable(this.posts[idx], context);
+    const target = this.posts[idx];
+    assertPostMutable(target, context);
+    // [LOG_ID: 20260722_0010] Supabase 드라이버와 동일한 정책 — "원글"이 답글을 갖고 있는 경우에만
+    // 완전 삭제 대신 자리표시자로 남긴다(원글이 없으면 답글들이 소속될 곳이 없어 고아가 됨).
+    // 답글(step>0)은 이 데이터 모델에 명시적 부모 추적이 없어 그 답글에 "딸린" 항목이라는
+    // 개념 자체가 없으므로, 답글 삭제는 기존처럼 항상 완전 삭제한다 — family 전체가 아니라
+    // "원글 삭제"만 이 정책의 대상이다(family에 다른 멤버가 있다고 무조건 자리표시자로 바꾸면,
+    // 답글 하나를 지울 때도 원글이 남아있다는 이유로 자리표시자가 되어버리는 과잉 적용이 된다).
+    const isRootWithReplies = target.step === 0 && this.posts.some((post, i) => i !== idx && post.boardId === target.boardId && post.family === target.family);
+    if (isRootWithReplies) {
+      target.title = '[삭제된 글입니다]';
+      target.content = '';
+      target.updatedAt = new Date().toISOString();
+      return { board, post: clonePost(target) };
+    }
     const [deleted] = this.posts.splice(idx, 1); return { board, post: clonePost(deleted) };
   }
 
