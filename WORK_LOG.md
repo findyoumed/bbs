@@ -1,3 +1,15 @@
+## [2026-07-21 09:35] [버그 심각] 자료실(PDS) 게시판 첨부파일 업로드가 항상 막혀 있던 결함 수정 — 전 게시판(12개) 글쓰기/답글 흐름 회귀 점검
+
+**LOG_ID: 20260721_0935**
+목표: "모두" 두 번째 갈래 — 새로 병합된 게시판 8개(횡설수설/묻고답하기/가입인사/지역소식/연예오락/자동차함께타기/불가사의/컴퓨터초보시절) + PDS까지 총 9개 게시판의 글쓰기/답글/첨부 흐름을 서버까지 실제로 띄워 HTTP로 검증.
+발견(심각): `BoardVirtualBoards.js`의 `VIRTUAL_BOARD_DEFINITIONS`가 PDS(자료실)를 `replyEnabled: true, attachmentEnabled: false`로 하드코딩하고 있었다. 이는 PDS가 `hanulso.mnu`에 실제 `<item type="board">`로 배선되기 **전** 시절 값이었는데, `resolveBoardDefinitions()`가 `DEFAULT_BOARDS → 메뉴 파싱 결과 → 이 fallback` 순으로 병합하면서 나중 값이 항상 이겨 메뉴가 정한 진짜 값(`<attachment>yes</attachment>`, `<reply>no</reply>`)을 매번 덮어쓰고 있었다. 결과: **PDS의 핵심 기능인 파일 첨부 업로드가 항상 "해당 게시판은 첨부 기능이 비활성화되어 있습니다" 오류로 막혀 있었고**, 반대로 원래 막혀야 할 답글은 계속 허용되고 있었다. Memory·Supabase 두 드라이버 모두 `resolveBoardDefinitions()`를 공유해서 쓰므로 프로덕션(Supabase)에도 동일하게 영향.
+검증 방법: `getBoard('pds')`를 직접 호출해 `attachmentEnabled:false / replyEnabled:true`를 확인 → 새 게시판 9개(위 8개+PDS)에 대해 서버를 실제로 띄우고 `POST .../posts`(글쓰기) → `GET .../posts/:id`(조회) → `POST .../posts/:id/reply`(답글) → `GET 목록`(리스트 반영) 전 과정을 HTTP로 실행하는 임시 검증 스크립트로 재현: PDS만 `replyOutcome: "ok"`(답글이 되면 안 되는데 됨)로 나와 확정. 별도로 PDS에 실제 base64 첨부파일을 `POST .../attachments`로 올려봤더니 400으로 항상 거부됨을 확인.
+수정: `VIRTUAL_BOARD_DEFINITIONS`의 pds 항목을 메뉴의 실제 값과 동일하게(`replyEnabled: false, attachmentEnabled: true`, name/footerFile도 메뉴와 일치) 맞췄다. 이 fallback 자체는 메뉴 파싱이 실패했을 때만 쓰이는 최후 보루라 남겨두되, 값만 최신화.
+검증: 수정 후 동일 스크립트 재실행 — PDS 답글 시도는 `400 답글 비활성화`로 정상 거부, PDS 첨부 업로드는 정상 성공(파일 저장/downloadCount 등 응답 확인). 나머지 8개 게시판은 처음부터 글쓰기/조회/답글/목록반영 전부 정상이었음(별도 결함 없음). `node --check`, `npm run loop:verify`(9종, boards 포함) 전체 통과.
+결과: ✅ 완료 — 이번 세션에서 발견한 것 중 가장 영향이 큰 기능 결함(자료실 첨부 기능이 배포 이후 계속 죽어 있었을 가능성).
+
+---
+
 ## [2026-07-21 09:10] [버그] 전투게임(Battleship) 공격 결과 피드백에 좌표가 뒤바뀌어 표시되던 버그 수정
 
 **LOG_ID: 20260721_0910**
