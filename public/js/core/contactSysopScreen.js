@@ -3,7 +3,12 @@ import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 // [LOG_ID: 20260720_2300] GUIDE의 '건의하기'를 게시판에서 시삽 이메일 발송 기능으로 교체.
 // 글이 쌓이기만 하고 아무도 안 보는 빈 게시판 대신, 쓰는 즉시 실제 이메일로 전달되게 했다.
-// UI는 memoScreens.js의 쪽지 쓰기(라인 에디터 트랜스크립트) 패턴을 그대로 따른다.
+// [LOG_ID: 20260721_1700] 사용자 요청: "하이텔, 나우누리, 천리안 같은 PC통신 UI로 만들자" —
+// 기존엔 memoScreens.js의 최소 라인 에디터 패턴만 따랐는데, 이 앱의 다른 글쓰기 화면
+// (postWriteView.js)이 이미 재현해 둔 정통 PC통신 라인 에디터 관례(단계 진입 시 안내문,
+// "현재:" 표시, 화면을 넘는 트랜스크립트의 말줄임 처리)를 그대로 가져오고, 실제 시삽에게
+// 이메일을 보내는 되돌릴 수 없는 동작이므로 원전 PC통신 게시판 저장 흐름의 핵심 요소인
+// "미리보기 + 저장 확인(Y/N)" 단계를 추가했다.
 export function createContactSysopScreen(deps) {
   const {
     apiFetch,
@@ -37,15 +42,34 @@ export function createContactSysopScreen(deps) {
     flow.transcript.push({ prompt: String(prompt || ''), value: String(value ?? '') });
   }
 
+  // [LOG_ID: 20260721_1700] postWriteView.js의 20260710_1640과 동일한 이유 — 본문이 길어지면
+  // 지금 치는 줄이 화면 하단 프롬프트 밖으로 밀려나던 문제를 같은 방식(화면 끝 줄부터
+  // 이어쓰기, 잘린 앞부분은 생략 표시)으로 막는다.
+  const MAX_VISIBLE_TRANSCRIPT_LINES = 18;
+
+  function getVisibleTranscript(flow) {
+    const lines = flow.transcript;
+    if (lines.length <= MAX_VISIBLE_TRANSCRIPT_LINES) {
+      return lines;
+    }
+    const hiddenCount = lines.length - (MAX_VISIBLE_TRANSCRIPT_LINES - 1);
+    return [
+      { prompt: '', value: `(... 이전 ${hiddenCount}줄 생략 ...)` },
+      ...lines.slice(hiddenCount)
+    ];
+  }
+
   function renderContactSysopScreen() {
     const flow = state._contactSysopFlow;
     if (!flow) return;
 
-    const transcriptHtml = flow.transcript
+    const transcriptHtml = getVisibleTranscript(flow)
       .map((line) => {
         const prompt = String(line?.prompt || '');
         const value = String(line?.value ?? '');
-        return `<div class="ansi-line"><span class="ansi-cyan">${esc(prompt)}</span>${value ? ` <span class="ansi-white">${esc(value)}</span>` : ''}</div>`;
+        const promptHtml = prompt ? `<span class="ansi-cyan">${esc(prompt)}</span>` : '';
+        const valueHtml = value ? `${prompt ? ' ' : ''}<span class="ansi-white">${esc(value)}</span>` : '';
+        return `<div class="ansi-line">${promptHtml}${valueHtml}</div>`;
       })
       .join('');
 
@@ -61,6 +85,9 @@ export function createContactSysopScreen(deps) {
     if (flow.sending) {
       setHint('시삽에게 전송하는 중입니다..');
       setPrompt('>>');
+    } else if (flow.stage === 'confirm') {
+      setHint('저장(Y), 계속 작성(N), 취소(/q, P, M, B)');
+      setPrompt('Y/N >>');
     } else {
       setHint('전송(/s 또는 SEND), 취소(/q, P, M, B)');
       setPrompt(flow.stage === 'subject' ? '제목 >>' : '내용 >>');
@@ -73,6 +100,22 @@ export function createContactSysopScreen(deps) {
     clearContactSysopFlow();
     await showBoardSelect('guide', '서비스 안내');
     return true;
+  }
+
+  // [LOG_ID: 20260721_1700] 정통 PC통신 게시판 저장 흐름의 핵심 — 실제로 이메일을 보내기
+  // 전에 제목/본문을 한 번에 보여주고 저장 여부를 묻는다(원전: "저장하시겠습니까? (Y/N)").
+  // 되돌릴 수 없는 동작(시삽에게 실제 이메일 발송)이라 확인 없이 바로 보내던 기존 흐름보다
+  // 훨씬 원전에 가깝고 오발송도 막는다.
+  function enterConfirmStage(flow) {
+    flow.stage = 'confirm';
+    appendContactSysopLine('', '');
+    appendContactSysopLine('', '--- 보낼 내용 미리보기 ---');
+    appendContactSysopLine('제목 :', flow.subject);
+    appendContactSysopLine('', '');
+    flow.bodyLines.forEach((line) => appendContactSysopLine('', line || ' '));
+    appendContactSysopLine('', '--------------------------');
+    appendContactSysopLine('', '이대로 시삽에게 전송하시겠습니까? (Y/N)');
+    renderContactSysopScreen();
   }
 
   async function submitContactSysop() {
@@ -100,6 +143,7 @@ export function createContactSysopScreen(deps) {
       return true;
     } catch (error) {
       flow.sending = false;
+      flow.stage = 'body';
       appendContactSysopLine('[안내]', `발송 실패: ${String(error?.message || '알 수 없는 오류입니다.')}`);
       renderContactSysopScreen();
       return false;
@@ -134,7 +178,29 @@ export function createContactSysopScreen(deps) {
       }
       flow.subject = trimmed;
       flow.stage = 'body';
-      appendContactSysopLine('[안내]', '내용을 한 줄씩 입력하세요. /s 또는 SEND 전송, /q 취소');
+      appendContactSysopLine('', `제목: ${flow.subject}`);
+      appendContactSysopLine('', '');
+      appendContactSysopLine('', '내용을 한 줄씩 입력하세요. 완료: /s 또는 SEND, 취소: /q, P, M, B');
+      renderContactSysopScreen();
+      return true;
+    }
+
+    if (flow.stage === 'confirm') {
+      appendContactSysopLine('Y/N >>', line);
+      if (isCancel) {
+        renderContactSysopScreen();
+        return await cancelContactSysop();
+      }
+      if (cmd === 'Y' || trimmed === '/s' || cmd === 'SEND') {
+        return await submitContactSysop();
+      }
+      if (cmd === 'N') {
+        flow.stage = 'body';
+        appendContactSysopLine('', '계속 작성하실 수 있습니다. 완료: /s 또는 SEND, 취소: /q, P, M, B');
+        renderContactSysopScreen();
+        return true;
+      }
+      appendContactSysopLine('[안내]', 'Y 또는 N을 입력해 주세요.');
       renderContactSysopScreen();
       return true;
     }
@@ -142,7 +208,8 @@ export function createContactSysopScreen(deps) {
     // stage === 'body'
     if (trimmed === '/s' || cmd === 'SEND') {
       appendContactSysopLine('내용 >>', line);
-      return await submitContactSysop();
+      enterConfirmStage(flow);
+      return true;
     }
     if (isCancel) {
       appendContactSysopLine('내용 >>', line);
@@ -177,7 +244,11 @@ export function createContactSysopScreen(deps) {
       subject: '',
       bodyLines: [],
       transcript: [
-        { prompt: '[안내]', value: '시삽에게 보낼 건의사항을 작성해 주세요. 보내신 내용은 이메일로 전달됩니다.' }
+        { prompt: '', value: '건의하기 작성' },
+        { prompt: '', value: '' },
+        { prompt: '[안내]', value: '시삽에게 보낼 건의사항을 작성해 주세요. 보내신 내용은 이메일로 전달됩니다.' },
+        { prompt: '', value: '' },
+        { prompt: '', value: '제목을 입력하십시오.' }
       ],
       stage: 'subject',
       sending: false
