@@ -1,3 +1,14 @@
+## [2026-07-21 16:15] [버그 회귀 수정] post-view — 짧은 글에서도 불필요하게 스크롤이 되던 문제 해결
+
+**LOG_ID: 20260721_1615**
+목표: 사용자 재보고 — 실제 프로덕션 주소(`https://01410.vercel.app/NOTICE/351`)로 접속해 "화면 스크롤이 가능해서 이상해". 스크린샷상 글 내용은 뷰포트 안에 다 들어가는(잘리지 않는) 짧은 글이었는데도, 페이지 자체가 스크롤되는 게 이상하다는 지적.
+원인: 직전 수정(20260721_1545)에서 post-view의 `body`/`.app-shell`에 준 `min-height: var(--mobile-visual-viewport-height, 100dvh)`가 문제였다. 이 CSS 변수는 `terminalViewportMetrics.js`가 매 프레임 실제 뷰포트 높이를 재서 갱신하는데, 모바일 브라우저는 페이지가 조금이라도 스크롤되면(살짝 드래그해도) 주소창을 접어 가용 높이를 늘리는 습성이 있다 — 늘어난 높이가 다시 JS를 거쳐 `--mobile-visual-viewport-height`에 반영되고, 그 값을 min-height가 그대로 따라가며 body가 더 커지는 되먹임(feedback loop)이 생겼다. 즉 "글이 짧아도 한 번 스크롤 제스처가 걸리면 스크롤 가능 영역이 계속 자라나는" 것처럼 보였다.
+수정: min-height를 JS가 계산하는 커스텀 프로퍼티 대신 브라우저 네이티브 `100dvh`로 고정(`body[data-screen="post-view"]`, `.app-shell` 두 곳). CSS 캔버스 배경 규칙상 body가 짧아도 html/body의 검정 배경은 어차피 뷰포트 전체를 채우므로(글 아래 흰 여백 없음), min-height가 굳이 JS 계산값을 따라갈 필요가 없었다. `100dvh`는 브라우저가 네이티브로 주소창 상태를 반영해 계산하므로 우리 쪽 JS 되먹임 루프 자체가 사라진다.
+검증: Playwright에 실제 모바일 컨텍스트(`isMobile:true, hasTouch:true`, 390×844)로 실제 앱 내비게이션(GUIDE→NOTICE→글 선택)해 짧은 공지글에 진입 — `docScrollHeight(844) === windowInnerHeight(844)`로 스크롤 가능 영역이 전혀 없음(`canScrollVertically:false`) 확인. 이어서 같은 화면에 긴 본문(80줄)을 주입해 `docScrollHeight(1913) > windowInnerHeight(844)`로 긴 글은 여전히 정상적으로 스크롤됨(`canScrollVertically:true`)과 가로 오버플로우 없음(`scrollWidth===clientWidth===390`, 직전 수정 20260721_1600 유지) 모두 재확인. `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — post-view는 이제 짧은 글에서 불필요한 스크롤 없이 완전히 고정된 화면으로, 긴 글에서만 자연스러운 페이지 스크롤로 동작한다.
+
+---
+
 ## [2026-07-21 16:00] [버그 회귀 수정] post-view 페이지 스크롤 전환의 부작용 — 가로 스크롤로 본문이 왼쪽으로 쏠려 보이던 문제 해결
 
 **LOG_ID: 20260721_1600**

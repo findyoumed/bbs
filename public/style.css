@@ -2589,7 +2589,15 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="post-view"] {
         position: static !important;
         height: auto !important;
-        min-height: var(--mobile-visual-viewport-height, 100dvh) !important;
+        /* [LOG_ID: 20260721_1615] min-height를 JS가 매 프레임 갱신하는 --mobile-visual-viewport-height
+           대신 브라우저 네이티브 100dvh로 고정한다. 이전엔 짧은 글(뷰포트보다 작은 내용)에서도
+           스크롤이 "되는" 이상한 여유 공간이 생겼는데 — 원인은 스크롤이 살짝이라도 걸리면 모바일
+           브라우저 주소창이 접히며 실제 가용 높이가 늘고, 그 늘어난 높이를 JS가 다시
+           --mobile-visual-viewport-height에 반영해 min-height가 따라 커지는 피드백 루프였다.
+           html/body의 검정 배경은 CSS 캔버스 배경 규칙상 min-height 없이도 뷰포트 전체를 채우므로
+           (짧은 글 아래 흰 여백이 생기지 않으므로) min-height 자체가 굳이 JS 값을 따라갈 필요가
+           없었다 — 네이티브 100dvh만으로 충분하다. */
+        min-height: 100dvh !important;
         /* [LOG_ID: 20260721_1600] 세로만 풀어준다. 가로까지 visible로 풀면 topbar의 긴 '─' 구분선
            문자열(개별적으로는 overflow:hidden으로 잘려 보이지만 원본 텍스트 폭은 뷰포트보다 큼)이
            document.documentElement.scrollWidth를 밀어올려 본문 전체가 왼쪽으로 쏠려 보이는
@@ -2601,7 +2609,7 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="post-view"] .app-shell {
         position: static !important;
         height: auto !important;
-        min-height: var(--mobile-visual-viewport-height, 100dvh) !important;
+        min-height: 100dvh !important;
         overflow-x: hidden !important;
         overflow-y: visible !important;
     }
