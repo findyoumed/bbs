@@ -1,3 +1,14 @@
+## [2026-07-21 10:40] [개선] CONF(토론의 광장) N+1 쿼리 병렬화 + 조용히 삼켜지던 경고 로그 3건 수정
+
+**LOG_ID: 20260721_1040**
+목표: "모두" 세 번째 갈래 — N+1 쿼리 패턴, 에러 핸들링 일관성 점검.
+발견 1(N+1): `ConfRepositorySupabase.js`의 `listRooms()`가 회의실 목록을 가져온 뒤 방마다 `_agendaCount()`를 `for` 루프 안에서 순차 await하고 있었다(1+N회 순차 요청). `listAgendas()`도 동일하게 안건마다 `_publicAgenda()`(내부에서 재청 수 조회 2회)를 순차 await(1+2N회). 회의실/안건이 많아질수록 목록 조회가 개수에 비례해 느려지는 구조. `Promise.all`로 병렬화. (참고로 `SupabaseBoardRepositoryMutation.js`의 답글 정렬 shift 루프도 순차 루프이지만, sort_order UNIQUE 제약 충돌을 피하려고 높은 순서부터 의도적으로 순차 처리하는 것이라 병렬화하지 않고 그대로 둠 — VoteRepositorySupabase.js는 이미 `.in()` 배치 조회로 N+1을 잘 피하고 있어 손댈 게 없었음.)
+발견 2(에러 핸들링): `boardRoutes.js`의 `enrichWithAttachmentSummaries()`가 `this.deps.logger?.warn?.(...)`로 첨부 요약 조회 실패를 기록하려 했는데, 라우터 deps에는 애초에 `logger`가 주입된 적이 없어(`createAppServices.js` 반환값에 없음, 전체 서버 코드에서 이 한 곳만 `deps.logger`를 참조) 옵셔널체이닝이 조용히 무시해 실패가 로그에 전혀 안 남고 있었다. 공용 `logger` 모듈을 직접 require해서 고쳤다. 같은 김에 구조화 로거 대신 `console.error`를 쓰던 `authRoutes.js`(가입 시 이메일 중복 사전확인 실패)와 `memberRoutes.js`(비밀번호 Auth 폴백 검증 실패)도 `logger.error`로 통일. `AuthBridgeSync.js`의 `console.warn`은 `smoke-auth-bridge.js`가 `console.warn`을 직접 몽키패치해 검증하는 기존 회귀 테스트가 있어(logger는 stdout에 JSON으로 쓰므로 이 테스트가 못 잡음) 그대로 유지 — 사소한 스타일 통일보다 기존 회귀 테스트 계약을 지키는 쪽을 택함. `api_handler.js`의 부트스트랩 실패 `console.error`도 "그 무엇도 아직 초기화 안 됐을 수 있는 최후의 보루" 성격이라 의도적으로 유지.
+검증: `node --check` 전체, `npm run loop:verify`(9종) 통과 — 처음에 AuthBridgeSync.js를 바꿨다가 auth-bridge 테스트가 깨져서(정확히 위에서 설명한 이유) 되돌리고 재검증.
+결과: ✅ 완료 — "모두"로 요청받은 세 갈래(오락실 게임/새 게시판 흐름/N+1·에러 핸들링) 전부 마무리.
+
+---
+
 ## [2026-07-21 09:35] [버그 심각] 자료실(PDS) 게시판 첨부파일 업로드가 항상 막혀 있던 결함 수정 — 전 게시판(12개) 글쓰기/답글 흐름 회귀 점검
 
 **LOG_ID: 20260721_0935**

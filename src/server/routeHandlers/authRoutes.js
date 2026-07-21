@@ -10,6 +10,7 @@ const {
   validateReservedUserId,
   validateReservedEmail
 } = require('../ReservedNicknamePolicy');
+const logger = require('../logger');
 
 function isTruthyAuthFlag(value) {
   return value === true || String(value || '').toLowerCase() === 'true';
@@ -418,7 +419,7 @@ class AuthRouter extends BaseRouter {
         String(user?.email || '').trim().toLowerCase() === normalizedEmail
       ));
     } catch (error) {
-      console.error('Signup auth email precheck failed:', error.message);
+      logger.error('Signup auth email precheck failed', { component: 'AuthRouter', error: error.message });
       return null;
     }
   }

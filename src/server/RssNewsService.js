@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('crypto');
+const logger = require('./logger');
 // [LOG: 20260615_1754] Use modern Chrome headers to bypass bot detection and prevent 429 rate limit errors
 const CHROME_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -155,7 +156,7 @@ class RssNewsService extends RssServiceBase {
           recoveredFromCache = true;
         }
       } catch (err) {
-        console.warn('캐시 복원 시도 중 오류 발생:', err.message);
+        logger.warn('캐시 복원 시도 중 오류 발생', { component: 'RssNewsService', error: err.message });
       }
     }
 

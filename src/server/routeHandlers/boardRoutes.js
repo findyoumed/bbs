@@ -1,6 +1,7 @@
 'use strict';
 
 const BaseRouter = require('./BaseRouter');
+const logger = require('../logger');
 
 class BoardRouter extends BaseRouter {
   get routes() {
@@ -132,7 +133,9 @@ class BoardRouter extends BaseRouter {
       }
     } catch (error) {
       // 첨부 요약은 부가 정보다 — 실패해도 목록 자체는 그대로 내려준다.
-      this.deps.logger?.warn?.('첨부 요약 조회 실패', { boardId, error: error.message });
+      // [LOG_ID: 20260721_1030] this.deps.logger는 실제로 어디서도 주입되지 않아 이 경고가
+      // 항상 조용히 삼켜지고 있었다(에러 핸들링 일관성 점검 중 발견) — 공용 logger 모듈을 직접 쓴다.
+      logger.warn('첨부 요약 조회 실패', { component: 'BoardRouter', boardId, error: error.message });
     }
   }
 
