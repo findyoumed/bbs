@@ -13,10 +13,14 @@ export function createSignupScreens(deps) {
   function makeSignupTopbar(centerLabel) {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    // [LOG_ID: 20260721_1520] 모바일도 PC와 동일하게 날짜까지 보이도록 통일(사용자 요청) —
+    // 더는 모바일에서 시:분만 줄이지 않고 항상 풀포맷을 쓴다.
     const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`; // [LOG: 20260609_1132] 1993 고정을 현재 연도로 변경
     return buildTopbarHtml({
       siteLabel: 'PC통신 동호회 01410',
       timestamp,
+      layoutMode: isMobile ? 'compact' : 'full',
       leftLabel: 'SIGNUP',
       centerLabel: centerLabel || '회원가입',
       rightLabel: ''

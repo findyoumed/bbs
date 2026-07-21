@@ -77,14 +77,14 @@ class SupabaseConfRepository extends BaseRepository {
   }
 
   // ── 회의실 ──
+  // [LOG_ID: 20260721_1010] 방마다 안건 수를 순차 await로 조회하던 N+1 쿼리를
+  // Promise.all로 병렬화 — 회의실이 많을수록 목록 조회가 방 개수에 비례해 느려지던 문제.
   async listRooms(options = {}) {
     let query = this.client.from(this.roomsTable).select('*').order('room_no', { ascending: false });
     if (options.includeClosed !== true) query = query.eq('is_open', true);
     const { data, error } = await query;
     if (error) this._fail('회의실 목록 조회', error);
-    const out = [];
-    for (const row of data || []) out.push(this._publicRoom(row, await this._agendaCount(row.room_no)));
-    return out;
+    return Promise.all((data || []).map(async (row) => this._publicRoom(row, await this._agendaCount(row.room_no))));
   }
 
   async createRoom(payload = {}, context = {}) {
@@ -120,14 +120,13 @@ class SupabaseConfRepository extends BaseRepository {
   }
 
   // ── 안건 ──
+  // [LOG_ID: 20260721_1010] 안건마다 재청 수를 순차 await로 조회하던 N+1 쿼리를 병렬화.
   async listAgendas(roomNo) {
     await this._findRoomRow(roomNo);
     const { data, error } = await this.client.from(this.agendasTable)
       .select('*').eq('room_no', Number(roomNo)).order('agenda_no', { ascending: false });
     if (error) this._fail('안건 목록 조회', error);
-    const out = [];
-    for (const row of data || []) out.push(await this._publicAgenda(row));
-    return out;
+    return Promise.all((data || []).map((row) => this._publicAgenda(row)));
   }
 
   async createAgenda(roomNo, payload = {}, context = {}) {

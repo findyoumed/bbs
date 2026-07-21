@@ -40,6 +40,222 @@
 결과: ✅ 완료
 
 ---
+## [2026-07-21 16:45] [버그 수정] 구분선('─')이 실기기에서 폰트 대체 폭 차이로 짧게 그려지던 진짜 원인 해결
+
+**LOG_ID: 20260721_1645**
+목표: 사용자 재보고 — 직전 수정(1630) 배포 후에도 새 스크린샷에서 동일한 픽셀 위치(y=802, 왼쪽 4px/오른쪽 117px)에 여전히 구분선이 쏠려 있음을 확인. 사용자가 "직접 확인할 수 없냐"고 물어 실제 프로덕션 URL로 직접 접속을 시도했으나, 이 샌드박스의 헤드리스 브라우저(Playwright Chromium)는 프록시를 거쳐도 외부 인터넷에 접속이 안 되는 구조적 제약이 있었다(`curl`은 되지만 브라우저 프로세스는 `ERR_PROXY_CONNECTION_FAILED`) — `curl`로 프로덕션에 배포된 style.css를 직접 받아 로컬 수정본과 바이트 단위로 비교해 배포는 확실히 완료됐음을 확인했고, 실제 프로덕션 API에서 문제의 글(#351) 원본 데이터까지 가져와 로컬에 그대로 재현했다.
+원인 재진단: 1630 수정("post-view만 폰트를 더 줄이던 비율 탓")은 틀린 진단이었다 — 로컬에서 실측하니 두 비율(0.025 vs 0.027) 모두 실제 모바일 뷰포트 폭(357px 이상)에서는 어차피 같은 15px 상한에 걸려 완전히 동일한 폰트 크기를 냈다(전/후 차이 없음, 배포해도 증상이 그대로였던 이유). 진짜 원인을 찾기 위해 폰트별 '─' 문자 렌더링 폭을 직접 비교하는 테스트 페이지를 만들어 스크린샷으로 확인한 결과: `.ansi-line`의 폰트 스택(`'BbsPrimaryFont', 'BbsLineFont', ...`)에서 `BbsLineFont`(style.css 75행)가 박스 그리기 문자 전체(U+2500-257F, '─' 포함)를 `local('GulimChe'), local('DotumChe'), local('monospace')`로 대체하도록 되어 있는데, 안드로이드에는 GulimChe/DotumChe가 없어 시스템 기본 monospace로 폴백되고, 이 폴백 폰트의 '─' 문자 폭이 본문에 쓰이는 커스텀 픽셀 폰트(DungGeunMo)보다 넓다 — 같은 44칸(또는 44×1.3배 전 기준)으로 만든 구분선이 실제 폭보다 좁게 그려져 왼쪽으로 쏠려 보인 것. 헤드리스 Chromium(리눅스)에서는 이 폴백 경로가 다르게 해석돼 재현되지 않았다(로컬 테스트가 매번 "정상"으로 나왔던 이유).
+수정: 정확한 폭 비율을 기기별로 예측하는 대신, 실기기에서 어떤 폰트로 대체되든 항상 안전하게 폭을 채우는 방식을 택했다 — `ansiBuilderUtils.js`의 `ansiHLine()`이 모바일에서는 요청 폭의 1.3배만큼 '─'를 더 그리고(`Math.ceil(width*1.3)`), `style.css`의 `.ansi-line`에 `overflow-x:hidden`을 추가해 초과분을 안전하게 잘라낸다(이미 모든 모바일 화면의 `#terminal-screen`에 overflow:hidden 안전망이 있어 페이지 스크롤을 유발하지 않는다). 데스크톱(80칸)은 그대로 둬 영향 없음.
+검증: 실제 프로덕션 글 데이터(#351 "게시판 개편 안내")를 로컬에 그대로 재현해 구분선 텍스트 길이가 44→58(44×1.3)로 늘어나고 `scrollWidth(435) > offsetWidth(410)`로 실제로 넘치는 부분이 잘리는지 확인, 문서 레벨 가로 오버플로우 없음(`docScrollWidth === docClientWidth`) 확인. 데스크톱(1280px)에서는 구분선이 그대로 80글자, 오버플로우 없음 확인(영향 없음). `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — 실기기의 폰트 대체 차이와 무관하게 구분선이 항상 화면 폭을 채우도록 방어적으로 고쳤다. (참고: 1630 수정 자체는 틀린 진단이었지만, post-view가 더 이상 세로 공간을 아낄 필요가 없다는 근거는 여전히 유효해 되돌리지 않고 유지한다.)
+
+---
+
+## [2026-07-21 16:30] [버그 회귀 수정] post-view — 가로선/본문이 왼쪽으로 쏠려 보이던 진짜 원인(44칸 고정 폭 vs 폰트 축소 비율 불일치) 해결
+
+**LOG_ID: 20260721_1630**
+목표: 사용자 재보고(스크린샷, 실제 프로덕션 `/NOTICE/351`) — "가로선과 본문글은 좌측으로 쏠려있어" (스크롤은 이제 잘 막혀있음을 확인). 직전 두 수정(1600, 1615)은 각각 가로 오버플로우와 불필요한 세로 스크롤을 고쳤지만, 이 왼쪽 쏠림 자체는 여전히 남아 있었다.
+원인 진단: 스크린샷을 픽셀 단위로 분석(sharp로 각 행의 밝은 픽셀 좌/우 경계 스캔)해 실제로 확실히 비대칭인 구분선을 특정했다 — 글 메타정보(#351/1, 조회수 등) 바로 아래, 본문 시작 전 구분선만 왼쪽 여백 4px·오른쪽 여백 117px로 뚜렷하게 쏠려 있었고, 상단 타이틀 아래 구분선과 하단 프롬프트 위 구분선은 대칭적이었다(비교 기준 확보). 이 특정 구분선은 `ansiBoardBuilders.js`의 `buildPostViewAnsi()`가 `ansiHLine(targetCols, 8)`(44칸 고정 대시 문자열)로 만들고, 본문도 같은 44칸 기준으로 `wrapAnsiText()`가 줄바꿈한다 — 이 "44칸 ≈ 화면 폭"이라는 전제는 일반 화면들이 쓰는 폰트 크기 비율(0.027)에 맞춰 캘리브레이션된 것인데, `post-view`는 news-view/help/omok-play와 함께 세로 공간을 아끼려고 더 작은 비율(0.025)의 별도 폰트-축소 규칙을 쓰고 있었다. 두 비율이 실제 기기의 뷰포트 크기(특히 폰트 계산이 min(4.2vw, vh 기반값)의 vh쪽에 걸리는 조건)에 따라 서로 다른 실제 폰트 크기로 풀리면, 44칸의 실제 렌더링 폭이 화면 폭보다 좁아져 좌측 정렬된 구분선·본문 텍스트 모두 오른쪽에 빈 여백을 남기고 "쏠려" 보인다.
+수정: post-view를 그 폰트-축소(0.025) 그룹에서 뺐다. post-view는 직전 수정(1545)으로 이미 "한 프레임 고정" 제약을 완전히 벗어나 자유롭게 세로 스크롤되므로, 세로 공간을 아끼려고 폰트를 더 줄일 이유 자체가 없어졌다 — 이제 일반 화면과 동일한 0.027 비율(#terminal-container 기본 규칙)을 그대로 물려받아, ansiHLine/wrapAnsiText가 전제하는 44칸 기준과 실제 렌더링 폭이 다시 일치한다.
+검증: Playwright로 여러 뷰포트 조합(390×844, 412×915, 390×650, 428×600 — 폭·높이 양쪽 다 변주)에서 main-menu와 post-view의 `#terminal-container` 폰트 크기가 항상 동일(15px)함을 확인, 구분선 offsetWidth가 모든 조합에서 뷰포트 폭 대비 거의 완전히 채워짐(390→388, 412→410, 428→426 — 오차 2px은 렌더링 반올림 수준)을 확인. `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — post-view의 구분선과 본문이 더 이상 왼쪽으로 쏠리지 않고 화면 폭을 정상적으로 채운다.
+
+---
+
+## [2026-07-21 16:15] [버그 회귀 수정] post-view — 짧은 글에서도 불필요하게 스크롤이 되던 문제 해결
+
+**LOG_ID: 20260721_1615**
+목표: 사용자 재보고 — 실제 프로덕션 주소(`https://01410.vercel.app/NOTICE/351`)로 접속해 "화면 스크롤이 가능해서 이상해". 스크린샷상 글 내용은 뷰포트 안에 다 들어가는(잘리지 않는) 짧은 글이었는데도, 페이지 자체가 스크롤되는 게 이상하다는 지적.
+원인: 직전 수정(20260721_1545)에서 post-view의 `body`/`.app-shell`에 준 `min-height: var(--mobile-visual-viewport-height, 100dvh)`가 문제였다. 이 CSS 변수는 `terminalViewportMetrics.js`가 매 프레임 실제 뷰포트 높이를 재서 갱신하는데, 모바일 브라우저는 페이지가 조금이라도 스크롤되면(살짝 드래그해도) 주소창을 접어 가용 높이를 늘리는 습성이 있다 — 늘어난 높이가 다시 JS를 거쳐 `--mobile-visual-viewport-height`에 반영되고, 그 값을 min-height가 그대로 따라가며 body가 더 커지는 되먹임(feedback loop)이 생겼다. 즉 "글이 짧아도 한 번 스크롤 제스처가 걸리면 스크롤 가능 영역이 계속 자라나는" 것처럼 보였다.
+수정: min-height를 JS가 계산하는 커스텀 프로퍼티 대신 브라우저 네이티브 `100dvh`로 고정(`body[data-screen="post-view"]`, `.app-shell` 두 곳). CSS 캔버스 배경 규칙상 body가 짧아도 html/body의 검정 배경은 어차피 뷰포트 전체를 채우므로(글 아래 흰 여백 없음), min-height가 굳이 JS 계산값을 따라갈 필요가 없었다. `100dvh`는 브라우저가 네이티브로 주소창 상태를 반영해 계산하므로 우리 쪽 JS 되먹임 루프 자체가 사라진다.
+검증: Playwright에 실제 모바일 컨텍스트(`isMobile:true, hasTouch:true`, 390×844)로 실제 앱 내비게이션(GUIDE→NOTICE→글 선택)해 짧은 공지글에 진입 — `docScrollHeight(844) === windowInnerHeight(844)`로 스크롤 가능 영역이 전혀 없음(`canScrollVertically:false`) 확인. 이어서 같은 화면에 긴 본문(80줄)을 주입해 `docScrollHeight(1913) > windowInnerHeight(844)`로 긴 글은 여전히 정상적으로 스크롤됨(`canScrollVertically:true`)과 가로 오버플로우 없음(`scrollWidth===clientWidth===390`, 직전 수정 20260721_1600 유지) 모두 재확인. `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — post-view는 이제 짧은 글에서 불필요한 스크롤 없이 완전히 고정된 화면으로, 긴 글에서만 자연스러운 페이지 스크롤로 동작한다.
+
+---
+
+## [2026-07-21 16:00] [버그 회귀 수정] post-view 페이지 스크롤 전환의 부작용 — 가로 스크롤로 본문이 왼쪽으로 쏠려 보이던 문제 해결
+
+**LOG_ID: 20260721_1600**
+목표: 사용자 재보고(스크린샷, 상단바 타임스탬프 15:37:30) — "글이 왼쪽으로 치우쳐있어". 직전 수정(20260721_1545)으로 post-view의 세로 잘림/내부 스크롤박스는 해결됐지만, 새로운 시각적 결함이 생겼다.
+원인: `body[data-screen="post-view"]`/`.app-shell`/`#terminal-screen`을 `overflow: visible`(가로+세로 모두)로 풀면서, 그동안 `body`의 `overflow:hidden`이 가려주던 **가로 오버플로우**까지 함께 드러났다. 상단바의 구분선(`.retro-topbar-line`, `.retro-topbar-hr`)은 `buildTopbarHtml()`이 만드는 긴 `─` 문자열을 담고 있는데, 각 요소 자체는 `overflow:hidden`으로 시각적으로는 잘려 보이지만(`offsetWidth` 28px/330px) 원본 텍스트의 고유 폭(~600px, 뷰포트 390px보다 큼)은 그대로 조상 요소의 `scrollWidth` 계산에 반영된다. 이전엔 `body{overflow:hidden}`이 이를 가려 뷰포트 밖으로는 아무것도 안 보였지만, post-view만 이 안전망을 걷어내면서 `document.documentElement.scrollWidth`가 689px(뷰포트 390px)까지 벌어졌고, 이 가로 오버플로우가 화면 전체를 왼쪽으로 쏠려 보이게 만드는 원인이었다.
+수정: `overflow: visible !important` 블랑켓 규칙을 축 분리 — `body[data-screen="post-view"]`, `.app-shell`, `#terminal-screen` 세 곳 모두 `overflow-x: hidden !important; overflow-y: visible !important;`로 변경. 가로는 계속 잘라내 상단바 구분선이 밖으로 새지 않게 하고, 세로만 풀어 직전 수정의 "브라우저 기본 페이지 스크롤로 긴 글 전체 보기" 목적은 그대로 유지.
+검증: Playwright에 실제 모바일 컨텍스트(`isMobile:true, hasTouch:true`, Android UA, 390×844)로 post-view 상태(topbar 구분선 + 80줄 긴 본문)를 재현 — 수정 전 `scrollWidth:689 vs clientWidth:390`(오버플로우 있음)이었던 것이 수정 후 `scrollWidth:390 === clientWidth:390`(오버플로우 없음)으로 확인, `.ansi-line`의 `getBoundingClientRect().left`가 정확히 0으로 왼쪽 쏠림 없이 정렬됨을 확인. 세로 성장은 그대로 유지되는지도 재확인(`docScrollHeight:1677 > viewportHeight:844`, `canScrollVertically:true`) — 직전 수정을 되돌리지 않았음을 검증. `npm run loop:verify`(9종) 전체 통과.
+결과: ✅ 완료 — post-view는 이제 가로 오버플로우 없이(본문이 왼쪽으로 쏠리지 않고) 세로만 자연스럽게 페이지 스크롤된다.
+
+---
+
+## [2026-07-21 15:45] [설계 변경] 게시글 보기(post-view)를 "한 프레임 고정" 모델에서 완전히 빼고 자연스러운 페이지 스크롤로 전환
+
+**LOG_ID: 20260721_1545**
+목표: 사용자 재재보고 — "공지사항 게시글에서 아직도 똑같이 글씨가 잘리고 있는데, 스크롤바가 생성되지 않게 구현되어야 하는데. 달라진게 없어". 폰트 축소만으로는 게시글처럼 길이 제한이 없는 콘텐츠를 항상 담을 수 없고(11px 바닥 이하로는 가독성이 무너짐), 그동안 시도한 "고정 프레임 안에서 내부만 스크롤"(overflow-y:auto) 방식은 작은 박스 안에 갇힌 스크롤바가 사용자가 원하는 모습이 아니었다.
+수정: post-view만 이 앱 전역의 "터미널 한 프레임" 원칙(`body`/`.app-shell`의 `position:fixed`+고정 height+`overflow:hidden`)에서 완전히 빼냈다 — `body[data-screen="post-view"]`와 그 하위 `.app-shell`을 `position:static; height:auto; overflow:visible`로 풀고, `#terminal-wrapper`의 `max-height:100dvh` 제한도 제거, `#terminal-screen`은 `overflow:visible`로(더 이상 내부 스크롤 컨테이너가 아님). 결과: 문서가 내용만큼 자연스럽게 길어지고 **브라우저 기본 페이지 스크롤**로 전체를 볼 수 있다 — 작은 박스 안에 갇힌 스크롤바가 없다.
+부작용 발견 및 수정: 이 전환 직후 실측하니 화면이 항상 "맨 아래로 스크롤된 채" 시작했다 — 원인은 두 가지 기존 메커니즘이 새 모델과 안 맞았기 때문. ① 본문 줄 단위 스트리밍 렌더러(`terminalSequentialRenderer.js`)가 각 줄을 `scrollIntoView`로 "따라가는데", `#terminal-screen`이 더는 스크롤 컨테이너가 아니게 되면서 그 호출이 대신 **window/document를 끝까지** 스크롤시켰다. ② 스트리밍 완료 후 원점 복귀 코드(`ansiTopbarScreen.js`)가 `screenEl.scrollTop = 0`만 리셋했는데, 실제 스크롤은 이제 window에서 일어나 이 리셋이 무의미했다 — `window.scrollTo(0, 0)`을 함께 호출하도록 추가(다른 화면은 body가 여전히 fixed라 안전한 no-op).
+검증: Playwright에 실제 모바일 컨텍스트(`isMobile:true, hasTouch:true`, Android UA)로 15문단짜리 긴 글을 렌더 — 로드 직후 `window.scrollY === 0`(최상단부터 시작) 확인, 스크린샷으로 제목부터 정상 노출 확인, 페이지 끝까지 스크롤 시 마지막 줄과 커맨드 입력창(footer)까지 전부 도달 가능함을 확인. `docScrollHeight(2012) > docClientHeight(700)`로 정상적인 페이지 스크롤이 걸림을, `screenHasInternalScroll:false`로 내부 박스 스크롤이 더는 없음을 확인. (참고: 첫 시도에서 터치 에뮬레이션 없이 테스트해 데스크톱 포인터 경로로 빠지며 `cmdInput.focus()`가 화면 하단 스크롤을 훔쳐가는 걸 오인했었다 — `shouldAutoFocusCommandInput()`은 터치 기기에서 항상 false라 실제 모바일에서는 원래도 문제 없었음을 재확인.) `node --check`, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — post-view는 이제 폰트 축소나 내부 스크롤박스에 기대지 않고, 아무리 긴 글이라도 브라우저의 자연스러운 페이지 스크롤로 끝까지 볼 수 있다.
+
+---
+
+## [2026-07-21 15:35] [버그 회귀 수정] --stable-vh의 "가장 큰 높이만 채택" 로직이 모바일 주소창 변화를 무시해 긴 글이 다시 잘리던 문제 해결
+
+**LOG_ID: 20260721_1535**
+목표: 사용자 재보고 — "모바일에서 아직도 하단이 짤리고 스크롤바가 있어" (긴 공지글, post-view 화면). 앞선 수정(20260721_1345)으로 post-view에 스크롤 완화를 넣었는데도 여전히 잘림을 재보고.
+원인: 20260721_1453에서 넣은 `--stable-vh`("관측된 뷰포트 높이 중 가장 큰 값만 채택하는 monotonic-max")가 소프트웨어 키보드뿐 아니라 **모바일 브라우저의 접이식 주소창**(스크롤에 따라 나타났다 사라짐)이 만드는 정상적인 높이 변화까지 통째로 무시하고 있었다. 주소창이 잠깐 숨겨졌을 때의 더 큰 높이가 기준으로 굳어버리면, 주소창이 다시 나타나 실제 가용 높이가 줄어든 뒤에도 폰트 크기 계산은 여전히 그 더 큰(실제보다 과장된) 기준을 쓰게 되어, 실제 화면보다 큰 글자로 렌더링되며 긴 게시글 본문 아래가 잘리고 `overflow-y:auto` 안전망이 스크롤바로 나타났다 — "고쳤다"던 화면이 오히려 이전 라운드의 부작용으로 다시 깨진 셈.
+수정: `terminalViewportMetrics.js`가 이미 정밀하게 계산해두는 `keyboardVisible` 신호(visualViewport와 layout 뷰포트 높이 차이로 키보드 개폐를 정확히 구분)를 재사용하도록 재작성 — "가장 큰 값 채택"이라는 뭉뚱그린 휴리스틱을 버리고, **키보드가 떠 있을 때만** 높이 갱신을 건너뛰고 그 외(주소창 변화, 실제 리사이즈, 회전 등)의 모든 높이 변화는 항상 정직하게 반영한다.
+검증: Playwright로 뷰포트를 700px→760px(주소창 숨김 흉내)→700px(주소창 재등장 흉내, 키보드 없음)로 왕복 — 새 로직은 `--stable-vh`가 700→760→700으로 정확히 따라감을 확인(구 로직이었다면 760에서 멈춰있었을 것). `node --check`, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — 다만 실제 안드로이드 기기의 주소창 접힘/재등장 자체는 이 샌드박스(headless Chromium, 실제 주소창 UI 없음)에서 재현이 불가능해 로직 레벨로만 검증했다. 계속 잘림이 보이면 추가 제보 요청.
+
+---
+
+## [2026-07-21 15:20] [기능] 모바일 상단바 시계도 PC와 동일하게 날짜까지 표시 — 전 화면 공통 적용
+
+**LOG_ID: 20260721_1520**
+목표: 사용자 요청 — "모바일화면 프로젝트 전체적으로 오른쪽 상단의 시계를 pc화면과 똑같이 날짜도 넣어줘. 모든 메뉴에서". 지금까지 모바일(compact 레이아웃)은 "HH:MM"만, PC(full)는 "YYYY-MM-DD HH:MM:SS"를 보여주도록 의도적으로 구분해왔는데, 이제 모바일도 항상 풀포맷을 쓰도록 통일.
+시계 텍스트를 만드는 지점이 프로젝트 전체에 4곳 있어 전부 수정:
+1. `ansiTopbarScreen.js`의 1초 주기 시계 갱신 — `data-layout-mode`가 compact면 `formatShortCurrentTime()`(HH:MM)을, 아니면 풀포맷을 쓰던 분기를 제거하고 항상 풀포맷만 쓰게 함. 이제 안 쓰는 `formatShortCurrentTime` 함수도 삭제.
+2. `ansiBuilderUtils.js`의 `buildTopHeader()` — 대부분의 인앱 화면(메뉴/게시판 등)이 공유하는 ANSI 헤더 빌더. 44칸 모바일(`isSmall`)일 때 `timestampText.split(' ')[1].slice(0,5)`로 시:분만 잘라 쓰던 로직 제거, 이제 항상 풀 타임스탬프. 이제 안 쓰는 `isSmall` 변수도 제거.
+3. `authScreens.js`의 `buildAuthTopbar()`(로그인 화면) — `isMobile` 여부로 시:분/풀포맷을 나누던 분기 제거.
+4. `myInfoRenderer.js`의 `buildTimestamp()`(MyInfo 화면), `signupScreens.js`의 `makeSignupTopbar()`(회원가입 화면) — 동일하게 모바일 분기 제거.
+`data-layout-mode`(compact/full) 자체는 시계 포맷과 무관하게 상단바의 다른 레이아웃(칸 수, 줄 배치 등)에 계속 쓰이므로 그대로 유지 — CSS 쪽(`.retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-row1`)이 이미 `grid-template-columns: max-content minmax(2ch, 1fr) max-content`로 시계 칸을 `max-content`(내용에 맞춰 늘어남)로 잡아둬서, 길어진 시계 텍스트를 CSS 변경 없이도 그대로 수용한다(가운데 구분선이 짧아질 뿐).
+검증: Playwright로 모바일 뷰포트(390px)에서 메인메뉴/로그인/회원가입/게시판목록 4개 화면을 실측 — 전부 "2026-07-21 06:10:xx" 풀포맷으로 표시되고 `document.documentElement.scrollWidth > clientWidth`(가로 넘침) 전부 false, 스크린샷으로 줄바꿈·겹침 없이 깔끔하게 들어가는 것 확인. `node --check` 5개 JS 파일, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
+## [2026-07-21 15:02] [모바일] 비밀번호 입력 시 블록 커서가 마지막 별표와 겹쳐 보이던 결함 수정 — 로그인/가입/MyInfo 3곳 공통 결함
+
+**LOG_ID: 20260721_1502**
+목표: 사용자 지적 — "* 표와 커서캐럿이 곂쳐있어" (로그인 비밀번호칸).
+원인: Playwright로 `.terminal-cursor`(커스텀 블록 커서)와 `#cmd-mask-text`(비밀번호 별표 오버레이)의 computed font-size를 직접 비교해 확정 — 커서는 `20260721_1430`에 고친 `.entry-login-prompt-host` 규칙 덕에 앰비언트 15px을 정확히 따라가는데, `#cmd-mask-text`는 그 규칙에 포함되지 않아 여전히 footer 전용 `var(--cmd-font-size, 17px)`(20260615_1538 전역 규칙)를 쓰고 있었다(`cursorFontSize:"15px"` vs `maskFontSize:"17px"`). 커서 위치는 `0.5em × 글자수`로 계산되는데, 이 "em"이 커서 자신의 15px 기준인 반면 실제 별표는 17px로 더 크게 그려지니 칸 폭이 서로 안 맞아 커서가 마지막 별표에 못 미쳐 겹쳐 보였다. 같은 패턴을 가진 `.signup-terminal-prompt-host`(회원가입 비밀번호)도 `#cmd-mask-text`가 빠져 있었고, `.myinfo-password-prompt-host`(MyInfo 비밀번호 변경)는 아예 `#cmd-input`에 `font-size: inherit`조차 없어 더 근본적으로 같은 결함을 안고 있었다.
+수정: 세 호스트 클래스(`.entry-login-prompt-host`, `.signup-terminal-prompt-host`, `.myinfo-password-prompt-host`) 전부 `#cmd-mask-text`(및 MyInfo는 `#cmd-input`/`#cmd-prompt-renderer`도 함께)에 `font-size: inherit !important`를 추가해 커서·입력·별표 오버레이 셋이 항상 같은 크기를 쓰도록 통일했다.
+검증: Playwright로 로그인에서 `sysop` 계정으로 비밀번호 단계 진입 후 9자리 입력 — 수정 전 `cursorFontSize:"15px"`/`maskFontSize:"17px"`(불일치) → 수정 후 둘 다 `"15px"`(일치). 스크린샷으로 커서가 마지막 별표 바로 뒤에 깔끔하게 위치함을 육안 확인. `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
+## [2026-07-21 14:53] [모바일] 소프트웨어 키보드 열고 닫을 때마다 전체 폰트 크기가 출렁이던 문제 해결 — 폰트 크기 고정, 대신 스크롤 허용
+
+**LOG_ID: 20260721_1453**
+목표: 사용자가 "회원 ID" 라벨까지도 두 스크린샷에서 크기가 다르다고 지적 — 처음엔 IME 조합 중 렌더링 문제로 오판했으나(CDP로 실제 조합 상태를 시뮬레이션해 computed style이 조합 중에도 정상임을 확인해 그 가설은 기각), 진짜 원인은 모바일 폰트 크기 `clamp()`가 순정 `vh` 단위를 쓰고 있었던 것 — Playwright로 뷰포트 높이만 줄여봤더니(844px→524px, 안드로이드 키보드가 화면 하단 ~320px를 가리는 상황 재현) `#terminal-container` 폰트가 15px→14.148px로 실제 변했다. 즉 특정 요소 하나만 어긋난 게 아니라 키보드가 열리고 닫힐 때마다 화면 전체 글자가 같이 커졌다 작아졌다 하고 있었다("본문이 프레임에 다 들어가게" 하려고 넣은 반응형 로직의 부작용). 사용자에게 "① 폰트 고정+스크롤 허용 vs ② 지금처럼 유지" 중 선택받아 ①로 확정.
+수정: `terminalViewportMetrics.js`에 `--stable-vh` CSS 변수를 추가 — 관측된 뷰포트 높이 중 **가장 큰 값(=키보드가 닫힌 상태)만 채택하는 monotonic-max**로 갱신해(키보드가 열려 줄어드는 순간은 무시), `window.innerHeight`/`document.documentElement.clientHeight` 기준으로 매 resize마다 갱신한다. 화면 회전은 실제로 기준이 바뀌어야 하므로 `orientationchange`에서 강제 리셋(`resetStableViewportHeight`)한다. `style.css`의 모바일 폰트 크기 clamp 3곳(전역 `2.7vh`, 뉴스/도움말/오목/게시글보기 전용 `2.5vh`)을 전부 `calc(var(--stable-vh, 100vh) * 0.027)`/`* 0.025)`로 교체 — 키보드 개폐에는 반응하지 않고 실제 화면 회전에만 반응한다. 키보드가 열렸을 때 가려지는 하단 내용은 기존에 이미 있던 `body[data-mobile-keyboard="visible"] #terminal-screen{overflow-y:auto}` 스크롤 완화가 그대로 커버한다(이번 수정에서 건드리지 않음).
+검증: Playwright로 뷰포트 844px→524px(키보드 열림 재현)→844px(닫힘)까지 반복해 폰트 크기가 15px로 고정 유지됨을 확인(수정 전엔 14.148px로 변했음), `--stable-vh`도 844px로 안 줄어듦을 확인. 세로→가로 회전(844x390) 시뮬레이션에서는 `--stable-vh`가 새 방향의 높이(390px)로 정상 갱신됨을 확인. `node --check` 2개 JS 파일, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
+## [2026-07-21 14:30] [모바일] 비밀번호칸 이중 캐럿 결함 + 로그인/MyInfo/가입 상단바가 1초 뒤 풀포맷으로 되돌아가던 결함 수정
+
+**LOG_ID: 20260721_1430**
+목표: 사용자 스크린샷 2건 — ① "비밀번호칸의 캐럿 커서 위치가 이상해" ② "위에 날짜가 보이는데 원래보이는거면 프로젝트 전반에 걸쳐서 빠짐없이 보여줘"(로그인 화면이 모바일인데도 상단바에 "2026-07-21 14:23:03" 풀포맷이 떠 있었음).
+
+① 캐럿: `#cmd-input[data-masked="true"]`가 `caret-color:#ffffff !important`로 네이티브 캐럿을 켜고 있었다. 이는 20260707_1500의 "캐럿 단일화"(네이티브 캐럿을 끄고 `.terminal-cursor` 커스텀 블록 커서만 쓴다) 수정보다 먼저 작성된 규칙인데, id+attribute 선택자라 detailedness가 더 높아 항상 이겨, 비밀번호 입력 중엔 네이티브 흰 캐럿과 커스텀 블록 커서 둘 다 동시에 그려지고 있었다(서로 다른 위치 계산 방식이라 어긋나 보임). `caret-color:transparent !important`로 일반 입력과 통일.
+
+② 상단바 날짜: `buildTopbarHtml(model)`은 `model.layoutMode==='compact'`가 아니면 항상 `data-layout-mode="full"`을 찍는다. 그런데 로그인(`authScreens.js`)/MyInfo(`myInfoRenderer.js`)/가입(`signupScreens.js`) 세 화면의 자체 상단바 빌더는 전부 `layoutMode`를 안 넘기고 있었다 — 처음 그릴 때는 각자 계산한 짧은 timestamp 문자열로 맞게 보이지만, `ansiTopbarScreen.js`의 1초 시계 갱신 인터벌이 `data-layout-mode`만 보고 포맷을 고르기 때문에(20260718_2320에 이미 한 번 고친 문제의 재발) 1초 뒤 모바일에서도 항상 풀포맷으로 덮어써졌다. 셋 다 `layoutMode: isMobile ? 'compact' : 'full'`을 명시적으로 넘기도록 수정(가입 화면은 애초에 모바일 짧은 포맷 계산 자체가 없어 그것도 함께 추가).
+
+검증: Playwright로 로그인 화면(모바일 뷰포트) 진입 직후와 2.2초 대기 후 `.retro-topbar-clock`의 `data-layout-mode`/텍스트가 둘 다 "compact"/"05:31"로 유지됨을 확인(수정 전엔 2번째 값이 풀포맷으로 바뀌었을 것). `sysop`으로 로그인해 비밀번호 단계(`data-masked="true"`) 진입 후 `#cmd-input`의 computed `caret-color`가 `rgba(0,0,0,0)`(투명)임을 확인. `node --check` 3개 JS 파일, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
+## [2026-07-21 14:10] [모바일] 로그인 화면에서 엔터로 ID/비밀번호를 확정하는 순간 폰트 크기가 다시 어긋나던 결함 수정
+
+**LOG_ID: 20260721_1410**
+목표: 직전 수정(라이브 입력창 폰트 크기 통일) 확인 중 사용자 지적 — "엔터를 치면 폰트크기가 바뀌어".
+원인: `authScreens.js`의 `appendCommittedIdLine`/`appendCommittedPasswordLine`이 엔터로 확정된 줄을 `readonly <input style="font:inherit">`로 트랜스크립트에 追加하는데, `style.css`의 `#terminal-footer label, #cmd-prompt-renderer, #cmd-input, ..., .entry-login-committed-row input, ...` 규칙(20260615_1538)이 `.entry-login-committed-row input`을 footer 전용 `var(--cmd-font-size, 17px)`로 `!important` 강제하고 있었다. 스타일시트의 `!important` 선언은 인라인 style(비-important)보다 항상 이기므로, 확정 줄의 `font:inherit`가 무시되고 17px로 고정됐다 — 라이브 입력(앰비언트 15px, 직전 수정으로 통일됨)과 확정 후(17px)가 서로 달라 보였다.
+수정: `.entry-login-committed-row input { font-size: inherit !important; }`를 스타일시트 뒤쪽에 다시 선언 — 동일 선택자·동일 detailedness라 소스 순서상 나중 규칙이 이겨 inherit(앰비언트 크기)로 되돌아간다.
+검증: Playwright로 로그인 ID를 입력→엔터 후 트랜스크립트에 남은 확정 줄의 `<input>` computed font-size가 `#terminal-container`와 동일한 15px임을 확인(수정 전엔 17px 고정이었을 것). `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — 로그인 화면의 라이브 입력·확정 후 표시가 이제 모두 앰비언트 크기로 일관됨.
+
+---
+
+## [2026-07-21 13:55] [모바일] 로그인 화면 ID 입력 글자 폰트/자간이 어긋나던 결함 수정
+
+**LOG_ID: 20260721_1355**
+목표: 사용자 스크린샷 제보 — 로그인 화면 "회원 ID >>" 뒤에 입력한 글자("postnews")만 폰트 크기와 자간이 주변 레트로 폰트와 다르게 보임.
+원인: 이 화면(`#login-prompt-host`)도 signup 이메일 입력 화면과 동일하게 `mountPromptRow()`로 원래 footer 소속인 `#cmd-input`/`#cmd-prompt-renderer`를 본문 트랜스크립트 자리에 인라인으로 옮겨 붙인다. 그런데 그 입력 요소들은 footer 전용 폰트 크기 변수(`--cmd-font-size`, 모바일 12px 고정)를 그대로 쓰기 때문에 본문 ambient font-size(뷰포트별 clamp, 이 경우 15px)를 안 따라가 다르게 보였다 — signup 화면은 이미 20260718_2350에서 이 문제를 `.signup-terminal-prompt-host`에 고쳤는데, 로그인 화면(`.entry-login-prompt-host`)에는 그 CSS가 전혀 없었다(대조해보니 signup 클래스는 style.css에 8개 규칙이 있고 login 클래스는 0개).
+수정: `.signup-terminal-prompt-host`의 CSS 블록(폰트 크기/줄높이 상속, 커서 위치 보정 등)을 `.entry-login-prompt-host`에 동일하게 복제.
+검증: Playwright로 로그인 화면 모바일 뷰포트(390x700)에서 `#terminal-container`/`#cmd-input`/`#cmd-prompt-renderer`의 computed font-size가 전부 15px로 일치함을 확인(수정 전엔 입력 요소만 다른 값이었을 것 — signup에서 이미 검증된 동일 패턴). `index.html`의 `style.css?v=` 캐시버스팅 갱신, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
+## [2026-07-21 13:45] [모바일] 게시글 보기(post-view) 화면 본문 아래쪽이 잘리던 결함 수정
+
+**LOG_ID: 20260721_1345**
+목표: 사용자 스크린샷 제보 — 공지사항 게시글 본문 마지막 줄이 구분선/풋터 위에서 잘림.
+원인: 이 세션에서 이미 여러 차례 반복된 동일 계열 버그(모바일 "터미널 한 프레임" 고정 높이가 기본 23~24줄 예산을 넘으면 아래쪽이 잘리는 문제) — `style.css`의 뉴스목록/뉴스기사/도움말/오목 4개 화면에 적용된 3종 완화(`#terminal-screen{overflow-y:auto}`, `.ansi-line{min-height:1.32em}`, `#terminal-container{font-size:clamp(11px,min(4.2vw,2.5vh),15px)}`)가 게시글 보기(`post-view`) 화면에는 아직 확장되지 않았다. 게시글 본문은 글마다 길이가 가변적이라 긴 글에서 특히 잘 드러난다.
+수정: `body[data-screen="post-view"]`를 위 3개 CSS 규칙 그룹에 동일하게 추가.
+검증: Playwright로 모바일 뷰포트(390x700)에서 게시글 보기 진입 후 `#terminal-screen`의 computed style 확인 — `overflow-y:auto`, `.ansi-line{min-height:19.8px}`(15px 폰트의 1.32em), `#terminal-container{font-size:15px}` 전부 정상 적용 확인. `public/index.html`의 `style.css?v=` 캐시버스팅 버전도 갱신(이 세션 초반에 깜빡했다가 사용자 재보고로 배웠던 교훈 — 이번엔 처음부터 함께 갱신). `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
+## [2026-07-21 13:55] [성능 심각] 접속 초기 로딩이 외부 jsdelivr CDN(Supabase JS SDK) 응답 대기에 완전히 발목 잡히던 구조적 문제 해결
+
+**LOG_ID: 20260721_1355**
+목표: 직전 커밋(모뎀 연출 CSS 가림 수정) 직후 사용자가 "이런 시간이 지연되는 효과는 필요없어"라고 해 연출 자체를 완전히 제거 — 그런데 제거하고 실측해보니 "연결하는 중입니다" 이전 대기시간이 거의 그대로(약 13초)였다. 진짜 원인을 다시 조사.
+발견: `index.html`이 `<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">`를 `<script type="module" src="/js/app.js">` **앞에** 두고 있었다. HTML 표준상 defer 클래식 스크립트와 async가 아닌 module 스크립트는 "문서 순서대로 실행"되는 같은 목록에 묶여, 앞선 CDN 스크립트가 성공/실패 상관없이 완전히 결판날 때까지 뒤의 app.js는 로컬 모듈이 전부 이미 받아져 있어도 **실행 자체를 시작하지 못한다.** 이 순서는 실수가 아니라 `authServiceBootstrap.js`의 `initAuth()`가 `window.supabase`를 재시도 없이 딱 한 번만 확인하기 때문에 필요한 것이었다 — 문제는 외부 CDN 요청이 네트워크 상태에 따라 몇 초~수십 초씩 걸리거나 아예 실패할 수 있는데, 그동안 앱 전체가 "연결하는 중입니다" 같은 로딩 문구조차 못 띄운 채 완전히 멈춰 있었다는 것. Playwright로 요청 타임라인을 전부 캡처해 확정: 로컬 정적 자산(JS/CSS/폰트)은 전부 500ms 안에 끝나는데, `cdn.jsdelivr.net` 요청만 **12.9초 뒤에 `ERR_CONNECTION_RESET`으로 실패**하고, 그 즉시 `/api/auth/config` 등 나머지 초기화가 한꺼번에 쏟아지듯 이어졌다 — 즉 app.js의 실행 자체가 그 12.9초 동안 통째로 안 되고 있었다.
+수정: 이미 이 프로젝트가 폰트를 CDN에서 자체 호스팅(`/fonts/*.woff`)으로 옮긴 전례와 동일한 방향으로, `node_modules/@supabase/supabase-js/dist/umd/supabase.js`(UMD 번들, `window.supabase` 전역 노출은 CDN 버전과 동일)를 `public/vendor/supabase.js`로 복사해 자체 호스팅했다. `initAuth()`가 요구하는 "module 스크립트 실행 전 완료 보장" 순서는 그대로 유지하면서, 외부 네트워크 왕복을 로컬 정적 자산 수준(수십 ms)으로 줄였다. 더는 안 쓰는 `cdn.jsdelivr.net`을 `staticRequestHandler.js`의 CSP(`script-src`/`font-src`)에서도 제거해 허용 출처를 좁혔다.
+검증: Playwright로 요청 타임라인 재측정 — 전체 초기화(첫 힌트 텍스트가 뜨기까지) **13,026ms → 444ms**(약 29배). `node --check`, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — "연결하는 중입니다가 뜨기 전이 길다"는 원 질문의 진짜 근본 원인이었다. 앞선 모뎀 연출 CSS 수정(LOG_ID 20260721_1320)은 그 자체로도 유효한 결함이었지만 체감 지연의 대부분을 설명하진 못했고, 사용자 요청대로 그 연출은 이번에 완전히 제거했다.
+
+---
+
+## [2026-07-21 13:20] [버그] 접속 시 모뎀 다이얼링 연출(ATDT/DIALING/CONNECT)이 CSS에 가려 완전히 안 보인 채 3.5초를 그냥 흘려보내던 결함 수정
+
+**LOG_ID: 20260721_1320**
+목표: 사용자 질문 — "접속할 때 맨 처음에 '연결하는 중입니다' 나오기 전의 시간이 꽤 긴데 이건 왜그럴까". 처음엔 `app.js`의 `showConnectSequence()`(90년대 모뎀 접속 재현: ATDT 01410 → DIALING... → CONNECT 14400, 글자당 50ms 타이핑 + 줄마다 대기, 총 약 3.5초)가 "의도된 연출이라 그렇다"고 답했으나, 사용자가 "일부러 넣은 연출은 없는데"(그런 연출을 본 적이 없다)라고 반박해 재조사.
+발견: `showConnectSequence()`가 `#terminal-screen`에 주입하는 `<div id="connect-seq">`에 **class가 전혀 없었다**. 그런데 `style.css:2722`에 `#terminal-container.is-loading #terminal-screen > :not(.loading):not(.ansi-screen) { display: none !important; }` 규칙이 있고, 이 함수가 실행되는 시점엔 `#terminal-container`가 초기 HTML의 `class="is-loading"`를 아직 그대로 갖고 있다(`showMain()`의 데이터 로드가 끝나야 `setReady(true)`가 이 클래스를 벗긴다). `.loading`도 `.ansi-screen`도 아닌 `#connect-seq`는 이 규칙에 정확히 걸려 `display:none`으로 완전히 숨겨진 채, 애니메이션의 `await delay(...)` 호출들만 실시간으로 다 소진되고 있었다 — 즉 사용자에게는 그냥 3.5초짜리 빈 화면(또는 이전 콘텐츠가 감춰진 공백)이었던 것. Playwright로 실측: 수정 전 `getComputedStyle(connectSeqEl).display` = `none`(연출이 화면에 존재하지도 렌더링되지도 않는 것처럼 보임), CSS 규칙을 직접 대조해 확정.
+수정: `#connect-seq` div에 `class="loading"`을 추가 — 이 프로젝트가 로딩 중에도 보여야 하는 콘텐츠를 표시하기 위해 이미 쓰고 있는 관례(위 CSS의 `:not(.loading)` 예외)를 그대로 따름. 인라인 style이 이미 padding/font-size를 지정하므로 `.loading` 클래스의 자체 스타일(padding:16px 8px; font-size:13px)과 충돌하지 않는다(인라인이 항상 이김).
+검증: Playwright로 재방문 → `#connect-seq`의 `display:block, visibility:visible` 확인, "ATDT 01410" → "DIALING..." → "CONNECT 14400 / HiTEL"이 실제로 한 글자씩 타이핑되는 것을 폴링으로 캡처(수정 전엔 이 텍스트 자체가 안 보였음). `node --check`, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — 사용자가 겪은 "연결하는 중입니다 뜨기 전이 길다"의 실제 원인은 폰트대기+인증확인에 더해, **완전히 화면에 그려지지도 않던 3.5초짜리 죽은 애니메이션**이었다. 이제 그 시간 동안 실제로 접속 연출이 보인다.
+
+---
+
+## [2026-07-21 10:40] [개선] CONF(토론의 광장) N+1 쿼리 병렬화 + 조용히 삼켜지던 경고 로그 3건 수정
+
+**LOG_ID: 20260721_1040**
+목표: "모두" 세 번째 갈래 — N+1 쿼리 패턴, 에러 핸들링 일관성 점검.
+발견 1(N+1): `ConfRepositorySupabase.js`의 `listRooms()`가 회의실 목록을 가져온 뒤 방마다 `_agendaCount()`를 `for` 루프 안에서 순차 await하고 있었다(1+N회 순차 요청). `listAgendas()`도 동일하게 안건마다 `_publicAgenda()`(내부에서 재청 수 조회 2회)를 순차 await(1+2N회). 회의실/안건이 많아질수록 목록 조회가 개수에 비례해 느려지는 구조. `Promise.all`로 병렬화. (참고로 `SupabaseBoardRepositoryMutation.js`의 답글 정렬 shift 루프도 순차 루프이지만, sort_order UNIQUE 제약 충돌을 피하려고 높은 순서부터 의도적으로 순차 처리하는 것이라 병렬화하지 않고 그대로 둠 — VoteRepositorySupabase.js는 이미 `.in()` 배치 조회로 N+1을 잘 피하고 있어 손댈 게 없었음.)
+발견 2(에러 핸들링): `boardRoutes.js`의 `enrichWithAttachmentSummaries()`가 `this.deps.logger?.warn?.(...)`로 첨부 요약 조회 실패를 기록하려 했는데, 라우터 deps에는 애초에 `logger`가 주입된 적이 없어(`createAppServices.js` 반환값에 없음, 전체 서버 코드에서 이 한 곳만 `deps.logger`를 참조) 옵셔널체이닝이 조용히 무시해 실패가 로그에 전혀 안 남고 있었다. 공용 `logger` 모듈을 직접 require해서 고쳤다. 같은 김에 구조화 로거 대신 `console.error`를 쓰던 `authRoutes.js`(가입 시 이메일 중복 사전확인 실패)와 `memberRoutes.js`(비밀번호 Auth 폴백 검증 실패)도 `logger.error`로 통일. `AuthBridgeSync.js`의 `console.warn`은 `smoke-auth-bridge.js`가 `console.warn`을 직접 몽키패치해 검증하는 기존 회귀 테스트가 있어(logger는 stdout에 JSON으로 쓰므로 이 테스트가 못 잡음) 그대로 유지 — 사소한 스타일 통일보다 기존 회귀 테스트 계약을 지키는 쪽을 택함. `api_handler.js`의 부트스트랩 실패 `console.error`도 "그 무엇도 아직 초기화 안 됐을 수 있는 최후의 보루" 성격이라 의도적으로 유지.
+검증: `node --check` 전체, `npm run loop:verify`(9종) 통과 — 처음에 AuthBridgeSync.js를 바꿨다가 auth-bridge 테스트가 깨져서(정확히 위에서 설명한 이유) 되돌리고 재검증.
+결과: ✅ 완료 — "모두"로 요청받은 세 갈래(오락실 게임/새 게시판 흐름/N+1·에러 핸들링) 전부 마무리.
+
+---
+
+## [2026-07-21 09:35] [버그 심각] 자료실(PDS) 게시판 첨부파일 업로드가 항상 막혀 있던 결함 수정 — 전 게시판(12개) 글쓰기/답글 흐름 회귀 점검
+
+**LOG_ID: 20260721_0935**
+목표: "모두" 두 번째 갈래 — 새로 병합된 게시판 8개(횡설수설/묻고답하기/가입인사/지역소식/연예오락/자동차함께타기/불가사의/컴퓨터초보시절) + PDS까지 총 9개 게시판의 글쓰기/답글/첨부 흐름을 서버까지 실제로 띄워 HTTP로 검증.
+발견(심각): `BoardVirtualBoards.js`의 `VIRTUAL_BOARD_DEFINITIONS`가 PDS(자료실)를 `replyEnabled: true, attachmentEnabled: false`로 하드코딩하고 있었다. 이는 PDS가 `hanulso.mnu`에 실제 `<item type="board">`로 배선되기 **전** 시절 값이었는데, `resolveBoardDefinitions()`가 `DEFAULT_BOARDS → 메뉴 파싱 결과 → 이 fallback` 순으로 병합하면서 나중 값이 항상 이겨 메뉴가 정한 진짜 값(`<attachment>yes</attachment>`, `<reply>no</reply>`)을 매번 덮어쓰고 있었다. 결과: **PDS의 핵심 기능인 파일 첨부 업로드가 항상 "해당 게시판은 첨부 기능이 비활성화되어 있습니다" 오류로 막혀 있었고**, 반대로 원래 막혀야 할 답글은 계속 허용되고 있었다. Memory·Supabase 두 드라이버 모두 `resolveBoardDefinitions()`를 공유해서 쓰므로 프로덕션(Supabase)에도 동일하게 영향.
+검증 방법: `getBoard('pds')`를 직접 호출해 `attachmentEnabled:false / replyEnabled:true`를 확인 → 새 게시판 9개(위 8개+PDS)에 대해 서버를 실제로 띄우고 `POST .../posts`(글쓰기) → `GET .../posts/:id`(조회) → `POST .../posts/:id/reply`(답글) → `GET 목록`(리스트 반영) 전 과정을 HTTP로 실행하는 임시 검증 스크립트로 재현: PDS만 `replyOutcome: "ok"`(답글이 되면 안 되는데 됨)로 나와 확정. 별도로 PDS에 실제 base64 첨부파일을 `POST .../attachments`로 올려봤더니 400으로 항상 거부됨을 확인.
+수정: `VIRTUAL_BOARD_DEFINITIONS`의 pds 항목을 메뉴의 실제 값과 동일하게(`replyEnabled: false, attachmentEnabled: true`, name/footerFile도 메뉴와 일치) 맞췄다. 이 fallback 자체는 메뉴 파싱이 실패했을 때만 쓰이는 최후 보루라 남겨두되, 값만 최신화.
+검증: 수정 후 동일 스크립트 재실행 — PDS 답글 시도는 `400 답글 비활성화`로 정상 거부, PDS 첨부 업로드는 정상 성공(파일 저장/downloadCount 등 응답 확인). 나머지 8개 게시판은 처음부터 글쓰기/조회/답글/목록반영 전부 정상이었음(별도 결함 없음). `node --check`, `npm run loop:verify`(9종, boards 포함) 전체 통과.
+결과: ✅ 완료 — 이번 세션에서 발견한 것 중 가장 영향이 큰 기능 결함(자료실 첨부 기능이 배포 이후 계속 죽어 있었을 가능성).
+
+---
+
+## [2026-07-21 09:10] [버그] 전투게임(Battleship) 공격 결과 피드백에 좌표가 뒤바뀌어 표시되던 버그 수정
+
+**LOG_ID: 20260721_0910**
+목표: "모두"(오락실 게임 9종 로직 검증 + 새 게시판 흐름 + 성능/일관성 점검, 3갈래 병행 요청) 첫 갈래 — `arcadeGameLogic.js`의 오목/오델로/숫자야구/영어단어맞추기/15퍼즐/스크램블/영어학습게임/타자연습/퀴즈박사/전투게임 로직을 전부 코드 리뷰.
+발견: `arcadeAnsiBuilders.js`의 `buildBattleAnsi()`가 "귀하 공격"/"적군 보복" 피드백 줄에서 `String.fromCharCode(65 + shot.x)`(문자)와 `shot.y + 1`(숫자)로 좌표를 표기했는데, 이 게임의 좌표계는 격자판 렌더링(`rowLabels[y]` + 열번호 x+1)과 입력 파서(`arcadeScreens.js`의 `battleMove`: 문자→y, 숫자→x) 둘 다 "행(y)=문자, 열(x)=숫자"다. 즉 x/y가 뒤바뀐 채 표기되어, 예를 들어 "G3"를 공격해도 피드백 줄엔 "(C 7)"처럼 전혀 다른 좌표가 떴다. 노드로 `battleApply(st, 2, 6)`(=G3)를 직접 실행해 `lastUserShot={x:2,y:6}`을 확인, 수정 전 공식대로면 "C 7"이 나옴을 재현해 확정.
+수정: `rowLabels[shot.y]}${shot.x + 1}`로 격자·입력과 동일한 좌표계로 통일(공백도 입력 예시 "G3"와 같은 형식으로 제거).
+검증: 동일 시나리오를 노드로 재실행해 "G3"가 올바르게 표기됨을 확인, `node --check`, `npm run loop:verify`(9종) 전체 통과. 나머지 9개 게임 로직(오목 승리판정/AI, 오델로 뒤집기·패스·종국 판정, 숫자야구 스트라이크/볼, 행맨 완성판정, 15퍼즐 가해성 셔플, 스크램블 글자수 검증, 영어학습 3회 제한, 타자연습 레벤슈타인 정확도, 퀴즈박사 채점)은 리뷰 결과 로직상 결함 없음.
+결과: ✅ 완료.
+
+---
+
+## [2026-07-21 08:20] [보안] renderInitError()가 이스케이프 없이 innerHTML에 메시지를 꽂던 XSS 방어 공백 수정
+
+**LOG_ID: 20260721_0820**
+목표: "처음 하던 작업을 이어서" — 코드수정 보안 루프 계속, 이번엔 클라이언트 쪽 innerHTML 대입부를 전수 조사(게시판/쪽지/CONF/투표 등 서버 라우트는 직전 라운드에서 이미 클린 확인).
+발견: `public/js/core/terminalFeedback.js`의 `renderInitError(message)`가 `screenEl.innerHTML = \`<div class="bbs-error">${normalizedMessage}</div>\``로 메시지를 이스케이프 없이 그대로 꽂고 있었다. 바로 아래 있는 자매 함수 `showError(message)`는 같은 자리에서 `esc(message)`를 정확히 쓰고 있어 — 대칭이 깨진 채 방치된 코드였다. `app.js`에서 `renderInitError(\`초기화 과정에서 오류가 발생했습니다. (${e.message})\`)` 형태로 호출되는데, 현재는 e.message가 우리 코드/네트워크 오류 문자열이라 당장 공격 경로는 아니지만, 이 앱의 다른 모든 화면이 지키는 "사용자 인접 텍스트는 반드시 esc()를 거쳐 innerHTML에 들어간다"는 중앙 방어 규칙에서 벗어난 결함이라 방어 공백으로 판단.
+수정: `esc(normalizedMessage)`로 감싸 나머지 코드베이스와 동일한 이스케이프 규칙을 적용.
+검증: `node --input-type=module --check`로 문법 확인, `npm run loop:verify`(9종) 전체 통과.
+결과: ✅ 완료.
+>>>>>>> 621f483d41bc39c6cdf9cbb8e93c8b40c67bef9d
+
+---
 
 ## [2026-07-21 08:05] [보안 라운드] 서버 라우트 전수 점검(게시판/쪽지/CONF/투표/첨부/랭킹/가입) — 새 취약점은 없었고, 기본 대화방 삭제 위험 하나를 방어적으로 굳힘
 

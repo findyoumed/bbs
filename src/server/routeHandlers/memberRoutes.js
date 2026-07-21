@@ -6,6 +6,7 @@ const {
   getReservedNicknameMessage,
   validateReservedNickname
 } = require('../ReservedNicknamePolicy');
+const logger = require('../logger');
 
 /**
  * [LOG: 20260426_1910] Simplified MemberRouter by offloading Auth and Memo responsibilities (Evolution Mode: Structural Optimization)
@@ -504,7 +505,7 @@ class MemberRouter extends BaseRouter {
       }
       return { verified: true, source: 'auth-password' };
     } catch (error) {
-      console.error('[MemberRouter] Auth password fallback verification failed:', error.message);
+      logger.error('Auth password fallback verification failed', { component: 'MemberRouter', error: error.message });
       return { verified: false, source: 'auth-password' };
     }
   }

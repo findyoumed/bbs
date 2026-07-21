@@ -76,7 +76,7 @@ export function createTerminalFeedback(deps) {
     const normalizedMessage = String(message || UI_TEXT.RENDER_ERROR);
 
     if (screenEl) {
-      screenEl.innerHTML = `<div class="bbs-error">${normalizedMessage}</div>`;
+      screenEl.innerHTML = `<div class="bbs-error">${esc(normalizedMessage)}</div>`;
     }
 
     setFooterVisibility(true);

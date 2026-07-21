@@ -3,13 +3,16 @@
 const path = require('path');
 const { pickExistingFile, safeResolve, sendText, streamFile } = require('./httpUtils');
 
+// [LOG_ID: 20260721_1400] Supabase JS SDK를 public/vendor/에 자체 호스팅으로 옮기면서
+// script-src/font-src의 cdn.jsdelivr.net 허용이 필요 없어졌다(폰트는 이미 /fonts/*.woff로
+// 자체 호스팅 중이었음). 더는 쓰지 않는 외부 출처를 CSP에서 제거해 허용 범위를 좁힌다.
 const CSP_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io",
   "img-src 'self' data: http: https:",
-  "font-src 'self' https://cdn.jsdelivr.net",
+  "font-src 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'"
 ].join('; ');

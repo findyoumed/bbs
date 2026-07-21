@@ -22,30 +22,19 @@ function formatCurrentTime() {
   return `${y}-${m}-${d} ${h}:${min}:${s}`;
 }
 
-function formatShortCurrentTime() {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');
-  const min = String(now.getMinutes()).padStart(2, '0');
-  return `${h}:${min}`;
-}
-
 // [LOG: 20260423_1420] 실시간 시계 업데이트 (1초 간격)
-// [LOG_ID: 20260718_2320] 모바일(compact) 상단바는 buildTopHeader가 "HH:MM"만 넣어 44칸에 맞춰
-// 그리는데, 이 인터벌은 레이아웃과 무관하게 매초 풀포맷("YYYY-MM-DD HH:MM:SS")으로 덮어써서
-// 렌더 직후엔 짧게 보이다가 1초 안에 연-월-일이 갑자기 튀어나오는 것처럼 보였다(사용자 지적:
-// "다음페이지를 누르면 잠시 연도날짜부분이 없다가 나타나"). 각 시계 요소가 속한 상단바의
-// data-layout-mode를 따라 compact면 짧은 포맷을 유지한다.
+// [LOG_ID: 20260721_1520] 모바일도 PC와 동일하게 날짜까지 보이도록 통일(사용자 요청: "모바일화면
+// 프로젝트 전체적으로... pc화면과 똑같이 날짜도 넣어줘. 모든 메뉴에서") — 더는 compact/full을
+// 구분하지 않고 항상 풀포맷("YYYY-MM-DD HH:MM:SS")을 쓴다. data-layout-mode는 시계 포맷과
+// 무관한 다른 레이아웃(칸 수 등) 판단에는 계속 쓰이므로 그대로 둔다.
 if (typeof window !== 'undefined') {
   setInterval(() => {
     const clockEls = document.querySelectorAll('.retro-topbar-clock');
     if (clockEls.length > 0) {
       const fullTimeStr = formatCurrentTime();
-      const shortTimeStr = formatShortCurrentTime();
       clockEls.forEach(el => {
-        const layoutMode = el.closest('[data-layout-mode]')?.dataset.layoutMode;
-        const timeStr = layoutMode === 'compact' ? shortTimeStr : fullTimeStr;
-        if (el.textContent !== timeStr) {
-          el.textContent = timeStr;
+        if (el.textContent !== fullTimeStr) {
+          el.textContent = fullTimeStr;
         }
       });
     }
@@ -267,14 +256,21 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
     if (promptRowEl) promptRowEl.style.removeProperty('visibility');
     footerEl?.classList.remove('is-divider-pending');
     // [LOG_ID: 20260710_1815] 스트리밍 완료 후 화면 스크롤을 원점(상단바)으로 복원한다.
-    // 본문 스트리밍 중 scrollIntoView는 줄을 따라 내려가며 조상 스크롤러인 #terminal-screen의
-    // scrollTop도 함께 내리는데, 작은 모바일 뷰포트에서는 본문(고정 줄 수)이 화면 영역보다 커서
-    // 렌더가 "아래로 스크롤된 채" 끝났다 — 상단바(로고/시계 줄)가 화면 위로 밀려 잘린 채 고착되고
-    // overflow가 hidden인 화면에서는 사용자가 되돌릴 방법도 없었다. 새 화면은 항상 맨 위부터
-    // 보여야 하는 PC통신 메타포에 맞춰 완료 시점에 원점으로 되돌린다(갈무리 모드는 창 스크롤
-    // 소관이라 제외 — newsScreens가 window.scrollTo(0,0)로 별도 처리).
+    // 본문 스트리밍 중 scrollIntoView는 줄을 따라 내려가며 조상 스크롤러의 scrollTop도 함께
+    // 내리는데, 작은 모바일 뷰포트에서는 본문(고정 줄 수)이 화면 영역보다 커서 렌더가 "아래로
+    // 스크롤된 채" 끝났다 — 상단바(로고/시계 줄)가 화면 위로 밀려 잘린 채 고착되고 overflow가
+    // hidden인 화면에서는 사용자가 되돌릴 방법도 없었다. 새 화면은 항상 맨 위부터 보여야 하는
+    // PC통신 메타포에 맞춰 완료 시점에 원점으로 되돌린다(갈무리 모드는 창 스크롤 소관이라 제외 —
+    // newsScreens가 window.scrollTo(0,0)로 별도 처리).
     if (screenEl && !(typeof state !== 'undefined' && state.serviceData?._printView === true)) {
       screenEl.scrollTop = 0;
+      // [LOG_ID: 20260721_1545] 게시글 보기(post-view)는 "한 프레임 고정"에서 빠져나와 #terminal-screen
+      // 자체가 더는 스크롤 컨테이너가 아니다(overflow:visible, 페이지 전체가 스크롤됨) — 그 상태에서
+      // 스트리밍 중 scrollIntoView가 실제로 움직인 건 window/document인데, 위 screenEl.scrollTop=0은
+      // 이제 아무것도 없는 스크롤 위치를 리셋하는 셈이라 효과가 없었다. 실제로 스크롤된 window도
+      // 함께 원점으로 되돌린다(다른 화면은 body가 여전히 position:fixed라 원래 스크롤되지 않으므로
+      // 이 호출이 안전한 no-op이다).
+      window.scrollTo(0, 0);
     }
   }
 

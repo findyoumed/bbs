@@ -18,14 +18,11 @@ export function createMyInfoRenderer(deps) {
         getTranscript
     } = deps;
 
+    // [LOG_ID: 20260721_1520] 모바일도 PC와 동일하게 날짜까지 보이도록 통일(사용자 요청) —
+    // 더는 모바일에서 시:분만 줄이지 않고 항상 풀포맷을 쓴다.
     function buildTimestamp(value = new Date()) {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
         const date = value instanceof Date ? value : new Date(value);
         const pad = (num) => String(num).padStart(2, '0');
-
-        if (isMobile) {
-            return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-        }
         return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     }
 
@@ -48,9 +45,13 @@ export function createMyInfoRenderer(deps) {
 
     function makeMyInfoTopbar() {
         const { leftLabel, centerLabel } = getTopbarLabels();
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        // [LOG_ID: 20260721_1430] layoutMode 누락으로 1초 시계 갱신이 모바일에서도 풀포맷으로
+        // 덮어써지던 결함(authScreens.js와 동일 원인) — 여기도 명시적으로 넘긴다.
         return buildTopbarHtml({
             siteLabel: 'PC통신 동호회 01410',
             timestamp: buildTimestamp(),
+            layoutMode: isMobile ? 'compact' : 'full',
             leftLabel,
             centerLabel,
             rightLabel: ''
