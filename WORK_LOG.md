@@ -1,3 +1,14 @@
+## [2026-07-21 08:20] [보안] renderInitError()가 이스케이프 없이 innerHTML에 메시지를 꽂던 XSS 방어 공백 수정
+
+**LOG_ID: 20260721_0820**
+목표: "처음 하던 작업을 이어서" — 코드수정 보안 루프 계속, 이번엔 클라이언트 쪽 innerHTML 대입부를 전수 조사(게시판/쪽지/CONF/투표 등 서버 라우트는 직전 라운드에서 이미 클린 확인).
+발견: `public/js/core/terminalFeedback.js`의 `renderInitError(message)`가 `screenEl.innerHTML = \`<div class="bbs-error">${normalizedMessage}</div>\``로 메시지를 이스케이프 없이 그대로 꽂고 있었다. 바로 아래 있는 자매 함수 `showError(message)`는 같은 자리에서 `esc(message)`를 정확히 쓰고 있어 — 대칭이 깨진 채 방치된 코드였다. `app.js`에서 `renderInitError(\`초기화 과정에서 오류가 발생했습니다. (${e.message})\`)` 형태로 호출되는데, 현재는 e.message가 우리 코드/네트워크 오류 문자열이라 당장 공격 경로는 아니지만, 이 앱의 다른 모든 화면이 지키는 "사용자 인접 텍스트는 반드시 esc()를 거쳐 innerHTML에 들어간다"는 중앙 방어 규칙에서 벗어난 결함이라 방어 공백으로 판단.
+수정: `esc(normalizedMessage)`로 감싸 나머지 코드베이스와 동일한 이스케이프 규칙을 적용.
+검증: `node --input-type=module --check`로 문법 확인, `npm run loop:verify`(9종) 전체 통과.
+결과: ✅ 완료.
+
+---
+
 ## [2026-07-21 08:05] [보안 라운드] 서버 라우트 전수 점검(게시판/쪽지/CONF/투표/첨부/랭킹/가입) — 새 취약점은 없었고, 기본 대화방 삭제 위험 하나를 방어적으로 굳힘
 
 **LOG_ID: 20260721_0805**
