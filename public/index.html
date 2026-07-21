@@ -80,7 +80,7 @@
     <link rel="stylesheet" href="/styles/entry-signup-inline.css?v=20260624_1006">
     <link rel="stylesheet" href="/styles/entry-signup-theme.css?v=20260624_1006">
     <link rel="stylesheet" href="/styles/entry-auth.css?v=20260624_1006">
-    <link rel="stylesheet" href="/style.css?v=20260720_2010">
+    <link rel="stylesheet" href="/style.css?v=20260721_1645">
 
     <!-- JS 모듈 진입점 사전 로드 -->
     <!-- [LOG: 20260611_1540] UI assets are revalidated by server cache headers after spacing fixes. -->
@@ -189,8 +189,14 @@
         </div>
     </div>
 
-    <!-- defer: HTML 파싱 블로킹 없이 로드, module script 실행 전 완료 보장 -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- [LOG_ID: 20260721_1400] jsdelivr CDN 의존 제거 — 폰트를 자체 호스팅으로 옮긴 것과 동일한 이유.
+         defer 스크립트는 문서 순서대로 "완전히 로드(성공/실패 불문)"될 때까지 module 스크립트 실행을
+         막는데, initAuth()가 window.supabase 존재 여부를 재시도 없이 한 번만 확인하므로 이 순서
+         자체는 필요하다 — 문제는 외부 CDN 요청이 네트워크 상태에 따라 수 초~수십 초까지 걸리거나
+         아예 실패할 수 있어, 그동안 앱 전체가 하얗게(또는 로딩 문구도 없이) 멈춰 있었다는 점이다.
+         node_modules의 UMD 번들을 public/vendor/에 그대로 복사해 자체 호스팅하면 같은 순서 보장을
+         유지하면서 로컬 자산 수준의 속도로 로드된다. -->
+    <script defer src="/vendor/supabase.js?v=2.99.3"></script>
     <script type="module" src="/js/app.js"></script>
 </body>
 

@@ -65,7 +65,19 @@ export function createAnsiBuilderUtils(deps) {
   }
 
   function ansiHLine(width, fg = 4) {
-    return ansiColor(fg) + '─'.repeat(width) + ANSI_RESET;
+    // [LOG_ID: 20260721_1645] '─'(U+2500) 문자는 CSS 폰트 스택에서 'BbsLineFont'(로컬 시스템
+    // 폰트로 대체되는 박스 그리기 전용 폰트, style.css 76행)의 unicode-range(U+2500-257F)에
+    // 걸려 있는데, 실기기(특히 GulimChe/DotumChe가 없는 안드로이드)에서 이 대체 폰트의 문자 폭이
+    // 본문에 쓰이는 커스텀 픽셀 폰트(DungGeunMo)보다 넓어, 같은 글자수(44칸)로 만든 구분선이
+    // 실제 화면 폭보다 좁게 렌더링되어 오른쪽에 빈 여백을 남기는 문제가 있었다(사용자 지적:
+    // "가로선과 본문글은 좌측으로 쏠려있어" — 헤드리스 브라우저로는 재현되지 않아 실기기 폰트
+    // 대체 차이로 추정). 정확한 폭 비율을 기기마다 예측하기보다, 모바일에서는 여유 있게
+    // 더 그려서 넘치는 부분을 잘라내는 쪽이 어떤 폰트 조합에서도 항상 폭을 다 채우는 안전한
+    // 방법이다 — 모바일 화면은 이미 #terminal-screen에 overflow:hidden(또는 post-view의
+    // overflow-x:hidden)이 기본 적용돼 있어 초과분은 잘릴 뿐 스크롤을 유발하지 않는다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const renderWidth = isMobile ? Math.ceil(width * 1.3) : width;
+    return ansiColor(fg) + '─'.repeat(renderWidth) + ANSI_RESET;
   }
 
   function buildPageLabel(current, total) {
@@ -182,13 +194,14 @@ export function createAnsiBuilderUtils(deps) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetWidth = width || (isMobile ? 44 : 80);
 
-    const isSmall = targetWidth < 50;
     const brand = 'PC통신동호회 01410';
     const { leftLabel, centerLabel, rightLabel } = resolveHeaderLabels(titlePath, pageLabel);
 
-    // [LOG: 20260427_1150] Shorten timestamp on mobile to fit the line
-    const timestampText = buildHeaderTimestamp();
-    const timestamp = (isSmall && timestampText.includes(' ')) ? timestampText.split(' ')[1].slice(0, 5) : timestampText;
+    // [LOG_ID: 20260721_1520] 모바일도 PC와 동일하게 날짜까지 보이도록 통일(사용자 요청) —
+    // 더는 44칸 모바일에서 "HH:MM"으로 줄이지 않고 항상 풀포맷을 쓴다. brandMaxWidth 계산이
+    // 이미 나머지 요소들과 함께 폭 예산을 나누므로, 좁아진 여유 폭은 브랜드 텍스트 쪽이
+    // truncateDisplayText로 자연스럽게 흡수한다.
+    const timestamp = buildHeaderTimestamp();
     const topRightWidth = displayWidth(timestamp);
 
     const brandMaxWidth = Math.max(0, targetWidth - topRightWidth - 3);
