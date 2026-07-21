@@ -1,3 +1,14 @@
+## [2026-07-21 15:45] [설계 변경] 게시글 보기(post-view)를 "한 프레임 고정" 모델에서 완전히 빼고 자연스러운 페이지 스크롤로 전환
+
+**LOG_ID: 20260721_1545**
+목표: 사용자 재재보고 — "공지사항 게시글에서 아직도 똑같이 글씨가 잘리고 있는데, 스크롤바가 생성되지 않게 구현되어야 하는데. 달라진게 없어". 폰트 축소만으로는 게시글처럼 길이 제한이 없는 콘텐츠를 항상 담을 수 없고(11px 바닥 이하로는 가독성이 무너짐), 그동안 시도한 "고정 프레임 안에서 내부만 스크롤"(overflow-y:auto) 방식은 작은 박스 안에 갇힌 스크롤바가 사용자가 원하는 모습이 아니었다.
+수정: post-view만 이 앱 전역의 "터미널 한 프레임" 원칙(`body`/`.app-shell`의 `position:fixed`+고정 height+`overflow:hidden`)에서 완전히 빼냈다 — `body[data-screen="post-view"]`와 그 하위 `.app-shell`을 `position:static; height:auto; overflow:visible`로 풀고, `#terminal-wrapper`의 `max-height:100dvh` 제한도 제거, `#terminal-screen`은 `overflow:visible`로(더 이상 내부 스크롤 컨테이너가 아님). 결과: 문서가 내용만큼 자연스럽게 길어지고 **브라우저 기본 페이지 스크롤**로 전체를 볼 수 있다 — 작은 박스 안에 갇힌 스크롤바가 없다.
+부작용 발견 및 수정: 이 전환 직후 실측하니 화면이 항상 "맨 아래로 스크롤된 채" 시작했다 — 원인은 두 가지 기존 메커니즘이 새 모델과 안 맞았기 때문. ① 본문 줄 단위 스트리밍 렌더러(`terminalSequentialRenderer.js`)가 각 줄을 `scrollIntoView`로 "따라가는데", `#terminal-screen`이 더는 스크롤 컨테이너가 아니게 되면서 그 호출이 대신 **window/document를 끝까지** 스크롤시켰다. ② 스트리밍 완료 후 원점 복귀 코드(`ansiTopbarScreen.js`)가 `screenEl.scrollTop = 0`만 리셋했는데, 실제 스크롤은 이제 window에서 일어나 이 리셋이 무의미했다 — `window.scrollTo(0, 0)`을 함께 호출하도록 추가(다른 화면은 body가 여전히 fixed라 안전한 no-op).
+검증: Playwright에 실제 모바일 컨텍스트(`isMobile:true, hasTouch:true`, Android UA)로 15문단짜리 긴 글을 렌더 — 로드 직후 `window.scrollY === 0`(최상단부터 시작) 확인, 스크린샷으로 제목부터 정상 노출 확인, 페이지 끝까지 스크롤 시 마지막 줄과 커맨드 입력창(footer)까지 전부 도달 가능함을 확인. `docScrollHeight(2012) > docClientHeight(700)`로 정상적인 페이지 스크롤이 걸림을, `screenHasInternalScroll:false`로 내부 박스 스크롤이 더는 없음을 확인. (참고: 첫 시도에서 터치 에뮬레이션 없이 테스트해 데스크톱 포인터 경로로 빠지며 `cmdInput.focus()`가 화면 하단 스크롤을 훔쳐가는 걸 오인했었다 — `shouldAutoFocusCommandInput()`은 터치 기기에서 항상 false라 실제 모바일에서는 원래도 문제 없었음을 재확인.) `node --check`, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — post-view는 이제 폰트 축소나 내부 스크롤박스에 기대지 않고, 아무리 긴 글이라도 브라우저의 자연스러운 페이지 스크롤로 끝까지 볼 수 있다.
+
+---
+
 ## [2026-07-21 15:35] [버그 회귀 수정] --stable-vh의 "가장 큰 높이만 채택" 로직이 모바일 주소창 변화를 무시해 긴 글이 다시 잘리던 문제 해결
 
 **LOG_ID: 20260721_1535**
