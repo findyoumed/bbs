@@ -1,3 +1,14 @@
+## [2026-07-21 13:20] [버그] 접속 시 모뎀 다이얼링 연출(ATDT/DIALING/CONNECT)이 CSS에 가려 완전히 안 보인 채 3.5초를 그냥 흘려보내던 결함 수정
+
+**LOG_ID: 20260721_1320**
+목표: 사용자 질문 — "접속할 때 맨 처음에 '연결하는 중입니다' 나오기 전의 시간이 꽤 긴데 이건 왜그럴까". 처음엔 `app.js`의 `showConnectSequence()`(90년대 모뎀 접속 재현: ATDT 01410 → DIALING... → CONNECT 14400, 글자당 50ms 타이핑 + 줄마다 대기, 총 약 3.5초)가 "의도된 연출이라 그렇다"고 답했으나, 사용자가 "일부러 넣은 연출은 없는데"(그런 연출을 본 적이 없다)라고 반박해 재조사.
+발견: `showConnectSequence()`가 `#terminal-screen`에 주입하는 `<div id="connect-seq">`에 **class가 전혀 없었다**. 그런데 `style.css:2722`에 `#terminal-container.is-loading #terminal-screen > :not(.loading):not(.ansi-screen) { display: none !important; }` 규칙이 있고, 이 함수가 실행되는 시점엔 `#terminal-container`가 초기 HTML의 `class="is-loading"`를 아직 그대로 갖고 있다(`showMain()`의 데이터 로드가 끝나야 `setReady(true)`가 이 클래스를 벗긴다). `.loading`도 `.ansi-screen`도 아닌 `#connect-seq`는 이 규칙에 정확히 걸려 `display:none`으로 완전히 숨겨진 채, 애니메이션의 `await delay(...)` 호출들만 실시간으로 다 소진되고 있었다 — 즉 사용자에게는 그냥 3.5초짜리 빈 화면(또는 이전 콘텐츠가 감춰진 공백)이었던 것. Playwright로 실측: 수정 전 `getComputedStyle(connectSeqEl).display` = `none`(연출이 화면에 존재하지도 렌더링되지도 않는 것처럼 보임), CSS 규칙을 직접 대조해 확정.
+수정: `#connect-seq` div에 `class="loading"`을 추가 — 이 프로젝트가 로딩 중에도 보여야 하는 콘텐츠를 표시하기 위해 이미 쓰고 있는 관례(위 CSS의 `:not(.loading)` 예외)를 그대로 따름. 인라인 style이 이미 padding/font-size를 지정하므로 `.loading` 클래스의 자체 스타일(padding:16px 8px; font-size:13px)과 충돌하지 않는다(인라인이 항상 이김).
+검증: Playwright로 재방문 → `#connect-seq`의 `display:block, visibility:visible` 확인, "ATDT 01410" → "DIALING..." → "CONNECT 14400 / HiTEL"이 실제로 한 글자씩 타이핑되는 것을 폴링으로 캡처(수정 전엔 이 텍스트 자체가 안 보였음). `node --check`, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료 — 사용자가 겪은 "연결하는 중입니다 뜨기 전이 길다"의 실제 원인은 폰트대기+인증확인에 더해, **완전히 화면에 그려지지도 않던 3.5초짜리 죽은 애니메이션**이었다. 이제 그 시간 동안 실제로 접속 연출이 보인다.
+
+---
+
 ## [2026-07-21 10:40] [개선] CONF(토론의 광장) N+1 쿼리 병렬화 + 조용히 삼켜지던 경고 로그 3건 수정
 
 **LOG_ID: 20260721_1040**
