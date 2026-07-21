@@ -49,7 +49,11 @@ export function createMyInfoCommandHandler(deps) {
                 await openNicknameChange();
                 return true;
             }
-            if (cmd === '2' || cmd === 'E' || cmd === 'EMAIL' || cmd === 'MAIL') {
+            // [LOG_ID: 20260721_1800] 'MAIL'은 여기 도달하지 못하는 사문화 코드였다 — 디스패처
+            // 파이프라인에서 handleGlobalCommand(전역 MAIL='전자우편함 열기', commandRouterGlobalNavigation.js)가
+            // handleMyInfoCommand보다 먼저 실행돼, myinfo 화면에서 'MAIL'을 입력해도 항상 전역
+            // 쪽지함이 열렸을 뿐 이메일 변경은 절대 트리거되지 않았다(E/EMAIL/2는 전역에 없어 정상 동작).
+            if (cmd === '2' || cmd === 'E' || cmd === 'EMAIL') {
                 await openEmailChange();
                 return true;
             }

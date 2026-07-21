@@ -38,7 +38,8 @@ export function createHelpScreens(deps) {
     AUTH: UI_TEXT.CAT_AUTH,
     MEMO: UI_TEXT.CAT_MEMO,
     CHAT: UI_TEXT.CAT_CHAT,
-    UI: UI_TEXT.CAT_UI
+    UI: UI_TEXT.CAT_UI,
+    SYS: UI_TEXT.CAT_SYS
   };
 
   function normalizeHelpOptions(pageOrOptions = 1) {
@@ -65,9 +66,13 @@ export function createHelpScreens(deps) {
   /**
    * 전체 도움말 ANSI 생성 (페이징 지원)
    */
-  // [LOG_ID: 20260713_1230] 나우누리 GUIDE '명령어안내' 재현 — 분류 번호(0~6)를 골라
+  // [LOG_ID: 20260713_1230] 나우누리 GUIDE '명령어안내' 재현 — 분류 번호(0~7)를 골라
   // 해당 분류의 명령어만 볼 수 있다. 0(전체)이 기본값이라 기존 H 동작은 그대로다.
-  const HELP_TAB_KEYS = ['NAV', 'POST', 'AUTH', 'MEMO', 'CHAT', 'UI'];
+  // [LOG_ID: 20260721_1800] 'SYS'(H/HELP/CLS/HIST/SET/UNSET/ENV/CAP/TIME 등)가 이 목록에서
+  // 빠져 있어 실제로 동작하는 명령들이 /help 화면에 통째로 보이지 않고 있었다(사용자 지적:
+  // "누락된 내용도 확인해야해") — CAT_LABELS.SYS(UI_TEXT.CAT_SYS)는 이미 정의돼 있었는데
+  // 여기 탭 목록에 넣는 걸 빠뜨린 배선 누락이었다.
+  const HELP_TAB_KEYS = ['NAV', 'POST', 'AUTH', 'MEMO', 'CHAT', 'UI', 'SYS'];
 
   function buildHelpAnsi(page = 1) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
