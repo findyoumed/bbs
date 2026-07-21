@@ -14,11 +14,9 @@ export function createSignupScreens(deps) {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    // [LOG_ID: 20260721_1430] 다른 화면(로그인/MyInfo)과 같은 결함 — 모바일에서도 항상 풀포맷을
-    // 만들고 layoutMode도 안 넘겨, 1초 시계 갱신 때 짧은 포맷으로 안 좁혀지고 계속 풀포맷이었다.
-    const timestamp = isMobile
-      ? `${pad(now.getHours())}:${pad(now.getMinutes())}`
-      : `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`; // [LOG: 20260609_1132] 1993 고정을 현재 연도로 변경
+    // [LOG_ID: 20260721_1520] 모바일도 PC와 동일하게 날짜까지 보이도록 통일(사용자 요청) —
+    // 더는 모바일에서 시:분만 줄이지 않고 항상 풀포맷을 쓴다.
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`; // [LOG: 20260609_1132] 1993 고정을 현재 연도로 변경
     return buildTopbarHtml({
       siteLabel: 'PC통신 동호회 01410',
       timestamp,

@@ -182,13 +182,14 @@ export function createAnsiBuilderUtils(deps) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetWidth = width || (isMobile ? 44 : 80);
 
-    const isSmall = targetWidth < 50;
     const brand = 'PC통신동호회 01410';
     const { leftLabel, centerLabel, rightLabel } = resolveHeaderLabels(titlePath, pageLabel);
 
-    // [LOG: 20260427_1150] Shorten timestamp on mobile to fit the line
-    const timestampText = buildHeaderTimestamp();
-    const timestamp = (isSmall && timestampText.includes(' ')) ? timestampText.split(' ')[1].slice(0, 5) : timestampText;
+    // [LOG_ID: 20260721_1520] 모바일도 PC와 동일하게 날짜까지 보이도록 통일(사용자 요청) —
+    // 더는 44칸 모바일에서 "HH:MM"으로 줄이지 않고 항상 풀포맷을 쓴다. brandMaxWidth 계산이
+    // 이미 나머지 요소들과 함께 폭 예산을 나누므로, 좁아진 여유 폭은 브랜드 텍스트 쪽이
+    // truncateDisplayText로 자연스럽게 흡수한다.
+    const timestamp = buildHeaderTimestamp();
     const topRightWidth = displayWidth(timestamp);
 
     const brandMaxWidth = Math.max(0, targetWidth - topRightWidth - 3);

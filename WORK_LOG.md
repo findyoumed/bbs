@@ -1,3 +1,18 @@
+## [2026-07-21 15:20] [기능] 모바일 상단바 시계도 PC와 동일하게 날짜까지 표시 — 전 화면 공통 적용
+
+**LOG_ID: 20260721_1520**
+목표: 사용자 요청 — "모바일화면 프로젝트 전체적으로 오른쪽 상단의 시계를 pc화면과 똑같이 날짜도 넣어줘. 모든 메뉴에서". 지금까지 모바일(compact 레이아웃)은 "HH:MM"만, PC(full)는 "YYYY-MM-DD HH:MM:SS"를 보여주도록 의도적으로 구분해왔는데, 이제 모바일도 항상 풀포맷을 쓰도록 통일.
+시계 텍스트를 만드는 지점이 프로젝트 전체에 4곳 있어 전부 수정:
+1. `ansiTopbarScreen.js`의 1초 주기 시계 갱신 — `data-layout-mode`가 compact면 `formatShortCurrentTime()`(HH:MM)을, 아니면 풀포맷을 쓰던 분기를 제거하고 항상 풀포맷만 쓰게 함. 이제 안 쓰는 `formatShortCurrentTime` 함수도 삭제.
+2. `ansiBuilderUtils.js`의 `buildTopHeader()` — 대부분의 인앱 화면(메뉴/게시판 등)이 공유하는 ANSI 헤더 빌더. 44칸 모바일(`isSmall`)일 때 `timestampText.split(' ')[1].slice(0,5)`로 시:분만 잘라 쓰던 로직 제거, 이제 항상 풀 타임스탬프. 이제 안 쓰는 `isSmall` 변수도 제거.
+3. `authScreens.js`의 `buildAuthTopbar()`(로그인 화면) — `isMobile` 여부로 시:분/풀포맷을 나누던 분기 제거.
+4. `myInfoRenderer.js`의 `buildTimestamp()`(MyInfo 화면), `signupScreens.js`의 `makeSignupTopbar()`(회원가입 화면) — 동일하게 모바일 분기 제거.
+`data-layout-mode`(compact/full) 자체는 시계 포맷과 무관하게 상단바의 다른 레이아웃(칸 수, 줄 배치 등)에 계속 쓰이므로 그대로 유지 — CSS 쪽(`.retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-row1`)이 이미 `grid-template-columns: max-content minmax(2ch, 1fr) max-content`로 시계 칸을 `max-content`(내용에 맞춰 늘어남)로 잡아둬서, 길어진 시계 텍스트를 CSS 변경 없이도 그대로 수용한다(가운데 구분선이 짧아질 뿐).
+검증: Playwright로 모바일 뷰포트(390px)에서 메인메뉴/로그인/회원가입/게시판목록 4개 화면을 실측 — 전부 "2026-07-21 06:10:xx" 풀포맷으로 표시되고 `document.documentElement.scrollWidth > clientWidth`(가로 넘침) 전부 false, 스크린샷으로 줄바꿈·겹침 없이 깔끔하게 들어가는 것 확인. `node --check` 5개 JS 파일, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
 ## [2026-07-21 15:02] [모바일] 비밀번호 입력 시 블록 커서가 마지막 별표와 겹쳐 보이던 결함 수정 — 로그인/가입/MyInfo 3곳 공통 결함
 
 **LOG_ID: 20260721_1502**

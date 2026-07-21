@@ -22,30 +22,19 @@ function formatCurrentTime() {
   return `${y}-${m}-${d} ${h}:${min}:${s}`;
 }
 
-function formatShortCurrentTime() {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');
-  const min = String(now.getMinutes()).padStart(2, '0');
-  return `${h}:${min}`;
-}
-
 // [LOG: 20260423_1420] 실시간 시계 업데이트 (1초 간격)
-// [LOG_ID: 20260718_2320] 모바일(compact) 상단바는 buildTopHeader가 "HH:MM"만 넣어 44칸에 맞춰
-// 그리는데, 이 인터벌은 레이아웃과 무관하게 매초 풀포맷("YYYY-MM-DD HH:MM:SS")으로 덮어써서
-// 렌더 직후엔 짧게 보이다가 1초 안에 연-월-일이 갑자기 튀어나오는 것처럼 보였다(사용자 지적:
-// "다음페이지를 누르면 잠시 연도날짜부분이 없다가 나타나"). 각 시계 요소가 속한 상단바의
-// data-layout-mode를 따라 compact면 짧은 포맷을 유지한다.
+// [LOG_ID: 20260721_1520] 모바일도 PC와 동일하게 날짜까지 보이도록 통일(사용자 요청: "모바일화면
+// 프로젝트 전체적으로... pc화면과 똑같이 날짜도 넣어줘. 모든 메뉴에서") — 더는 compact/full을
+// 구분하지 않고 항상 풀포맷("YYYY-MM-DD HH:MM:SS")을 쓴다. data-layout-mode는 시계 포맷과
+// 무관한 다른 레이아웃(칸 수 등) 판단에는 계속 쓰이므로 그대로 둔다.
 if (typeof window !== 'undefined') {
   setInterval(() => {
     const clockEls = document.querySelectorAll('.retro-topbar-clock');
     if (clockEls.length > 0) {
       const fullTimeStr = formatCurrentTime();
-      const shortTimeStr = formatShortCurrentTime();
       clockEls.forEach(el => {
-        const layoutMode = el.closest('[data-layout-mode]')?.dataset.layoutMode;
-        const timeStr = layoutMode === 'compact' ? shortTimeStr : fullTimeStr;
-        if (el.textContent !== timeStr) {
-          el.textContent = timeStr;
+        if (el.textContent !== fullTimeStr) {
+          el.textContent = fullTimeStr;
         }
       });
     }

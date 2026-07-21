@@ -18,14 +18,11 @@ export function createMyInfoRenderer(deps) {
         getTranscript
     } = deps;
 
+    // [LOG_ID: 20260721_1520] 모바일도 PC와 동일하게 날짜까지 보이도록 통일(사용자 요청) —
+    // 더는 모바일에서 시:분만 줄이지 않고 항상 풀포맷을 쓴다.
     function buildTimestamp(value = new Date()) {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
         const date = value instanceof Date ? value : new Date(value);
         const pad = (num) => String(num).padStart(2, '0');
-
-        if (isMobile) {
-            return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-        }
         return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     }
 
