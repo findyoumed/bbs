@@ -37,9 +37,14 @@ export function createAuthScreens(deps) {
       ? `${pad(now.getHours())}:${pad(now.getMinutes())}`
       : `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
+    // [LOG_ID: 20260721_1430] layoutMode를 안 넘기면 buildTopbarHtml이 항상 'full'로 간주해
+    // data-layout-mode="full"을 찍는다 — 처음엔 위에서 계산한 짧은 timestamp로 맞게 그려지지만,
+    // ansiTopbarScreen.js의 1초 시계 갱신이 이 속성만 보고 포맷을 고르기 때문에 1초 뒤 모바일에서도
+    // 풀포맷("YYYY-MM-DD HH:MM:SS")으로 덮어써졌다(사용자 지적: "위에 날짜가 보이는데... 빠짐없이").
     return buildTopbarHtml({
       siteLabel: 'PC통신동호회 01410',
       timestamp,
+      layoutMode: isMobile ? 'compact' : 'full',
       leftLabel,
       centerLabel,
       rightLabel: ''

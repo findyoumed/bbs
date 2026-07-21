@@ -1,3 +1,17 @@
+## [2026-07-21 14:30] [모바일] 비밀번호칸 이중 캐럿 결함 + 로그인/MyInfo/가입 상단바가 1초 뒤 풀포맷으로 되돌아가던 결함 수정
+
+**LOG_ID: 20260721_1430**
+목표: 사용자 스크린샷 2건 — ① "비밀번호칸의 캐럿 커서 위치가 이상해" ② "위에 날짜가 보이는데 원래보이는거면 프로젝트 전반에 걸쳐서 빠짐없이 보여줘"(로그인 화면이 모바일인데도 상단바에 "2026-07-21 14:23:03" 풀포맷이 떠 있었음).
+
+① 캐럿: `#cmd-input[data-masked="true"]`가 `caret-color:#ffffff !important`로 네이티브 캐럿을 켜고 있었다. 이는 20260707_1500의 "캐럿 단일화"(네이티브 캐럿을 끄고 `.terminal-cursor` 커스텀 블록 커서만 쓴다) 수정보다 먼저 작성된 규칙인데, id+attribute 선택자라 detailedness가 더 높아 항상 이겨, 비밀번호 입력 중엔 네이티브 흰 캐럿과 커스텀 블록 커서 둘 다 동시에 그려지고 있었다(서로 다른 위치 계산 방식이라 어긋나 보임). `caret-color:transparent !important`로 일반 입력과 통일.
+
+② 상단바 날짜: `buildTopbarHtml(model)`은 `model.layoutMode==='compact'`가 아니면 항상 `data-layout-mode="full"`을 찍는다. 그런데 로그인(`authScreens.js`)/MyInfo(`myInfoRenderer.js`)/가입(`signupScreens.js`) 세 화면의 자체 상단바 빌더는 전부 `layoutMode`를 안 넘기고 있었다 — 처음 그릴 때는 각자 계산한 짧은 timestamp 문자열로 맞게 보이지만, `ansiTopbarScreen.js`의 1초 시계 갱신 인터벌이 `data-layout-mode`만 보고 포맷을 고르기 때문에(20260718_2320에 이미 한 번 고친 문제의 재발) 1초 뒤 모바일에서도 항상 풀포맷으로 덮어써졌다. 셋 다 `layoutMode: isMobile ? 'compact' : 'full'`을 명시적으로 넘기도록 수정(가입 화면은 애초에 모바일 짧은 포맷 계산 자체가 없어 그것도 함께 추가).
+
+검증: Playwright로 로그인 화면(모바일 뷰포트) 진입 직후와 2.2초 대기 후 `.retro-topbar-clock`의 `data-layout-mode`/텍스트가 둘 다 "compact"/"05:31"로 유지됨을 확인(수정 전엔 2번째 값이 풀포맷으로 바뀌었을 것). `sysop`으로 로그인해 비밀번호 단계(`data-masked="true"`) 진입 후 `#cmd-input`의 computed `caret-color`가 `rgba(0,0,0,0)`(투명)임을 확인. `node --check` 3개 JS 파일, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
 ## [2026-07-21 14:10] [모바일] 로그인 화면에서 엔터로 ID/비밀번호를 확정하는 순간 폰트 크기가 다시 어긋나던 결함 수정
 
 **LOG_ID: 20260721_1410**

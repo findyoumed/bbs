@@ -48,9 +48,13 @@ export function createMyInfoRenderer(deps) {
 
     function makeMyInfoTopbar() {
         const { leftLabel, centerLabel } = getTopbarLabels();
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        // [LOG_ID: 20260721_1430] layoutMode 누락으로 1초 시계 갱신이 모바일에서도 풀포맷으로
+        // 덮어써지던 결함(authScreens.js와 동일 원인) — 여기도 명시적으로 넘긴다.
         return buildTopbarHtml({
             siteLabel: 'PC통신 동호회 01410',
             timestamp: buildTimestamp(),
+            layoutMode: isMobile ? 'compact' : 'full',
             leftLabel,
             centerLabel,
             rightLabel: ''
