@@ -1089,6 +1089,49 @@ body.theme-nownuri .write-field textarea {
     top: 0.15em;
 }
 
+/* [LOG_ID: 20260721_1400] 로그인 화면(#login-prompt-host)도 signup-terminal-prompt-host와 똑같이
+   mountPromptRow()로 #cmd-input/#cmd-prompt-renderer를 본문에 인라인으로 옮겨 붙이는데, 그 위의
+   20260718_2350 수정이 signup에만 적용되고 로그인에는 빠져 있었다 — 그래서 "회원 ID >>" 다음에
+   입력한 글자(예: postnews)만 폰트가 다르게(footer 전용 --cmd-font-size, 모바일 12px 고정) 보이고
+   자간도 어긋났다(사용자 지적: "입력부분의 폰트사이즈와 공백이 이상한데"). 동일한 완화를 그대로 적용. */
+.entry-login-prompt-host {
+    display: block;
+    min-height: 1.4em;
+    line-height: 1.4;
+}
+
+.entry-login-prompt-host #terminal-prompt-row {
+    align-items: baseline;
+    min-height: 1.4em;
+}
+
+.entry-login-prompt-host #terminal-prompt-row label {
+    color: #ffffff;
+    cursor: default;
+    flex-shrink: 0;
+    line-height: inherit;
+    white-space: nowrap;
+}
+
+.entry-login-prompt-host #cmd-input-wrapper {
+    min-height: 1.4em;
+    align-items: baseline;
+}
+
+.entry-login-prompt-host #cmd-prompt-renderer,
+.entry-login-prompt-host #cmd-input {
+    font-size: inherit !important;
+    line-height: inherit !important;
+    height: 1.4em;
+    min-height: 0;
+    max-height: none;
+}
+
+.entry-login-prompt-host .terminal-cursor {
+    height: 1.1em;
+    top: 0.15em;
+}
+
 .myinfo-warning {
     margin-bottom: 12px;
     padding: 8px 10px;

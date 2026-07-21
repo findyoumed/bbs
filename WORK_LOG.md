@@ -1,3 +1,14 @@
+## [2026-07-21 13:55] [모바일] 로그인 화면 ID 입력 글자 폰트/자간이 어긋나던 결함 수정
+
+**LOG_ID: 20260721_1355**
+목표: 사용자 스크린샷 제보 — 로그인 화면 "회원 ID >>" 뒤에 입력한 글자("postnews")만 폰트 크기와 자간이 주변 레트로 폰트와 다르게 보임.
+원인: 이 화면(`#login-prompt-host`)도 signup 이메일 입력 화면과 동일하게 `mountPromptRow()`로 원래 footer 소속인 `#cmd-input`/`#cmd-prompt-renderer`를 본문 트랜스크립트 자리에 인라인으로 옮겨 붙인다. 그런데 그 입력 요소들은 footer 전용 폰트 크기 변수(`--cmd-font-size`, 모바일 12px 고정)를 그대로 쓰기 때문에 본문 ambient font-size(뷰포트별 clamp, 이 경우 15px)를 안 따라가 다르게 보였다 — signup 화면은 이미 20260718_2350에서 이 문제를 `.signup-terminal-prompt-host`에 고쳤는데, 로그인 화면(`.entry-login-prompt-host`)에는 그 CSS가 전혀 없었다(대조해보니 signup 클래스는 style.css에 8개 규칙이 있고 login 클래스는 0개).
+수정: `.signup-terminal-prompt-host`의 CSS 블록(폰트 크기/줄높이 상속, 커서 위치 보정 등)을 `.entry-login-prompt-host`에 동일하게 복제.
+검증: Playwright로 로그인 화면 모바일 뷰포트(390x700)에서 `#terminal-container`/`#cmd-input`/`#cmd-prompt-renderer`의 computed font-size가 전부 15px로 일치함을 확인(수정 전엔 입력 요소만 다른 값이었을 것 — signup에서 이미 검증된 동일 패턴). `index.html`의 `style.css?v=` 캐시버스팅 갱신, `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
 ## [2026-07-21 13:45] [모바일] 게시글 보기(post-view) 화면 본문 아래쪽이 잘리던 결함 수정
 
 **LOG_ID: 20260721_1345**
