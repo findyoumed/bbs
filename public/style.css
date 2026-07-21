@@ -1188,6 +1188,10 @@ body.theme-nownuri .write-field textarea {
     min-height: 24px;
     font-family: 'BbsPrimaryFont', 'BbsLineFont', 'Sam3KRFont', 'GulimChe', monospace;
     font-size: 17px;
+    /* [LOG_ID: 20260721_1645] ansiHLine()가 모바일에서 폰트 대체 차이에 대비해 구분선을
+       일부러 더 길게(1.3배) 그리는데, 어느 화면의 조상 요소가 가로 클리핑을 안 갖고 있어도
+       이 한 줄 스스로가 항상 자기 폭 밖으로 넘치지 않도록 방어적으로 잘라낸다. */
+    overflow-x: hidden;
 }
 
 .ansi-line .wc {

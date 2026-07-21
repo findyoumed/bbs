@@ -65,7 +65,19 @@ export function createAnsiBuilderUtils(deps) {
   }
 
   function ansiHLine(width, fg = 4) {
-    return ansiColor(fg) + '─'.repeat(width) + ANSI_RESET;
+    // [LOG_ID: 20260721_1645] '─'(U+2500) 문자는 CSS 폰트 스택에서 'BbsLineFont'(로컬 시스템
+    // 폰트로 대체되는 박스 그리기 전용 폰트, style.css 76행)의 unicode-range(U+2500-257F)에
+    // 걸려 있는데, 실기기(특히 GulimChe/DotumChe가 없는 안드로이드)에서 이 대체 폰트의 문자 폭이
+    // 본문에 쓰이는 커스텀 픽셀 폰트(DungGeunMo)보다 넓어, 같은 글자수(44칸)로 만든 구분선이
+    // 실제 화면 폭보다 좁게 렌더링되어 오른쪽에 빈 여백을 남기는 문제가 있었다(사용자 지적:
+    // "가로선과 본문글은 좌측으로 쏠려있어" — 헤드리스 브라우저로는 재현되지 않아 실기기 폰트
+    // 대체 차이로 추정). 정확한 폭 비율을 기기마다 예측하기보다, 모바일에서는 여유 있게
+    // 더 그려서 넘치는 부분을 잘라내는 쪽이 어떤 폰트 조합에서도 항상 폭을 다 채우는 안전한
+    // 방법이다 — 모바일 화면은 이미 #terminal-screen에 overflow:hidden(또는 post-view의
+    // overflow-x:hidden)이 기본 적용돼 있어 초과분은 잘릴 뿐 스크롤을 유발하지 않는다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const renderWidth = isMobile ? Math.ceil(width * 1.3) : width;
+    return ansiColor(fg) + '─'.repeat(renderWidth) + ANSI_RESET;
   }
 
   function buildPageLabel(current, total) {
