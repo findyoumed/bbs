@@ -1,3 +1,14 @@
+## [2026-07-21 15:02] [모바일] 비밀번호 입력 시 블록 커서가 마지막 별표와 겹쳐 보이던 결함 수정 — 로그인/가입/MyInfo 3곳 공통 결함
+
+**LOG_ID: 20260721_1502**
+목표: 사용자 지적 — "* 표와 커서캐럿이 곂쳐있어" (로그인 비밀번호칸).
+원인: Playwright로 `.terminal-cursor`(커스텀 블록 커서)와 `#cmd-mask-text`(비밀번호 별표 오버레이)의 computed font-size를 직접 비교해 확정 — 커서는 `20260721_1430`에 고친 `.entry-login-prompt-host` 규칙 덕에 앰비언트 15px을 정확히 따라가는데, `#cmd-mask-text`는 그 규칙에 포함되지 않아 여전히 footer 전용 `var(--cmd-font-size, 17px)`(20260615_1538 전역 규칙)를 쓰고 있었다(`cursorFontSize:"15px"` vs `maskFontSize:"17px"`). 커서 위치는 `0.5em × 글자수`로 계산되는데, 이 "em"이 커서 자신의 15px 기준인 반면 실제 별표는 17px로 더 크게 그려지니 칸 폭이 서로 안 맞아 커서가 마지막 별표에 못 미쳐 겹쳐 보였다. 같은 패턴을 가진 `.signup-terminal-prompt-host`(회원가입 비밀번호)도 `#cmd-mask-text`가 빠져 있었고, `.myinfo-password-prompt-host`(MyInfo 비밀번호 변경)는 아예 `#cmd-input`에 `font-size: inherit`조차 없어 더 근본적으로 같은 결함을 안고 있었다.
+수정: 세 호스트 클래스(`.entry-login-prompt-host`, `.signup-terminal-prompt-host`, `.myinfo-password-prompt-host`) 전부 `#cmd-mask-text`(및 MyInfo는 `#cmd-input`/`#cmd-prompt-renderer`도 함께)에 `font-size: inherit !important`를 추가해 커서·입력·별표 오버레이 셋이 항상 같은 크기를 쓰도록 통일했다.
+검증: Playwright로 로그인에서 `sysop` 계정으로 비밀번호 단계 진입 후 9자리 입력 — 수정 전 `cursorFontSize:"15px"`/`maskFontSize:"17px"`(불일치) → 수정 후 둘 다 `"15px"`(일치). 스크린샷으로 커서가 마지막 별표 바로 뒤에 깔끔하게 위치함을 육안 확인. `npm run loop:verify`(9종) 통과.
+결과: ✅ 완료.
+
+---
+
 ## [2026-07-21 14:53] [모바일] 소프트웨어 키보드 열고 닫을 때마다 전체 폰트 크기가 출렁이던 문제 해결 — 폰트 크기 고정, 대신 스크롤 허용
 
 **LOG_ID: 20260721_1453**

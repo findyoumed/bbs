@@ -946,6 +946,16 @@ body.theme-nownuri .write-field textarea {
     min-height: 1.1em;
 }
 
+/* [LOG_ID: 20260721_1510] signup/login에서 발견한 것과 같은 결함이 여기도 있었다 — #cmd-input에
+   font-size: inherit가 아예 빠져 있어 footer 전용 var(--cmd-font-size, 17px)를 그대로 썼고,
+   #cmd-mask-text(비밀번호 별표 오버레이)도 함께 빠져 있어 커스텀 블록 커서(앰비언트 크기 기준
+   위치 계산)와 어긋날 수 있었다. 세 요소를 모두 앰비언트 크기로 맞춘다. */
+.myinfo-password-prompt-host #cmd-prompt-renderer,
+.myinfo-password-prompt-host #cmd-input,
+.myinfo-password-prompt-host #cmd-mask-text {
+    font-size: inherit !important;
+}
+
 .myinfo-password-prompt-host #cmd-input {
     height: 1.1em;
     min-height: 0;
@@ -1090,6 +1100,12 @@ body.theme-nownuri .write-field textarea {
     max-height: none;
 }
 
+/* [LOG_ID: 20260721_1510] 로그인 화면과 동일 결함 — 별표 오버레이(#cmd-mask-text)가 빠져 있어
+   비밀번호 입력 단계에서 캐럿과 별표가 어긋날 수 있었다. 같은 패턴으로 함께 맞춘다. */
+.signup-terminal-prompt-host #cmd-mask-text {
+    font-size: inherit !important;
+}
+
 .signup-terminal-prompt-host .terminal-cursor {
     height: 1.1em;
     top: 0.15em;
@@ -1131,6 +1147,15 @@ body.theme-nownuri .write-field textarea {
     height: 1.4em;
     min-height: 0;
     max-height: none;
+}
+
+/* [LOG_ID: 20260721_1510] 위 수정이 #cmd-input/#cmd-prompt-renderer만 앰비언트 크기로 맞췄고
+   비밀번호 별표 오버레이(#cmd-mask-text)는 빠뜨렸다 — #cmd-mask-text는 여전히 footer 전용
+   var(--cmd-font-size, 17px)를 쓰는 전역 규칙(20260615_1538)에 걸려 있어서, 커스텀 블록 커서(15px
+   기준 0.5em 셀 폭으로 위치 계산)와 실제 별표 렌더링 크기(17px)가 어긋나 캐럿이 마지막 별표와
+   겹쳐 보였다(사용자 지적: "* 표와 커서캐럿이 곂쳐있어"). 별표도 같은 앰비언트 크기로 맞춘다. */
+.entry-login-prompt-host #cmd-mask-text {
+    font-size: inherit !important;
 }
 
 .entry-login-prompt-host .terminal-cursor {
