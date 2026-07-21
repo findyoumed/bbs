@@ -1,3 +1,14 @@
+## [2026-07-21 22:20] [보안/버그 수정 후속] 직전 전수점검에서 낮은 우선순위로 미룬 항목 3건 마저 반영 — 뉴스 피드 실패 시 빈 목록만 뜨던 문제, 닉네임 20자 상한 클라이언트 미고지 2건 수정
+
+**LOG_ID: 20260721_2220**
+목표: 사용자 요청 — "진행"(직전 "다른화면전수점검" 배치에서 아키텍처 영향이 작아 마저 처리 가능한 낮은 우선순위 항목들을 이어서 처리). 직전 배치에서 "낮은 우선순위"로 보류했던 항목 중 아키텍처 변경이 필요 없는(로그인 구조 개편·연쇄 삭제 설계처럼 사용자 확인이 필요한 건 제외) 2건을 마저 수정했다.
+1. **뉴스 피드 조회 실패가 빈 목록으로만 보임**(직전 배치에서 고친 날씨와 동일 유형, 뉴스 쪽만 남아 있었음): `newsScreens.js`의 `loadNewsTopicState()`가 `RssNewsService`가 내려주는 `articles.unavailable`/`articles.message`를 완전히 버리고 `items: articles?.items || []`만 취해, 실패든 진짜 빈 목록이든 사용자에겐 똑같이 헤더만 있는 빈 표로 보였다. `unavailable`/`message`를 결과 객체에 실어 `showNewsList()`에서 `buildNewsListAnsi()`로 전달하도록 연결하고, `buildNewsListAnsi()`(newsAnsiBuilders.js)에 4번째 `meta` 인자를 추가해 `unavailable && !items.length`일 때 실패 사유 문구를 표시하도록 했다(기존 호출부는 인자 생략 시 그대로 동작 — 하위 호환 확인).
+2. **MyInfo 닉네임 변경에 20자 상한 클라이언트 안내 없음**: `myInfoActions.js`의 `submitNicknameChange()`는 2자 미만만 걸러내고 있었는데, 서버(`memberRoutes.js`의 `updateProfile` validate.body.nickName)는 이미 `maxLength: 20`을 강제하고 있어 21자 이상을 입력하면 API 왕복 후에야 실패를 알 수 있었다. 최소 길이 검사와 동일한 패턴으로 20자 초과 시 즉시 안내하는 검사를 추가.
+검증: `newsAnsiBuilders.js`의 `buildNewsListAnsi()`를 Node ESM으로 직접 임포트해(isWideChar/displayWidth만 최소 의존성으로 주입) unavailable=true+빈 목록일 때 실패 문구가 뜨고, 정상 목록엔 안 뜨고, meta 인자를 아예 생략해도(기존 호출부 하위 호환) 안 깨짐을 5개 어서션으로 확인. `myInfoActions.js`는 최소/최대 길이 검사가 구조적으로 동일한 패턴이라(node --check로 문법만 재확인) 별도 모킹 테스트는 생략. `node --check` 수정 파일 전체 통과, `npm run loop:verify`(9종) 재통과.
+결과: ✅ 완료 — 직전 배치의 "낮음" 우선순위 항목 중 아키텍처 영향 없는 2건을 마저 반영했다. 남은 항목(답글 들여쓰기/고아글, MemoryBoardRepositoryCore local_id 미이전, 인메모리 모드 로그인 부재, 회원 탈퇴 연쇄 삭제 없음)은 여전히 설계 판단이 필요해 사용자 확인 후 진행 예정.
+
+---
+
 ## [2026-07-21 21:00] [보안/버그 수정] "다른화면전수점검" — 4개 서브에이전트 전수 감사 결과 반영: 평문 비밀번호 저장(치명), 게시글 수정/답글 깨짐(치명), 게시판 열람권한 우회, 회원 개인정보 무인증 유출, 혈액형 'B' 입력 충돌 등 9건 수정
 
 **LOG_ID: 20260721_2100**

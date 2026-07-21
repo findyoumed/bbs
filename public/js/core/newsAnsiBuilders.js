@@ -126,7 +126,7 @@ export function createNewsAnsiBuilders(deps) {
     return `오늘의 주요기사-${topicTitle}`;
   }
 
-  function buildNewsListAnsi(topic, articles, pageNo = 1) {
+  function buildNewsListAnsi(topic, articles, pageNo = 1, meta = {}) {
     // [LOG: 20260426_2345] Adaptive layout: Use 44 columns for mobile portrait
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -154,6 +154,17 @@ export function createNewsAnsiBuilders(deps) {
       ansiColor(15) + headerCells.filter((cell) => cell !== '').join('') + ANSI_RESET,
       ansiHLine(targetCols, 8)
     ];
+
+    // [LOG_ID: 20260721_2210] 피드 조회 실패(unavailable) 시 빈 표만 뜨던 문제 — 날씨와 동일하게
+    // 실패 사유를 안내한다.
+    if (meta?.unavailable && !visibleItems.length) {
+      parts.push('');
+      parts.push(`  ${ansiColor(12)}${meta.message || '뉴스를 불러올 수 없습니다.'}${ANSI_RESET}`);
+      return {
+        items: [], pageCount: 1, pageNo: 1, pageSize: NEWS_LIST_PAGE_SIZE,
+        text: padPartsToScreenHeight(parts).join('\n')
+      };
+    }
 
     visibleItems.forEach((article, index) => {
       const articleNo = article?.no || (pageOffset + index + 1);

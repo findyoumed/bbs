@@ -165,6 +165,13 @@ export function createMyInfoActions(deps) {
             await renderMyInfo(true);
             return false;
         }
+        // [LOG_ID: 20260721_2200] 서버(updateProfile validate.body.nickName)는 이미 20자 상한이
+        // 있는데 클라이언트엔 안내가 없어 21자 이상 입력 시 API 왕복 후에야 실패를 알 수 있었다.
+        if (newNick.length > 20) {
+            setMessage('닉네임은 20자 이하여야 합니다.', 'error');
+            await renderMyInfo(true);
+            return false;
+        }
 
         // [LOG: 20260716_1932] API 응답 후 화면이 새로 그려지므로 여기서 미리 지우지 않는다.
         // 미리 지우면 API 대기 중 입력값이 사라져 사용자에게 혼란을 준다.

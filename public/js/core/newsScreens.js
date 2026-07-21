@@ -482,7 +482,12 @@ export function createNewsScreens(deps) {
       const articles = await loadNewsArticles(topicDoor, pageNo);
       const topic = topics.find((item) => String(item.door) === String(topicDoor));
       const topicTitle = String(articles?.topic?.title || articles?.category?.title || topic?.title || topic?.name || '').trim();
-      const result = { topics, topicTitle, items: articles?.items || [] };
+      // [LOG_ID: 20260721_2210] articles.unavailable/message를 버려 피드 실패가 빈 목록으로만
+      // 보이던 문제(날씨와 같은 유형) — 결과에 실어 showNewsList에서 안내 문구로 표시한다.
+      const result = {
+        topics, topicTitle, items: articles?.items || [],
+        unavailable: !!articles?.unavailable, message: articles?.message || ''
+      };
 
       topicCache.set(cacheKey, result);
       return result;
@@ -582,7 +587,7 @@ export function createNewsScreens(deps) {
     }, 80);
 
     try {
-      const { topics, topicTitle, items } = await loadNewsTopicState(topicDoor, requestedPageNo);
+      const { topics, topicTitle, items, unavailable, message } = await loadNewsTopicState(topicDoor, requestedPageNo);
       clearTimeout(loadingTimer);
       // [LOG_ID: 20260707_2345] loadingTimer(위)는 "80ms 후 로딩 화면을 보여줄지" 결정하는 바깥 타이머일
       // 뿐이다. 이미 그 80ms가 지나 showNewsLoading()→setLoading()이 실행됐다면, setLoading 내부에서
@@ -593,7 +598,7 @@ export function createNewsScreens(deps) {
       // 동시에 보이는 것처럼 어긋나 보였다.
       setReady(true);
 
-      const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo);
+      const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo, { unavailable, message });
 
       state.serviceData = {
         topics, topicDoor, topicTitle, items,
