@@ -2641,11 +2641,22 @@ body[data-print-view="true"] .ansi-screen {
         min-height: 1.32em;
     }
 
+    /* [LOG_ID: 20260721_1630] post-view는 원래 위 화면들과 함께 폰트를 더 줄이는 0.025 비율
+       그룹이었는데(세로 공간에 맞추려는 목적), ansiHLine()/wrapAnsiText()가 만드는 구분선·본문
+       줄바꿈은 모두 "44칸"이라는 고정 글자수를 전제로 한다 — 이 44칸이 화면 폭을 꽉 채우도록
+       캘리브레이션된 기준은 일반 화면들이 쓰는 0.027 비율의 폰트 크기다. post-view만 더 작은 0.025
+       비율을 쓰면 실제 기기(특히 15px 상한에 걸리는 폭 357px 이상 기기)에서 44칸이 실제 폭보다
+       좁게 렌더링되어 구분선과 본문 전체가 오른쪽에 빈 여백을 남기고 왼쪽으로 쏠려 보였다(사용자
+       지적: "가로선과 본문글은 좌측으로 쏠려있어" — 실측: 본문 앞 구분선 왼쪽 여백 4px vs 오른쪽
+       117px, 다른 화면들의 대칭적인 구분선과 대비됨). post-view는 직전 수정(20260721_1545)으로
+       이미 "한 프레임 고정" 제약에서 완전히 빠져나와 세로 스크롤이 자유로우므로, 폰트를 더
+       줄여서라도 세로 공간에 맞출 필요 자체가 없어졌다 — 이 그룹에서 빼고(post-view 제외) 다른
+       일반 화면과 동일한 0.027 비율(위 #terminal-container 기본 규칙)을 쓰게 하면 44칸 기준과
+       실제 렌더링 폭이 다시 일치한다. */
     body[data-screen="news-list"] #terminal-container,
     body[data-screen="news-view"] #terminal-container,
     body[data-screen="help"] #terminal-container,
-    body[data-screen="omok-play"] #terminal-container,
-    body[data-screen="post-view"] #terminal-container {
+    body[data-screen="omok-play"] #terminal-container {
         font-size: clamp(11px, min(4.2vw, calc(var(--stable-vh, 100vh) * 0.025)), 15px) !important;
     }
 
