@@ -1,3 +1,15 @@
+## [2026-07-22 16:00] [보안 긴급 수정] Supabase RLS 완전 비활성화 + 익명 키로 게시글/대화방 등 전체 공개 읽기 가능하던 취약점 수정(DB 레벨, 코드 변경 없음)
+
+**LOG_ID: 20260722_1600**
+목표: 사용자가 Supabase 보안 경고 메일(critical: `rls_disabled_in_public`, `sensitive_columns_exposed`)을 전달하며 "이것도 고쳐줘"라고 요청. 메일에 언급된 프로젝트 2개(hosting Project `fhmrxmpyynrkldtydjjf`, seoul-migration `jynbmavtipserkozlgwt`) 중 `.env`의 `SUPABASE_URL`을 대조해 이 저장소(www-bbs)가 실제로 쓰는 프로젝트는 **seoul-migration**뿐임을 확인 — "민감 정보 노출"(sensitive_columns_exposed) 이슈는 hosting Project 전용이라 이 저장소와 무관(계정/코드 접근 없음, 손대지 않음).
+**1단계 — 취약점 실증**: 이 앱의 Node 서버는 항상 `SUPABASE_SERVICE_ROLE_KEY`로만 DB에 접근(RLS 우회)하고 브라우저가 테이블에 직접 접근할 이유가 없는 구조인데, `SUPABASE_ANON_KEY`(공개 키)로 직접 PostgREST API를 호출해보니 `boards`/`posts`/`chat_rooms` 등 실서비스 데이터가 로그인·서버 경유 없이 그대로 읽혔다(직접 검증, 진짜 게시글 내용 확인). `members`(비밀번호·이메일)는 이미 RLS가 걸려 있어 안전했다.
+**2단계 — RLS 활성화**: 이 네트워크에서 Supabase DB 직접 연결(IPv6 전용 호스트)이 막혀 있어, 처음엔 사용자가 대시보드 SQL 편집기에서 직접 실행하도록 SQL을 제공 — `leaderboard`가 VIEW라 그 줄에서 에러가 났다는 걸 계기로, project_ref가 이 프로젝트와 정확히 일치하는 Supabase MCP 서버가 이미 설정되어 있음을 발견하고 OAuth 인증(사용자가 대시보드에서 승인)을 거쳐 직접 연결했다. `list_tables`로 PostgREST가 실제로 노출 중인 28개 테이블(뷰 1개 제외 27개 실테이블)을 확인, 그중 RLS가 꺼진 8개(`rss_cache`,`boards`,`post_recommendations`,`votes`,`vote_records`,`conf_rooms`,`conf_agendas`,`conf_seconds`)에 `apply_migration`으로 RLS를 켰다(정책은 추가하지 않음 — 서비스 롤은 RLS 자체를 우회하므로 앱 동작에 영향 없음).
+**3단계 — 추가 발견 및 사용자 확인 후 재설계**: RLS를 켠 뒤에도 `posts`/`comments`/`chat_rooms`/`faqs`/`polls` 등 19개 테이블은 여전히 anon 키로 전부 읽혔다 — 조사해보니 `"Posts are viewable by everyone."`(qual=true) 같은, 이 앱이 만들지 않은 것으로 보이는(‌`auth.uid()`/`author_id` 등 이 앱이 안 쓰는 Supabase Auth 스키마 전제) 사전 정책 51개가 anon/authenticated 역할에 읽기·쓰기를 넓게 열어주고 있었다. 게시글을 로그인 없이 API로 직접 읽는 게 의도된 것인지 사용자에게 확인 — "의도된 것 아님, 정책 제거/재설계"로 결정, 51개 정책 전부 `DROP POLICY`로 제거해 서버(service_role)만 접근 가능한 상태로 통일했다.
+검증: 수정 전/후 각각 anon 키로 27개 테이블 전체를 직접 조회해 전부 빈 결과로 바뀜을 확인(수정 전엔 boards/posts 등 실데이터가 그대로 노출됐었음), 동시에 service_role 키(=이 앱의 서버)로는 posts/boards/members 전부 정상 조회됨을 재확인. 실제 로컬 서버(`node server.js`, Supabase 연동)를 띄워 `/api/boards/notice`, `/api/boards/counts`가 정상 응답함을 최종 확인.
+결과: ✅ 완료 — DB 레벨 수정이라 이 저장소의 코드 변경은 없음(WORK_LOG 기록만). hosting Project(fhmrxmpyynrkldtydjjf)의 "민감 정보 노출" 이슈는 이 저장소와 무관한 별도 프로젝트라 미해결 상태로 남음 — 사용자가 별도로 처리 필요.
+
+---
+
 ## [2026-07-22 15:50] [기능 개선] 건의하기 발송 완료 [ENTER] 대기 줄의 불필요한 "선택 >>" 프롬프트 라벨 제거
 
 **LOG_ID: 20260722_1550**
