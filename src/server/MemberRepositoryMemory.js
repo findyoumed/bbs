@@ -100,6 +100,23 @@ class MemoryMemberRepository extends BaseRepository {
     return toPublicMember(next);
   }
 
+  // [LOG_ID: 20260722_3000] 부재통지(ABSENT/NOMAN) — global.absentMessages(프로세스 메모리
+  // Map, 서버 재시작/서버리스 인스턴스 교체마다 소실)를 대체하는 영속 저장.
+  async setAbsence(userId, { start = null, end = null, reason = '' } = {}) {
+    const normalizedUserId = normalizeLookup(userId);
+    const current = this.members.get(normalizedUserId) || null;
+    if (!current) {
+      throw createHttpError(404, '회원 정보를 찾을 수 없습니다.');
+    }
+    const next = mergeMemberRecord(normalizedUserId, current, {
+      absentStart: start || null,
+      absentEnd: end || null,
+      absentReason: String(reason || '').trim()
+    });
+    this.members.set(next.userId, next);
+    return toPublicMember(next);
+  }
+
   async deleteMember(userId) {
     const normalizedUserId = normalizeLookup(userId);
     const member = this.members.get(normalizedUserId) || null;

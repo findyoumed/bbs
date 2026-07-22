@@ -1,3 +1,23 @@
+## [2026-07-22 30:00] [기능 추가] 대화실 대기실 참여자 미리보기 + 부재통지(ABSENT/NOMAN) 영속화·시작일종료일 지원 — 하이텔 길라잡이·천리안 책 이미지 대조
+
+**LOG_ID: 20260722_3000**
+목표: 직전(20260722_2900 대기실 참여자 미리보기 조사) 이어서 사용자 지시 — 하이텔 길라잡이 PDF(6분할, `docs/책/책_hitel길라잡이ocr_part_1~6.pdf`, 총 173쪽)를 이미지로 학습하고, 천리안 책과 종합해 도입 여부를 결정.
+조사: `docs/hitel_upgrade_plan.txt`가 인용한 원전 "하이텔 10분 가이드"(173쪽) 실물을 PyMuPDF로 페이지 이미지 렌더링해 대조했다.
+- **그림 6.1(대기실 상황, p.103)** 실측: 대기실 인원 명단 아래 각 대화방마다 "공개(인원) [개설자]제목" 한 줄과 그 밑에 실제 참여자 닉네임(아이디) 목록이 나열됨. 우리 대기실(chatAnsiBuilders.js buildChatLobbyAnsi, LOG_ID 20260713_1000)은 인원 "수"만 보여주고 누가 있는지는 없었다.
+- **그림 7.7~7.11(전자우편)**: 보낸편지 확인·주소록(GROUP) 기능은 이미 구현돼 있음을 재확인(주소록은 `memoGroups.js` LOG_ID 20260719_1400가 이미 "천리안 주소록(ADDRESS) 재현"으로 처리 — 새로 만들 필요 없었음).
+- **그림 7.12(부재통지 ABSENT, p.118)** + 천리안 책 NOMAN(p.165) 대조: 둘 다 "부재 시작일 → 부재 종료일 → 부재 사유" 3단계로 등록하는 동일한 개념. 코드를 뒤져보니 이 기능은 이미 부분 구현돼 있었다(`commandRouterMemo.js`의 ABSENT/부재 명령, `memberRoutes.js`의 `/api/members/absent`, `memoRoutes.js`의 발송 시 부재 수신자 안내) — **그런데 저장소가 `global.absentMessages`(Node 프로세스 메모리 Map)뿐이라 서버 재시작·서버리스 함수 인스턴스 교체마다 사라지는 실질적 결함**이 있었고, 시작일/종료일 개념도 없이 메시지 문자열 하나뿐이었다(원전 스펙에 못 미침).
+구현:
+1. **대기실 참여자 미리보기** — `chatAnsiBuilders.js`의 `buildChatLobbyAnsi`가 각 방 줄 아래에 `room.participants`(이미 `publicRoom()`이 userId/nickName만 내려줌, 스키마 변경 불필요)로 참여자 이름(아이디)을 최대 4명(모바일 2명) 미리보여준다. 한 줄 늘어난 만큼 목록에 보여주는 방 수를 6→4(모바일 4→3)로 줄여 24줄 예산 유지.
+2. **부재통지 영속화** — `supabase/migrations/0020_member_absence.sql`(members 테이블에 `absent_start`/`absent_end`/`absent_reason` 컬럼 추가, idempotent). `MemberRepositoryShared.js`에 `isMemberAbsentNow(member)` 헬퍼(시작~종료 구간 판정, 시작일 없으면 즉시부터·종료일 없으면 수동 해제 전까지)와 `mergeMemberRecord`/`normalizeMember`/`toSupabaseMemberPayload`에 세 필드 배선(프로필 수정 시 부재 값이 지워지지 않도록 기존 값 보존). `MemberRepositoryMemory.js`/`MemberRepositorySupabase.js`에 `setAbsence(userId, {start,end,reason})` 추가.
+3. **`/api/members/absent` 재배선** — `global.absentMessages` 대신 `memberRepository`를 통해 영속 저장(기존 `{absentMsg}` 계약은 별칭으로 유지해 하위호환).
+4. **`memoRoutes.js` createMemo** — 부재 수신자 판정을 `global.absentMessages.has()` 대신 `memberRepository.getMember()` + `isMemberAbsentNow()`로 교체(응답 형태 `absentRecipients`/`recipientAbsent`/`absentMsg`는 기존 클라이언트가 그대로 읽도록 동일하게 유지).
+5. **`commandRouterMemo.js`** — 기존 단일 메시지 입력을 원전과 동일한 3단계(부재 시작일→종료일→사유, `YYYYMMDD` 8자리 표기로 사이트의 다른 날짜 입력과 통일) 플로우로 교체. 이미 부재중이면 재실행 시 해제 여부(Y/N)부터 묻는다(원전: "부재 통지를 지정한 후 다시 선택하면 해제 여부를 묻는다").
+검증: `node --check` 8개 파일 전체 통과. `MemoryMemberRepository`를 Node로 직접 호출해 `isMemberAbsentNow` 판정 9가지(미설정/즉시활성/프로필수정후보존/해제/미래시작전/과거만료/현재활성 등) 확인. `commandRouterMemo.js`의 `handleMemoCommand`를 목업 `apiFetch`로 직접 호출해 전체 3단계 등록 플로우 + 이미 부재중일 때 해제 확인 플로우까지 12개 어서션으로 확인. `buildChatLobbyAnsi`를 목업 데이터로 호출해 참여자 미리보기 렌더링 확인. `npm run smoke:vercel-ready`, `npm run qa:final`, `npm run smoke:renderer-ui`, `npm run smoke:chat-rooms`, `npm run smoke:boards` 전체 통과(회귀 없음).
+**배포 필요 사항**: `supabase/migrations/0020_member_absence.sql`을 실제 운영 Supabase DB에 적용해야 부재통지 등록(ABSENT 명령)이 정상 동작한다 — 마이그레이션 적용 전에는 `setAbsent` 호출이 존재하지 않는 컬럼 때문에 오류를 낸다(조회 경로는 컬럼이 없어도 안전하게 빈 값으로 폴백해 기존 기능에 영향 없음). 이 세션은 실행 중인 라이브 DB에 직접 스키마 변경을 적용할 수단이 없어 마이그레이션 파일만 작성했다.
+결과: ✅ 완료(코드) — 부재통지는 마이그레이션 적용 후 실사용 가능.
+
+---
+
 ## [2026-07-22 28:00] [기능 추가] 대화실 입장/퇴장 시스템 메시지 구현 — "■■ 닉네임(아이디) 님이 입장/퇴장하였습니다. ■■"
 
 **LOG_ID: 20260722_2800**

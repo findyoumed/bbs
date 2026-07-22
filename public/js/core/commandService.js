@@ -100,7 +100,7 @@ export const CMD_META = {
   MEMO: { label: '쪽지', tip: 'ME, MEMO (별칭: MAIL, RMAIL, CMAIL)', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   WMAIL: { label: '쪽지쓰기', tip: 'WMAIL', login: true, priority: 30, cat: 'MEMO', desc: '새 쪽지 쓰기 화면을 바로 엽니다.' },
   WC: { label: '카드쓰기', tip: 'WC (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지함에서 축하카드/그림엽서 쓰기를 시작합니다.' },
-  ABSENT: { label: '부재중', tip: 'ABSENT, 부재 (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지함에서 부재중 메시지를 설정하거나(빈 엔터로 해제) 확인합니다.' },
+  ABSENT: { label: '부재중', tip: 'ABSENT, 부재 (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지함에서 부재기간(시작일/종료일)과 사유를 등록합니다. 이미 등록돼 있으면 해제 여부를 묻습니다.' },
   MB: { label: '보관함', tip: 'MB (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지 편지보관함을 엽니다. K [번호]로 보관하거나 꺼낼 수 있습니다.' },
   GRP: { label: '주소록', tip: 'GRP, GRP+ 이름 아이디1,아이디2, GRP- 이름 (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '단체편지용 주소록 그룹을 관리합니다. GRP는 목록, GRP+는 등록, GRP-는 삭제입니다.' },
   // [LOG_ID: 20260713_1230] 나우누리 CMAIL '배달 확인/취소' 재현 — 보낸쪽지함 발송 취소

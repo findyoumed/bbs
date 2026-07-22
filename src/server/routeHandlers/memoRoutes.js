@@ -2,6 +2,7 @@
 
 const BaseRouter = require('./BaseRouter');
 const { parseRecipients } = require('../MemoRepositoryShared');
+const { isMemberAbsentNow } = require('../MemberRepositoryShared');
 
 // [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — 한 번에 보낼 수 있는 수신자 수 상한.
 // 상한이 없으면 쪽지 한 통 요청으로 임의 개수의 행을 만들 수 있다.
@@ -88,7 +89,7 @@ class MemoRouter extends BaseRouter {
   // 수신자 수만큼 쪽지를 만든다. 쪽지 1건 = 1행이라 스키마 변경 없이 된다.
   // (원전의 "그룹지정"=이름 붙인 수신자 그룹 저장은 별도 테이블이 필요해 구현하지 않았다.)
   async createMemo() {
-    const { memoRepository } = this.deps;
+    const { memoRepository, memberRepository } = this.deps;
     const body = await this.getCreateMemoBody();
     const context = await this.getContext();
 
@@ -100,17 +101,18 @@ class MemoRouter extends BaseRouter {
       this.validationError(`단체편지는 한 번에 최대 ${MEMO_MAX_RECIPIENTS}명까지 보낼 수 있습니다.`);
     }
 
-    global.absentMessages = global.absentMessages || new Map();
-
+    // [LOG_ID: 20260722_3000] global.absentMessages(프로세스 메모리 Map — 서버 재시작/서버리스
+    // 인스턴스 교체마다 소실되던 것)를 대신해 members 테이블에 영속 저장된 부재통지를 조회한다.
     const results = [];
     const absentRecipients = [];
     for (const recipientUserId of recipients) {
       const created = await memoRepository.createMemo({ ...body, recipientUserId }, context);
       results.push(created);
-      if (global.absentMessages.has(recipientUserId)) {
+      const recipientMember = memberRepository ? await memberRepository.getMember(recipientUserId) : null;
+      if (isMemberAbsentNow(recipientMember)) {
         absentRecipients.push({
           userId: recipientUserId,
-          absentMsg: global.absentMessages.get(recipientUserId)
+          absentMsg: recipientMember.absentReason
         });
       }
     }

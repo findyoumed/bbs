@@ -101,7 +101,13 @@ export function createChatAnsiBuilders(deps) {
     roomHeader += fitCell('주제', roomTitleWidth) + ANSI_RESET;
     parts.push(roomHeader);
 
-    const maxRoomsToShow = isMobile ? 4 : 6;
+    // [LOG_ID: 20260722_2900] 하이텔 길라잡이 책(그림 6.1 "대기실 상황") 실측 — 원전은 방 번호/
+    // 제목 줄 바로 아래에 그 방에 있는 참여자들의 이름을 나열해 누가 있는지 미리 보여준다.
+    // 지금까지는 인원 "수"만 보여주고 누가 있는지는 방에 직접 들어가야만 알 수 있었다 —
+    // room.participants(publicRoom()이 이미 userId/nickName만 내려줌, 스키마 변경 불필요)로
+    // 채운다. 한 줄 늘어나는 만큼 목록에 보여주는 방 수를 6→4로 줄여 24줄 예산을 지킨다.
+    const maxRoomsToShow = isMobile ? 3 : 4;
+    const maxNamesPerRoom = isMobile ? 2 : 4;
     if (!rooms || !rooms.length) {
       parts.push(ansiColor(8) + '   개설된 대화방이 없습니다.' + ANSI_RESET);
     } else {
@@ -117,6 +123,17 @@ export function createChatAnsiBuilders(deps) {
         if (roomCol.pub) line += ansiColor(room.visibility === '비밀방' ? 13 : 8) + fitCell(pubStr, roomCol.pub) + ' ';
         line += ansiColor(15) + fitCell(titleStr, roomTitleWidth) + ANSI_RESET;
         parts.push(line);
+
+        const participants = Array.isArray(room.participants) ? room.participants : [];
+        if (participants.length) {
+          const shownNames = participants
+            .slice(0, maxNamesPerRoom)
+            .map((p) => `${p.nickName || p.userId}(${p.userId})`)
+            .join('  ');
+          const overflowCount = participants.length - maxNamesPerRoom;
+          const previewText = overflowCount > 0 ? `${shownNames} 외 ${overflowCount}명` : shownNames;
+          parts.push(ansiColor(8) + fitCell(`   ${previewText}`, targetCols - 1) + ANSI_RESET);
+        }
       });
     }
 

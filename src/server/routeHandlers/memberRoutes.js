@@ -542,37 +542,52 @@ class MemberRouter extends BaseRouter {
     }
   }
 
-  // [LOG_ID: 20260713_1050] 내 부재 상태 조회 API
+  // [LOG_ID: 20260722_3000] 내 부재 상태 조회 API — 종전엔 global.absentMessages(프로세스
+  // 메모리 Map)에서 메시지 문자열 하나만 읽었는데, 서버 재시작/서버리스 인스턴스 교체마다
+  // 사라지는 결함이 있었다(하이텔·천리안 두 책 모두 확인한 부재통지는 시작일/종료일까지
+  // 포함하는데 그마저도 없었다). members 테이블(absent_start/absent_end/absent_reason,
+  // 0020_member_absence.sql)에서 읽도록 교체.
   async getMyAbsent() {
+    const { memberRepository } = this.deps;
     const context = await this.getContext();
     const userId = context.userId;
     if (!userId || userId === 'guest') {
       return this.error(401, '로그인이 필요한 서비스입니다.');
     }
-    global.absentMessages = global.absentMessages || new Map();
-    const msg = global.absentMessages.get(userId) || null;
-    return this.send(200, { absentMsg: msg });
+    const member = await memberRepository.getMember(userId);
+    return this.send(200, {
+      absentStart: member?.absentStart || null,
+      absentEnd: member?.absentEnd || null,
+      absentReason: member?.absentReason || '',
+      // 하위 호환: 기존 클라이언트가 absentMsg만 읽어도 동작하도록 별칭 유지.
+      absentMsg: member?.absentReason || null
+    });
   }
 
-  // [LOG_ID: 20260713_1050] 부재 상태 설정 API
+  // [LOG_ID: 20260722_3000] 부재 상태 설정 API. { reason, start, end }를 받는다 — 원전(그림 7.12,
+  // NOMAN)과 동일하게 시작/종료일시를 남길 수 있다. 과거 클라이언트 호환을 위해 { absentMsg }만
+  // 와도 사유로 받아들이고(날짜 없이 즉시~수동해제까지 무기한 활성), reason이 빈 문자열이면 해제.
   async setAbsent() {
+    const { memberRepository } = this.deps;
     const context = await this.getContext();
     const userId = context.userId;
     if (!userId || userId === 'guest') {
       return this.error(401, '로그인이 필요한 서비스입니다.');
     }
-    
+
     const payload = await this.getJsonBody() || {};
-    const msg = String(payload.absentMsg || '').trim();
-    
-    global.absentMessages = global.absentMessages || new Map();
-    if (msg) {
-      global.absentMessages.set(userId, msg);
-    } else {
-      global.absentMessages.delete(userId);
-    }
-    
-    return this.send(200, { ok: true, absentMsg: msg || null });
+    const reason = String(payload.reason ?? payload.absentMsg ?? '').trim();
+    const start = reason ? String(payload.start || '').trim() || null : null;
+    const end = reason ? String(payload.end || '').trim() || null : null;
+
+    const member = await memberRepository.setAbsence(userId, { start, end, reason });
+    return this.send(200, {
+      ok: true,
+      absentStart: member.absentStart || null,
+      absentEnd: member.absentEnd || null,
+      absentReason: member.absentReason || '',
+      absentMsg: member.absentReason || null
+    });
   }
 }
 

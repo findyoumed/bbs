@@ -34,6 +34,133 @@ export function createMemoCommandHandler(deps) {
         return true;
     }
 
+    // [LOG_ID: 20260722_3000] 부재통지(ABSENT/NOMAN) — 하이텔 책(그림 7.12)·천리안 책(NOMAN,
+    // p.165) 둘 다 "부재 시작일 → 부재 종료일 → 부재 사유" 3단계 등록 흐름이었다. 날짜는
+    // 이 사이트의 다른 생년월일 입력(바이오리듬 등)과 동일한 8자리(YYYYMMDD) 표기로 통일한다.
+    function parseAbsentDate(raw) {
+        const digits = String(raw || '').replace(/\D/g, '');
+        if (digits.length !== 8) return null;
+        const year = Number(digits.slice(0, 4));
+        const month = Number(digits.slice(4, 6));
+        const day = Number(digits.slice(6, 8));
+        const date = new Date(year, month - 1, day);
+        if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+        return date;
+    }
+
+    async function beginAbsentFlow() {
+        setHint?.('부재통지 상태를 확인하는 중입니다..');
+        try {
+            const current = await apiFetch('/api/members/absent');
+            if (current?.absentReason) {
+                state._absentStage = 'confirm-clear';
+                const until = current.absentEnd
+                    ? new Date(current.absentEnd).toLocaleDateString('ko-KR')
+                    : '수동 해제 전까지';
+                setHint?.(`이미 부재중입니다: "${current.absentReason}" (복귀예정: ${until}). 해제하시겠습니까?`);
+                setPrompt?.('부재통지 해제 (y/n) >>');
+            } else {
+                state._absentStage = 'start';
+                state._absentDraft = {};
+                setHint?.('부재 시작일을 입력하십시오. (예: 20260725, 빈 엔터=즉시 시작, 취소: /Q)');
+                setPrompt?.('부재 시작일 >>');
+            }
+        } catch (err) {
+            setHint?.(`부재통지 상태 조회 실패: ${err.message}`);
+            setPrompt?.('선택 >>');
+        }
+        return true;
+    }
+
+    async function handleAbsentFlowInput(input) {
+        const raw = String(input || '').trim();
+        const stage = state._absentStage;
+
+        if (stage === 'confirm-clear') {
+            const answer = raw.toUpperCase();
+            state._absentStage = null;
+            if (answer === 'Y' || answer === 'YES') {
+                setHint?.('부재통지를 해제하는 중입니다..');
+                try {
+                    await apiFetch('/api/members/absent', { method: 'POST', body: JSON.stringify({ reason: '' }) });
+                    setHint?.('부재통지가 해제되었습니다.');
+                } catch (err) {
+                    setHint?.(`부재통지 해제 실패: ${err.message}`);
+                }
+            } else {
+                setHint?.('부재통지를 유지합니다.');
+            }
+            setPrompt?.('선택 >>');
+            await showMemoList();
+            return true;
+        }
+
+        if (raw === '/q' || raw.toUpperCase() === 'Q') {
+            state._absentStage = null;
+            state._absentDraft = null;
+            setHint?.('부재통지 설정을 취소했습니다.');
+            setPrompt?.('선택 >>');
+            return true;
+        }
+
+        if (stage === 'start') {
+            const startDate = raw ? parseAbsentDate(raw) : new Date();
+            if (!startDate) {
+                setHint?.('날짜 형식이 올바르지 않습니다. 예: 20260725');
+                setPrompt?.('부재 시작일 >>');
+                return true;
+            }
+            state._absentDraft = { start: startDate.toISOString() };
+            state._absentStage = 'end';
+            setHint?.('부재 종료일을 입력하십시오. (예: 20260801, 빈 엔터=수동 해제 전까지)');
+            setPrompt?.('부재 종료일 >>');
+            return true;
+        }
+
+        if (stage === 'end') {
+            let endDate = null;
+            if (raw) {
+                endDate = parseAbsentDate(raw);
+                if (!endDate) {
+                    setHint?.('날짜 형식이 올바르지 않습니다. 예: 20260801');
+                    setPrompt?.('부재 종료일 >>');
+                    return true;
+                }
+            }
+            state._absentDraft.end = endDate ? endDate.toISOString() : null;
+            state._absentStage = 'reason';
+            setHint?.('부재 사유를 입력하십시오. (한글 20자 이내)');
+            setPrompt?.('부재 사유 >>');
+            return true;
+        }
+
+        if (stage === 'reason') {
+            const reason = raw.slice(0, 20);
+            if (!reason) {
+                setHint?.('부재 사유를 입력해 주세요.');
+                setPrompt?.('부재 사유 >>');
+                return true;
+            }
+            setHint?.('부재통지를 등록하는 중입니다..');
+            try {
+                await apiFetch('/api/members/absent', {
+                    method: 'POST',
+                    body: JSON.stringify({ start: state._absentDraft.start, end: state._absentDraft.end, reason })
+                });
+                setHint?.(`부재통지가 등록되었습니다: "${reason}"`);
+            } catch (err) {
+                setHint?.(`부재통지 등록 실패: ${err.message}`);
+            }
+            state._absentStage = null;
+            state._absentDraft = null;
+            setPrompt?.('선택 >>');
+            await showMemoList();
+            return true;
+        }
+
+        return false;
+    }
+
     async function handleMemoDeleteConfirm(input) {
         const pending = state._memoDeleteConfirm;
         if (!pending) {
@@ -66,38 +193,14 @@ export function createMemoCommandHandler(deps) {
 
     return async function handleMemoCommand({ input, rawCmd, cmd, context }) {
         if (state.screen === 'memo-list') {
-            // [LOG_ID: 20260713_1050] 부재 메시지 설정 입력 가로채기
-            if (state._absentStage === 'setting') {
-                const msg = String(input || '').trim();
-                setHint?.('부재 등록을 처리 중입니다..');
-                apiFetch('/api/members/absent', {
-                    method: 'POST',
-                    body: JSON.stringify({ absentMsg: msg })
-                })
-                .then(() => {
-                    if (msg) {
-                        setHint?.(`부재 등록되었습니다: "${msg}"`);
-                    } else {
-                        setHint?.('부재 등록이 해제되었습니다.');
-                    }
-                    setPrompt?.('선택 >>');
-                    state._absentStage = null;
-                    showMemoList();
-                })
-                .catch((err) => {
-                    setHint?.(`부재 등록 실패: ${err.message}`);
-                    setPrompt?.('선택 >>');
-                    state._absentStage = null;
-                    showMemoList();
-                });
-                return true;
+            // [LOG_ID: 20260722_3000] 부재통지(ABSENT/NOMAN) 단계별 입력 가로채기 — 하이텔·천리안
+            // 두 책 모두 확인된 "시작일 → 종료일 → 사유" 3단계 흐름(beginAbsentFlow/handleAbsentFlowInput).
+            if (state._absentStage) {
+                return await handleAbsentFlowInput(input);
             }
 
             if (cmd === 'ABSENT' || cmd === '부재') {
-                state._absentStage = 'setting';
-                setHint?.('부재 중 메시지를 입력하십시오. (최대 50자, 해제는 빈 엔터)');
-                setPrompt?.('부재 메시지 >>');
-                return true;
+                return await beginAbsentFlow();
             }
 
             if (cmd === 'T') {
