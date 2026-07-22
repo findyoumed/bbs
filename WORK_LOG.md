@@ -1,3 +1,14 @@
+## [2026-07-22 24:00] [버그 수정] 모바일 세로 화면에서 회원정보(MYINFO) 화면이 왼쪽 끝에 거의 붙어 "쏠려" 보이던 문제 수정
+
+**LOG_ID: 20260722_2400**
+목표: 사용자 리포트(스크린샷 첨부, `postnews` 계정으로 로그인 후 MYINFO 화면) — "모바일 화면에서 왼쪽으로 쏠린 화면들이 자주나와".
+조사: WORK_LOG에 같은 "왼쪽으로 쏠려 보인다" 증상의 과거 사례가 여러 건 있었다(LOG_ID 20260721_1600대: post-view 구분선/본문, `.ansi-screen-body`에 `max-width:44ch;margin:0 auto` 도입 등) — 전부 "80/44칸 고정폭 ANSI 텍스트 격자가 실제 화면 폭을 정확히 못 채워 왼쪽에 붙어 보이는" 유형이었다. 이번 건은 다른 원인이었다: `style.css`가 모바일 세로 화면(`@media (max-width:768px)`, 특히 `and (orientation:portrait)` 블록)에서 `.ansi-screen-body`의 좌우 padding을 4px→1px까지 단계적으로 압축한다 — 80칸 고정폭 ANSI 텍스트 화면이 좁은 화면에 최대한 많은 글자를 욱여넣기 위한 의도된 설계다. 그런데 MYINFO 화면(`myInfoRenderer.js`의 `view`/`guest-blocked` 모드, `data-screen-kind="myinfo"`)은 고정폭 문자 격자가 아니라 자유 폭 HTML 패널(`.myinfo-row` CSS 그리드 등)이라 이 압축이 전혀 필요 없는데도 같은 `.ansi-screen-body` 클래스를 공유해 그대로 1px까지 눌린 padding을 물려받았다 — 그 결과 본문 텍스트가 화면 왼쪽 끝에 거의 붙어(반대로 오른쪽은 넉넉히 비어) "쏠려 보이는" 결과를 낳았다. (참고로 닉네임/이메일/비밀번호/탈퇴 등 myinfo의 입력 단계 화면들은 `.ansi-screen-body`가 아닌 별도 선택자(`[data-screen-kind="myinfo-password"]`)를 써서 이미 무조건 16px를 갖고 있어 이 문제가 없었다 — view 모드만 누락돼 있었다.)
+구현: `style.css`의 `.ansi-screen-body[data-screen-kind="myinfo"]` 규칙(이미 존재하던, myinfo 전용 `padding-top:2px` 규칙)에 `padding-left:16px; padding-right:16px;`를 추가했다. 이 선택자는 클래스+속성 조합이라 미디어쿼리 안의 `.ansi-screen-body` 단독 규칙보다 특정도가 항상 높아, 소스 순서·미디어쿼리 우선순위와 무관하게 항상 이긴다 — 화면 크기·방향에 상관없이 myinfo-password 화면과 동일한 16px 여백으로 통일된다.
+검증: 실제 로컬 서버를 띄우고 Playwright로 스크린샷의 뷰포트(모바일 세로, 390×844)를 재현해 `.ansi-screen-body[data-screen-kind="myinfo"]`의 실제 계산된 padding이 `16px/16px/2px`(좌/우/상)로 적용됨을 확인, 수정 전 스크린샷(좌측 여백 ~4px)과 수정 후 스크린샷을 비교해 좌측 여백이 정상적으로 확보됨을 시각적으로 확인. 다른 `data-screen-kind` 속성을 쓰는 화면이 있는지 전수 grep했으나 myinfo가 유일해 영향 범위가 이 화면으로 한정됨을 확인. `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`, `npm run qa:final` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-22 23:00] [UX 개선] 게스트가 회원정보 화면에 접근할 때 힌트바/프롬프트가 사라지던 문제 — 안내 메시지를 먼저 보여주고 ENTER로 초기화면 이동하도록 변경
 
 **LOG_ID: 20260722_2300**

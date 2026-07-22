@@ -888,6 +888,15 @@ body.theme-nownuri .write-field textarea {
 .myinfo-screen,
 .ansi-screen-body[data-screen-kind="myinfo"] {
     padding-top: 2px;
+    /* [LOG_ID: 20260722_2400] 모바일 세로 화면(768px 이하)에서 .ansi-screen-body의 좌우 padding이
+       1px까지 압축되도록 되어 있는데(80칸 ANSI 고정폭 격자 화면이 폭을 최대한 채우기 위한 설계,
+       style.css 하단 여러 @media 블록), myinfo는 고정폭 문자 격자가 아니라 자유 폭 HTML 패널
+       (.myinfo-row 그리드 등)이라 이 압축이 필요 없고, 오히려 텍스트가 화면 왼쪽 끝에 거의
+       붙어버려 "왼쪽으로 쏠려 보인다"는 결과를 냈다(사용자 스크린샷 보고). 이 선택자는 이미
+       .ansi-screen-body 단독 규칙보다 특정도가 높아(클래스+속성 vs 클래스 단독) 미디어쿼리 순서와
+       무관하게 항상 이긴다 — myinfo-password 화면(위 규칙, 무조건 16px)과 동일한 여백으로 통일한다. */
+    padding-left: 16px;
+    padding-right: 16px;
 }
 
 .ansi-screen[data-screen-kind="myinfo-password"]>.myinfo-message,
