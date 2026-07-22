@@ -47,8 +47,7 @@ export function createPostViewCommandHandler(deps) {
         if (['1', '2', '3'].includes(choice)) {
           const protocolName = choice === '1' ? 'Kermit' : choice === '2' ? 'Zmodem' : 'Super Kermit';
           state._downloadStage = 'transferring';
-          
-          const file = state._pendingDownload;
+
           const targetCols = typeof window !== 'undefined' && window.innerWidth < 768 ? 44 : 80;
 
           // Hitel 원전 화일 전송 대화 상자 연출 빌더
@@ -56,12 +55,12 @@ export function createPostViewCommandHandler(deps) {
           // 폴백되며 무지개색 노이즈로 깨졌다(투표 그래프와 동일 원인). 실측 확인된
           // '■'/'□'(폭 2칸)로 교체 — 폭이 2배가 되므로 barLength를 절반으로 줄여 원래의
           // 시각적 길이(표시폭)를 유지한다.
-          const drawTransferBox = (percent) => {
+          const drawTransferBox = (file, percent) => {
             const barLength = Math.max(5, Math.floor((targetCols - 30) / 2));
             const filledLength = Math.floor((barLength * percent) / 100);
             const emptyLength = barLength - filledLength;
             const bar = '■'.repeat(filledLength) + '□'.repeat(emptyLength);
-            
+
             // 80칸 기준 TUI 전송 박스
             const padName = String(file.fileName).substring(0, 25).padEnd(25);
             const padProto = String(protocolName).padEnd(25);
@@ -80,25 +79,64 @@ export function createPostViewCommandHandler(deps) {
               `      └──────────────────────────────────────────────┘\n`;
           };
 
+          // [LOG_ID: 20260722_3300] 하이텔 책(p.128) "DN 번호1, 번호2..." / "DN 번호1-번호2"
+          // 다중/범위 다운로드 지원 — commandRouterBrowse.js의 DN 파서가 채운
+          // state._downloadQueue(남은 글 번호 목록)를 한 번 선택한 프로토콜로 순서대로 소진한다.
           const runTransferAnimation = async () => {
-            if (typeof renderScreenSequential === 'function') {
-              for (let pct = 0; pct <= 100; pct += 25) {
-                await renderScreenSequential(drawTransferBox(pct), { clear: true });
-                await new Promise(r => setTimeout(r, 200));
+            let currentFile = state._pendingDownload;
+            let lastPostId = currentFile.postId;
+            let transferredCount = 0;
+
+            while (currentFile) {
+              if (typeof renderScreenSequential === 'function') {
+                for (let pct = 0; pct <= 100; pct += 25) {
+                  await renderScreenSequential(drawTransferBox(currentFile, pct), { clear: true });
+                  await new Promise(r => setTimeout(r, 200));
+                }
+              }
+
+              try {
+                await downloadAttachment(currentFile.boardId, currentFile.postId, currentFile.fileId, currentFile.fileName);
+                transferredCount += 1;
+                const remaining = state._downloadQueue?.queue?.length || 0;
+                setHint(remaining > 0
+                  ? `화일 전송 완료: ${currentFile.fileName} (남은 ${remaining}건)`
+                  : `화일 전송 완료: ${currentFile.fileName}`);
+              } catch (err) {
+                setHint(`화일 전송 실패: ${err.message}`);
+              }
+
+              lastPostId = currentFile.postId;
+              currentFile = null;
+
+              while (state._downloadQueue?.queue?.length) {
+                const nextPostId = state._downloadQueue.queue.shift();
+                let attachments = [];
+                try {
+                  attachments = await apiFetch(`/api/boards/${state._downloadQueue.boardId}/posts/${nextPostId}/attachments`);
+                } catch (err) {
+                  attachments = [];
+                }
+                const nextFile = Array.isArray(attachments) && attachments.length > 0 ? attachments[0] : null;
+                if (nextFile) {
+                  currentFile = {
+                    boardId: state._downloadQueue.boardId,
+                    postId: nextPostId,
+                    fileId: nextFile.id,
+                    fileName: nextFile.originalFilename || nextFile.filename,
+                    fileSize: nextFile.fileSize
+                  };
+                  break;
+                }
+                // 첨부파일이 없는 글은 건너뛰고 큐의 다음 글로 계속 진행한다.
               }
             }
 
-            try {
-              await downloadAttachment(file.boardId, file.postId, file.fileId, file.fileName);
-              setHint(`화일 전송 완료: ${file.fileName}`);
-            } catch (err) {
-              setHint(`화일 전송 실패: ${err.message}`);
-            }
-
+            state._downloadQueue = null;
             state._downloadStage = null;
             state._pendingDownload = null;
             setPrompt('선택 >>');
-            
+
             // [LOG_ID: 20260713_1120] 자료실 목록 화면(post-list)에서 다운로드가 완료된 경우 목록 화면으로 복원
             if (state._originScreenForDownload === 'post-list') {
               state._originScreenForDownload = null;
@@ -106,7 +144,7 @@ export function createPostViewCommandHandler(deps) {
                 await showPostList(state.board.id, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
               }
             } else if (typeof showAttachmentList === 'function') {
-              await showAttachmentList(state.board.id, file.postId);
+              await showAttachmentList(state.board.id, lastPostId);
             }
           };
 

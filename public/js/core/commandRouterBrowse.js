@@ -277,11 +277,10 @@ export function createBrowseCommandHandler(deps) {
       }
       // [LOG_ID: 20260713_1120] 자료실 목록 화면에서의 DN 단독 실행 2단계 가로채기
       if (state._pendingDownloadPrompt) {
-        const idx = parseInt(cmd, 10);
+        const post = findPostByNumberToken(String(cmd || '').trim());
         state._pendingDownloadPrompt = false;
         setPrompt('선택 >>');
-        if (idx >= 1 && state.posts?.[idx - 1]) {
-          const post = state.posts[idx - 1];
+        if (post) {
           await startPdsDownloadSequence(post);
         } else {
           setHint('잘못된 번호입니다.');
@@ -323,30 +322,64 @@ export function createBrowseCommandHandler(deps) {
         }
       }
 
+      // [LOG_ID: 20260722_3300] 글 목록에 표시되는 "번호" 열은 localId/id다(ansiBoardBuilders.js).
+      // 예전 DN 구현은 이를 배열 인덱스로 오인해 첫 페이지가 아니거나 정렬이 내림차순일 때
+      // 엉뚱한 글을 내려받는 버그가 있었다 — PR 명령과 동일하게 localId/id로 먼저 찾고,
+      // 못 찾으면 인덱스로 폴백한다.
+      function findPostByNumberToken(token) {
+        return state.posts?.find((post) => String(post.localId ?? post.id) === token)
+          || state.posts?.[parseInt(token, 10) - 1]
+          || null;
+      }
+
       // [LOG_ID: 20260713_1120] PDS 자료 내려받기(DN [번호]) 커맨드 및 얼라이어스 (DL, DOWNLOAD, TR, GET)
-      const dnMatch = cmd.match(/^(?:DN|DL|DOWNLOAD|TR|GET)(?:\s+(\d+))?$/i);
+      // [LOG_ID: 20260722_3300] 하이텔 책(길라잡이 p.128) 실측: "DN 번호" 외에
+      // "DN 번호1, 번호2..."(나열, 최대 10건)와 "DN 번호1-번호2"(범위)도 지원해야 한다 —
+      // PR 명령의 파서(그림 8.9와 동일 페이지)와 동일한 문법·큐 방식을 재사용한다.
+      const dnMatch = cmd.match(/^(?:DN|DL|DOWNLOAD|TR|GET)(?:\s+([\d,\s-]+))?$/i);
       if (dnMatch) {
         if (!isPds) {
           return false;
         }
 
-        const rawNum = dnMatch[1];
-        if (rawNum) {
-          const idx = parseInt(rawNum, 10);
-          if (idx >= 1 && state.posts?.[idx - 1]) {
-            const post = state.posts[idx - 1];
-            await startPdsDownloadSequence(post);
-          } else {
-            setHint('존재하지 않는 번호입니다.');
-            setPrompt('선택 >>');
-          }
-          return true;
-        } else {
+        const spec = String(dnMatch[1] || '').trim();
+        if (!spec) {
           state._pendingDownloadPrompt = true;
           setHint('다운로드할 글 번호를 입력해 주십시오.');
           setPrompt('글 번호 >>');
           return true;
         }
+
+        let targets = [];
+        const rangeMatch = spec.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (rangeMatch) {
+          const low = Math.min(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10));
+          const high = Math.max(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10));
+          targets = (state.posts || [])
+            .filter((post) => { const id = parseInt(post.localId ?? post.id, 10); return id >= low && id <= high; })
+            .sort((left, right) => parseInt(left.localId ?? left.id, 10) - parseInt(right.localId ?? right.id, 10))
+            .slice(0, 10);
+        } else if (spec.includes(',')) {
+          const tokens = spec.split(',').map((token) => token.trim()).filter(Boolean).slice(0, 10);
+          targets = tokens.map((token) => findPostByNumberToken(token)).filter(Boolean);
+        } else {
+          const single = findPostByNumberToken(spec);
+          if (single) targets = [single];
+        }
+
+        if (!targets.length) {
+          setHint('존재하지 않는 번호입니다.');
+          setPrompt('선택 >>');
+          return true;
+        }
+
+        const [first, ...rest] = targets;
+        state._downloadQueue = {
+          boardId: state.board.id,
+          queue: rest.map((post) => post.localId ?? post.id)
+        };
+        await startPdsDownloadSequence(first);
+        return true;
       }
 
       async function startPdsDownloadSequence(post) {
@@ -362,7 +395,7 @@ export function createBrowseCommandHandler(deps) {
               fileName: file.originalFilename || file.filename,
               fileSize: file.fileSize
             };
-            
+
             // 임시로 attachment-list 로 전환하여 postView의 공통 프로토콜 선택 모듈을 재사용
             state._originScreenForDownload = 'post-list';
             state.screen = 'attachment-list';

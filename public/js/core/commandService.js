@@ -63,8 +63,10 @@ export const CMD_META = {
   // 대표 별칭 2개만 항목으로 두고 나머지는 tip 문구로만 안내한다(기능은 그대로 전부 동작).
   UP: { label: '자료올리기', tip: 'UP, UPLOAD (별칭: UL, PUT / 자료실 전용)', login: true, priority: 20, cat: 'POST', desc: '자료실(PDS)에 새 자료를 올립니다.' },
   UPLOAD: { label: '자료올리기', tip: 'UP, UPLOAD (별칭: UL, PUT / 자료실 전용)', login: true, priority: 20, cat: 'POST', desc: '자료실(PDS)에 새 자료를 올립니다.' },
-  DN: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DL, TR, GET / 자료실 전용)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다.' },
-  DOWNLOAD: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DL, TR, GET / 자료실 전용)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다.' },
+  // [LOG_ID: 20260722_3300] 하이텔 책(길라잡이 p.128) 실측: "DN 번호1,번호2..."(나열)/
+  // "DN 번호1-번호2"(범위) 다중 다운로드도 지원 — 힌트에도 안내해야 발견 가능한 기능이 된다.
+  DN: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DL, TR, GET / 자료실 전용, 예: DN 3,5 또는 DN 1-3)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다. 여러 건을 한 번에 받으려면 번호를 쉼표로 나열하거나(DN 3,5) 범위를 지정합니다(DN 1-3).' },
+  DOWNLOAD: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DL, TR, GET / 자료실 전용, 예: DN 3,5 또는 DN 1-3)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다. 여러 건을 한 번에 받으려면 번호를 쉼표로 나열하거나(DN 3,5) 범위를 지정합니다(DN 1-3).' },
 
   // Auth & Profile
   LOGIN: { label: '로그인', tip: 'LOGIN', priority: 90, cat: 'AUTH', desc: 'BBS 계정으로 로그인합니다.' },
