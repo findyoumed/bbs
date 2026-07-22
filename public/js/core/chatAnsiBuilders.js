@@ -178,13 +178,20 @@ export function createChatAnsiBuilders(deps) {
         return ansiColor(13) + prefix + ansiColor(15) + fitCell(actualText, maxText) + ANSI_RESET;
       }
 
-      const prefix = `[${who}] `;
+      // [LOG_ID: 20260722_2700] 하이텔 책(그림 6.2 "대화실 참여") 실측 대조 — 원전은
+      // "[닉네임] 메시지"가 아니라 "닉네임(아이디)   메시지"(대괄호 없이, 이름 뒤에 아이디를
+      // 괄호로 붙이고 고정폭으로 맞춘 뒤 메시지) 형식이었다. 대괄호 프리픽스는 우리 쪽 임의
+      // 표기였음 — 원전 형식으로 교체한다(사용자 요청: "하이텔과 똑같이 만들어").
+      const idLabel = senderId ? `(${message.userId})` : '';
+      const label = `${who}${idLabel}`;
+      const labelWidth = isMobile ? 12 : 18;
+      const prefix = fitCell(label, labelWidth) + '  ';
       const maxText = (targetCols - 2) - displayWidth(prefix);
 
       const isMe = who === userNick;
       const color = isMe ? ansiColor(10) : ansiColor(11);
 
-      return color + `[${who}] ` + ansiColor(15) + fitCell(text, maxText) + ANSI_RESET;
+      return color + prefix + ansiColor(15) + fitCell(text, maxText) + ANSI_RESET;
     }
 
     // [LOG: 20260707_1424] 대화방도 4줄 상단바 헤더 필수 — 누락 시 첫 메시지가 로고로 오인되고
