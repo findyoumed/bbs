@@ -2,6 +2,7 @@
 
 const { ensureCapabilities } = require('./SupabaseBoardRepositorySchema');
 const { getMergedBoardSourceIds } = require('./BoardVirtualBoards');
+const { parseMultiTermQuery } = require('./BoardRepositorySearch');
 
 function escapeLikeQuery(query) {
   return query
@@ -36,8 +37,26 @@ function applySupabaseSearch(queryBuilder, capabilities, search) {
   const nickNameField = capabilities.nickName || 'nick_name';
 
   switch (search.mode) {
-    case 'lt':
+    // [LOG_ID: 20260722_3200] 하이텔 책(그림 9.4) "*"(AND)/"+"(OR) 다중 검색어 —
+    // Memory 드라이버(BoardRepositorySearch.js filterPostsBySearch)와 동일 파서를 공유한다.
+    // PostgREST에서 같은 쿼리 빌더에 .or()를 여러 번 체이닝하면 그 그룹들끼리는 AND로
+    // 묶이므로, AND는 항별로 .or() 호출을 반복하고 OR는 절을 한 번의 .or()에 합친다.
+    case 'lt': {
+      const parsed = parseMultiTermQuery(query);
+      if (parsed.operator === 'and') {
+        return parsed.terms.reduce((qb, term) => {
+          const esc = escapeLikeQuery(term);
+          return qb.or(`title.ilike.%${esc}%,content.ilike.%${esc}%`);
+        }, queryBuilder);
+      }
+      if (parsed.operator === 'or') {
+        const clause = parsed.terms
+          .map((term) => { const esc = escapeLikeQuery(term); return `title.ilike.%${esc}%,content.ilike.%${esc}%`; })
+          .join(',');
+        return queryBuilder.or(clause);
+      }
       return queryBuilder.or(`title.ilike.%${escaped}%,content.ilike.%${escaped}%`);
+    }
     case 'li':
       if (userIdField === 'author_id') {
         return queryBuilder.ilike(nickNameField, `%${escaped}%`);

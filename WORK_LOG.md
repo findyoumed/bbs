@@ -1,3 +1,14 @@
+## [2026-07-22 32:00] [기능 추가] 게시판 제목검색(LT)에 하이텔 책의 "*"(AND)/"+"(OR) 다중 검색어 문법 재현
+
+**LOG_ID: 20260722_3200**
+목표: 사용자 지시("다음 진행")에 따라 하이텔 길라잡이 책 8~10장(게시판/동호회/자료실) 이미지를 계속 대조.
+발견: 그림 9.4(p.124, LI 명령어 설명 화면)의 본문 텍스트에서 "LT 단어1 * 단어2와 같은 형태로 명령을 사용하면 단어1과 단어2가 모두 들어간 제목에 대해 검색을 하며, 'LT 단어1 + 단어2'와 같은 형태로 사용하면 단어1이나 단어2 둘 중 한 단어만 있으면 검색을 하여준다"는 명세를 확인. 우리 LT는 검색어 문자열 전체를 하나의 부분 문자열로만 취급해 `*`/`+`가 그냥 검색어의 일부 글자처럼 처리되고 있었다(다중 검색어 개념 자체가 없었음).
+구현: `BoardRepositorySearch.js`(Memory 드라이버 + 두 드라이버가 공유하는 `normalizeSearchOptions`가 있는 파일)에 `parseMultiTermQuery(query)`를 추가 — `*`만 있으면 AND, `+`만 있으면 OR, 둘 다 없거나 둘 다 섞여 있으면(원전에 명세 없음) 기존처럼 단일 검색어로 취급. `filterPostsBySearch`의 `lt` 케이스가 이를 사용하도록 교체. Supabase 드라이버(`SupabaseBoardRepositoryQueryHelpers.js`)는 별도 SQL 빌더(`applySupabaseSearch`)를 쓰므로 같은 파서를 가져와 동일하게 적용 — PostgREST에서 같은 쿼리 빌더에 `.or()`를 여러 번 체이닝하면 그 그룹들끼리는 AND로 묶이는 성질을 이용해, AND는 항별로 `.or()`를 반복 호출하고 OR는 한 번의 `.or()`에 절을 합쳤다(두 드라이버 동작 일치 보장). `i18n.js`의 LT 검색 안내 문구에도 새 문법을 추가해 기능이 숨겨지지 않게 했다.
+검증: `node --check` 3개 파일 통과. `filterPostsBySearch`/`parseMultiTermQuery`를 Node로 직접 호출해 AND(둘 다 포함하는 글만)/OR(하나만 있어도)/단일검색어(기존 동작 불변)/연산자 혼용(모호하므로 원문 그대로 취급) 7개 어서션 확인. Supabase 드라이버의 `applySupabaseSearch`도 mock 쿼리빌더로 호출해 AND가 `.or()` 2회 체이닝, OR가 `.or()` 1회로 나오는지 5개 어서션으로 확인. `npm run smoke:vercel-ready`, `npm run smoke:boards`(`plazaSearchMode:"lt"` 기존 케이스 회귀 없음), `npm run smoke:command-parity` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-22 31:00] [배포] 0020_member_absence.sql 운영 Supabase DB 적용 완료 — 부재통지 실사용 가능
 
 **LOG_ID: 20260722_3100**

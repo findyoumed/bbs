@@ -33,7 +33,10 @@ export const UI_TEXT = {
   POST_EDIT_MY_ONLY: '본인의 글만 수정할 수 있습니다.',
   POST_NOT_FOUND: '해당 글을 찾을 수 없습니다.',
   
-  SEARCH_TITLE_PROMPT: '제목 검색어를 입력해 주세요. (예: LT 안녕)',
+  // [LOG_ID: 20260722_3200] 하이텔 책(그림 9.4, p.124) "단어1 * 단어2"(모두 포함)/
+  // "단어1 + 단어2"(하나만 포함) 문법을 힌트에도 안내한다 — 기능만 있고 안내가 없으면
+  // 사실상 숨은 기능이라 발견되지 않는다.
+  SEARCH_TITLE_PROMPT: '제목 검색어를 입력해 주세요. (예: LT 안녕, 여러 단어: 안녕*세상=모두포함 안녕+세상=하나만)',
   SEARCH_AUTHOR_PROMPT: '작성자 아이디를 입력해 주세요. (예: LI admin)',
   SEARCH_CONTENT_PROMPT: '내용 검색어를 입력해 주세요. (예: GA 안녕)',
   SEARCH_KEYWORD: '검색어 >>',

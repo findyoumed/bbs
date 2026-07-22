@@ -56,6 +56,27 @@ function containsIgnoreCase(value, query) {
   return String(value || '').toLowerCase().includes(String(query || '').toLowerCase());
 }
 
+// [LOG_ID: 20260722_3200] 하이텔 길라잡이 책(그림 9.4, LT 명령어 설명, p.124) 실측 —
+// "LT 단어1 * 단어2"는 두 단어가 모두 들어간 제목만(AND), "LT 단어1 + 단어2"는 둘 중
+// 하나만 있어도(OR) 검색된다고 명시돼 있는데, 우리 LT는 지금까지 쿼리 문자열 전체를
+// 하나의 부분 문자열로만 취급해 "*"/"+"가 그냥 검색어의 일부 글자처럼 처리됐다.
+// AND가 OR보다 먼저 매치되면 "*"가 있는 쿼리에 "+"도 우연히 섞였을 때 애매해지므로
+// 한쪽만 있을 때만 그 연산자로 해석하고, 둘 다 없거나 둘 다 있으면 원래처럼 단일 검색어로 둔다.
+function parseMultiTermQuery(query) {
+  const raw = String(query || '');
+  const hasAnd = raw.includes('*');
+  const hasOr = raw.includes('+');
+  if (hasAnd && !hasOr) {
+    const terms = raw.split('*').map((t) => t.trim()).filter(Boolean);
+    if (terms.length > 1) return { operator: 'and', terms };
+  }
+  if (hasOr && !hasAnd) {
+    const terms = raw.split('+').map((t) => t.trim()).filter(Boolean);
+    if (terms.length > 1) return { operator: 'or', terms };
+  }
+  return { operator: 'single', terms: [raw] };
+}
+
 function filterPostsBySearch(posts, search) {
   let result = posts.slice();
 
@@ -82,8 +103,13 @@ function filterPostsBySearch(posts, search) {
 
   return result.filter((post) => {
     switch (mode) {
-      case 'lt': // Title + Content
-        return containsIgnoreCase(post.title, query) || containsIgnoreCase(post.content, query);
+      case 'lt': { // Title + Content, "*"(AND)/"+"(OR) 다중 검색어 지원(그림 9.4)
+        const parsed = parseMultiTermQuery(query);
+        const matchesTerm = (term) => containsIgnoreCase(post.title, term) || containsIgnoreCase(post.content, term);
+        if (parsed.operator === 'and') return parsed.terms.every(matchesTerm);
+        if (parsed.operator === 'or') return parsed.terms.some(matchesTerm);
+        return matchesTerm(query);
+      }
       case 'li': // ID + Nickname
         return containsIgnoreCase(post.userId, query) || containsIgnoreCase(post.nickName, query);
       case 'lc': // Content only
@@ -109,5 +135,6 @@ function filterPostsBySearch(posts, search) {
 module.exports = {
   sortPostsThreaded,
   normalizeSearchOptions,
-  filterPostsBySearch
+  filterPostsBySearch,
+  parseMultiTermQuery
 };
