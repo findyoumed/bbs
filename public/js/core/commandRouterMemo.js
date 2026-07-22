@@ -396,6 +396,23 @@ export function createMemoCommandHandler(deps) {
             if (cmd === 'DD' || cmd === 'D') {
                 return await beginMemoDeleteConfirm();
             }
+            // [LOG_ID: 20260722_3500] 하이텔 책(길라잡이 p.109) "이동 명령어 'A'(화면에서 위에 있는
+            // 편지, 나중에 도착한 편지)나 'N'(아래에 있는 편지, 전에 도착한 편지)를 통해 다음 편지나
+            // 전 편지를 읽을 수도 있다" — 목록으로 돌아가지 않고 편지 사이를 바로 이동하는 기능이
+            // 아예 없었다. state._memos는 최신순(내림차순)이므로 A는 배열 앞쪽(더 최근), N은 뒤쪽
+            // (더 오래됨)으로 이동한다(게시판 글보기 A/N 방향 수정과 동일한 규칙).
+            if (cmd === 'A' || cmd === 'N') {
+                const memos = Array.isArray(state._memos) ? state._memos : [];
+                const idx = memos.findIndex((m) => String(m?.id) === String(state._currentMemoId));
+                const targetIdx = idx >= 0 ? (cmd === 'A' ? idx - 1 : idx + 1) : -1;
+                const target = targetIdx >= 0 ? memos[targetIdx] : null;
+                if (target) {
+                    await showMemoView(target.id);
+                } else {
+                    setHint?.(cmd === 'A' ? '더 최근에 받은 편지가 없습니다.' : '더 이전에 받은 편지가 없습니다.');
+                }
+                return true;
+            }
             return false;
         }
 
