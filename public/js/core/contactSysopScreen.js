@@ -103,9 +103,15 @@ export function createContactSysopScreen(deps) {
     } else if (flow.stage === 'confirm') {
       setHint('발송(1), 이어서 작성(0), 취소(/q, P, M, B)');
       setPrompt('발송 명령 (1, 0) >>');
+    } else if (flow.stage === 'subject') {
+      // [LOG_ID: 20260722_1130] 사용자 지적: 제목 입력 단계에서 아직 시작도 안 한 본문
+      // 작성 명령("전송(/s 또는 SEND)")을 안내하고 있었다 — 제목은 한 줄만 입력하는 단계라
+      // /s·SEND는 이 단계에서 의미가 없다(본문 단계에 가서야 실제로 동작함).
+      setHint('제목을 입력하고 Enter, 취소(/q, P, M, B)');
+      setPrompt('제목 >>');
     } else {
       setHint('전송(/s 또는 SEND), 취소(/q, P, M, B)');
-      setPrompt(flow.stage === 'subject' ? '제목 >>' : '내용 >>');
+      setPrompt('내용 >>');
     }
     setReady?.(true);
     focusCommandInput();
