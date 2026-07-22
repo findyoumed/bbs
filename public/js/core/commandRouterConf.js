@@ -2,6 +2,7 @@
 export function createConfCommandHandler(deps) {
   const {
     showMain,
+    showBoardSelect,
     showConfRooms,
     showConfAgendas,
     showConfAgenda,
@@ -22,7 +23,11 @@ export function createConfCommandHandler(deps) {
     // 회의실 목록
     if (s === 'conf-rooms') {
       if (cmd === 'T') { await showMain(); return true; }
-      if (cmd === 'P' || cmd === 'M') { await showMain(); return true; }
+      // [LOG_ID: 20260722_2100] 사용자 리포트("다른 메뉴에서도 이렇게 P를 눌렀는데 최상단으로
+      // 이동하는 것 있어?")로 발견 — 메뉴 구조상 토론의 광장(forum/conf-rooms)은 여론광장
+      // (agora) 밑의 자식 항목인데(하이텔 원전 "(12)여론광장-1.토론의 광장"), P/M이 그 실제
+      // 상위(여론광장 메뉴)를 건너뛰고 곧장 초기화면으로 가버렸다 — /policy와 같은 패턴.
+      if (cmd === 'P' || cmd === 'M') { await showBoardSelect('agora'); return true; }
       if (cmd === 'O') {
         if (isGuest) { setHint('회의실 개설은 로그인 후에 가능합니다.'); return true; }
         await showConfRoomCreate();
