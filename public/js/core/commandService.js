@@ -29,8 +29,11 @@ export const CMD_META = {
   HIST: { label: '작업기록', tip: 'HIST', priority: 10, cat: 'SYS', desc: '최근에 입력한 명령어 기록을 보여줍니다.' },
 
   // Post Management
-  N: { label: '이전글', tip: 'N', priority: 60, cat: 'POST', desc: '목록에서 이전 글을 읽습니다.' },
-  A: { label: '다음글', tip: 'A', priority: 60, cat: 'POST', desc: '목록에서 다음 글을 읽습니다.' },
+  // [LOG_ID: 20260722_3400] 하이텔 책(길라잡이 p.92) 실측: A=더 높은 번호(최신 방향, "이전글"),
+  // N=더 낮은 번호(과거 방향, "다음글") — 뉴스 기사 보기(commandRouterService.js)와 동일한 방향으로
+  // 게시판 글보기(commandRouterPostView.js)도 맞췄다. 라벨도 실제 동작에 맞게 함께 뒤집는다.
+  N: { label: '다음글', tip: 'N', priority: 60, cat: 'POST', desc: '목록에서 다음(더 낮은 번호) 글을 읽습니다.' },
+  A: { label: '이전글', tip: 'A', priority: 60, cat: 'POST', desc: '목록에서 이전(더 높은 번호) 글을 읽습니다.' },
   L: { label: '첫장', tip: 'L', priority: 55, cat: 'POST', desc: '게시판 첫 페이지로 이동하며 검색을 초기화합니다.' },
   W: { label: '글쓰기', tip: 'W', login: true, priority: 50, cat: 'POST', desc: '새 글을 작성합니다.' },
   R: { label: '답글', tip: 'R, RE', login: true, priority: 48, cat: 'POST', desc: '현재 글에 대한 답글을 작성합니다.' },

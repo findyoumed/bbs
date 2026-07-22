@@ -274,13 +274,19 @@ export function createPostViewCommandHandler(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260722_3400] 하이텔 책(길라잡이 p.92) 실측: "1047번 글을 읽다가 'A' 명령을
+    // 내리면 1048번 글(화면 윗부분에 있는 글, 즉 더 높은 번호)로 이동한다. 'N'은 'A'의 반대."
+    // 즉 A=더 높은 번호(최신 방향)/N=더 낮은 번호(과거 방향)인데, 게시판 글보기는 지금까지
+    // 정반대(A=다음글/더 낮은 번호, N=이전글/더 높은 번호)로 구현돼 있었다. 뉴스 기사 보기
+    // (commandRouterService.js)는 이미 책과 같은 방향으로 구현돼 있어(사용자 기존 사양),
+    // 게시판 쪽만 책·뉴스 규칙에 맞춰 방향을 뒤집는다(공용 인프라는 별도 검토 사항으로 유지).
     if (cmd === 'A' || cmd === ']') {
-      if (await showAdjacentPost(1)) {
+      if (await showAdjacentPost(-1)) {
         return true;
       }
     }
     if (cmd === 'N' || cmd === '[') {
-      if (await showAdjacentPost(-1)) {
+      if (await showAdjacentPost(1)) {
         return true;
       }
     }
