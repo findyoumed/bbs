@@ -189,10 +189,13 @@ export function createContactSysopScreen(deps) {
     }
 
     // 4) stage === 'sent_success' 발송 성공 [ENTER] 대기 인라인 입력
+    // [LOG_ID: 20260722_1550] 사용자 지적 — "선택 >>"은 이 줄에서 실제로 뭘 선택하는 게
+    // 아니라 그냥 [ENTER]만 누르면 되는 안내문이라 불필요했다. 프롬프트 라벨 없이 안내
+    // 문구만 남긴다(안 보이는 입력창은 그대로 Enter 키만 받는 용도로 유지).
     if (flow.stage === 'sent_success') {
       const inlineInputHtml = `<input id="tosysop-inline-sent" class="inline-tosysop-input" type="text" style="width: 1px; opacity: 0; position: absolute;" autofocus />`;
       transcriptLines.push({
-        prompt: '선택 >>',
+        prompt: '',
         value: `[ENTER] 키를 누르십시오. ${inlineInputHtml}`,
         isRawHtml: true
       });
