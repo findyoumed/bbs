@@ -80,12 +80,17 @@ export function createPolicyScreens(deps) {
 
   async function showPolicy(kind = 'tos', page = 1, fromHistory = false) {
     const normalizedKind = normalizePolicyKind(kind);
+    // [LOG_ID: 20260722_2200] menu-index/help와 동일한 원인의 버그 — F/B 페이지 넘김마다
+    // pushState해 히스토리를 쌓았고, 그 뒤 P(handleHistoryBack → window.history.back())를 누르면
+    // 실제 상위(GUIDE)가 아니라 방금 페이지로만 되돌아가 "P가 B처럼 작동"했다. 이미 policy
+    // 화면에 있었다면(=페이지 넘김) replaceState로 히스토리를 늘리지 않는다.
+    const stayingOnSameScreen = state.screen === 'policy';
     state.screen = 'policy';
     state.policyKind = normalizedKind;
     const built = buildPolicyAnsi(normalizedKind, page);
     state.page = built.page;
     state.policyTotalPages = built.totalPages;
-    if (!fromHistory) updateURL();
+    if (!fromHistory) updateURL(stayingOnSameScreen);
 
     await renderAnsiScreenWithTopbarSequential({
       ansiText: built.text,

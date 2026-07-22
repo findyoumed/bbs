@@ -113,6 +113,13 @@ export function createMenuIndexScreens(deps) {
     const fromHistory = pageOrFromHistory === true || maybeFromHistory === true;
     const requestedPage = pageOrFromHistory === true ? 1 : pageOrFromHistory;
 
+    // [LOG_ID: 20260722_2200] F/B로 페이지만 넘기는 것도 매번 새 브라우저 히스토리 항목을
+    // pushState하고 있었다 — 그래서 페이지를 넘긴 뒤 P(상위, HISTORY_BACK_SCREENS 폴백인
+    // handleHistoryBack()이 window.history.back() 사용)를 누르면 실제 상위 화면이 아니라
+    // 방금 넘긴 페이지로만 되돌아가 "P가 B처럼 작동"하는 것으로 보였다(사용자 보고: "메뉴
+    // 안내에서 p를 누르면 b로 작동하네"). 이미 menu-index에 있었다면(=페이지 넘김) 히스토리를
+    // 늘리지 않고 replaceState, 다른 화면에서 처음 들어온 경우에만 pushState한다.
+    const stayingOnSameScreen = state.screen === 'menu-index';
     state.screen = 'menu-index';
 
     // [LOG_ID: 20260718_1400] /index 로 URL 직접 진입하면 TOP을 거치지 않아 state.menuTree가
@@ -125,7 +132,7 @@ export function createMenuIndexScreens(deps) {
     const view = buildMenuIndexAnsi(requestedPage);
     state.page = view.page;
     state.menuIndexTotalPages = view.totalPages;
-    if (!fromHistory) updateURL();
+    if (!fromHistory) updateURL(stayingOnSameScreen);
 
     const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: view.text,

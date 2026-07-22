@@ -238,6 +238,11 @@ export function createHelpScreens(deps) {
 
   async function showHelp(cmdKey = '', pageOrOptions = 1) {
     const { fromHistory, page } = normalizeHelpOptions(pageOrOptions);
+    // [LOG_ID: 20260722_2200] menu-index와 동일한 원인의 버그 — F/B 페이지 넘김·분류(0~7) 전환마다
+    // pushState해 히스토리를 쌓았고, 그 뒤 P(handleHistoryBack → window.history.back())를 누르면
+    // 실제 상위(GUIDE 등)가 아니라 방금 페이지/분류로만 되돌아가 "P가 B처럼 작동"했다. 이미
+    // help 화면에 있었다면(=페이지·분류 전환) replaceState로 히스토리를 늘리지 않는다.
+    const stayingOnSameScreen = state.screen === 'help';
     state.screen = 'help';
 
     let helpView;
@@ -250,7 +255,7 @@ export function createHelpScreens(deps) {
     state.page = helpView.page;
     state.helpTotalPages = helpView.totalPages;
     if (!fromHistory) {
-      updateURL();
+      updateURL(stayingOnSameScreen);
     }
 
     // [LOG_ID: 20260707_2300] PC통신: 화면 전체(본문+하단 힌트/입력줄)가 위→아래로 이어서 나온다 —

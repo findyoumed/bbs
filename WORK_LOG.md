@@ -1,3 +1,24 @@
+## [2026-07-22 22:00] [버그 수정] 전체메뉴안내/도움말/이용약관 화면에서 F/B로 페이지를 넘긴 뒤 P를 누르면 실제 상위 화면이 아니라 방금 넘긴 페이지로만 되돌아가 "P가 B처럼 작동"하던 문제 수정
+
+**LOG_ID: 20260722_2200**
+목표: 사용자 리포트 — "https://01410.vercel.app/index 메뉴 안내에서 p를 누르면 b로 작동하네".
+조사: `menu-index`/`help`/`policy`는 자체 라우터에 P/M이 없어 `commandDispatcherExecution.js`의 `HISTORY_BACK_SCREENS` 공용 폴백(`handleHistoryBack()` → `window.history.back()`, 직전 LOG_ID 20260722_2000에서 도입)에 의존한다. 그런데 이 세 화면은 F(다음페이지)/B(이전페이지)를 누를 때마다 `showMenuIndex`/`showHelp`/`showPolicy` 내부에서 `updateURL()`을 인자 없이(=pushState) 호출하고 있어, 페이지를 한 번이라도 넘기면 브라우저 히스토리에 그 페이지가 새 항목으로 쌓였다. 이 상태에서 P를 누르면 `window.history.back()`은 (실제로 이 화면에 들어오기 전 있었던 GUIDE 등이 아니라) 방금 쌓인 "이전 페이지" 히스토리 항목으로만 돌아가 버려, 사용자 눈에는 P가 B(이전페이지)와 똑같이 동작하는 것처럼 보였다. `routingUrlBuilder.js`가 이 세 화면 모두 페이지 번호를 URL 쿼리(`?page=N`)에 실어 매번 다른 URL을 만드는 것도 원인을 키웠다(URL이 달라 `updateURL()`의 "URL 같으면 스킵" 가드도 통과 못 함).
+구현: `updateURL(replace)`가 이미 `replace=true`일 때 `pushState` 대신 `replaceState`를 쓰도록 지원하고 있었다(`routingModule.js`). 세 화면 모두 `state.screen`을 덮어쓰기 직전에 "이미 같은 화면에 있었는지"(`stayingOnSameScreen = state.screen === 'menu-index'|'help'|'policy'`)를 먼저 캡처해 두고, `updateURL()` 호출을 `updateURL(stayingOnSameScreen)`로 바꿨다 — 다른 화면에서 처음 들어올 때(예: GUIDE에서 GO INDEX)는 여전히 pushState로 히스토리에 새 항목을 남기고, 이미 그 화면 안에서 페이지만 넘기는 경우(F/B, help의 0~7 분류 전환, policy의 tos/privacy 전환 포함)는 replaceState로 히스토리를 늘리지 않는다. 파일: `public/js/core/menuIndexScreens.js`, `public/js/core/helpScreens.js`, `public/js/core/policyScreens.js`.
+검증: `node --check` 3개 파일 전체 통과. 실제 로컬 서버(Supabase 연동)를 띄우고 Playwright로 세 화면 각각 (1) `GO INDEX/HELP/GUIDE→TOS` 진입 → `F`(페이지 2, URL에 `?page=2` 반영 확인) → `P` → 화면이 `menu-index`/`help`/`policy`에 머물지 않고 실제 상위(main 또는 guide/board-select)로 이동하는지, (2) 페이지를 넘기지 않고 바로 `P`를 눌러도 여전히 정상적으로 상위로 이동하는지(기존 20260722_2000 수정이 이 변경으로 깨지지 않았는지) 총 9개 시나리오로 라이브 확인. `npm run smoke:vercel-ready`, `npm run smoke:menu-wiring`, `npm run qa:final` 전체 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 21:30] [확인/설명, 코드 변경 없음] 게시판 URL 대문자(`/NOTICE`) 표시는 회귀가 아니라 기존에 결정된 의도된 동작임을 재확인
+
+**LOG_ID: 20260722_2150**
+목표: 사용자 질의 — "https://01410.vercel.app/NOTICE notice 소문자로 바꾸지 않았나?"
+조사: `routingUrlBuilder.js`가 게시판 URL의 boardId를 의도적으로 `.toUpperCase()` 처리하는 근거를 과거 WORK_LOG에서 확인. LOG_ID 20260717_1925("게시판 URL 대문자 변환(정합성 동기화) 및 대소문자 무관 상태 복원 구현")에서 하이텔 원전 "GO NOTICE" 같은 대문자 명령 관례에 맞춰 주소창 표시를 `/board/NOTICE` 형태로 바꾸기로 결정했고, 곧이어 LOG_ID 20260717_1930에서 `/board` 접두사까지 제거해 지금의 `/NOTICE` 형태가 확정됐다. 이후 어떤 커밋에서도(가장 최근 병합된 병렬 세션의 대량 작업 포함) 이 결정을 뒤집거나 소문자로 되돌린 이력이 없음을 `git log`/WORK_LOG 전체 검토로 확인.
+결론: 소문자로 바뀐 적이 없으며, 대문자 `/NOTICE`가 현재도 유효한 의도된 사양이다 — 코드 변경 없음.
+결과: ✅ 완료(설명 응답)
+
+---
+
 ## [2026-07-22 21:00] [버그 수정] 여론광장(AGORA) 하위로 편입된 투표/설문·토론의 광장에서 P/M이 그 상위 메뉴를 건너뛰고 초기화면으로 가던 문제 추가 수정 — 메뉴 트리 전수 대조로 확인
 
 **LOG_ID: 20260722_2100**
