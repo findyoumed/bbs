@@ -45,6 +45,24 @@ function visibilityLabel(room) {
   return room?.password || room?.isPrivate ? '비밀방' : '공개';
 }
 
+// [LOG_ID: 20260722_2800] 하이텔 책(그림 6.2 "대화실 참여") 실측 — 원전은 입장/퇴장할 때
+// "■■ 닉네임(아이디) 님이 입장(퇴장)하였습니다. ■■" 시스템 메시지를 대화 로그에 함께
+// 남긴다. join()/leave()가 이 헬퍼로 만든 메시지를 각 드라이버의 messagesByRoomNo에 그대로
+// push하면, 이미 3초 간격으로 돌고 있는 /messages 폴링이 다른 참여자들에게도 자동으로
+// 전달한다(별도 폴링/스키마 불필요 — 메시지 자체가 두 드라이버 다 서버 메모리에만 있음).
+// 정확한 문구는 클라이언트(chatAnsiBuilders.js msgLine)가 type==='system'을 보고 조립한다.
+function buildSystemMessage(eventType, userId, nickName) {
+  return {
+    id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: 'system',
+    eventType,
+    userId: normalizeText(userId, 'guest'),
+    nickName: normalizeText(nickName, '손님'),
+    content: '',
+    createdAt: new Date().toISOString()
+  };
+}
+
 
 function summarizeParticipantCounts(participants = [], persistedAuthUserCount = 0) {
   const authUsers = new Set();
@@ -128,6 +146,7 @@ function publicRoom(room, counts = 0) {
 }
 
 module.exports = {
+  buildSystemMessage,
   createHttpError,
   maybeUuid,
   normalizeMaxUser,

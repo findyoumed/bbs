@@ -1,7 +1,7 @@
 'use strict';
 const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
-const { createHttpError, maybeUuid, normalizeMaxUser, normalizeRoomSecret, normalizeRoomText, normalizeSessionKey, normalizeText, publicRoom, summarizeParticipantCounts, roomKeyForNo } = require('./ChatRoomRepositoryShared');
+const { buildSystemMessage, createHttpError, maybeUuid, normalizeMaxUser, normalizeRoomSecret, normalizeRoomText, normalizeSessionKey, normalizeText, publicRoom, summarizeParticipantCounts, roomKeyForNo } = require('./ChatRoomRepositoryShared');
 const { ChatRoomMemberPersistence } = require('./ChatRoomMemberPersistence');
 const { ChatRoomRepositorySupabaseQueries } = require('./ChatRoomRepositorySupabaseQueries');
 
@@ -77,6 +77,8 @@ class SupabaseChatRoomRepository extends BaseRepository {
     if (!existing && nextSummary.userCount > normalizeMaxUser(room.max_user, 99)) throw createHttpError(409, '정원 초과');
     if (existing) Object.assign(existing, p); else participants.push(p);
     this.participantsByRoomNo.set(Number(room.room_no), participants);
+    // [LOG_ID: 20260722_2800] 원전(그림 6.2) 입장 알림 재현 — Memory 드라이버와 동일.
+    this._pushSystemMessage(room.room_no, 'join', p.userId, p.nickName);
     await this.memberPersistence.persistJoin(room, p); await this._touch(room.room_no);
     room.last_activity_at = now; return this._toPublicRoom(room, nextSummary);
   }
@@ -102,6 +104,11 @@ class SupabaseChatRoomRepository extends BaseRepository {
     }
 
     if (filtered.length) this.participantsByRoomNo.set(Number(room.room_no), filtered); else this.participantsByRoomNo.delete(Number(room.room_no));
+    // [LOG_ID: 20260722_2800] 원전(그림 6.2) 퇴장 알림 재현 — 방이 통째로 종료되는 위 분기는
+    // 메시지 저장소 자체를 지우므로 거기서는 남기지 않는다(Memory 드라이버와 동일 원칙).
+    if (leaving) {
+      this._pushSystemMessage(room.room_no, 'leave', leaving.userId, leaving.nickName);
+    }
     await this.memberPersistence.persistLeave(room, payload, context, filtered);
     const authCount = await this.memberPersistence.loadActiveAuthMemberCount(room.id);
     await this._touch(room.room_no); room.last_activity_at = new Date().toISOString();
@@ -179,7 +186,6 @@ class SupabaseChatRoomRepository extends BaseRepository {
 
   async sendMessage(roomNo, payload = {}, context = {}) {
     const num = Number(roomNo);
-    const messages = this.messagesByRoomNo.get(num) || [];
     const msg = {
       id: Date.now() + Math.random(),
       userId: normalizeText(context.userId, 'guest'),
@@ -187,11 +193,22 @@ class SupabaseChatRoomRepository extends BaseRepository {
       content: normalizeText(payload.content),
       createdAt: new Date().toISOString()
     };
-    messages.push(msg);
-    if (messages.length > 100) messages.shift(); // 최근 100개 유지
-    this.messagesByRoomNo.set(num, messages);
+    this._appendMessage(num, msg);
     await this._touch(num);
     return msg;
+  }
+
+  // [LOG_ID: 20260722_2800] join()/leave() 공용 — Memory 드라이버와 동일한 원리.
+  _pushSystemMessage(roomNo, eventType, userId, nickName) {
+    this._appendMessage(roomNo, buildSystemMessage(eventType, userId, nickName));
+  }
+
+  _appendMessage(roomNo, message) {
+    const num = Number(roomNo);
+    const messages = this.messagesByRoomNo.get(num) || [];
+    messages.push(message);
+    if (messages.length > 100) messages.shift(); // 최근 100개 유지
+    this.messagesByRoomNo.set(num, messages);
   }
 
   async listMessages(roomNo) {

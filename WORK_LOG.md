@@ -1,3 +1,18 @@
+## [2026-07-22 28:00] [기능 추가] 대화실 입장/퇴장 시스템 메시지 구현 — "■■ 닉네임(아이디) 님이 입장/퇴장하였습니다. ■■"
+
+**LOG_ID: 20260722_2800**
+목표: 사용자 지시 — 직전(20260722_2700) 작업에서 "보류"로 남겨뒀던 입장/퇴장 시스템 메시지를 "계속 구현".
+설계: 채팅 메시지 자체가 두 드라이버(Memory/Supabase) 모두 실제 DB 테이블이 아니라 서버 프로세스 메모리(`messagesByRoomNo` Map)에만 있다는 것을 확인했다 — 스키마 마이그레이션이 전혀 필요 없다는 뜻. 클라이언트는 이미 3초 간격으로 `/messages`를 폴링하고 있으므로, `join()`/`leave()`가 성공할 때 그 자리에서 시스템 메시지를 같은 저장소에 `push`만 해두면 별도의 참여자-목록 폴링/디핑 로직 없이도 방 안의 다른 모든 참여자에게 다음 폴링 때 자연스럽게 전달된다.
+구현:
+- `ChatRoomRepositoryShared.js` — `buildSystemMessage(eventType, userId, nickName)` 헬퍼 추가(`{ type:'system', eventType:'join'|'leave', userId, nickName, content:'', createdAt }` 형태).
+- `ChatRoomRepositoryMemory.js` — `sendMessage()`의 "push+100개 캡+set" 로직을 `_appendMessage()`로 뽑아내고, `_pushSystemMessage()`로 감쌌다. `join()` 성공 시(재입장 포함, 매번) 입장 메시지를, `leave()`가 참여자를 실제로 제거하는 정상 경로에서 퇴장 메시지를 남긴다 — 단, 방 자체가 통째로 종료되는 분기(방장 마지막 세션 퇴장)는 메시지 저장소도 함께 삭제되므로 거기서는 남기지 않는다(남겨도 즉시 버려져 무의미).
+- `ChatRoomRepositorySupabase.js` — 동일한 원리로 `join()`/`leave()`/`sendMessage()`에 `_pushSystemMessage()`/`_appendMessage()` 적용(Memory 드라이버와 대칭).
+- `chatAnsiBuilders.js` `msgLine()` — `message.type === 'system'`이면 `■■ 닉네임(아이디) 님이 입장/퇴장하였습니다. ■■` 형식으로 렌더링(하이텔 책 그림 6.2 실측 문구 그대로), 그 외 일반 메시지는 직전 작업의 `닉네임(아이디)  메시지` 형식 그대로 유지.
+검증: `node --check` 4개 파일 전체 통과. `buildChatRoomAnsi()`를 Node ESM으로 직접 호출해 join/leave 시스템 메시지 + 일반 메시지가 섞인 목업 데이터로 정확한 문구가 렌더링됨을 확인. 실제 로컬 서버(Supabase 드라이버)에 curl로 join→leave를 실제로 호출해 `/messages` 응답에 시스템 메시지가 순서대로 쌓이는 것을 API 레벨에서 확인. Playwright 실브라우저로 GO CHAT → 방 입장 시 실제 화면에 "■■ guest(guest) 님이 입장하였습니다. ■■"가 정상 렌더링됨을 확인, 콘솔 에러 0건. `npm run smoke:chat-rooms`가 새 메시지 개수(입장 시스템 메시지 2건 포함)를 반영하지 못해 실패한 것을 발견 — 어서션을 시스템/일반 메시지를 구분해서 검증하도록 스크립트 자체를 정확하게 갱신(완화가 아니라 새 정상 동작을 올바르게 반영). `npm run smoke:vercel-ready`, `npm run qa:final`, `npm run smoke:renderer-ui` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-22 27:00] [원전 대조] 대화실 메시지 표시 형식을 하이텔 책(그림 6.2 "대화실 참여") 실측과 대조해 "[닉네임] 메시지"→"닉네임(아이디) 메시지"로 수정
 
 **LOG_ID: 20260722_2700**

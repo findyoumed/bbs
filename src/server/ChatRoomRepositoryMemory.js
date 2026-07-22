@@ -1,6 +1,7 @@
 'use strict';
 
 const {
+  buildSystemMessage,
   createHttpError,
   normalizeMaxUser,
   normalizeRoomSecret,
@@ -113,6 +114,10 @@ class MemoryChatRoomRepository {
       room.participants.push(participant);
     }
 
+    // [LOG_ID: 20260722_2800] 원전(그림 6.2) 입장 알림 재현 — 재입장(같은 세션 재조인)도
+    // 실제 터미널에서 다시 접속한 것과 같으므로 매번 알린다.
+    this._pushSystemMessage(room.no, 'join', participant.userId, participant.nickName);
+
     return publicRoom(room, summarizeParticipantCounts(room.participants));
   }
 
@@ -146,6 +151,13 @@ class MemoryChatRoomRepository {
     }
 
     room.participants = remainingParticipants;
+    // [LOG_ID: 20260722_2800] 원전(그림 6.2) 퇴장 알림 재현. 방 자체가 곧 사라지는 경우(위
+    // 조기 return 분기)는 메시지도 함께 버려지므로 거기서는 남기지 않는다 — 여기 도달했다는
+    // 것 자체가 방이 계속 존재한다는 뜻이라 안전하게 남긴다(방이 이 직후 _removeIfDisposable로
+    // 정리돼도 메시지 맵 전체가 지워지므로 무해하다).
+    if (leavingParticipant) {
+      this._pushSystemMessage(room.no, 'leave', leavingParticipant.userId, leavingParticipant.nickName);
+    }
     this._removeIfDisposable(room);
     return publicRoom(room, summarizeParticipantCounts(room.participants));
   }
@@ -213,8 +225,6 @@ class MemoryChatRoomRepository {
   sendMessage(roomNo, payload = {}, context = {}) {
     this._cleanup();
     const room = this._findRoom(roomNo);
-    const numericRoomNo = Number(room.no || roomNo);
-    const messages = this.messagesByRoomNo.get(numericRoomNo) || [];
     const rawContent = payload?.content ?? payload?.message ?? '';
     const content = normalizeText(rawContent);
 
@@ -230,13 +240,24 @@ class MemoryChatRoomRepository {
       createdAt: new Date().toISOString()
     };
 
+    this._appendMessage(room.no || roomNo, message);
+    return { ...message };
+  }
+
+  // [LOG_ID: 20260722_2800] join()/leave() 공용 — 입장/퇴장 시스템 메시지를 일반 메시지와
+  // 동일한 저장소에 남겨, 이미 3초 간격으로 도는 /messages 폴링이 자동으로 실어나르게 한다.
+  _pushSystemMessage(roomNo, eventType, userId, nickName) {
+    this._appendMessage(roomNo, buildSystemMessage(eventType, userId, nickName));
+  }
+
+  _appendMessage(roomNo, message) {
+    const numericRoomNo = Number(roomNo);
+    const messages = this.messagesByRoomNo.get(numericRoomNo) || [];
     messages.push(message);
     if (messages.length > 100) {
       messages.shift();
     }
-
     this.messagesByRoomNo.set(numericRoomNo, messages);
-    return { ...message };
   }
 
   listMessages(roomNo) {

@@ -160,6 +160,17 @@ export function createChatAnsiBuilders(deps) {
     function msgLine(message) {
       const who = String(message.nickName || message.userId || '?');
       const senderId = String(message.userId || '').trim().toLowerCase();
+
+      // [LOG_ID: 20260722_2800] 하이텔 책(그림 6.2 "대화실 참여") 실측 — 원전은 입장/퇴장할 때
+      // "■■ 닉네임(아이디) 님이 입장(퇴장)하였습니다. ■■" 시스템 메시지를 대화 로그에 함께
+      // 남긴다(join()/leave()가 서버에서 이 메시지를 만들어 messagesByRoomNo에 심어둔다).
+      if (message.type === 'system') {
+        const idLabel = senderId ? `(${message.userId})` : '';
+        const verb = message.eventType === 'leave' ? '퇴장' : '입장';
+        const line = `■■ ${who}${idLabel} 님이 ${verb}하였습니다. ■■`;
+        return ansiColor(14) + fitCell(line, targetCols - 2) + ANSI_RESET;
+      }
+
       let text = String(message.content || message.message || '');
 
       const whisperMatch = text.match(/^\[TO:(\S+)\]\s*(.+)$/i);

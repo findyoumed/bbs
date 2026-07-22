@@ -205,8 +205,14 @@ async function main() {
     assert(joinedRoomB.guestSessionCount === 2, 'second guest join should increment guest session count');
     assert(joinedRoomB.sessionCount === 2, 'second guest join should increment session count');
     assert(sentMessage.content === '안녕하세요 채팅 스모크', 'chat message create should preserve content');
-    assert(Array.isArray(listedMessages) && listedMessages.length === 1, 'chat message list should return sent messages');
-    assert(listedMessages[0].content === '안녕하세요 채팅 스모크', 'chat message list should preserve message content');
+    // [LOG_ID: 20260722_2800] join()이 이제 원전(하이텔 그림 6.2) 재현으로 입장 시스템 메시지를
+    // 함께 남긴다 — session-1/session-2 두 번의 성공한 join(joinErrorStatus/invalidSessionStatus
+    // 실패 시도는 시스템 메시지를 만들지 않는다) + 실제 전송 메시지 1건 = 총 3건이 정상이다.
+    const realMessages = listedMessages.filter((m) => m.type !== 'system');
+    const joinSystemMessages = listedMessages.filter((m) => m.type === 'system' && m.eventType === 'join');
+    assert(Array.isArray(listedMessages) && listedMessages.length === 3, 'chat message list should include join system messages plus the sent message');
+    assert(realMessages.length === 1 && realMessages[0].content === '안녕하세요 채팅 스모크', 'chat message list should preserve the sent message content');
+    assert(joinSystemMessages.length === 2, 'chat message list should include a join system message for each successful join');
     assert(fullErrorStatus === 409, 'full room should reject extra users');
     assert(listedAfterOneLeave.some((room) => room.no === createdRoom.no && room.userCount === 1 && room.guestSessionCount === 1), 'room should remain after a non-owner participant leaves');
     assert(!listedAfterAllLeave.some((room) => room.no === createdRoom.no), 'room should auto-close when the owner session leaves');
