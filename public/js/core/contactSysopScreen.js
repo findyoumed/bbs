@@ -59,25 +59,40 @@ export function createContactSysopScreen(deps) {
     ];
   }
 
+  function renderLine(line) {
+    const prompt = String(line?.prompt || '');
+    const value = String(line?.value ?? '');
+    const promptHtml = prompt ? `<span class="ansi-cyan">${esc(prompt)}</span>` : '';
+    const valueHtml = value ? `${prompt ? ' ' : ''}<span class="ansi-white">${esc(value)}</span>` : '';
+    return `<div class="ansi-line">${promptHtml}${valueHtml}</div>`;
+  }
+
+  // [LOG_ID: 20260722_1100] 사용자 지적: "글쓰기 편하게 되어 있어야지. 지금은 글 제목을
+  // 아래쪽에서 넣고 있잖아" — 원전(그림 7.6)은 수신/제목이 편지쓰기 화면 맨 위에 고정된
+  //머리글로 계속 보이는데, 이전 구현은 그 줄들을 스크롤되는 트랜스크립트 배열에 넣어서
+  // 본문을 몇 줄만 써도 MAX_VISIBLE_TRANSCRIPT_LINES 말줄임에 밀려 화면에서 사라졌다 —
+  // 즉 몇 줄 쓰고 나면 누구에게, 무슨 제목으로 쓰는 중인지 안 보이는 상태가 됐었다. 수신/
+  // 제목을 트랜스크립트가 아니라 매 렌더마다 새로 만드는 고정 머리글로 분리해, 본문을
+  // 아무리 길게 써도 화면 맨 위에서 절대 스크롤되어 사라지지 않게 한다.
+  function buildHeaderHtml(flow) {
+    if (!flow || flow.stage === 'subject') {
+      return '';
+    }
+    return `${renderLine({ prompt: '수신 :', value: '시삽' })}${renderLine({ prompt: '제목 :', value: flow.subject })}${renderLine({ prompt: '', value: '' })}`;
+  }
+
   function renderContactSysopScreen() {
     const flow = state._contactSysopFlow;
     if (!flow) return;
 
-    const transcriptHtml = getVisibleTranscript(flow)
-      .map((line) => {
-        const prompt = String(line?.prompt || '');
-        const value = String(line?.value ?? '');
-        const promptHtml = prompt ? `<span class="ansi-cyan">${esc(prompt)}</span>` : '';
-        const valueHtml = value ? `${prompt ? ' ' : ''}<span class="ansi-white">${esc(value)}</span>` : '';
-        return `<div class="ansi-line">${promptHtml}${valueHtml}</div>`;
-      })
-      .join('');
+    const headerHtml = buildHeaderHtml(flow);
+    const transcriptHtml = getVisibleTranscript(flow).map(renderLine).join('');
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     renderRawHtmlScreenWithTopbar({
       leftLabel: 'TOSYSOP',
       centerLabel: '건의하기',
-      bodyHtml: transcriptHtml,
+      bodyHtml: headerHtml + transcriptHtml,
       screenEl,
       isMobile
     });
@@ -113,11 +128,10 @@ export function createContactSysopScreen(deps) {
   // 계속 쓸 수 있게 한다(완전 취소는 기존처럼 /q, P, M, B로).
   function enterConfirmStage(flow) {
     flow.stage = 'confirm';
+    // [LOG_ID: 20260722_1100] 수신/제목은 buildHeaderHtml()이 이미 고정 머리글로 보여주고
+    // 있으므로 미리보기에서 다시 반복하지 않는다(중복 표시 방지).
     appendContactSysopLine('', '');
     appendContactSysopLine('', '--- 보낼 내용 미리보기 ---');
-    appendContactSysopLine('수신 :', '시삽');
-    appendContactSysopLine('제목 :', flow.subject);
-    appendContactSysopLine('', '');
     flow.bodyLines.forEach((line) => appendContactSysopLine('', line || ' '));
     appendContactSysopLine('', '--------------------------');
     appendContactSysopLine('[선택]', '명령(1:발송, 0:이어서 작성)');
@@ -184,9 +198,12 @@ export function createContactSysopScreen(deps) {
       }
       flow.subject = trimmed;
       flow.stage = 'body';
-      appendContactSysopLine('', `제목: ${flow.subject}`);
-      appendContactSysopLine('', '');
-      appendContactSysopLine('', '내용을 한 줄씩 입력하세요. 완료: /s 또는 SEND, 취소: /q, P, M, B');
+      // [LOG_ID: 20260722_1100] 수신/제목은 이제 buildHeaderHtml()이 고정 머리글로 그리므로
+      // 트랜스크립트엔 다시 넣지 않는다 — 대신 본문 작성용으로 트랜스크립트를 새로 시작해
+      // 말줄임 예산(MAX_VISIBLE_TRANSCRIPT_LINES) 전체를 본문 줄에 쓸 수 있게 한다.
+      flow.transcript = [
+        { prompt: '', value: '내용을 한 줄씩 입력하세요. 완료: /s 또는 SEND, 취소: /q, P, M, B' }
+      ];
       renderContactSysopScreen();
       return true;
     }
