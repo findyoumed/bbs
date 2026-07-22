@@ -28,38 +28,60 @@ export function createContactSysopScreen(deps) {
     return 'tosysop-inline-title';
   }
 
-  // [LOG_ID: 20260722_1500] 사용자 지적("포커스가 2군데로 쪼개지는 현상") — cmdInput을
-  // disabled로 막아둬도, 이 화면이 모르는 다른 전역 로직(예: ESC 명령취소, 대화상자
-  // open/close 등)이 cmdInput.disabled=false + focus()를 부르면 포커스가 다시 갈라진다.
-  // 그 모든 외부 호출 지점을 일일이 추적해 막는 대신, 이 화면이 켜져 있는 동안엔 어디를
-  // 클릭하든(인라인 입력창 자체를 클릭한 경우 제외) 항상 그 순간의 인라인 입력창으로 포커스를
-  // 되돌리는 캡처 리스너를 하나 둔다 — 원인이 무엇이든 결과적으로 포커스가 한 곳(인라인 입력창)
-  // 으로만 유지된다.
-  let focusGuardHandler = null;
+  // [LOG_ID: 20260722_1530] 사용자 지적 — 직전 수정(20260722_1500)은 "포커스가 일단 다른
+  // 곳으로 찍혔다가 되돌아오는" 방식(click 캡처 후 requestAnimationFrame으로 재확보)이라,
+  // 아주 짧지만 실제로 포커스가 두 번 이동하는 게 보였다("포커스가 2군데로 쪼개지는" 원인).
+  // "처음부터 포커스는 1개로"라는 요청대로 mousedown만 막아봤더니(20260722_1530 1차 시도),
+  // 실브라우저 재현 테스트에서 여전히 뚫렸다 — mousedown과 click은 서로 다른 이벤트라
+  // mousedown에서 stopPropagation해도 뒤이어 발생하는 별도의 click 이벤트(그리고 거기 달린
+  // 다른 전역 리스너의 cmdInput.focus() 호출)는 전혀 막지 못했다(재현 테스트로 확인 후 정정).
+  // 그래서 두 이벤트 모두에 개입한다 — mousedown에서 preventDefault로 브라우저의 기본
+  // 블러/포커스 이동 자체를 취소하고(네이티브 동작 차단), 뒤따르는 click은 capture 단계
+  // document에서 stopPropagation으로 끊어 그 이후의 다른 리스너(bubble 단계 포함)에 아예
+  // 도달하지 못하게 한다 — 두 이벤트 다 막아야 인라인 입력창이 단 한 번도 포커스를 안 잃는다.
+  let focusGuardHandlers = null;
 
   function installFocusGuard() {
-    if (typeof document === 'undefined' || focusGuardHandler) return;
-    focusGuardHandler = (event) => {
+    if (typeof document === 'undefined' || focusGuardHandlers) return;
+
+    const isOutsideActiveInput = (event) => {
       const flow = state._contactSysopFlow;
-      if (!flow) return;
+      if (!flow) return false;
       const activeId = getActiveInlineInputId(flow);
       const activeInput = activeId ? document.getElementById(activeId) : null;
-      if (!activeInput || event.target === activeInput) return;
-      requestAnimationFrame(() => {
-        if (document.activeElement === activeInput) return;
+      return Boolean(activeInput) && event.target !== activeInput;
+    };
+
+    const onMouseDown = (event) => {
+      if (isOutsideActiveInput(event)) {
+        event.preventDefault();
+      }
+    };
+
+    const onClickCapture = (event) => {
+      if (!isOutsideActiveInput(event)) return;
+      event.stopPropagation();
+      const flow = state._contactSysopFlow;
+      const activeId = getActiveInlineInputId(flow);
+      const activeInput = document.getElementById(activeId);
+      if (activeInput && document.activeElement !== activeInput) {
         activeInput.focus();
         const len = activeInput.value.length;
         activeInput.setSelectionRange(len, len);
-      });
+      }
     };
-    document.addEventListener('click', focusGuardHandler, true);
+
+    focusGuardHandlers = { mousedown: onMouseDown, click: onClickCapture };
+    document.addEventListener('mousedown', onMouseDown, true);
+    document.addEventListener('click', onClickCapture, true);
   }
 
   function removeFocusGuard() {
-    if (focusGuardHandler && typeof document !== 'undefined') {
-      document.removeEventListener('click', focusGuardHandler, true);
+    if (focusGuardHandlers && typeof document !== 'undefined') {
+      document.removeEventListener('mousedown', focusGuardHandlers.mousedown, true);
+      document.removeEventListener('click', focusGuardHandlers.click, true);
     }
-    focusGuardHandler = null;
+    focusGuardHandlers = null;
   }
 
   function clearContactSysopFlow() {
