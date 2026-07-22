@@ -177,8 +177,17 @@ export function createCommandDispatcherExecution(deps) {
       async () => await handleConfCommand({ s: screen, cmd, rawCmd: normalized, context }),
       async () => input && await handleGlobalCommand({ cmd, rawCmd: normalized, context }),
       async () => await handleEntryCommand({ s: screen, cmd, context }),
-      async () => HISTORY_BACK_SCREENS.has(screen) && cmd === 'B' && (await handleHistoryBack(), true),
-      async () => HISTORY_BACK_SCREENS.has(screen) && ['P', 'M', 'T'].includes(cmd) && (await showMain(), true),
+      // [LOG_ID: 20260722_2000] 사용자 리포트: "/policy/tos에서 P를 누르면 상위메뉴로 가는 게
+      // 아니라 초기화면으로 이동해버리네" — P/M(상위)이 T(초기화면)와 똑같이 무조건 showMain()을
+      // 타고 있었다. 이 목록의 화면들(policy/help/menu-index 등)은 자체 라우터가 없어 그 화면
+      // 진입 전 어디 있었는지(GUIDE 메뉴 등 실제 "상위")를 모르는데, showMain()은 그 맥락을
+      // 무시하고 항상 맨 처음 화면으로 보내버린다 — B(이전페이지 아님, HISTORY_BACK_SCREENS
+      // 전용 실제 "뒤로가기")는 이미 handleHistoryBack()(브라우저 히스토리 기반, 실제 진입
+      // 전 화면으로 복귀)을 쓰고 있었는데 P/M만 빠져 있었다. 사이트 전역 관례(M=P 동급,
+      // hitel_upgrade_plan.txt P4-3 "사용자 결정: 현행 유지")대로 P/M도 B와 동일하게
+      // handleHistoryBack()을 타도록 하고, T(초기화면 전용)만 showMain()으로 남긴다.
+      async () => HISTORY_BACK_SCREENS.has(screen) && ['B', 'P', 'M'].includes(cmd) && (await handleHistoryBack(), true),
+      async () => HISTORY_BACK_SCREENS.has(screen) && cmd === 'T' && (await showMain(), true),
       async () => await handleChatCommand({ input, rawCmd: normalized, cmd, context }),
       async () => await handleMemoCommand({ input, rawCmd: normalized, cmd, context }),
       async () => await handleMyInfoCommand({ input, rawCmd: normalized, cmd, context }),

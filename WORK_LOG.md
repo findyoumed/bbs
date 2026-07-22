@@ -1,3 +1,14 @@
+## [2026-07-22 20:00] [버그 수정] 자체 라우터 없는 화면(정책/도움말/전체메뉴 등)에서 P/M(상위)이 실제 상위 화면이 아니라 무조건 초기화면으로 가버리던 문제 수정
+
+**LOG_ID: 20260722_2000**
+목표: 사용자 리포트 — "/policy/tos 이런 메뉴에서 P 를 누르면 상위메뉴로 가는게 아니라 초기화면으로 이동해버리네".
+조사: `commandDispatcherExecution.js`의 `HISTORY_BACK_SCREENS`(자체 라우터가 없어 P/M/T/B를 공용 폴백에 의존하는 화면 목록 — policy/help/menu-index/history/profile/my-stats/active-users/activity-summary/system-diagnostics/system-log)에서, `B`는 이미 `handleHistoryBack()`(브라우저 히스토리 기반 — 실제 진입 전 화면으로 복귀)을 타고 있었는데, `P`·`M`·`T` 세 개가 전부 `showMain()`(무조건 초기화면)으로 뭉뚱그려져 있었다. `T`(초기화면)는 원래 그게 맞지만, `P`·`M`(상위)은 사이트 전역 관례상 실제 상위 화면으로 가야 한다(이미 이번 세션에서 "M=P 동급" 관례를 여러 번 확인·유지해온 바 있음) — `policyScreens.js`의 `showPolicy()`가 `updateURL()`로 이미 브라우저 히스토리에 진입 전 화면(예: GUIDE 메뉴)을 쌓아두고 있어, `B`처럼 `handleHistoryBack()`을 쓰면 그대로 정확한 상위로 복귀할 수 있는데 그 경로를 안 쓰고 있었다.
+구현: `P`·`M`을 `B`와 같은 그룹으로 묶어 셋 다 `handleHistoryBack()`을 타도록 수정, `T`만 별도로 `showMain()`을 유지.
+검증: 디스패처를 Node ESM으로 직접 임포트해(모든 화면별 핸들러를 없음으로 모킹) `policy` 화면에서 P/M이 `handleHistoryBack()`을 타고 `showMain()`은 안 타는지, T는 반대로 `showMain()`만 타는지, B는 기존대로 유지되는지 7개 어서션으로 확인. 실제 로컬 서버(Supabase 연동)를 띄우고 Playwright로 `GO GUIDE → GO TOS → P` 시퀀스를 그대로 재현해, P를 누르면 URL이 `/policy/tos`에서 `/guide`(진짜 상위)로 돌아가고 `main`으로는 안 감을 라이브로 확인. `node --check` 통과, `npm run loop:verify`(9종) 재통과.
+결과: ✅ 완료 — HISTORY_BACK_SCREENS에 속한 10개 화면 전부에서 P/M이 이제 실제 상위 화면으로 정확히 복귀한다.
+
+---
+
 ## [2026-07-22 17:00] [병합] 병렬 세션(로컬)의 건의하기 인라인 에디터 전면 개편과 이 세션의 한글 오타 복원 수정을 병합 — 재통합 중 "M" 취소 키가 힌트엔 있는데 실제로는 빠져 있던 버그 추가 발견·수정
 
 **LOG_ID: 20260722_1700**
