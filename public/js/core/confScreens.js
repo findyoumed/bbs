@@ -57,7 +57,10 @@ export function createConfScreens(deps) {
     if (!fromHistory) { updateURL(); pushHistory(); }
     try {
       const rooms = await apiFetch('/api/conf/rooms?closed=1');
-      await render(buildConfRoomListAnsi(rooms || []), 'confRooms', '회의실 번호 입력 >> ');
+      // [LOG_ID: 20260722_2600] 사용자 지적("다른 메뉴들은 선택 >> 같은데") — 회의실 목록은
+      // GAME 메뉴·board-select 등 다른 번호 선택 목록과 같은 구조인데 커스텀 프롬프트를 써서
+      // 달라 보였다. 인자를 생략해 기본 프롬프트("선택 >>")를 쓰도록 통일한다.
+      await render(buildConfRoomListAnsi(rooms || []), 'confRooms');
     } catch (e) {
       setHint('회의실 목록을 가져오지 못했습니다: ' + e.message);
     }
@@ -86,7 +89,9 @@ export function createConfScreens(deps) {
       const map = {};
       (agendas || []).forEach((a) => { map[a.no] = a.id; });
       state.serviceData.agendaIdByNo = map;
-      await render(buildConfAgendaListAnsi(room, agendas || []), 'confAgendas', '안건 번호 입력 >> ');
+      // [LOG_ID: 20260722_2600] 위 회의실 목록과 동일한 사유 — 안건 목록도 번호로 항목을 고르는
+      // 목록 화면이라 기본 프롬프트("선택 >>")를 쓰도록 통일한다.
+      await render(buildConfAgendaListAnsi(room, agendas || []), 'confAgendas');
     } catch (e) {
       setHint('안건 목록을 가져오지 못했습니다: ' + e.message);
       await showConfRooms(true);

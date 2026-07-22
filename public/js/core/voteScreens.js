@@ -59,7 +59,11 @@ export function createVoteScreens(deps) {
     try {
       const votes = await apiFetch('/api/votes');
       const ansi = buildVoteListAnsi(votes || []);
-      await render(ansi, 'voteList', '설문 번호 입력 >> ');
+      // [LOG_ID: 20260722_2600] 사용자 지적("다른 메뉴들은 선택 >> 같은데") — 설문 목록도
+      // 번호로 항목을 고르는 목록 화면이라 기본 프롬프트("선택 >>")를 쓰도록 통일한다.
+      // (참고: 아래 vote-detail의 '투표 번호 입력 >>'는 단순 탐색이 아니라 실제 투표를
+      // 행사하는 화면이라 의도적으로 남겨둔다.)
+      await render(ansi, 'voteList');
     } catch (e) {
       setHint('설문조사 목록을 가져오지 못했습니다: ' + e.message);
     }
