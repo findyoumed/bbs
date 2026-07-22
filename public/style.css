@@ -3024,3 +3024,34 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
     50% { opacity: 0.4; }
 }
 
+/* [LOG_ID: 20260722_1310] 본문 인라인 커서 실시간 깜빡임 전용 클래스 */
+@keyframes ansi-cursor-blink-anim {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+.ansi-cursor-blink {
+    animation: ansi-cursor-blink-anim 1s step-start infinite;
+    display: inline-block;
+}
+
+/* [LOG_ID: 20260722_1330] 건의하기 제목 인라인 직접 입력창 전용 스타일 */
+.inline-tosysop-input {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    color: #ffffff !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    caret-color: #ffffff !important;
+    /* [LOG_ID: 20260722_1500] 65%처럼 넓은 기본폭은 JS(adjustWidth)가 실제 글자수 기준
+       ch폭으로 덮어쓰기 전까지 아주 짧게 화면에 스치며, 그 사이 클릭하면 글자 뒤가 아닌
+       입력창 우측 빈 공간을 클릭하게 된다 — JS 최소값(5ch)과 맞춰 그 틈을 없앤다. */
+    width: 5ch;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+
+

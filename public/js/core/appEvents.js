@@ -314,6 +314,8 @@ export function bindAppEvents(deps) {
     if (terminalWrapper) {
       terminalWrapper.addEventListener('click', (event) => {
         if (event.target.closest('input, textarea, select')) return;
+        // [LOG: 20260722_1407] 화면 내부에 인라인 입력창(예: 건의하기)이 렌더링되어 있다면 글로벌 포커스를 cmdInput으로 뺏지 않음
+        if (document.querySelector('#terminal-screen input, #terminal-screen textarea, #terminal-screen select')) return;
         const selection = window.getSelection();
         if (selection && selection.toString().length > 0) return;
         cmdInput.focus();

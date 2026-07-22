@@ -1,4 +1,271 @@
+## [2026-07-22 15:00] [버그 수정] 건의하기 인라인 입력창 — 클릭 시 캐럿이 항상 끝으로 튕기던 버그 수정, 포커스 탈취를 원인 추적 대신 재확보(reclaim) 방식으로 근본 방어
+
+**LOG_ID: 20260722_1500**
+목표: 사용자가 인라인 입력창 도입(20260722_1410~) 이후 구체적인 버그 리포트 2건을 제시 — (1) "포커스가 2군데로 쪼개지는 현상": 20260722_1407에서 `appEvents.js`의 `terminalWrapper` 클릭 리스너에 가드를 추가했지만 여전히 어딘가에서 충돌 발생. (2) "텍스트 클릭 시 커서가 우측 끝에 멈추는 현상": 어느 위치를 클릭하든 캐럿이 항상 글자 맨 끝에 가 있어야 하는데(원했던 동작) 실제로는 그렇게 되고 있었다고 착각한 리포트였으나, 코드를 보니 실제 버그는 정반대였다 — `inlineInput.onclick`이 클릭 위치와 무관하게 항상 `setSelectionRange(끝,끝)`을 강제하고 있어, 텍스트 **중간**을 클릭해도 캐럿이 그 자리에 안 붙고 끝으로 튕겨나가는 게 실제 결함이었다(사용자가 "여백 클릭 시 끝으로 감"이라고 표현한 현상의 근본 원인).
+**버그 1(캐럿) 수정**: `renderContactSysopScreen()`에서 매 렌더마다 인라인 `<input>`에 걸던 `onclick` 핸들러(항상 끝으로 캐럿 강제)를 완전히 제거했다 — 클릭한 위치에 캐럿을 놓는 건 브라우저 네이티브 `<input>`이 이미 정확히 하는 동작이라 별도 처리가 불필요했다(오히려 그 강제 로직이 네이티브 동작을 방해하고 있었음). 렌더 직후 첫 포커스 시에만 끝에 캐럿을 두는 기존 로직(`inlineInput.focus(); setSelectionRange(len,len)`)은 유지 — 이건 "이어서 타이핑"을 위해 필요한 동작이라 문제없다.
+**버그 2(포커스 탈취) 수정**: 20260722_1407은 `appEvents.js`의 특정 리스너 하나에만 가드를 추가하는 "원인 지점 추적" 방식이었는데, `cmdInput.focus()`/`cmdInput.disabled=false`를 호출하는 지점이 코드베이스 전역에 최소 8곳(`commandExecutionState.js`, `commandPalette.js`, `terminalDialog.js`, `terminalHintFooter.js`, `terminalLoadingState.js`, `terminalUiCore.js` 등, ESC 명령취소·대화상자 open/close·로딩 상태 종료 등 다양한 트리거) 있어 전부 추적해 가드를 넣는 건 깨지기 쉬운 방식이었다. 대신 `contactSysopScreen.js` 자체에 "이 화면이 켜져 있는 동안 인라인 입력창이 아닌 곳을 클릭하면 항상 그 인라인 입력창으로 포커스를 되돌리는" capture 단계 `document` 클릭 리스너(`installFocusGuard`/`removeFocusGuard`)를 추가했다 — 원인이 무엇이든(외부의 어느 코드가 포커스를 훔쳐가든) 결과적으로 포커스가 항상 인라인 입력창 하나로 재확보되므로, 새로운 미래의 포커스 탈취 경로가 추가돼도 이 화면 안에서는 안전하다.
+부수 정리: `width: 65%`이던 `.inline-tosysop-input` 기본 CSS 폭을 JS의 최소 폭(5ch)과 맞춰, 렌더 직후 JS가 실제 글자수 기준 폭으로 덮어쓰기 전까지의 아주 짧은 순간에도 입력창이 과도하게 넓어 보이지 않게 정리.
+검증: 실제 렌더 HTML을 정적 HTTP 서버로 띄워 Playwright 실브라우저로 "HelloWorld"(10자) 입력창의 정중앙을 클릭 → `selectionStart/End`가 정확히 5(정중앙)로 찍힘을 확인(온클릭 강제 로직이 사라져 네이티브 캐럿 배치가 정상 동작함을 실증). `node --check` 통과, `npm run loop:verify`(9종) 재통과.
+결과: ✅ 완료 — 캐럿 버그는 코드 제거로 근본 해결 확인, 포커스 탈취는 "재확보" 방식으로 원인 불문 방어(추후 로그인 가능한 세션에서 실사용자 클릭 시나리오 재확인 권장).
+
+---
+
+## [2026-07-22 14:07] [버그 수정] 건의하기 등 인라인 에디터 화면에서 빈 곳 클릭 시 숨겨진 하단 입력창으로 포커스 탈취되는 버그 해결
+
+**LOG_ID: 20260722_1407**
+목표: `contact-sysop` 화면 등 인라인 입력창을 사용하는 화면에서 빈 화면을 마우스로 클릭할 때, 글로벌 클릭 리스너가 작동하여 보이지 않는 하단 풋터의 `cmdInput`으로 포커스를 강제 탈취하던 오작동(찍히는 위치가 2군데로 느껴지던 현상) 해결.
+변경 파일: public/js/core/appEvents.js
+수행 작업:
+1) `appEvents.js`의 `terminalWrapper` 클릭 리스너 내부에 `#terminal-screen`에 인라인 input이 존재하는지 검사하는 가드 조건 (`document.querySelector(...)`) 추가.
+실행: `node --check public/js/core/appEvents.js`
+기대: 빌드 및 문법 체크 통과, 빈 곳 클릭 시 포커스 탈취 차단.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 14:10] [기능 복구 및 버그 수정] 건의하기 롤백 복구 및 비동기 클릭 커서 고정 적용
+
+**LOG_ID: 20260722_1410**
+목표: 1) 다른 에이전트의 덮어쓰기 작업으로 유실(롤백)되었던 메일 전송 성공 시 [ENTER] 대기 화면 및 다음 화면 '1' 잔상 제거 로직을 최신 14:10 버전에 맞게 완벽히 복구 및 병합. 2) 마우스로 입력창 클릭 시 기본 브라우저 동작에 의해 캐럿이 뒤로 밀리는 문제를 비동기 `setTimeout` 고정으로 해결.
+변경 파일: public/js/core/contactSysopScreen.js
+수행 작업:
+1) `submitContactSysop()`의 메일 발송 성공 시 `sent_success` 단계로 분기하도록 복구.
+2) `renderContactSysopScreen()`에서 `sent_success` 단계 렌더링 및 하단 푸터 숨김 조건 복구.
+3) `setTimeout` 바인딩 시 `sent_success`에 대한 엔터키 리스너 추가 및 `onclick` 시 비동기 `setTimeout` 캐럿 복구 적용.
+실행: `node --check public/js/core/contactSysopScreen.js`
+기대: 빌드 및 문법 체크 통과, 발송 후 엔터 대기 복구 완료.
+결과: ✅ 진행 중
+
+---
+
+## [2026-07-22 14:04] [기능 개선] 건의하기(TOSYSOP) 인라인 입력창 클릭 시 커서 위치 끝으로 강제 및 동적 너비 조절 적용
+
+**LOG_ID: 20260722_1404**
+목표: 마우스로 인라인 입력창의 오른쪽 여백을 누를 때 커서가 우측 빈 공간에 멈추는 현상을 수정하여, 항상 글자 끝으로 달라붙고 입력창 가로 폭이 글자 수에 맞게 실시간 동적 조절되도록 개선.
+변경 파일: public/js/core/contactSysopScreen.js
+수행 작업:
+1) `contactSysopScreen.js`에서 인라인 입력창 초기화 및 `oninput` 시점에 `style.width`를 글자 길이에 맞춰 동적 조절하는 `adjustWidth` 로직 구현.
+2) `onclick` 이벤트를 바인딩해 클릭 시 `setSelectionRange`로 커서를 글자 맨 뒤로 보내도록 강제 처리.
+실행: `node --check public/js/core/contactSysopScreen.js`
+기대: 빌드 및 문법 체크 통과, 인라인 입력창의 너비 축소 및 클릭 시 캐럿 끝부분 고정 확인.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 13:55] [기능 개선] 건의하기(TOSYSOP) 인라인 입력창들의 중복 ID 분리 처리
+
+**LOG_ID: 20260722_1355**
+목표: 제목, 본문, 발송확인 단계에서 사용하는 인라인 `<input>`의 ID가 모두 `tosysop-inline-input`으로 중복되던 문제를 해결하여, 각각 고유한 ID를 부여하고 클릭/포커스 오류 차단.
+변경 파일: public/js/core/contactSysopScreen.js
+수행 작업:
+1) 제목 입력창 ID를 `tosysop-inline-title`로 변경.
+2) 본문 입력창 ID를 `tosysop-inline-body`로 변경.
+3) 발송확인 입력창 ID를 `tosysop-inline-confirm`로 변경.
+4) `renderContactSysopScreen()` 내부의 `setTimeout` 이벤트 바인딩 로직에서 `flow.stage`에 따라 올바른 고유 ID 요소를 취득하도록 수정.
+실행: `node --check public/js/core/contactSysopScreen.js`
+기대: 빌드 및 문법 체크 통과, 인라인 입력 정상 작동.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 11:30] [기능 개선] 건의사항 발송 성공 시 [ENTER] 대기 화면 추가 및 다음 화면 입력값 잔상 버그 해결
+
+**LOG_ID: 20260722_1130**
+목표: 1) 시삽 메일 발송 성공 후 즉시 화면을 벗어나지 않고 "[ENTER] 키를 누르십시오." 안내와 함께 대기하도록 개선. 2) 다음 화면(서비스 안내)으로 넘어갈 때 하단 입력창에 '1' 잔상이 남는 문제를 해결하기 위해 `cmdInput.value` 완전 제거.
+변경 파일: public/js/core/contactSysopScreen.js
+수행 작업:
+1) `clearContactSysopFlow()`에서 `cmdInput.value = ''` 처리 추가.
+2) `submitContactSysop()` 성공 시 `sent_success` 단계로 전환하고 안내 문구 추가.
+3) `renderContactSysopScreen()`에서 `sent_success` 상태일 때 하단 푸터를 숨기고, 보이지 않는 인라인 autofocus input을 통해 `Enter` 키를 대기한 후 화면을 전환하도록 개선.
+실행: `node --check public/js/core/contactSysopScreen.js`
+기대: 빌드 및 문법 체크 통과, 발송 완료 후 엔터 대기 작동.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 11:27] [환경 설정] 건의하기 메일 발송 수신처 이메일 변경 (jatseoul@gmail.com)
+
+**LOG_ID: 20260722_1127**
+목표: Resend 무료 티어의 수신인 제한 문제를 해결하기 위해 시삽 수신 주소를 계정 소유자 이메일(`jatseoul@gmail.com`)로 변경.
+변경 파일: .env
+수행 작업:
+1) `.env` 파일의 `SYSOP_EMAIL` 값을 `jatseoul@gmail.com`으로 수정.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 및 헬스체크 정상 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 11:23] [환경 설정] 건의하기 메일 발송 API Key 및 시삽 수신 이메일 설정
+
+**LOG_ID: 20260722_1123**
+목표: `.env` 파일에 사용자가 발급받은 Resend API Key와 수신 시삽 이메일 주소를 추가하여 503 전송 오류 해결.
+변경 파일: .env
+수행 작업:
+1) `.env` 파일 하단에 `RESEND_API_KEY` 및 `SYSOP_EMAIL` 환경변수 추가.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드 및 리포지토리 헬스체크 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 11:12] [기능 개선] 건의하기(TOSYSOP) 본문 내용도 상단 본문에서 인라인으로 입력받도록 개선
+목표: 본문(내용) 입력 UI가 화면 아래에 있는 문제를 해결하여, 이메일 쓰기처럼 제목 아래에서 직접 한 줄씩 인라인으로 입력받도록 변경.
+변경 파일: public/js/core/contactSysopScreen.js
+수행 작업:
+1) `contactSysopScreen.js`에서 본문 입력 단계(`body` 단계)에서도 하단 푸터 `#terminal-footer`를 숨김 처리.
+2) 본문 입력 시 현재 줄(`*1:`, `*2:` 등) 우측에 인라인 `<input>`을 동적으로 배치하고 포커스를 부여.
+3) 엔터 키를 누르면 `/s`, `SEND` 등의 전송 명령이나 `/q` 등의 취소 명령을 감지하여 분기하고, 일반 텍스트인 경우 `flow.bodyLines`에 한 줄씩 등록.
+실행: `node --check public/js/core/contactSysopScreen.js`
+기대: 문법 오류 없이 정상 실행되며, 브라우저에서 인라인 본문 입력 작동.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 14:10] [기능 개선] 하이텔 원전(그림 7.1) 100% 동일 본문 라인 에디터(*1:, *2:...) 및 미리보기 발송 승인 전 과정 본문 인라인 수신 구현
+
+**LOG_ID: 20260722_1410**
+목표: 사용자 12차 지적 — "전송(/s 또는 SEND), 취소(/q, P, M, B)\n내용 >>\n내용 이부분이 다시 아래로 내려갔는데". 원인 실측: 제목 입력 단계 완료 후 본문 작성 단계(`stage === 'body'`)로 전환될 때 하단 푸터 24행으로 입력이 다시 내려가던 현상 확인.
+수정: 스캔본 PDF 106쪽 `[그림 7.1]`과 100% 동일하게, 본문 작성 단계(`stage === 'body'`) 및 발송 승인 단계(`stage === 'confirm'`) 전 과정 동안 하단 푸터를 `display:none`으로 완전히 차단. 본문 윗줄부터 `*1: [인라인 input]`, `*2: [인라인 input]` 형태로 차곡차곡 인라인 수신하여 하단 24행 푸터로 입력을 보내지 않도록 완성.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 13:50] [버그 수정] 상단 인라인 입력창 XPath 지점 이중 포커스 경합 원천 차단 및 단일 포커스 고정
+
+
+**LOG_ID: 20260722_1350**
+목표: 사용자 11차 지적 — "//*[@id='terminal-screen']/div/div[2]/div[4]/span[2] 이부분에 텍스트 포커스가 2개가 잡히는데". 원인 실측: 상단 인라인 입력창(`#tosysop-inline-title`)이 포커스를 잡고 있음에도 하단 `cmdInput`에 글로벌 포커스가 동시에 적용되어 브라우저 포커스가 2개 잡히던 현상 확인.
+수정: `public/js/core/contactSysopScreen.js`에서 제목 입력 단계(`stage === 'subject'`) 동안 `cmdInput.disabled = true` 및 `cmdInput.blur()`를 지정하여 하단 입력창의 포커스를 물리적으로 완전 차단하고, 포커스를 오직 상단 인라인 입력창 (`#tosysop-inline-title`) 1곳으로만 100% 고정함.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 13:40] [버그 수정] 시삽 건의 전송 후 복귀 시 '선택 >> 1' 형태로 잔여 입력값이 나타나던 현상 수정
+
+
+**LOG_ID: 20260722_1340**
+목표: 사용자 10차 지적 — "http://localhost:3000/guide/tosysop 시삽에게 전송한 다음에 선택에 1이 저절로 표시되어 있는데". 원인 분석: 발송 확인 단계(`stage === 'confirm'`)에서 `1` (발송)을 입력한 후 `showBoardSelect('guide')`로 복귀 시, `cmdInput.value`에 전송 승인 시 입력했던 `'1'` 문자열이 청소되지 않고 남아있던 현상 확인.
+수정: `public/js/core/contactSysopScreen.js`의 `clearContactSysopFlow()` 시 `cmdInput.value = ''`를 명시적으로 호출하여, 건의하기 화면 종료 및 메뉴 화면 복귀 시 입력창이 깨끗하게 빈 값으로 초기화되도록 수정.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 13:30] [버그 수정] 이중 입력 수신 구조 완전 해소 — 상단 본문 "제목 :" 바로 옆에 진짜 인라인 <input>을 직접 결합해 입력을 1곳으로 단일화
+
+
+**LOG_ID: 20260722_1330**
+목표: 사용자 9차 지적 — "입력을 2군데서 받고 있는데". 원인 실측: 기존 구조는 하단 `cmdInput`과 상단 가짜 커서 렌더링이 이중으로 분리되어 있어, 브라우저/모바일 포커스 시 2군데서 입력을 받는 어색함이 남아있었음.
+수정: 1) `public/style.css`에 `.inline-tosysop-input` 투명 인라인 스타일 정의. 2) `contactSysopScreen.js`에서 제목 입력 단계(subject) 동안 하단 `#terminal-footer` 전체를 `display:none` 처리하고, 상단 본문 `제목 :` 바로 오른쪽 자리에 진짜 인라인 HTML `<input id="tosysop-inline-title">` 요소를 직접 결합. 브라우저 커서, 포커스, 키보드 입력을 오직 상단 `제목 : ` 바로 오른쪽 1곳으로 완전 단일화함.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 13:20] [버그 수정] 제목 입력 수신 차단 문제 수정 — cmdInput을 숨기지 않고 활성화 유지하여 상단 "제목 : [입력값]█" 타이핑 100% 정상 수신
+
+
+**LOG_ID: 20260722_1320**
+목표: 사용자 8차 지적 — "제목에 입력이 안되고 있는데. 이메일 기능처럼 해야지. 입력을 받아야지". 직전 수정에서 footer 전체에 `display:none`을 주어 내부 `cmdInput`까지 숨겨져 키보드 입력을 수신하지 못했던 버그 원인을 수정.
+수정: `public/js/core/contactSysopScreen.js`에서 footer 요소를 `display:none` 하지 않고, 하단 힌트 및 시각적 요소만 은닉(`opacity:0`, `is-divider-pending`) 처리하여 `cmdInput`이 키보드 입력(포커스 및 input 이벤트)을 100% 정상 수신하도록 수정. 사용자가 타이핑하는 즉시 상단 본문 `제목 : [입력값]<span class="ansi-cursor-blink">█</span>` 줄에 실시간으로 작성되어 보여짐.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 13:10] [버그 수정] 상단 "제목 :" 인라인 커서(█) 실시간 깜빡임 구현 및 하단 어색한 가로선(─────) 소거
+
+
+**LOG_ID: 20260722_1310**
+목표: 사용자 7차 지적 — "제목 오른편에 커서가 깜빡이지 않고, 아래에 가로선이 그어져 있어". 실측 원인 분석: 1) 상단 "제목 :" 오른쪽 커서(█)가 고정 텍스트로 렌더링되어 깜빡이지 않던 현상 확인. 2) 제목 입력 단계(subject) 동안 하단 #terminal-footer 요소 전체가 숨겨지지 않아 텅 빈 하단 가로선 구분선(─────)이 노출되던 현상 확인.
+수정: 1) `public/style.css`에 `.ansi-cursor-blink` 1초 키프레임 애니메이션 추가 및 `contactSysopScreen.js`에서 커서 노드(`<span class="ansi-cursor-blink">█</span>`) 실시간 적용. 2) 제목 입력 동안 `#terminal-footer`를 `display:none` 및 `data-footer-state="hidden"`으로 완전히 숨겨 어색한 하단 가로선(─────)과 중복 프롬프트를 완전 소거함.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 13:00] [버그 수정] 제목 입력 단계 동안 하단 푸터 행을 완전히 숨겨 "선택 >> █" 소거 및 커서를 상단 "제목 : █" 1곳으로 단일화
+
+
+**LOG_ID: 20260722_1300**
+목표: 사용자 6차 지적 — "선택>> 이 나오는데? 이상해졌는데. 커서 위치가 아래쪽이 아니라 제목 옆 아냐?". 하단 푸터 행(#terminal-prompt-row, #cmd-hint)이 계속 표시되면서 하단에 `선택 >> █` 커서가 노출되어 사용자 시선에 아래쪽 커서가 남던 현상을 완전 수정.
+수정: `public/js/core/contactSysopScreen.js`에서 `stage === 'subject'` 동안 하단 푸터 행(`promptRowEl`, `hintEl`)에 `display:none`을 적용하여 아래쪽 커서 및 `선택 >>`를 흔적도 없이 소거함. 오직 상단 본문의 `제목 : [입력값]█` 1곳에만 커서와 입력이 집중되도록 완성.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 12:55] [버그 수정] 제목 입력 단계에서 하단 푸터에 중복으로 뜨던 "제목 >>" 프롬프트와 힌트를 완전 제거하여 원전(그림 7.1)과 1:1 통일
+
+
+**LOG_ID: 20260722_1255**
+목표: 사용자 5차 지적 — "제목 부분들이 화면 위에 있어야 하는데 아래에 또 있는데. 다시한번 하이텔 ui를 잘봐". 캡처 및 원전 분석 결과: 1) 상단 본문에 "제목 : █"가 정상 위치하고 있음에도, 하단 24행 푸터에 `setPrompt('제목 >>')`로 인해 `제목 >> █` 및 힌트가 아래쪽에 또 중복 노출되던 현상 확인. 2) 하이텔 원전 PDF 106쪽 `[그림 7.1]`은 화면 하단에 중복 프롬프트가 존재하지 않고 상단 본문 내에서만 입력을 받음을 재확인.
+수정: `public/js/core/contactSysopScreen.js`에서 `stage === 'subject'` 일 때 하단 푸터 힌트와 프롬프트를 비워, 화면 하단 중복 노출을 완전히 지우고 상단 본문 "제목 : █" 1개에만 온전히 집중되도록 정합성 수정.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 12:35] [기능 개선] 상단 본문 "제목 :" 줄에서 실시간으로 타이핑 및 커서(█)가 반응하도록 인터랙션 완전 개선
+
+
+**LOG_ID: 20260722_1235**
+목표: 사용자 4차 지적 — "아직도 제목 입력을 화면 아래에서 하는데". 기존에는 키보드로 제목을 칠 때 화면 맨 아래 24행 푸터 프롬프트에서 커서가 반짝여 사용자가 시선상 "화면 아래에서 제목을 입력하고 있다"고 느꼈다.
+수정: `public/js/core/contactSysopScreen.js`에서 키보드 `input` 이벤트 발생 시 현재 타이핑 중인 입력값과 커서 블록(`█`)을 상단 본문 `제목 : [입력중인글자]█` 줄에 즉시 실시간 렌더링되도록 구현. 이제 타이핑 시 커서와 글자가 상단 본문 `제목 :` 줄에서 직접 반응하여 아래쪽 입력 어색함이 완벽히 해결됨.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 12:15] [기능 개선] 하이텔 PDF 106쪽 [그림 7.1] 진짜 편지 쓰기 화면 스캔본 발굴 및 건의하기 폼 1:1 완전 정합
+
+
+**LOG_ID: 20260722_1215**
+목표: 사용자 지적 — "일단 하이텔에서 편지쓰기 화면이 있는 이미지를 찾아. 지금 그 화면을 못찾으면 계속 이상하게 나와". 스캔본 PDF 106쪽 `[그림 7.1] 편지 쓰기 화면` 및 107쪽 `[그림 7.2] 편지 종류의 선택` 스캔본 이미지를 발견. 106쪽 원본 화면 순서: `수신 : DawnDeer` -> `참조 : ` -> `제목 : ` -> `작성방법(1:에디터...) >> 1` -> `에디터쓰기 (끝낼때는...)` -> `*1:`, `*2:` 라인 에디터 진입.
+수정: `public/js/core/contactSysopScreen.js`를 원전 [그림 7.1] 순서와 1:1로 완전 이식. 제목 작성 완료 시 원전과 같이 `작성방법(1:에디터...) >> 1`과 `에디터쓰기...` 안내문을 순차로 찍고 `*1:` 에디터가 차곡차곡 열리도록 정밀 맞춤. 아티팩트 `hitel_mail_screen.md`도 함께 생성.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 12:00] [버그 수정] 하단 프롬프트가 "선택 >>"로 치환되던 문제 수정 및 원전(그림 7.6) 메일 에디터 안내문 1:1 재현
+
+
+**LOG_ID: 20260722_1200**
+목표: 사용자 3차 지적 — "하이텔pdf에서 메일 보내기 화면 이미지 찾았어? 지금 화면스크린샷을 줄게. 전혀 달라". 실측 분석 결과: 1) `setPrompt('>>')` 전달 시 시스템 기본값인 `선택 >>`로 자동 치환되어 하단 프롬프트에 `선택 >>`가 표시되던 현상 확인. 2) 원전 스캔본 PDF 113쪽 `[그림 7.6] 메일의 발송`은 본문 진입 시 "에디터쓰기 (끝낼때는...)" 안내문이 뜨고 바로 아래 `*1:`, `*2:` 라인 에디터가 열리는 통합 폼 구조임을 확인.
+수정: `public/js/core/contactSysopScreen.js`에서 `setPrompt('제목 >>')`를 명시적으로 전달해 하단 프롬프트를 `제목 >>`로 정확히 지정하고, 본문 작성 진입 시 원전과 동일하게 "에디터쓰기 (완료: /s 또는 SEND...)" 안내문이 출력되도록 맞춤.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 11:50] [버그 수정] 건의하기 제목 입력 화면에서 중복되던 "제목을 입력하십시오." 안내문과 프롬프트를 제거하고 원전(그림 7.6) 1:1 레이아웃으로 수정
+
+
+**LOG_ID: 20260722_1150**
+목표: 사용자 2차 지적 — "제목을 입력하세요가 2개인데. pdf에서 이메일 쓰기 기능을 잘봐봐". 스캔본 PDF 113쪽 `[그림 7.6] 메일의 발송` 실측 결과, "제목을 입력하십시오." 같은 별도의 군더더기 안내 문구가 존재하지 않고, "수신 : DawnDeer" 바로 다음 줄에 "제목 : " 하나만 깔끔하게 존재함을 재확인. 기존 코드의 불필요한 "제목을 입력하십시오." 문구와 하단 중복 "제목 >>"로 인해 "제목 입력" 안내가 2개씩 노출되던 문제를 수정.
+수정: `public/js/core/contactSysopScreen.js`에서 "제목을 입력하십시오." 안내 줄을 제거하고, 상단 본문에 "수신 : 시삽" 아래 "제목 :" 줄 1개만 배치. 하단 프롬프트는 `>>`로 깔끔하게 지정하여 1:1 일치시킴.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-22 11:45] [기능 개선] 건의하기 제목 입력 위치를 원전 하이텔 스캔본(그림 7.6)과 일치하도록 상단 안내문 바로 아래 인라인 배치
+
+
+**LOG_ID: 20260722_1145**
+목표: 사용자 지적 — "이미지를 잘 봐봐". 스캔본 `docs/첵_hitelImage_001.pdf` 113쪽 `[그림 7.6] 메일의 발송` 실측 결과, 원전 하이텔 화면은 "수신 :", "제목 :"이 상단 안내문 아래에 순차적 라인 흐름으로 붙어 입력받는다. 기존 웹 화면은 "제목을 입력하십시오." 아래 커다란 빈 영역을 지나 24행(화면 최하단 고정 푸터)에만 "제목 >>"가 떨어져 나타나서 어색했던 문제를 해결하고자 함.
+수정: `public/js/core/contactSysopScreen.js`의 `showContactSysop`에서 초기 트랜스크립트에 `{ prompt: '제목 >>', value: '' }` 항목을 추가하여, 상단 안내문 바로 아래에서 제목 입력 프롬프트가 이어서 노출되도록 개선하고 제목 작성 완료 시 해당 라인의 value로 채워지도록 함.
+검증: `node --check public/js/core/contactSysopScreen.js` 통과, `npm run loop:verify` 9종 전 항목 PASS 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-22 11:30] [버그 수정] 건의하기 제목 입력 단계에서 아직 쓸 수 없는 "전송(/s 또는 SEND)" 힌트가 뜨던 문제 수정
+
 
 **LOG_ID: 20260722_1130**
 목표: 사용자 지적 — 실제 화면에서 "전송(/s 또는 SEND), 취소(/q, P, M, B)" 힌트와 "제목 >>" 프롬프트가 같이 뜨는 걸 보고 지적. `renderContactSysopScreen()`이 'subject'(제목 입력)와 'body'(본문 입력) 두 단계에 똑같은 힌트 텍스트("전송(/s 또는 SEND)...")를 재사용하고 있었는데, `/s`·SEND는 본문 작성 단계에서만 실제로 처리되는 명령이라(제목은 한 줄만 입력하고 Enter) 제목 입력 화면에서는 안내만 있고 실제로는 의미 없는 문구였다 — "제목 >>" 프롬프트를 보면서 아직 시작도 안 한 본문 종료 명령을 안내받는 불일치.
