@@ -115,6 +115,7 @@ export function createContactSysopScreen(deps) {
     flow.stage = 'confirm';
     appendContactSysopLine('', '');
     appendContactSysopLine('', '--- 보낼 내용 미리보기 ---');
+    appendContactSysopLine('수신 :', '시삽');
     appendContactSysopLine('제목 :', flow.subject);
     appendContactSysopLine('', '');
     flow.bodyLines.forEach((line) => appendContactSysopLine('', line || ' '));
@@ -213,19 +214,27 @@ export function createContactSysopScreen(deps) {
     }
 
     // stage === 'body'
+    // [LOG_ID: 20260722_1005] /s·취소 명령은 편지 본문 줄이 아니라 에디터를 끝내는 제어
+    // 입력이므로(원전의 'CTRL+Z'에 해당) 본문 줄과 같은 "*N:" 번호를 붙이지 않는다.
     if (trimmed === '/s' || cmd === 'SEND') {
-      appendContactSysopLine('내용 >>', line);
+      appendContactSysopLine('명령 >>', line);
       enterConfirmStage(flow);
       return true;
     }
     if (isCancel) {
-      appendContactSysopLine('내용 >>', line);
+      appendContactSysopLine('명령 >>', line);
       renderContactSysopScreen();
       return await cancelContactSysop();
     }
 
+    // [LOG_ID: 20260722_1005] 구글 드라이브에 실제로 올려주신 하이텔 원전 스캔본(그림 7.6
+    // "메일의 발송")에서 편지쓰기 에디터가 각 줄 앞에 "*1:", "*2:", "*3:"...으로 번호를 매기며
+    // 받아쓰는 걸 직접 확인했다 — 지금까지는 그냥 "내용 >>"만 반복해 몇 번째 줄인지 안 보였다.
+    // 그 번호 매기는 에디터 관례를 그대로 재현한다(내용은 그대로 한 줄씩 입력, 완료는 이
+    // 사이트 다른 글쓰기 화면들과 통일된 /s·SEND 관례를 유지 — 원전의 'E'로 바꾸면 이 화면만
+    // 달라져 오히려 혼란을 준다).
     flow.bodyLines.push(line);
-    appendContactSysopLine('내용 >>', line);
+    appendContactSysopLine(`*${flow.bodyLines.length}:`, line);
     renderContactSysopScreen();
     return true;
   }
@@ -253,6 +262,9 @@ export function createContactSysopScreen(deps) {
       transcript: [
         { prompt: '', value: '건의하기 작성' },
         { prompt: '', value: '' },
+        // [LOG_ID: 20260722_1005] 그림 7.6 "메일의 발송"의 편지쓰기 머리글(수신/제목)을
+        // 재현 — 건의하기는 받는 사람이 항상 시삽으로 고정이라 정적으로 표시한다.
+        { prompt: '수신 :', value: '시삽' },
         { prompt: '[안내]', value: '시삽에게 보낼 건의사항을 작성해 주세요. 보내신 내용은 이메일로 전달됩니다.' },
         { prompt: '', value: '' },
         { prompt: '', value: '제목을 입력하십시오.' }
