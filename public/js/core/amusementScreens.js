@@ -78,7 +78,12 @@ export function createAmusementScreens(deps) {
   }
 
   // [LOG_ID: 20260711_1400] 추억의 접속화면 — olddos-bbs(hanulso) txt/door 원본 아트 뷰어.
-  async function showRetroArt(fromHistory = false) { state.screen = 'retro-list'; state.serviceData = { kind: 'retro-art' }; if (!fromHistory) updateURL(); const rendered = await render(buildRetroArtListAnsi(), 'amusementInput', '번호 입력 >> '); if (rendered && rendered.screenNode) { renderRetroArtListHotspots(rendered.screenNode, DOOR_ART, 3); } }
+  // [LOG_ID: 20260722_2500] 사용자 지적 — "다른 메뉴들은 선택 >> 같은데, 번호라고 표시하는 메뉴가
+  // 있어?" 이 목록은 바이오리듬/혈액형처럼 실제 자유 입력(생년월일 등)을 받는 화면이 아니라
+  // 목록에 보이는 번호(1~8)만 고르는 화면이라(findDoorArt는 표시되지 않는 key 매칭도 지원하지만
+  // 화면엔 번호만 노출됨) GAME 메뉴·board-select 등 다른 번호 선택 목록과 구조가 같다 — 세 번째
+  // 인자(커스텀 프롬프트)를 빼서 다른 목록 화면과 동일한 기본 프롬프트("선택 >>")를 쓰도록 통일한다.
+  async function showRetroArt(fromHistory = false) { state.screen = 'retro-list'; state.serviceData = { kind: 'retro-art' }; if (!fromHistory) updateURL(); const rendered = await render(buildRetroArtListAnsi(), 'amusementInput'); if (rendered && rendered.screenNode) { renderRetroArtListHotspots(rendered.screenNode, DOOR_ART, 3); } }
   async function showRetroArtView(input, fromHistory = false) { const item = findDoorArt(input); if (!item) { setHint('목록의 번호를 입력하세요.'); return false; } state.screen = 'retro-view'; state.serviceData = { kind: 'retro-art', artKey: item.key }; if (!fromHistory) updateURL(); const rendered = await render(buildRetroArtViewAnsi(item), 'amusementView'); if (rendered && rendered.screenNode) { rendered.screenNode.style.cursor = 'pointer'; rendered.screenNode.title = '클릭하면 목록으로 돌아갑니다 (L)'; rendered.screenNode.addEventListener('click', async (e) => { if (e.target.closest('a')) return; await showRetroArt(); }); } return true; }
   // [LOG_ID: 20260720_1358] 천리안 원전 6.14.1 "컴퓨터와 게임을" — 오락실 게임 5종.
   // render 헬퍼를 공유해 이 return 에 spread 하면 appFactoryRuntime 의 ...screens.amusementScreens
