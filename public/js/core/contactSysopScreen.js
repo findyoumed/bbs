@@ -86,8 +86,8 @@ export function createContactSysopScreen(deps) {
       setHint('시삽에게 전송하는 중입니다..');
       setPrompt('>>');
     } else if (flow.stage === 'confirm') {
-      setHint('저장(Y), 계속 작성(N), 취소(/q, P, M, B)');
-      setPrompt('Y/N >>');
+      setHint('발송(1), 이어서 작성(0), 취소(/q, P, M, B)');
+      setPrompt('발송 명령 (1, 0) >>');
     } else {
       setHint('전송(/s 또는 SEND), 취소(/q, P, M, B)');
       setPrompt(flow.stage === 'subject' ? '제목 >>' : '내용 >>');
@@ -102,10 +102,15 @@ export function createContactSysopScreen(deps) {
     return true;
   }
 
-  // [LOG_ID: 20260721_1700] 정통 PC통신 게시판 저장 흐름의 핵심 — 실제로 이메일을 보내기
-  // 전에 제목/본문을 한 번에 보여주고 저장 여부를 묻는다(원전: "저장하시겠습니까? (Y/N)").
-  // 되돌릴 수 없는 동작(시삽에게 실제 이메일 발송)이라 확인 없이 바로 보내던 기존 흐름보다
-  // 훨씬 원전에 가깝고 오발송도 막는다.
+  // [LOG_ID: 20260722_0200] 정통 PC통신 게시판 저장 흐름의 핵심 — 실제로 이메일을 보내기
+  // 전에 제목/본문을 한 번에 보여주고 저장 여부를 묻는다. 원전(하이텔 길라잡이 p.109)의
+  // 발송 명령 화면 "명령(H, 1:발송, 2:저장, 3:발송+저장, 4:발송+삐삐, 5:발송+저장+삐삐,
+  // 0:취소)"을 그대로 가져오되, 건의하기는 편지함(저장)도 삐삐(호출) 기능도 없는 시삽 앞
+  // 1회성 이메일 발송이라 실제로 동작하는 두 개(발송/취소)만 남긴다 — 원전에 있다고 그대로
+  // 베끼면 "H"처럼 그 화면에서 실제로는 아무 반응도 없는 죽은 선택지가 생긴다(memoScreens.js의
+  // 쪽지쓰기 발송 명령 화면도 같은 이유로 "H"가 표기만 되고 실제로는 처리되지 않는 걸 확인함 —
+  // 같은 함정을 반복하지 않는다). 취소(0)는 쪽지쓰기의 "임시글 폐기"와 달리 본문으로 되돌아가
+  // 계속 쓸 수 있게 한다(완전 취소는 기존처럼 /q, P, M, B로).
   function enterConfirmStage(flow) {
     flow.stage = 'confirm';
     appendContactSysopLine('', '');
@@ -114,7 +119,7 @@ export function createContactSysopScreen(deps) {
     appendContactSysopLine('', '');
     flow.bodyLines.forEach((line) => appendContactSysopLine('', line || ' '));
     appendContactSysopLine('', '--------------------------');
-    appendContactSysopLine('', '이대로 시삽에게 전송하시겠습니까? (Y/N)');
+    appendContactSysopLine('[선택]', '명령(1:발송, 0:이어서 작성)');
     renderContactSysopScreen();
   }
 
@@ -186,21 +191,23 @@ export function createContactSysopScreen(deps) {
     }
 
     if (flow.stage === 'confirm') {
-      appendContactSysopLine('Y/N >>', line);
+      appendContactSysopLine('발송 명령 >>', line);
       if (isCancel) {
         renderContactSysopScreen();
         return await cancelContactSysop();
       }
-      if (cmd === 'Y' || trimmed === '/s' || cmd === 'SEND') {
+      // [LOG_ID: 20260722_0200] 원전 발송 명령(1:발송)이 기본이고, Y/SEND/`/s`는 이전 버전과의
+      // 하위 호환을 위해 그대로 유지한다(기능은 동일, 입력 방식만 여러 개).
+      if (trimmed === '1' || cmd === 'Y' || trimmed === '/s' || cmd === 'SEND') {
         return await submitContactSysop();
       }
-      if (cmd === 'N') {
+      if (trimmed === '0' || cmd === 'N') {
         flow.stage = 'body';
         appendContactSysopLine('', '계속 작성하실 수 있습니다. 완료: /s 또는 SEND, 취소: /q, P, M, B');
         renderContactSysopScreen();
         return true;
       }
-      appendContactSysopLine('[안내]', 'Y 또는 N을 입력해 주세요.');
+      appendContactSysopLine('[안내]', '1(발송) 또는 0(이어서 작성)을 입력해 주세요.');
       renderContactSysopScreen();
       return true;
     }
