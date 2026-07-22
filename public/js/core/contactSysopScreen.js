@@ -1,5 +1,6 @@
 import { renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
+import { convertKoreanToEnglish } from './commandNormalizer.js';
 
 // [LOG_ID: 20260720_2300] GUIDE의 '건의하기'를 게시판에서 시삽 이메일 발송 기능으로 교체.
 // 글이 쌓이기만 하고 아무도 안 보는 빈 게시판 대신, 쓰는 즉시 실제 이메일로 전달되게 했다.
@@ -22,6 +23,16 @@ export function createContactSysopScreen(deps) {
     state,
     updateURL
   } = deps;
+
+  // [LOG_ID: 20260722_1000] 사용자 리포트: /guide/tosysop에서 한/영 전환이 안 된 채 '/s'를
+  // 치면 두벌식 자판상 같은 물리키가 'ㄴ'으로 들어와 '/ㄴ'이 된다(취소 명령 P/M/B도 동일 현상).
+  // 명령어 토큰 비교에서만 두벌식→영타 역변환을 시도하고, 실제 편지 본문(자유 한국어 문장)에는
+  // 적용하지 않는다 — 한글 음절은 최소 2글자(초성+중성)로 분해되므로 단일 글자 명령(P/M/B 등)과
+  // 우연히 같은 결과가 나올 일이 없고, 변환 결과가 알려진 명령과 일치할 때만 그 명령으로
+  // 인정하므로 일반 문장 오작동 위험은 없다.
+  function toCommandToken(value) {
+    return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(value) ? convertKoreanToEnglish(value).toUpperCase() : '';
+  }
 
   function focusCommandInput() {
     if (shouldAutoFocusCommandInput()) {
@@ -168,7 +179,9 @@ export function createContactSysopScreen(deps) {
     const line = String(raw ?? '');
     const trimmed = line.trim();
     const cmd = trimmed.toUpperCase();
-    const isCancel = trimmed === '/q' || cmd === 'P' || cmd === 'M' || cmd === 'B';
+    const koCmd = toCommandToken(trimmed);
+    const isCancel = trimmed === '/q' || cmd === 'P' || cmd === 'M' || cmd === 'B'
+      || koCmd === '/Q' || koCmd === 'P' || koCmd === 'M' || koCmd === 'B';
 
     if (flow.stage === 'subject') {
       appendContactSysopLine('제목 >>', line);
@@ -198,10 +211,11 @@ export function createContactSysopScreen(deps) {
       }
       // [LOG_ID: 20260722_0200] 원전 발송 명령(1:발송)이 기본이고, Y/SEND/`/s`는 이전 버전과의
       // 하위 호환을 위해 그대로 유지한다(기능은 동일, 입력 방식만 여러 개).
-      if (trimmed === '1' || cmd === 'Y' || trimmed === '/s' || cmd === 'SEND') {
+      if (trimmed === '1' || cmd === 'Y' || trimmed === '/s' || cmd === 'SEND'
+        || koCmd === 'Y' || koCmd === '/S' || koCmd === 'SEND') {
         return await submitContactSysop();
       }
-      if (trimmed === '0' || cmd === 'N') {
+      if (trimmed === '0' || cmd === 'N' || koCmd === 'N') {
         flow.stage = 'body';
         appendContactSysopLine('', '계속 작성하실 수 있습니다. 완료: /s 또는 SEND, 취소: /q, P, M, B');
         renderContactSysopScreen();
@@ -213,7 +227,7 @@ export function createContactSysopScreen(deps) {
     }
 
     // stage === 'body'
-    if (trimmed === '/s' || cmd === 'SEND') {
+    if (trimmed === '/s' || cmd === 'SEND' || koCmd === '/S' || koCmd === 'SEND') {
       appendContactSysopLine('내용 >>', line);
       enterConfirmStage(flow);
       return true;

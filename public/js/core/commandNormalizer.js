@@ -90,8 +90,9 @@ export function normalizeCommand(rawCmd, stateScreen) {
 
 /**
  * [LOG_ID: 20260710_1203] 한글 오타(Dubeolsik)를 QWERTY 영문 자판으로 실시간 번역
+ * [LOG_ID: 20260722_1000] contactSysopScreen.js 등 raw-text 입력 화면에서도 재사용할 수 있게 export.
  */
-function convertKoreanToEnglish(text) {
+export function convertKoreanToEnglish(text) {
   const chosungs = ['r', 'R', 's', 'e', 'E', 'f', 'a', 'q', 'Q', 't', 'T', 'd', 'w', 'W', 'c', 'z', 'x', 'v', 'g'];
   const jungsungs = ['k', 'o', 'i', 'O', 'j', 'p', 'u', 'P', 'h', 'hk', 'ho', 'hl', 'y', 'n', 'nj', 'np', 'nl', 'y', 'm', 'ml', 'l'];
   const jongsungs = ['', 'r', 'R', 'rt', 's', 'sw', 'sg', 'e', 'f', 'fr', 'fa', 'fq', 'ft', 'fx', 'fv', 'fg', 'a', 'q', 'qt', 't', 'T', 'd', 'w', 'c', 'z', 'x', 'v', 'g'];
@@ -101,7 +102,11 @@ function convertKoreanToEnglish(text) {
     'ㅂ': 'q', 'ㅃ': 'Q', 'ㅅ': 't', 'ㅆ': 'T', 'ㅇ': 'd', 'ㅈ': 'w', 'ㅉ': 'W',
     'ㅊ': 'c', 'ㅋ': 'z', 'ㅌ': 'x', 'ㅍ': 'v', 'ㅎ': 'g',
     'ㅏ': 'k', 'ㅐ': 'o', 'ㅑ': 'i', 'ㅒ': 'O', 'ㅓ': 'j', 'ㅔ': 'p', 'ㅕ': 'u',
-    'ㅖ': 'P', 'ㅗ': 'h', 'ㅛ': 'y', 'ㅜ': 'n', 'ㅠ': 'y', 'ㅡ': 'm', 'ㅣ': 'l'
+    // [LOG_ID: 20260722_1000] 'ㅠ'는 실제로는 b키에서 나오는데 'y'(ㅛ와 중복)로 잘못 매핑돼
+    // 있었다 — /guide/tosysop에서 B 취소(P/M/B) 한글 오타 복원이 이 버그 때문에 항상 실패할
+    // 뻔했다(실제 2벌식 배열 기준으로 재확인해 수정: q=ㅂ w=ㅈ e=ㄷ r=ㄱ t=ㅅ y=ㅛ u=ㅕ i=ㅑ
+    // o=ㅐ p=ㅔ a=ㅁ s=ㄴ d=ㅇ f=ㄹ g=ㅎ h=ㅗ j=ㅓ k=ㅏ l=ㅣ z=ㅋ x=ㅌ c=ㅊ v=ㅍ b=ㅠ n=ㅜ m=ㅡ).
+    'ㅖ': 'P', 'ㅗ': 'h', 'ㅛ': 'y', 'ㅜ': 'n', 'ㅠ': 'b', 'ㅡ': 'm', 'ㅣ': 'l'
   };
 
   let result = '';
