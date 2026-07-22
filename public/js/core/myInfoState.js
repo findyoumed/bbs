@@ -1,4 +1,6 @@
-const MYINFO_MODES = new Set(['view', 'nickname', 'email', 'password', 'delete']);
+// [LOG_ID: 20260722_2300] 'guest-blocked' — 게스트가 회원정보 화면에 접근했을 때 안내 메시지를
+// 먼저 보여주고 ENTER로 초기화면 이동을 기다리는 전용 모드(아래 ensureMyInfoAccess 참고).
+const MYINFO_MODES = new Set(['view', 'nickname', 'email', 'password', 'delete', 'guest-blocked']);
 // [LOG: 20260509_0959] delete-confirm이 idle로 정규화되면 탈퇴 확인 프롬프트가 비밀번호 프롬프트로 되돌아간다.
 const MYINFO_STAGES = new Set(['idle', 'email-current', 'email-new', 'password-current', 'password-new', 'password-confirm', 'password-saving', 'delete-password', 'delete-confirm', 'delete-complete']);
 

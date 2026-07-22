@@ -25,6 +25,13 @@ export function createMyInfoCommandHandler(deps) {
 
         const mode = String(state._myInfoMode || 'view').trim().toLowerCase();
 
+        // [LOG_ID: 20260722_2300] 게스트 안내 화면 — ENTER를 포함해 어떤 입력이 와도 초기화면으로
+        // 이동한다(사용자 요청: "메세지를 먼저 보여주고, 엔터를 누르면 초기화면으로 이동").
+        if (mode === 'guest-blocked') {
+            await showMain();
+            return true;
+        }
+
         if (cmd === 'T') {
             await showMain();
             return true;

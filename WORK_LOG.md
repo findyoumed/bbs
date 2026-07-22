@@ -1,3 +1,18 @@
+## [2026-07-22 23:00] [UX 개선] 게스트가 회원정보 화면에 접근할 때 힌트바/프롬프트가 사라지던 문제 — 안내 메시지를 먼저 보여주고 ENTER로 초기화면 이동하도록 변경
+
+**LOG_ID: 20260722_2300**
+목표: 사용자 리포트 — "회원 정보는 로그인 사용자만 이용할 수 있습니다. >> 라고 나오는 화면에서 힌트바와 선택 >> 이 없어지니까. 차라리 메세지를 먼저 보여주고, 사용자가 엔터를 누르면 초기화면으로 이동하게 바꿔줘."
+원인: `myInfoActions.js`의 `ensureMyInfoAccess()`가 게스트를 걸러낼 때 `showMain()`으로 메인 화면을 먼저 통째로 그린 뒤, 그 위에 `setHint(...)`/`setPrompt('>> ')`만 덮어쓰고 있었다. 메인 화면 자체의 렌더 경로가 곧이어 자신의 힌트바/프롬프트 상태로 되돌리면서 방금 덮어쓴 안내 문구와 `>>` 프롬프트가 사라져 보이는 경합이 있었다(메인 화면 자체는 정상 — "회원정보" 화면 몫의 안내를 메인 위에 얹으려 한 것이 문제).
+구현: 메인으로 바로 보내는 대신, `myinfo` 화면 자체에 `guest-blocked`라는 전용 모드를 추가해 안내 메시지를 정식 화면으로 그리고(힌트바·`>>` 프롬프트 정상 유지), 이 화면에서 어떤 입력(특히 ENTER)이 와도 초기화면으로 이동하도록 라우팅했다.
+- `myInfoState.js` — `MYINFO_MODES`에 `'guest-blocked'` 추가.
+- `myInfoRenderer.js` — `buildGuestBlockedContent()` 신설(메시지 패널만 표시), `buildScreenContent()`에 분기 추가, `applyHint()`에 `guest-blocked` 전용 분기 추가(힌트 "ENTER를 누르면 초기화면으로 이동합니다.", 프롬프트 `>> ` 정상 세팅, `restorePromptRow()`로 하단 프롬프트/힌트바 유지).
+- `commandRouterMyInfo.js` — `handleMyInfoCommand` 최상단에 `mode === 'guest-blocked'`면 어떤 명령이든 `showMain()`으로 보내는 분기 추가(ENTER=빈 입력 포함).
+- `myInfoActions.js` — `ensureMyInfoAccess()`가 `showMain()` 대신 `resetMyInfoState()` → `setMode('guest-blocked')` → `renderMyInfo()`를 호출하도록 변경.
+검증: `node --check` 4개 파일 전체 통과. 실제 로컬 서버(Supabase 연동)를 띄우고 Playwright로 게스트 상태에서 `GO MYINFO` → myinfo 화면 진입 확인, 본문에 안내 메시지 렌더 확인, 힌트바("ENTER를 누르면 초기화면으로 이동합니다.")와 프롬프트(`>>`)가 비어있지 않음을 확인, 이어서 빈 ENTER 입력 시 `main` 화면으로 정상 이동함을 3회 연속 확인. `npm run smoke:vercel-ready`, `npm run smoke:menu-wiring`, `npm run qa:final` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-22 22:00] [버그 수정] 전체메뉴안내/도움말/이용약관 화면에서 F/B로 페이지를 넘긴 뒤 P를 누르면 실제 상위 화면이 아니라 방금 넘긴 페이지로만 되돌아가 "P가 B처럼 작동"하던 문제 수정
 
 **LOG_ID: 20260722_2200**

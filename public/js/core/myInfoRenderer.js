@@ -219,12 +219,26 @@ export function createMyInfoRenderer(deps) {
           ${buildPromptTranscriptHtml()}`;
     }
 
+    // [LOG_ID: 20260722_2300] 사용자 리포트: "회원 정보는 로그인 사용자만 이용할 수 있습니다. >> 라고
+    // 나오는 화면에서 힌트바와 선택 >>이 없어진다" — 종전엔 ensureMyInfoAccess()가 showMain()을 먼저
+    // 호출해 메인 화면을 그린 뒤 그 위에 setHint/setPrompt만 덮어써, 메인 화면의 자체 렌더가 그 직후
+    // 힌트바/프롬프트를 다시 지워버리는 경합이 있었다. 이제 이 안내를 myinfo 화면 자체의 한 모드로
+    // 그려 hint/footer가 정상적으로 붙게 하고, ENTER(또는 아무 명령)를 누르면 초기화면으로 이동한다
+    // (commandRouterMyInfo.js의 mode==='guest-blocked' 분기).
+    function buildGuestBlockedContent() {
+        return `
+          <div class="myinfo-panel">
+            <div class="myinfo-message myinfo-message--error">회원 정보는 로그인 사용자만 이용할 수 있습니다.</div>
+          </div>`;
+    }
+
     function buildScreenContent(user) {
         const mode = getMode();
         if (mode === 'nickname') return buildNicknameContent(user);
         if (mode === 'email') return buildEmailContent();
         if (mode === 'password') return buildPasswordContent();
         if (mode === 'delete') return buildDeleteContent(user);
+        if (mode === 'guest-blocked') return buildGuestBlockedContent();
         return buildViewContent(user);
     }
 
@@ -237,6 +251,19 @@ export function createMyInfoRenderer(deps) {
             state._maskCommandInput = false;
             const footerText = String(deps.getSupportedFooterText(state) || '').trim();
             await applyCommandFooter('', footerText);
+            return;
+        }
+
+        // [LOG_ID: 20260722_2300] 게스트 안내 화면 — 힌트바/프롬프트를 정상적으로 유지한 채
+        // "ENTER를 누르면 초기화면으로 이동합니다" 안내를 보여준다.
+        if (mode === 'guest-blocked') {
+            restorePromptRow?.();
+            state._maskCommandInput = false;
+            setHint('ENTER를 누르면 초기화면으로 이동합니다.');
+            setPrompt('>> ');
+            if (cmdInput) {
+                cmdInput.value = '';
+            }
             return;
         }
 

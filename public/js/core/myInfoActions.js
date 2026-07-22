@@ -99,10 +99,15 @@ export function createMyInfoActions(deps) {
             return true;
         }
 
+        // [LOG_ID: 20260722_2300] 사용자 리포트: "회원 정보는 로그인 사용자만 이용할 수 있습니다. >>
+        // 라고 나오는 화면에서 힌트바와 선택 >>이 없어진다" — 종전엔 showMain()으로 메인 화면을 먼저
+        // 그린 뒤 그 위에 setHint/setPrompt만 덮어써, 메인 화면 자체 렌더가 곧바로 힌트바/프롬프트를
+        // 지워버리는 경합이 있었다. 이제 메인으로 바로 보내지 않고 안내 메시지를 myinfo 화면 자체의
+        // 전용 모드로 먼저 보여준 뒤, ENTER(또는 임의 입력)를 누르면 초기화면으로 이동한다
+        // (commandRouterMyInfo.js의 mode==='guest-blocked' 분기가 처리).
         resetMyInfoState();
-        await showMain();
-        setHint('회원 정보는 로그인 사용자만 이용할 수 있습니다.');
-        setPrompt('>> ');
+        setMode('guest-blocked');
+        await renderMyInfo();
         return false;
     }
 
