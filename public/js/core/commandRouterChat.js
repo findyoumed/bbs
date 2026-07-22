@@ -39,6 +39,8 @@ export function createChatCommandHandler(deps) {
   // 나가면 방이 안 닫혔다. 모든 퇴장 경로가 이 헬퍼를 쓴다.
   async function leaveCurrentRoom() {
     if (state._chatPollTimer) clearInterval(state._chatPollTimer);
+    // [LOG_ID: 20260722_3600] 귓속말 토글 상태는 방을 나가면 함께 해제한다(다음 방까지 이어지면 안 됨).
+    state._chatWhisperTarget = null;
     if (state._chatRoomId) {
       try {
         await apiFetch(`/api/chat/rooms/${encodeURIComponent(state._chatRoomId)}/leave`, {
@@ -288,6 +290,29 @@ export function createChatCommandHandler(deps) {
       }
 
       // [LOG: 20260411_2345] 대화방 내 명령어는 반드시 '/'로 시작해야 함
+      // [LOG_ID: 20260722_3600] 하이텔 책(길라잡이 p.101) 실측: "/TO userid"(메시지 없이 아이디만)는
+      // 해제할 때까지 내가 하는 모든 말이 그 사람에게만 보이는 "귓속말 설정/해제" 토글이고,
+      // "/TO userid msg"(메시지 포함)는 그 한마디만 보내는 별개의 명령이다. 기존 구현은 메시지가
+      // 항상 필수였던 "귓속말 한마디"만 있었고, 토글형 귓속말 설정 자체가 없었다.
+      const toToggleMatch = input.match(/^(?:\/)?(TO|EAR|속|SAY|WHISPER)\s+(\S+)\s*$/i);
+      if (toToggleMatch) {
+        if (state.user?.isGuest) {
+          setHint('귓속말은 로그인 후 사용하실 수 있습니다.');
+          setPrompt('선택 >>');
+          return true;
+        }
+        const targetId = toToggleMatch[2].trim();
+        if (state._chatWhisperTarget && state._chatWhisperTarget.toLowerCase() === targetId.toLowerCase()) {
+          state._chatWhisperTarget = null;
+          setHint('귓속말을 해제했습니다. 이제부터 하는 말은 모두에게 보입니다.');
+        } else {
+          state._chatWhisperTarget = targetId;
+          setHint(`[${targetId}]님과 귓속말을 시작합니다. 해제하려면 다시 "/TO ${targetId}"를 입력하세요.`);
+        }
+        setPrompt('선택 >>');
+        return true;
+      }
+
       // [LOG_ID: 20260713_1160] 대화방 귓속말(/TO, /EAR, /속, /SAY, /WHISPER 및 슬래시 없는 say, whisper) 구현
       const toMatch = input.match(/^(?:\/)?(TO|EAR|속|SAY|WHISPER)\s+(\S+)\s+(.+)$/i);
       if (toMatch) {
@@ -604,7 +629,11 @@ export function createChatCommandHandler(deps) {
         // 없지만, 결과물인 "메시지마다 짧은 문구가 자동으로 붙는다"는 기존 SET envVar로 재현 가능).
         const typedText = String(input || '').trim();
         const tag = String(state.envVars?.TAG || '').trim();
-        const messageText = tag ? `${typedText} (${tag})` : typedText;
+        const taggedText = tag ? `${typedText} (${tag})` : typedText;
+        // [LOG_ID: 20260722_3600] /TO 토글로 귓속말 모드 중이면 평범한 입력도 전부
+        // "[TO:대상]" 형식으로 자동 전송한다(해제 전까지 계속 적용, 원전 스펙).
+        const whisperTarget = state._chatWhisperTarget;
+        const messageText = whisperTarget ? `[TO:${whisperTarget}] ${taggedText}` : taggedText;
 
         // [LOG: 20260411_2330] 메시지 전송 후 즉시 화면 갱신 (Optimistic UI)
         try {
@@ -630,10 +659,15 @@ export function createChatCommandHandler(deps) {
         const visibleMessages = muted && muted.size
           ? (state._chatMessages || []).filter((m) => !muted.has(m.userId))
           : (state._chatMessages || []);
-        const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick);
+        // [LOG_ID: 20260722_3600] myId를 넘겨야 "[TO:...]" 귓속말 필터가 내가 보낸 메시지를
+        // 정확히 통과시킨다 — 누락 시 귓속말 모드에서 보낸 메시지가 낙관적 갱신에서 사라진다.
+        const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick, state.user?.userId);
         // [LOG: 20260707_1424] 낙관적 갱신도 표준 상단바 렌더러를 사용한다.
         // 기존의 screenEl.innerHTML 직접 조립은 상단바 없이 그려져 메시지 전송 직후 로고/시계가 사라졌다.
         renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });
+        if (whisperTarget) {
+          setHint(`(귓속말 중: [${whisperTarget}]님에게만 보입니다. 해제: /TO ${whisperTarget})`);
+        }
         if (shouldAutoFocusCommandInput()) {
           cmdInput.focus();
         }
