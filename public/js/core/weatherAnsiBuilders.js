@@ -168,6 +168,13 @@ export function createWeatherAnsiBuilders(deps) {
           const wind = fitCell(`${item.windDirection || ''} ${item.windSpeed || ''}m/s`, 12);
           parts.push(`  ${ansiColor(11)}${hour}${ANSI_RESET}${ansiColor(15)}${weather}${ANSI_RESET}${ansiColor(13)}${temp}${ANSI_RESET}${ansiColor(12)}${rain}${ANSI_RESET}${ansiColor(8)}${wind}${ANSI_RESET}`);
         });
+
+        // [LOG_ID: 20260723_2200] 시간별 상세 페이지에도 요약 페이지(page 1)와 동일하게
+        // 클릭 가능한 "F:다음 페이지" 안내를 넣는다 — 마지막 페이지가 아닐 때만 표시.
+        if (currentPage < pageCount) {
+          parts.push('');
+          parts.push(`  ${ansiColor(8)}F:다음 페이지 보기${ANSI_RESET}`);
+        }
       }
     }
 

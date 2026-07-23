@@ -84,11 +84,13 @@ export function createWeatherScreens(deps) {
   // [LOG_ID: 20260723_2100] "F:다음 페이지에서 시간별 상세 확인" 안내 줄이 텍스트로만 표시되고
   // 클릭할 수 없었다(사용자 보고: "이부분클릭가능해야지") — newsScreens.js의 "[엔터]" 복귀 안내와
   // 동일한 패턴으로, 렌더된 줄에서 해당 문구를 찾아 F 명령을 실행하는 핫스팟을 그 위에 올린다.
+  // [LOG_ID: 20260723_2200] 요약(1페이지)뿐 아니라 시간별 상세(2페이지 이후)에도 같은 형태의
+  // "F:다음 페이지 보기" 안내가 추가됐으므로, 문구 전문 대신 "F:"로 시작하는 줄을 범용으로 찾는다.
   function renderWeatherHourlyHintHotspot(screenNode) {
     if (!screenNode) return;
     const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
     const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
-    const rowIdx = lineNodes.findIndex((node) => (node.textContent || '').includes('시간별 상세 확인'));
+    const rowIdx = lineNodes.findIndex((node) => String(node.textContent || '').trim().startsWith('F:'));
     if (rowIdx < 0) return;
 
     const lineNode = lineNodes[rowIdx];
@@ -102,8 +104,9 @@ export function createWeatherScreens(deps) {
       || estimateServiceLineBounds(screenNode, lineNode);
     if (!bounds) return;
 
+    const label = sourceText.trim().replace(/^F:/, '');
     const layer = createHotspotLayer();
-    layer.appendChild(createHotspotButton('F', '다음 페이지에서 시간별 상세 확인', bounds));
+    layer.appendChild(createHotspotButton('F', label, bounds));
     screenNode.appendChild(layer);
   }
 
