@@ -1,3 +1,14 @@
+## [2026-07-23 19:20] [기능 추가] 날씨 지역별 화면의 "F:다음 페이지에서 시간별 상세 확인" 안내 문구를 클릭 가능하게 만듦
+
+**LOG_ID: 20260723_2100**
+목표: 사용자 보고 — 지역별 날씨 요약 화면 하단의 "F:다음 페이지에서 시간별 상세 확인" 문구를 가리키며 "이부분클릭가능해야지"(이 부분이 클릭 가능해야 한다).
+원인: 이 문구는 `weatherAnsiBuilders.js`의 `buildWeatherAnsi`가 순수 텍스트로만 렌더링하고 있었다. 사이트 전반의 클릭 가능 핫스팟은 두 계열로 나뉘는데, (1) 메인메뉴/게시판 목록에서 쓰이는 `buildMenuHotspotsFromRows`는 `(F)` 형태의 괄호 명령만 인식하고 `F:라벨` 형태는 인식하지 못하며, (2) 뉴스/날씨 화면은 애초에 이 범용 핫스팟 스캐너를 쓰지 않고 화면마다 필요한 지점에 `createHotspotButton`으로 직접 핫스팟을 심는 방식(`newsScreens.js`의 "[엔터]" 복귀 안내가 동일 패턴)이라, 이 문구엔 아무도 핫스팟을 만들어주지 않았다.
+구현: `weatherScreens.js`에 `renderWeatherHourlyHintHotspot(screenNode)`를 추가 — 렌더된 `.ansi-line` 중 "시간별 상세 확인"을 포함한 줄을 찾아 `measureLineSegmentBounds`(실패 시 `measureServiceLineBounds`/`estimateServiceLineBounds`로 폴백)로 그 줄의 실제 텍스트 영역을 측정하고, `createHotspotButton('F', ...)`으로 F 명령을 실행하는 버튼을 그 위에 겹쳐 그린다(뉴스의 "[엔터]" 핫스팟과 동일 패턴). `showWeatherView`의 지역별 요약 화면(`buildWeatherAnsi` 사용, `isLocalWeather`가 아닌 분기) 렌더 직후 호출.
+검증: `node --check` 통과. 로컬 서버 기동 후 Playwright(390px 모바일)로 `/service/weather/1`(서울특별시) 접속 → 힌트 줄 존재 확인 → 생성된 `.ansi-hotspot` 버튼의 `data-cmd`가 `"F"`인 것 확인 → 실제 클릭 이벤트 발생 → 응답으로 화면이 (02/10) 페이지(시간별 상세, "07시"류의 시간 행 포함)로 정상 전환됨을 실측 확인. `npm run smoke:renderer-ui`, `smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-23 19:10] [버그 수정] 날씨 지역별 피드(RSS)에서 "The operation was aborted due to timeout" 같은 Node 내부 에러 메시지가 화면에 그대로 노출되던 문제 수정 + 타임아웃 2초→5초로 완화
 
 **LOG_ID: 20260723_2010**

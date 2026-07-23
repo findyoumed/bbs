@@ -21,6 +21,9 @@ export function createWeatherScreens(deps) {
     updateURL,
     createHotspotLayer,
     createHotspotButton,
+    measureServiceLineBounds,
+    estimateServiceLineBounds,
+    measureLineSegmentBounds,
     renderScreenSequential
   } = deps;
 
@@ -76,6 +79,32 @@ export function createWeatherScreens(deps) {
       }
     }
     if (layer.childElementCount > 0) screenNode.appendChild(layer);
+  }
+
+  // [LOG_ID: 20260723_2100] "F:다음 페이지에서 시간별 상세 확인" 안내 줄이 텍스트로만 표시되고
+  // 클릭할 수 없었다(사용자 보고: "이부분클릭가능해야지") — newsScreens.js의 "[엔터]" 복귀 안내와
+  // 동일한 패턴으로, 렌더된 줄에서 해당 문구를 찾아 F 명령을 실행하는 핫스팟을 그 위에 올린다.
+  function renderWeatherHourlyHintHotspot(screenNode) {
+    if (!screenNode) return;
+    const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
+    const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
+    const rowIdx = lineNodes.findIndex((node) => (node.textContent || '').includes('시간별 상세 확인'));
+    if (rowIdx < 0) return;
+
+    const lineNode = lineNodes[rowIdx];
+    const sourceText = String(lineNode.textContent || '');
+    const startIdx = sourceText.search(/\S/);
+    const trimmedEnd = sourceText.replace(/\s+$/g, '').length;
+    if (startIdx < 0 || trimmedEnd <= startIdx) return;
+
+    const bounds = measureLineSegmentBounds(screenNode, lineNode, startIdx, trimmedEnd)
+      || measureServiceLineBounds(screenNode, lineNode)
+      || estimateServiceLineBounds(screenNode, lineNode);
+    if (!bounds) return;
+
+    const layer = createHotspotLayer();
+    layer.appendChild(createHotspotButton('F', '다음 페이지에서 시간별 상세 확인', bounds));
+    screenNode.appendChild(layer);
   }
 
   async function renderWeatherMenuScreen(items) {
@@ -217,7 +246,7 @@ export function createWeatherScreens(deps) {
     if (!fromHistory) { updateURL(); pushHistory(); }
 
     // [LOG_ID: 20260707_2300] 본문도 위→아래 스트리밍으로 통일 (weather-menu/local과 동일 규칙).
-    await renderAnsiScreenWithTopbarSequential({
+    const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: weatherResult.text,
       ansiToHTML,
       screenEl,
@@ -226,6 +255,7 @@ export function createWeatherScreens(deps) {
         await applyCommandFooter(getMenuNodeByKey('weather')?.footer, getCommandFooterText('weatherView'));
       }
     });
+    renderWeatherHourlyHintHotspot(rendered.screenNode);
 
     if (shouldAutoFocusCommandInput()) cmdInput.focus();
   }
