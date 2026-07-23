@@ -22,7 +22,8 @@ export function bindAppEvents(deps) {
     setReady,
     setGhostText,
     setSuggestions,
-    interactionHandlers // New dependency
+    interactionHandlers, // New dependency
+    showToast
   } = deps;
 
   const { handleGlobalClick, shouldAutoFocusCommandInput } = interactionHandlers;
@@ -96,6 +97,11 @@ export function bindAppEvents(deps) {
       cmdInput.value = text;
       cmdInput.focus();
       moveCaretToEnd();
+      // [LOG_ID: 20260723_2320] 조용히 입력줄만 채우면 P/T/H와 달리 화면이 안 바뀌어 "클릭이
+      // 안 된다"고 느끼기 쉬워, 눈에 띄는 토스트로 확실한 피드백을 준다.
+      if (typeof showToast === 'function') {
+        showToast(`"${text.trim()}" 다음에 코드를 입력하고 엔터를 누르세요.`, 2500, 'info');
+      }
       if (typeof setGhostText === 'function') {
         setGhostText('');
       }

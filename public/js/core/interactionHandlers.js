@@ -19,7 +19,8 @@ export function createInteractionHandlers(deps) {
     cmdInput,
     moveCaretToEnd,
     setGhostText,
-    setSuggestions
+    setSuggestions,
+    showToast
   } = deps;
 
   /**
@@ -67,6 +68,10 @@ export function createInteractionHandlers(deps) {
     cmdInput.focus();
     if (typeof moveCaretToEnd === 'function') {
       moveCaretToEnd();
+    }
+    // [LOG_ID: 20260723_2320] P/T/H와 달리 화면이 안 바뀌는 조용한 동작이라 토스트로 확실히 알린다.
+    if (typeof showToast === 'function') {
+      showToast(`"${text.trim()}" 다음에 코드를 입력하고 엔터를 누르세요.`, 2500, 'info');
     }
     return true;
   }
