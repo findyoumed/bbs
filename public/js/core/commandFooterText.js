@@ -84,13 +84,7 @@ export const CMD_ORDER = {
   confAgenda: ['R:재청', 'P:목록', 'T', 'GO', 'H'],
   confRoomCreate: ['P:취소', 'T', 'GO', 'H'],
   confAgendaNew: ['P:취소', 'T', 'GO', 'H'],
-  // [LOG_ID: 20260715_1300] 게시판 랭킹 화면도 여론광장과 동일한 유형의 중복 하드코딩
-  // 안내줄("[1]레벨 [2]글수 [3]추천 [4]조회 | [M]오락실 [T]대문")을 본문에 갖고 있었다.
-  // 여기선 M/T 목적지 자체는 정확했지만(랭킹은 실제로 오락실 하위), 표준 힌트바의
-  // 상위(P)·초기화면(T)와 여전히 중복이었다 — 진짜 추가 정보(1~4 분류 전환, B)만
-  // 표준 체계로 흡수한다.
-  rankingSummary: ['1:레벨', '2:글수', '3:추천', '4:조회', 'P', 'T', 'GO', 'H'],
-  rankingDetail: ['B:종합', '1:레벨', '2:글수', '3:추천', '4:조회', 'P', 'T', 'GO', 'H'],
+
   // [LOG_ID: 20260720_1358] 오락실 게임 5종 — 진행/종료 공용(arcadePlay). 행맨은 진행 중
   // 단일 알파벳이 전부 추측으로 소비되므로 내비게이션 키를 안내하지 않는다(hangmanPlay).
   arcadePlay: ['L:새게임', 'P', 'T', 'GO', 'H'],
@@ -144,7 +138,6 @@ const SCREEN_TO_CATEGORY = {
   'typing-play': 'arcadePlay', 'quiz-play': 'arcadePlay',
   'battle-play': 'arcadePlay',
   'vote-list': 'voteList', 'vote-detail': 'voteDetail', 'vote-create': 'voteCreate',
-  'ranking-summary': 'rankingSummary', 'ranking-detail': 'rankingDetail',
   'conf-rooms': 'confRooms', 'conf-agendas': 'confAgendas', 'conf-agenda': 'confAgenda',
   'conf-room-create': 'confRoomCreate', 'conf-agenda-new': 'confAgendaNew',
   login: 'login',
@@ -204,6 +197,17 @@ export function createCommandFooterTextUtils(deps) {
   function getSupportedFooterText(nextState = state) {
     const currentState = nextState || state || {};
     const currentScreen = String(currentState.screen || '').trim();
+
+    // [LOG_ID: 20260723_1139] 사용자 지시 — 오락실의 모든 입력/결과 화면에서 하단 힌트바(L/P/T/GO/H 등)가 노출되고 마우스 클릭 가능해야 함.
+    // 미니게임 플레이 화면(omok-play 등)만 게임에 집중하도록 힌트바 숨김 유지.
+    const gamePlayOnlyScreens = [
+      'omok-play', 'oth-play', 'base-play', 'hangman-play',
+      'puzzle15-play', 'scramble-play', 'wp-play', 'typing-play',
+      'quiz-play', 'battle-play'
+    ];
+    if (gamePlayOnlyScreens.includes(currentScreen)) {
+      return '';
+    }
 
     if (!currentScreen) {
       return getCommandFooterText('top');

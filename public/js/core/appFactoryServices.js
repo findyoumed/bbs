@@ -1,7 +1,6 @@
-// [LOG: 20260623_0013] origin/main에서 vote/ranking ansi 빌더 포팅 (self-contained import)
+// [LOG: 20260623_0013] origin/main에서 vote ansi 빌더 포팅 (self-contained import)
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 import { createVoteAnsiBuilders } from './voteAnsiBuilders.js';
-import { createRankingAnsiBuilders } from './rankingAnsiBuilders.js';
 // [LOG_ID: 20260719_1600] 토론의 광장(CONF) ansi 빌더
 import { createConfAnsiBuilders } from './confAnsiBuilders.js';
 
@@ -118,10 +117,9 @@ export function createAppFactoryServices(deps) {
   const serviceAnsiBuilders = createServiceAnsiBuilders({ isWideChar, displayWidth, state });
   const systemAnsiBuilders = createSystemAnsiBuilders({ isWideChar, displayWidth });
 
-  // [LOG: 20260623_0013] vote/ranking ansi 빌더 (origin/main 포팅)
+  // [LOG: 20260623_0013] vote ansi 빌더 (origin/main 포팅)
   const ansiBuilderUtils = createAnsiBuilderUtils({ isWideChar, displayWidth });
   const voteAnsiBuilders = createVoteAnsiBuilders({ ansiBuilderUtils });
-  const rankingAnsiBuilders = createRankingAnsiBuilders({ ansiBuilderUtils });
   const confAnsiBuilders = createConfAnsiBuilders({ ansiBuilderUtils }); // [LOG_ID: 20260719_1600]
 
   return {
@@ -146,7 +144,6 @@ export function createAppFactoryServices(deps) {
     screenEl,
     serviceAnsiBuilders,
     voteAnsiBuilders,
-    rankingAnsiBuilders,
     confAnsiBuilders,
     settingsService,
     soundService,

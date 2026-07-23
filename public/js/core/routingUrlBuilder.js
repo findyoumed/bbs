@@ -120,20 +120,23 @@ export function createRoutingUrlBuilder(deps) {
       case 'chat-lobby':
         return '/chat';
 
+      // [LOG_ID: 20260723_1049] 오락실 기능들의 URL 스키마를 /game/* 네임스페이스 하위에 명시적으로 고정
       case 'bio-input':
-      case 'bio-result': return getMenuNodeRoutePath('bio');
+      case 'bio-result': return '/game/bio';
       case 'fortune-input':
-      case 'fortune-result': return getMenuNodeRoutePath('fortune');
-      case 'mbti-list': return getMenuNodeRoutePath('mbti');
-      case 'mbti-detail': return `${getMenuNodeRoutePath('mbti')}/${encodeURIComponent(state._mbtiCode || '')}`;
+      case 'fortune-result': return '/game/fortune';
+      case 'mbti-intro':
+      case 'mbti-test':
+      case 'mbti-list': return '/game/mbti';
+      case 'mbti-detail': return `/game/mbti/${encodeURIComponent(state._mbtiCode || '')}`;
       // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현
       case 'blood-input':
-      case 'blood-result': return getMenuNodeRoutePath('blood');
+      case 'blood-result': return '/game/blood';
       case 'compat-input':
       case 'compat-input2':
-      case 'compat-result': return getMenuNodeRoutePath('compat');
+      case 'compat-result': return '/game/compat';
       case 'tojeong-input':
-      case 'tojeong-result': return getMenuNodeRoutePath('tojeong');
+      case 'tojeong-result': return '/game/tojeong';
       // [LOG_ID: 20260720_1358] 오락실 게임 5종 — 진행 상태는 URL로 복원하지 않는다(새로고침=새 게임).
       case 'omok-play': return getMenuNodeRoutePath('omok');
       case 'oth-play': return getMenuNodeRoutePath('oth');
@@ -152,7 +155,7 @@ export function createRoutingUrlBuilder(deps) {
       case 'chat-room':
         return `/chat/${encodeURIComponent(_chatRoomId || '')}`;
 
-      // [LOG: 20260623_0013] vote/ranking URL (origin/main 포팅)
+      // [LOG: 20260623_0013] vote URL (origin/main 포팅)
       // [LOG_ID: 20260714_1200] 투표는 오락실이 아니라 최상위 여론광장(AGORA)에 속하므로
       // /game/vote → /acro 로 이전한다(오락실 하위 중복 항목 제거와 함께).
       // [LOG_ID: 20260718_2230] go 코드를 "acro"에서 "agora"로 정정(사용자 지적) — /acro → /agora.
@@ -162,10 +165,6 @@ export function createRoutingUrlBuilder(deps) {
         return `/agora/${encodeURIComponent(serviceData?.voteId || '')}`;
       case 'vote-create':
         return '/agora/create';
-      case 'ranking-summary':
-        return '/game/ranking';
-      case 'ranking-detail':
-        return `/game/ranking/${encodeURIComponent(serviceData?.category || '')}`;
 
       // [LOG_ID: 20260719_1600] 토론의 광장(CONF) URL
       // [LOG_ID: 20260718_2300] go 코드를 "conf"에서 "forum"으로 정정(사용자 지적) — /conf → /forum.

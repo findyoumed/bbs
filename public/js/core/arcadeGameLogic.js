@@ -12,7 +12,8 @@ export function createOmokState() {
 const inOmok = (x, y) => x >= 0 && x < OMOK_SIZE && y >= 0 && y < OMOK_SIZE;
 const OMOK_DIRS = [[1, 0], [0, 1], [1, 1], [1, -1]];
 
-// 착수점 기준 4방향 양쪽 연속 카운트 ≥5 (장목 허용 — 원전 천리안도 흑 금수 규칙 없음)
+// 착수점 기준 4방향 양쪽 연속 카운트가 정확히 5인 경우만 승리 판정 (장목 제외)
+// [LOG_ID: 20260723_1712] 연속 6개(장목)는 이긴 것으로 인정되지 않는 오목 규칙 준수 (사용자 요청)
 export function omokCheckWin(board, x, y) {
   const who = board[y * OMOK_SIZE + x];
   if (!who) return false;
@@ -22,7 +23,7 @@ export function omokCheckWin(board, x, y) {
       let cx = x + dx * sign, cy = y + dy * sign;
       while (inOmok(cx, cy) && board[cy * OMOK_SIZE + cx] === who) { count++; cx += dx * sign; cy += dy * sign; }
     }
-    if (count >= 5) return true;
+    if (count === 5) return true;
   }
   return false;
 }

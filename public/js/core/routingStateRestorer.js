@@ -49,8 +49,6 @@ export function createRoutingStateRestorer(deps) {
     showConfAgenda,
     showConfRoomCreate,
     showConfAgendaNew,
-    showRanking,
-    showRankingDetail,
     showBiorhythm,
     showBiorhythmResult,
     showFortune,
@@ -434,12 +432,6 @@ export function createRoutingStateRestorer(deps) {
           if (shown) return shown;
         }
         if (typeof showRetroArt === 'function') return await showRetroArt(true);
-      }
-      if (sub === 'ranking') {
-        if (param) {
-          if (typeof showRankingDetail === 'function') return await showRankingDetail(param, true);
-        }
-        if (typeof showRanking === 'function') return await showRanking(true);
       }
       // [LOG: 20260707_1430] /game 단독 딥링크(새로고침)가 초기화면으로 폴백하던 문제 수정.
       // 이 핸들러가 rootSegment 'game'을 선점해 범용 메뉴 복원(showBoardSelect)에 도달하지
