@@ -20,8 +20,13 @@ export const CMD_META = {
   GO: { label: '이동', tip: 'GO [코드]', priority: 90, cat: 'NAV', desc: '특정 메뉴나 게시판 코드로 바로 이동합니다.' },
   // [LOG_ID: 20260712_2130] 하이텔 원전 의미(화면 재전송)로 변경 — 사용자 결정 (hitel_upgrade_plan P4-1)
   Z: { label: '재전송', tip: 'Z', priority: 85, cat: 'NAV', desc: '현재 화면을 다시 그립니다. (하이텔: 잡음으로 깨진 화면 재전송)' },
-  F: { label: '다음쪽', tip: 'F, [ENTER]', priority: 70, cat: 'NAV', desc: '다음 페이지로 이동합니다. (또는 엔터키)' },
-  B: { label: '이전쪽', tip: 'B', priority: 70, cat: 'NAV', desc: '이전 페이지로 이동합니다.' },
+  // [LOG_ID: 20260723_2230] 70(GO=90보다 낮음)이라 실제로 다음 페이지가 있는 화면에서도 좁은
+  // 모바일 힌트바 트림(trimHintEntriesToFit)이 GO/T/P보다 F/B를 먼저 숨겼다 — 정작 F/B가 뜬다는
+  // 것 자체가 "지금 이 화면에 진짜 다음/이전 페이지가 있다"는 뜻이라 GO(임의 코드 이동, 흔치 않음)
+  // 보다 훨씬 더 우선순위가 높아야 한다(사용자 보고: 날씨 지역별 화면 다중 페이지에서 F가 계속
+  // 안 보임 — 실측: data-priority=70이 GO=90보다 낮아 트림 1순위로 잘림).
+  F: { label: '다음쪽', tip: 'F, [ENTER]', priority: 92, cat: 'NAV', desc: '다음 페이지로 이동합니다. (또는 엔터키)' },
+  B: { label: '이전쪽', tip: 'B', priority: 92, cat: 'NAV', desc: '이전 페이지로 이동합니다.' },
   C: { label: '배경색', tip: 'C', priority: 36, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
   COLOR: { label: '배경색', tip: 'COLOR', priority: 35, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
   CLS: { label: '화면지움', tip: 'CLS, CLEAR', priority: 10, cat: 'SYS', desc: '터미널 화면을 깨끗이 지웁니다.' },
