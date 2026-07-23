@@ -1,3 +1,14 @@
+## [2026-07-23 21:35] [기능 추가] 힌트바 "이동(GO)"을 클릭 가능하게 함 — 즉시 실행 대신 입력줄에 "GO "를 채워 넣고 포커스
+
+**LOG_ID: 20260723_2300**
+목표: 사용자 요청 — "모든 힌트바의 이동(GO)도 클릭 가능하고 'go ' 텍스트가 '선택>>' 오른편에 쓰여지면 좋겠어".
+배경: GO는 인자 없이는 아무 동작도 하지 않는 명령(`GO [코드]` 형태로만 유효 — `menuNavigationActions.js`의 `executeGoCommand`가 `/^GO\s+(.+)$/`에 안 걸리면 그냥 `false` 반환)이라, 기존처럼 클릭 즉시 `executeCommand('GO')`를 실행하면 아무 일도 안 일어나는 죽은 버튼이었다.
+구현: `commandService.js`의 `CMD_META.GO`에 `prefill: true` 속성 추가. `terminalHintMarkup.js`의 `buildCommandToken`/`buildParenCommandToken`이 `meta.prefill`이면 `data-cmd="GO"` 대신 `data-cmd-prefill="GO "`(트레일링 공백 포함)를 쓰도록 분기. `interactionHandlers.js`에 새 `prefillCommandInput(value)` 함수(입력줄에 값만 채우고 포커스만 줄 뿐 `executeCommand`/`handleCmd`를 호출하지 않음)와 `'cmd-prefill'` 클릭 핸들러를 추가해 연결. 화면 자동전환 시 모바일 키보드 팝업을 막는 기존 `shouldAutoFocusCommandInput()` 규칙과 무관하게, 이건 사용자가 직접 탭한 결과라 항상 포커스한다. `handleGlobalClick`의 QUIET_COMMANDS(렌더링 중단 안 함) 판정에도 prefill 클릭을 포함시켜, 아무것도 제출하지 않는 이 동작이 진행 중인 화면 스트리밍을 불필요하게 끊지 않게 했다.
+검증: `node --check` 통과. Playwright로 `/policy` 화면에서 "이동(GO)" 토큰 클릭 → 화면 전환 없이(`data-screen` 그대로) 입력창 값이 정확히 `"GO "`로 채워지고, `document.activeElement`가 그 입력창이며 커서가 맨 끝(`selectionStart:3`)에 위치함을 실측 확인. `npm run smoke:command-parity`, `smoke:menu-wiring`, `smoke:renderer-ui`, `smoke:vercel-ready` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-23 21:20] [버그 수정] help/policy/weatherView/menuIndex/newsList에서 F/B의 "페이지 없으면 숨김" 로직이 커스텀 라벨('다음페이지'/'이전페이지')과 매치 안 돼, 단 하나뿐인 페이지에서도 F가 계속 노출되던 문제 수정
 
 **LOG_ID: 20260723_2240**

@@ -17,7 +17,11 @@ export const CMD_META = {
   P: { label: '상위', tip: 'P, M', priority: 95, cat: 'NAV', desc: '상위 메뉴로 이동합니다.' },
   M: { label: '상위', tip: 'P, M', priority: 95, cat: 'NAV', desc: '상위 메뉴로 이동합니다.' },
   T: { label: '초기화면', tip: 'T', priority: 98, cat: 'NAV', desc: 'BBS 초기 화면으로 이동합니다.' },
-  GO: { label: '이동', tip: 'GO [코드]', priority: 90, cat: 'NAV', desc: '특정 메뉴나 게시판 코드로 바로 이동합니다.' },
+  // [LOG_ID: 20260723_2300] GO는 인자("GO [코드]") 없이는 아무 동작도 하지 않아 힌트바에서
+  // 클릭해도 죽은 버튼이었다(사용자 요청: "이동(GO)도 클릭 가능하고 go 텍스트가 선택>> 오른편에
+  // 쓰여지면 좋겠어") — prefill:true면 클릭 시 즉시 실행하는 대신 입력줄에 "GO "만 채워 넣고
+  // 커서를 포커스해, 사용자가 이어서 코드를 타이핑할 수 있게 한다.
+  GO: { label: '이동', tip: 'GO [코드]', priority: 90, cat: 'NAV', prefill: true, desc: '특정 메뉴나 게시판 코드로 바로 이동합니다.' },
   // [LOG_ID: 20260712_2130] 하이텔 원전 의미(화면 재전송)로 변경 — 사용자 결정 (hitel_upgrade_plan P4-1)
   Z: { label: '재전송', tip: 'Z', priority: 85, cat: 'NAV', desc: '현재 화면을 다시 그립니다. (하이텔: 잡음으로 깨진 화면 재전송)' },
   // [LOG_ID: 20260723_2230] 70(GO=90보다 낮음)이라 실제로 다음 페이지가 있는 화면에서도 좁은

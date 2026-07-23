@@ -51,6 +51,26 @@ export function createInteractionHandlers(deps) {
     return true;
   }
 
+  // [LOG_ID: 20260723_2300] GO처럼 인자가 꼭 필요한 명령은 클릭해도 그대로 실행하면 죽은 버튼이라
+  // (사용자 요청) 클릭 시 실행하지 않고 입력줄에 "CMD "만 채워 넣고 포커스만 준다 — 이어서 사용자가
+  // 직접 인자를 타이핑해서 엔터를 누르는 방식. showPendingCommandInput(실행 직전 표시용)과 달리
+  // 여기서는 executeCommand를 아예 호출하지 않는다.
+  function prefillCommandInput(value) {
+    const text = String(value || '');
+    if (!cmdInput) {
+      return false;
+    }
+
+    cmdInput.value = text;
+    // [LOG_ID: 20260723_2300] 이건 사용자가 직접 탭한 결과라, 화면 자동 전환 때 키보드 팝업을
+    // 막는 shouldAutoFocusCommandInput()의 일반 규칙과 무관하게 항상 포커스를 준다.
+    cmdInput.focus();
+    if (typeof moveCaretToEnd === 'function') {
+      moveCaretToEnd();
+    }
+    return true;
+  }
+
   function clearPendingCommandInput(value) {
     const text = String(value || '').trim();
     if (!cmdInput || cmdInput.value !== text) {
@@ -183,6 +203,9 @@ export function createInteractionHandlers(deps) {
     'cmd-fill': (btn) => {
       executeCommand(getClickableCommandValue('cmd-fill', btn));
     },
+    'cmd-prefill': (btn) => {
+      prefillCommandInput(btn.dataset.cmdPrefill || '');
+    },
     'external-url': (btn) => {
       const opened = window.open(btn.dataset.externalUrl, '_blank', 'noopener,noreferrer');
       if (opened) opened.opener = null;
@@ -207,7 +230,8 @@ export function createInteractionHandlers(deps) {
         // [LOG: 20260426_1325] 유틸리티 명령어(C, Y 등)는 렌더링을 중단하지 않도록 개선
         const cmdValue = btn.dataset.cmd || '';
         const QUIET_COMMANDS = ['C', 'COLOR', 'Y', 'MUTE', '+', 'ZOOM', 'RESET', 'PERF', 'SYSINFO', 'DIAG', 'ACT', 'ACTIVITY', 'HIST', 'ENV', 'VARS', 'SET'];
-        const isQuiet = QUIET_COMMANDS.some(q => cmdValue.toUpperCase().startsWith(q));
+        // [LOG_ID: 20260723_2300] prefill(GO 등)은 아무것도 실행/제출하지 않으므로 중단할 렌더링이 없다.
+        const isQuiet = Boolean(btn.dataset.cmdPrefill) || QUIET_COMMANDS.some(q => cmdValue.toUpperCase().startsWith(q));
 
         if (!isQuiet && interruptRendering) {
           interruptRendering();

@@ -22,9 +22,13 @@ export function createTerminalHintMarkup(deps) {
         ? `${label}[${normalizedCmd}]`
         : (meta.tip || normalizedCmd)
     ).trim();
+    // [LOG_ID: 20260723_2300] prefill(예: GO)은 클릭 즉시 실행하지 않고 입력줄에 "CMD "만 채워
+    // 사용자가 이어서 인자를 타이핑하게 한다 — fill(즉시 실행)과는 다른 별도 속성.
     const dataAttr = meta.fill
       ? `data-cmd-fill="${esc(meta.fill)}"`
-      : `data-cmd="${esc(normalizedCmd)}"`;
+      : meta.prefill
+        ? `data-cmd-prefill="${esc(normalizedCmd)} "`
+        : `data-cmd="${esc(normalizedCmd)}"`;
     // [LOG: 20260622_1900] 푸터 토큰 표기는 '라벨(CMD)' 괄호 형식으로 통일(기존 대다수 화면의 표기와 동일).
     const tokenText = normalizedCmd === label.toUpperCase()
       ? esc(label)
@@ -42,7 +46,9 @@ export function createTerminalHintMarkup(deps) {
     const meta = CMD_META[normalizedCmd] || {};
     const dataAttr = meta.fill
       ? `data-cmd-fill="${esc(meta.fill)}"`
-      : `data-cmd="${esc(normalizedCmd)}"`;
+      : meta.prefill
+        ? `data-cmd-prefill="${esc(normalizedCmd)} "`
+        : `data-cmd="${esc(normalizedCmd)}"`;
     const tip = String(meta.tip || `${label}[${normalizedCmd}]`).trim();
 
     return `<span class="cmd-token cmd-clickable" data-tip="${esc(tip)}" ${dataAttr}>${esc(label)}(${esc(normalizedCmd)})</span>`;
