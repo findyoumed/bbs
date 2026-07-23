@@ -248,8 +248,7 @@ export function initializeAppFactoryRuntime(deps) {
       }
     },
     setGhostText: services.terminalUiCore.setGhostText,
-    setSuggestions: services.terminalUiCore.setSuggestions,
-    showToast: services.terminalUiCore.showToast
+    setSuggestions: services.terminalUiCore.setSuggestions
   });
   const commandPalette = createCommandPalette({
     state,
@@ -270,11 +269,7 @@ export function initializeAppFactoryRuntime(deps) {
     saveHistory: services.settingsService.saveHistory,
     jumpToContent: screens.jumpToContent,
     interactionHandlers,
-    commandPalette,
-    // [LOG_ID: 20260723_2320] GO 등 prefill 클릭 시 입력줄에 조용히 텍스트만 채워지면
-    // 사용자가 "클릭이 아예 안 된다"고 느끼기 쉬워(P/T/H처럼 화면이 바로 안 바뀌므로) 토스트로
-    // 명확한 피드백을 준다.
-    showToast: services.terminalUiCore.showToast
+    commandPalette
   });
 
   let hasLoggedSystemInfo = false;

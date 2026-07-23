@@ -1,3 +1,13 @@
+## [2026-07-23 22:00] [정리] GO 클릭 토스트 제거 — 사용자가 정상 동작을 확인한 뒤 불필요하다고 판단
+
+**LOG_ID: 20260723_2330**
+목표: 사용자 확인 — "토스트 나오고 있어. 텍스트 go도 나왔어"(직전 토스트 추가분이 정상 작동 중임을 확인)했고, 곧이어 "go 눌렀을때 토스트메세지 효과는 필요없어"(제거 요청).
+구현: `appEvents.js`/`interactionHandlers.js`의 prefill 처리 분기에서 `showToast(...)` 호출과 관련 주석만 제거 — 입력줄에 "GO "를 채우고 포커스하는 핵심 동작은 그대로 유지. 두 파일 모두에서 이제 쓰이지 않는 `showToast` 의존성 destructuring도 함께 제거. `appFactoryRuntime.js`의 `bindAppEvents`/`createInteractionHandlers` 호출부에 추가했던 `showToast: services.terminalUiCore.showToast` 연결 2곳도 함께 정리(다른 용도로 이미 쓰이는 `services.terminalUiCore.showToast` 자체는 그대로 유지).
+검증: `node --check` 통과. Playwright(hasTouch:true)로 날씨 지역선택 화면에서 "이동(GO)" 터치 — 입력줄이 "GO "로 채워지는 핵심 동작은 그대로, 토스트(`#terminal-notification`)는 더 이상 뜨지 않음을 확인. `npm run smoke:command-parity`, `smoke:menu-wiring`, `smoke:renderer-ui`, `smoke:vercel-ready` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-23 21:55] [기능 개선] 이동(GO) 클릭 시 토스트로 명확한 피드백 추가 — "클릭이 안 된다"는 반복 신고가 사실은 조용한 성공(피드백 부재)이었을 가능성 대응
 
 **LOG_ID: 20260723_2320**
