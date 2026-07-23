@@ -1,3 +1,14 @@
+## [2026-07-23 19:10] [버그 수정] 날씨 지역별 피드(RSS)에서 "The operation was aborted due to timeout" 같은 Node 내부 에러 메시지가 화면에 그대로 노출되던 문제 수정 + 타임아웃 2초→5초로 완화
+
+**LOG_ID: 20260723_2010**
+목표: 사용자가 배포된 화면 스크린샷 첨부 — 날씨 "서울특별시" 지역 화면(`/service/weather/<door>`)에서 "피드 오류: The operation was aborted due to ti..."라는 영문 기술 에러 메시지가 그대로 노출됨.
+원인: `RssServiceBase.js`의 `_fetchCached`(날씨 지역 피드·전국 개요·뉴스 카테고리 목록이 공용으로 사용)가 fetch 실패 시 `message: `피드 오류: ${e.message}`` 형태로 Node/undici의 원본 에러 메시지(`The operation was aborted due to timeout`, `fetch failed` 등)를 가공 없이 그대로 화면 문자열에 박아 넣고 있었다. `RssWeatherService.js`의 "내 위치" 날씨(`getLocalWeather`)는 이미 `getFriendlyLocalWeatherError`로 이런 기술 메시지를 한글 안내문으로 치환하는 로직이 있었는데, 정작 더 자주 쓰이는 지역별 피드 경로(`_fetchCached`)에는 같은 처리가 없었다(2026-06-11 로그에 "Do not expose Node fetch internals" 주석까지 있었지만 `getLocalWeather` 경로에만 적용되고 `_fetchCached` 경로엔 누락). 또한 `_fetchCached`의 타임아웃이 2초로 매우 타이트해(2026-06-10 로그) 실제 서비스 환경(서버리스 콜드스타트·해외 상위 서버 지연)에서 정상 응답도 자주 시간 초과로 실패하고 있었다.
+구현: `RssServiceBase.js`에 `sanitizeFeedError(error)` 함수 추가 — 에러의 name/code/message를 검사해 timeout·network·DNS류는 "서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.", upstream HTTP 실패는 "원본 서버 응답 오류가 발생했습니다.", 그 외는 "처리 중 오류가 발생했습니다."로 치환(기존 `getFriendlyLocalWeatherError`와 동일한 패턴). `_fetchCached`의 catch 블록이 `sanitizeFeedError(e)`를 쓰도록 수정하고, `RssServiceBase.sanitizeFeedError`로 정적 메서드 노출해 `RssNewsService.js`의 기사 본문 fetch catch 블록(동일한 `${error.message}` 누출 패턴)에서도 재사용. 타임아웃은 2000ms → 5000ms로 완화(날씨 "내 위치"가 이미 쓰던 5000ms 기본값과 통일).
+검증: `node --check` 통과. `node -e`로 `sanitizeFeedError` 단위 확인(timeout/fetch failed→연결 실패 문구, upstream failed→응답 오류 문구, 기타→일반 오류 문구). `npm run smoke:rss-services` 통과(날씨 10개 지역·뉴스 11개 토픽 정상 파싱 확인). `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-23 00:20] [버그 수정] 모바일에서 policy/newsList/weatherView/menuIndex 힌트바가 P,H 두 개만 남던 문제 수정 — help는 이미 고쳐졌던 동일 버그가 나머지 3곳엔 남아 있었음
 
 **LOG_ID: 20260723_0020**

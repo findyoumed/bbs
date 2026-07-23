@@ -29,6 +29,23 @@ function decodeXmlBuffer(buffer, contentTypeHeader) {
   }
 }
 
+// [LOG: 20260723_2010] Never leak raw fetch/Node error internals (e.g. "The operation was
+// aborted due to timeout") onto the BBS screen — translate to a friendly Korean message.
+function sanitizeFeedError(error) {
+  const rawMessage = String(error?.message || '').trim();
+  const rawName = String(error?.name || '').trim();
+  const rawCode = String(error?.cause?.code || error?.code || '').trim();
+  const technicalText = `${rawName} ${rawCode} ${rawMessage}`;
+
+  if (/fetch failed|aborted|timeout|terminated|network|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(technicalText)) {
+    return '서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  }
+  if (/^upstream failed/i.test(rawMessage)) {
+    return '원본 서버 응답 오류가 발생했습니다.';
+  }
+  return '처리 중 오류가 발생했습니다.';
+}
+
 class RssServiceBase {
   constructor(options = {}) {
     this.fetchImpl = options.fetchImpl || global.fetch;
@@ -48,16 +65,17 @@ class RssServiceBase {
     if (persistent) { this._setMemoryCacheEntry(this.feedCache, cacheKey, persistent, this.cacheTtlMs); return persistent; }
     let val;
     try {
-      // [LOG: 20260610_1500] Add 2 second timeout to avoid hanging on slow RSS servers
+      // [LOG: 20260723_2010] Bumped from 2s to 5s — 2s was tripping spurious timeouts on
+      // slower upstream RSS servers / serverless cold starts, not just genuinely hung ones.
       const res = await this.fetchImpl(url, {
         headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' },
-        signal: AbortSignal.timeout(2000)
+        signal: AbortSignal.timeout(5000)
       });
       if (!res?.ok) throw new Error(`upstream failed${res?.status ? ` (${res.status})` : ''}`);
       // [LOG: 20260616_1110] Dynamic charset detection and decoding for RSS feeds
       const buf = await res.arrayBuffer();
       val = parser(decodeXmlBuffer(buf, res.headers.get('content-type')));
-    } catch (e) { val = { unavailable: true, message: `피드 오류: ${e.message}`, items: [] }; }
+    } catch (e) { val = { unavailable: true, message: `피드 오류: ${sanitizeFeedError(e)}`, items: [] }; }
     this._setMemoryCacheEntry(this.feedCache, cacheKey, val, this.cacheTtlMs);
     await this._setPersistentCacheEntry(storeKey, val, this.cacheTtlMs);
     return val;
@@ -96,4 +114,5 @@ class RssServiceBase {
   _notFoundError(msg) { const e = new Error(msg); e.status = 404; return e; }
 }
 
+RssServiceBase.sanitizeFeedError = sanitizeFeedError;
 module.exports = RssServiceBase;

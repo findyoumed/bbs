@@ -565,7 +565,7 @@ class RssNewsService extends RssServiceBase {
         }
       }
     } catch (error) {
-      detail = { unavailable: true, message: `피드 오류: ${error.message}`, items: [] };
+      detail = { unavailable: true, message: `피드 오류: ${RssServiceBase.sanitizeFeedError(error)}`, items: [] };
     }
 
     if (resolvedSourceLink && resolvedSourceLink !== normalizedLink) {
