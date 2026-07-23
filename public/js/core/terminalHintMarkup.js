@@ -154,12 +154,19 @@ export function createTerminalHintMarkup(deps) {
       return false;
     }
 
-    if (normalizedCmd === 'B' && (resolvedLabel === '이전쪽' || resolvedLabel === '이전')) {
+    // [LOG_ID: 20260723_2240] help/policy/weatherView/menuIndex/newsList는 CMD_ORDER에서
+    // F/B 라벨을 'B:이전페이지'/'F:다음페이지'로 오버라이드하는데, 이 페이지 존재 여부 검사는
+    // 기본 라벨('이전쪽'/'이전', '다음쪽'/'다음')만 알고 있어 '이전페이지'/'다음페이지'는 매치되지
+    // 않았다 — 그 결과 이 다섯 카테고리는 마지막/유일 페이지에서도 F/B가 계속 노출됐다(날씨
+    // 지역별 화면 실측: 07/01 단일 페이지·피드 오류 화면에서도 "다음페이지(F)"가 떠 있었음).
+    // voteDetail의 'B:목록'·voteCreate의 'B:취소'·confAgendas의 'B:회의실'처럼 B가 페이지 이동과
+    // 무관한 라벨로도 쓰이므로, cmd만으로 판단하지 않고 실제 페이지네이션 라벨만 넓게 포함한다.
+    if (normalizedCmd === 'B' && ['이전쪽', '이전', '이전페이지'].includes(resolvedLabel)) {
       const { pageNo } = getFooterPageState();
       if (pageNo <= 1) return false;
     }
 
-    if (normalizedCmd === 'F' && (resolvedLabel === '다음쪽' || resolvedLabel === '다음')) {
+    if (normalizedCmd === 'F' && ['다음쪽', '다음', '다음페이지'].includes(resolvedLabel)) {
       const { pageNo, pageCount } = getFooterPageState();
       if (pageNo >= pageCount) return false;
     }
