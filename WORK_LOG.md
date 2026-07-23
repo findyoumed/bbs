@@ -1,3 +1,14 @@
+## [2026-07-23 00:20] [버그 수정] 모바일에서 policy/newsList/weatherView/menuIndex 힌트바가 P,H 두 개만 남던 문제 수정 — help는 이미 고쳐졌던 동일 버그가 나머지 3곳엔 남아 있었음
+
+**LOG_ID: 20260723_0020**
+목표: 사용자가 배포된 화면 스크린샷으로 "힌트바에 기능이 두개만 나오는데. 원래더많은데"라고 보고 — 날씨 "내 위치" 화면 하단 힌트바가 "상위(P),도움말(H)" 두 개만 보임.
+원인: `commandFooterText.js`의 `getCommandFooterText`가 모바일(`isMobile`)일 때 `policy`/`newsList`/`weatherView`/`menuIndex` 네 카테고리를 `['F:다음', 'B:이전', 'P', 'H']`로 하드코딩 축소하고 있었다. "내 위치" 날씨는 페이지가 1쪽뿐이라 F/B가 `shouldShowFooterToken`의 페이지네이션 조건(`pageNo<=1`→B 숨김, `pageNo>=pageCount`→F 숨김)에 걸려 둘 다 사라지고, 애초에 축소 목록에 T·GO가 아예 없었으므로 P,H만 남았다. 코드에 이미 남아있던 `help` 카테고리 전용 수정 커밋(LOG_ID 20260718_2330, "메뉴 힌트바가 많이 없어졌는데")이 정확히 같은 원인·같은 증상을 다뤘는데, 그때 `help`만 데스크톱 풀세트(F/B/P/T/GO)로 고치고 나머지 3개 카테고리는 옛날 축소 목록이 그대로 남아 있었다.
+구현: `policy`/`newsList`/`weatherView`/`menuIndex`에 대한 모바일 전용 축소 분기를 완전히 제거 — `help`와 동일하게 `CMD_ORDER[category]`(데스크톱 풀세트, T·GO·H 포함)를 그대로 쓰고 좁은 화면에서는 이미 존재하는 동적 트림(`trimHintEntriesToFit`)이 알아서 우선순위 낮은 토큰을 H 툴팁으로 접도록 맡긴다.
+검증: `node --check` 통과. 로컬 서버 기동 후 Playwright(390px 모바일)로 `/service/weather/local`·`/policy`·`/service/news`를 직접 열어 힌트바 DOM을 확인 — 날씨 "내 위치"는 이제 "상위(P),초기화면(T),이동(GO),도움말(H)"(F/B는 1쪽뿐이라 정상적으로 숨겨져 H 툴팁에 편입), `/policy`는 전체 6개("다음페이지(F),이전페이지(B),상위(P),초기화면(T),이동(GO),도움말(H)"), `/service/news`는 5개("상위(P),초기화면(T),이동(GO),로그인(LOGIN),도움말(H)")로 정상 노출됨을 실측 확인. `npm run smoke:command-parity`, `smoke:menu-wiring`, `smoke:renderer-ui`, `smoke:vercel-ready` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-23 00:10] [버그 수정] 날씨 "내 위치" 화면이 모바일에서 데스크톱 폭(52칸)으로 고정돼 강수 열이 화면 밖으로 잘리던 문제 수정
 
 **LOG_ID: 20260723_0010**

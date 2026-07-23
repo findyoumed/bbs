@@ -164,15 +164,19 @@ export function createCommandFooterTextUtils(deps) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     if (isMobile) {
-      if (category === 'policy' || category === 'newsList' || category === 'weatherView' || category === 'menuIndex') {
-        order = ['F:다음', 'B:이전', 'P', 'H'];
-      } else if (category === 'help') {
+      if (category === 'help') {
         // [LOG_ID: 20260718_2330] 페이지가 1쪽뿐인 도움말(F/B가 둘 다 필터링되는 경우)에서
         // T·GO까지 빠져 있어 상위(P) 토큰 하나만 남아 보였다(사용자 지적: "메뉴 힌트바가 많이
         // 없어졌는데"). 데스크톱 help 세트(F/B/P/T/GO)와 동일하게 맞춘다 — 안 들어가면 동적
         // 트림(trimHintEntriesToFit)이 알아서 H 툴팁으로 접는다.
         order = ['F:다음', 'B:이전', 'P', 'T', 'GO'];
       }
+      // [LOG_ID: 20260723_1900] policy/newsList/weatherView/menuIndex도 같은 종류의 문제였다
+      // (사용자 지적: "힌트바에 기능이 두개만 나오는데. 원래 더 많은데") — 페이지가 1쪽뿐이라
+      // F/B가 둘 다 필터링되면 P,H(또는 P만)만 남아 T·GO가 완전히 사라져 보였다. 위 help 수정과
+      // 동일한 원인이었는데 그때는 help만 고쳐졌고 나머지 셋은 예전의 축소 목록(F/B/P/H)이
+      // 그대로 남아 있었다. CMD_ORDER[category]의 데스크톱 풀세트를 그대로 쓰고 동적
+      // 트림(trimHintEntriesToFit)이 좁은 화면에서 알아서 줄이도록 맡긴다 — 별도 오버라이드 불필요.
     }
 
     // [LOG_ID: 20260713_1230] 쪽지함 상자별 힌트바 — 보낸쪽지함에서는 나우누리 CMAIL식
