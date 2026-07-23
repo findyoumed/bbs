@@ -199,6 +199,73 @@ export function createMemoCommandHandler(deps) {
                 return await handleAbsentFlowInput(input);
             }
 
+            // [LOG_ID: 20260722_3700] 나우누리 책("PC통신에서 인터넷까지" p.114) 실측: "DD 3-9"
+            // (범위) / "DD 1,3,4,6,7,8"(나열) 명령으로 목록에서 편지를 한번에 여러 통 지울 수
+            // 있다고 명시하고, 바로 옆에서 "한 번 삭제한 편지는 되살릴 수 없으므로... 정말 지울
+            // 것인지 한 번 더 생각해보고 지우도록 합시다"라고 경고한다 — 그래서 기존 단건 삭제
+            // (beginMemoDeleteConfirm)와 동일하게 Y/N 확인 단계를 둔다.
+            if (state._memoBulkDeleteConfirm) {
+                const answer = String(input || '').trim().toUpperCase();
+                if (answer === 'Y' || answer === 'YES') {
+                    const ids = state._memoBulkDeleteConfirm.ids;
+                    state._memoBulkDeleteConfirm = null;
+                    setHint?.('쪽지를 삭제하는 중입니다..');
+                    for (const id of ids) {
+                        try {
+                            await apiFetch(`/api/memos/${id}`, { method: 'DELETE' });
+                        } catch (error) {
+                            // 개별 실패는 건너뛰고 나머지를 계속 지운다.
+                        }
+                    }
+                    await showMemoList();
+                    setHint?.(`${ids.length}통의 쪽지를 삭제했습니다.`);
+                } else {
+                    state._memoBulkDeleteConfirm = null;
+                    await showMemoList();
+                    setHint?.('삭제를 취소했습니다.');
+                }
+                setPrompt?.('선택 >>');
+                return true;
+            }
+
+            const ddMatch = cmd.match(/^DD(?:\s+([\d,\s-]+))?$/);
+            if (ddMatch) {
+                const spec = String(ddMatch[1] || '').trim();
+                if (!spec) {
+                    setHint?.('사용법: DD {번호} — 쪽지 삭제. 여러 통은 DD 3,5 또는 범위 DD 1-4');
+                    return true;
+                }
+
+                let targets = [];
+                const rangeMatch = spec.match(/^(\d+)\s*-\s*(\d+)$/);
+                if (rangeMatch) {
+                    const low = Math.min(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10));
+                    const high = Math.max(parseInt(rangeMatch[1], 10), parseInt(rangeMatch[2], 10));
+                    for (let i = low; i <= high; i += 1) {
+                        const memo = state._memos?.[i - 1];
+                        if (memo) targets.push(memo);
+                    }
+                } else if (spec.includes(',')) {
+                    const tokens = spec.split(',').map((token) => token.trim()).filter(Boolean);
+                    targets = tokens
+                        .map((token) => state._memos?.[parseInt(token, 10) - 1])
+                        .filter(Boolean);
+                } else {
+                    const memo = state._memos?.[parseInt(spec, 10) - 1];
+                    if (memo) targets = [memo];
+                }
+
+                if (!targets.length) {
+                    setHint?.('존재하지 않는 번호입니다.');
+                    return true;
+                }
+
+                state._memoBulkDeleteConfirm = { ids: targets.map((memo) => memo.id) };
+                setHint?.(`${targets.length}통의 쪽지를 삭제하시겠습니까? 한 번 삭제하면 되살릴 수 없습니다.`);
+                setPrompt?.('삭제 (y/n) >>');
+                return true;
+            }
+
             if (cmd === 'ABSENT' || cmd === '부재') {
                 return await beginAbsentFlow();
             }
