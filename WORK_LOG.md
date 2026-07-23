@@ -1,3 +1,14 @@
+## [2026-07-23 22:15] [버그 수정] /service/* 딥링크(북마크·탭 복원 등)로 진입하면 loadMenuTree()를 안 거쳐 state.menuLookup이 비어, 이후 GO로 다른 메뉴(예: GO NEWS)로 이동이 깨지던 문제 수정
+
+**LOG_ID: 20260723_2340**
+목표: 사용자가 "go news 했더니 이상하게 나오네" → "마찬가지로 모바일에서 go news 하면 뉴스가 이상한데"로 재보고. 스크린샷은 뉴스 카테고리 목록(1.최신, 2.정치...) 대신 빈 게시판 목록 형태("등록된 글이 없습니다")를 보여줬다. 로컬에서 메인 화면부터 시작해 "GO NEWS"를 타이핑(직접 입력·GO 클릭 후 이어 입력 둘 다)하면 항상 정상 동작해 재현이 안 됐다.
+원인: `routingStateRestorer.js`의 `restoreStateFromURL()`은 URL 첫 세그먼트가 `routeHandlers`에 있으면 그 핸들러로 바로 위임하고, **매칭 안 되는 경로에서만** 폴백 경로에서 `loadMenuTree()`를 호출한다. `service` 라우트 핸들러(`/service/weather`, `/service/news` 등 처리) 자신은 `loadMenuTree()`를 전혀 호출하지 않았다 — 즉 사용자가 날씨 화면 등을 **딥링크로 직접 진입**(북마크, 브라우저 탭 복원, 링크 공유 등 — 이 세션 내내 날씨 URL을 반복 테스트했으므로 유력)하면 화면 자체는 정상 렌더링되지만 `state.menuLookup`은 빈 채로 남는다. 이후 "GO NEWS"를 치면 `executeGoCommand`의 메뉴 노드 검색(`resolveAnyMenuNodeTarget` → 빈 `menuLookup`)이 아무것도 못 찾고 게시판 폴백으로 새 뒤, 존재하지 않는 "NEWS" 게시판을 그대로 열어 빈 목록을 보여준 것. 이미 동일한 버그가 `game` 라우트(LOG_ID 20260720_1450)에서 한 번 발견·수정됐었는데, 당시 각 routeHandler가 개별적으로 `loadMenuTree()`를 챙기게 놔둔 탓에 같은 종류의 결함이 `service`에서 재발했다.
+구현: `service` 라우트 핸들러 시작 부분에 `await loadMenuTree()` 추가(즉시 수정). 근본적으로 이런 산발적 재발을 막기 위해, `restoreStateFromURL()`의 `routeHandlers[rootSegment]` 위임 **이전**에 `loadMenuTree()`를 한 번 호출하도록 옮겨 — 어떤 routeHandler로 딥링크가 들어오든 `state.menuLookup`이 항상 채워지도록 구조적으로 보장했다(이미 로드됐으면 캐시로 즉시 반환해 비용 없음, `game` 핸들러의 기존 개별 호출은 안전한 중복 호출로 남겨둠).
+검증: `node --check` 통과. Playwright로 사용자의 정확한 시나리오 재현 — `/service/weather` 딥링크로 직접 진입(메인 화면 안 거침) 후 "GO NEWS" 입력 → 수정 전: 화면이 안 바뀜(조용히 실패) / 수정 후: 뉴스 카테고리 목록(1.최신~11.오피니언)으로 정상 이동함을 확인. `/game/omok` 딥링크 진입 후 "GO WEATHER"도 정상 동작(회귀 없음) 확인. `npm run smoke:command-parity`, `smoke:menu-wiring`, `smoke:renderer-ui`, `smoke:vercel-ready` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-23 22:00] [정리] GO 클릭 토스트 제거 — 사용자가 정상 동작을 확인한 뒤 불필요하다고 판단
 
 **LOG_ID: 20260723_2330**

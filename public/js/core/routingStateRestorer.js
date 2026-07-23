@@ -174,6 +174,13 @@ export function createRoutingStateRestorer(deps) {
     },
 
     async service(segments, query) {
+      // [LOG_ID: 20260723_2340] game 라우트(20260720_1450)와 동일한 버그 — /service/* 딥링크(북마크,
+      // 탭 복원, 직접 URL 진입 등)로 들어오면 loadMenuTree()를 거치지 않아 state.menuLookup이 빈
+      // 채로 남는다. 화면 자체는 정상 렌더링되지만, 이후 GO 명령의 메뉴 노드 검색(resolveAnyMenuNodeTarget)이
+      // 빈 lookup에서 아무것도 못 찾아 다른 메뉴(예: GO NEWS)로 이동이 깨진다(사용자 보고: "go news
+      // 했더니 이상하게 나오네" — 날씨 화면에 직접 진입한 뒤 GO NEWS를 치면 뉴스 카테고리 대신
+      // 빈 게시판 화면이 뜸). loadMenuTree()는 이미 로드됐으면 즉시 반환하므로 비용 없음.
+      await loadMenuTree();
       const [, service, param] = segments;
       const articleNo = query.get('article');
       const page = parseInt(query.get('page') || '1', 10);
@@ -454,11 +461,18 @@ export function createRoutingStateRestorer(deps) {
       }
 
       const rootSegment = segments[0];
+      // [LOG_ID: 20260723_2340] 개별 routeHandler가 각자 필요할 때만 loadMenuTree()를 부르게
+      // 놔뒀더니 같은 종류의 버그가 반복됐다(game: 20260720_1450에서 발견·수정, service:
+      // 20260723_2340에서 또 발견 — "GO NEWS"가 날씨 딥링크 진입 후 깨짐). 딥링크로 어느
+      // routeHandler로 들어오든 state.menuLookup이 항상 채워지도록 여기서 한 번에 보장한다.
+      // 이미 로드됐으면 즉시 반환하므로(state.menuTree 캐시) 비용 없음 — 개별 핸들러의 기존
+      // loadMenuTree() 호출(game 등)은 그대로 둬도 안전한 중복 호출이 될 뿐이다.
+      await loadMenuTree();
+
       if (routeHandlers[rootSegment]) {
         return await routeHandlers[rootSegment](segments, queryParams);
       }
 
-      await loadMenuTree();
       const routeMatch = resolveMenuRoute(segments);
 
       if (routeMatch) {
