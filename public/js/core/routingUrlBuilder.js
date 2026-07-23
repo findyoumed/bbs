@@ -152,7 +152,7 @@ export function createRoutingUrlBuilder(deps) {
       case 'chat-room':
         return `/chat/${encodeURIComponent(_chatRoomId || '')}`;
 
-      // [LOG: 20260623_0013] vote/ranking URL (origin/main 포팅)
+      // [LOG: 20260623_0013] vote URL (origin/main 포팅)
       // [LOG_ID: 20260714_1200] 투표는 오락실이 아니라 최상위 여론광장(AGORA)에 속하므로
       // /game/vote → /acro 로 이전한다(오락실 하위 중복 항목 제거와 함께).
       // [LOG_ID: 20260718_2230] go 코드를 "acro"에서 "agora"로 정정(사용자 지적) — /acro → /agora.
@@ -162,10 +162,6 @@ export function createRoutingUrlBuilder(deps) {
         return `/agora/${encodeURIComponent(serviceData?.voteId || '')}`;
       case 'vote-create':
         return '/agora/create';
-      case 'ranking-summary':
-        return '/game/ranking';
-      case 'ranking-detail':
-        return `/game/ranking/${encodeURIComponent(serviceData?.category || '')}`;
 
       // [LOG_ID: 20260719_1600] 토론의 광장(CONF) URL
       // [LOG_ID: 20260718_2300] go 코드를 "conf"에서 "forum"으로 정정(사용자 지적) — /conf → /forum.

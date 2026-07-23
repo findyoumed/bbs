@@ -139,17 +139,11 @@ export function createMenuNavigationActions(deps) {
       await refs.showWeatherMenu();
       return true;
     }
-    // [LOG: 20260623_0013] vote/ranking 메뉴 타입 진입 (origin/main 포팅)
+    // [LOG: 20260623_0013] vote 메뉴 타입 진입 (origin/main 포팅)
     if (node.type === 'vote' && typeof refs.showVoteList === 'function') {
       state.boardMenuPath = contextMenuPath;
       state.boardMenuTitle = contextMenuTitle;
       await refs.showVoteList();
-      return true;
-    }
-    if (node.type === 'ranking' && typeof refs.showRanking === 'function') {
-      state.boardMenuPath = contextMenuPath;
-      state.boardMenuTitle = contextMenuTitle;
-      await refs.showRanking();
       return true;
     }
     // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 메뉴 타입 진입

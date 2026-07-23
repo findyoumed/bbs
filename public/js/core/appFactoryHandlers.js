@@ -1,7 +1,6 @@
-// [LOG: 20260623_0013] origin/main에서 vote/ranking command handler 포팅 (self-contained import)
+// [LOG: 20260623_0013] origin/main에서 vote command handler 포팅 (self-contained import)
 import { createVoteCommandHandler } from './commandRouterVote.js';
 import { createConfCommandHandler } from './commandRouterConf.js';
-import { createRankingCommandHandler } from './commandRouterRanking.js';
 
 export function createAppFactoryHandlers(deps) {
   const {
@@ -98,14 +97,10 @@ export function createAppFactoryHandlers(deps) {
     apiFetch: services.apiFetch
   });
 
-  // [LOG: 20260623_0013] vote/ranking command handler (origin/main 포팅)
+  // [LOG: 20260623_0013] vote command handler (origin/main 포팅)
   const handleVoteCommand = createVoteCommandHandler({
     ...handlerDeps,
     ...screens.voteScreens
-  });
-  const handleRankingCommand = createRankingCommandHandler({
-    ...handlerDeps,
-    ...screens.rankingScreens
   });
   // [LOG_ID: 20260719_1600] 토론의 광장(CONF) command handler
   const handleConfCommand = createConfCommandHandler({
@@ -176,9 +171,8 @@ export function createAppFactoryHandlers(deps) {
     handleMyInfoCommand,
     handlePostViewCommand,
     handleServiceCommand,
-    // [LOG: 20260623_0013] vote/ranking command handler 리턴 (origin/main 포팅)
+    // [LOG: 20260623_0013] vote command handler 리턴 (origin/main 포팅)
     handleVoteCommand,
-    handleRankingCommand,
     handleConfCommand
   };
 }

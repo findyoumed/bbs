@@ -1,3 +1,32 @@
+## [2026-07-23 09:25] 게시판 랭킹 (/game/ranking) 기능 제거
+
+**LOG_ID: 20260723_0925**
+목표: 사용자 요청에 따라 게시판 랭킹 (`/game/ranking`) 기능 완선 제거.
+삭제 파일:
+- `public/js/core/rankingScreens.js`
+- `public/js/core/rankingAnsiBuilders.js`
+- `public/js/core/commandRouterRanking.js`
+- `src/server/routeHandlers/rankingRoutes.js`
+수정 파일:
+- `legacy/hanulso.mnu` (오락실 door=7 ranking 항목 삭제 및 door 8~18 -> 7~17 조정)
+- `public/js/core/menuNavigationActions.js`
+- `public/js/core/routingStateRestorer.js`
+- `public/js/core/routingUrlBuilder.js`
+- `public/js/core/commandFooterText.js`
+- `public/js/core/commandDispatcherExecution.js`
+- `public/js/core/appFactoryServices.js`
+- `public/js/core/appFactoryScreens.js`
+- `public/js/core/appFactoryHandlers.js`
+- `public/js/core/appFactoryRuntime.js`
+- `src/server/apiRequestRouter.js`
+- `scripts/smoke-menu-wiring.js`
+수행 작업: 랭킹 관련 파일 4개 삭제 및 클라이언트/서버 wiring/메뉴 트리에서 랭킹 요소를 완벽히 제거.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:command-parity`, `npm run smoke:renderer-ui`
+기대: `/game/ranking` 기능이 완전히 제거되고 타 기능에 영향 없으며 스모크 검사 통과.
+결과: ✅ 성공
+
+---
+
 ## [2026-07-22 32:00] [기능 추가] 게시판 제목검색(LT)에 하이텔 책의 "*"(AND)/"+"(OR) 다중 검색어 문법 재현
 
 **LOG_ID: 20260722_3200**

@@ -88,7 +88,6 @@ export function createCommandDispatcherExecution(deps) {
       handlePostViewCommand,
       handleLogCommand,
       handleVoteCommand,
-      handleRankingCommand,
       handleConfCommand
     },
     screens: {
@@ -170,9 +169,8 @@ export function createCommandDispatcherExecution(deps) {
       // over global command handling so page navigation does not leak into menu navigation.
       async () => await handleBrowseCommand({ s: screen, input, cmd, rawCmd: normalized, context }),
       async () => await handleServiceCommand({ s: screen, input, cmd, rawCmd: normalized, context }),
-      // [LOG: 20260623_0013] vote/ranking 화면 명령 라우팅 (origin/main 포팅)
+      // [LOG: 20260623_0013] vote 화면 명령 라우팅 (origin/main 포팅)
       async () => await handleVoteCommand({ s: screen, cmd, rawCmd: normalized, context }),
-      async () => await handleRankingCommand({ s: screen, cmd, rawCmd: normalized, context }),
       // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 화면 명령 라우팅
       async () => await handleConfCommand({ s: screen, cmd, rawCmd: normalized, context }),
       async () => input && await handleGlobalCommand({ cmd, rawCmd: normalized, context }),

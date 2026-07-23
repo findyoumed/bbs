@@ -1,7 +1,6 @@
-// [LOG: 20260623_0013] origin/main에서 vote/ranking 스크린 포팅 (self-contained import)
+// [LOG: 20260623_0013] origin/main에서 vote 스크린 포팅 (self-contained import)
 import { createVoteScreens } from './voteScreens.js';
 import { createConfScreens } from './confScreens.js';
-import { createRankingScreens } from './rankingScreens.js';
 import { createAmusementScreens } from './amusementScreens.js';
 // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색(member/byid/byname)
 import { createMemberSearchScreens } from './memberSearchScreens.js';
@@ -56,7 +55,6 @@ export function createAppFactoryScreens(deps) {
     systemAnsiBuilders,
     terminalUiCore,
     voteAnsiBuilders,
-    rankingAnsiBuilders,
     confAnsiBuilders
   } = services;
 
@@ -223,20 +221,13 @@ export function createAppFactoryScreens(deps) {
     showMain
   });
 
-  // [LOG: 20260623_0013] vote/ranking 스크린 (origin/main 포팅, apiFetch는 로컬 screenDeps에 없어 명시 전달)
+  // [LOG: 20260623_0013] vote 스크린 (origin/main 포팅, apiFetch는 로컬 screenDeps에 없어 명시 전달)
   const voteScreens = createVoteScreens({
     ...screenDeps,
     apiFetch,
     buildVoteListAnsi: voteAnsiBuilders.buildVoteListAnsi,
     buildVoteDetailAnsi: voteAnsiBuilders.buildVoteDetailAnsi,
     buildVoteCreateAnsi: voteAnsiBuilders.buildVoteCreateAnsi,
-    getMenuNodeByKey: menuService.getMenuNodeByKey
-  });
-  const rankingScreens = createRankingScreens({
-    ...screenDeps,
-    apiFetch,
-    buildRankingSummaryAnsi: rankingAnsiBuilders.buildRankingSummaryAnsi,
-    buildRankingDetailAnsi: rankingAnsiBuilders.buildRankingDetailAnsi,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
   // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 스크린
@@ -300,7 +291,6 @@ export function createAppFactoryScreens(deps) {
     screenDeps,
     serviceScreens,
     voteScreens,
-    rankingScreens,
     confScreens,
     amusementScreens,
     showBoardSelect,

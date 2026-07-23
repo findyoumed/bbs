@@ -321,14 +321,10 @@
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="ranking" go="ranking" id="game_ranking" door="7" access_level="1">
-				<name>게시판 랭킹</name>
-				<header></header>
-				<footer>txt/cmd_menu_footer.txt</footer>
-			</item>
+			<!-- [LOG_ID: 20260723_0925] 게시판 랭킹 (/game/ranking) 기능 제거 (사용자 요청). 이하 door 번호 재배치. -->
 
 			<!-- [LOG_ID: 20260711_1400] olddos-bbs txt/door 원본 아트 이식 -->
-			<item type="retro-art" go="retro" id="game_retro" door="8" access_level="1">
+			<item type="retro-art" go="retro" id="game_retro" door="7" access_level="1">
 				<name>추억의 접속화면</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
@@ -337,61 +333,61 @@
 			<!-- [LOG_ID: 20260720_1358] 천리안 원전 6.14.1 "컴퓨터와 게임을" 재현 — 오목/오델로/
 			     숫자야구/영어단어맞추기/숫자판맞추기. 온라인 철학관과 동일하게 서버 데이터·콘텐츠
 			     시딩이 필요 없는 클라이언트 로직 게임이라 "빈 껍데기" 리스크가 없다. -->
-			<item type="omok" go="omok" id="game_omok" door="9" access_level="1">
+			<item type="omok" go="omok" id="game_omok" door="8" access_level="1">
 				<name>오목</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="othello" go="oth" id="game_oth" door="10" access_level="1">
+			<item type="othello" go="oth" id="game_oth" door="9" access_level="1">
 				<name>오델로</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="baseball" go="base" id="game_base" door="11" access_level="1">
+			<item type="baseball" go="base" id="game_base" door="10" access_level="1">
 				<name>숫자야구</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="hangman" go="hangman" id="game_hangman" door="12" access_level="1">
+			<item type="hangman" go="hangman" id="game_hangman" door="11" access_level="1">
 				<name>영어단어 맞추기</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="puzzle15" go="16p" id="game_16p" door="13" access_level="1">
+			<item type="puzzle15" go="16p" id="game_16p" door="12" access_level="1">
 				<name>숫자판 맞추기</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="scramble" go="scramble" id="game_scramble" door="14" access_level="1">
+			<item type="scramble" go="scramble" id="game_scramble" door="13" access_level="1">
 				<name>스크램블</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="wp" go="wp" id="game_wp" door="15" access_level="1">
+			<item type="wp" go="wp" id="game_wp" door="14" access_level="1">
 				<name>영어 단어 학습</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="typing" go="typing" id="game_typing" door="16" access_level="1">
+			<item type="typing" go="typing" id="game_typing" door="15" access_level="1">
 				<name>타자 연습</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="quiz" go="quiz" id="game_quiz" door="17" access_level="1">
+			<item type="quiz" go="quiz" id="game_quiz" door="16" access_level="1">
 				<name>퀴즈 박사</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>
 			</item>
 
-			<item type="battle" go="battle" id="game_battle" door="18" access_level="1">
+			<item type="battle" go="battle" id="game_battle" door="17" access_level="1">
 				<name>배틀쉽</name>
 				<header></header>
 				<footer>txt/cmd_menu_footer.txt</footer>

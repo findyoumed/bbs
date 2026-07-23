@@ -20,7 +20,6 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.chatScreens,
     ...screens.authScreens,
     ...screens.voteScreens,
-    ...screens.rankingScreens,
     ...screens.confScreens,
     ...screens.amusementScreens,
     // [LOG_ID: 20260713_1700] refs에 빠져 있어 refs.showMemoList가 항상 undefined였다 —
@@ -166,7 +165,6 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.authScreens,
     ...screens.memoScreens,
     ...screens.voteScreens,
-    ...screens.rankingScreens,
     ...screens.confScreens,
     ...screens.amusementScreens,
     getAuthLeafRoutePath: services.menuService.getAuthLeafRoutePath,
@@ -219,9 +217,8 @@ export function initializeAppFactoryRuntime(deps) {
       handleMyInfoCommand: handlers.handleMyInfoCommand,
       handlePostViewCommand: handlers.handlePostViewCommand,
       handleLogCommand: screens.systemLogScreens.handleLogCommand,
-      // [LOG: 20260623_0013] vote/ranking command handler 연결 (origin/main 포팅)
+      // [LOG: 20260623_0013] vote command handler 연결 (origin/main 포팅)
       handleVoteCommand: handlers.handleVoteCommand,
-      handleRankingCommand: handlers.handleRankingCommand,
       handleConfCommand: handlers.handleConfCommand
     },
     screens: {
