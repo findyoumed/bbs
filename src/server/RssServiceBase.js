@@ -53,6 +53,11 @@ class RssServiceBase {
     this.cacheTtlMs = Number(options.cacheTtlMs || 15 * 60 * 1000);
     this.menuCacheTtlMs = Number(options.menuCacheTtlMs || 60 * 60 * 1000);
     this.cacheStore = options.cacheStore || null;
+    // [LOG_ID: 20260723_2130] 실패(unavailable) 결과를 성공 결과와 같은 15분 TTL로 캐시하면,
+    // 기상청 RSS가 몇 초 뒤 다시 정상 응답해도 사용자는 최대 15분 동안 계속 에러 화면만 보게 된다
+    // (사용자 보고: "에러가 오히려 생겼어" — 직접 확인해보니 weather.go.kr 자체는 몇 초 만에
+    // 정상 응답했는데도 화면엔 에러가 떠 있었다). 실패는 훨씬 짧게만 캐시해 빠르게 재시도되게 한다.
+    this.failureCacheTtlMs = Number(options.failureCacheTtlMs || 60 * 1000);
     this.menuCache = new Map();
     this.feedCache = new Map();
   }
@@ -76,8 +81,9 @@ class RssServiceBase {
       const buf = await res.arrayBuffer();
       val = parser(decodeXmlBuffer(buf, res.headers.get('content-type')));
     } catch (e) { val = { unavailable: true, message: `피드 오류: ${sanitizeFeedError(e)}`, items: [] }; }
-    this._setMemoryCacheEntry(this.feedCache, cacheKey, val, this.cacheTtlMs);
-    await this._setPersistentCacheEntry(storeKey, val, this.cacheTtlMs);
+    const ttl = val.unavailable ? this.failureCacheTtlMs : this.cacheTtlMs;
+    this._setMemoryCacheEntry(this.feedCache, cacheKey, val, ttl);
+    await this._setPersistentCacheEntry(storeKey, val, ttl);
     return val;
   }
 
