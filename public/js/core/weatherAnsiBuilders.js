@@ -180,33 +180,45 @@ export function createWeatherAnsiBuilders(deps) {
     return { text: parts.join('\n'), pageNo: currentPage, pageCount };
   }
 
+  // [LOG_ID: 20260723_1000] buildWeatherAnsi(지역 날씨 요약)는 이미 isMobile 분기가 있었지만
+  // 이 함수(내 위치 날씨)는 항상 데스크톱 폭(52칸)으로 고정돼 있어, 모바일(44칸) 화면에서
+  // 오른쪽 "강수" 열이 화면 밖으로 잘려 나가던 버그(스크린샷으로 실측 확인)를 고친다.
   function buildLocalWeatherAnsi(local) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const city = local?.city || '알 수 없음';
     const parts = [];
     parts.push(`  ${ansiColor(11)}◈ 내 위치 (${city})${ANSI_RESET}  ${ansiColor(15)}현재 ${local?.temperature || ''}℃ ${local?.weather || ''}${ANSI_RESET}`);
+
+    const widths = isMobile
+      ? { day: 12, weather: 10, high: 6, low: 6, rain: 6 }
+      : { day: 16, weather: 12, high: 8, low: 8, rain: 8 };
+
     parts.push(
-      `  ${ansiColor(14)}${fitCell('날짜', 16)}${ANSI_RESET}` +
-      `${ansiColor(14)}${fitCell('날씨', 12)}${ANSI_RESET}` +
-      `${ansiColor(14)}${fitCell('최고', 8)}${ANSI_RESET}` +
-      `${ansiColor(14)}${fitCell('최저', 8)}${ANSI_RESET}` +
-      `${ansiColor(14)}${fitCell('강수', 8)}${ANSI_RESET}`
+      `  ${ansiColor(14)}${fitCell('날짜', widths.day)}${ANSI_RESET}` +
+      `${ansiColor(14)}${fitCell('날씨', widths.weather)}${ANSI_RESET}` +
+      `${ansiColor(14)}${fitCell('최고', widths.high)}${ANSI_RESET}` +
+      `${ansiColor(14)}${fitCell('최저', widths.low)}${ANSI_RESET}` +
+      `${ansiColor(14)}${fitCell('강수', widths.rain)}${ANSI_RESET}`
     );
-    parts.push(`  ${ansiColor(8)}${'─'.repeat(52)}${ANSI_RESET}`);
+    const lineWidth = widths.day + widths.weather + widths.high + widths.low + widths.rain;
+    parts.push(`  ${ansiColor(8)}${'─'.repeat(lineWidth)}${ANSI_RESET}`);
     (local?.days || []).forEach((d) => {
       parts.push(
-        `  ${ansiColor(11)}${fitCell(d.day || '', 16)}${ANSI_RESET}` +
-        `${ansiColor(15)}${fitCell(d.weather || '', 12)}${ANSI_RESET}` +
-        `${ansiColor(13)}${fitCell(d.high ? `${d.high}℃` : '', 8)}${ANSI_RESET}` +
-        `${ansiColor(12)}${fitCell(d.low ? `${d.low}℃` : '', 8)}${ANSI_RESET}` +
-        `${ansiColor(12)}${fitCell(d.rainProbability || '', 8)}${ANSI_RESET}`
+        `  ${ansiColor(11)}${fitCell(d.day || '', widths.day)}${ANSI_RESET}` +
+        `${ansiColor(15)}${fitCell(d.weather || '', widths.weather)}${ANSI_RESET}` +
+        `${ansiColor(13)}${fitCell(d.high ? `${d.high}℃` : '', widths.high)}${ANSI_RESET}` +
+        `${ansiColor(12)}${fitCell(d.low ? `${d.low}℃` : '', widths.low)}${ANSI_RESET}` +
+        `${ansiColor(12)}${fitCell(d.rainProbability || '', widths.rain)}${ANSI_RESET}`
       );
     });
     return parts.join('\n');
   }
 
   function buildWeatherLocalAnsi(local) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
     const parts = [];
-    parts.push(buildTopHeader(['날씨', '내 위치']));
+    parts.push(buildTopHeader(['날씨', '내 위치'], '', targetCols));
 
     if (!local || local.unavailable) {
       parts.push('');
