@@ -1,3 +1,14 @@
+## [2026-07-23 21:45] [버그 수정] 이동(GO) 클릭이 캡처 단계 명령 리스너(appEvents.js)에 인식되지 않아 실제 클릭이 씹히던 문제 보강 수정
+
+**LOG_ID: 20260723_2310**
+목표: 직전 GO prefill 기능 배포 후 사용자가 "아직도 이동(GO)는 클릭도 안되는데"라고 재보고. 로컬 Playwright 재현(문서 레벨 `.click()` 시뮬레이션)에서는 정상 동작했지만, 실제 기기 클릭과 더 가까운 좌표 기반 클릭까지 다시 검증했다.
+원인 분석: `appEvents.js`에 명령 토큰 클릭을 처리하는 **캡처 단계** 전역 리스너(`getCommandClickAction`/`executeCommandFromClick`)가 별도로 존재하고, 이게 `interactionHandlers.js`의 버블 단계 `handleGlobalClick`보다 **먼저** 실행되며 인식한 클릭은 `stopImmediatePropagation()`으로 소비한다. 이 캡처 리스너의 명령 토큰 셀렉터가 `[data-cmd-execute], [data-cmd-fill], [data-cmd], [data-signup-choice]`로, 직전에 GO에 추가한 `data-cmd-prefill`이 빠져 있었다 — 이 자체로 클릭을 막지는 않지만(인식 못 하면 그냥 지나침), 실제 기기에서 토큰과 바로 옆 쉼표(.cmd-sep) 경계의 히트테스트 차이 등 재현이 어려운 변수까지 없애기 위해 이 1차 리스너에서부터 명시적으로 처리하도록 보강했다.
+구현: `getCommandClickAction`의 명령 토큰 셀렉터에 `[data-cmd-prefill]` 추가, 인식 시 `{ kind: 'prefill', value: ... }` 액션 반환. `executeCommandFromClick`에 `action.kind === 'prefill'` 분기 추가 — `interruptRendering`/`handleCmd`(명령 실행)는 건드리지 않고 입력줄에 값만 채운 뒤 포커스·커서 이동만 수행.
+검증: `node --check` 통과. Playwright로 `page.mouse.click(x, y)`(문서 `.click()`이 아니라 실제 화면 좌표를 계산해 클릭하는, 실기기 탭에 더 가까운 방식)로 "이동(GO)" 토큰 중심점을 클릭 — 화면 전환 없이 입력창이 정확히 "GO "로 채워짐을 재확인. `npm run smoke:command-parity`, `smoke:menu-wiring`, `smoke:renderer-ui`, `smoke:vercel-ready` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-23 21:35] [기능 추가] 힌트바 "이동(GO)"을 클릭 가능하게 함 — 즉시 실행 대신 입력줄에 "GO "를 채워 넣고 포커스
 
 **LOG_ID: 20260723_2300**

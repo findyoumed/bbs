@@ -29,9 +29,17 @@ export function bindAppEvents(deps) {
   const { moveCaretToEnd } = bindCommandInputEvents(deps);
 
   function getCommandClickAction(target) {
-    const commandToken = target?.closest?.('[data-cmd-execute], [data-cmd-fill], [data-cmd], [data-signup-choice]');
+    // [LOG_ID: 20260723_2310] GO 등 prefill 토큰도 이 캡처 단계 리스너의 셀렉터에 없으면
+    // getCommandClickAction이 null을 반환해 그냥 지나치긴 하지만(버블 단계로 넘어감), 실제
+    // 기기에서 손가락이 토큰과 바로 옆 쉼표(.cmd-sep) 경계를 살짝 벗어나 짚었을 때의 히트테스트
+    // 차이 등 재현하기 어려운 변수를 없애기 위해, 이 1차 캡처 리스너에서부터 명시적으로 인식한다.
+    const commandToken = target?.closest?.('[data-cmd-execute], [data-cmd-fill], [data-cmd-prefill], [data-cmd], [data-signup-choice]');
     if (!commandToken || commandToken.closest?.('[data-external-url]')) {
       return null;
+    }
+
+    if (commandToken.dataset.cmdPrefill) {
+      return { kind: 'prefill', value: commandToken.dataset.cmdPrefill };
     }
 
     const value = String(commandToken.dataset.cmdFill || commandToken.dataset.cmd || commandToken.dataset.signupChoice || '')
@@ -74,6 +82,26 @@ export function bindAppEvents(deps) {
   function executeCommandFromClick(action) {
     if (isCommandExecutionLocked()) {
       // [LOG: 20260617_1035] Swallow command clicks while a submitted line is waiting.
+      return true;
+    }
+
+    // [LOG_ID: 20260723_2310] prefill(GO 등)은 실행하지 않고 입력줄만 채운다 — 인자가 꼭 필요한
+    // 명령을 클릭 즉시 실행하면 아무 일도 안 일어나는 죽은 버튼이 되므로, 사용자가 이어서 직접
+    // 타이핑하도록 값만 채우고 포커스한다. interruptRendering/handleCmd는 건드리지 않는다.
+    if (action?.kind === 'prefill') {
+      const text = String(action.value || '');
+      if (!text || !cmdInput) {
+        return false;
+      }
+      cmdInput.value = text;
+      cmdInput.focus();
+      moveCaretToEnd();
+      if (typeof setGhostText === 'function') {
+        setGhostText('');
+      }
+      if (typeof setSuggestions === 'function') {
+        setSuggestions([]);
+      }
       return true;
     }
 
