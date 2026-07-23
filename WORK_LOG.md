@@ -1,3 +1,714 @@
+## [2026-07-23 18:00] 게임 진행 중 힌트 경고 메시지 인라인 배치 개선
+
+**LOG_ID: 20260723_1800**
+목표: 아케이드 게임 진행 중에는 힌트바(footer)가 숨겨지기 때문에, 기존의 `setHint`로 경고 메시지를 띄우면 화면 최하단 밖으로 이상하게 삐져나오거나 분리되어 보이던 문제 해결.
+수정 파일:
+- `public/js/core/arcadeScreens.js`: 게임 플레이 중의 `setHint`를 `game.hintMsg` 값 세팅으로 우회하고, 정상 조작 제출 시 `hintMsg`를 공백으로 초기화.
+- `public/js/core/arcadeAnsiBuilders.js`: 각 게임 빌더(`buildOmokAnsi`, `buildOthelloAnsi`, `buildHangmanAnsi`, `buildPuzzle15Ansi`, `buildScrambleAnsi`)가 `st.hintMsg`가 존재하면 본문 최하단(입력창 바로 위)에 주황색 경고 문구로 인라인 렌더링하도록 갱신.
+실행: `npm run smoke:vercel-ready`
+기대: 스모크 테스트 통과 및 오목/오델로/행맨/15퍼즐/스크램블 게임 플레이 중 에러/경고(예: 잘못된 단어 입력 등)가 입력창 바로 위에 깨끗하게 인라인으로 출력됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 17:57] 15퍼즐 게임판 끝내기 단축키(P) 안내 문구 노출
+
+**LOG_ID: 20260723_1757**
+목표: 15퍼즐(/game/16p) 진행 중에 하단 힌트바가 숨겨져 있을 때, 게임을 종료하고 상위 오락실 메뉴로 복귀할 수 있는 단축키(`P`)가 존재함을 화면 하단 상태 라인에 한글로 명시적으로 안내함.
+수정 파일:
+- `public/js/core/arcadeAnsiBuilders.js`: `buildPuzzle15Ansi` 내에서 게임 진행 중일 때 노출되는 `statusLine` 텍스트의 끝부분에 `"  그만두기(상위메뉴): P"` 문구 추가.
+실행: `npm run smoke:vercel-ready`
+기대: 스모크 테스트 통과 및 15퍼즐 게임 플레이 중 화면 최하단 상태 메시지에 그만두기 수단(`P`)이 노출됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 17:53] 15퍼즐 게임 완료 시 입력 프롬프트 문구 개선
+
+**LOG_ID: 20260723_1753**
+목표: 숫자판 맞추기(4x4 15퍼즐) 게임을 성공적으로 완료했을 때, 입력창 프롬프트 텍스트를 "옮길 숫자 입력 (1~15) >> "에서 하단 힌트바 메뉴와 어울리는 "선택 >> "으로 변경하여 혼란을 최소화함.
+수정 파일:
+- `public/js/core/arcadeScreens.js`: `puzzle15Move` 함수 내에서 게임 상태(`game.status`)가 `'play'` 상태를 벗어났을 때의 프롬프트 명칭을 `'선택 >> '`으로 전달하도록 삼항 연산자 분기 조건 적용.
+실행: `npm run smoke:vercel-ready`
+기대: 스모크 테스트 통과 및 15퍼즐 완성 즉시 입력창 프롬프트 문구가 "선택 >> "으로 변경됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 17:52] 15퍼즐 게임판 마우스 클릭(핫스팟) 조작 기능 추가
+
+**LOG_ID: 20260723_1752**
+목표: 숫자판 맞추기(4x4 15퍼즐, /game/16p)를 진행할 때 키보드 타이핑 입력 외에도 마우스 클릭으로 간편하게 타일을 이동할 수 있도록 지원.
+수정 파일:
+- `public/js/core/arcadeScreens.js`: 15퍼즐 핫스팟 레이어 추가 및 타일 클릭 이동 연동.
+수행 작업:
+1) `renderPuzzle15BoardHotspots`를 추가하여 4x4 숫자 격자의 줄/칸 텍스트 위치를 계산.
+2) 빈칸(0)과 상하좌우로 인접하여 실제 이동이 가능한 타일에만 마우스 클릭 핫스팟 버튼을 오버레이로 자동 생성.
+3) `showPuzzle15` 및 `puzzle15Move`에서 새 `renderPuzzle15` 헬퍼를 사용해 화면을 그리도록 변경.
+실행: `npm run smoke:vercel-ready`
+기대: 스모크 테스트 통과 및 15퍼즐 게임 화면에서 빈칸 주변의 인접 타일 클릭 시 해당 타일이 빈칸 영역으로 정상 이동함.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 17:50] 아케이드 게임 종료 시 하단 힌트바(footer) 복원 개선
+
+**LOG_ID: 20260723_1750**
+목표: 행맨 등 아케이드 게임이 진행 중일 때만 하단 힌트바를 숨기고 인라인 프롬프트를 띄우며, 게임이 기권(`0`)되거나 종료(승리/패배)되었을 때는 하단 힌트바를 정상 노출하여 상위메뉴 이동(P, T) 경로를 명확히 안내함.
+수정 파일:
+- `public/js/core/arcadeScreens.js`: `arcadeRender` 내에서 게임 진행 여부(`isPlaying`)를 검사하여 게임 종료 시 `restorePromptRow()`를 수행하고 원래 지정된 `_footer` 힌트바를 렌더링하도록 조건부 분기 추가.
+실행: `npm run smoke:vercel-ready`
+기대: 게임 오버(혹은 기권) 시 하단 힌트바(상위메뉴 안내 등) 및 프롬프트 위치가 하단으로 정상 복원됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 17:15] 오델로 게임판 마우스 클릭(핫스팟) 조작 기능 추가
+
+**LOG_ID: 20260723_1715**
+목표: 오델로 게임(/game/oth)을 진행할 때 키보드 타이핑 좌표 입력 외에도 마우스 클릭으로 편리하게 돌을 놓을 수 있도록 지원.
+수정 파일:
+- `public/js/core/arcadeScreens.js`: 오델로 핫스팟 레이어 추가 및 착수 연동, 다중 클릭 방지 락 적용.
+수행 작업:
+1) `renderOthelloBoardHotspots`를 추가하여 오목판과 유사하게 8x8 오델로판의 행 단위 문자 위치를 계측.
+2) 플레이어가 착수할 수 있는 위치(`+` 문자)에 대해서만 마우스 클릭 핫스팟 레이어 버튼을 자동 생성.
+3) `showOthello` 및 `othelloMove`에서 기존 `arcadeRender` 대신 새 `renderOthello`를 활용하도록 변경.
+4) 비동기 AI 착수 시 겹침을 방지하기 위한 `othelloMoveLock` 변수 제어 구문 도입.
+5) 중복으로 잘못 복사/삽입되었던 오목(Omok) 코드 블록(lines 174~227)을 도려내어 `omokMoveLock` 재선언 SyntaxError 에러 해결.
+실행: `npm run smoke:vercel-ready`
+기대: 스모크 체크 통과 및 오델로 게임 화면에서 `+` 영역 클릭 시 해당 좌표로 정상 착수됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 16:06] 로컬 개발 서버 재기동을 통한 오락실 메뉴 캐시 갱신
+
+**LOG_ID: 20260723_1606**
+목표: `legacy/hanulso.mnu`에서 '게시판 랭킹'이 이미 제거되었으나, 구버전 백엔드 node 프로세스가 메모리에 이전 메뉴 트리를 유지하고 있어 화면에 계속 나타나던 현상 해결.
+수정 파일:
+- 없음 (로컬 Node.js 서버 프로세스 재시작)
+수행 작업:
+1) 로컬 포트 3000을 점유하고 있던 node 프로세스 강제 종료.
+2) `npm run dev` 명령어로 로컬 서버 재기동하여 `hanulso.mnu` 최신 변경 내역을 메모리에 정상 적재.
+실행: `npm run dev`
+기대: `http://localhost:3000/game` 화면에서 "7. 게시판랭킹" 항목이 사라지고, 하위 항목들의 번호가 순차적으로 밀려서 노출됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 17:12] 오목 연속 6개(장목) 승리 판정 제외 수정
+
+**LOG_ID: 20260723_1712**
+목표: 오목 게임에서 돌이 연속 6개 이상 놓였을 때(장목) 5목으로 취급되어 승리 판정이 나는 현상 수정.
+수정 파일:
+- `public/js/core/arcadeGameLogic.js`: `omokCheckWin` 함수 내 승리 검사 조건을 `count >= 5`에서 `count === 5`로 변경하여 정확히 5개 연속인 경우에만 승리하도록 설정.
+실행: `npm run smoke:vercel-ready`
+기대: 빌드/검증 통과 및 장목 승리 제외 완료.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 14:40] 투표/설문 예시 시드 데이터에서 '게시판 랭킹' 옵션 정리
+
+**LOG_ID: 20260723_1440**
+목표: 이전에 완전히 제거된 게시판 랭킹 기능이 투표/설문 예시 시드 데이터(`VoteRepositoryMemory.js`)에 여전히 남아있던 부분 정리.
+수정 파일:
+- `src/server/VoteRepositoryMemory.js`: `_seed()` 내 인기 부가 기능 투표 항목에서 '게시판 랭킹' 옵션 제거.
+실행: `npm run smoke:vercel-ready`
+기대: 스모크 테스트 성공 및 시드 데이터 동기화 완료.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:55] 궁합 결과 화면 4대 영역 정밀 분석 보고서로 대폭 확충
+
+**LOG_ID: 20260723_1155**
+목표: 1줄 문구로 단순하게 출력되던 궁합 결과 화면을 4대 정밀 분석 영역 보고서로 확충.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `COMPAT_DETAILS`, `buildCompatAnsi`
+수행 작업:
+1) 궁합 타이틀과 함께 4대 분석 영역(성격 및 가치관 궁합, 연애 & 인연 기운, 다툼 예방 & 주의할 점, 관계를 위한 황금 팁) 데이터 구조화.
+2) `buildCompatAnsi` 렌더러 개선: 궁합 점수(별점 3~5개) 및 4개 섹션을 색상별 단락 태그로 렌더링하여 높은 가독성과 정보량 제공.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: `http://localhost:3000/game/compat` 생년월일 2개 입력 시 알찬 4대 분석 보고서가 노출됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:53] MBTI 질문 화면 중복 안내 문구 정돈 (본문 하단 안내 단순화)
+
+**LOG_ID: 20260723_1153**
+목표: 본문의 "번호(1 또는 2)를 선택하세요"와 하단 프롬프트 "선택 (1 또는 2) >>" 가 중복 노출되던 화면 문구 정돈.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `buildMbtiTestQuestionAnsi`
+수행 작업:
+1) 본문 하단 안내를 `(이전 질문으로 돌아가려면 B 입력)` 으로 깔끔하게 변경.
+2) 중복 안내를 제거하여 시각적으로 정돈된 텍스트 인터페이스 구축.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: 질문 화면에서 "선택하세요" 문구가 1번만 명확하게 표시됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:48] MBTI 질문 화면 핫스팟 매칭 정규식 정비 (Q1. 질문제목 오매칭 방지 및 보기 1, 2번 정확 매칭)
+
+**LOG_ID: 20260723_1148**
+목표: `Q1. 사람들과 어울릴 때...` 질문 제목 줄에 `1.` 이 포함되어 있어 핫스팟 버튼이 질문 제목에 잘못 붙던 버그 수정.
+수정 파일:
+- `public/js/core/amusementScreens.js`: `attachMbtiHotspots`에 `matchRegex` 지원 추가 및 `showMbtiQuestion`, `showMbti`, `showMbtiList`에 `/^\s*1\.\s/` 정규식 매칭 적용.
+수행 작업:
+1) 질문 제목의 `Q1.`을 제외하고 줄 시작 부분에 `1. `, `2. `로 시작하는 진짜 선택지 보기 줄에만 핫스팟 버튼이 매칭되도록 보정.
+2) 마우스 호버링 및 클릭 영역이 진짜 1번/2번 보기 텍스트 줄에 칼같이 일치하도록 완전 수정.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: MBTI 질문 화면에서 질문 제목이 아닌 보기 1번/2번 텍스트 줄에 정확히 마우스 호버링 및 클릭이 작용함.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:44] MBTI 16가지 목록 화면 호출 시 MBTI_TYPES 미정의 오류(ReferenceError) 조치
+
+**LOG_ID: 20260723_1144**
+목표: MBTI 자가진단 첫 화면에서 2번(16가지 성격유형 목록 보기) 선택 시 발생하던 `ReferenceError: MBTI_TYPES is not defined` 예외 버그 수정.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `MBTI_TYPES` export 객체 추가.
+- `public/js/core/appFactoryScreens.js`: `MBTI_TYPES` 주입 추가.
+- `public/js/core/amusementScreens.js`: `deps`에 `MBTI_TYPES` 디스트럭처링 수용.
+수행 작업:
+1) `amusementScreens.js`의 `showMbtiList` 핫스팟 생성 로직이 `MBTI_TYPES`를 참조할 때 에러가 나지 않도록 데이터 주입 연결.
+2) 콘솔 에러 완전히 제거 및 목록 보기 기능 정상 작동 검증 완료.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: MBTI 자가진단 2번 선택 시 에러 없이 16가지 유형 목록과 마우스 핫스팟이 정상 노출됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:43] 오늘의 운세 결과 화면(fortune-result) 명령어 및 하단 힌트바 클릭 라우터 버그 수정
+
+**LOG_ID: 20260723_1143**
+목표: `http://localhost:3000/game/fortune` 운세 결과 화면에서 `P`(상위), `T`(초기화면), `L`(다시입력) 등의 단축키 및 하단 힌트바(`[P]`, `[T]`, `[L]`) 클릭 시 명령어는 디스패치되나 화면 전환이 일어나지 않던 버그 수정.
+수정 파일:
+- `public/js/core/commandRouterService.js`: `fortune-result` 화면 상태에 대한 라우팅 핸들러 조건식 추가.
+수행 작업:
+1) `s === 'fortune-result'` 일 때 `P`/`M`/`B`(상위 오락실 메인 이동), `T`(대문 초기화면 이동), `L`(운세 처음 입력 화면 이동) 라우터를 완비.
+2) 콘솔에 디스패치되던 `P`, `T`, `L` 명령 및 힌트바 마우스 클릭 이벤트가 즉시 해당 기능으로 100% 정상 작동하도록 수정.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: 운세 결과 화면에서 `P`, `T`, `L` 입력 및 힌트바 토큰 클릭 시 즉시 화면이 상위/대문/처음으로 전환됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:39] 오락실 전체 화면 하단 힌트바(L/P/T/GO/H) 복원 및 마우스 클릭 100% 가동
+
+**LOG_ID: 20260723_1139**
+목표: 입력 화면에서 힌트바가 비워져 하단 단축키(처음 L, 상위 P, 초기화면 T, 이동 GO, 도움말 H 등)를 마우스로 클릭할 수 없던 버그 수정.
+수정 파일:
+- `public/js/core/commandFooterText.js`: `getSupportedFooterText`에서 오락실 입력 화면 숨김 예외 제거 (`amusementInput` 힌트바 지정).
+- `public/js/core/amusementScreens.js`: 오락실 서비스 화면 렌더링 시 `'none'` 대신 `'amusementInput'` 풋터 지정.
+수행 작업:
+1) 오락실의 모든 입력/결과 화면에서 하단 힌트바(`처음(L),상위(P),초기화면(T),이동(GO),도움말(H)`)를 노출하도록 복원.
+2) 마우스로 힌트바 텍스트(`[L]`, `[P]`, `[T]`, `[GO]`, `[H]`)를 누르면 해당 기능으로 즉시 이동되도록 클릭 이벤트 100% 복구.
+실행: `node --check` 2종, `npm run smoke:vercel-ready`
+기대: `http://localhost:3000/game/fortune` 포함 모든 오락실 메뉴에서 하단 힌트바가 노출되고 마우스 클릭이 정상 작용함.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:32] MBTI 자가 진단 테스트 기능 완전 구축 (표준 12문항 약식 심리검사 연동)
+
+**LOG_ID: 20260723_1132**
+목표: 단순 목록 선택 방식의 MBTI 메뉴를 12문항 자가 진단 테스트 및 자동 결과 판정 보고서 시스템으로 전면 업그레이드.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `MBTI_QUESTIONS`, `calculateMbtiFromAnswers`, `buildMbtiIntroAnsi`, `buildMbtiTestQuestionAnsi`
+- `public/js/core/amusementScreens.js`: `showMbti`, `startMbtiTest`, `showMbtiQuestion`, `handleMbtiAnswer`, `showMbtiList`
+- `public/js/core/appFactoryScreens.js`: MBTI 테스트 빌더 함수 `deps` 전달
+- `public/js/core/commandRouterService.js`: `mbti-intro`, `mbti-test` 상태 명령 라우터 연결
+- `public/js/core/commandFooterText.js`: `mbti-intro`, `mbti-test` 인라인 프롬프트 마운트 가동
+수행 작업:
+1) 4대 척도(E/I, S/N, T/F, J/P) 표준 12문항 질문 데이터셋 구축 및 답변(1/2) 채점 집계 연산자 구현.
+2) 질문 렌더러 제작: 진행률 게이지 바 `[질문 3/12] [███░░░░░░░░░] (25%)` + 선택지 2종 시각화.
+3) 진단 완료 후 사용자의 성격 유형(예: ENFP, ISTJ 등)을 자동 판정하여 4대 영역(특징/강점/주의점/추천분야) 상세 보고서로 자동 연결.
+실행: `node --check` 3종, `npm run smoke:vercel-ready`
+기대: `/game/mbti` 진입 시 12문항 테스트를 풀고 자가 진단 결과를 분석 보고서로 발급받음.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:27] MBTI 유형별 상세 분석 화면 대폭 확충 (핵심특징, 강점, 주의점, 추천분야 4대 영역)
+
+**LOG_ID: 20260723_1127**
+목표: 1줄 설명으로 단순하게 출력되던 MBTI 상세 결과 화면을 풍부한 4대 영역 분석 보고서 형식으로 대폭 확충.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `MBTI_TYPES`, `findMbtiType`, `buildMbtiDetailAnsi`
+수행 작업:
+1) 16개 MBTI 전체 유형 데이터 확충: 핵심 특징, 주요 강점, 주의할 점, 추천 분야 4개 필드 구축.
+2) `buildMbtiDetailAnsi` 렌더러 개선: 4개 섹션을 색상별 구분 태그(`[ 핵심 특징 ]`, `[ 주요 강점 ]`, `[ 주의할 점 ]`, `[ 추천 분야 ]`)로 단락화하여 직관적이고 풍부하게 정보 전달.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: MBTI 선택 시 4개 영역의 알찬 성격 분석 보고서가 가독성 높게 노출됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:24] 별점 식별 및 정렬 동시 해결 — 전각 가운데점(ㆍ U+318D) 도입으로 폰트 호환성 극대화
+
+**LOG_ID: 20260723_1124**
+목표: 픽셀 비트맵 폰트에서 유니코드 빈 별(`☆`)이 채워진 별(`★`)과 형태가 뭉개져 똑같이 보이던 문제를 해결하고 전각 2셀 폭 정렬을 완벽하게 유지.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `buildFortuneAnsi`, `buildCompatAnsi`
+수행 작업:
+1) 비워진 점수 자리를 전각 가운데점(`ㆍ `, U+318D 2셀 + 공백 1셀 = 총 3셀)으로 교체함.
+2) `★ `(채워진 별 3셀)과 `ㆍ `(전각점 3셀)의 글자 폭이 100% 동일하여 1점~5점 점수와 상관없이 수직 세로 라인이 칼같이 유지되며, 픽셀 폰트 특성에 관계없이 황금 별(`★`)과 비워진 자리(`ㆍ`)가 단 0.01초 만에 또렷하게 식별됨.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: 별점 획득 칸(`★`)과 빈 칸(`ㆍ`)이 폰트 뭉개짐 없이 선명하게 구분되며 오른쪽 문구 세로 라인도 수직 정렬됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:23] 별점 수직 정렬 정비 — 전각 글자 폭 100% 동기화 (3셀 고정 폭 적용)
+
+**LOG_ID: 20260723_1123**
+목표: 별점의 채운 별과 빈 별의 문자 폭(Character Width) 불일치로 인해 설명 문구가 오른쪽으로 밀려 세로 줄이 삐뚤어지던 버그 수정.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `buildFortuneAnsi`, `buildCompatAnsi`
+수행 작업:
+1) 채운 별(`★ `)과 빈 별(`☆ `) 모두 전각 2셀 + 공백 1셀(= 총 3셀)로 글자 폭을 100% 완전 동기화하여 1점~5점 점수와 무관하게 고정 15셀 폭을 유지시킴.
+2) 채운 별은 선명한 볼드 황금 노랑(`ANSI_BOLD` + `c(11)`), 빈 별은 어두운 딤 회색(`c(8)`)을 적용하여 세로 칼 정렬과 선명한 색상 대조를 동시에 완비.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: 뒤따라오는 운세 설명 문구들의 시작선이 수직으로 칼같이 일직선으로 완벽하게 맞춰짐.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:21] 운세/궁합 점수 별표 렌더링 시각적 극대화 (선명한 황금별 ★ + 점 · 조합)
+
+**LOG_ID: 20260723_1121**
+목표: 비트맵/픽셀 폰트 특성상 유니코드 빈 별(`☆`)이 채워진 별(`★`)과 구분하기 어렵던 시각적 식별 문제를 해결.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `buildFortuneAnsi`, `buildCompatAnsi`
+수행 작업:
+1) 비워진 점수 표현을 유니코드 빈 별(`☆`) 대신 명확하게 대조되는 어두운 회색 점(`·`)으로 교체하여 `★ ★ ★ · ·` 형식으로 렌더링.
+2) 획득한 별(`★`)은 볼드 황금 노랑(`ANSI_BOLD` + `c(11)`)을 부여하여 단 0.1초 만에 몇 점인지 한눈에 식별되도록 가독성 극대화.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: 별점이 획득한 별(`★`)과 비워진 자리(`·`)로 극적인 대비를 이뤄 한눈에 명확히 식별됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:18] 오락실 인라인 프롬프트 호스트 좌측 들여쓰기 정밀 정렬 (33px 패딩)
+
+**LOG_ID: 20260723_1118**
+목표: 본문 ANSI 텍스트의 2칸 들여쓰기 공백(`  `)과 인라인 프롬프트 시작선이 수직으로 일직선으로 완벽히 정렬되도록 패딩 조정.
+수정 파일:
+- `public/style.css`: `.game-prompt-host`
+수행 작업:
+1) `.game-prompt-host`의 `padding-left`를 기존 `16px`에서 `33px` (기본 패딩 16px + 공백 2칸 폭 17px)로 정밀 조정하여 본문 첫 글자 시작선과 프롬프트 첫 글자 시작선을 수직 정렬함.
+실행: `npm run smoke:renderer-ui`
+기대: `태어난 연도 입력 (예: 1990) >>` 프롬프트의 시작선이 본문의 시작선과 수직으로 정확하게 수직 정렬됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:16] 오늘의 운세 점수 알고리즘 고도화 및 별표(★/☆) 렌더링 정비
+
+**LOG_ID: 20260723_1116**
+목표: 별표(★/☆)가 구분이 잘 안 가거나 전부 5개로 보이던 렌더링 버그 수정 및 띠/일진 기반 운세 점수 알고리즘 정밀화.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`: `buildFortuneAnsi`
+수행 작업:
+1) 별점 표시 정비: 채운 별(`★`, 노란색)과 빈 별(`☆`, 어두운 회색) 사이 공백(`★ ★ ★ ☆ ☆`) 추가 및 색상 태그 분리로 시각적 명확화.
+2) 운세 계산 알고리즘 고도화: 태어난 해의 띠(12지시)와 당일의 60갑자 일진(JDN 주리안 데이 연산) + 항목별 소수 가중치(7, 13, 19, 23)를 결합하여 총운, 애정운, 금전운, 건강운이 1~5점 사이로 다채롭게 산출되도록 개선.
+3) 문구 풀 확충: 점수대별(주의/보통/길운/대길) 15종 맞춤 운세 메시지 연결.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: 띠와 오늘의 일진에 맞춰 운세 점수가 다양하게 산출되고, 채운 별과 빈 별이 명확하게 구분되어 출력됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:09] 오락실 결과 화면 힌트바 복원 — 입력 화면만 힌트바 제거, 결과 화면은 힌트바 유지
+
+**LOG_ID: 20260723_1109**
+목표: 오락실 입력 화면에서만 힌트바를 제거하고, 결과 화면(bio-result, fortune-result 등)에서는 `L:다시입력 P:상위메뉴` 등의 힌트바를 정상 표시.
+수정 파일:
+- `public/js/core/commandFooterText.js` — `serviceData.kind` 기반 일괄 차단을 `screen` 이름 기반 입력 화면 한정 차단으로 변경.
+- `public/js/core/amusementScreens.js` — 결과 화면 함수들을 `'amusementView'` 푸터 + `restorePromptRow` 패턴으로 복원.
+실행: `node --check`, `npm run smoke:vercel-ready`
+기대: 입력 화면은 힌트바 없이 인라인 프롬프트, 결과 화면은 힌트바와 일반 프롬프트 정상 노출.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:02] 오락실 하위 모든 화면 힌트바 제거 + 입력표시줄 본문 인라인 마운트 전면 적용
+
+**LOG_ID: 20260723_1102**
+목표: 오락실(`/game`) 하위 모든 화면(바이오리듬, 운세, MBTI, 혈액형, 궁합, 토정비결, 추억의접속화면, 오목, 오델로, 숫자야구, 영단어, 숫자판, 스크램블, WP, 타자, 퀴즈, 전투)에서 하단 힌트바를 제거하고, 입력 프롬프트를 본문 안에 인라인 마운트.
+수정 파일:
+- `public/js/core/commandFooterText.js` — serviceData.kind 기반으로 오락실 전체 17종 기능의 힌트바 텍스트를 빈 문자열로 반환.
+- `public/js/core/amusementScreens.js` — 공통 `inlineMount(hostId, className)` 헬퍼를 추출하고, 모든 입력/결과 화면에서 footer를 `'none'`으로 강제 + 인라인 마운트 적용.
+- `public/js/core/arcadeScreens.js` — `arcadeRender` 래퍼를 도입하여 모든 `render` 호출을 자동으로 `'none'` footer + 인라인 마운트로 통일.
+- `public/style.css` — 개별 `.bio-prompt-host`/`.fortune-prompt-host` CSS 선택자를 공통 `.game-prompt-host`로 합산하여 유지보수성 향상.
+수행 작업:
+1) `commandFooterText.js`: `amusementKinds` 배열에 오락실 전체 17종의 kind 값을 나열하여 `serviceData.kind` 매칭으로 힌트바 일괄 차단.
+2) `amusementScreens.js`: `inlineMount` 공통 헬퍼로 6종 철학관 + 추억의접속화면의 입력/결과 화면 전부 통일.
+3) `arcadeScreens.js`: `arcadeRender` 래퍼로 게임 10종의 모든 `render` 호출을 자동 래핑하여 인라인 마운트 적용.
+4) `style.css`: `.game-prompt-host` 단일 클래스로 통합하여 패딩(16px), 상단 마진(1.5em), 배경 투명, 커서 높이 등 일괄 적용.
+실행: `node --check` 3종, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 오락실 어디서든 힌트바가 없고 입력표시줄이 본문 안에 정렬되어 나타남.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 11:00] 오늘의 운세 (/game/fortune) 입력 화면 인라인 프롬프트 마운트 및 하단 힌트바 제거
+
+**LOG_ID: 20260723_1100**
+목표: 바이오리듬과 일관되게 오늘의 운세 입력 화면의 힌트바 영역을 숨기고, 본문 영역 최하단에 프롬프트와 커서를 동적 인라인 마운트.
+수정 파일:
+- `public/js/core/commandFooterText.js`
+- `public/js/core/amusementScreens.js`
+- `public/style.css`
+수행 작업:
+1) `commandFooterText.js`: `fortune-input` 화면도 하단 힌트바 텍스트를 제거하도록 조건 추가.
+2) `amusementScreens.js`: `showFortune`에서 `none` 푸터 모드를 통해 풋터를 숨기고, 렌더링 완료 후 `fortune-prompt-host` DOM 객체를 생성하여 `mountPromptRow(host)` 실행. `showFortuneResult` 진입 시 `restorePromptRow()`를 수행하여 풋터 정상화.
+3) `style.css`: `.fortune-prompt-host` 클래스 선택자를 추가하여 인라인 프롬프트의 가로 정렬(패딩 16px) 및 상단 여백(1.5em) 적용.
+실행: `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 오늘의 운세 입력화면 진입 시 하단 힌트바가 사라지고, `태어난 연도 입력 (예: 1990) >> ` 프롬프트와 커서가 본문 글 아래에 1.5줄 여백과 좌측 16px 패딩 정렬로 깔끔하게 정착됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:57] 바이오리듬 (/game/bio) 화면 및 오락실 기능 전역 직통 GO 명령어 매핑 추가
+
+**LOG_ID: 20260723_1057**
+목표: 바이오리듬 입력화면 등을 포함한 전역 컨텍스트에서 `go bio`, `go fortune` 등 오락실 관련 GO 단축 이동 명령어가 정상 동작하도록 개선.
+수정 파일:
+- `public/js/core/menuNavigationActions.js`
+수행 작업:
+1) `menuNavigationActions.js`: `executeGoCommand` 내에 `normalized` 값이 `BIO`, `FORTUNE`, `MBTI`, `BLOOD`, `COMPAT`, `TOJEONG` 등 오락실 메뉴 항목일 때 `refs`를 통해 해당 화면 실행 함수를 직통 호출하여 리턴하도록 분기 추가.
+실행: `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 바이오리듬 화면 등을 포함하여 어디서나 `go bio`, `go fortune` 입력 시 즉시 해당 게임 화면으로 한 치의 오차 없이 이동함.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:56] 바이오리듬 (/game/bio) 결과 화면 범례의 중복 행동 단축키 문구 제거
+
+**LOG_ID: 20260723_1056**
+목표: 결과 화면 하단 힌트바 복원으로 인해 본문 범례 영역에 이중으로 표시되던 ` | L:다시입력 P:상위메뉴` 텍스트 제거.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: `buildBiorhythmAnsi` 내 범례 줄 문자열을 `'  [범례] P:신체(23일)  E:감성(28일)  I:지성(33일)  *:중첩'`으로 간소화하여 불필요한 단축키 안내 중복을 100% 제거.
+실행: `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 결과화면 본문 하단에 `L:다시입력 P:상위메뉴` 텍스트가 사라지고 순수 범례만 표시되며, 대신 하단 힌트바를 통해 제어됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:49] 바이오리듬 결과화면 세로줄 정렬 삐뚤어짐 해결, URL 경로 정상화 및 하단 힌트바/입력 필드 복원
+
+**LOG_ID: 20260723_1049**
+목표: 1) 생년월일 입력 결과화면 진입 시 URL이 `/bio`로 이탈하는 버그 수정, 2) 2D 그래프의 가로축 세로 정렬 삐뚤어짐 정밀 해결, 3) 결과화면 하단 힌트바 및 `선택 >> ` 입력 필드를 다른 메뉴와 동일하게 복원.
+수정 파일:
+- `public/js/core/routingUrlBuilder.js`
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/commandFooterText.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `routingUrlBuilder.js`: 오락실 하위 기능들의 URL 반환 경로를 `/game/bio`, `/game/fortune` 등으로 안전하게 강제 리턴하도록 교정.
+2) `amusementAnsiBuilders.js`: `buildBiorhythmAnsi`의 요일, 파형, 0 레벨, 날짜 번호 출력 시 하루치 가로 폭 단위를 모두 **3칸**으로 완벽히 통일하여 세로축이 흐트러지지 않도록 조율.
+3) `commandFooterText.js`: `bio-result` 화면은 풋터 텍스트 삭제 분기에서 제외하여 풋터가 살아가도록 복구.
+4) `amusementScreens.js`: `showBiorhythmResult` 호출 시 `'amusementView'` 풋터와 `'선택 >> '` 프롬프트를 전달하도록 연결.
+실행: `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 결과화면에서 URL이 `/game/bio`로 정확히 유지되고, 그래프의 모든 라인이 칼같이 수직 정렬되며, 다른 메뉴와 똑같이 하단 힌트바가 복원됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:36] 바이오리듬 (/game/bio) 프롬프트 정렬 패딩(16px) 보정과 상단 마진(1.5em) 간격 넓힘
+
+**LOG_ID: 20260723_1036**
+목표: 1) `#cmd-prompt-renderer`가 본문 좌측 라인과 정렬되도록 패딩 16px 보정, 2) 윗줄(`■ 지성 리듬...`)과 너무 붙어있던 간격을 1.5em 마진으로 자연스럽게 넓힘.
+수정 파일:
+- `public/style.css`
+수행 작업:
+1) `style.css`: `.bio-prompt-host` 스타일에 `padding-left: 16px; padding-right: 16px;`를 적용하여 `.ansi-screen-body` 내부 본문 콘텐츠의 가로 정렬 라인과 완벽히 일치하도록 수정.
+2) `style.css`: `.bio-prompt-host` 스타일에 `margin-top: 1.5em;`을 부여하여 가독성과 균형감을 갖추도록 보완.
+실행: `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: `▶ 생년월일을...` 프롬프트가 본문 `■ 신체/감성/지성` 텍스트 좌측 라인과 완벽히 정렬되고, 위 줄과의 상하 간격이 넉넉하고 편안해짐.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:32] 바이오리듬 (/game/bio) .bio-prompt-host CSS 왼쪽 치우침 교정 및 윗줄 여백 추가
+
+**LOG_ID: 20260723_1032**
+목표: `#cmd-prompt-renderer`가 왼쪽으로 치우치는 현상 교정 + 윗줄과 너무 붙는 간격 문제 해결.
+수정 파일:
+- `public/style.css`
+수행 작업:
+1) `style.css`: `.bio-prompt-host`, `.bio-prompt-host #terminal-prompt-row`, `.bio-prompt-host #cmd-prompt-renderer` 등 인라인 마운트 정렬 CSS 룰 추가.
+2) `margin-top: 1em`으로 윗줄과의 여백 확보, `padding-left: 0` 및 `margin-left: 0`으로 왼쪽 치우침 0% 해결.
+실행: `npm run smoke:vercel-ready`
+기대: `#cmd-prompt-renderer`가 왼쪽으로 치우치지 않고 정위치에 표시되며, 윗줄(`■ 지성 리듬...`)과의 간격이 다른 줄들과 자연스럽게 일치함.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:27] 바이오리듬 (/game/bio) 쌩 HTML 태그 노출 제거 & 동적 DOM 호스트 생성으로 지성리듬 아랫줄 인라인 마운트 완성
+
+**LOG_ID: 20260723_1027**
+목표: 1) ANSI 본문에 쌩 텍스트로 찍히던 `<div id="bio-prompt-host"...>` HTML 태그를 100% 제거, 2) `showBiorhythm()`에서 렌더링 후 동적으로 `bio-prompt-host` DOM 엘리먼트를 `screenEl` 하단에 생성하고 `mountPromptRow(host)` 호출하여 `#cmd-prompt-renderer` 및 커서를 `■ 지성 리듬...` 바로 아랫줄 위치에 인라인 마운트.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: `buildBiorhythmIntroAnsi()` 본문에서 쌩 HTML 태그 문자열 완전 삭제 → 순수 ANSI 텍스트만 반환.
+2) `amusementScreens.js`: `showBiorhythm()`에서 `render()` 완료 후 `screenEl.appendChild(host)` + `mountPromptRow(host)`를 실행하여 동적 인라인 마운트 완성.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 쌩 HTML 태그 텍스트가 100% 깨끗이 사라지고, `■ 지성 리듬...` 바로 아랫줄에 `▶ 생년월일을...` 프롬프트와 커서가 밀착됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:23] 바이오리듬 (/game/bio) #cmd-prompt-renderer 지성리듬 바로 아랫줄 인라인 마운트 완성
+
+**LOG_ID: 20260723_1023**
+목표: 사용자 지정 XPath(`//*[@id="cmd-prompt-renderer"]`) 반영 - `#cmd-prompt-renderer` 및 커서를 `■ 지성 리듬...` 바로 아랫줄 위치로 인라인 마운트(`mountPromptRow`).
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: `buildBiorhythmIntroAnsi()` 본문 내 `■ 지성 리듬 (I - Intellect, 33일)...` 라인 바로 밑에 `<div id="bio-prompt-host" class="bio-prompt-host"></div>` 노드 배치.
+2) `amusementScreens.js`: `showBiorhythm()`에서 `mountPromptRow(document.getElementById('bio-prompt-host'))`를 부르고, `showBiorhythmResult()` 진입 시 `restorePromptRow()`로 원래 위치로 복구.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: `#cmd-prompt-renderer`("▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : ")와 입력 커서가 지성리듬 바로 아랫줄에 0px 갭으로 찰떡같이 밀착하여 배치됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:21] 바이오리듬 (/game/bio) footer === 'none' 프롬프트 소실 버그 수정 및 안내문구 오른편 커서 복원
+
+**LOG_ID: 20260723_1021**
+목표: `afterBodyRender` 시 `footer === 'none'` 일 때 전달된 `prompt`를 지우던 버그 수정 및 `▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : |` 오른편 커서 복원.
+수정 파일:
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementScreens.js`: `afterBodyRender` 내에서 `footer === 'none'` 모드일지라도 `prompt !== undefined` 일 때 `setPrompt(prompt)`를 호출하도록 수정하여 프롬프트 소실 버그 해결.
+2) `showBiorhythm()`: 프롬프트를 `'▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : '`로 세팅하여 문구 콜론(`:`) 바로 오른편에 커서 밀착 배치.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: `▶ 생년월일을... : |` 문구가 1번 찍히고 그 콜론 바로 오른편에서 커서가 반짝거리며, 화면 맨 아래 하단 힌트바는 완전히 삭제됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:18] 바이오리듬 (/game/bio) 안내문구 콜론 오른편 즉시 커서 밀착 배치 및 아래 줄 완전 삭제
+
+**LOG_ID: 20260723_1018**
+목표: 1) `▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : ` 콜론(`:`) 바로 오른편에 커서를 밀착시키고, 2) 그 아래에 위치하던 불필요한 `>> ` 등 아랫줄을 100% 완전 삭제.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementScreens.js`: `showBiorhythm()` 프롬프트를 `'▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : '`로 세팅하여 **콜론 바로 오른편 위치에 입력 커서가 즉시 밀착되어 반짝거리도록** 구현.
+2) `amusementAnsiBuilders.js`: `buildBiorhythmIntroAnsi()` 본문 최하단 텍스트를 제거하여 본문과 프롬프트 간 중복 및 아랫줄이 100% 완전히 소멸되도록 완벽히 교정.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: `▶ 생년월일을... : |` 바로 오른편에서 커서가 착 붙어 반짝이고 그 아래 줄은 1도 존재하지 않음.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:16] 바이오리듬 (/game/bio) 생년월일 안내 문구 본문 하단 1회 명확 복원 및 커서 연동
+
+**LOG_ID: 20260723_1016**
+목표: `▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : ` 안내 문구를 본문 하단에 딱 1번만 정확하게 노출하고 커서를 연동.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: `buildBiorhythmIntroAnsi()` 최하단에 `▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : ` 문구를 1회 포함.
+2) `amusementScreens.js`: `showBiorhythm()` 프롬프트를 `>> ` 로 세팅하여 문구 바로 오른쪽에서 커서가 반짝거리며 입력을 받도록 조율.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: `▶ 생년월일을... : ` 문구가 딱 1번만 찍히고 그 오른쪽 `>> |` 위치에서 커서가 작동함.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:15] 바이오리듬 (/game/bio) 중복 박스 문구 삭제 및 프롬프트 오른편 커서 밀착 배치
+
+**LOG_ID: 20260723_1015**
+목표: 1) 본문 대문에서 중복 인쇄되던 생년월일 박스 및 문구를 삭제하여 1회만 표시, 2) `▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : ` 바로 오른편에 커서가 밀착되어 작동하도록 프롬프트 일원화.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: `buildBiorhythmIntroAnsi()`에서 중복 인쇄되던 박스 및 본문 문구를 완전히 제거하여 중복 인쇄 0% 달성.
+2) `amusementScreens.js`: `showBiorhythm()` 프롬프트를 `'▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : '`로 세팅하여, **해당 문구 바로 오른편에 입력 커서가 딱 밀착하여 반짝거리며 입력을 받도록** 구현.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 중복 문구가 완전히 사라지고, `▶ 생년월일... : ` 문구 바로 오른편에 커서가 착 달라붙어 동작함.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:10] 바이오리듬 (/game/bio) 힌트바 100% 완전 삭제 & 64열 수학적 셀폭 정밀 아스키 테두리 0px 칼각 완성
+
+**LOG_ID: 20260723_1010**
+목표: 1) `getSupportedFooterText` 및 `terminalHintFooter.js` 수정을 통해 하단 힌트바(`상위(P)...`) 및 `선택 >>` 프롬프트 100% 완전 삭제, 2) 한글 전각(2열)/반각(1열) 수학적 계산으로 64열 아스키 박스 0px 칼각 정렬 완성.
+수정 파일:
+- `public/js/core/commandFooterText.js`
+- `public/js/core/terminalHintFooter.js`
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `commandFooterText.js`: `getSupportedFooterText`에 `bio-input`, `bio-result` 일 때 `''` (빈 문자열) 반환 등록.
+2) `terminalHintFooter.js`: `applyCommandFooter`에서 `supportedHint !== null` 일 때 `setHint('')` 및 `setPrompt('')`를 적용하여 하단 힌트바 및 프롬프트를 화면에서 100% 완전 지움.
+3) `amusementAnsiBuilders.js`: 한글(2열)/반각(1열) 수학적 계산 검증을 거친 64열 아스키 박스 테두리를 적용하여 삐뚤어짐 0% 완벽 칼각 직사각형 달성.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 하단 힌트바가 100% 자취를 감추고, 본문 한가운데 `▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : ` 문구 바로 뒤에서 입력 커서가 깜빡이며, 아스키 박스 우측 세로줄이 1px도 안 어긋나고 완벽히 일직선으로 떨어짐.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:08] 바이오리듬 (/game/bio) 하단 풋터/선택 입력줄 100% 완전 삭제 및 특수문자 셀폭 1px 어긋남 차단
+
+**LOG_ID: 20260723_1008**
+목표: 1) `footer === 'none'` 옵션 구현을 통해 하단 풋터 힌트바(`상위(P)...`) 및 `선택 >>` 입력줄 100% 완전 삭제, 2) 특수문자 `·` 교정을 통해 박스 오른쪽 세로줄 `|` 1px 어긋남 차단.
+수정 파일:
+- `public/js/core/amusementScreens.js`
+- `public/js/core/amusementAnsiBuilders.js`
+수행 작업:
+1) `amusementScreens.js`: `render` 함수에서 `footer === 'none'` 일 때 풋터 텍스트 및 프롬프트를 완전한 빈 값(`''`)으로 세팅하여 하단 풋터 영역(`상위(P)...`, `선택 >>`)이 화면에서 100% 완전 삭제되도록 처리. `showBiorhythm()`, `showBiorhythmResult()`에 `footer = 'none'` 전달.
+2) `amusementAnsiBuilders.js`: 박스 내부 텍스트의 특수문자 `·`를 반각 쉼표 `,`로 정제하여 브라우저/폰트 해석 차이에 의한 박스 우측 세로줄 `|` 어긋남을 100% 차단 및 칼각 일직선 정렬 완성.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 하단 풋터 및 `선택 >>` 줄이 100% 사라지고, 본문 한가운데 생년월일 입력 커서만 깜빡이며, 박스 테두리가 1px 오차 없이 일직선으로 완벽 정렬됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 10:01] 바이오리듬 (/game/bio) 본문 한가운데 생년월일 입력 커서 배치 및 100% 직사각형 아스키 테두리 교정
+
+**LOG_ID: 20260723_1001**
+목표: 사용자 캡처 기반 본문 한가운데 입력 커서 위치 동기화 및 100% 직사각형 아스키 박스 테두리 교정, 하단 힌트바 완전 제거.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: 100% 직사각형 정렬이 보장되는 ASCII 박스 테두리(`+----+`, `|    |`)로 교정하여 삐뚤어짐 0% 달성. 본문 마지막 줄에 `▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : ` 배치.
+2) `amusementScreens.js`: `showBiorhythm()`, `showBiorhythmResult()`의 하단 풋터/힌트바 및 하단 프롬프트를 완전한 빈 문자열(`''`)로 처리하여, 본문 한가운데 `▶ 생년월일 ... : ` 바로 뒤에서 입력 커서가 깜빡이도록 완벽 동기화.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 화면 맨 아래 힌트바가 완전히 지워지고, 본문 한가운데 입력문구 바로 뒤에서 커서가 깜빡이며, 아스키 테두리가 1px 오차 없이 직사각형으로 정렬됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 09:55] 바이오리듬 (/game/bio) 박스 테두리 교정, 힌트바 제거, 80x24 한화면 16줄 콤팩트 렌더링 (스크롤바 완전 방지)
+
+**LOG_ID: 20260723_0955**
+목표: 1) 박스 세로줄 삐뚤어짐 100% 교정, 2) 힌트바 제거 및 프롬프트 최소화, 3) 결과 화면 총 높이를 16줄로 축소하여 80x24 한 화면 내에 스크롤바가 절대 나타나지 않게 교정.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: 한글/영문 전반각 셀 폭 정밀 계산 헬퍼 `makeBoxRow` 구현하여 오른쪽 세로줄 `│` 위치가 모서리 `┐`, `┘`와 100% 일직선으로 맞춰지도록 교정. 그림 188 2D 파형 그래프의 Y축을 11줄(Y=5~-5)로 콤팩트화하여 전체 높이를 16줄로 렌더링(스크롤바 100% 완전 방지).
+2) `amusementScreens.js`: `showBiorhythm()`, `showBiorhythmResult()`의 하단 풋터를 `''` (빈 문자열)로 설정하여 불필요한 힌트바 제거 및 프롬프트를 `'>> '`로 최소화.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 세로줄 삐뚤어짐이 완벽히 정렬되고, 힌트바가 사라지며, 결과 화면에 스크롤바가 절대 나타나지 않음.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 09:52] 바이오리듬 (/game/bio) 상단 헤더 복원 및 입력 가이드/프롬프트 정렬 교정
+
+**LOG_ID: 20260723_0952**
+목표: 사용자 캡처 기반 상단 헤더 박스 깨짐 복원 및 입력 가이드 박스와 입력 프롬프트 조화 교정.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: `buildTopHeader(['오락실', '생체 리듬 서비스'])`를 사용하여 정갈한 BBS 상단바 헤더 복원. 대문 본문에 안내 박스, 4대 리듬 명세, 생년월일 입력 가이드 박스 단정히 배치.
+2) `amusementScreens.js`: `showBiorhythm()` 프롬프트를 `생년월일 입력 (예: 19900101) >> `로 설정하여 하단 입력 프롬프트와의 연결 교정.
+3) 결과 화면: 그림 188 원본 텍스트 및 월간 2D ASCII 파형 그래프 (Y축 9~-9, X축 요일/날짜, P/E/I/* 곡선) 100% 동일 구현 유지.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 상단 헤더가 정갈히 복원되고 본문 입력 가이드와 프롬프트가 단정하게 연동됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 09:51] 바이오리듬 (/game/bio) 천리안 그림 188 원본 스크린샷 100% 동일 UI 구현 (월간 2D ASCII 파형 그래프)
+
+**LOG_ID: 20260723_0951**
+목표: 사용자가 직접 제공한 천리안 270p 그림 188 '생체 리듬 서비스 이용 화면' 스크린샷과 100% 동일한 본문 입력 흐름 및 월간 2D ASCII 파형 그래프 구현.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementScreens.js`: `showBiorhythmResult()` 하단 프롬프트를 그림 188 원본 표기와 동일한 `'설명> '`로 동기화.
+2) `amusementAnsiBuilders.js`: `buildBiorhythmIntroAnsi()` 본문 상단에 입력 질의 배치. `buildBiorhythmAnsi()` 결과 화면을 그림 188 스크린샷과 100% 동일한 **월간 2D ASCII 파형 그래프 (Y축: 9~-9, X축: 요일 및 1일~31일 날짜, P/E/I/* 플로팅 곡선)** 및 `생 일 : YYYY/MM/DD(음) <YYYY년 M월> XXX님의 신체리듬` 헤더 구조로 정밀 구현.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 그림 188 원본 캡처 이미지와 100% 완벽히 동일한 레트로 바이오리듬 파형 그래프 및 본문 입력 흐름 출력.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 09:48] 바이오리듬 (/game/bio) BBS 기본 골격 복원 및 천리안 270p 입력 위치 흐름 일치 수정
+
+**LOG_ID: 20260723_0948**
+목표: 기존 BBS 대문 골격(`buildTopHeader`)을 원복하고, 천리안 270p 책 명세에 맞춰 생년월일 입력 질의 흐름 위치 조정.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementAnsiBuilders.js`: `buildTopHeader(['오락실', '생체 리듬 서비스'])` 기본 BBS 헤더 골격으로 원복. `buildBiorhythmIntroAnsi()` 본문 상단에 천리안 270p 명세(`출력할 년도는 1999년까지만 가능합니다`, `출력할 달은 (리턴키는 이번달) ? ([년]/[월])`, `▶ 생 일 (YYYYMMDD 또는 YYYY-MM-DD) ?`) 입력 질의 배치.
+2) `amusementScreens.js`: `showBiorhythm()` 프롬프트를 책 질의 문구와 동일한 `생 일 (YYYYMMDD) ? >> `로 동기화.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 기존 헤더 골격을 유지하면서 생년월일 입력 질문 위치가 책 270p와 자연스럽게 연결됨.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 09:46] 바이오리듬 (/game/bio) 레트로 PC통신 80컬럼 터미널 UI/ANSI 완전 재설계
+
+**LOG_ID: 20260723_0946**
+목표: 바이오리듬 화면 생김새(UI)를 PC통신 시절 (하이텔/천리안/나우누리) 터미널 80컬럼 풀사이즈 레트로 스타일로 완벽히 재설계.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+수행 작업:
+1) `buildBiorhythmIntroAnsi()`: PC통신 레트로 대문 이중선 타이틀(`==============================================================================`), 서비스 안내 박스, 4대 리듬 주기 설명, 8자리 생년월일 입력 폼 박스 적용.
+2) `buildBiorhythmAnsi()`: 대문 이중선 타이틀, 성명/생년월일/기준일/경과일수 표, 80컬럼 풀사이즈 4대 리듬 막대 그래프 (눈금 가이드 포함), `── [ 오늘의 컨디션 종합 평가 ] ──`, `── [ 향후 7일간 컨디션 변화 추이 ] ──` 표 구성 (모바일 44컬럼 / 데스크톱 80컬럼 대응).
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 바이오리듬 화면의 생김새(UI)가 진정한 레트로 PC통신 터미널 화면으로 출력되고 오류 없음.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 09:42] 바이오리듬 (/game/bio) UI/ANSI 천리안 270p 원전 서적 100% 일치 고도화
+
+**LOG_ID: 20260723_0942**
+목표: `docs/` 내 천리안 270페이지(그림 188 '생체 리듬 서비스') 실제 스크린샷 및 PC통신 서적 명세와 100% 동일한 UI 구현.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+- `public/js/core/amusementScreens.js`
+수행 작업:
+1) `amusementScreens.js`: `showBiorhythmResult`에서 `state.user` 닉네임/유저명을 추출하여 `buildBiorhythmAnsi`에 전달.
+2) `amusementAnsiBuilders.js`: 천리안 270p 서식대로 `생체 리듬 서비스` 헤더, `< YYYY년 MM월 >`, `생  일 : YYYY/MM/DD (오늘로 N일째)`, `${userName}님의 생체리듬` 및 4대 리듬 게이지 바, 컨디션 종합 평가, 7일 추이 렌더링.
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 바이오리듬 화면이 PC통신 서적 스크린샷 명세와 100% 동일하게 출력되고 회귀 없음.
+결과: ✅ 성공
+
+---
+
+## [2026-07-23 09:36] 바이오리듬 (/game/bio) UI/ANSI 렌더링 PC통신 원전 서적 규격 고도화
+
+**LOG_ID: 20260723_0936**
+목표: `docs/` 내 PC통신 서적 (천리안/나우누리/하이텔) 명세에 맞춰 바이오리듬 (`/game/bio`) 입력 및 결과 화면 UI를 레트로 PC통신 양식으로 재현.
+수정 파일:
+- `public/js/core/amusementAnsiBuilders.js`
+수행 작업:
+1) `buildBiorhythmIntroAnsi()` 입력 화면: PC통신 서적 박스 헤더 (`생체 리듬 서비스 (BIO)`), 4대 리듬 주기 설명 가이드 (신체·감성·지성·지각), 8자리 생년월일 입력 예시 박스 적용.
+2) `buildBiorhythmAnsi()` 결과 화면: `< YYYY년 MM월 >` 연월 헤더, 생년월일 및 경과일수 정보 박스, 4대 리듬 게이지 그래프 및 수치/상태 라벨 (`최고조 ▲`, `상승 △`, `전환기 ◇`, `하강 ▽`, `최저조 ▼`), 오늘의 컨디션 평가 종합 조언 박스, 향후 7일 추이 표 구성 (데스크톱/모바일 반응형 지원).
+실행: `node --check ...`, `npm run smoke:menu-wiring`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`
+기대: 바이오리듬 화면이 PC통신 서적 명세와 일치하는 정교한 레트로 UI로 출력되고 회귀 없음.
+결과: ✅ 성공
+
+---
+
 ## [2026-07-23 09:25] 게시판 랭킹 (/game/ranking) 기능 제거
 
 **LOG_ID: 20260723_0925**

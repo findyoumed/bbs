@@ -258,6 +258,11 @@ export function createAppFactoryScreens(deps) {
     buildRetroArtListAnsi: serviceAnsiBuilders.buildRetroArtListAnsi,
     buildRetroArtViewAnsi: serviceAnsiBuilders.buildRetroArtViewAnsi,
     findMbtiType: serviceAnsiBuilders.findMbtiType,
+    buildMbtiIntroAnsi: serviceAnsiBuilders.buildMbtiIntroAnsi,
+    buildMbtiTestQuestionAnsi: serviceAnsiBuilders.buildMbtiTestQuestionAnsi,
+    calculateMbtiFromAnswers: serviceAnsiBuilders.calculateMbtiFromAnswers,
+    MBTI_QUESTIONS: serviceAnsiBuilders.MBTI_QUESTIONS,
+    MBTI_TYPES: serviceAnsiBuilders.MBTI_TYPES,
     // [LOG_ID: 20260720_1358] 오락실 게임 5종 (오목/오델로/숫자야구/영어단어맞추기/숫자판맞추기)
     buildOmokAnsi: serviceAnsiBuilders.buildOmokAnsi,
     buildOthelloAnsi: serviceAnsiBuilders.buildOthelloAnsi,

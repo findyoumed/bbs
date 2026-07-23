@@ -20,10 +20,33 @@ export function createArcadeScreens(deps) {
   const {
     buildOmokAnsi, buildOthelloAnsi, buildBaseballAnsi, buildHangmanAnsi, buildPuzzle15Ansi,
     buildScrambleAnsi, buildWpAnsi, buildTypingAnsi, buildQuizAnsi, buildBattleAnsi,
-    render, setHint, state, updateURL, cmdInput, displayWidth
+    render, setHint, state, updateURL, cmdInput, displayWidth,
+    mountPromptRow, restorePromptRow, screenEl
   } = deps;
 
   const sd = (kind) => (state.serviceData?.kind === kind ? state.serviceData : null);
+  // [LOG_ID: 20260723_1102] 아케이드 게임 공통 — footer를 항상 'none'으로 강제하고 렌더 후 인라인 마운트.
+  // 기존의 개별 footer 인자('arcadePlay', 'hangmanPlay')를 무시하고, 모든 아케이드 게임이 힌트바 없이
+  // 본문 안에 프롬프트를 마운트하도록 한다.
+  // [LOG: 20260723_1750] 게임 진행 중(play)에만 footer를 숨기고 인라인 마운트, 게임이 종료되면 하단 힌트바(footer) 복원
+  async function arcadeRender(ansi, _footer, prompt) {
+    const isPlaying = state.serviceData?.status === 'play';
+    const footerToUse = isPlaying ? 'none' : _footer;
+    
+    if (!isPlaying && typeof restorePromptRow === 'function') {
+      restorePromptRow();
+    }
+    
+    const rendered = await render(ansi, footerToUse, prompt);
+    if (isPlaying && screenEl && typeof mountPromptRow === 'function') {
+      const kind = state.serviceData?.kind || 'arcade';
+      const hostId = `${kind}-prompt-host`;
+      let host = document.getElementById(hostId);
+      if (!host) { host = document.createElement('div'); host.id = hostId; host.className = 'game-prompt-host'; screenEl.appendChild(host); }
+      mountPromptRow(host);
+    }
+    return rendered;
+  }
 
   // [LOG_ID: 20260720_1600] 오목판 마우스 클릭 지원 — retro-art 목록과 동일한 핫스팟 패턴
   // (createHotspotLayer/createHotspotButton, appEvents.js 의 [data-cmd] 전역 클릭 위임을 그대로 탄다).
@@ -52,7 +75,7 @@ export function createArcadeScreens(deps) {
     if (layer.childElementCount > 0) screenNode.appendChild(layer);
   }
   async function renderOmok(game, footer, prompt) {
-    const rendered = await render(buildOmokAnsi(game), footer, prompt);
+    const rendered = await arcadeRender(buildOmokAnsi(game), footer, prompt);
     if (rendered && rendered.screenNode) renderOmokBoardHotspots(rendered.screenNode, game);
   }
 
@@ -80,7 +103,7 @@ export function createArcadeScreens(deps) {
   let omokMoveLock = false;
   async function showOmok(fromHistory = false) {
     state.screen = 'omok-play';
-    state.serviceData = { kind: 'omok', ...createOmokState(), cursor: { x: 7, y: 7 } };
+    state.serviceData = { kind: 'omok', ...createOmokState(), cursor: { x: 7, y: 7 }, hintMsg: '' };
     if (!fromHistory) updateURL();
     await renderOmok(state.serviceData, 'arcadePlay', '좌표 입력, 클릭 (예: H8) >> ');
   }
@@ -89,9 +112,10 @@ export function createArcadeScreens(deps) {
     const game = sd('omok');
     if (!game) { await showOmok(); return true; }
     if (game.status !== 'play') { setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.'); return true; }
+    game.hintMsg = '';
     const x = colLetter.toUpperCase().charCodeAt(0) - 65;
     const y = row - 1;
-    if (game.board[y * OMOK_SIZE + x] !== 0) { setHint('이미 돌이 있는 자리입니다.'); return true; }
+    if (game.board[y * OMOK_SIZE + x] !== 0) { game.hintMsg = '이미 돌이 있는 자리입니다.'; await renderOmok(game, 'arcadePlay', '좌표 입력, 클릭 (예: H8) >> '); return true; }
     omokMoveLock = true;
     try {
       game.board[y * OMOK_SIZE + x] = 1;
@@ -124,36 +148,76 @@ export function createArcadeScreens(deps) {
     return true;
   }
 
+  // [LOG: 20260723_1715] 오델로 핫스팟 및 마우스 조작 추가
+  const OTH_ROW_PREFIX = 5, OTH_CELL_WIDTH = 2;
+  function renderOthelloBoardHotspots(screenNode, game) {
+    if (!screenNode || game.status !== 'play') return;
+    const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
+    const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
+    const rowLines = lineNodes.filter((node) => /^\s*([1-8])\s/.test(node.textContent || '')).slice(0, OTH_SIZE);
+    if (rowLines.length !== OTH_SIZE) return;
+    
+    const layer = createHotspotLayer();
+    const legalMoves = othelloLegalMoves(game.board, 1);
+    const legalSet = new Set(legalMoves.map((m) => m.idx));
+    
+    rowLines.forEach((lineNode, y) => {
+      for (let x = 0; x < OTH_SIZE; x++) {
+        const idx = y * OTH_SIZE + x;
+        if (!legalSet.has(idx)) continue;
+        
+        const start = OTH_ROW_PREFIX + x * OTH_CELL_WIDTH;
+        const bounds = measureLineSegmentBounds(screenNode, lineNode, start, start + OTH_CELL_WIDTH);
+        if (!bounds) continue;
+        const coord = `${String.fromCharCode(65 + x)}${y + 1}`;
+        layer.appendChild(createHotspotButton(coord, `${coord}에 착수`, bounds));
+      }
+    });
+    if (layer.childElementCount > 0) screenNode.appendChild(layer);
+  }
+  async function renderOthello(game, footer, prompt) {
+    const rendered = await arcadeRender(buildOthelloAnsi(game), footer, prompt);
+    if (rendered && rendered.screenNode) renderOthelloBoardHotspots(rendered.screenNode, game);
+  }
+
   // ── 오델로 ──
+  let othelloMoveLock = false;
   async function showOthello(fromHistory = false) {
     state.screen = 'oth-play';
-    state.serviceData = { kind: 'oth', ...createOthelloState() };
+    state.serviceData = { kind: 'oth', ...createOthelloState(), hintMsg: '' };
     if (!fromHistory) updateURL();
-    await render(buildOthelloAnsi(state.serviceData), 'arcadePlay', '좌표 입력 (예: C4) >> ');
+    await renderOthello(state.serviceData, 'arcadePlay', '좌표 입력 (예: C4) >> ');
   }
   function othelloFinish(game) {
     const { black, white } = othelloCount(game.board);
     game.status = black > white ? 'win' : black < white ? 'lose' : 'draw';
   }
   async function othelloMove(colLetter, row) {
+    if (othelloMoveLock) return true;
     const game = sd('oth');
     if (!game) { await showOthello(); return true; }
     if (game.status !== 'play') { setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.'); return true; }
+    game.hintMsg = '';
     const idx = (row - 1) * OTH_SIZE + (colLetter.toUpperCase().charCodeAt(0) - 65);
     const flips = othelloFlipsFor(game.board, idx, 1);
-    if (!flips.length) { setHint('그 자리에는 둘 수 없습니다. + 표시된 자리에 두세요.'); return true; }
-    othelloApply(game.board, idx, 1, flips);
-    game.passMsg = '';
-    // 컴퓨터 응수 — 사용자가 둘 곳이 생길 때까지(패스 처리), 양쪽 모두 없으면 종국.
-    while (game.status === 'play') {
-      const cpuMove = othelloBestMove(game.board);
-      if (cpuMove) { othelloApply(game.board, cpuMove.idx, 2, cpuMove.flips); game.lastCpu = cpuMove.idx; }
-      if (othelloLegalMoves(game.board, 1).length) break;
-      if (!othelloLegalMoves(game.board, 2).length) { othelloFinish(game); break; }
-      game.passMsg = '귀하가 둘 곳이 없어 한 수 쉽니다. 컴퓨터가 계속 둡니다.';
+    if (!flips.length) { game.hintMsg = '그 자리에는 둘 수 없습니다. + 표시된 자리에 두세요.'; await renderOthello(game, 'arcadePlay', '좌표 입력 (예: C4) >> '); return true; }
+    othelloMoveLock = true;
+    try {
+      othelloApply(game.board, idx, 1, flips);
+      game.passMsg = '';
+      // 컴퓨터 응수 — 사용자가 둘 곳이 생길 때까지(패스 처리), 양쪽 모두 없으면 종국.
+      while (game.status === 'play') {
+        const cpuMove = othelloBestMove(game.board);
+        if (cpuMove) { othelloApply(game.board, cpuMove.idx, 2, cpuMove.flips); game.lastCpu = cpuMove.idx; }
+        if (othelloLegalMoves(game.board, 1).length) break;
+        if (!othelloLegalMoves(game.board, 2).length) { othelloFinish(game); break; }
+        game.passMsg = '귀하가 둘 곳이 없어 한 수 쉽니다. 컴퓨터가 계속 둡니다.';
+      }
+      await renderOthello(game, 'arcadePlay', '좌표 입력 (예: C4) >> ');
+      return true;
+    } finally {
+      othelloMoveLock = false;
     }
-    await render(buildOthelloAnsi(game), 'arcadePlay', '좌표 입력 (예: C4) >> ');
-    return true;
   }
 
   // ── 숫자야구 ──
@@ -161,7 +225,7 @@ export function createArcadeScreens(deps) {
     state.screen = 'base-play';
     state.serviceData = { kind: 'base', ...createBaseballState() };
     if (!fromHistory) updateURL();
-    await render(buildBaseballAnsi(state.serviceData), 'arcadePlay', '숫자 3자리 입력 (예: 123) >> ');
+    await arcadeRender(buildBaseballAnsi(state.serviceData), 'arcadePlay', '숫자 3자리 입력 (예: 123) >> ');
   }
   async function baseballGuess(guess) {
     const game = sd('base');
@@ -173,71 +237,115 @@ export function createArcadeScreens(deps) {
     game.tries.push({ guess: digits, strike, ball });
     if (strike === 3) game.status = 'win';
     else if (game.tries.length >= BASEBALL_MAX_TRIES) game.status = 'lose';
-    await render(buildBaseballAnsi(game), 'arcadePlay', '숫자 3자리 입력 (예: 123) >> ');
+    await arcadeRender(buildBaseballAnsi(game), 'arcadePlay', '숫자 3자리 입력 (예: 123) >> ');
     return true;
   }
 
   // ── 영어단어 맞추기 ──
   async function showHangman(fromHistory = false) {
     state.screen = 'hangman-play';
-    state.serviceData = { kind: 'hangman', ...createHangmanState() };
+    state.serviceData = { kind: 'hangman', ...createHangmanState(), hintMsg: '' };
     if (!fromHistory) updateURL();
-    await render(buildHangmanAnsi(state.serviceData), 'hangmanPlay', '알파벳 입력 >> ');
+    await arcadeRender(buildHangmanAnsi(state.serviceData), 'hangmanPlay', '알파벳 입력 >> ');
   }
   async function hangmanGuess(letter) {
     const game = sd('hangman');
     if (!game) { await showHangman(); return true; }
     if (game.status !== 'play') { setHint('게임이 끝났습니다. L을 누르면 새 단어가 나옵니다.'); return true; }
-    if (hangmanApply(game, letter) === 'already') { setHint('** 이미 선택하신 알파벳입니다 **'); return true; }
+    game.hintMsg = '';
+    if (hangmanApply(game, letter) === 'already') { game.hintMsg = '** 이미 선택하신 알파벳입니다 **'; const footer = game.status === 'play' ? 'hangmanPlay' : 'arcadePlay'; await arcadeRender(buildHangmanAnsi(game), footer, '알파벳 입력 >> '); return true; }
     const footer = game.status === 'play' ? 'hangmanPlay' : 'arcadePlay';
-    await render(buildHangmanAnsi(game), footer, '알파벳 입력 >> ');
+    await arcadeRender(buildHangmanAnsi(game), footer, '알파벳 입력 >> ');
     return true;
   }
   async function hangmanResign() {
     const game = sd('hangman');
     if (!game) { await showHangman(); return true; }
     if (game.status === 'play') game.status = 'lose';
-    await render(buildHangmanAnsi(game), 'arcadePlay', '알파벳 입력 >> ');
+    await arcadeRender(buildHangmanAnsi(game), 'arcadePlay', '알파벳 입력 >> ');
     return true;
+  }
+
+  // [LOG: 20260723_1752] 15퍼즐 마우스 조작 핫스팟 레이어 추가
+  const PUZZLE15_ROW_PREFIX = 3, PUZZLE15_CELL_WIDTH = 5;
+  function renderPuzzle15BoardHotspots(screenNode, game) {
+    if (!screenNode || game.status !== 'play') return;
+    const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
+    const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
+    const rowLines = lineNodes.filter((node) => {
+      const text = node.textContent || '';
+      return text.includes('|') && !text.includes('+');
+    }).slice(0, 4);
+    if (rowLines.length !== 4) return;
+    
+    const blankIdx = game.tiles.indexOf(0);
+    const blankX = blankIdx % 4;
+    const blankY = Math.floor(blankIdx / 4);
+    
+    const layer = createHotspotLayer();
+    rowLines.forEach((lineNode, y) => {
+      for (let x = 0; x < 4; x++) {
+        const idx = y * 4 + x;
+        const v = game.tiles[idx];
+        if (v === 0) continue;
+        
+        const isNeighbor = (Math.abs(x - blankX) + Math.abs(y - blankY)) === 1;
+        if (!isNeighbor) continue;
+        
+        const start = PUZZLE15_ROW_PREFIX + x * PUZZLE15_CELL_WIDTH;
+        const bounds = measureLineSegmentBounds(screenNode, lineNode, start, start + 4);
+        if (!bounds) continue;
+        
+        layer.appendChild(createHotspotButton(String(v), `${v}번 타일 이동`, bounds));
+      }
+    });
+    if (layer.childElementCount > 0) screenNode.appendChild(layer);
+  }
+  async function renderPuzzle15(game, footer, prompt) {
+    const rendered = await arcadeRender(buildPuzzle15Ansi(game), footer, prompt);
+    if (rendered && rendered.screenNode) renderPuzzle15BoardHotspots(rendered.screenNode, game);
   }
 
   // ── 숫자판 맞추기 ──
   async function showPuzzle15(fromHistory = false) {
     state.screen = 'puzzle15-play';
-    state.serviceData = { kind: 'puzzle15', ...createPuzzle15State() };
+    state.serviceData = { kind: 'puzzle15', ...createPuzzle15State(), hintMsg: '' };
     if (!fromHistory) updateURL();
-    await render(buildPuzzle15Ansi(state.serviceData), 'arcadePlay', '옮길 숫자 입력 (1~15) >> ');
+    await renderPuzzle15(state.serviceData, 'arcadePlay', '옮길 숫자 입력 (1~15) >> ');
   }
   async function puzzle15Move(num) {
     const game = sd('puzzle15');
     if (!game) { await showPuzzle15(); return true; }
     if (game.status !== 'play') { setHint('완성했습니다. L을 누르면 새 판이 나옵니다.'); return true; }
-    if (!puzzle15Apply(game, num)) { setHint('빈칸과 붙어 있는 숫자만 옮길 수 있습니다.'); return true; }
-    await render(buildPuzzle15Ansi(game), 'arcadePlay', '옮길 숫자 입력 (1~15) >> ');
+    game.hintMsg = '';
+    if (!puzzle15Apply(game, num)) { game.hintMsg = '빈칸과 붙어 있는 숫자만 옮길 수 있습니다.'; const promptText = game.status === 'play' ? '옮길 숫자 입력 (1~15) >> ' : '선택 >> '; await renderPuzzle15(game, 'arcadePlay', promptText); return true; }
+    const promptText = game.status === 'play' ? '옮길 숫자 입력 (1~15) >> ' : '선택 >> ';
+    await renderPuzzle15(game, 'arcadePlay', promptText);
     return true;
   }
 
   // ── 스크램블 ──
   async function showScramble(fromHistory = false) {
     state.screen = 'scramble-play';
-    state.serviceData = { kind: 'scramble', ...createScrambleState() };
+    state.serviceData = { kind: 'scramble', ...createScrambleState(), hintMsg: '' };
     if (!fromHistory) updateURL();
-    await render(buildScrambleAnsi(state.serviceData), 'arcadePlay', '단어 입력 >> ');
+    await arcadeRender(buildScrambleAnsi(state.serviceData), 'arcadePlay', '단어 입력 >> ');
   }
   async function scrambleGuess(word) {
     const game = sd('scramble');
     if (!game) { await showScramble(); return true; }
     if (game.status !== 'play') { setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.'); return true; }
     
+    game.hintMsg = '';
     const res = scrambleApply(game, word);
     if (res === 'end') {
-      await render(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
+      await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
       return true;
     }
-    if (res === 'already') { setHint('이미 찾은 단어입니다.'); return true; }
-    if (res === 'invalid') { setHint('유효하지 않은 단어이거나 글자판에 없는 단어입니다.'); return true; }
+    if (res === 'already') { game.hintMsg = '이미 찾은 단어입니다.'; }
+    if (res === 'invalid') { game.hintMsg = '유효하지 않은 단어이거나 글자판에 없는 단어입니다.'; }
     
-    await render(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
+    await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
     return true;
   }
 
@@ -246,7 +354,7 @@ export function createArcadeScreens(deps) {
     state.screen = 'wp-play';
     state.serviceData = { kind: 'wp', ...createWpState() };
     if (!fromHistory) updateURL();
-    await render(buildWpAnsi(state.serviceData), 'arcadePlay', '정답 단어 입력 >> ');
+    await arcadeRender(buildWpAnsi(state.serviceData), 'arcadePlay', '정답 단어 입력 >> ');
   }
   async function wpGuess(guess) {
     const game = sd('wp');
@@ -262,7 +370,7 @@ export function createArcadeScreens(deps) {
       setHint('기회를 모두 잃었습니다. 다음 문제로 넘어갑니다.');
     }
     
-    await render(buildWpAnsi(game), 'arcadePlay', '정답 단어 입력 >> ');
+    await arcadeRender(buildWpAnsi(game), 'arcadePlay', '정답 단어 입력 >> ');
     return true;
   }
 
@@ -271,7 +379,7 @@ export function createArcadeScreens(deps) {
     state.screen = 'typing-play';
     state.serviceData = { kind: 'typing', ...createTypingState() };
     if (!fromHistory) updateURL();
-    await render(buildTypingAnsi(state.serviceData), 'arcadePlay', '문장 입력 >> ');
+    await arcadeRender(buildTypingAnsi(state.serviceData), 'arcadePlay', '문장 입력 >> ');
   }
   async function typingGuess(input) {
     const game = sd('typing');
@@ -283,7 +391,7 @@ export function createArcadeScreens(deps) {
       setHint(`결과: ${res.cpm} CPM / 정확도 ${res.accuracy}%`);
     }
     
-    await render(buildTypingAnsi(game), 'arcadePlay', '문장 입력 >> ');
+    await arcadeRender(buildTypingAnsi(game), 'arcadePlay', '문장 입력 >> ');
     return true;
   }
 
@@ -292,7 +400,7 @@ export function createArcadeScreens(deps) {
     state.screen = 'quiz-play';
     state.serviceData = { kind: 'quiz', ...createQuizState() };
     if (!fromHistory) updateURL();
-    await render(buildQuizAnsi(state.serviceData), 'arcadePlay', '답 입력 (1~4) >> ');
+    await arcadeRender(buildQuizAnsi(state.serviceData), 'arcadePlay', '답 입력 (1~4) >> ');
   }
   async function quizGuess(ans) {
     const game = sd('quiz');
@@ -302,7 +410,7 @@ export function createArcadeScreens(deps) {
     const isCorrect = quizApply(game, ans);
     setHint(isCorrect ? '정답입니다!' : '오답입니다!');
     
-    await render(buildQuizAnsi(game), 'arcadePlay', '답 입력 (1~4) >> ');
+    await arcadeRender(buildQuizAnsi(game), 'arcadePlay', '답 입력 (1~4) >> ');
     return true;
   }
 
@@ -311,7 +419,7 @@ export function createArcadeScreens(deps) {
     state.screen = 'battle-play';
     state.serviceData = { kind: 'battle', ...createBattleState() };
     if (!fromHistory) updateURL();
-    await render(buildBattleAnsi(state.serviceData), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+    await arcadeRender(buildBattleAnsi(state.serviceData), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
   }
   async function battleMove(coord) {
     const game = sd('battle');
@@ -339,14 +447,14 @@ export function createArcadeScreens(deps) {
       setHint('빗나갔습니다.');
     }
     
-    await render(buildBattleAnsi(game), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+    await arcadeRender(buildBattleAnsi(game), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
     return true;
   }
   async function battleResign() {
     const game = sd('battle');
     if (!game) { await showBattle(); return true; }
     if (game.status === 'play') game.status = 'lose';
-    await render(buildBattleAnsi(game), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+    await arcadeRender(buildBattleAnsi(game), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
     return true;
   }
 

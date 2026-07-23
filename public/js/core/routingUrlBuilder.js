@@ -120,20 +120,23 @@ export function createRoutingUrlBuilder(deps) {
       case 'chat-lobby':
         return '/chat';
 
+      // [LOG_ID: 20260723_1049] 오락실 기능들의 URL 스키마를 /game/* 네임스페이스 하위에 명시적으로 고정
       case 'bio-input':
-      case 'bio-result': return getMenuNodeRoutePath('bio');
+      case 'bio-result': return '/game/bio';
       case 'fortune-input':
-      case 'fortune-result': return getMenuNodeRoutePath('fortune');
-      case 'mbti-list': return getMenuNodeRoutePath('mbti');
-      case 'mbti-detail': return `${getMenuNodeRoutePath('mbti')}/${encodeURIComponent(state._mbtiCode || '')}`;
+      case 'fortune-result': return '/game/fortune';
+      case 'mbti-intro':
+      case 'mbti-test':
+      case 'mbti-list': return '/game/mbti';
+      case 'mbti-detail': return `/game/mbti/${encodeURIComponent(state._mbtiCode || '')}`;
       // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현
       case 'blood-input':
-      case 'blood-result': return getMenuNodeRoutePath('blood');
+      case 'blood-result': return '/game/blood';
       case 'compat-input':
       case 'compat-input2':
-      case 'compat-result': return getMenuNodeRoutePath('compat');
+      case 'compat-result': return '/game/compat';
       case 'tojeong-input':
-      case 'tojeong-result': return getMenuNodeRoutePath('tojeong');
+      case 'tojeong-result': return '/game/tojeong';
       // [LOG_ID: 20260720_1358] 오락실 게임 5종 — 진행 상태는 URL로 복원하지 않는다(새로고침=새 게임).
       case 'omok-play': return getMenuNodeRoutePath('omok');
       case 'oth-play': return getMenuNodeRoutePath('oth');

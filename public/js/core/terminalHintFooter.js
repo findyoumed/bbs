@@ -365,10 +365,10 @@ export function createTerminalHintFooter(deps) {
 
     try {
       const supportedHint = getSupportedFooterText(state);
-      if (supportedHint) {
+      if (supportedHint !== null && supportedHint !== undefined) {
         const parsedSupported = parseCommandFooter(supportedHint, supportedHint);
-        setPrompt(parsedSupported.prompt);
-        setHint(parsedSupported.hint);
+        setPrompt(parsedSupported.prompt || '');
+        setHint(parsedSupported.hint || '');
       }
 
       let rawText = '';

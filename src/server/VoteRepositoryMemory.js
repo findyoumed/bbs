@@ -30,7 +30,7 @@ class MemoryVoteRepository extends BaseRepository {
     this.votes.push({
       id: 1,
       title: 'BBS의 최고 인기 부가 기능은?',
-      options: ['바이오리듬', '오늘의 운세', 'MBTI 성격유형', '설문조사(투표)', '게시판 랭킹'],
+      options: ['바이오리듬', '오늘의 운세', 'MBTI 성격유형', '설문조사(투표)'],
       createdBy: 'sysop',
       createdAt: new Date().toISOString(),
       isActive: true

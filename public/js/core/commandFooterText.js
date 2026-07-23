@@ -193,6 +193,17 @@ export function createCommandFooterTextUtils(deps) {
     const currentState = nextState || state || {};
     const currentScreen = String(currentState.screen || '').trim();
 
+    // [LOG_ID: 20260723_1139] 사용자 지시 — 오락실의 모든 입력/결과 화면에서 하단 힌트바(L/P/T/GO/H 등)가 노출되고 마우스 클릭 가능해야 함.
+    // 미니게임 플레이 화면(omok-play 등)만 게임에 집중하도록 힌트바 숨김 유지.
+    const gamePlayOnlyScreens = [
+      'omok-play', 'oth-play', 'base-play', 'hangman-play',
+      'puzzle15-play', 'scramble-play', 'wp-play', 'typing-play',
+      'quiz-play', 'battle-play'
+    ];
+    if (gamePlayOnlyScreens.includes(currentScreen)) {
+      return '';
+    }
+
     if (!currentScreen) {
       return getCommandFooterText('top');
     }

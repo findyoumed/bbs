@@ -14,6 +14,7 @@ export function createServiceCommandHandler(deps) {
     showFortuneResult,
     showMbti,
     showMbtiDetail,
+    handleMbtiAnswer,
     showBlood,
     showBloodResult,
     showCompat,
@@ -82,7 +83,21 @@ export function createServiceCommandHandler(deps) {
     if (s === 'bio-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showBiorhythm(); return true; } if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showBiorhythmResult(rawCmd); return true; } return false; }
     if (s === 'fortune-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{4}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
     if (s === 'fortune-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showFortune(); return true; } if (/^\d{4}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
-    if (s === 'mbti-list' || s === 'mbti-detail') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (s === 'mbti-detail' && cmd === 'L') { await showMbti(); return true; } if (/^(1[0-6]|[1-9]|[EI][SN][TF][JP])$/.test(cmd)) { await showMbtiDetail(cmd); return true; } return false; }
+    if (['mbti-intro', 'mbti-test', 'mbti-list', 'mbti-detail'].includes(s)) {
+      if (cmd === 'T') { await showMain(); return true; }
+      if (s === 'mbti-test') {
+        if (['P', 'M'].includes(cmd)) return goGame();
+        if (typeof handleMbtiAnswer === 'function') {
+          return await handleMbtiAnswer(rawCmd);
+        }
+      }
+      if (['P', 'M', 'B'].includes(cmd)) return goGame();
+      if (s === 'mbti-detail' && cmd === 'L') { await showMbti(); return true; }
+      if (typeof handleMbtiAnswer === 'function') {
+        return await handleMbtiAnswer(rawCmd);
+      }
+      return false;
+    }
     // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현 — 혈액형 성격진단/궁합/토정비결.
     // [LOG_ID: 20260721_2000] 혈액형 'B'가 P/M/B 내비게이션 단축키와 겹쳐 게임방으로 튕기던 문제 —
     // 혈액형 입력 패턴을 P/M/B 내비게이션 체크보다 먼저 검사해 'B' 입력이 정상적으로 결과로 이어지게 한다.

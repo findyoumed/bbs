@@ -421,6 +421,56 @@ body.theme-nownuri .write-field textarea {
     display: none;
 }
 
+/* [LOG_ID: 20260723_1102] 오락실 하위 모든 화면의 인라인 프롬프트 호스트 — 본문 아랫줄에 입력창 마운트 */
+.game-prompt-host {
+    display: block;
+    margin-top: 1.5em;
+    line-height: inherit;
+    min-height: 1.65em;
+    padding-left: 33px;
+    padding-right: 16px;
+}
+
+.game-prompt-host #terminal-prompt-row {
+    align-items: baseline;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    line-height: inherit !important;
+    min-height: 1.65em;
+    padding: 0;
+    width: 100%;
+    margin-left: 0;
+}
+
+.game-prompt-host #cmd-prompt-renderer {
+    background: transparent !important;
+    height: 1.65em;
+    line-height: inherit !important;
+    max-height: none;
+    min-height: 0;
+}
+
+.game-prompt-host #cmd-input-wrapper {
+    align-items: baseline;
+    line-height: inherit !important;
+    min-height: 1.65em;
+}
+
+.game-prompt-host #cmd-input {
+    background: transparent !important;
+    height: 1.65em;
+    line-height: inherit !important;
+    max-height: none;
+    min-height: 0;
+    transform: none !important;
+}
+
+.game-prompt-host .terminal-cursor {
+    height: 1.1em;
+    top: 0.25em;
+}
+
 #terminal-prompt-row {
     display: flex;
     align-items: center;

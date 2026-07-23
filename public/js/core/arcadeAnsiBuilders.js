@@ -67,6 +67,7 @@ export function createArcadeAnsiBuilders(deps) {
       : st.lastCpu ? c(15, `  컴퓨터가 ${coordText(st.lastCpu.x, st.lastCpu.y)} 에 놓았습니다. 다음 수를 입력하세요. (${st.moves}수)`)
       : c(15, '  귀하가 흑(●) 선공입니다. 놓을 좌표를 입력하세요.');
     const parts = [buildTopHeader(['오락실', '오목']), c(8, colLabels), ...rows, statusLine];
+    if (st.hintMsg) parts.push('', c(9, `  ${st.hintMsg}`));
     if (isMobile) {
       parts.push('', ...panelLines.filter(Boolean).map((line) => `  ${line}`));
     }
@@ -98,7 +99,8 @@ export function createArcadeAnsiBuilders(deps) {
       : st.passMsg ? c(9, `  ${st.passMsg}`)
       : st.lastCpu !== null ? c(15, `  컴퓨터가 ${coordText(st.lastCpu % OTH_SIZE, Math.floor(st.lastCpu / OTH_SIZE))} 에 놓았습니다. 좌표를 입력하세요.`)
       : c(15, '  귀하가 흑(●) 선공입니다. 놓을 좌표를 입력하세요. 입력 예) C4');
-    return [buildTopHeader(['오락실', '오델로']), c(8, colLabels), ...rows, countLine, statusLine].join('\n');
+    const hintLine = st.hintMsg ? `\n  ${c(9, st.hintMsg)}` : '';
+    return [buildTopHeader(['오락실', '오델로']), c(8, colLabels), ...rows, countLine, statusLine].join('\n') + hintLine;
   }
 
   // ── 숫자야구 ──
@@ -142,6 +144,7 @@ export function createArcadeAnsiBuilders(deps) {
     } else {
       parts.push('', c(15, '  알파벳 한 글자를 입력하세요.'), c(8, '  0을 입력하면 포기하고 정답을 봅니다.'));
     }
+    if (st.hintMsg) parts.push('', c(9, `  ${st.hintMsg}`));
     return parts.join('\n');
   }
 
@@ -164,7 +167,8 @@ export function createArcadeAnsiBuilders(deps) {
     }
     const statusLine = st.status === 'win'
       ? c(11, `${ANSI_BOLD}  축하합니다! ${st.moves}번 만에 완성했습니다. L을 누르면 새 판이 나옵니다.${ANSI_RESET}`)
-      : c(15, `  이동횟수: ${st.moves}회   ${ansiColor(8)}빈칸 옆의 숫자를 입력하면 그 자리로 이동합니다. 1~15${ANSI_RESET}`);
+      : c(15, `  이동횟수: ${st.moves}회   ${ansiColor(8)}숫자 이동: 1~15   그만두기(상위메뉴): P${ANSI_RESET}`);
+    const hintLine = st.hintMsg ? `\n  ${c(9, st.hintMsg)}` : '';
     return [
       buildTopHeader(['오락실', '숫자판 맞추기']),
       c(15, '  숫자를 움직여 1부터 15까지 차례대로 재배열하는 게임입니다.'),
@@ -172,7 +176,7 @@ export function createArcadeAnsiBuilders(deps) {
       ...rows,
       '',
       statusLine
-    ].join('\n');
+    ].join('\n') + hintLine;
   }
 
   // ── 6. 스크램블 (Scramble) ──
@@ -197,6 +201,8 @@ export function createArcadeAnsiBuilders(deps) {
       ? c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`)
       : `  ${c(14, '남은시간:')} ${c(11, `${remains}초`)}   ${c(14, '점수:')} ${c(11, `${st.score}점`)}`;
       
+    const hintLine = st.hintMsg ? `\n  ${c(9, st.hintMsg)}` : '';
+      
     return [
       buildTopHeader(['오락실', '스크램블']),
       c(15, '  정사각형 글자판 속 알파벳들을 조합하여 유효한 영어 단어를 만드세요.'),
@@ -205,7 +211,7 @@ export function createArcadeAnsiBuilders(deps) {
       `  ${c(14, '찾은 단어들 :')} ${c(15, `[${st.found.join(', ')}]`)}`,
       '',
       statusLine
-    ].join('\n');
+    ].join('\n') + hintLine;
   }
 
   // ── 7. 영어단어/숙어 학습게임 (WP) ──

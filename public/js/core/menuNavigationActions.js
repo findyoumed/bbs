@@ -43,6 +43,44 @@ export function createMenuNavigationActions(deps) {
       return true;
     }
 
+    // [LOG_ID: 20260723_1057] 오락실 기능들에 대한 직통 GO 명령어 분기
+    if (normalized === 'BIO' || normalized === 'BIORYTHM') {
+      if (typeof refs.showBiorhythm === 'function') {
+        await refs.showBiorhythm();
+        return true;
+      }
+    }
+    if (normalized === 'FORTUNE') {
+      if (typeof refs.showFortune === 'function') {
+        await refs.showFortune();
+        return true;
+      }
+    }
+    if (normalized === 'MBTI') {
+      if (typeof refs.showMbti === 'function') {
+        await refs.showMbti();
+        return true;
+      }
+    }
+    if (normalized === 'BLOOD') {
+      if (typeof refs.showBlood === 'function') {
+        await refs.showBlood();
+        return true;
+      }
+    }
+    if (normalized === 'COMPAT') {
+      if (typeof refs.showCompat === 'function') {
+        await refs.showCompat();
+        return true;
+      }
+    }
+    if (normalized === 'TOJEONG') {
+      if (typeof refs.showTojeong === 'function') {
+        await refs.showTojeong();
+        return true;
+      }
+    }
+
     // [LOG_ID: 20260714_1900] 나우누리 전자우편 GO 단축 — 원전(NOW_MENU.DAT)에서
     // "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)"로
     // GO 이동이 가능했다. 명령어(ME/MEMO/RMAIL/CMAIL/WMAIL)로는 이미 직접 입력 가능했지만
