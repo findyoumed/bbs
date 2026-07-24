@@ -34,16 +34,17 @@ export function createThemeService(deps) {
   }
 
   function toggleTheme() {
-    // [LOG_ID: 20260713_1155] 기본 -> 블루 -> 나우누리 순환 토글로 변경
+    // [LOG_ID: 20260724_2200] 사용자 요청 — "바탕색에서 이 색상은 빼줘"(나우누리 청록/시안
+    // 배경을 C 순환에서 제외). 나우누리 테마 자체(메뉴 번호 처리 등)는 여전히 SET THEME
+    // NOWNURI로 명시적으로 쓸 수 있어 완전히 제거하지는 않는다 — 배경색 토글(C)의 순환
+    // 목록에서만 뺀다. 기본 -> 블루 -> 기본 2단 순환으로 축소.
     let next = 'default';
     if (state.theme === 'default' || state.theme === 'dark') {
       next = 'blue';
-    } else if (state.theme === 'blue') {
-      next = 'nownuri';
-    } else if (state.theme === 'nownuri') {
+    } else {
       next = 'default';
     }
-    
+
     applyTheme(next);
     if (typeof setTheme === 'function') {
       setTheme(next);

@@ -1,3 +1,16 @@
+## [2026-07-24 22:00] [기능 개선] 바탕색(C) 순환에서 나우누리 청록색 제외 + 파랑 테마 커서 색상 버그 수정
+
+**LOG_ID: 20260724_2200**
+목표: 사용자 요청 — "바탕색에서 이 색상은 빼줘"(스크린샷: 나우누리 청록/시안 배경) + "파랑 바탕색에서도 커서나 글씨들은 백색으로 통일시켜줘" + "선택한 배경색은 localStorage로 기억하고, 다음 접속시에 배경색으로 사용해".
+구현/조사:
+1) `themeService.js`의 `toggleTheme()`(C 명령이 호출)이 기본→블루→나우누리 3단 순환이었던 것을 기본→블루 2단 순환으로 축소 — 나우누리 테마 자체(메뉴 번호 처리 등 `state.theme==='nownuri'` 분기)는 완전히 제거하지 않고 `SET THEME NOWNURI` 명령으로는 여전히 명시적으로 쓸 수 있게 남겨둠(배경색 토글의 순환 목록에서만 제외).
+2) 커서 색상 버그 원인 파악: `retro-terminal.css`의 `.terminal-cursor`가 `mix-blend-mode: difference`로 그려져, 검정(기본) 배경에서만 흰색으로 보이는 트릭이다 — diff(백색, 검정)=백색이지만 파랑(#0000aa)/시안(#00aaaa) 배경에서는 diff(백색, 파랑)=(255,255,85) 같은 노란빛으로 계산돼 커서만 다른 색으로 보였다. `style.css`에 `body.theme-blue .terminal-cursor, body.theme-nownuri .terminal-cursor { background-color:#ffffff; mix-blend-mode:normal; }`를 추가해 두 테마는 순수 백색 블록 커서로 대체(본문 글자색은 이미 `themeService.js`의 `--color:#ffffff !important`로 테마 무관하게 통일돼 있음을 확인).
+3) localStorage 저장/복원은 이미 구현돼 있었음을 확인(`settingsService.js`가 부팅 시 `bbs_theme` 키를 읽어 `state.theme`에 반영, `setTheme()`이 매 전환마다 저장, `app.js`의 `restoreTheme()`이 부팅 초기에 호출) — 추가 구현 불필요.
+검증: `node --check` 통과. Playwright로 로컬 확인 — C 세 번 연속 입력 시 `blue → default → blue`로만 순환(나우누리 미노출) 확인. 블루 테마에서 `.terminal-cursor`의 계산된 스타일이 `background-color: rgb(255,255,255)`, `mix-blend-mode: normal`로 정상 흰색 확인. 페이지 새로고침 후에도 `body.theme-blue`가 유지되어 localStorage 복원이 정상 동작함을 확인. `npm run smoke:command-parity`, `smoke:renderer-ui` 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 21:30] [기능 개선] 글보기 삭제 확인의 "(Y/N)" 프롬프트 문구 자체를 클릭·호버 가능하게 변경
 
 **LOG_ID: 20260724_2140**

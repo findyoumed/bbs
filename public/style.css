@@ -193,6 +193,18 @@ body.theme-blue .write-field textarea {
     background: var(--bgcolor, #0000aa);
 }
 
+/* [LOG_ID: 20260724_2200] 사용자 요청 — "파랑 바탕색에서도 커서나 글씨들은 백색으로 통일".
+   .terminal-cursor(retro-terminal.css)는 mix-blend-mode:difference로 커서를 그려 기본(검정)
+   배경에서만 흰색으로 보인다 — diff(백색, 검정)=백색이지만, 파랑(#0000aa)/시안(#00aaaa) 배경에서는
+   diff(백색, 파랑)=(255,255,85) 같은 노란빛으로 계산되어 커서만 눈에 띄게 다른 색으로 보였다.
+   두 테마는 blend-mode 트릭을 끄고 순수 백색 블록 커서로 대체한다(본문 글자색은 이미
+   themeService.js의 --color:#ffffff !important로 통일돼 있다). */
+body.theme-blue .terminal-cursor,
+body.theme-nownuri .terminal-cursor {
+    background-color: #ffffff;
+    mix-blend-mode: normal;
+}
+
 /* [LOG_ID: 20260713_1155] 나우누리 청록색(Cyan) 테마 추가 */
 body.theme-nownuri {
     background: #00aaaa;
