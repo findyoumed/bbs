@@ -122,7 +122,7 @@ export function createPostWriteView(deps) {
   // [LOG_ID: 20260724_0010] 본문 단계는 일반 화면의 P/S/H 힌트만으로는 줄 편집 명령(/E, /D, /I,
   // /L)을 알 수 없어, 본문 입력 중에는 이 명령들을 직접 안내하는 전용 힌트를 쓴다.
   function setBodyEditorHint() {
-    setHint('저장:. 또는 /s·S  취소:/q 또는 P  목록:/l  수정:/e[번호]  삭제:/d[번호]  삽입:/i[번호]');
+    setHint('입력마침:. 또는 /s·S  취소:/q 또는 P  목록:/l  수정:/e[번호]  삭제:/d[번호]  삽입:/i[번호]');
   }
 
   function clearPostWriteEditor() {
@@ -189,7 +189,7 @@ export function createPostWriteView(deps) {
     editor.stage = 'body';
     editor.pendingLineOp = null;
     appendTranscriptLine(editor, '');
-    appendTranscriptLine(editor, '본문을 입력하십시오. (저장 . 또는 /s·S, 취소 /q 또는 P/M/B)');
+    appendTranscriptLine(editor, '본문을 입력하십시오. (입력 마침 . 또는 /s·S, 취소 /q 또는 P/M/B)');
     appendTranscriptLine(editor, '줄 수정 /e 번호, 줄 삭제 /d 번호[-번호], 줄 삽입 /i 번호, 줄 목록 /l');
     if (editor.bodyLines.length) {
       appendTranscriptLine(editor, '');
@@ -209,11 +209,44 @@ export function createPostWriteView(deps) {
   }
 
   // [LOG_ID: 20260724_0020] 하이텔 등 원전 PC통신 라인 에디터의 관례 — 본문 입력 중 한 줄에
-  // 마침표(.)만 찍으면 그 자리에서 글쓰기를 마친다(사용자 확인: "pc통신의 글쓰기가 그렇게
-  // 되어있던데"). "." 하나로만 이루어진 줄은 실제 본문으로 쓸 일이 거의 없어 안전하게 구분된다.
-  function isSaveWriteCommand(raw) {
+  // 마침표(.)만 찍으면 입력을 마친다(사용자 확인: "pc통신의 글쓰기가 그렇게 되어있던데").
+  // "." 하나로만 이루어진 줄은 실제 본문으로 쓸 일이 거의 없어 안전하게 구분된다.
+  function isFinishTypingCommand(raw) {
     const input = String(raw || '').trim();
     return input === '/s' || input === '.' || input.toUpperCase() === 'S';
+  }
+
+  // [LOG_ID: 20260724_0030] 천리안 책(6.4.6절) 실측 — 본문을 다 쓰고 "."을 치면 곧바로
+  // 저장되는 게 아니라 "등록(1) 편집(2) 내용열람(3) 제목변경(4) ... 귀소(6)" 확인 메뉴가
+  // 뜨고, 여기서 "편집"을 골라야 방금 쓴 본문으로 돌아가 고칠 수 있었다(사용자 지적: "글
+  // 안에서 직접 텍스트 수정 들어가는 방법 없어?" — 곧바로 저장되면 그 기회가 없었음).
+  // 이 저장 전 확인 단계를 재현한다.
+  function isConfirmYesCommand(raw) {
+    const upper = String(raw || '').trim().toUpperCase();
+    return ['.', '1', '/S', 'Y', 'S', '등록'].includes(upper);
+  }
+
+  function isConfirmEditChoice(raw) {
+    const trimmed = String(raw || '').trim();
+    const upper = trimmed.toUpperCase();
+    return upper === 'N' || trimmed === '2' || trimmed === '편집';
+  }
+
+  function enterConfirmStage(editor) {
+    editor.stage = 'confirm_save';
+    editor.pendingLineOp = null;
+    appendTranscriptLine(editor, '');
+    appendTranscriptLine(editor, '--- 작성한 본문 (저장 전 확인) ---');
+    if (editor.bodyLines.length) {
+      appendNumberedBody(editor);
+    } else {
+      appendTranscriptLine(editor, '(본문이 비어 있습니다)');
+    }
+    appendTranscriptLine(editor, '--- 여기까지입니다 ---');
+    appendTranscriptLine(editor, '');
+    appendTranscriptLine(editor, '이대로 등록하시겠습니까?');
+    setHint('등록:Y 또는 .  계속 수정:N 또는 /e[번호]·/d[번호]·/i[번호]·/l  취소:/q 또는 P');
+    renderLineEditor(editor);
   }
 
   // [LOG_ID: 20260724_0010] "/L", "/E 3", "/D 2-4", "/I 5" 형태의 줄 편집 명령을 인식한다.
@@ -413,6 +446,52 @@ export function createPostWriteView(deps) {
         return true;
       }
 
+      // [LOG_ID: 20260724_0030] 저장 전 확인 단계 — 천리안 책의 "등록(1) 편집(2) ... 귀소(6)"
+      // 메뉴를 재현. 여기서 "N"/"편집" 또는 줄 편집 명령(/E,/D,/I,/L)을 고르면 방금 쓴 본문으로
+      // 곧장 돌아가 고칠 수 있다(사용자 지적에 대한 대응 — "글 안에서 직접 텍스트 수정 들어가는
+      // 방법 없어?").
+      if (activeEditor.stage === 'confirm_save') {
+        if (isConfirmYesCommand(line)) {
+          appendTranscriptLine(activeEditor, line);
+          const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
+          if (isPds && activeEditor.mode !== 'edit') {
+            activeEditor.stage = 'keyword_1';
+            appendTranscriptLine(activeEditor, '');
+            appendTranscriptLine(activeEditor, '자료 검색용 키워드 3개를 순서대로 입력해 주십시오.');
+            renderLineEditor(activeEditor);
+            return true;
+          }
+          await handlers.handleWriteSubmit();
+          return true;
+        }
+        if (isCancelWriteCommand(line)) {
+          clearPostWriteEditor();
+          handlers.cancelPostWrite();
+          return true;
+        }
+        if (isConfirmEditChoice(line)) {
+          activeEditor.stage = 'body';
+          appendTranscriptLine(activeEditor, line);
+          appendTranscriptLine(activeEditor, '');
+          appendNumberedBody(activeEditor);
+          appendTranscriptLine(activeEditor, '');
+          appendTranscriptLine(activeEditor, '이어서 입력하거나 /e, /d, /i, /l 명령을 사용하십시오.');
+          setBodyEditorHint();
+          renderLineEditor(activeEditor);
+          return true;
+        }
+        if (parseLineCommand(line)) {
+          // 줄 편집 명령을 바로 입력한 경우 — 본문 단계로 돌려보내 같은 입력을 그대로 다시
+          // 처리시켜 한 번에 적용한다(재입력 요구하지 않음).
+          activeEditor.stage = 'body';
+          return await handlePostWriteLine(line);
+        }
+        appendTranscriptLine(activeEditor, line);
+        appendTranscriptLine(activeEditor, '등록(Y 또는 .), 수정(N 또는 /e,/d,/i,/l), 취소(/q) 중 하나를 입력하십시오.');
+        renderLineEditor(activeEditor);
+        return true;
+      }
+
       // [LOG_ID: 20260724_0010] /E 또는 /I로 지정한 줄의 새 내용을 기다리는 중이면, 이번 입력은
       // 명령이 아니라 그 줄의 실제 텍스트다.
       if (activeEditor.pendingLineOp) {
@@ -507,17 +586,8 @@ export function createPostWriteView(deps) {
         }
       }
 
-      if (isSaveWriteCommand(line)) {
-        // [LOG_ID: 20260713_1110] 자료실(pds) 신규 글 작성인 경우 저장 전에 검색 키워드 3개 등록 단계를 순차 진행
-        const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
-        if (isPds && activeEditor.mode !== 'edit') {
-          activeEditor.stage = 'keyword_1';
-          appendTranscriptLine(activeEditor, '');
-          appendTranscriptLine(activeEditor, '자료 검색용 키워드 3개를 순서대로 입력해 주십시오.');
-          renderLineEditor(activeEditor);
-          return true;
-        }
-        await handlers.handleWriteSubmit();
+      if (isFinishTypingCommand(line)) {
+        enterConfirmStage(activeEditor);
         return true;
       }
       if (isCancelWriteCommand(line)) {
