@@ -193,6 +193,9 @@ export function initializeAppFactoryRuntime(deps) {
     showSystemLog: screens.systemLogScreens.showSystemLog,
     // [LOG_ID: 20260721_1715] URL 대소문자 무관 복원을 위한 findBoardByKey 의존성 주입 추가
     findBoardByKey: services.boardService.findBoardByKey,
+    // [LOG_ID: 20260724_1900] restoreStateFromURL이 findBoardByKey를 쓰려면 state.boards가
+    // 먼저 채워져 있어야 하는데 loadBoards가 주입되지 않았었다 — loadMenuTree와 같은 유형의 누락.
+    loadBoards: services.boardService.loadBoards,
     state,
     statusManager: services.statusManager,
     logger: services.logger

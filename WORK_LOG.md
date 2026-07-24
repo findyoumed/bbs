@@ -1,3 +1,14 @@
+## [2026-07-24 09:50] [버그 수정] 게시판 글 딥링크(예: /notice/1) 새로고침/직접 진입 시 초기화면으로 조용히 폴백 — F(다음페이지)/B(이전페이지) 등 글보기 화면 자체가 뜨지 않던 근본 원인 수정
+
+**LOG_ID: 20260724_1900**
+목표: 사용자 리포트 — "다음(F),이전(B) 표시하고 작동. 마우스클릭과 호버링도 작동. https://01410.vercel.app/notice/1 뉴스 메뉴의 f b 와 똑같은 기능"(공지사항 글보기가 뉴스 화면처럼 F/B 페이징이 작동해야 함). Playwright로 `/notice/1`에 직접 진입해 재현한 결과, 글보기 화면 자체가 뜨지 않고 조용히 초기화면(TOP 메뉴)으로 떨어짐을 확인 — 즉 F/B가 "안 되는" 게 아니라 화면 진입 자체가 실패하고 있었다.
+원인: `routingStateRestorer.js`의 `restoreStateFromURL()` 마지막 폴백 경로(538행 부근)가 `findBoardByKey(firstSeg)`로 게시판을 찾아 `showPostView`를 호출하는데, `findBoardByKey`는 `state.boards`(게시판 목록 API 응답)가 미리 로드돼 있어야 정상 동작한다. 하지만 이 목록을 불러오는 `loadBoards()` 호출은 게시판 선택 화면(`showBoardSelect`) 진입 시에만 실행됐고, 게시글 상세로 곧장 들어오는 딥링크(새로고침·주소창 직접 입력·북마크)에서는 한 번도 호출되지 않아 `state.boards`가 항상 빈 배열이었다 — `findBoardByKey`가 `null`을 반환해 이 분기 전체가 스킵되고 `showMain(true)`로 흘러갔다. 20260723_2340에 `loadMenuTree()`를 딥링크 진입 시점에 보강했던 것과 정확히 같은 유형의 누락(개별 화면이 각자 필요할 때만 선행 데이터를 부르는 구조라, 그 화면을 거치지 않고 곧장 들어오는 경로가 항상 깨졌다).
+구현: `boardService.loadBoards`를 `appFactoryRuntime.js`의 `createRoutingModule(...)` 호출부에 `loadBoards` 의존성으로 새로 주입하고, `routingStateRestorer.js`에서 `loadMenuTree()`와 같은 지점(모든 라우트 디스패치 이전)에 `await loadBoards();`를 추가 — `loadBoards()`도 `state.boards.length > 0`이면 즉시 반환하는 캐시 구조라 중복 호출 비용 없음.
+검증: `node --check` 통과. Playwright로 로컬 서버(`server.js`, PORT 3099)에 `/notice/1` 직접 진입 — 수정 전: 화면이 초기 메뉴 텍스트만 렌더링, `#cmd-hint` 자체가 없음. 수정 후: `GET /api/boards/notice/posts/1?view=1` 호출 확인, 화면에 "NOTICE / 공지사항 (01/04)" 정상 렌더링(전체 4페이지), 하단 힌트바에 `다음페이지(F)`가 `data-cmd="F"`로 클릭 가능하게 노출(`이전페이지(B)`는 1페이지라 올바르게 숨김 — 이 라벨 매칭은 이전 세션 수정분 20260723_2240 로직 그대로 재사용). `[data-cmd="F"]`를 실제 클릭 → 화면이 "(02/04)"로 전환되고 이제 `이전페이지(B)`도 함께 노출되는 것을 확인(뉴스 목록 화면의 F/B와 동일한 공용 힌트 토큰·클릭 파이프라인이므로 호버 툴팁도 동일하게 동작). `npm run smoke:boards`, `smoke:menu-wiring`, `smoke:command-parity`, `smoke:vercel-ready` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 00:35] [기능 개선] 글쓰기 "." 입력 시 곧바로 저장하지 않고 천리안 책의 저장 전 확인(등록/편집/취소) 단계를 재현 — "글 안에서 직접 수정하는 방법" 요청 대응
 
 **LOG_ID: 20260724_0030**

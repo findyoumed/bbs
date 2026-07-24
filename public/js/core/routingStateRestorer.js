@@ -2,6 +2,7 @@ export function createRoutingStateRestorer(deps) {
   const {
     getMenuNodeByKey,
     getMenuNodeKey,
+    loadBoards,
     loadMenuTree,
     logger,
     resolveMenuRoute,
@@ -468,6 +469,15 @@ export function createRoutingStateRestorer(deps) {
       // 이미 로드됐으면 즉시 반환하므로(state.menuTree 캐시) 비용 없음 — 개별 핸들러의 기존
       // loadMenuTree() 호출(game 등)은 그대로 둬도 안전한 중복 호출이 될 뿐이다.
       await loadMenuTree();
+      // [LOG_ID: 20260724_1900] 같은 유형의 누락 — 게시판 글 딥링크(예: /notice/1)를 새로고침
+      // 또는 직접 주소창 입력으로 들어오면 아래 findBoardByKey(firstSeg)가 state.boards를
+      // 조회하는데, 이 화면 진입 전에는 그 목록을 불러오는 코드가 전혀 실행되지 않아 항상
+      // 비어 있었다 — findBoardByKey가 null을 반환해 showMain(초기화면)으로 조용히 폴백되고,
+      // 그 결과 F(다음페이지)/B(이전페이지) 등 게시글 보기 화면 자체가 뜨지 않았다.
+      // loadBoards()도 loadMenuTree()처럼 이미 로드됐으면 즉시 반환하므로 중복 호출 비용 없음.
+      if (typeof loadBoards === 'function') {
+        await loadBoards();
+      }
 
       if (routeHandlers[rootSegment]) {
         return await routeHandlers[rootSegment](segments, queryParams);
