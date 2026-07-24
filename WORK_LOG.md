@@ -1,3 +1,13 @@
+## [2026-07-24 21:15] [기능 개선] 글보기 삭제 확인의 예(Y)/아니오(N)를 클릭·호버 가능한 힌트 토큰으로 노출
+
+**LOG_ID: 20260724_2130**
+목표: 사용자 요청 — "삭제하겠습니까 Y N 도 클릭되고 호버링 되어야지"(방금 setHint/setPrompt 방식으로 바꾼 삭제 확인의 Y/N도 다른 힌트바 토큰(F/B/P 등)처럼 마우스 클릭·호버가 되어야 함).
+구현: `beginPostDeleteConfirm`의 `setHint` 문구에 `Y:예 N:아니오`를 추가 — `terminalHintMarkup.js`의 `renderHintMarkup`이 이 "CMD:라벨" 표기를 다른 화면과 동일한 `.cmd-token.cmd-clickable`(hover용 `data-tip`, 클릭용 `data-cmd`)로 변환해준다. `buildCommandToken`은 `CMD_META`에 없는 명령도 그대로 동작하므로 Y/N을 새로 등록할 필요가 없었다. 키보드로 직접 "Y"/"N"을 입력하는 기존 `setPrompt`의 "(Y/N) [N] >>" 프롬프트는 그대로 유지 — 클릭과 타이핑 두 경로 모두 지원.
+검증: `node --check` 통과. `createTerminalHintMarkup`을 직접 구동해 `renderHintMarkup('...\nY:예 N:아니오')` 출력 확인 — `<span class="cmd-token cmd-clickable" data-tip="예[Y]" data-cmd="Y">예(Y)</span>`, `<span ... data-tip="아니오[N]" data-cmd="N">아니오(N)</span>` 정상 생성(다른 화면의 F/B/P와 동일한 클릭·호버 파이프라인 재사용이라 별도 배선 불필요). `createPostViewCommandHandler`를 모의 의존성으로 구동해 D 입력 시 힌트에 "Y:예 N:아니오" 원문이 정확히 포함됨을 재확인. `npm run smoke:boards`, `smoke:command-parity` 통과. (운영 DB 연결 환경이라 브라우저로 실제 삭제까지는 재현하지 않음.)
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 21:00] [버그 수정] 글보기 D(삭제) 확인 문구가 본문과 동떨어진 화면 맨 아래에 붙던 문제 수정
 
 **LOG_ID: 20260724_2100**

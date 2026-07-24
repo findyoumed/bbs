@@ -44,7 +44,11 @@ export function createPostViewCommandHandler(deps) {
       menuTitle: state.boardMenuTitle,
       searchParams: { ...(state.searchParams || {}) }
     };
-    setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
+    // [LOG_ID: 20260724_2130] 사용자 요청 — "삭제하겠습니까 Y N 도 클릭되고 호버링 되어야지".
+    // setHint는 renderHintMarkup을 거쳐 "CMD:라벨" 표기를 다른 힌트 토큰(F/B/P 등)과 똑같이
+    // 클릭 가능·호버 툴팁이 붙는 .cmd-token으로 바꿔준다(CMD_META에 없는 명령도 동작 — Y/N을
+    // 새로 등록할 필요 없음). setPrompt의 "(Y/N) [N] >>"는 여전히 키보드 타이핑용으로 남긴다.
+    setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}\nY:예 N:아니오`);
     setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [N] >>`);
   }
 
