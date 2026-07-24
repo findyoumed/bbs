@@ -1,3 +1,17 @@
+## [2026-07-24 11:13] BBS 서비스 라우터 내 s(state.screen) 전달 누락 버그 해결 (WP 등 게임 입력 불능 극복)
+
+**LOG_ID: 20260724_1113**
+목표: 영어학습(WP) 등 오락실 서비스 계열 화면에서 사용자가 키보드로 정답을 입력해도 아무 작동을 안 하던 치명적 입력 불능 현상 해결.
+변경 파일: public/js/core/commandRouter.js
+수행 작업:
+1) `commandRouter.js`에서 `handleServiceCommand` 호출 시 구조 분해 할당 파라미터 `s`에 매핑될 `s: state.screen` 변수가 누락되어 있었음을 정밀 분석으로 확인.
+2) `handleServiceCommand({ s: state.screen, input, rawCmd, cmd })` 로 수정하여 스크린 정보가 올바르게 전달되도록 전격 교정.
+실행: `node --check public/js/core/commandRouter.js`
+기대: 영어 학습게임(WP) 화면에서 답을 타이핑하고 엔터를 치면 정상적으로 채점 반응(정답/오답 힌트 등)이 작동함.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 11:07] 스크램블 게임 종료(실패/타임아웃) 시 불특정 입력에 의한 페이지 튕김/리로드 해결
 
 **LOG_ID: 20260724_1107**
