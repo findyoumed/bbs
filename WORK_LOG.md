@@ -1,3 +1,17 @@
+## [2026-07-24 10:49] 스크램블 게임 설명 가이드에 허용 단어 및 중심 단어 글자수 정보 추가
+
+**LOG_ID: 20260724_1049**
+목표: 스크램블 게임 내에서 입력 가능한 단어의 글자수 조건 및 글자판의 중심이 되는 단어의 글자수 범위를 가이드라인에 노출하여 이용자 혼선 방지.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 내 정사각형 글자판 설명 문구를 수정:
+   - `(2글자 이상...)` 에서 `(2~9글자 단어 입력 후 엔터. 예: PONY / 중심 단어는 5~9글자입니다)` 로 글자 길이에 대한 가이드를 더 명확하게 보강.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 스크램블 게임 상단 가이드 라인에 글자수 범위 안내가 직관적으로 제공됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:46] 스크램블 buildScrambleAnsi 내 isMobile 정의 누락 ReferenceError 버그 해결
 
 **LOG_ID: 20260724_1046**
