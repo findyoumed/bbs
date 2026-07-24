@@ -105,7 +105,11 @@ export function createArcadeScreens(deps) {
     state.screen = 'omok-play';
     state.serviceData = { kind: 'omok', ...createOmokState(), cursor: { x: 7, y: 7 }, hintMsg: '' };
     if (!fromHistory) updateURL();
-    await renderOmok(state.serviceData, 'arcadePlay', '좌표 입력, 클릭 (예: H8) >> ');
+    const game = state.serviceData;
+    const isPlay = game.status === 'play';
+    const footerType = isPlay ? 'arcadePlay' : 'amusementView';
+    const promptText = isPlay ? '좌표 입력, 클릭 (예: H8) >> ' : '선택 >> ';
+    await renderOmok(game, footerType, promptText);
   }
   async function omokMove(colLetter, row) {
     if (omokMoveLock) return true;
@@ -133,7 +137,10 @@ export function createArcadeScreens(deps) {
         if (omokCheckWin(game.board, cpu.x, cpu.y)) game.status = 'lose';
         else if (game.board.every((v) => v !== 0)) game.status = 'draw';
       }
-      await renderOmok(game, 'arcadePlay', '좌표 입력, 클릭 (예: H8) >> ');
+      const isPlay = game.status === 'play';
+      const footerType = isPlay ? 'arcadePlay' : 'amusementView';
+      const promptText = isPlay ? '좌표 입력, 클릭 (예: H8) >> ' : '선택 >> ';
+      await renderOmok(game, footerType, promptText);
       return true;
     } finally {
       omokMoveLock = false;
@@ -144,7 +151,10 @@ export function createArcadeScreens(deps) {
     const game = sd('omok');
     if (!game) { await showOmok(); return true; }
     if (game.status === 'play') game.status = 'resigned';
-    await renderOmok(game, 'arcadePlay', '좌표 입력, 클릭 (예: H8) >> ');
+    const isPlay = game.status === 'play';
+    const footerType = isPlay ? 'arcadePlay' : 'amusementView';
+    const promptText = isPlay ? '좌표 입력, 클릭 (예: H8) >> ' : '선택 >> ';
+    await renderOmok(game, footerType, promptText);
     return true;
   }
 
