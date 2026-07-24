@@ -9,7 +9,7 @@ import {
 // 이 폰트에서 ●/○/·/박스문자(U+2500대)는 전부 반각(1칸)이다(ansiRenderUtils.isWideChar 참고).
 // 반상 셀은 "돌+공백"으로 표시폭 2를 고정해 우측 정보 패널과의 정렬을 보장한다.
 export function createArcadeAnsiBuilders(deps) {
-  const { ANSI_BOLD, ANSI_RESET, ansiColor, buildTopHeader, fitCell } = createAnsiBuilderUtils(deps);
+  const { ANSI_BOLD, ANSI_RESET, ansiColor, buildTopHeader, fitCell, wrapAnsiText } = createAnsiBuilderUtils(deps);
   const c = (tone, text) => `${ansiColor(tone)}${text}${ANSI_RESET}`;
   // [LOG_ID: 20260720_1600] 천리안 원전 그림179/181("TIME&SPACE님이 (I 8) 에 놓았습니다.")
   // 표기를 그대로 재현 — 괄호와 공백 포함.
@@ -209,7 +209,11 @@ export function createArcadeAnsiBuilders(deps) {
         const displayLimit = 10;
         const shown = missing.slice(0, displayLimit).join(', ');
         const extra = missing.length > displayLimit ? ` 외 ${missing.length - displayLimit}개` : '';
-        answerLine = `\n  ${c(11, `미처 찾지 못한 정답 단어: [${shown}${extra}]`)}`;
+        const fullMsg = `미처 찾지 못한 정답 단어: [${shown}${extra}]`;
+        const targetCols = isMobile ? 44 : 80;
+        const wrapWidth = targetCols - 6;
+        const wrappedLines = wrapAnsiText(fullMsg, wrapWidth);
+        answerLine = '\n' + wrappedLines.map(line => `  ${c(11, line)}`).join('\n');
       }
     }
       

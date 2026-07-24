@@ -1,3 +1,17 @@
+## [2026-07-24 10:37] 스크램블 종료 정답 목록 가로 화면 잘림 방지 자동 줄바꿈(Word Wrap) 도입
+
+**LOG_ID: 20260724_1037**
+목표: 스크램블 게임 종료 후 노출되는 미발견 정답 단어 목록이 80컬럼 폭을 초과해 가로로 잘려 보이는 현상 해결.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `createAnsiBuilderUtils(deps)` 구조 분해 할당에 `wrapAnsiText` 유틸 추가.
+2) `buildScrambleAnsi` 내에서 정답 문장 `fullMsg`를 생성한 후 `wrapAnsiText(fullMsg, wrapWidth)`를 적용하여 터미널 가로 폭 규격(80칸/모바일 44칸)에 맞도록 동적 자동 줄바꿈 처리 및 인덴테이션 보정.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 정답 단어 목록이 길어지면 터미널 오른쪽 끝에서 잘리지 않고 다음 줄로 이쁘게 줄바꿈되어 모든 숨겨진 정답이 안전하게 표시됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:34] 스크램블 게임 종료 시 미처 찾지 못한 정답 단어 노출 기능 구현
 
 **LOG_ID: 20260724_1034**
