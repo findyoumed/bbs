@@ -3116,7 +3116,7 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
 .blood-hotspot {
     color: #ffff00 !important;
     cursor: pointer;
-    text-decoration: underline;
+    text-decoration: none !important;
     font-weight: bold;
     padding: 0 2px;
     display: inline-block;
