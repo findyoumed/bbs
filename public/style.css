@@ -3122,7 +3122,7 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
     display: inline-block;
 }
 .blood-hotspot:hover {
-    color: #00ffff !important;
+    color: #ffff00 !important;
     background-color: #333333 !important;
 }
 
