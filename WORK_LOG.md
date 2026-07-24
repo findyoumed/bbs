@@ -1,3 +1,18 @@
+## [2026-07-25 10:30] [기능 개선] help/policy/menuIndex/newsList 힌트바를 postView/weatherView와 동일한 짧은 스타일로 통일 + policy/menu-index F/B 숨김판정 버그 수정
+
+**LOG_ID: 20260725_1030**
+목표: 사용자 요청(전수조사) — "좋아. 다른 메뉴들의 힌트바들도 구조를 이렇게 구성할 수 있을지 전수 조사해줘"(postView/weatherView에 적용한 "다음(F),이전(B),상위(P)" 짧은 라벨 + T 생략 구조를 다른 화면에도 적용할 수 있는지 조사).
+조사: `commandFooterText.js`의 `CMD_ORDER`를 전수 확인한 결과 `help`/`policy`/`menuIndex`/`newsList` 네 카테고리가 postView/weatherView와 정확히 같은 모양(`['F:다음페이지', 'B:이전페이지', 'P', 'T', 'GO', ...]`)이었다. 각 화면의 라우터(`commandRouterGlobalNavigation.js`, `commandRouterService.js`)를 확인해 F/B는 페이지 넘김, P는 상위 화면(policy/help/menuIndex는 `commandDispatcherExecution.js`의 공용 `HISTORY_BACK_SCREENS` → `handleHistoryBack()`, newsList는 자체 라우터 → `showNewsMenu()`), T는 항상 초기화면(`showMain()`)으로 서로 다른 목적지이되, T 명령 자체는 힌트바 노출 여부와 무관하게 계속 동작함을 확인 — postView/weatherView 때와 동일한 전제.
+추가로 발견한 버그: `terminalHintMarkup.js`의 `getFooterPageState()`에 `post-view`/`help`/`post-list` 전용 분기만 있고 `policy`/`menu-index`는 없어 DEFAULT 폴백(`state.serviceData?.pageNo/pageCount`)을 탔다. 그런데 `policyScreens.js`/`menuIndexScreens.js`는 페이지 상태를 `state.serviceData`가 아니라 `state.page` + 자기 전용 필드(`state.policyTotalPages`/`state.menuIndexTotalPages`)에 저장해, F/B 숨김판정이 직전에 봤던 다른 화면의 잔여 `serviceData` 값을 잘못 참조하고 있었다. `getFooterPageState()`에 `policy`/`menu-index` 전용 분기를 추가해 수정.
+구현:
+1. `commandFooterText.js`: `help` → `['F:다음', 'B:이전', 'P', 'GO']`, `policy`/`menuIndex`/`newsList` → `['F:다음', 'B:이전', 'P', 'GO', 'H']`로 변경(T 제거, 라벨 단축). 모바일 전용 `help` 하드코딩 오버라이드(1쪽뿐일 때 P만 남는 문제 대응, 20260718_2330)도 동일하게 T 제거.
+2. `terminalHintMarkup.js`: `getFooterPageState()`에 `policy`(`state.page`/`state.policyTotalPages`), `menu-index`(`state.page`/`state.menuIndexTotalPages`) 분기 추가.
+범위 밖(적용 보류): `pdsList`/`postList`/`serviceArticle` 등도 T+P를 함께 갖고 있지만 F/B가 "다음페이지" 라벨이 아니거나(예: 게시판은 이미 bare `F`/`B`) 토큰 수가 훨씬 많아(10개 이상) 이미 동적 트림에 의존하는 구조라 postView/weatherView와 기계적으로 같은 모양이 아니었다 — 별도 판단이 필요해 이번 전수조사에서는 건드리지 않음.
+검증: `node --check` 통과(2개 파일). `npm run smoke:menu-wiring` 통과(33개 타입 정상). Playwright(393×700)로 확인 — help/policy(1쪽)/menu-index(1쪽): "다음(F), 상위(P), 이동(GO)[, 도움말(H)]"만 노출(B 자동 숨김). news-list(1쪽): 동일 패턴. policy 2쪽 강제 진입: F·B 둘 다 노출(이전 버그였다면 여기서 잘못 숨었을 것). menu-index 마지막 쪽(`?page=999` 클램프): B만 노출, F 자동 숨김 — policy/menu-index 버그 수정이 실제로 반영됐음을 확인.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-25 09:00] [기능 개선] 날씨 힌트바를 공지사항 글보기와 동일한 짧은 스타일로 통일
 
 **LOG_ID: 20260725_0900**

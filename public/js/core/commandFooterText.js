@@ -7,11 +7,16 @@ export const CMD_ORDER = {
   top: ['GO', 'LOGIN', 'PF', 'C:바탕색', 'H'], // [LOG: 20260609_1157] WHO(회원정보) 삭제, HI(내정보) 삭제
   menu: ['P', 'T', 'GO', 'LOGIN', 'PF', 'H'], // [LOG: 20260609_1157] WHO(회원정보) 삭제, HI(내정보) 삭제
   authMenu: ['P', 'T', 'GO', 'H'],
-  help: ['F:다음페이지', 'B:이전페이지', 'P', 'T', 'GO'],
+  // [LOG_ID: 20260725_1030] 사용자 요청(전수조사) — postView/weatherView에 적용한 짧은 라벨(다음/이전)
+  // + T 생략 구조를 정확히 같은 모양(F/B 다음페이지·이전페이지 + P + T + GO)이던 help/policy/
+  // menuIndex/newsList 네 카테고리에도 동일 적용한다. T(초기화면) 명령 자체는 계속 동작하며
+  // (commandDispatcherExecution.js의 HISTORY_BACK_SCREENS 공용 처리), 힌트바 노출만 뺀다.
+  help: ['F:다음', 'B:이전', 'P', 'GO'],
   history: ['P', 'T', 'GO', 'H'],
   // [LOG_ID: 20260713_2100] GUIDE 화면 이용약관/개인정보처리방침 뷰어 — help와 동일하게 페이징.
   // [LOG_ID: 20260716_2326] '다음페이지', '이전페이지' 라벨 오버라이드
-  policy: ['F:다음페이지', 'B:이전페이지', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260725_1030] 짧은 라벨 + T 생략 구조로 통일(위 help 주석 참고)
+  policy: ['F:다음', 'B:이전', 'P', 'GO', 'H'],
   newsMenu: ['P', 'T', 'GO', 'LOGIN', 'H'],
   weatherMenu: ['P', 'T', 'GO', 'H'],
   // [LOG_ID: 20260725_0900] 사용자 요청 — "모바일에서 명령어힌트바 공지사항글의 힌트바처럼
@@ -62,7 +67,8 @@ export const CMD_ORDER = {
   memberSearch: ['BYID:아이디로', 'BYNAME:이름으로', 'P', 'T', 'GO', 'H'],
   // [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 전체 메뉴 안내 — help처럼 F/B로 페이징하고,
   // 목록의 코드를 그냥 입력하면 GO 없이 바로 이동한다.
-  menuIndex: ['F:다음페이지', 'B:이전페이지', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260725_1030] 짧은 라벨 + T 생략 구조로 통일(위 help 주석 참고)
+  menuIndex: ['F:다음', 'B:이전', 'P', 'GO', 'H'],
   myInfoView: ['P', 'T', 'GO', 'H'],
   myInfoEdit: ['P:취소', 'T', 'ENTER:변경', 'H'],
   myInfoDelete: ['P:취소', 'T', 'ENTER:탈퇴', 'H'],
@@ -72,7 +78,8 @@ export const CMD_ORDER = {
   systemInfo: ['P', 'T', 'GO', 'H'],
   systemLog: ['P', 'T', 'GO', 'R:새로고침', 'C:지우기', 'CP:복사', 'H'],
   attachmentList: ['P', 'T', 'GO', 'H'],
-  newsList: ['F:다음페이지', 'B:이전페이지', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260725_1030] 짧은 라벨 + T 생략 구조로 통일(위 help 주석 참고)
+  newsList: ['F:다음', 'B:이전', 'P', 'GO', 'H'],
   // [LOG_ID: 20260712_0030] PR 표기를 '연속읽기'로 통일(사용자 결정) — 게시판(postList)과 동일 용어.
   // [LOG_ID: 20260712_0100] N/A는 뉴스 기사 화면에서 실제 동작(이전/다음 기사 이동)하는데,
   // 기본 라벨 '이전글/다음글'이 shouldShowFooterToken의 "post-view 전용" 숨김 규칙에 걸려
@@ -184,9 +191,10 @@ export function createCommandFooterTextUtils(deps) {
       if (category === 'help') {
         // [LOG_ID: 20260718_2330] 페이지가 1쪽뿐인 도움말(F/B가 둘 다 필터링되는 경우)에서
         // T·GO까지 빠져 있어 상위(P) 토큰 하나만 남아 보였다(사용자 지적: "메뉴 힌트바가 많이
-        // 없어졌는데"). 데스크톱 help 세트(F/B/P/T/GO)와 동일하게 맞춘다 — 안 들어가면 동적
+        // 없어졌는데"). 데스크톱 help 세트와 동일하게 맞춘다 — 안 들어가면 동적
         // 트림(trimHintEntriesToFit)이 알아서 H 툴팁으로 접는다.
-        order = ['F:다음', 'B:이전', 'P', 'T', 'GO'];
+        // [LOG_ID: 20260725_1030] 데스크톱 help 세트에서 T를 뺐으므로(전수조사) 여기도 맞춘다.
+        order = ['F:다음', 'B:이전', 'P', 'GO'];
       }
       // [LOG_ID: 20260723_1900] policy/newsList/weatherView/menuIndex도 같은 종류의 문제였다
       // (사용자 지적: "힌트바에 기능이 두개만 나오는데. 원래 더 많은데") — 페이지가 1쪽뿐이라

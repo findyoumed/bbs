@@ -117,6 +117,25 @@ export function createTerminalHintMarkup(deps) {
       };
     }
 
+    // [LOG_ID: 20260725_1030] policy/menu-index는 help와 동일한 F/B 페이징이지만 페이지 상태를
+    // state.serviceData가 아니라 state.page + 자기 전용 totalPages 필드에 저장한다(policyScreens.js/
+    // menuIndexScreens.js — 둘 다 serviceData를 아예 건드리지 않음). 이 분기가 없어 DEFAULT
+    // 폴백(state.serviceData?.pageNo/pageCount)을 타면서, 직전에 봤던 다른 화면(날씨/뉴스 등)의
+    // serviceData 잔여값을 그대로 읽어 F가 실제 페이지 수와 무관하게 숨거나 계속 뜨는 오류가 있었다.
+    if (state.screen === 'policy') {
+      return {
+        pageNo: Math.max(1, Number(state.page || 1)),
+        pageCount: Math.max(1, Number(state.policyTotalPages || 1))
+      };
+    }
+
+    if (state.screen === 'menu-index') {
+      return {
+        pageNo: Math.max(1, Number(state.page || 1)),
+        pageCount: Math.max(1, Number(state.menuIndexTotalPages || 1))
+      };
+    }
+
     if (state.screen === 'post-list') {
       return {
         pageNo: Math.max(1, Number(state.page || 1)),
