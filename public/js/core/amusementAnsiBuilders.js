@@ -907,19 +907,37 @@ function calculateMbtiFromAnswers(answers) {
   function buildTojeongIntroAnsi() {
     return [buildTopHeader(['오락실', '토정비결']), c(15, '  생년월일로 올해 열두 달의 운세를 풀어봅니다.'), '', c(14, '  생년월일을 입력하세요.'), c(11, '  입력 예) 1990-01-01 또는 19900101')].join('\n');
   }
-  // [LOG: 20260724_1008] 전통 토정비결 144괘 연산 및 동적 총론·월별 운세 조립 알고리즘 도입
+  // [LOG: 20260724_1009] 정통 토정비결 조견상수 및 한국식 세는나이 작괘공식 반영
   function buildTojeongAnsi(birth, target = new Date()) {
     const animal = ZODIAC[((birth.getFullYear() - 4) % 12 + 12) % 12];
     const year = target.getFullYear();
+
+    const birthGanjiIdx = getYearGanjiIndex(birth.getFullYear());
+    const targetGanjiIdx = getYearGanjiIndex(year);
 
     // 1. 3자리 괘 생성 (상괘 1~8, 중괘 1~6, 하괘 1~3)
     const birthYear = birth.getFullYear();
     const birthMonth = birth.getMonth() + 1;
     const birthDay = birth.getDate();
 
-    const sang = ((birthYear + year + birthMonth) % 8) + 1;
-    const jung = ((birthMonth + birthDay + year) % 6) + 1;
-    const ha = ((birthDay + year) % 3) + 1;
+    const GAN_CONSTANTS = [9, 8, 7, 6, 5, 9, 8, 7, 6, 5]; // 甲(9) ~ 癸(5)
+    const JI_CONSTANTS = [9, 8, 7, 6, 5, 9, 8, 7, 6, 5, 9, 8]; // 子(9) ~ 亥(8)
+
+    const birthGan = birthGanjiIdx % 10;
+    const targetGan = targetGanjiIdx % 10;
+    const targetJi = targetGanjiIdx % 12;
+
+    const age = year - birthYear + 1; // 한국식 세는나이
+
+    const sangSum = GAN_CONSTANTS[targetGan] + GAN_CONSTANTS[birthGan] + age;
+    const sang = (sangSum % 8) || 8;
+
+    const jungSum = birthMonth + JI_CONSTANTS[targetJi];
+    const jung = (jungSum % 6) || 6;
+
+    const yearOffset = (targetGanjiIdx % 3) + 1;
+    const haSum = birthDay + yearOffset;
+    const ha = (haSum % 3) || 3;
 
     const gwaNo = `${sang}${jung}${ha}`;
     const sangNames = ['천(天)', '지(地)', '수(水)', '화(火)', '풍(風)', '뢰(雷)', '산(山)', '택(澤)'];
@@ -967,8 +985,6 @@ function calculateMbtiFromAnswers(answers) {
       '자연스러운 순리에 맡겨 두고 서둘러 억지로 채우려 들지 마십시오.'
     ];
 
-    const birthGanjiIdx = getYearGanjiIndex(birth.getFullYear());
-    const targetGanjiIdx = getYearGanjiIndex(year);
     const targetGanjiStr = ganjiText(targetGanjiIdx);
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
