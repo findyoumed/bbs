@@ -1,3 +1,16 @@
+## [2026-07-24 10:46] 스크램블 buildScrambleAnsi 내 isMobile 정의 누락 ReferenceError 버그 해결
+
+**LOG_ID: 20260724_1046**
+목표: 스크램블 게임 종료 시 `isMobile is not defined` 라는 ReferenceError 예외가 발생하여 화면 렌더링이 뻗는 문제 해결.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 함수 내부에 `const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;` 변수 선언을 정상 추가하여 모바일 여부 판단 값이 예외 없이 정상 연산되도록 수정.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 에러 메시지가 사라지고, 스크램블 제한시간 만료 시 정상적으로 정답 단어 목록이 잘림 없이 렌더링됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:43] 스크램블 게임 60초 자동 타임아웃 타이머 및 종료 화면 강제 리플래시 구현
 
 **LOG_ID: 20260724_1043**

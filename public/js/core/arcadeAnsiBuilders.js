@@ -182,6 +182,7 @@ export function createArcadeAnsiBuilders(deps) {
   // ── 6. 스크램블 (Scramble) ──
   // [LOG: 20260724_1034] 게임 종료 시 미처 찾지 못한 정답 단어 목록 노출 로직 보강
   function buildScrambleAnsi(st) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const divider = c(8, '  +---+---+---+---+');
     const rows = [divider];
     for (let y = 0; y < 4; y++) {
