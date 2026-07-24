@@ -447,18 +447,63 @@ export function createAmusementAnsiBuilders(deps) {
   }
   
   function buildFortuneIntroAnsi() {
-    return [buildTopHeader(['오락실', '오늘의 운세']), c(15, '  태어난 해의 띠와 오늘의 일진을 풀어 운세를 봅니다.'), c(8, '  십이지의 삼합·육합·육충·육해 관계를 사용합니다.'), '', c(14, '  태어난 연도(4자리)를 입력하세요.'), c(11, '  입력 예) 1990')].join('\n');
+    return [buildTopHeader(['오락실', '오늘의 운세']), c(15, '  태어난 해의 띠와 오늘의 일진을 풀어 운세를 봅니다.'), c(8, '  십이지의 삼합·육합·육충·육해 관계를 사용합니다.'), '', c(14, '  생년월일(8자리)을 입력하세요.'), c(11, '  입력 예) 19900101')].join('\n');
   }
-  function buildFortuneAnsi(year, target = new Date()) {
+  // [LOG: 20260724_0948] 생년월일 날짜 객체 기반 및 십이지 합충 역학 알고리즘 적용
+  function buildFortuneAnsi(birthDate, target = new Date()) {
+    const year = birthDate.getFullYear();
+    const month = birthDate.getMonth() + 1;
+    const day = birthDate.getDate();
+
     const animal = ZODIAC[((year - 4) % 12 + 12) % 12];
-    // [LOG_ID: 20260723_1116] 태어난 해(띠) + 오늘 일진(60갑자) 기반의 정밀 운세 알고리즘
-    const yearZodiacIdx = ((year - 4) % 12 + 12) % 12;
+    const yearZodiacIdx = ((year - 4) % 12 + 12) % 12; // 띠 지지 인덱스 (0~11)
     const dayGanjiIdx = getDayGanjiIndex(target);
     const dayGanjiStr = ganjiText(dayGanjiIdx);
+    const dayJijiIdx = dayGanjiIdx % 12; // 오늘의 지지 인덱스 (0~11)
 
-    // 항목별 고유 소수 가중치를 적용하여 각 운세별 점수가 더욱 다채롭게 분산되도록 함 (1~5점)
+    // 동양 역학(삼합, 육합, 육충, 육해) 분석
+    // 1) 육합: 자축(0-1), 인해(2-11), 묘술(3-10), 진유(4-9), 사신(5-8), 오미(6-7)
+    const isYukHap = (
+      (yearZodiacIdx === 0 && dayJijiIdx === 1) || (yearZodiacIdx === 1 && dayJijiIdx === 0) ||
+      (yearZodiacIdx === 2 && dayJijiIdx === 11) || (yearZodiacIdx === 11 && dayJijiIdx === 2) ||
+      (yearZodiacIdx === 3 && dayJijiIdx === 10) || (yearZodiacIdx === 10 && dayJijiIdx === 3) ||
+      (yearZodiacIdx === 4 && dayJijiIdx === 9) || (yearZodiacIdx === 9 && dayJijiIdx === 4) ||
+      (yearZodiacIdx === 5 && dayJijiIdx === 8) || (yearZodiacIdx === 8 && dayJijiIdx === 5) ||
+      (yearZodiacIdx === 6 && dayJijiIdx === 7) || (yearZodiacIdx === 7 && dayJijiIdx === 6)
+    );
+
+    // 2) 삼합: 4칸 또는 8칸 차이
+    const isSamHap = (Math.abs(yearZodiacIdx - dayJijiIdx) === 4 || Math.abs(yearZodiacIdx - dayJijiIdx) === 8);
+
+    // 3) 육충: 정확히 6칸 차이
+    const isYukChung = (Math.abs(yearZodiacIdx - dayJijiIdx) === 6);
+
+    // 4) 육해: 자미(0-7), 축오(1-6), 인사(2-5), 묘진(3-4), 신해(8-11), 유술(9-10)
+    const isYukHae = (
+      (yearZodiacIdx === 0 && dayJijiIdx === 7) || (yearZodiacIdx === 7 && dayJijiIdx === 0) ||
+      (yearZodiacIdx === 1 && dayJijiIdx === 6) || (yearZodiacIdx === 6 && dayJijiIdx === 1) ||
+      (yearZodiacIdx === 2 && dayJijiIdx === 5) || (yearZodiacIdx === 5 && dayJijiIdx === 2) ||
+      (yearZodiacIdx === 3 && dayJijiIdx === 4) || (yearZodiacIdx === 4 && dayJijiIdx === 3) ||
+      (yearZodiacIdx === 8 && dayJijiIdx === 11) || (yearZodiacIdx === 11 && dayJijiIdx === 8) ||
+      (yearZodiacIdx === 9 && dayJijiIdx === 10) || (yearZodiacIdx === 10 && dayJijiIdx === 9)
+    );
+
+    // 기본 무난한 점수 3점에서 시작하여 띠-일진 궁합에 따라 1차 보정
+    let baseFortuneScore = 3;
+    if (isYukHap) baseFortuneScore += 2;
+    else if (isSamHap) baseFortuneScore += 1;
+    if (isYukChung) baseFortuneScore -= 2;
+    else if (isYukHae) baseFortuneScore -= 1;
+
+    // 각 항목별(총운, 애정운, 금전운, 건강운)로 태어난 월, 일의 정보와 고유 소수 가중치를 결합해
+    // 점수를 다채롭게 분산시킴 (1~5점)
     const itemMultipliers = [7, 13, 19, 23];
-    const scores = itemMultipliers.map((mult) => 1 + ((yearZodiacIdx * mult + dayGanjiIdx * 3 + mult) % 5));
+    const scores = itemMultipliers.map((mult, index) => {
+      const variant = (month + day + index) * mult + dayGanjiIdx;
+      const offset = (variant % 3) - 1; // -1, 0, 1 중 하나
+      let score = baseFortuneScore + offset;
+      return Math.max(1, Math.min(5, score));
+    });
 
     // 풍부한 15종 운세 문구 풀 (점수대별 맞춤 문구 제공)
     const messagePool = [
@@ -490,13 +535,13 @@ export function createAmusementAnsiBuilders(deps) {
 
     const getMessage = (score, itemIdx) => {
       let poolIdx = score <= 2 ? 0 : score === 3 ? 1 : score === 4 ? 2 : 3;
-      const subIdx = (yearZodiacIdx + dayGanjiIdx + itemIdx) % messagePool[poolIdx].length;
+      const subIdx = (yearZodiacIdx + month + day + dayGanjiIdx + itemIdx) % messagePool[poolIdx].length;
       return messagePool[poolIdx][subIdx];
     };
 
     const parts = [
       buildTopHeader(['오락실', '오늘의 운세']),
-      c(11, `${ANSI_BOLD}  ${year}년생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${dateText(target)} (오늘의 일진: ${dayGanjiStr}일)${ANSI_RESET}`),
+      c(11, `${ANSI_BOLD}  ${year}년생 ${animal}띠 (${month}월 ${day}일생)${ANSI_RESET}  ${ansiColor(8)}${dateText(target)} (오늘의 일진: ${dayGanjiStr}일)${ANSI_RESET}`),
       ''
     ];
 
