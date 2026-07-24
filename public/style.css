@@ -674,7 +674,19 @@ body.theme-nownuri .write-field textarea {
     color: #ffffff;
     caret-color: transparent !important;
     display: block;
-    flex: 0 0 auto;
+    /* [LOG_ID: 20260724_2230] 사용자 보고 — "모바일화면에서 화면밖으로 나가는 ui들은 전수조사".
+       JS(syncPromptRendererWidth)가 이 요소의 width를 프롬프트 텍스트 길이에 맞춰 인라인으로
+       계산하는데(위 주석들), flex-shrink:0이면 화면 폭보다 긴 프롬프트(예: 생체리듬 화면의
+       "▶ 생년월일을 8자리로 입력해 주십시오 (예: 19900101) : ")가 그대로 뷰포트 밖으로
+       튀어나갔다 — <input>은 원래 줄바꿈이 불가능해 유일한 안전장치는 줄어들 수 있게 하고
+       (flex-shrink) 넘치는 부분을 말줄임표로 자르는 것뿐이다. 평소 짧은 프롬프트는 공간이
+       충분해 이 축소가 전혀 개입하지 않으므로 기존 화면들에는 영향이 없다.
+       .game-prompt-host #cmd-prompt-renderer(오락실 인라인 프롬프트)는 flex/overflow를 다시
+       선언하지 않으므로 이 값을 그대로 상속해 동일하게 보호된다. */
+    flex: 0 1 auto;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     position: relative;
     min-height: 1.1em;
     /* [LOG_ID: 20260708_1740] min-width도 ch에서 em으로 통일 — 20260708_1725와 동일한 이유
