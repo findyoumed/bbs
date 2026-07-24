@@ -362,7 +362,8 @@ export function createScrambleState() {
     found: [],
     score: 0,
     status: 'play',
-    allPossibleAnswers: answers
+    allPossibleAnswers: answers,
+    baseWordLength: baseWord.length
   };
 }
 

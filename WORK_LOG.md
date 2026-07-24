@@ -1,3 +1,18 @@
+## [2026-07-24 10:51] 스크램블 게임 내 이번 판의 정확한 중심 단어 글자수 힌트 제공
+
+**LOG_ID: 20260724_1051**
+목표: 스크램블 게임 시작 시 이번 판의 핵심이 되는 중심 단어의 정확한 글자수(예: 7글자)를 힌트로 직접 제공하여 게임 몰입도 향상.
+변경 파일: public/js/core/arcadeGameLogic.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeGameLogic.js`의 `createScrambleState`에서 뽑힌 `baseWord`의 실제 글자수 정보를 `baseWordLength: baseWord.length` 프로퍼티로 상태 객체에 동시 저장하도록 보완.
+2) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 상단 힌트 괄호 가이드를 동적으로 수정:
+   - `st.baseWordLength` 값을 바인딩하여 `(이번 판의 중심 단어는 X글자입니다)`로 동적 타겟 힌트가 출력되도록 렌더링 변경.
+실행: `node --check public/js/core/arcadeGameLogic.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 게임 진입 시 상단에 "이번 판의 중심 단어는 X글자입니다" 라고 정확한 글자수 힌트가 동적으로 출력됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:49] 스크램블 게임 설명 가이드에 허용 단어 및 중심 단어 글자수 정보 추가
 
 **LOG_ID: 20260724_1049**
