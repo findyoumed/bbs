@@ -316,18 +316,26 @@ export function createAmusementAnsiBuilders(deps) {
   }
 
   // [LOG_ID: 20260723_1027] 순수 ANSI 본문 렌더링 (쌩 HTML 태그 노출 100% 완전 제거)
+  // [LOG_ID: 20260724_2240] 사용자 지적 — "세로선이 안맞아"(박스 우측 테두리 |가 줄마다 다른
+  // 위치에 찍힘). 이 박스는 fitCell 없이 손으로 공백 개수를 세어 만든 문자열이었는데, 한글은
+  // 실제로 2칸(와이드 문자)을 차지해서 "글자 수는 맞아도 표시 폭은 다른" 줄들이 섞여 있었다
+  // (예: "생체 리듬 서비스" 줄과 "자신의 생년월일을..." 줄은 글자 수는 비슷해도 실제 표시 폭이
+  // 서로 달랐음). fitCell(displayWidth 기반 와이드 문자 인식 패딩)로 내부 폭을 정확히 맞춘다.
   function buildBiorhythmIntroAnsi() {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const header = buildTopHeader(['오락실', '생체 리듬 서비스']);
+    const innerWidth = isMobile ? 39 : 60;
+    const border = `+${'-'.repeat(innerWidth)}+`;
+    const boxLine = (text) => `|${fitCell(text, innerWidth)}|`;
 
     if (isMobile) {
       return [
         header,
-        c(15, '+---------------------------------------+'),
-        c(15, '|  [ 생체 리듬 서비스 (BIORYTHM) ]      |'),
-        c(15, '|  자신의 생년월일을 입력하시면 신체,  |'),
-        c(15, '|  감성, 지성 4대 파형 차트를 봅니다.  |'),
-        c(15, '+---------------------------------------+'),
+        c(15, border),
+        c(15, boxLine('  [ 생체 리듬 서비스 (BIORYTHM) ]')),
+        c(15, boxLine('  자신의 생년월일을 입력하시면 신체,')),
+        c(15, boxLine('  감성, 지성 4대 파형 차트를 봅니다.')),
+        c(15, border),
         '',
         c(14, '■ 신체 리듬 (P - Physical, 23일)'),
         c(14, '■ 감성 리듬 (E - Emotional, 28일)'),
@@ -338,11 +346,11 @@ export function createAmusementAnsiBuilders(deps) {
 
     return [
       header,
-      c(15, '+------------------------------------------------------------+'),
-      c(15, '|  [ 생체 리듬 서비스 (BIORYTHM) ]                           |'),
-      c(15, '|  태어난 날부터의 주기로 컨디션을 파악하는 서비스입니다.    |'),
-      c(15, '|  신체, 감성, 지성 4대 파형 차트를 2D로 렌더링합니다.       |'),
-      c(15, '+------------------------------------------------------------+'),
+      c(15, border),
+      c(15, boxLine('  [ 생체 리듬 서비스 (BIORYTHM) ]')),
+      c(15, boxLine('  태어난 날부터의 주기로 컨디션을 파악하는 서비스입니다.')),
+      c(15, boxLine('  신체, 감성, 지성 4대 파형 차트를 2D로 렌더링합니다.')),
+      c(15, border),
       '',
       c(14, '■ 신체 리듬 (P - Physical, 23일) : 체력, 피로도, 인내심'),
       c(14, '■ 감성 리듬 (E - Emotional, 28일): 기분, 감수성, 정신안정'),
