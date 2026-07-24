@@ -353,7 +353,12 @@ export function createArcadeScreens(deps) {
     });
     if (scrambleLines.length !== 4) return;
     
+    // [LOG: 20260724_1101] 가상 제출 엔터 버튼 라인 노드 탐색
+    const submitLineNode = lineNodes.find(node => (node.textContent || '').includes('[단어제출 ENTER]'));
+    
     const layer = createHotspotLayer();
+    
+    // 1. 알파벳 그리드 핫스팟 바인딩
     scrambleLines.forEach((lineNode, y) => {
       for (let x = 0; x < 4; x++) {
         const char = game.grid[y * 4 + x];
@@ -376,6 +381,37 @@ export function createArcadeScreens(deps) {
         layer.appendChild(btn);
       }
     });
+    
+    // 2. 가상 엔터 버튼 핫스팟 바인딩
+    if (submitLineNode) {
+      const txt = submitLineNode.textContent || '';
+      const start = txt.indexOf('[단어제출 ENTER]');
+      if (start !== -1) {
+        const len = '[단어제출 ENTER]'.length;
+        const bounds = measureLineSegmentBounds(screenNode, submitLineNode, start, start + len);
+        if (bounds) {
+          const btn = createHotspotButton('', '단어 제출 (엔터)', bounds);
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const inputEl = document.getElementById('cmd-input');
+            if (inputEl && inputEl.value.trim()) {
+              inputEl.focus();
+              const enterEvent = new KeyboardEvent('keydown', {
+                key: 'Enter',
+                code: 'Enter',
+                keyCode: 13,
+                which: 13,
+                bubbles: true
+              });
+              inputEl.dispatchEvent(enterEvent);
+            }
+          });
+          layer.appendChild(btn);
+        }
+      }
+    }
+    
     if (layer.childElementCount > 0) screenNode.appendChild(layer);
   }
   async function renderScramble(game) {

@@ -1,3 +1,18 @@
+## [2026-07-24 11:01] 스크램블 게임 가상 [단어제출 ENTER] 버튼 탑재 및 마우스/터치 전송 지원
+
+**LOG_ID: 20260724_1101**
+목표: 모바일 또는 마우스 조작 환경에서 글자 입력 완료 후 키보드 엔터를 수동으로 누르는 번거로움을 제거하기 위해, 화면상에 클릭 가능한 가상 [단어제출 ENTER] 버튼을 장착하고 클릭 시 자동 단어 전송 처리.
+변경 파일: public/js/core/arcadeAnsiBuilders.js, public/js/core/arcadeScreens.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 글자판 최하단에 `  [단어제출 ENTER]` 녹색 버튼 텍스트 라인을 동적으로 렌더링하도록 반영.
+2) `arcadeScreens.js`의 `renderScrambleHotspots`에서 해당 버튼 라인 영역을 추적하여 `createHotspotButton`을 덮어씌움.
+3) 버튼 클릭 리스너 내부에 `#cmd-input`으로 가상 KeyboardEvent(Enter, keyCode: 13)를 생성하여 dispatch 함으로써, 네이티브 단어 전송 메커니즘을 그대로 수행하도록 연동.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`, `node --check public/js/core/arcadeScreens.js`
+기대: 글자판 하단의 녹색 버튼 클릭 시 모바일 가상 자판 없이도 단어가 즉시 채점 및 전송됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:59] 스크램블 알파벳 클릭 미작동 해결 (#cmd-input 타겟팅 교정) 및 상단 중복 가이드 제거
 
 **LOG_ID: 20260724_1059**

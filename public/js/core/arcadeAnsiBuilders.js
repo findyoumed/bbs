@@ -195,6 +195,13 @@ export function createArcadeAnsiBuilders(deps) {
       rows.push(divider);
     }
     
+    // [LOG: 20260724_1101] 가상 제출 엔터 버튼 렌더링
+    if (st.status === 'play') {
+      rows.push(`  ${c(10, '[단어제출 ENTER]')}`);
+    } else {
+      rows.push('');
+    }
+    
     const timeLimit = 60;
     const currentElapsed = Math.min(timeLimit, Math.floor((Date.now() - st.startTime) / 1000));
     const remains = Math.max(0, timeLimit - (st.status === 'end' ? st.elapsed : currentElapsed));
