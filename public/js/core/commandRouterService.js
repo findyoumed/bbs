@@ -103,7 +103,9 @@ export function createServiceCommandHandler(deps) {
     // [LOG_ID: 20260721_2000] 혈액형 'B'가 P/M/B 내비게이션 단축키와 겹쳐 게임방으로 튕기던 문제 —
     // 혈액형 입력 패턴을 P/M/B 내비게이션 체크보다 먼저 검사해 'B' 입력이 정상적으로 결과로 이어지게 한다.
     if (s === 'blood-input') { if (cmd === 'T') { await showMain(); return true; } if (/^(A|B|O|AB)$/i.test(cmd)) { await showBloodResult(cmd); return true; } if (['P', 'M'].includes(cmd)) return goGame(); return false; }
-    if (s === 'blood-result') { if (cmd === 'T') { await showMain(); return true; } if (cmd === 'L') { await showBlood(); return true; } if (/^(A|B|O|AB)$/i.test(cmd)) { await showBloodResult(cmd); return true; } if (['P', 'M'].includes(cmd)) return goGame(); return false; }
+    // [LOG_ID: 20260725_0830] F로 설명 문단 다음 페이지 이동(전수조사로 발견된 세로 오버플로 수정).
+    // B는 이미 "B형 결과 보기"로 쓰이고 있어(아래 A/B/O/AB 분기) 페이지네이션의 "이전"으로는 쓰지 않는다.
+    if (s === 'blood-result') { if (cmd === 'T') { await showMain(); return true; } if (cmd === 'F') { const pageNo = Number(state.serviceData?.pageNo || 1); const pageCount = Number(state.serviceData?.pageCount || 1); if (pageNo < pageCount) { await showBloodResult(state.serviceData.bloodCode, false, pageNo + 1); return true; } } if (cmd === 'L') { await showBlood(); return true; } if (/^(A|B|O|AB)$/i.test(cmd)) { await showBloodResult(cmd); return true; } if (['P', 'M'].includes(cmd)) return goGame(); return false; }
     if (s === 'compat-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showCompatStep2(rawCmd); return true; } return false; }
     if (s === 'compat-input2') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showCompatResult(rawCmd); return true; } return false; }
     if (s === 'compat-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showCompat(); return true; } return false; }

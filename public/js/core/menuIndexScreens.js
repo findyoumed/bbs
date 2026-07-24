@@ -84,7 +84,10 @@ export function createMenuIndexScreens(deps) {
     });
 
     // [LOG_ID: 20260717_1953] 가이드라인 문구 제거 요청 반영 및 본문 줄 수를 19줄로 확대
-    const linesPerPage = 19;
+    // [LOG_ID: 20260725_0830] 사용자 지적(전수조사) — 19줄(+상단바 4줄=23줄 총예산)은 주소창이
+    // 보이는 등 뷰포트가 좁은 실사용 환경(Playwright 실측: 568px 높이에서도 여전히 잘림)에서
+    // 마지막 줄이 잘렸다. 여유를 두고 15줄(총예산 19줄)로 낮춘다.
+    const linesPerPage = 15;
     const totalPages = Math.max(1, Math.ceil(rows.length / linesPerPage));
     const finalPage = Math.max(1, Math.min(requestedPage, totalPages));
     const pageSlice = rows.slice((finalPage - 1) * linesPerPage, finalPage * linesPerPage);
@@ -96,12 +99,12 @@ export function createMenuIndexScreens(deps) {
     ];
 
     const joinedLines = parts.join('\n').split('\n');
-    while (joinedLines.length < 23) {
+    while (joinedLines.length < 19) {
       joinedLines.push('');
     }
 
     return {
-      text: joinedLines.slice(0, 23).join('\n'),
+      text: joinedLines.slice(0, 19).join('\n'),
       page: finalPage,
       totalPages,
       pageSliceNodes

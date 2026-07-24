@@ -48,7 +48,12 @@ export function createWeatherAnsiBuilders(deps) {
     const dailyItems = data?.daily || [];
     const dayGroups = groupWeatherByDay(allItems);
     // [LOG: 20260724_0942] 15개 시 세로 스크롤바가 생기는 현상을 해결하기 위해 예보 표시 개수를 14로 줄임
-    const HOURLY_PAGE_SIZE = 14;
+    // [LOG_ID: 20260725_0810] 사용자 지적(스크린샷) — 14도 여전히 마지막 줄("F:다음 페이지 보기")이
+    // 잘려 보였다. #terminal-screen의 실제 가용 높이는 뷰포트 높이에서 상단바/하단 힌트바를 뺀
+    // 나머지라, 주소창이 보이는 등 뷰포트가 좁아지면(실측 Playwright: 852px에서는 안 잘리다가
+    // 600px 이하에서 잘림 시작) 14줄 분량도 넘친다. 실제 모바일 브라우저는 주소창이 보이는 상태가
+    // 흔하므로(뷰포트가 기기 화면 전체 높이보다 작음) 더 보수적인 값으로 낮춘다.
+    const HOURLY_PAGE_SIZE = 10;
 
     const subPageInfo = [];
     subPageInfo.push({ type: 'summary' });

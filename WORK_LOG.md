@@ -1,3 +1,18 @@
+## [2026-07-25 08:30] [버그 수정] 날씨 시간별 상세 마지막 줄 잘림 + 세로 오버플로 전수조사(혈액형·전체메뉴안내 추가 발견)
+
+**LOG_ID: 20260725_0810 / 0830**
+목표: 사용자 보고(스크린샷: 날씨 서울 2쪽 "F:다음 페이지 보기" 줄이 깨져 보임) — "날씨 서울 두번째페이지에서 글이 길어서 세로가 넘쳐. 살짝조정해줘. 프로젝트전체적으로 세로가 넘치는화면 전수조사".
+원인: `#terminal-screen`의 실제 가용 높이는 뷰포트 높이에서 상단바/하단 힌트바를 뺀 나머지라, 뷰포트가 좁아지면(주소창이 보이는 실제 모바일 브라우저 상태) 고정 줄 수 기준으로 짠 화면들이 넘친다 — Playwright 실측: 852px 뷰포트에서는 안 잘리다가 600px 이하에서 잘리기 시작(날씨 시간별 상세는 HOURLY_PAGE_SIZE=14로도 여전히 넘쳤음). 가로 오버플로 전수조사 때와 같은 유형의 문제가 세로 방향에도 있었다.
+구현:
+1. `weatherAnsiBuilders.js`: `HOURLY_PAGE_SIZE` 14 → 10 (모바일 550px 안팎까지 안 잘림 확인).
+2. `menuIndexScreens.js`(전체메뉴안내, `/index`): 페이지당 줄 수 19 → 15, 총 예산 23 → 19줄로 축소.
+3. `amusementAnsiBuilders.js`의 혈액형 결과(`buildBloodAnsi`): 설명 문단이 줄바꿈해도 모바일 기준 17줄이라 상단바·머리글과 합쳐 항상 넘쳤다 — 날씨와 같은 방식으로 설명 문단만 페이지네이션(F로 다음 페이지)하도록 변경. `showBloodResult`(amusementScreens.js)에 pageNo 인자 추가, `commandRouterService.js`의 `blood-result` 분기에 F 처리 추가(B는 이미 "B형 결과 보기"로 쓰이고 있어 페이지네이션엔 쓰지 않음). `commandFooterText.js`의 `amusementView` 카테고리에 `F` 토큰을 추가해 클릭 가능하게 만듦 — `state.serviceData.pageNo/pageCount`를 안 쓰는 다른 amusementView 화면(bio-result 등)에서는 `getFooterPageState()`의 기본 폴백이 항상 1/1로 읽어 자동으로 숨는 것을 확인.
+전수조사: 가로 오버플로 조사 때 썼던 30개 게스트 접근 가능 라우트 스윕을 뷰포트 393×600(주소창이 보이는 실제 모바일 상태를 흉내낸 보수적인 높이)으로 다시 돌려 세로 오버플로(`.ansi-line` 중 마지막 줄의 bottom이 `#terminal-screen`의 bottom을 넘는지)를 검사 — F 클릭으로 다음 페이지까지, 입력이 필요한 화면은 실제 입력을 채워 결과 화면까지 도달시켰다. 위 세 곳 외에 추가로 발견된 문제는 없었다(공지사항 글보기도 F로 여러 페이지 넘겨가며 재확인, 모두 정상).
+검증: `node --check` 통과(4개 파일). Playwright로 날씨(HOURLY_PAGE_SIZE=10, 393×540까지 안 잘림), 전체메뉴안내(15줄, 393×550까지 안 잘림), 혈액형(F로 2쪽 이동 확인, 각 쪽 안 잘림, 마지막 쪽에서 F 토큰 자동으로 사라짐, bio-result 등 다른 화면엔 F가 뜨지 않음)을 각각 확인. `npm run smoke:renderer-ui`, `smoke:command-parity`, `smoke:ui-geometry`, `smoke:ui-layout` 전체 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 23:20] [기능 개선] 모바일 생체 리듬 결과를 달력형 차트 대신 오늘의 점수+막대 요약으로 표시
 
 **LOG_ID: 20260724_2310**

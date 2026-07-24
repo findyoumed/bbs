@@ -271,7 +271,7 @@ export function createAmusementScreens(deps) {
     });
   }
 
-  async function showBloodResult(input, fromHistory = false) { const type = findBloodType(input); if (!type) { setHint('혈액형을 A, B, O, AB 중에서 입력하세요.'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'blood-result'; state.serviceData = { kind: 'blood', bloodCode: type.code }; if (!fromHistory) updateURL(); const rendered = await render(buildBloodAnsi(type), 'amusementView', '선택 >> '); if (rendered && rendered.screenNode) { attachBloodResultHotspots(rendered.screenNode); } return true; }
+  async function showBloodResult(input, fromHistory = false, pageNo = 1) { const type = findBloodType(input); if (!type) { setHint('혈액형을 A, B, O, AB 중에서 입력하세요.'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'blood-result'; const built = buildBloodAnsi(type, pageNo); state.serviceData = { kind: 'blood', bloodCode: type.code, pageNo: built.pageNo, pageCount: built.pageCount }; if (!fromHistory) updateURL(); const rendered = await render(built.text, 'amusementView', '선택 >> '); if (rendered && rendered.screenNode) { attachBloodResultHotspots(rendered.screenNode); } return true; }
 
   async function showCompat(fromHistory = false) { state.screen = 'compat-input'; state.serviceData = { kind: 'compat' }; if (!fromHistory) updateURL(); await render(buildCompatIntroAnsi(), 'amusementInput', '첫 번째 사람 생년월일 입력 (예: 19900101) >> '); inlineMount('compat-prompt-host', 'game-prompt-host'); }
   async function showCompatStep2(input, fromHistory = false) {

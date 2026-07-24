@@ -77,7 +77,11 @@ export const CMD_ORDER = {
   // [LOG_ID: 20260710_1530] PR(복사) 전체 보기 모드: 엔터로 페이지 보기 복귀
   serviceArticleFull: ['ENTER:페이지보기', 'N', 'A', 'P', 'T', 'H'],
   amusementInput: ['P', 'T', 'GO', 'H'],
-  amusementView: ['L:처음', 'P', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260725_0830] F 추가 — 혈액형 결과처럼 본문이 길어 여러 페이지로 나뉘는 화면에서
+  // 클릭 가능한 "다음(F)" 토큰을 제공한다. shouldShowFooterToken의 기본 폴백(state.serviceData
+  // .pageNo/pageCount, terminalHintMarkup.js getFooterPageState 참고)이 이미 이 값을 안 쓰는
+  // 다른 amusementView 화면(예: bio-result)에서는 pageNo/pageCount가 항상 1이라 자동으로 숨는다.
+  amusementView: ['L:처음', 'F', 'P', 'T', 'GO', 'H'],
   // [LOG_ID: 20260715_1100] 설문조사(여론광장/ACRO) 화면 전용 카테고리 — 종전엔 표준
   // 힌트바(P/T/GO/H, amusementInput 재사용) 위에 "[번호] 보기 | [W] 설문등록 | [P] 이전 |
   // [M] ... | [T] 대문" 같은 문구를 ANSI 본문에 직접 하드코딩해 완전히 중복되면서도

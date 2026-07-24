@@ -826,10 +826,41 @@ function calculateMbtiFromAnswers(answers) {
     const found = BLOOD_TYPES.find(([code]) => code === value);
     return found ? { code: found[0], nick: found[1], desc: found[2] } : null;
   }
-  function buildBloodAnsi(type) {
+  // [LOG_ID: 20260725_0830] 사용자 지적(전수조사) — 혈액형 설명 문단이 길어(줄바꿈해도 모바일
+  // 기준 17줄) 상단바·머리글과 합쳐 화면 세로 높이를 넘겨 마지막 줄이 잘렸다. 날씨 시간별 상세와
+  // 같은 방식(F로 다음 페이지)으로 설명 문단만 페이지네이션한다.
+  function buildBloodAnsi(type, pageNo = 1) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
-    return [buildTopHeader(['오락실', `혈액형 ${type.code}형`]), c(11, `${ANSI_BOLD}  ${type.code}형${ANSI_RESET}  ${ansiColor(14)}${type.nick}${ANSI_RESET}`), c(8, `  ${'─'.repeat(targetCols - 28)}`), ...wrapAnsiText(type.desc, targetCols - 10).map((line) => c(15, `  ${line}`)), '', c(8, '  다른 혈액형을 보려면 A/B/O/AB를 입력하세요.')].join('\n');
+    const header = buildTopHeader(['오락실', `혈액형 ${type.code}형`]);
+    const nickLine = c(11, `${ANSI_BOLD}  ${type.code}형${ANSI_RESET}  ${ansiColor(14)}${type.nick}${ANSI_RESET}`);
+    const hrLine = c(8, `  ${'─'.repeat(targetCols - 28)}`);
+    const descLines = wrapAnsiText(type.desc, targetCols - 10);
+
+    // 고정 오버헤드(상단바 4줄 + 닉네임줄 + 구분선 + 빈줄 + 하단 안내줄) ≈ 8줄을 제외한 나머지를
+    // 설명 문단에 배정한다. 모바일은 좁은 화면(주소창 노출 등)까지 감안해 보수적으로 잡는다.
+    const fixedOverhead = 8;
+    const totalBudget = isMobile ? 18 : 24;
+    const descLinesPerPage = Math.max(4, totalBudget - fixedOverhead);
+    const pageCount = Math.max(1, Math.ceil(descLines.length / descLinesPerPage));
+    const currentPage = Math.min(Math.max(Number.parseInt(pageNo, 10) || 1, 1), pageCount);
+    const startIdx = (currentPage - 1) * descLinesPerPage;
+    const visibleDesc = descLines.slice(startIdx, startIdx + descLinesPerPage);
+
+    const parts = [
+      header,
+      nickLine,
+      hrLine,
+      ...visibleDesc.map((line) => c(15, `  ${line}`)),
+      ''
+    ];
+    if (currentPage < pageCount) {
+      parts.push(c(8, `  F:다음 페이지 (${currentPage}/${pageCount})`));
+    } else {
+      parts.push(c(8, '  다른 혈액형을 보려면 A/B/O/AB를 입력하세요.'));
+    }
+
+    return { text: parts.join('\n'), pageNo: currentPage, pageCount };
   }
 
   function buildCompatIntroAnsi() {
