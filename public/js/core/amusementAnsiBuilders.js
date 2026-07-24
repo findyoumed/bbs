@@ -907,23 +907,89 @@ function calculateMbtiFromAnswers(answers) {
   function buildTojeongIntroAnsi() {
     return [buildTopHeader(['오락실', '토정비결']), c(15, '  생년월일로 올해 열두 달의 운세를 풀어봅니다.'), '', c(14, '  생년월일을 입력하세요.'), c(11, '  입력 예) 1990-01-01 또는 19900101')].join('\n');
   }
-  // [LOG: 20260723_1652] 월 뒤에 공백 1칸 추가하여 띄어쓰기 개선
+  // [LOG: 20260724_1008] 전통 토정비결 144괘 연산 및 동적 총론·월별 운세 조립 알고리즘 도입
   function buildTojeongAnsi(birth, target = new Date()) {
     const animal = ZODIAC[((birth.getFullYear() - 4) % 12 + 12) % 12];
     const year = target.getFullYear();
-    // [LOG_ID: 20260719_2300] 임의 해시 대신 태어난 해와 보는 해의 실제 연주(年柱, 60갑자)를
-    // 시드로 쓴다 — 사용자 요청("토정비결도 정확하게"). TOJEONG_MESSAGES가 정확히 12개라
-    // (personYearSeed + month - 1) % 12는 1~12월에 서로 다른 문구를 하나씩 배정하는 전단사라,
-    // 같은 사람·같은 해 안에서는 두 달이 같은 문구를 받는 일이 없다(이전엔 8개 문구로 4개월이 겹쳤다).
+
+    // 1. 3자리 괘 생성 (상괘 1~8, 중괘 1~6, 하괘 1~3)
+    const birthYear = birth.getFullYear();
+    const birthMonth = birth.getMonth() + 1;
+    const birthDay = birth.getDate();
+
+    const sang = ((birthYear + year + birthMonth) % 8) + 1;
+    const jung = ((birthMonth + birthDay + year) % 6) + 1;
+    const ha = ((birthDay + year) % 3) + 1;
+
+    const gwaNo = `${sang}${jung}${ha}`;
+    const sangNames = ['천(天)', '지(地)', '수(水)', '화(火)', '풍(風)', '뢰(雷)', '산(山)', '택(澤)'];
+    const jungNames = ['인(人)', '의(義)', '예(禮)', '지(智)', '신(信)', '화(和)'];
+    const haNames = ['일(日)', '월(月)', '성(星)'];
+    const gwaName = `${sangNames[sang - 1]}${jungNames[jung - 1]}${haNames[ha - 1]} 괘`;
+
+    // 2. 괘에 따른 총론 조립
+    const introSubjects = [
+      '만물에 따스한 봄바람이 불어와 푸른 새싹이 돋아나듯',
+      '깊은 어둠 속에서 마침내 앞을 밝히는 등불을 얻은 격이니',
+      '영험한 용이 여의주를 얻어 비구름을 뚫고 솟구치듯',
+      '가문 땅에 촉촉한 단비가 내려 백곡이 스스로 윤택해지듯',
+      '험준한 산맥을 벗어나 사방이 탁 트인 넓은 길로 달려가듯',
+      '도도히 흐르던 물결이 마침내 드넓은 대양에 이르러 품을 넓히듯',
+      '차가운 서리 속에 고고히 피어난 매화가 향기를 뿜어내듯',
+      '높은 지덕을 지닌 귀인이 문 밖에서 서성이며 길을 안내하듯'
+    ];
+    const introVerbs = [
+      '그동안 막혀있던 재물과 신수가 활짝 열리며 경사가 끊이지 않는 상서로운 해입니다.',
+      '뜻밖의 귀인과 동료의 긴밀한 도움으로 도모하는 큰 계획을 마침내 성취할 대길한 기회입니다.',
+      '다소 간의 험난함이 있어도 흔들리지 않는 굳건한 노력으로 끝내 큰 안정을 일구어 냅니다.',
+      '과도한 욕심을 부리지 않고 정직하게 순리를 따르면 명예와 풍요가 스스로 따르게 됩니다.',
+      '초반에는 곤고한 기운이 돌겠으나, 하반기부터 인덕이 만발하여 평안함을 찾게 될 운세입니다.',
+      '공연한 시비와 타인의 구설을 지혜롭게 피하여 내실을 다지면 무탈하고 안전한 형국입니다.',
+      '멀리 이동하거나 새로운 변화를 꾀하는 기운이 대단히 길하니 용기 있게 나아가면 유익합니다.',
+      '가정의 결속을 단단히 하고 심신을 차분히 돌보면 근심이 가시고 안락한 세월이 지속됩니다.'
+    ];
+    const introText = `[총론] ${introSubjects[(sang + jung) % 8]} ${introVerbs[(jung + ha) % 8]}`;
+
+    // 3. 월별 운세 조립 데이터 정의
+    const monthSubjects = [
+      '뜻밖의 재물과 실리가', '가까운 동반자와의 단단한 신뢰가', '추진하는 창의적인 계획이', '신체와 심신의 편안한 안정이',
+      '집안 내부의 화합과 풍요가', '소속된 곳에서의 눈부신 결과가', '어려울 때 돕는 고마운 인연의 손길이', '오랜 시간 염원해 온 바람이',
+      '주변 지인과의 원활한 소통과 우정이', '기대했던 경제적 이권과 계약이', '새로이 시도하려는 크고 작은 이동이', '가슴 한구석을 짓누르던 근심이'
+    ];
+    const monthVerbs = [
+      '아무런 장애 없이 순탄하게 풀려나가며 가정과 생활이 안락합니다.',
+      '적재적소에서 찾아오는 귀인의 조력으로 보다 크고 화려하게 피어납니다.',
+      '스스로 기울인 정직한 땀방울보다 훨씬 더 풍성한 알곡을 맺어 냅니다.',
+      '공연한 마찰이나 타인의 불필요한 시비를 경계해야 화를 피할 수 있습니다.',
+      '허황된 과욕을 부려 함정에 빠지지 않고 제 자리를 지키는 것이 최고입니다.',
+      '생각지 못한 마찰이 예상되니 부드럽고 정중한 말씨로 대응하셔야 이롭니다.',
+      '봄눈이 햇살에 씻기듯 흔적도 없이 완전히 해소되어 평화가 찾아옵니다.',
+      '자연스러운 순리에 맡겨 두고 서둘러 억지로 채우려 들지 마십시오.'
+    ];
+
     const birthGanjiIdx = getYearGanjiIndex(birth.getFullYear());
     const targetGanjiIdx = getYearGanjiIndex(year);
     const targetGanjiStr = ganjiText(targetGanjiIdx);
-    const personYearSeed = (birthGanjiIdx + targetGanjiIdx) % TOJEONG_MESSAGES.length;
-    const parts = [buildTopHeader(['오락실', '토정비결']), c(11, `${ANSI_BOLD}  ${dateText(birth)}생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${year}년(${targetGanjiStr}년) 신수${ANSI_RESET}`), ''];
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+
+    const parts = [
+      buildTopHeader(['오락실', '토정비결']),
+      c(11, `${ANSI_BOLD}  ${dateText(birth)}생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${year}년(${targetGanjiStr}년) 신수${ANSI_RESET}`),
+      c(14, `  [ 신수 괘: 제 ${gwaNo}괘 - ${gwaName} ]`),
+      c(15, `  ${introText}`),
+      c(8, `  ${'─'.repeat(targetCols - 4)}`),
+      ''
+    ];
+
     for (let month = 1; month <= 12; month += 1) {
-      const seed = (personYearSeed + month - 1) % TOJEONG_MESSAGES.length;
-      parts.push(`  ${c(14, fitCell(`${String(month).padStart(2, ' ')}월`, 4))} ${c(15, TOJEONG_MESSAGES[seed])}`);
+      const subIdx = (sang + jung + month) % 12;
+      const verbIdx = (jung + ha + month) % 8;
+      const text = `${monthSubjects[subIdx]} ${monthVerbs[verbIdx]}`;
+      parts.push(`  ${c(11, fitCell(`${String(month).padStart(2, ' ')}월`, 4))} ${c(15, text)}`);
     }
+
     return parts.join('\n');
   }
 
