@@ -510,11 +510,50 @@ export function createArcadeScreens(deps) {
   }
 
   // ── 퀴즈박사 ──
+  // [LOG_ID: 20260724_1136] 퀴즈박사 보기(1~4번) 마우스 호버 및 클릭 지원 핫스팟 레이어 추가
+  function renderQuizHotspots(screenNode, game) {
+    if (!screenNode || game.status !== 'play') return;
+    const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
+    const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
+    const current = game.questions?.[game.currentIdx];
+    if (!current || !Array.isArray(current.options)) return;
+
+    const layer = createHotspotLayer();
+    current.options.forEach((optText, idx) => {
+      const numStr = String(idx + 1);
+      const lineNode = lineNodes.find(node => {
+        const txt = (node.textContent || '').trim();
+        return txt.startsWith(`${numStr}.`);
+      });
+      if (!lineNode) return;
+
+      const fullTxt = lineNode.textContent || '';
+      const startCol = fullTxt.indexOf(`${numStr}.`);
+      if (startCol < 0) return;
+      const endCol = startCol + displayWidth(optText);
+
+      const bounds = measureLineSegmentBounds(screenNode, lineNode, startCol, endCol);
+      if (!bounds) return;
+
+      layer.appendChild(createHotspotButton(numStr, optText, bounds));
+    });
+
+    if (layer.childElementCount > 0) screenNode.appendChild(layer);
+  }
+
+  async function renderQuiz(game, footer, prompt) {
+    const rendered = await arcadeRender(buildQuizAnsi(game), footer, prompt);
+    if (rendered && rendered.screenNode) {
+      renderQuizHotspots(rendered.screenNode, game);
+    }
+    return rendered;
+  }
+
   async function showQuiz(fromHistory = false) {
     state.screen = 'quiz-play';
     state.serviceData = { kind: 'quiz', ...createQuizState() };
     if (!fromHistory) updateURL();
-    await arcadeRender(buildQuizAnsi(state.serviceData), 'arcadePlay', '답 입력 (1~4) >> ');
+    await renderQuiz(state.serviceData, 'arcadePlay', '답 입력 (1~4) >> ');
   }
   async function quizGuess(ans) {
     const game = sd('quiz');
@@ -524,16 +563,75 @@ export function createArcadeScreens(deps) {
     const isCorrect = quizApply(game, ans);
     setHint(isCorrect ? '정답입니다!' : '오답입니다!');
     
-    await arcadeRender(buildQuizAnsi(game), 'arcadePlay', '답 입력 (1~4) >> ');
+    await renderQuiz(game, 'arcadePlay', '답 입력 (1~4) >> ');
     return true;
   }
 
   // ── 전투 게임 ──
+  // [LOG_ID: 20260724_1138] 전투 게임 10x10 좌표판 및 Q(기권) 마우스 호버 및 클릭 지원 핫스팟 레이어 추가
+  // [LOG: 20260724_1216] 명중 표시를 아스키 별표(* )로 변경함에 따라 핫스팟 좌표 계산에 단순 x * 2 및 라인 검출 조건 * 추가 적용
+  function renderBattleHotspots(screenNode, game) {
+    if (!screenNode || game.status !== 'play') return;
+    const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
+    const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
+    const rowLabels = 'ABCDEFGHIJ';
+
+    const layer = createHotspotLayer();
+
+    // 1. 격자판(A~J) 핫스팟 (10x10)
+    for (let y = 0; y < 10; y++) {
+      const rowChar = rowLabels[y];
+      const lineNode = lineNodes.find(node => {
+        const txt = node.textContent || '';
+        return txt.includes(`  ${rowChar} `) || txt.includes(`  ${rowChar}·`) || txt.includes(`  ${rowChar}X`) || txt.includes(`  ${rowChar}*`) || txt.includes(`  ${rowChar}★`);
+      });
+      if (!lineNode) continue;
+
+      const lineText = lineNode.textContent || '';
+      const rowStartCol = lineText.indexOf(`  ${rowChar} `);
+      if (rowStartCol < 0) continue;
+
+      const gridStart = rowStartCol + 4;
+
+      for (let x = 0; x < 10; x++) {
+        const coord = `${rowChar}${x + 1}`;
+        const start = gridStart + x * 2;
+        const bounds = measureLineSegmentBounds(screenNode, lineNode, start, start + 2);
+        if (!bounds) continue;
+
+        layer.appendChild(createHotspotButton(coord, `좌표 ${coord} 공격`, bounds));
+      }
+    }
+
+    // 2. Q: 게임포기 핫스팟
+    const qLineNode = lineNodes.find(node => (node.textContent || '').includes('Q: 게임포기') || (node.textContent || '').includes('Q:'));
+    if (qLineNode) {
+      const qText = qLineNode.textContent || '';
+      const qStart = qText.indexOf('Q:');
+      if (qStart >= 0) {
+        const bounds = measureLineSegmentBounds(screenNode, qLineNode, qStart, qStart + 8);
+        if (bounds) {
+          layer.appendChild(createHotspotButton('Q', '게임포기 (Q)', bounds));
+        }
+      }
+    }
+
+    if (layer.childElementCount > 0) screenNode.appendChild(layer);
+  }
+
+  async function renderBattle(game, footer, prompt) {
+    const rendered = await arcadeRender(buildBattleAnsi(game), footer, prompt);
+    if (rendered && rendered.screenNode) {
+      renderBattleHotspots(rendered.screenNode, game);
+    }
+    return rendered;
+  }
+
   async function showBattle(fromHistory = false) {
     state.screen = 'battle-play';
     state.serviceData = { kind: 'battle', ...createBattleState() };
     if (!fromHistory) updateURL();
-    await arcadeRender(buildBattleAnsi(state.serviceData), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+    await renderBattle(state.serviceData, 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
   }
   async function battleMove(coord) {
     const game = sd('battle');
@@ -561,14 +659,14 @@ export function createArcadeScreens(deps) {
       setHint('빗나갔습니다.');
     }
     
-    await arcadeRender(buildBattleAnsi(game), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+    await renderBattle(game, 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
     return true;
   }
   async function battleResign() {
     const game = sd('battle');
     if (!game) { await showBattle(); return true; }
     if (game.status === 'play') game.status = 'lose';
-    await arcadeRender(buildBattleAnsi(game), 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
+    await renderBattle(game, 'arcadePlay', '공격 좌표 입력 (예: G3) >> ');
     return true;
   }
 

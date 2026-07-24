@@ -433,15 +433,16 @@ export function createArcadeAnsiBuilders(deps) {
   }
 
   // ── 10. 전투 게임 (Battle - Battleship) ──
+  // [LOG_ID: 20260724_1148] 명중 기호 전각(2ch) 폭 불일치로 인한 세로선 밀림 보정 및 헤더 정렬 정밀 교정
+  // [LOG: 20260724_1216] Battleship 유니코드 별표 대신 아스키 별표와 공백('* ') 조합으로 변경하여 브라우저간 폰트/정렬 파편화 완전 해결
   function buildBattleAnsi(st) {
-    const colLabels = '  1 2 3 4 5 6 7 8 9 10';
+    const colLabels = ' 1 2 3 4 5 6 7 8 9 10';
     const rowLabels = 'ABCDEFGHIJ';
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     
     const parts = [
       buildTopHeader(['오락실', '전투 게임 (Battleship)']),
-      c(15, '  격자판 좌표(예: G3)를 입력해 적의 숨겨진 군장비(12칸)를 폭격하세요!'),
-      ''
+      c(15, '  격자판 좌표(예: G3)를 입력해 적의 숨겨진 군장비(12칸)를 폭격하세요!')
     ];
     
     if (isMobile) {
@@ -451,9 +452,9 @@ export function createArcadeAnsiBuilders(deps) {
         let line = `  ${c(8, rowLabels[y])} `;
         for (let x = 0; x < 10; x++) {
           const shot = st.userShots[y * 10 + x];
-          if (shot === 2) line += c(11, '★ ');
-          else if (shot === 1) line += c(8, 'X ');
-          else line += c(8, '· ');
+          if (shot === 2) line += c(11, '* '); // 아스키 별표 + 공백으로 2ch 완벽 정렬
+          else if (shot === 1) line += c(8, 'X '); // 반각 1ch + 공백 1ch = 2ch
+          else line += c(8, '· '); // 반각 점 1ch + 공백 1ch = 2ch
         }
         parts.push(line);
       }
@@ -462,20 +463,20 @@ export function createArcadeAnsiBuilders(deps) {
         `  ${c(14, '귀하 명중:')} ${c(11, `${st.userHits}/12`)}   ${c(14, '컴퓨터 명중:')} ${c(9, `${st.cpuHits}/12`)}`
       );
     } else {
-      // 데스크톱 넓은 화면: 좌우 나란히 렌더링
+      // 데스크톱 넓은 화면: 좌우 나란히 렌더링 (헤더 4ch + 20ch 정밀 맞춤)
       parts.push(
-        `     ${c(14, '<< 상대 해역 포격 현황 >>')}           ${c(11, '<< 아군 해역 배치 및 현황 >>')}`,
-        `   ${c(8, colLabels)}         ${c(8, colLabels)}`
+        `  ${c(14, '<< 상대 해역 포격 현황 >>')}  ${c(11, '<< 아군 해역 배치 및 현황 >>')}`,
+        `   ${c(8, colLabels)}        ${c(8, colLabels)}`
       );
       
       for (let y = 0; y < 10; y++) {
-        // 좌측: 상대 해역 포격
+        // 좌측: 상대 해역 포격 (프리픽스 4ch + 셀 10개 20ch = 24ch)
         let leftLine = `  ${c(8, rowLabels[y])} `;
         for (let x = 0; x < 10; x++) {
           const shot = st.userShots[y * 10 + x];
-          if (shot === 2) leftLine += c(11, '★ ');
-          else if (shot === 1) leftLine += c(8, 'X ');
-          else leftLine += c(8, '· ');
+          if (shot === 2) leftLine += c(11, '* '); // 2ch 유지
+          else if (shot === 1) leftLine += c(8, 'X '); // 2ch
+          else leftLine += c(8, '· '); // 2ch
         }
         
         // 우측: 아군 배치 및 컴퓨터 포격 현황
@@ -485,10 +486,10 @@ export function createArcadeAnsiBuilders(deps) {
           const ship = st.userBoard[idx];
           const shot = st.cpuShots[idx];
           
-          if (shot === 2) rightLine += c(9, '★ '); // 아군 피격 명중
-          else if (shot === 1) rightLine += c(8, 'X '); // 빗나감
-          else if (ship !== 0) rightLine += c(14, `${ship[0]} `); // 함선 존재
-          else rightLine += c(8, '· ');
+          if (shot === 2) rightLine += c(9, '* '); // 아군 피격 명중 2ch 유지
+          else if (shot === 1) rightLine += c(8, 'X '); // 빗나감 2ch
+          else if (ship !== 0) rightLine += c(14, `${ship[0]} `); // 함선 존재 2ch
+          else rightLine += c(8, '· '); // 2ch
         }
         
         parts.push(`${leftLine}     ${rightLine}`);
@@ -499,7 +500,6 @@ export function createArcadeAnsiBuilders(deps) {
     // [LOG_ID: 20260721_0900] 좌표 표기 순서 버그 — 격자는 행(y)=문자, 열(x)=숫자(예: G3 → y=6,x=2)로
     // 입력·렌더링되는데, 이 피드백 줄만 x를 문자로 y를 숫자로 뒤집어 써서 "G3를 공격"해도
     // "(C 7)"처럼 완전히 다른 좌표로 표시됐다. rowLabels[y]/x+1로 바로잡는다.
-    parts.push('');
     if (st.lastUserShot) {
       const res = st.lastUserShot.hit ? c(11, `명중! (${st.lastUserShot.target})`) : c(8, '빗나감');
       parts.push(`  귀하 공격 : (${rowLabels[st.lastUserShot.y]}${st.lastUserShot.x + 1}) - ${res}`);
@@ -509,14 +509,12 @@ export function createArcadeAnsiBuilders(deps) {
       parts.push(`  적군 보복 : (${rowLabels[st.lastCpuShot.y]}${st.lastCpuShot.x + 1}) - ${res}`);
     }
     
-    // 승패/진행 상태
-    parts.push('');
     if (st.status === 'win') {
       parts.push(c(11, `${ANSI_BOLD}  작전 성공! 귀하의 완벽한 승리입니다! L을 누르면 다시 시작합니다.${ANSI_RESET}`));
     } else if (st.status === 'lose') {
       parts.push(c(9, `  함대가 전멸했습니다... 작전 실패. L을 눌러 다시 도전하세요.`));
     } else {
-      parts.push(c(15, '  공격할 좌표를 입력하세요. 입력 예) G3'), c(8, '  Q: 게임포기'));
+      parts.push(c(15, '  공격할 좌표를 입력하세요. 입력 예) G3  (Q: 게임포기)'));
     }
     
     return parts.join('\n');

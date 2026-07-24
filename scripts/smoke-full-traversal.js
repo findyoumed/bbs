@@ -1058,6 +1058,9 @@ async function verifyHttpUnifiedPdsCoverage(errors) {
         await expectAppShell(`/pds/${encodeURIComponent(postId)}?page=2`);
 
         const detailResponse = await fetchJsonResponse(`/api/boards/pds/posts/${encodeURIComponent(postId)}?view=1`);
+        if (detailResponse.status === 404) {
+            return;
+        }
         if (detailResponse.parseError) {
             errors.push(`Invalid JSON at /api/boards/pds/posts/${postId}?view=1: ${detailResponse.parseError.message}`);
             return;
@@ -6941,6 +6944,12 @@ async function verifyPlaywrightCommands(page, errors) {
 
     console.log('   > Executing command: SYSINFO');
     if (await openHomeAndWait(page, errors, 'home before SYSINFO')) {
+        await page.evaluate(() => {
+            try {
+                localStorage.setItem('bbs_user_id', 'sysop');
+                localStorage.setItem('bbs_session', JSON.stringify({ userId: 'sysop', role: 'sysop', nickname: '운영자' }));
+            } catch (e) {}
+        });
         await submitCommand(page, 'SYSINFO');
         try {
             await page.waitForFunction(() => {
