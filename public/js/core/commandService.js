@@ -29,8 +29,15 @@ export const CMD_META = {
   // 것 자체가 "지금 이 화면에 진짜 다음/이전 페이지가 있다"는 뜻이라 GO(임의 코드 이동, 흔치 않음)
   // 보다 훨씬 더 우선순위가 높아야 한다(사용자 보고: 날씨 지역별 화면 다중 페이지에서 F가 계속
   // 안 보임 — 실측: data-priority=70이 GO=90보다 낮아 트림 1순위로 잘림).
-  F: { label: '다음쪽', tip: 'F, [ENTER]', priority: 92, cat: 'NAV', desc: '다음 페이지로 이동합니다. (또는 엔터키)' },
-  B: { label: '이전쪽', tip: 'B', priority: 92, cat: 'NAV', desc: '이전 페이지로 이동합니다.' },
+  // [LOG_ID: 20260724_1930] 92는 여전히 P(95)/T(98)보다 낮아, 모바일 폭에서 정확히 한 토큰만
+  // 더 잘라내면 되는 경우 P나 T 대신 F/B 쪽이 먼저 잘렸다. 게다가 F/B가 동점(92)일 때
+  // trimHintEntriesToFit의 동점 처리(index 큰 쪽 우선 숨김)가 항상 B(다음 목록에 이어 배치돼
+  // index가 F보다 큼)만 골라 지워, 페이지 중간(예: 7쪽 중 2쪽)에서 "이전쪽"만 사라지고
+  // "다음쪽"은 남는 비대칭 현상이 발생했다(실측: /notice/1 2/7쪽, 모바일 폭 — 힌트바에 F만
+  // 남고 B가 통째로 빠짐). 지금 화면에 실제 다음/이전 페이지가 있다는 사실 자체가 P/T/GO보다
+  // 훨씬 중요하므로, F/B를 H(100) 바로 아래인 99로 올려 P/T/GO가 먼저 잘리게 한다.
+  F: { label: '다음쪽', tip: 'F, [ENTER]', priority: 99, cat: 'NAV', desc: '다음 페이지로 이동합니다. (또는 엔터키)' },
+  B: { label: '이전쪽', tip: 'B', priority: 99, cat: 'NAV', desc: '이전 페이지로 이동합니다.' },
   C: { label: '배경색', tip: 'C', priority: 36, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
   COLOR: { label: '배경색', tip: 'COLOR', priority: 35, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
   CLS: { label: '화면지움', tip: 'CLS, CLEAR', priority: 10, cat: 'SYS', desc: '터미널 화면을 깨끗이 지웁니다.' },
