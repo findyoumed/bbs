@@ -1,3 +1,18 @@
+## [2026-07-24 10:53] 스크램블 게임 내 중심 단어의 시작 알파벳 힌트 동적 제공
+
+**LOG_ID: 20260724_1053**
+목표: 스크램블 게임 시작 시 이번 판의 코어가 되는 중심 단어가 어떤 알파벳으로 시작하는지 알려주어 게임 난이도를 보완하고 연상 작용을 기름.
+변경 파일: public/js/core/arcadeGameLogic.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeGameLogic.js`의 `createScrambleState`에서 뽑힌 `baseWord`의 첫 번째 철자를 `baseWordStartChar: baseWord[0]`로 상태 객체에 기록.
+2) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 상단의 가이드 라인을 보강:
+   - `st.baseWordStartChar` 값을 가져와서 `중심 단어: Y글자 (시작: Z)` 형식으로 첫 시작 철자 힌트가 동적으로 출력되도록 수정.
+실행: `node --check public/js/core/arcadeGameLogic.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 게임 접속 시 상단에 "중심 단어: X글자(시작: Z)"로 시작 철자 힌트가 정상 연산되어 나타남.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:52] 스크램블 게임 내 총 정답 개수 및 각기 다른 단어 글자수 힌트 보강
 
 **LOG_ID: 20260724_1052**

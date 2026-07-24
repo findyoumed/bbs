@@ -223,7 +223,7 @@ export function createArcadeAnsiBuilders(deps) {
     return [
       buildTopHeader(['오락실', '스크램블']),
       c(15, '  정사각형 글자판 속 알파벳들을 조합하여 유효한 영어 단어들을 만드세요.'),
-      c(8, `  (2~9글자 입력. 이번 판 총 ${st.allPossibleAnswers?.length || 0}개 정답 존재 / 중심 단어: ${st.baseWordLength || 6}글자 / 단어별 글자수 다름)`),
+      c(8, `  (2~9글자 입력. 이번 판 총 ${st.allPossibleAnswers?.length || 0}개 정답 존재 / 중심 단어: ${st.baseWordLength || 6}글자(시작: ${st.baseWordStartChar || ''}) / 단어별 글자수 다름)`),
       ...rows,
       `  ${c(14, '찾은 단어들 :')} ${c(15, `[${st.found.join(', ')}]`)}`,
       '',

@@ -363,7 +363,8 @@ export function createScrambleState() {
     score: 0,
     status: 'play',
     allPossibleAnswers: answers,
-    baseWordLength: baseWord.length
+    baseWordLength: baseWord.length,
+    baseWordStartChar: baseWord[0]
   };
 }
 
