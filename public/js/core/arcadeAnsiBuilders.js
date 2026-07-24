@@ -219,12 +219,60 @@ export function createArcadeAnsiBuilders(deps) {
     }
       
     const hintLine = st.hintMsg ? `\n  ${c(9, st.hintMsg)}` : '';
+    
+    // [LOG: 20260724_1055] 찾아야 할 단어 개별 힌트 리스트 생성
+    const sortedAnswers = st.allPossibleAnswers ? [...st.allPossibleAnswers].sort((a,b) => a.length - b.length || a.localeCompare(b)) : [];
+    const hintLines = sortedAnswers.map((word) => {
+      if (st.found.includes(word)) {
+        return `${c(10, '✔')} ${c(15, word.padEnd(9, ' '))} (${word.length}자)`;
+      } else {
+        const masked = word[0] + '_'.repeat(word.length - 1);
+        return `${c(8, '·')} ${c(11, masked.padEnd(9, ' '))} (${word.length}자)`;
+      }
+    });
+
+    // PC 환경에서 오른쪽 여백에 단어 힌트 리스트를 2열로 예쁘게 정렬하여 표시
+    const leftSide = [...rows];
+    let rightSide = [];
+    if (sortedAnswers.length > 0) {
+      rightSide.push(`${c(14, '★ 찾아야 할 단어 목록 ★')}`);
+      
+      const colsCount = 2;
+      const rightRows = [];
+      for (let i = 0; i < hintLines.length; i += colsCount) {
+        const part = [];
+        for (let j = 0; j < colsCount; j++) {
+          if (hintLines[i + j]) {
+            part.push(hintLines[i + j]);
+          }
+        }
+        rightRows.push(part.join('   '));
+      }
+      rightSide.push(...rightRows);
+    }
+
+    const combinedRows = [];
+    if (!isMobile && rightSide.length > 0) {
+      const maxLines = Math.max(leftSide.length, rightSide.length);
+      for (let i = 0; i < maxLines; i++) {
+        const left = leftSide[i] || '                     ';
+        const paddedLeft = left.padEnd(28, ' ');
+        const right = rightSide[i] || '';
+        combinedRows.push(paddedLeft + right);
+      }
+    } else {
+      combinedRows.push(...leftSide);
+      if (isMobile && rightSide.length > 0) {
+        combinedRows.push('');
+        combinedRows.push(...rightSide.map(line => `  ${line}`));
+      }
+    }
       
     return [
       buildTopHeader(['오락실', '스크램블']),
       c(15, '  정사각형 글자판 속 알파벳들을 조합하여 유효한 영어 단어들을 만드세요.'),
-      c(8, `  (2~9글자 입력. 이번 판 총 ${st.allPossibleAnswers?.length || 0}개 정답 존재 / 중심 단어: ${st.baseWordLength || 6}글자(시작: ${st.baseWordStartChar || ''}) / 단어별 글자수 다름)`),
-      ...rows,
+      c(8, `  (이번 판은 총 ${st.allPossibleAnswers?.length || 0}개의 정답 단어가 숨어 있습니다. 중심 단어: ${st.baseWordLength || 6}글자(시작: ${st.baseWordStartChar || ''}))`),
+      ...combinedRows,
       `  ${c(14, '찾은 단어들 :')} ${c(15, `[${st.found.join(', ')}]`)}`,
       '',
       statusLine
