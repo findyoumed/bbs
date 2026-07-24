@@ -3114,7 +3114,7 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
 
 /* [LOG_ID: 20260724_0955] 혈액형 입력 프롬프트용 핫스팟 스타일 */
 .blood-hotspot {
-    color: #ffff00 !important;
+    color: #ffffff !important;
     cursor: pointer;
     text-decoration: none !important;
     font-weight: bold;
