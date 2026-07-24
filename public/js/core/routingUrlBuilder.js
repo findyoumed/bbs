@@ -38,19 +38,21 @@ export function createRoutingUrlBuilder(deps) {
         return boardMenuPath && boardMenuPath !== 'top' ? getMenuNodeRoutePath(boardMenuPath) : '/';
 
       case 'post-list': {
-        const uppercaseBoardId = String(boardId || '').toUpperCase();
-        const url = isUnifiedPdsBoardId(boardId) ? '/pds' : `/${uppercaseBoardId}`;
+        const lowercaseBoardId = String(boardId || '').toLowerCase();
+        const url = isUnifiedPdsBoardId(boardId) ? '/pds' : `/${lowercaseBoardId}`;
         return (page && page > 1) ? `${url}?page=${page}` : url;
       }
 
-      case 'post-view':
+      case 'post-view': {
+        const postNum = (post?.localId !== undefined && post?.localId !== null) ? post.localId : (post?.id || '');
         if (isUnifiedPdsBoardId(boardId)) {
           // [LOG: 20260429_0634] Keep unified PDS detail URLs carrying ?page=N so
           // reload/history restores the same list-page context for adjacent navigation.
           const pdsPageQuery = Number(page || 1) > 1 ? `?page=${encodeURIComponent(page)}` : '';
-          return `/pds/${post?.id || ''}${pdsPageQuery}`;
+          return `/pds/${postNum}${pdsPageQuery}`;
         }
-        return `/${String(boardId || '').toUpperCase()}/${post?.id || ''}`;
+        return `/${String(boardId || '').toLowerCase()}/${postNum}`;
+      }
 
       case 'weather-menu':
         return '/service/weather';
@@ -245,25 +247,25 @@ export function createRoutingUrlBuilder(deps) {
         return '/memo/write';
 
       case 'post-write': {
-        const uppercaseBoardId = String(boardId || '').toUpperCase();
+        const lowercaseBoardId = String(boardId || '').toLowerCase();
         const editPostId = post?.localId ?? post?.id;
         // [LOG_ID: 20260721_2310] local_id 이전 후 GET /posts/:postId가 local_id로 조회하는데
         // (id != local_id인 실서비스 게시판 전부) 여기만 여전히 전역 id로 URL을 만들어, 수정/답글
         // 작성 화면에서 새로고침하거나 뒤로가기/링크 공유로 그 URL을 다시 열면 엉뚱한 글이 뜨거나
         // 404가 나는 상태였다.
         if (writeMode === 'edit' && editPostId) {
-          return `/${uppercaseBoardId}/${editPostId}/edit`;
+          return `/${lowercaseBoardId}/${editPostId}/edit`;
         }
         // [LOG: 20260429_0621] Keep reply compose addressable so reload/history
         // restores /board/:boardId/:postId/reply into reply mode, not create mode.
         if (writeMode === 'reply' && editPostId) {
-          return `/${uppercaseBoardId}/${editPostId}/reply`;
+          return `/${lowercaseBoardId}/${editPostId}/reply`;
         }
-        return `/${uppercaseBoardId}/write`;
+        return `/${lowercaseBoardId}/write`;
       }
 
       case 'attachment-list':
-        return `/${String(boardId || '').toUpperCase()}/${(post?.localId ?? post?.id) || ''}/files`;
+        return `/${String(boardId || '').toLowerCase()}/${(post?.localId ?? post?.id) || ''}/files`;
 
       default:
         return '/';

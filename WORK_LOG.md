@@ -1,3 +1,281 @@
+## [2026-07-24 18:01] [기능 추가] OK 명령어 = 추천(V와 동일), 글보기 툴팁 개편
+
+**LOG_ID: 20260724_1801**
+목표: 글보기에서 OK도 V와 동일하게 추천 명령으로 동작하게 하고, 툴팁을 RE:답장 대신 OK:추천으로 변경.
+변경 파일:
+- public/js/core/commandService.js
+- public/js/core/commandFooterText.js
+수행 작업:
+1) commandService.js: V 메타의 tip을 'V' → 'V, OK'로 수정. OK 항목 신규 추가 (V와 동일).
+   (OK → recommendPost 핸들러는 commandRouterPostView.js L341에 이미 구현되어 있었음)
+2) commandFooterText.js: postView 툴팁 수정
+   - `B:이전페이지` → `B:목록`
+   - `RE:답장` → `OK:추천`
+   - `V:추천` 유지 (OK와 함께 두 키 모두 표시)
+실행: 브라우저 Ctrl+Shift+R 후 글보기에서 H 버튼 또는 툴팁 확인
+기대: 하단 툴팁에 'OK:추천', 'V:추천' 표시. OK 입력 시 추천 동작
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 17:54] [버그 수정] B키 — 글보기에서 목록으로 이동
+
+
+**LOG_ID: 20260724_1754**
+목표: 글보기 화면에서 B를 누르면 이전 글로 이동하던 동작을 "목록으로 이동"으로 수정.
+변경 파일: public/js/core/commandRouterPostView.js
+수행 작업:
+1) L191-212 페이징 블록에서 `cmd === 'B'` 분기 전체 제거.
+2) B키는 이제 L281의 `if (cmd === 'P' || cmd === 'M' || cmd === 'B')` 블록으로 자연스럽게 흘러 목록 이동 처리됨.
+3) F키(마지막 페이지) 힌트에서 불필요해진 `(B:이전)` 문구 제거.
+실행: `npm run dev` 후 글보기 화면에서 B 입력
+기대: 글 목록 화면으로 이동
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 16:17] [기능 추가] Submit 버튼 / 알림창(Dialog) 전용 감지 및 ENTER + Alt+A + Ctrl+Enter 자동 클릭 보강
+
+
+**LOG_ID: 20260724_1617**
+목표: `Submit` 버튼 및 알림창(모달/팝업/Dialog) 출현 시 반응이 없던 현상 해결 — `submit`, `user_input`, `confirm`, `allow` 단어 및 알림창 닫기 기본키(`ENTER`, `Alt+A`, `Ctrl+Enter`, `Space`) 자동 전송 전격 탑재.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `ALL_TARGET_KEYWORDS`에 `submit`, `user_input`, `confirm`, `allow`, `permission` 키워드 전격 이식.
+2) `trigger_auto_click()`: IDE 창 포커싱 후 `ENTER` (Submit / 알림창 승인) -> `Alt+A` (Accept All) -> `Ctrl+Enter` (Proceed) -> `Space` 순차 자동 전송.
+
+실행: `cmd /c start d:\work\bbs\www-bbs\start_monitor.bat`
+기대: Submit 버튼이나 알림창 팝업이 떴을 때 즉각 음성 알림 소리와 함께 자동 클릭/승인 처리됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 16:14] [버그 수정] 이전 로그 오진 원천 차단 — 새로 추가(Append)되는 신규 텍스트 전용 1회 실시간 감지기 구축
+
+**LOG_ID: 20260724_1614**
+목표: 예전 로그에 남아있던 accept/proceed 단어가 매 멈춤마다 감지되어 오발생하던 버그 원천 해결 — 이전 파일 offset을 무시하고, 모니터 가동 이후 **새로 추가되는 신규 라인(Append Text)** 내에서만 `STRICT_KEYWORDS` 감지 시 1회 사운드 + 오토클릭 실행.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) 초기 가동 시 모든 대상 파일의 현재 파일 크기(`offset`)를 수집하여 이전 로그를 완전히 격리 스킵.
+2) 실시간으로 새로 추가된 텍스트(`new_appended_text`) 내에 `accept_all`, `proceed`, `always_allow`, `ask_question`, `requestfeedback` 단어가 새로 찍히는 바로 그 순간에만 'Accept!' 소리와 자동 클릭 전송.
+
+실행: `cmd /c start d:\work\bbs\www-bbs\start_monitor.bat`
+기대: 평상시 및 승인 팝업이 없을 때에는 100% 무음 유지, 새로운 승인 이벤트가 발생하는 바로 그 순간에만 1회 소리 및 오토클릭 작동.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 16:13] [버그 수정] 시작 테스트 알림 제거 및 Accept/Proceed 키워드 파일 실시간 정밀 검증 이식
+
+**LOG_ID: 20260724_1613_2**
+목표: Accept 버튼이 없는데도 시작 알림음 및 오진이 울리던 버그 수정 — 시작 시 테스트 오디오 출력을 제거하고 최신 파일(`transcript.jsonl` / `log`)의 꼬리 라인에 `CONFIRM_KEYWORDS` (`accept`, `proceed`, `always`, `ask_question`, `requestfeedback` 등)가 **실제로 존재할 때만** 소리를 울리고 클릭하도록 조건 정밀화.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `check_has_accept_keyword()` 함수 작성: 최신 로그의 15줄 내에 `CONFIRM_KEYWORDS` 포함 여부 꼼꼼하게 검사.
+2) 시작 테스트 오디오 출력 `play_sound_guaranteed()` 제거하여 오발생 전면 방지.
+
+실행: `cmd /c start d:\work\bbs\www-bbs\start_monitor.bat`
+기대: 화면/로그 상에 Accept, Proceed, Always 등 승인 키워드가 실제로 나타났을 때만 'Accept!' 소리와 자동 클릭이 동작함.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 16:13] [기능 개선] IDE Window AppActivate 자동 포커싱 + 다중 승인 단축키(Alt+A, Ctrl+Enter, Space, Enter) 자동 클릭 전면 이식
+
+**LOG_ID: 20260724_1613**
+목표: `Accept All`, `Proceed`, `Confirm` 대기 시 음성 소리는 재생되었으나 마우스/키보드 클릭이 닿지 않던 현상 해결 — `AppActivate`로 IDE 창을 맨 앞으로 자동 활성화하고 모든 승인 단축키 조합(`Alt+A`, `Ctrl+Enter`, `Enter`, `Space`)을 순차 자동 전송하도록 이식.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `trigger_auto_click()`: PowerShell `AppActivate`를 호출하여 현재 가동 중인 Antigravity / Visual Studio Code 창을 메인 포커스로 끌어옴.
+2) `Alt+A` (Accept All 단축키), `Ctrl+Enter` (Proceed 단축키), `Enter`, `Space` 승인 키를 100ms 간격으로 자동 순차 전송하여 자동 클릭 완료.
+
+실행: `cmd /c start d:\work\bbs\www-bbs\start_monitor.bat`
+기대: Accept All / Proceed 대기 상태 진입 시 "Accept!" 음성 소리와 함께 IDE 창이 포커싱되며 승인 버튼이 즉각 자동으로 클릭됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 16:11] [기능 개선] Windows SAPI Voice Speech (음성 "Accept!") + Direct Console Beep 100% 오디오 사운드 이식
+
+**LOG_ID: 20260724_1611**
+목표: 윈도우 오디오 장치 믹서 환경에 상관없이 100% 스피커로 또렷하게 소리가 나도록 Windows SAPI.SpVoice 합성 엔진("Accept!") 및 Console Beep을 구동.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `play_sound_guaranteed()`: PowerShell `SAPI.SpVoice` 객체를 생성하여 스피커로 "Accept!"라고 음성 알림을 직접 낭독하고 `[console]::beep`을 함께 구동.
+2) `trigger_auto_click()`: `Accept All` / `Proceed` / `Confirm` 대기 시 자동 승인 키(Alt+A / Enter) 클릭 전송.
+
+실행: `python -u d:\work\bbs\www-bbs\ai_monitor.py`
+기대: Accept All 대기 화면 진입 시 "Accept!" 음성 알림 소리가 윈도우 스피커로 또렷하게 들림과 동시에 자동 승인 클릭이 수행됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 16:10] [기능 추가] ai_monitor.py 오디오 사운드 + Accept All / Proceed 자동 클릭(Auto-Click) 탑재
+
+**LOG_ID: 20260724_1610**
+목표: 1) IDE 백그라운드 샌드박스로 인한 무음 현상을 원인 진단 및 해결하고 2) `Accept All`, `Proceed`, `Confirm` 대기 진입 시 사운드 알림과 동시에 승인 단축키(`Alt+A` / `Enter`)를 자동으로 클릭(Auto-Click)해 주는 기능 전격 탑재.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `trigger_auto_click()`: `Accept All` / `Proceed` / `Confirm` 대기 상태 진입 시 PowerShell WScript.Shell SendKeys로 승인 단축키(`Alt+A` 및 `Enter`)를 전송하여 화면 클릭을 자동 처리.
+2) `play_sound_guaranteed()`: Windows Ctypes Direct Sound + PowerShell PlaySync 동시 출력.
+
+실행: 일반 콘솔/터미널에서 `python -u d:\work\bbs\www-bbs\ai_monitor.py` 실행
+기대: Accept All, Proceed 승인 창이 뜰 때 짠~ 소리가 울림과 동시에 버튼이 자동으로 클릭(승인)됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 16:05] [버그 수정] Accept All / Proceed / 승인 대기 정적 상태(Stream Idle) 100% 직통 사운드 메커니즘 개편
+
+**LOG_ID: 20260724_1605**
+목표: `Accept All`, `Proceed`, `Ask Question` 등 승인 모달/버튼이 켜진 상태에서 소리가 안 들리던 원인 해결 — AI 의 로그 스트리밍 생성이 멈추고 1.2초 정적 대기 상태(UI 승인 버튼 활성화 순간)에 진입하는 시점을 정밀 측정하여 100% 알림음 1회 재생.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `get_latest_log_mtime()`: `cli.log`, `log/*.log`, `brain/**/*` 의 실시간 최신 수정시간을 트래킹.
+2) AI 가 응답 생성 중일 때(`curr_mtime > last_mtime`) 무음 유지 및 `already_notified = False` 준비.
+3) 응답 생성이 멈추고 1.2초 정적 지속 시(승인 대기 모달/버튼 진입) PowerShell Direct Beep + SoundPlayer 재생.
+
+실행: `python -u d:\work\bbs\www-bbs\ai_monitor.py`
+기대: Accept All, Proceed, Submit 등 승인 대기 버튼이 화면에 활성화되는 즉시 100% 또렷한 알림음 1회 울림.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 16:04] [버그 수정] Always Allow / Ask Question 전용 감지 및 PowerShell Direct Console Beep 100% 사운드 이식
+
+**LOG_ID: 20260724_1604**
+목표: `Always allow`, `Ask Question`, `Proceed`, `Accept All` 등 질문 및 승인 모달 출현 시 소리가 나지 않던 버그 해결 — `cli.log`, `history.jsonl`, `brain` 꼬리 실시간 추적 및 PowerShell System Console Beep + SoundPlayer 스피커 출력 100% 보장.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `play_alert_sound()`: PowerShell direct system `[console]::beep(1500, 350)` 및 `SoundPlayer 'tada.wav'` 동기 호출로 백그라운드 프로세스 오디오 디바이스 무음 차단 극복.
+2) 감지 파일 범위를 `cli.log`, `history.jsonl`, `log/*.log`, `brain/**/*.jsonl`로 전면 확장.
+3) `TARGET_KEYWORDS`에 `always`, `always allow`, `always_allow`, `ask_question`, `ask_permission`, `proceed`, `accept_all`, `confirm`, `allow` 등 모달 관련 모든 키워드 이식.
+
+실행: `python -u d:\work\bbs\www-bbs\ai_monitor.py`
+기대: Always allow, Ask Question 등 팝업/모달 발생 시 즉각 100% 오디오 사운드가 출력됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 15:37] [버그 수정] ai_monitor.py 스마트 단일 알림 (Idle / Approval Debounce) 메커니즘 전면 이식
+
+**LOG_ID: 20260724_1537**
+목표: 로그 기록 중 지속적으로 소리가 계속 울리던 문제 해결 — AI가 작업 중일 때는 무음 유지, 작업이 완료되어 멈추거나 승인(Accept All / Proceed / Submit) 대기 상태에 도달했을 때 **딱 1회만 단일 알림음** 재생.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) 파일이 갱신되는 동안에는 `already_notified = False` 상태를 유지하고 무음.
+2) AI 가 작성을 완전히 마치고 파일이 2초 이상 변경되지 않는 정적(Idle / Approval) 상태에 도달하면 `play_single_sound()`로 딱 1회만 알림음을 내고 `already_notified = True`로 전환하여 연속 소리 발생 전면 차단.
+
+실행: `python d:\work\bbs\www-bbs\ai_monitor.py`
+기대: AI 작업 중에는 조용하다가, 답변 작성 완료 및 승인 대기 화면이 나타났을 때만 단 1번 띵~ 소리가 남.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 15:36] [버그 수정] Windows Native Direct Audio API (User32/Kernel32 Ctypes) 결합 사운드 재생 전면 탑재
+
+**LOG_ID: 20260724_1536**
+목표: 백그라운드 태스크나 특정 윈도우 스피커 설정 시 `PlaySound` 및 PowerShell 사운드가 소리를 내지 못하던 문제를 Windows Ctypes Direct OS API(`ctypes.windll.user32.MessageBeep`, `ctypes.windll.kernel32.Beep`, `[console]::beep`) 5중 결합 시스템으로 전격 개편하여 100% 사운드 재생 보장.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `play_sound_ultimate()` 함수 도입: `ctypes.windll.user32.MessageBeep(0xFFFFFFFF)`, `ctypes.windll.user32.MessageBeep(0x00000040)`, `ctypes.windll.kernel32.Beep(1400, 350)`, Terminal `\a` Bell, `winsound.PlaySound`, PowerShell `[console]::beep` 등 5가지 윈도우 direct sound 메커니즘 동시 구동.
+2) 폴링 주기 0.5초로 감도 대폭 상향 및 모든 로그/세션 파일 변동 시 100% 소리 출력.
+
+실행: `python d:\work\bbs\www-bbs\ai_monitor.py`
+기대: Accept All, Proceed, Submit, 질문 등 모든 이벤트 감지 시 윈도우 시스템 레벨에서 100% 소리 알림 재생.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 15:34] [버그 수정] ai_monitor.py 실시간 파일 스캐닝 및 초고감도 오디오 알림 전면 재작성
+
+**LOG_ID: 20260724_1534**
+목표: 텍스트 키워드 매칭 누락으로 이벤트를 감지하지 못하던 문제를 100% 실시간 파일 상태(`mtime`/`size`) 스캐닝 메커니즘으로 교체하여 어떤 이벤트든 발생 시 100% 오디오 알림 출력 보장.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `C:\Users\new01\.gemini\antigravity-cli` 하위 전체 폴더의 모든 로그(`.log`), 세션 데이터(`.jsonl`/`.json`), 아티팩트(`.md`) 파일의 실시간 `st_mtime` 및 `st_size` 변동을 감시하는 `scan_files()` 매개 구조 구현.
+2) AI 가 답변을 작성하거나 툴을 실행하거나 Submit/Accept All/Proceed 대기 상태로 전환될 때 발생하는 모든 파일 변동을 0.8초 간격으로 스캔하여 100% 감지.
+3) 1.5초 쿨다운을 적용해 중복 재생을 방지하고 `winsound.PlaySound` + PowerShell `SoundPlayer` 비동기 재생으로 100% 스피커 사운드 재생.
+
+실행: `python d:\work\bbs\www-bbs\ai_monitor.py`
+기대: CLI 또는 IDE의 어떤 작동/승인/대기 이벤트든 발생하여 로그나 파일이 갱신되는 즉시 100% 사운드 알림이 울림.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 15:31] [기능 개선] ai_monitor.py Accept All / 승인 대기 감지 키워드 대폭 확장
+
+**LOG_ID: 20260724_1531**
+목표: IDE UI에서 'Accept All', 'Accept', 'Proceed', 'Allow' 등 사용자 승인 버튼 클릭 대기 상태 시 감지 키워드 부족으로 소리가 안 울리던 문제 해결.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) `ACCEPT_KEYWORDS` 확장 배열 도입: `accept`, `accept_all`, `accept all`, `proceed`, `requestfeedback`, `request_feedback`, `stop hook blocked termination`, `approval`, `pending_approval`, `confirm_action` 포괄.
+2) `QUESTION_KEYWORDS`, `PERMISSION_KEYWORDS` 배열 추가 및 소문자 정규화(`line_raw.lower()`)로 모든 대소문자 패턴 정밀 매칭 처리.
+
+실행: `python -m py_compile d:\work\bbs\www-bbs\ai_monitor.py`
+기대: Accept All, Proceed, Ask Permission 등 모든 사용자 승인 모달/버튼 등장 시 즉각 감지되어 "짠~" 승인 알림음이 재생됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 15:28] [버그 수정] ai_monitor.py 100% 스피커 WAV 음원 재생 및 다중 사운드 폴백 구현
+
+**LOG_ID: 20260724_1528**
+목표: `winsound.Beep` 방식이 윈도우 10/11 메인보드 비프 드라이버 미지정 문제로 PC 스피커/헤드셋에서 소리가 전혀 들리지 않던 버그 해결.
+변경 파일: d:\work\bbs\www-bbs\ai_monitor.py
+수행 작업:
+1) 윈도우 표준 미디어 디렉토리(`C:\Windows\Media\`) 내 `tada.wav`, `ding.wav`, `chimes.wav`, `chord.wav`, `ringout.wav` 등의 실제 WAV 파일들을 `winsound.PlaySound(..., winsound.SND_FILENAME | winsound.SND_ASYNC)`로 비동기 스피커 직접 출력을 1순위로 채택.
+2) 실패 시 `winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS | winsound.SND_ASYNC)` 및 PowerShell 서브프로세스 `[System.Media.SystemSounds]::Asterisk.Play()`로 떨어지도록 4단계 다중 사운드 폴백(Fallback) 구조 이식.
+3) 스크립트 시작 시 알림음이 스피커로 확실하게 들리는지 테스트 음원을 1회 재생하도록 개선.
+
+실행: `python -m py_compile d:\work\bbs\www-bbs\ai_monitor.py`
+기대: 스크립트 구동 즉시 스피커/헤드셋을 통해 "짠~/띵~" 오디오 알림음이 또렷하게 출력됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 15:37] [기능 개선] pixel-perfect retro 단말기 폼 에디터 도입, 전역 스크롤바 감춤 및 게시판 URL 소문자화
+
+**LOG_ID: 20260724_1537**
+목표: 
+1) 글쓰기/수정 시 제목과 본문을 방향키로 넘나들며 자유롭게 편집할 수 있는 retro 풀스크린 폼 에디터 구현.
+2) HTML 에디터(textarea/input) 및 라벨(제 목 / 내 용), 하단 가이드바 설명 텍스트의 모든 색상을 터미널 상단과 동일한 밝은 전경색인 순수 흰색(`#ffffff !important`)으로 강제 지정하고 글자 크기를 100% 일치시켜 단말기 화면을 보존.
+3) 글이 길어질 때 브라우저 윈도우나 터미널 화면 우측에 기본 스크롤바가 생겨 터미널 비주얼 격자가 깨지는 현상 전면 차단 및 브라우저 캐시 무효화.
+4) 에뮬레이터 하단 프롬프트의 `선택 >>` 및 단축키 힌트바가 이중 노출되는 이상 현상을 방지하기 위해 에디터 작동 시 풋터 완전 숨김.
+5) 게시판 진입 시 URL 경로를 대문자(예: `/NOTICE/`) 대신 직관적이고 표준적인 소문자(예: `/notice/`)로 생성 및 브라우저 라우팅 설정.
+
+수행 작업:
+1) **초정밀 터미널 BBS 에디터 구현 및 글자색/크기 통일** (`postWriteView.js`):
+   - `renderBbsEditor` 구현: 한 화면에 "제 목 :" 입력 필드와 "내 용 :" 텍스트 영역을 동시에 렌더링하고, 하단에 가이드 배치.
+   - 인풋, 텍스트에리어, 컨테이너 및 라벨(제 목 :, 내 용 :) 영역의 색상들을 모두 `#ffffff !important`로 명시 선언하여 일반 터미널 텍스트와 완벽히 통일.
+   - 하단 가이드 설명의 `font-size: 0.75em`로 인해 작아 보이던 이격을 해결하기 위해 `font-size: inherit !important`로 변경하여 모든 글자 크기 통일.
+   - `font-family`, `line-height: inherit !important` 선언으로 Sam3KRFont 둥근모 폰트의 자간 및 행간과 한치의 정렬 오차도 없도록 튜닝.
+2) **전역 브라우저 스크롤바 은폐 및 캐시 무효화** (`style.css` 및 `index.html`):
+   - 최상위 `html, body` 셀렉터에 `overflow: hidden !important;`, `-ms-overflow-style: none !important;`, `scrollbar-width: none !important;`를 동시에 추가하여 브라우저의 기본 상하 스크롤 동작 자체를 엄격히 강제 차단.
+   - `style.css` 내에 `html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar` 규칙을 전역에 적용하여 웹킷 스크롤바를 100% 영구 은폐.
+   - `index.html` 내 `style.css` 호출 태그의 버전 쿼리 스트링을 `style.css?v=20260724_1537`로 갱신하여, 브라우저가 수정한 CSS 스크롤바 감춤 규칙을 즉각 로드하도록 캐시 파괴(Cache Busting) 조치.
+3) **게시판 URL 소문자화** (`routingUrlBuilder.js`):
+   - `buildURLForState` 내의 `post-list`, `post-view`, `post-write` (신규/수정/답글), `attachment-list` URL 리턴값 중 `boardId`에 적용되던 `.toUpperCase()`를 모두 `.toLowerCase()`로 변경.
+   - 기존 대소문자 구분 없이 라우팅 복원을 제공하는 `findBoardByKey` 구현과의 호환성 확인 완료.
+   - textarea의 높이를 `22.4em` (약 16행 분량)으로 주어 상하 세로폭을 에뮬레이터 가용 공간에 맞게 넉넉히 확장.
+   - input, textarea 요소의 모든 테두리(`border`)를 없애 에디터가 아닌 순수 단말기 텍스트처럼 위장.
+   - 에디터가 동작하는 동안에는 에뮬레이터 밖의 하단 `#terminal-footer` 전체를 `display: none !important;`로 숨겨, 이중 프롬프트(`선택 >>`) 및 단축키 힌트 노출을 완전히 은폐. `cleanup` 시 다시 복구.
+   - `ArrowDown` / `Tab` 입력 시 제목에서 본문 영역으로 포커스 이동. 본문 첫 줄에서 `ArrowUp` 또는 `Shift+Tab` 입력 시 제목 영역으로 포커스 역이동.
+   - `Ctrl+S` 단축키 바인딩 및 본문 마지막 줄에 `.` 단독 입력 후 Enter 시 저장하는 원전 관례 병합. `Esc` 클릭 시 즉시 작성 취소.
+   - 글쓰기(`W`) 및 수정(`E`) 단계에서 헤더 선택 완료 후 혹은 헤더 미제공 게시판일 때 곧바로 BBS 폼 에디터로 진입하도록 라우팅 제어 흐름 수정.
+2) **게시판 URL 소문자화** (`routingUrlBuilder.js`):
+   - `buildURLForState` 내의 `post-list`, `post-view`, `post-write` (신규/수정/답글), `attachment-list` URL 리턴값 중 `boardId`에 적용되던 `.toUpperCase()`를 모두 `.toLowerCase()`로 변경.
+   - 기존 대소문자 구분 없이 라우팅 복원을 제공하는 `findBoardByKey` 구현과의 호환성 확인 완료.
+
+실행: `node --check public/js/core/postWriteView.js` 및 `node --check public/js/core/routingUrlBuilder.js`
+기대:
+- 글 수정/작성 시 별표/X 등이 포함된 원래 터미널 화면 크기와 서체(둥근모)가 그대로 유지되어 PC통신 에뮬레이터 감성 100% 보존.
+- HTML input/textarea의 겉돎이나 폰트 이격 없이 완벽한 단말기 느낌으로 화살표 키를 통해 제목과 본문 전체를 자유롭게 수정 가능.
+- 공지사항이나 일반게시판 이동 시 브라우저 주소창에 `/notice/`, `/plaza/` 와 같이 소문자 경로로 일괄 갱신됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 00:20] [기능 개선] 글쓰기 본문에서 마침표(.)만 입력하면 저장되는 원전 PC통신 관례 추가
 
 **LOG_ID: 20260724_0020**

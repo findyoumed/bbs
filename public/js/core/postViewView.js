@@ -21,41 +21,49 @@ export function createPostViewView(deps) {
     renderScreenSequential
   } = deps;
 
-  async function showPostView(boardId, postId, fromHistory = false) {
+  async function showPostView(boardId, postId, fromHistory = false, requestedPageNo = 1) {
     state.screen = 'post-view';
     state._postNavigation = null;
-    if (!state.post || String(state.post.localId ?? state.post.id) !== String(postId)) {
-      state.post = { id: postId, localId: postId };
-    }
+
+    const canReuse = state.post
+      && String(state.board?.id || '').trim() === String(boardId).trim()
+      && String(state.post.localId ?? state.post.id) === String(postId);
+
     if (!fromHistory) updateURL();
-    setLoading('연결하는 중입니다..');
-    const boardKey = String(boardId || '').trim();
-    const data = await loadPost(boardKey, postId);
 
-    state.post = data.post;
-    // [LOG: 20260429_0047] Direct /board/:boardId/:postId entry must keep
-    // server-side prev/next information so post-view commands do not depend on a prior list visit.
-    state._postNavigation = data.navigation || null;
-    if (data.board) {
-      const resolvedKey = getBoardKey(data.board) || boardKey;
-      state.board = { ...(state.board || {}), ...data.board, id: resolvedKey, boardId: resolvedKey };
-      const resolvedMenuPath = String(data.board.menuPath || state.boardMenuPath || 'top').trim() || 'top';
-      const needsMenuContextHydration = !String(state.boardMenuTitle || '').trim()
-        || String(state.boardMenuPath || '').trim() !== resolvedMenuPath;
-
-      if (needsMenuContextHydration && typeof loadMenuTree === 'function') {
-        await loadMenuTree();
+    if (!canReuse) {
+      if (!state.post || String(state.post.localId ?? state.post.id) !== String(postId)) {
+        state.post = { id: postId, localId: postId };
       }
+      setLoading('연결하는 중입니다..');
+      const boardKey = String(boardId || '').trim();
+      const data = await loadPost(boardKey, postId);
 
-      state.boardMenuPath = resolvedMenuPath;
-      state.boardMenuTitle = typeof getBoardSelectTitle === 'function'
-        ? getBoardSelectTitle(resolvedMenuPath)
-        : (String(state.boardMenuTitle || '').trim() || resolvedMenuPath.toUpperCase());
+      state.post = data.post;
+      // [LOG: 20260429_0047] Direct /board/:boardId/:postId entry must keep
+      // server-side prev/next information so post-view commands do not depend on a prior list visit.
+      state._postNavigation = data.navigation || null;
+      if (data.board) {
+        const resolvedKey = getBoardKey(data.board) || boardKey;
+        state.board = { ...(state.board || {}), ...data.board, id: resolvedKey, boardId: resolvedKey };
+        const resolvedMenuPath = String(data.board.menuPath || state.boardMenuPath || 'top').trim() || 'top';
+        const needsMenuContextHydration = !String(state.boardMenuTitle || '').trim()
+          || String(state.boardMenuPath || '').trim() !== resolvedMenuPath;
+
+        if (needsMenuContextHydration && typeof loadMenuTree === 'function') {
+          await loadMenuTree();
+        }
+
+        state.boardMenuPath = resolvedMenuPath;
+        state.boardMenuTitle = typeof getBoardSelectTitle === 'function'
+          ? getBoardSelectTitle(resolvedMenuPath)
+          : (String(state.boardMenuTitle || '').trim() || resolvedMenuPath.toUpperCase());
+      }
     }
 
     // [LOG_ID: 20260708_1300] setReady(true)를 남은 await(loadMenuTree)가 모두 끝난 뒤로 옮긴다.
     // 예전 위치(로딩 타이머 취소 목적)는 그 뒤에 여전히 await가 남아 있어, 그 사이 footer가 먼저
-    // 드러나며 구분선/힌트가 본문 없이(또는 이전 화면의 낡은 내용인 채) 노출되는 순서 역행을 만들었다.
+    // 드러나며 구분선/힌트가本문 없이(또는 이전 화면의 낡은 내용인 채) 노출되는 순서 역행을 만들었다.
     // (아래 게시물 없음 조기 반환 경로도 커버하도록 그 분기보다 앞에 둔다.)
     setReady(true);
 
@@ -68,8 +76,12 @@ export function createPostViewView(deps) {
     
     // [LOG: 20260426_1455] Evolve Mode: Sequential rendering for post view
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
+    const postViewAnsi = buildPostViewAnsi(state.board, state.post, state.totalCount, canEdit, isGuest, state.searchParams || {}, requestedPageNo);
+    state.postPageNo = postViewAnsi.pageNo;
+    state.postPageCount = postViewAnsi.pageCount;
+
     await renderAnsiScreenWithTopbarSequential({
-      ansiText: buildPostViewAnsi(state.board, state.post, state.totalCount, canEdit, isGuest, state.searchParams || {}),
+      ansiText: postViewAnsi.text,
       ansiToHTML,
       screenEl,
       renderScreenSequential,

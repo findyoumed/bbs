@@ -184,6 +184,28 @@ export function createPostViewCommandHandler(deps) {
       return false;
     }
 
+    // [LOG_ID: 20260724_1610] 본문 내 상하 페이징(F/B/엔터) 가로채기
+    const postPageNo = Number(state.postPageNo || 1);
+    const postPageCount = Number(state.postPageCount || 1);
+
+    if (cmd === 'F') {
+      if (postPageNo < postPageCount) {
+        await showPostView(state.board.id, state.post.localId ?? state.post.id, false, postPageNo + 1);
+        return true;
+      } else {
+        setHint('마지막 페이지입니다.');
+        return true;
+      }
+    }
+
+    // 엔터 입력 시 아직 본문 다음 페이지가 남아 있으면 다음 페이지로 우선 이동
+    if (cmd === '') {
+      if (postPageNo < postPageCount) {
+        await showPostView(state.board.id, state.post.localId ?? state.post.id, false, postPageNo + 1);
+        return true;
+      }
+    }
+
     // [LOG_ID: 20260711_1340] PR 연속읽기 — olddos-bbs(hanulso) 원작 명령 복원.
     // 모드 중 빈 엔터는 다음 글로 이동, 마지막 글이면 모드를 마친다.
     // A/N(인접 글 이동)과 빈 엔터 외의 명령을 입력하면 모드가 풀린다.
@@ -256,7 +278,12 @@ export function createPostViewCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'P' || cmd === 'M' || cmd === 'B') {
+    if (cmd === 'B') {
+      window.history.back();
+      return true;
+    }
+
+    if (cmd === 'P' || cmd === 'M') {
       await showPostList(state.board.id, state.page, {
         menuPath: state.boardMenuPath,
         menuTitle: state.boardMenuTitle,

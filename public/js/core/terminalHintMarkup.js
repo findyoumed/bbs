@@ -103,6 +103,13 @@ export function createTerminalHintMarkup(deps) {
   }
 
   function getFooterPageState() {
+    if (state.screen === 'post-view') {
+      return {
+        pageNo: Math.max(1, Number(state.postPageNo || 1)),
+        pageCount: Math.max(1, Number(state.postPageCount || 1))
+      };
+    }
+
     if (state.screen === 'help') {
       return {
         pageNo: Math.max(1, Number(state.page || 1)),

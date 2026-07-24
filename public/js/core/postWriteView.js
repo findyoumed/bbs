@@ -66,10 +66,15 @@ export function createPostWriteView(deps) {
   function getWritePrompt(editor) {
     if (!editor) return '>>';
     if (editor.stage === 'header') return '머리말 번호/이름 >>';
-    if (editor.stage === 'title') return '제목 >>';
+    if (editor.stage === 'title') {
+      return editor.mode === 'edit' ? '제목 (Enter=보존) >>' : '제목 >>';
+    }
     if (editor.stage === 'keyword_1') return '검색어 1 >>';
     if (editor.stage === 'keyword_2') return '검색어 2 >>';
     if (editor.stage === 'keyword_3') return '검색어 3 >>';
+    if (editor.stage === 'body' && typeof editor.editIndex === 'number' && editor.editIndex <= editor.bodyLines.length) {
+      return `[${editor.editIndex}번줄 수정(Enter=보존)] >>`;
+    }
     return '본문 >>';
   }
 
@@ -104,6 +109,165 @@ export function createPostWriteView(deps) {
       isMobile
     });
     setPrompt(getWritePrompt(editor));
+  }
+
+  // [LOG: 20260724_1517] PC통신(BBS) 스타일 폼 에디터 최종 튜닝
+  // 화살표키(ArrowUp, ArrowDown)로 제목과 본문 간 자유 이동 및 텍스트 수정 제공.
+  // 에뮬레이터 폰트(BbsPrimaryFont, Sam3KRFont), 크기(17px), 행간(1.4)을 100% 동일하게 강제하여 터미널과 완벽한 일체감 제공.
+  function renderBbsEditor(editor, onSave, onCancel) {
+    editor.stage = 'bbs-form';
+    const boardCode = String(state.board?.id || state.board?.boardId || 'BBS').toUpperCase();
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const titleId = 'bbs-ed-title';
+    const bodyId  = 'bbs-ed-body';
+
+    // PC통신 단말기 스타일 에디터 레이아웃
+    const sep = '─'.repeat(76);
+    const headerLine = editor.selectedHeader
+      ? `<div style="padding:1px 0;opacity:0.8;font-family:inherit;">[ 머리말 : ${editor.selectedHeader} ]</div>`
+      : '';
+
+    // 터미널과 100% 동일한 폰트, 자간, 행간, 색상 스타일 상속
+    const inputStyle = `
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #ffffff !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+      font-weight: inherit !important;
+      letter-spacing: inherit !important;
+      outline: none;
+      padding: 0;
+      margin: 0;
+      min-width: 0;
+    `;
+
+    const textareaStyle = `
+      width: 100%;
+      height: 22.4em; /* 약 16행 분량의 넉넉한 세로폭 */
+      background: transparent;
+      border: none;
+      color: #ffffff !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+      font-weight: inherit !important;
+      letter-spacing: inherit !important;
+      outline: none;
+      padding: 0;
+      margin: 0;
+      resize: none;
+    `;
+
+    const bodyHtml = `
+<div style="display:flex;flex-direction:column;height:100%;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;">
+  <div style="display:flex;align-items:center;padding:2px 0;gap:0;">
+    <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">제 목 :&nbsp;</span>
+    <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" style="${inputStyle}"/>
+  </div>
+  <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;">${sep}</div>
+  ${headerLine}
+  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;">
+    <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;">내 용 :</div>
+    <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
+  </div>
+  <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:nowrap;user-select:none;font-family:inherit;">
+    상하화살표/Tab:이동  |  저장: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Esc
+  </div>
+</div>`;
+
+    renderRawHtmlScreenWithTopbar({ leftLabel: boardCode, centerLabel: editor.modeLabel, bodyHtml, screenEl, isMobile });
+
+    const titleEl = document.getElementById(titleId);
+    const bodyEl  = document.getElementById(bodyId);
+    if (!titleEl || !bodyEl) return;
+
+    // 값 할당
+    titleEl.value = editor.title || '';
+    bodyEl.value  = editor.bodyLines.join('\n');
+
+    // 터미널 프롬프트 행만 숨김 (하단 힌트바 #cmd-hint는 계속 노출)
+    const promptRow = document.getElementById('terminal-prompt-row');
+    let savedPromptDisplay = '';
+    if (promptRow) {
+      savedPromptDisplay = promptRow.style.display || '';
+      promptRow.style.display = 'none';
+    }
+
+    // cmdInput 숨김
+    const savedCmdDisplay = cmdInput ? cmdInput.style.display : '';
+    if (cmdInput) cmdInput.style.display = 'none';
+    editor._textareaActive = true;
+    setHint(getWriteHintText());
+
+    function cleanup() {
+      editor._textareaActive = false;
+      if (promptRow) {
+        promptRow.style.display = savedPromptDisplay;
+      }
+      if (cmdInput) {
+        cmdInput.style.display = savedCmdDisplay;
+        setTimeout(() => cmdInput?.focus(), 0);
+      }
+      titleEl.removeEventListener('keydown', onTitleKey);
+      bodyEl.removeEventListener('keydown', onBodyKey);
+    }
+
+    function doSave() {
+      const titleVal = titleEl.value.trim();
+      const lines = bodyEl.value.split('\n');
+      if (lines.length > 0 && lines[lines.length - 1].trim() === '.') lines.pop();
+      editor.title = titleVal;
+      editor.bodyLines = lines;
+      cleanup();
+      onSave();
+    }
+
+    function isOnFirstLine(ta) {
+      return ta.value.substring(0, ta.selectionStart).indexOf('\n') === -1;
+    }
+
+    function onTitleKey(e) {
+      if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
+      if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
+      if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+        e.preventDefault();
+        bodyEl.focus();
+        bodyEl.setSelectionRange(0, 0);
+      }
+    }
+
+    function onBodyKey(e) {
+      if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
+      if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
+      if ((e.key === 'ArrowUp' && isOnFirstLine(bodyEl)) || (e.key === 'Tab' && e.shiftKey)) {
+        e.preventDefault();
+        titleEl.focus();
+        titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
+        return;
+      }
+      if (e.key === 'Enter') {
+        const pos = bodyEl.selectionStart;
+        const before = bodyEl.value.substring(0, pos);
+        const currentLine = before.split('\n').pop().trim();
+        if (currentLine === '.') { e.preventDefault(); doSave(); return; }
+      }
+    }
+
+    titleEl.addEventListener('keydown', onTitleKey);
+    bodyEl.addEventListener('keydown', onBodyKey);
+    editor._textareaCleanup = cleanup;
+
+    // 신규 작성: 제목 포커스 / 수정: 본문 포커스
+    if (editor.mode === 'edit' || editor.bodyLines.length) {
+      bodyEl.focus();
+      bodyEl.setSelectionRange(0, 0);
+    } else {
+      titleEl.focus();
+      titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
+    }
   }
 
   // [LOG_ID: 20260710_1640] getSupportedFooterText()는 "명령 힌트\n선택 >>"처럼 프롬프트 줄까지
@@ -165,12 +329,8 @@ export function createPostWriteView(deps) {
   }
 
   function enterTitleStage(editor) {
-    editor.stage = 'title';
-    appendTranscriptLine(editor, '');
-    appendTranscriptLine(editor, '제목을 입력하십시오.');
-    if (editor.title) appendTranscriptLine(editor, `현재: ${editor.title}`);
-    appendTranscriptLine(editor, '');
-    renderLineEditor(editor);
+    // [LOG: 20260724_1517] 제목 단계도 BBS 에디터 적용
+    renderBbsEditor(editor, editor._onSave, editor._onCancel);
   }
 
   // [LOG_ID: 20260724_0010] 하이텔/천리안/나우누리 책의 라인 에디터 방식 — 줄마다 번호를 매겨
@@ -186,20 +346,8 @@ export function createPostWriteView(deps) {
   }
 
   function enterBodyStage(editor) {
-    editor.stage = 'body';
-    editor.pendingLineOp = null;
-    appendTranscriptLine(editor, '');
-    appendTranscriptLine(editor, '본문을 입력하십시오. (저장 . 또는 /s·S, 취소 /q 또는 P/M/B)');
-    appendTranscriptLine(editor, '줄 수정 /e 번호, 줄 삭제 /d 번호[-번호], 줄 삽입 /i 번호, 줄 목록 /l');
-    if (editor.bodyLines.length) {
-      appendTranscriptLine(editor, '');
-      appendTranscriptLine(editor, '--- 현재 본문 ---');
-      appendNumberedBody(editor);
-      appendTranscriptLine(editor, '--- 이어서 입력하거나 위 명령으로 수정하십시오 ---');
-    }
-    appendTranscriptLine(editor, '');
-    setBodyEditorHint();
-    renderLineEditor(editor);
+    // [LOG: 20260724_1517] 본문 단계도 BBS 에디터 적용
+    renderBbsEditor(editor, editor._onSave, editor._onCancel);
   }
 
   function isCancelWriteCommand(raw) {
@@ -287,7 +435,9 @@ export function createPostWriteView(deps) {
     }
     // [LOG: 20260429_0312] Visible-row E [번호] list edits must hydrate state.post
     // before the submit path runs so edit submits call updatePost instead of createPost.
-    if ((mode === 'edit' || mode === 'reply') && activePost) {
+    if (mode === 'create') {
+      state.post = null;
+    } else if ((mode === 'edit' || mode === 'reply') && activePost) {
       state.post = activePost;
     }
 
@@ -304,6 +454,12 @@ export function createPostWriteView(deps) {
         : '';
     const bodyVal = mode === 'edit' ? (activePost?.content || activePost?.body || '') : '';
     const modeLabel = mode === 'edit' ? '글 수정' : mode === 'reply' ? '답글 쓰기' : '글 쓰기';
+    const targetPostId = activePost
+      ? ((activePost.localId !== undefined && activePost.localId !== null) ? activePost.localId : activePost.id)
+      : null;
+
+    // [LOG: 20260724_1405] _onSave / _onCancel 을 editor에 저장해
+    // enterBodyStage → renderTextareaEditor 에서 사용한다.
     const editor = {
       bodyLines: bodyVal ? String(bodyVal).split(/\r?\n/) : [],
       headerOptions,
@@ -312,7 +468,11 @@ export function createPostWriteView(deps) {
       selectedHeader: parsedTitle.selectedHeader || '',
       stage: headerOptions.length ? 'header' : 'title',
       title: titleVal,
-      transcript: []
+      transcript: [],
+      targetPost: activePost,
+      targetPostId,
+      _onSave: async () => handlers.handleWriteSubmit(),
+      _onCancel: () => { clearPostWriteEditor(); handlers.cancelPostWrite(); }
     };
 
     renderInitialTranscript(editor);
@@ -348,6 +508,7 @@ export function createPostWriteView(deps) {
           handlers.cancelPostWrite();
           return true;
         }
+        // [LOG: 20260724_1505] 수정 모드일 때 빈 엔터 입력 시 기존 제목 보존
         const title = line.trim() || activeEditor.title;
         appendTranscriptLine(activeEditor, line);
         if (!title) {
@@ -355,8 +516,9 @@ export function createPostWriteView(deps) {
           renderLineEditor(activeEditor);
           return true;
         }
+        const wasPreserved = !line.trim() && activeEditor.mode === 'edit';
         activeEditor.title = title;
-        appendTranscriptLine(activeEditor, `제목: ${title}`);
+        appendTranscriptLine(activeEditor, `제목: ${title}${wasPreserved ? ' (보존)' : ''}`);
         enterBodyStage(activeEditor);
         return true;
       }
@@ -413,6 +575,54 @@ export function createPostWriteView(deps) {
         return true;
       }
 
+      // [LOG: 20260724_1505] 본문 단계 순차 대화형 수정 모드 처리
+      if (activeEditor.stage === 'body' && typeof activeEditor.editIndex === 'number' && activeEditor.editIndex <= activeEditor.bodyLines.length) {
+        if (isCancelWriteCommand(line)) {
+          clearPostWriteEditor();
+          handlers.cancelPostWrite();
+          return true;
+        }
+        if (isSaveWriteCommand(line)) {
+          // 자료실(pds) 신규 글 작성 시 키워드 단계 예외 적용
+          const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
+          if (isPds && activeEditor.mode !== 'edit') {
+            activeEditor.stage = 'keyword_1';
+            appendTranscriptLine(activeEditor, '');
+            appendTranscriptLine(activeEditor, '자료 검색용 키워드 3개를 순서대로 입력해 주십시오.');
+            renderLineEditor(activeEditor);
+            return true;
+          }
+          await handlers.handleWriteSubmit();
+          return true;
+        }
+
+        const idx = activeEditor.editIndex;
+        // 빈 엔터 입력 시 기존 라인 보존, 글자 입력 시 그 줄 내용 교체
+        if (!line) {
+          appendTranscriptLine(activeEditor, `${idx}: ${activeEditor.bodyLines[idx - 1]} (보존)`);
+        } else {
+          activeEditor.bodyLines[idx - 1] = line;
+          appendTranscriptLine(activeEditor, `${idx}: ${line} (수정)`);
+        }
+
+        activeEditor.editIndex++;
+
+        if (activeEditor.editIndex <= activeEditor.bodyLines.length) {
+          appendTranscriptLine(activeEditor, `[${activeEditor.editIndex}번 줄] ${activeEditor.bodyLines[activeEditor.editIndex - 1]}`);
+        } else {
+          activeEditor.editIndex = null;
+          appendTranscriptLine(activeEditor, '');
+          appendTranscriptLine(activeEditor, '--- 본문 수정 완료. 이어서 추가 입력하십시오 ---');
+          appendTranscriptLine(activeEditor, '본문을 입력하십시오. (저장 . 또는 /s·S, 취소 /q 또는 P/M/B)');
+          appendTranscriptLine(activeEditor, '줄 수정 /e 번호, 줄 삭제 /d 번호[-번호], 줄 삽입 /i 번호, 줄 목록 /l');
+          appendTranscriptLine(activeEditor, '');
+          appendNumberedBody(activeEditor);
+          appendTranscriptLine(activeEditor, '');
+        }
+        renderLineEditor(activeEditor);
+        return true;
+      }
+
       // [LOG_ID: 20260724_0010] /E 또는 /I로 지정한 줄의 새 내용을 기다리는 중이면, 이번 입력은
       // 명령이 아니라 그 줄의 실제 텍스트다.
       if (activeEditor.pendingLineOp) {
@@ -440,16 +650,23 @@ export function createPostWriteView(deps) {
       }
 
       const lineCommand = parseLineCommand(line);
-      if (lineCommand) {
+
+      // [LOG: 20260724_1400] 수정 모드에서 숫자만 입력하면 /e 번호로 자동 처리 (편의 개선)
+      const bareNumber = !lineCommand && activeEditor.mode === 'edit' && /^\d+$/.test(line.trim())
+        ? Number(line.trim())
+        : null;
+      const effectiveCommand = lineCommand || (bareNumber ? { type: 'edit', index: bareNumber } : null);
+
+      if (effectiveCommand) {
         appendTranscriptLine(activeEditor, line);
 
-        if (lineCommand.type === 'invalid') {
-          appendTranscriptLine(activeEditor, lineCommand.reason);
+        if (effectiveCommand.type === 'invalid') {
+          appendTranscriptLine(activeEditor, effectiveCommand.reason);
           renderLineEditor(activeEditor);
           return true;
         }
 
-        if (lineCommand.type === 'list') {
+        if (effectiveCommand.type === 'list') {
           appendTranscriptLine(activeEditor, '');
           if (activeEditor.bodyLines.length) {
             appendNumberedBody(activeEditor);
@@ -461,39 +678,39 @@ export function createPostWriteView(deps) {
           return true;
         }
 
-        if (lineCommand.type === 'edit') {
-          if (lineCommand.index > activeEditor.bodyLines.length) {
-            appendTranscriptLine(activeEditor, `${lineCommand.index}번 줄이 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
+        if (effectiveCommand.type === 'edit') {
+          if (effectiveCommand.index > activeEditor.bodyLines.length) {
+            appendTranscriptLine(activeEditor, `${effectiveCommand.index}번 줄이 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
             renderLineEditor(activeEditor);
             return true;
           }
-          activeEditor.pendingLineOp = { type: 'edit', index: lineCommand.index };
-          appendTranscriptLine(activeEditor, `현재 ${lineCommand.index}번 줄: ${activeEditor.bodyLines[lineCommand.index - 1]}`);
+          activeEditor.pendingLineOp = { type: 'edit', index: effectiveCommand.index };
+          appendTranscriptLine(activeEditor, `현재 ${effectiveCommand.index}번 줄: ${activeEditor.bodyLines[effectiveCommand.index - 1]}`);
           appendTranscriptLine(activeEditor, '새 내용을 입력하십시오.');
           renderLineEditor(activeEditor);
           return true;
         }
 
-        if (lineCommand.type === 'insert') {
-          if (lineCommand.index > activeEditor.bodyLines.length + 1) {
-            appendTranscriptLine(activeEditor, `${lineCommand.index}번 줄 앞에 넣을 수 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
+        if (effectiveCommand.type === 'insert') {
+          if (effectiveCommand.index > activeEditor.bodyLines.length + 1) {
+            appendTranscriptLine(activeEditor, `${effectiveCommand.index}번 줄 앞에 넣을 수 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
             renderLineEditor(activeEditor);
             return true;
           }
-          activeEditor.pendingLineOp = { type: 'insert', index: lineCommand.index };
-          appendTranscriptLine(activeEditor, `${lineCommand.index}번 줄 앞에 넣을 내용을 입력하십시오.`);
+          activeEditor.pendingLineOp = { type: 'insert', index: effectiveCommand.index };
+          appendTranscriptLine(activeEditor, `${effectiveCommand.index}번 줄 앞에 넣을 내용을 입력하십시오.`);
           renderLineEditor(activeEditor);
           return true;
         }
 
-        if (lineCommand.type === 'delete') {
-          if (lineCommand.from > activeEditor.bodyLines.length) {
-            appendTranscriptLine(activeEditor, `${lineCommand.from}번 줄이 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
+        if (effectiveCommand.type === 'delete') {
+          if (effectiveCommand.from > activeEditor.bodyLines.length) {
+            appendTranscriptLine(activeEditor, `${effectiveCommand.from}번 줄이 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
             renderLineEditor(activeEditor);
             return true;
           }
-          const to = Math.min(lineCommand.to, activeEditor.bodyLines.length);
-          const removed = activeEditor.bodyLines.splice(lineCommand.from - 1, to - lineCommand.from + 1);
+          const to = Math.min(effectiveCommand.to, activeEditor.bodyLines.length);
+          const removed = activeEditor.bodyLines.splice(effectiveCommand.from - 1, to - effectiveCommand.from + 1);
           appendTranscriptLine(activeEditor, `${removed.length}줄을 삭제했습니다.`);
           appendTranscriptLine(activeEditor, '');
           if (activeEditor.bodyLines.length) {
@@ -542,11 +759,14 @@ export function createPostWriteView(deps) {
     };
     state._terminalInputHandler = state._postWriteInputHandler;
     setHint(getWriteHintText());
-    // [LOG_ID: 20260710_1640] 진입 즉시 글쓰기 화면을 그린다. 기존에는 renderLineEditor를 첫 입력
-    // 처리 때만 호출해서, W/E 직후에도 이전 목록 화면이 그대로 남고 하단 프롬프트만 바뀌어
-    // "글쓰기가 안 된다"고 느껴지는 상태였다(첫 줄을 입력해야 비로소 화면이 전환됐다).
-    renderLineEditor(editor);
-    cmdInput?.focus();
+    
+    // [LOG: 20260724_1517] header 없으면 직접 BBS 에디터 진입, 있으면 헤더 선택 화면 먼저
+    if (!editor.headerOptions.length) {
+      renderBbsEditor(editor, editor._onSave, editor._onCancel);
+    } else {
+      renderLineEditor(editor);
+      cmdInput?.focus();
+    }
   }
 
   async function handleWriteSubmit(handlers) {
@@ -572,7 +792,9 @@ export function createPostWriteView(deps) {
     }
 
     const boardId = state.board.id;
-    const postId = state.post?.localId ?? state.post?.id;
+    const editorTargetId = editor?.targetPostId;
+    const stateTargetId = state.post ? ((state.post.localId !== undefined && state.post.localId !== null) ? state.post.localId : state.post.id) : null;
+    const postId = editorTargetId ?? stateTargetId;
     const storedTitle = buildStoredTitle(title, selectedHeader, headerOptions);
 
     if (state.writeMode === 'edit' && state.post && !canEditPost(state.post)) {

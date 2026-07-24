@@ -269,14 +269,8 @@ export function createBoardAnsiBuilders(deps) {
     return parts.join('\n');
   }
 
-  function buildPostViewAnsi(board, post, totalCount, canEdit, isGuest, searchParams = {}) {
+  function buildPostViewAnsi(board, post, totalCount, canEdit, isGuest, searchParams = {}, requestedPageNo = 1) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    // [LOG_ID: 20260721_1735] 실기기 폰트 실측 기반 동적 컬럼 계산(measureMobileTargetCols)을
-    // 시도했으나, 헤드리스/실기기 간 캔버스 텍스트 측정 오차가 예상보다 커서 컬럼 수를
-    // 과대추정하면 실제 문장이 화면 밖으로 잘려 유실되는(스크린샷으로 직접 확인) 더 심각한
-    // 회귀가 발생했다 — 원래 버그(우측 여백)보다 텍스트 유실이 훨씬 나쁘므로 되돌린다.
-    // 대신 style.css의 가운데 정렬로 "쏠림"을 해결한다(폭을 늘리는 대신 남는 여백을 좌우로
-    // 고르게 분산).
     const targetCols = isMobile ? 44 : 80;
 
     const boardName = getBoardDisplayName(board);
@@ -302,10 +296,36 @@ export function createBoardAnsiBuilders(deps) {
     const highlightedContent = highlightText(rawContent, highlightTerm, 14, 15);
     const contentLines = wrapAnsiText(highlightedContent, targetCols);
 
+    // 본문 페이징 시뮬레이션 계산
+    let headerLineCount = 3; // 제목(1줄) + 올린이(1줄) + 구분선(1줄)
+    if (isMobile) {
+      headerLineCount = 4; // 제목(1줄) + 번호/저자(1줄) + 메타데이터(1줄) + 구분선(1줄)
+    }
+    const lastPageFooterLines = 1; // "마지막 페이지입니다" 등 푸터 줄
+    // 가용 본문 라인을 13행 기준으로 산출하여 약 9~10행 수준으로 제한 (F키 페이징 지원 및 스크롤 완전 차단)
+    const baseLines = Math.max(5, 13 - headerLineCount); 
+
+    const pages = [];
+    let currentLineIdx = 0;
+    const totalBodyLines = Math.max(1, contentLines.length);
+
+    while (currentLineIdx < totalBodyLines) {
+      const isLastPage = (totalBodyLines - currentLineIdx) <= baseLines;
+      const allowedLines = isLastPage ? Math.max(3, baseLines) : baseLines;
+      const chunk = contentLines.slice(currentLineIdx, currentLineIdx + allowedLines);
+      pages.push(chunk);
+      currentLineIdx += chunk.length;
+    }
+
+    const pageCount = pages.length;
+    const currentPage = Math.min(Math.max(Number.parseInt(requestedPageNo, 10) || 1, 1), pageCount);
+    const visibleBodyLines = pages[currentPage - 1] || [];
+    const pageLabel = buildPageLabel(currentPage, pageCount);
+
     // [LOG_ID: 20260712_2050] 하이텔 원전(길라잡이 그림 5.5) 재현: 글읽기 상단바는 'READ/글읽기'가
     // 아니라 게시판명('큰마을 (PLAZA)')이다 — 어느 게시판의 글인지 화면에서 사라지던 문제도 함께
     // 해소되고, 목록(125행)과 동일한 config 방식이라 목록↔글읽기 전환 시 상단바가 흔들리지 않는다.
-    const parts = [buildTopHeader({ leftLabel: boardCode || 'READ', centerLabel: boardName }, '', targetCols)];
+    const parts = [buildTopHeader({ leftLabel: boardCode || 'READ', centerLabel: boardName }, pageLabel, targetCols)];
 
     parts.push(ansiColor(14) + '제목 : ' + ansiColor(15) + title + ANSI_RESET);
 
@@ -326,11 +346,22 @@ export function createBoardAnsiBuilders(deps) {
       );
     }
     parts.push(ansiHLine(targetCols, 8));
-    contentLines.forEach((line) => {
+    visibleBodyLines.forEach((line) => {
       parts.push(ansiColor(15) + line + ANSI_RESET);
     });
 
-    return parts.join('\n');
+
+    const totalLines = 24;
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < totalLines) {
+      joinedLines.push(ANSI_RESET);
+    }
+
+    return {
+      text: joinedLines.slice(0, totalLines).join('\n'),
+      pageCount,
+      pageNo: currentPage
+    };
   }
 
   function buildBoardSelectAnsi(boards, titleOrOptions) {

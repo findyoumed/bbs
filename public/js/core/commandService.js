@@ -51,7 +51,8 @@ export const CMD_META = {
   ED: { label: '수정', tip: 'E, ED', login: true, priority: 46, cat: 'POST', desc: '내가 작성한 글을 수정합니다.' },
   D: { label: '삭제', tip: 'D, DD', login: true, priority: 44, cat: 'POST', desc: '내가 작성한 글을 삭제합니다.' },
   DD: { label: '삭제', tip: 'D, DD', login: true, priority: 44, cat: 'POST', desc: '내가 작성한 글을 삭제합니다.' },
-  V: { label: '추천', tip: 'V', login: true, priority: 34, cat: 'POST', desc: '현재 글을 추천합니다.' },
+  V: { label: '추천', tip: 'V, OK', login: true, priority: 34, cat: 'POST', desc: '현재 글을 추천합니다.' },
+  OK: { label: '추천', tip: 'V, OK', login: true, priority: 34, cat: 'POST', desc: '현재 글을 추천합니다.' },
 
   // Search
   LI: { label: 'ID검색', tip: 'LI [아이디]', priority: 80, cat: 'POST', desc: '작성자 아이디로 게시글을 검색합니다.' },
