@@ -1,3 +1,18 @@
+## [2026-07-24 11:04] 스크램블 게임 내 모든 단어 획득 시 즉시 자동 성공 종료 처리 추가
+
+**LOG_ID: 20260724_1104**
+목표: 사용자가 글자판 속 정답 단어를 모두 찾았을 때 게임이 멈추지 않고 계속 진행되던 버그를 고치고, 모든 단어를 다 찾았다면 즉각 성공 완료 메시지를 띄우며 게임이 종료되도록 개선.
+변경 파일: public/js/core/arcadeGameLogic.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeGameLogic.js`의 `scrambleApply`에서 단어 성공 적재 시 `st.found.length >= st.allPossibleAnswers.length` 인지 체크하는 조건문을 이식하여, 모두 다 찾았을 경우 `st.status = 'end'` 및 `'end'`를 반환하여 즉시 완료시키도록 제어.
+2) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 상태 변수 종료 분기를 확장:
+   - 모든 단어를 다 찾아서 종료된 경우 `축하합니다! 모든 단어를 찾아냈습니다!` 라는 긍정적이고 화려한 성공 문구 출력.
+실행: `node --check public/js/core/arcadeGameLogic.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 숨겨진 단어를 다 찾으면 게임 타이머가 중단되고 화면에 "모든 단어를 찾아냈습니다!"가 나오며 게임이 깔끔하게 끝남.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 11:01] 스크램블 게임 가상 [단어제출 ENTER] 버튼 탑재 및 마우스/터치 전송 지원
 
 **LOG_ID: 20260724_1101**

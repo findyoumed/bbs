@@ -405,6 +405,13 @@ export function scrambleApply(st, inputWord) {
   st.found.push(word);
   // 글자 수에 비례한 점수 획득
   st.score += word.length * 10;
+  
+  // [LOG: 20260724_1104] 모든 가능한 정답 단어를 전부 맞춘 경우 즉시 게임 종료(성공) 처리
+  if (st.allPossibleAnswers && st.found.length >= st.allPossibleAnswers.length) {
+    st.status = 'end';
+    return 'end';
+  }
+  
   return 'hit';
 }
 

@@ -206,8 +206,11 @@ export function createArcadeAnsiBuilders(deps) {
     const currentElapsed = Math.min(timeLimit, Math.floor((Date.now() - st.startTime) / 1000));
     const remains = Math.max(0, timeLimit - (st.status === 'end' ? st.elapsed : currentElapsed));
     
+    const isAllFound = st.allPossibleAnswers && st.found.length >= st.allPossibleAnswers.length;
     const statusLine = st.status === 'end'
-      ? c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`)
+      ? (isAllFound
+        ? c(10, `  축하합니다! 모든 단어를 찾아냈습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`)
+        : c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`))
       : `  ${c(14, '남은시간:')} ${c(11, `${remains}초`)}   ${c(14, '점수:')} ${c(11, `${st.score}점`)}`;
 
     let answerLine = '';
