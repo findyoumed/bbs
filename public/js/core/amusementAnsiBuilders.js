@@ -780,14 +780,101 @@ function calculateMbtiFromAnswers(answers) {
     return [buildTopHeader(['오락실', '궁합']), c(11, `${ANSI_BOLD}  ${dateText(birth1)}생 ${animal1}띠${ANSI_RESET}`), '', c(14, '  두 번째 사람의 생년월일을 입력하세요.'), c(11, '  입력 예) 1995-05-05 또는 19950505')].join('\n');
   }
   // [LOG: 20260724_1004] 세로 스크롤바 방지를 위한 문단 간 빈 줄 압축 적용
+  // [LOG: 20260724_1006] 실제 십이지(띠) 합·충·살 역학을 계산하는 정밀 궁합 연산 알고리즘 도입
   function buildCompatAnsi(birth1, birth2) {
-    const animal1 = ZODIAC[((birth1.getFullYear() - 4) % 12 + 12) % 12];
-    const animal2 = ZODIAC[((birth2.getFullYear() - 4) % 12 + 12) % 12];
-    const seed = Math.abs(Math.round((birth1.getTime() - birth2.getTime()) / 86400000)) % 41;
-    const score = 60 + seed;
+    const idx1 = ((birth1.getFullYear() - 4) % 12 + 12) % 12;
+    const idx2 = ((birth2.getFullYear() - 4) % 12 + 12) % 12;
+    const animal1 = ZODIAC[idx1];
+    const animal2 = ZODIAC[idx2];
 
-    const detailIdx = seed % COMPAT_DETAILS.length;
-    const [title, personality, chemistry, caution, tip] = COMPAT_DETAILS[detailIdx];
+    // 1. 역학 관계 계산
+    // 삼합 (4칸 또는 8칸 차이)
+    const diff = Math.abs(idx1 - idx2);
+    const isSamhap = (diff === 4 || diff === 8);
+    // 육합 (자축0-1, 인해2-11, 묘술3-10, 진유4-9, 사신5-8, 오미6-7 등 합이 11 혹은 23인 관계)
+    const isYukhap = ((idx1 + idx2) === 11 || (idx1 + idx2) === 23 || (idx1 === 0 && idx2 === 1) || (idx1 === 1 && idx2 === 0));
+    // 육충 (6칸 차이)
+    const isChung = (diff === 6);
+    // 원진살 (자미0-7, 축오1-6, 인유2-9, 묘신3-8, 진해4-11, 사술5-10)
+    const wonjinPairs = [[0,7],[7,0],[1,6],[6,1],[2,9],[9,2],[3,8],[8,3],[4,11],[11,4],[5,10],[10,5]];
+    const isWonjin = wonjinPairs.some(([a, b]) => idx1 === a && idx2 === b);
+    // 상해살 (자미0-7, 축오1-6, 인사2-5, 묘진3-4, 신해8-11, 유술9-10)
+    const sanghaePairs = [[0,7],[7,0],[1,6],[6,1],[2,5],[5,2],[3,4],[4,3],[8,11],[11,8],[9,10],[10,9]];
+    const isSanghae = sanghaePairs.some(([a, b]) => idx1 === a && idx2 === b);
+
+    // 2. 점수 산출
+    let score = 75; // 기본 점수
+    let title = '서로 노력이 필요한 궁합';
+    let relationType = 'normal';
+
+    if (isSamhap) {
+      score += 20;
+      title = '삼합(三合)의 천생연분 궁합';
+      relationType = 'samhap';
+    } else if (isYukhap) {
+      score += 15;
+      title = '육합(六合)의 이심전심 궁합';
+      relationType = 'yukhap';
+    } else if (isChung) {
+      score -= 20;
+      title = '충(沖)이 있어 마찰하는 궁합';
+      relationType = 'chung';
+    } else if (isWonjin) {
+      score -= 15;
+      title = '원진살(怨嗔煞)이 낀 애증 궁합';
+      relationType = 'wonjin';
+    } else if (isSanghae) {
+      score -= 10;
+      title = '해(害)가 있는 조율의 궁합';
+      relationType = 'sanghae';
+    } else {
+      // 일반적인 생일 차이 시드 보정
+      const dayDiff = Math.abs(Math.round((birth1.getTime() - birth2.getTime()) / 86400000)) % 11;
+      score += (dayDiff - 5); // -5 ~ +5 보정
+      relationType = 'normal';
+      if (score >= 76) title = '서로에게 은은하게 물드는 궁합';
+      else if (score <= 74) title = '서로 존중이 필요한 친구 궁합';
+      else title = '조화롭고 무난한 평탄 궁합';
+    }
+    score = Math.max(50, Math.min(100, score));
+
+    // 3. 역학 관계에 따른 영역별 설명문 구성
+    let personality = '';
+    let chemistry = '';
+    let caution = '';
+    let tip = '';
+
+    if (relationType === 'samhap') {
+      personality = `두 사람은 삼합(三合)을 이루어 성격과 가치관의 궁합이 매우 조화롭습니다. ${animal1}띠와 ${animal2}띠의 만남은 물 흐르듯 서로를 자연스럽게 이해하고 깊은 신뢰를 구축하기 가장 이상적입니다.`;
+      chemistry = `가장 강력한 인연의 기운이 작용합니다. 특별히 맞춰가려고 애쓰지 않아도 정서적인 교감이 빠르며, 두 사람이 함께 뜻을 모아 일을 도모하면 배가되는 큰 성공의 기운이 깃듭니다.`;
+      caution = `서로에 대한 편안함과 확신이 너무 큰 나머지, 역으로 무례해지거나 당연하게 생각하며 감사함을 잊어버리는 권태와 소홀함을 가장 조심하셔야 합니다.`;
+      tip = `늘 고마움을 솔직히 표현하는 말버릇을 들이고, 주말에 분위기 좋은 조용한 공간을 함께 방문하여 편안한 대화를 통해 초심을 늘 환기하는 것이 최선입니다.`;
+    } else if (relationType === 'yukhap') {
+      personality = `육합(六合)의 조화로 정서적으로 매우 끈끈한 결속력을 가집니다. 성격이 다르더라도 서로의 든든한 등받이가 되어주며 은은하면서도 깊은 소울메이트 같은 공감대가 자연스럽게 형성됩니다.`;
+      chemistry = `눈빛만 보아도 상대의 진심과 상황을 직감할 수 있을 정도로 이심전심의 영적 호흡이 잘 맞습니다. 서로의 삶에 긍정적인 자극이 되며 서로를 지지하는 에너지가 대단합니다.`;
+      caution = `상대방이 내 생각을 전부 알아줄 것이라 지레짐작하여 중요한 소통이나 말 표현을 은연중에 생략하다가 오해의 불씨를 남기는 실수를 경계해야 합니다.`;
+      tip = `아무리 가까워도 하루에 한 번씩 서로의 사소한 고민이나 일상을 나누는 따뜻한 통화나 메신저 대화를 거르지 않는 것이 소중한 관계를 지키는 길입니다.`;
+    } else if (relationType === 'chung') {
+      personality = `정반대의 방향에 위치한 띠로 충(沖)을 이루고 있습니다. 가치관과 행동 스타일이 판이하게 달라 첫눈에 강하게 끌리지만, 시간이 지날수록 부딪치는 빈도가 높아질 수 있는 관계입니다.`;
+      chemistry = `서로를 신선하게 자극하는 힘은 뛰어나지만 성격이 조급해질 때 마찰이 불꽃처럼 튀기 쉽습니다. 서로 다른 삶의 속도를 이해하기 전까지는 감정 기복이 클 수 있는 기운입니다.`;
+      caution = `서로의 주관과 의견 차이가 발생했을 때, 자신의 성향만이 옳다고 고집을 피우며 상대방의 스타일을 강압적으로 뜯어고치려 드는 지배적 태도를 금해야 합니다.`;
+      tip = `대립이 시작될 때는 말을 잠시 멈추고 3초간 숨을 고르세요. "서로 다르기 때문에 끌렸다"는 사실을 머리에 늘 되새기며 한 걸음 양보하는 훈련이 필요합니다.`;
+    } else if (relationType === 'wonjin') {
+      personality = `원진살(怨嗔煞)의 기운이 작용하여 애증의 감정이 교차할 수 있습니다. 함께 있으면 티격태격 미워하면서도, 막상 떨어져 있으면 서로의 안부가 간절해지는 묘한 성격적 자극을 지닙니다.`;
+      chemistry = `묘한 집착이나 감정적 밀당이 생기기 쉽습니다. 깊은 애정을 바탕으로 두고 있지만 오해가 생기면 겉으로 내뱉는 직설적인 가시 돋친 언행으로 서로에게 큰 상처를 주기 쉽습니다.`;
+      caution = `갈등 상황에서 옛날 일까지 끄집어내어 상대방의 약점이나 자존심을 긁는 독한 언사를 퍼붓거나 감정의 끝을 보려 드는 감정 싸움을 반드시 멈추셔야 합니다.`;
+      tip = `의견이 격해지면 즉시 각자만의 방이나 공간으로 잠시 격리하여 이성을 되찾은 뒤에 차분히 대화하세요. 화해할 때는 맛있는 음식을 함께 나누는 것이 즉효약입니다.`;
+    } else if (relationType === 'sanghae') {
+      personality = `서로에게 은근한 오해와 스트레스를 유발하기 쉬운 상해(害)의 역학에 해당합니다. 악의는 없으나 상대의 의도와 말을 오해하여 혼자서 소심하게 꽁해 있는 정서적 피로가 누적될 수 있습니다.`;
+      chemistry = `가랑비에 옷 젖듯 사소한 가치관 차이로 긴장감이 스며들기 쉽습니다. 하지만 이를 잘 조율하고 이해하기 시작하면 누구보다 꼼꼼하게 상대방의 구멍을 메워주는 건설적인 보조가 됩니다.`;
+      caution = `상대의 사소한 말 한마디를 나쁜 뜻으로 확대해석하여 혼자만의 편견의 벽을 쌓거나 뒤돌아 혼자 섭섭해하는 소극적이고 폐쇄적인 마음가짐을 자제해야 합니다.`;
+      tip = `조금이라도 오해나 서운함이 생기면 마음에 묵혀두지 말고, 그 자리에서 "아까 그 말은 혹시 이런 뜻이었어?"라고 부드럽고 가볍게 물어서 오해를 즉각 해소해야 합니다.`;
+    } else {
+      personality = `두 사람은 충이나 살이 없는 매우 무난하고 평탄한 성격 궁합을 지녔습니다. 튀는 대립도 없지만 지나친 자극도 없는, 편안하고 든든한 친구 같은 가치관을 공유합니다.`;
+      chemistry = `오래 알고 지낸 동료나 가족처럼 평화롭고 안도감이 높은 기운을 자랑합니다. 서로의 예의를 지켜주며 은은한 신뢰가 세월과 함께 대기만성형으로 굳건히 쌓이는 인연입니다.`;
+      caution = `관계가 너무 평화롭고 자극이 없다 보니 서로에게 익숙해져 설렘이나 연애 세포가 시들해지고 공기처럼 덤덤하게 대하게 되는 매너리즘을 조심해야 합니다.`;
+      tip = `가끔은 예상치 못한 깜짝 이벤트나 평소에 가보지 않았던 생소하고 이색적인 여행지를 탐방하며 서로에게 새로운 자극과 활력을 수시로 공급해 주는 노력이 큰 도움이 됩니다.`;
+    }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
