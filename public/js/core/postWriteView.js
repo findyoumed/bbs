@@ -122,7 +122,7 @@ export function createPostWriteView(deps) {
   // [LOG_ID: 20260724_0010] 본문 단계는 일반 화면의 P/S/H 힌트만으로는 줄 편집 명령(/E, /D, /I,
   // /L)을 알 수 없어, 본문 입력 중에는 이 명령들을 직접 안내하는 전용 힌트를 쓴다.
   function setBodyEditorHint() {
-    setHint('저장:/s 또는 S  취소:/q 또는 P  목록:/l  수정:/e[번호]  삭제:/d[번호]  삽입:/i[번호]');
+    setHint('저장:. 또는 /s·S  취소:/q 또는 P  목록:/l  수정:/e[번호]  삭제:/d[번호]  삽입:/i[번호]');
   }
 
   function clearPostWriteEditor() {
@@ -189,7 +189,7 @@ export function createPostWriteView(deps) {
     editor.stage = 'body';
     editor.pendingLineOp = null;
     appendTranscriptLine(editor, '');
-    appendTranscriptLine(editor, '본문을 입력하십시오. (저장 /s 또는 S, 취소 /q 또는 P/M/B)');
+    appendTranscriptLine(editor, '본문을 입력하십시오. (저장 . 또는 /s·S, 취소 /q 또는 P/M/B)');
     appendTranscriptLine(editor, '줄 수정 /e 번호, 줄 삭제 /d 번호[-번호], 줄 삽입 /i 번호, 줄 목록 /l');
     if (editor.bodyLines.length) {
       appendTranscriptLine(editor, '');
@@ -208,9 +208,12 @@ export function createPostWriteView(deps) {
     return input === '/q' || upper === 'P' || upper === 'M' || upper === 'B';
   }
 
+  // [LOG_ID: 20260724_0020] 하이텔 등 원전 PC통신 라인 에디터의 관례 — 본문 입력 중 한 줄에
+  // 마침표(.)만 찍으면 그 자리에서 글쓰기를 마친다(사용자 확인: "pc통신의 글쓰기가 그렇게
+  // 되어있던데"). "." 하나로만 이루어진 줄은 실제 본문으로 쓸 일이 거의 없어 안전하게 구분된다.
   function isSaveWriteCommand(raw) {
     const input = String(raw || '').trim();
-    return input === '/s' || input.toUpperCase() === 'S';
+    return input === '/s' || input === '.' || input.toUpperCase() === 'S';
   }
 
   // [LOG_ID: 20260724_0010] "/L", "/E 3", "/D 2-4", "/I 5" 형태의 줄 편집 명령을 인식한다.
