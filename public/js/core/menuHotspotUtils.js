@@ -1,4 +1,4 @@
-import { ANSI_COLS, ANSI_ROWS, displayWidth, isWideChar } from './ansiRenderUtils.js';
+import { ANSI_COLS, displayWidth, isWideChar } from './ansiRenderUtils.js';
 
 function findMenuLabelEnd(text, startIdx) {
   let endIdx = startIdx;
@@ -241,6 +241,13 @@ export function renderMenuHotspots(screenNode, hotspots) {
   const layer = document.createElement('div');
   layer.className = 'ansi-hotspot-layer';
   const positionedButtons = [];
+  // [LOG_ID: 20260723_2350] ANSI_ROWS(1000)는 스크롤백 버퍼 크기 상수라, 실제 화면 줄 수(보통
+  // 10~20줄)로 나누면 폴백 위치가 전부 화면 맨 위 1~2% 안에 뭉쳐버린다 — measureHotspotBounds가
+  // (레이아웃이 아직 안정되지 않은 짧은 순간 등) null을 반환해 이 폴백 경로를 타는 버튼은 실제
+  // 텍스트 위치와 무관하게 화면 상단 근처로 잘못 배치되고, 다른(정상 위치의) 버튼과 겹쳐 클릭이
+  // 엉뚱한 메뉴로 가는 원인이 될 수 있다(사용자 보고: "11. 날씨" 클릭 시 편지함으로 이동).
+  // 이 화면의 실제 줄 수로 나눠야 정상적인 대략적 위치가 나온다.
+  const fallbackRowCount = Math.max(lineNodes.length, 1);
 
   function applyBounds(button, hotspot) {
     const bounds = measureHotspotBounds(screenNode, lineNodes[hotspot.row], hotspot);
@@ -251,9 +258,9 @@ export function renderMenuHotspots(screenNode, hotspots) {
       button.style.height = `${bounds.height}px`;
     } else {
       button.style.left = `${(hotspot.startCol / ANSI_COLS) * 100}%`;
-      button.style.top = `${(hotspot.row / ANSI_ROWS) * 100}%`;
+      button.style.top = `${(hotspot.row / fallbackRowCount) * 100}%`;
       button.style.width = `${((hotspot.endCol - hotspot.startCol) / ANSI_COLS) * 100}%`;
-      button.style.height = `${(1 / ANSI_ROWS) * 100}%`;
+      button.style.height = `${(1 / fallbackRowCount) * 100}%`;
     }
   }
 

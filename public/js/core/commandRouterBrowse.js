@@ -101,47 +101,28 @@ export function createBrowseCommandHandler(deps) {
     }
 
     if (s === 'main') {
-      // [LOG_ID: 20260720_1740] 나우누리 전용 번호 매핑 통합 (테마 종속 해제)
+      // [LOG_ID: 20260723_2350] [LOG_ID: 20260720_1740]에서 도입된 나우누리 전용 번호 하드코딩
+      // (1→guide, 11→memo, 12→top, 13→chat, 16→pds)이 이후 메뉴 구조 개편(hanulso.mnu 재편)과
+      // 어긋난 채 방치돼 있었다 — 실제 door는 guide=1, memo=4, chat=6, pds=8, weather=11인데
+      // 이 하드코딩은 옛 배치를 그대로 가정해, 지금은 날씨(11)인 자리를 여전히 편지함으로
+      // 잘못 처리하고 있었다(사용자 보고: "11. 날씨" 클릭 시 "편지함은 로그인 후 사용하실 수
+      // 있습니다" 노출 — 콘솔 로그로 재현: Command 11 dispatch 후에도 화면이 안 바뀜). 1번만
+      // 우연히 현재 door와 일치해 정상으로 보였을 뿐이다. 아래 동적 해석
+      // (resolveMenuNodeTarget → executeMenuNodeAction)이 실제 메뉴 트리(door) 기준으로 이미
+      // 모든 번호를 올바르게 처리하므로, 어긋난 하드코딩 전체를 제거한다 — 게스트 편지함 접근
+      // 차단 등 기존 동작은 각 화면 함수(예: showMemoList의 ensureMemoAccess)가 이미 자체적으로
+      // 처리하므로 유지된다.
       const num = String(rawCmd || '').trim();
-      if (num === '1') {
-        if (typeof showBoardSelect === 'function') {
-          await showBoardSelect('guide', '서비스 안내');
-        }
-        return true;
-      }
-      if (num === '11') {
-        if (state.user?.isGuest) {
-          setHint('편지함은 로그인 후 사용하실 수 있습니다.');
-          setPrompt('선택 >>');
-        } else if (typeof showMemoList === 'function') {
-          state._memoBox = 'inbox';
-          await showMemoList();
-        }
-        return true;
-      }
-      if (num === '12') {
-        if (typeof showBoardSelect === 'function') {
-          await showBoardSelect('top', '게시판 목록');
-        }
-        return true;
-      }
-      if (num === '13') {
-        if (typeof showChatLobby === 'function') {
-          await showChatLobby();
-        }
-        return true;
-      }
-      if (num === '16') {
-        if (typeof showPostList === 'function') {
-          await showPostList('pds', 1, { menuPath: 'top', menuTitle: '자료실' });
-        }
-        return true;
-      }
-      // 나우누리 테마 활성화 상태인 경우에만 나머지 번호에 대해 '준비 중인 서비스' 안내 출력
+      // 나우누리 테마 활성화 상태에서, 실제 메뉴에 없는 번호는 '준비 중인 서비스' 안내를 출력한다.
       if (state.theme === 'nownuri' && /^\d+$/.test(num)) {
-        setHint('준비 중인 서비스입니다.');
-        setPrompt('선택 >>');
-        return true;
+        const visibleForNownuri = Array.isArray(state.boardMenuEntries) && state.boardMenuEntries.length
+          ? state.boardMenuEntries
+          : getMenuChildren(getMenuNodeByKey('top') || state.menuTree);
+        if (!resolveMenuNodeTarget(rawCmd, visibleForNownuri)) {
+          setHint('준비 중인 서비스입니다.');
+          setPrompt('선택 >>');
+          return true;
+        }
       }
 
       const visibleEntries = Array.isArray(state.boardMenuEntries) && state.boardMenuEntries.length
