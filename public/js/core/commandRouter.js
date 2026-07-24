@@ -109,7 +109,7 @@ export function createCommandHandler(deps) {
     if (await handleBrowseCommand({ input, rawCmd, cmd })) {
       return;
     }
-    if (await handleServiceCommand({ input, rawCmd, cmd })) {
+    if (await handleServiceCommand({ s: state.screen, input, rawCmd, cmd })) {
       return;
     }
     if (await handleChatCommand({ input, rawCmd, cmd })) {

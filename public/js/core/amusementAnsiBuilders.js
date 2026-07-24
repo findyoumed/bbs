@@ -137,11 +137,12 @@ const ZODIAC = ['쥐', '소', '호랑이', '토끼', '용', '뱀', '말', '양',
 
 // [LOG_ID: 20260719_1600] 천리안 원전(온라인 철학관: BLOOD/SAJU) 재현 — 기존 바이오리듬/오늘의운세/MBTI와
 // 동일하게 서버 데이터 없이 결정론적 알고리즘만으로 결과를 낸다.
+// [LOG: 20260724_0958] 혈액형 설명문 상세화 및 장문화
 const BLOOD_TYPES = [
-  ['A', '섬세한 계획가', '신중하고 책임감이 강하며 원칙과 질서를 중요하게 여깁니다. 장점은 성실함과 꼼꼼한 준비성이고, 단점은 지나친 걱정과 완벽주의로 스트레스를 잘 받는다는 것입니다.'],
-  ['B', '자유로운 탐구가', '호기심이 많고 자기 주관이 뚜렷하며 관심 분야에 몰입하는 힘이 강합니다. 장점은 독창성과 순발력이고, 단점은 마이페이스가 강해 주변과 부딪히기 쉽다는 것입니다.'],
-  ['O', '타고난 리더', '목표 지향적이고 사교적이며 사람들을 이끄는 힘이 있습니다. 장점은 추진력과 포용력이고, 단점은 승부욕이 강해 고집스러워 보일 수 있다는 것입니다.'],
-  ['AB', '이중적인 예술가', '이성과 감성을 오가며 다면적인 매력을 지닌 분석가입니다. 장점은 균형감각과 통찰력이고, 단점은 속마음을 잘 드러내지 않아 오해를 사기 쉽다는 것입니다.']
+  ['A', '섬세한 계획가', '신중하고 책임감이 대단히 강하며 자신이 속한 사회적 공동체의 원칙과 질서를 무엇보다 중요하게 여깁니다. 상대방을 배려하는 마음이 극진하여 타인에게 폐를 끼치는 행동을 극도로 경계하며, 언제나 성실하고 꼼꼼한 태도로 일처리를 완벽하게 준비하는 탁월한 장점을 가지고 있습니다. 그러나 한편으로는 주변의 평판이나 시선에 지나치게 신경을 쓴 나머지 과도한 걱정과 스트레스를 사서 받는 편이며, 내면의 자그마한 고민조차 혼자서 속으로 앓다가 완벽주의 성향에 가로막혀 마음의 여유를 잃어버리는 단점이 있습니다. 대인관계에서는 겉으로 묵묵해 보여도 속 깊은 신뢰를 나누는 단단한 동반자 스타일입니다.'],
+  ['B', '자유로운 탐구가', '호기심과 탐구 정신이 엄청나게 풍부하고 자기 주관과 개성이 매우 뚜렷하여 자신이 관심을 둔 특정 분야에 고도로 몰입하는 집중력이 타의 추종을 불허합니다. 매사 독창적이고 참신한 아이디어를 끊임없이 내놓으며 위기 상황이나 급작스러운 변화 앞에서도 탁월한 순발력으로 임기응변을 해내는 뛰어난 장점을 가집니다. 다만, 구속이나 간섭을 극도로 싫어하는 성향 탓에 규칙과 매뉴얼에 얽매이는 것을 견디지 못하고 마이페이스로 행동하기 쉽습니다. 이로 인해 주변 사람들과 의도치 않게 부딪히거나 차갑고 제멋대로라는 오해를 사기 쉬우며, 감정 기복이 다소 뚜렷해 계획을 끝까지 밀어붙이는 끈기가 부족하다는 아쉬운 점이 있습니다.'],
+  ['O', '타고난 리더', '매우 목표 지향적이며 열정적이고 사교성이 넘쳐나 어느 모임에서든 자연스럽게 사람들을 포용하고 리드하는 강직한 에너지를 지니고 있습니다. 난관 앞에서도 주눅 들지 않는 강력한 추진력과 긍정적인 현실 감각을 지녔으며, 대범하게 사람들의 마음을 하나로 모으는 넉살과 뛰어난 친화력을 보여주는 것이 최고의 장점입니다. 하지만 승부욕과 독점욕이 지나치게 강한 편이라 누군가와 대립할 때 자신의 주장을 절대 굽히지 않는 고집스러움을 드러내어 독선적이라는 평판을 얻을 위험이 있습니다. 또한 내면이 외향적인 겉모습과 달리 은근히 외로움을 잘 타고 사람들의 정서적 지지에 매우 굶주려 있는 감성적인 면모도 숨겨져 있습니다.'],
+  ['AB', '이중적인 예술가', '매사 합리적인 이성과 풍부한 감수성을 자유롭게 넘나들며 사물의 이면을 정확히 짚어내는 뛰어난 분석가이자 다면적인 지성을 지닌 독특한 매력의 소유자입니다. 냉철하고 객관적인 태도로 갈등을 조율하는 평온한 균형감각과 남들이 보지 못하는 사건의 본질을 꿰뚫어 보는 통찰력이 대단히 훌륭합니다. 그러나 한편으로는 사생활이나 개인적 영역의 침범을 완벽히 경계하는 강력한 개인주의 성향을 가지고 있어서, 자신의 진짜 속마음을 타인에게 절대 드러내지 않고 사적인 선을 긋는 탓에 주변인들로부터 차갑고 이중적인 인물이라는 오해를 흔히 사기도 합니다. 인간관계에서 겉으로는 깍듯하고 친절하지만 깊은 속정은 소수의 신뢰하는 사람에게만 한정하여 나누는 편입니다.']
 ];
 const COMPAT_DETAILS = [
   [
@@ -447,18 +448,63 @@ export function createAmusementAnsiBuilders(deps) {
   }
   
   function buildFortuneIntroAnsi() {
-    return [buildTopHeader(['오락실', '오늘의 운세']), c(15, '  태어난 해의 띠와 오늘의 일진을 풀어 운세를 봅니다.'), c(8, '  십이지의 삼합·육합·육충·육해 관계를 사용합니다.'), '', c(14, '  태어난 연도(4자리)를 입력하세요.'), c(11, '  입력 예) 1990')].join('\n');
+    return [buildTopHeader(['오락실', '오늘의 운세']), c(15, '  태어난 해의 띠와 오늘의 일진을 풀어 운세를 봅니다.'), c(8, '  십이지의 삼합·육합·육충·육해 관계를 사용합니다.'), '', c(14, '  생년월일(8자리)을 입력하세요.'), c(11, '  입력 예) 19900101')].join('\n');
   }
-  function buildFortuneAnsi(year, target = new Date()) {
+  // [LOG: 20260724_0948] 생년월일 날짜 객체 기반 및 십이지 합충 역학 알고리즘 적용
+  function buildFortuneAnsi(birthDate, target = new Date()) {
+    const year = birthDate.getFullYear();
+    const month = birthDate.getMonth() + 1;
+    const day = birthDate.getDate();
+
     const animal = ZODIAC[((year - 4) % 12 + 12) % 12];
-    // [LOG_ID: 20260723_1116] 태어난 해(띠) + 오늘 일진(60갑자) 기반의 정밀 운세 알고리즘
-    const yearZodiacIdx = ((year - 4) % 12 + 12) % 12;
+    const yearZodiacIdx = ((year - 4) % 12 + 12) % 12; // 띠 지지 인덱스 (0~11)
     const dayGanjiIdx = getDayGanjiIndex(target);
     const dayGanjiStr = ganjiText(dayGanjiIdx);
+    const dayJijiIdx = dayGanjiIdx % 12; // 오늘의 지지 인덱스 (0~11)
 
-    // 항목별 고유 소수 가중치를 적용하여 각 운세별 점수가 더욱 다채롭게 분산되도록 함 (1~5점)
+    // 동양 역학(삼합, 육합, 육충, 육해) 분석
+    // 1) 육합: 자축(0-1), 인해(2-11), 묘술(3-10), 진유(4-9), 사신(5-8), 오미(6-7)
+    const isYukHap = (
+      (yearZodiacIdx === 0 && dayJijiIdx === 1) || (yearZodiacIdx === 1 && dayJijiIdx === 0) ||
+      (yearZodiacIdx === 2 && dayJijiIdx === 11) || (yearZodiacIdx === 11 && dayJijiIdx === 2) ||
+      (yearZodiacIdx === 3 && dayJijiIdx === 10) || (yearZodiacIdx === 10 && dayJijiIdx === 3) ||
+      (yearZodiacIdx === 4 && dayJijiIdx === 9) || (yearZodiacIdx === 9 && dayJijiIdx === 4) ||
+      (yearZodiacIdx === 5 && dayJijiIdx === 8) || (yearZodiacIdx === 8 && dayJijiIdx === 5) ||
+      (yearZodiacIdx === 6 && dayJijiIdx === 7) || (yearZodiacIdx === 7 && dayJijiIdx === 6)
+    );
+
+    // 2) 삼합: 4칸 또는 8칸 차이
+    const isSamHap = (Math.abs(yearZodiacIdx - dayJijiIdx) === 4 || Math.abs(yearZodiacIdx - dayJijiIdx) === 8);
+
+    // 3) 육충: 정확히 6칸 차이
+    const isYukChung = (Math.abs(yearZodiacIdx - dayJijiIdx) === 6);
+
+    // 4) 육해: 자미(0-7), 축오(1-6), 인사(2-5), 묘진(3-4), 신해(8-11), 유술(9-10)
+    const isYukHae = (
+      (yearZodiacIdx === 0 && dayJijiIdx === 7) || (yearZodiacIdx === 7 && dayJijiIdx === 0) ||
+      (yearZodiacIdx === 1 && dayJijiIdx === 6) || (yearZodiacIdx === 6 && dayJijiIdx === 1) ||
+      (yearZodiacIdx === 2 && dayJijiIdx === 5) || (yearZodiacIdx === 5 && dayJijiIdx === 2) ||
+      (yearZodiacIdx === 3 && dayJijiIdx === 4) || (yearZodiacIdx === 4 && dayJijiIdx === 3) ||
+      (yearZodiacIdx === 8 && dayJijiIdx === 11) || (yearZodiacIdx === 11 && dayJijiIdx === 8) ||
+      (yearZodiacIdx === 9 && dayJijiIdx === 10) || (yearZodiacIdx === 10 && dayJijiIdx === 9)
+    );
+
+    // 기본 무난한 점수 3점에서 시작하여 띠-일진 궁합에 따라 1차 보정
+    let baseFortuneScore = 3;
+    if (isYukHap) baseFortuneScore += 2;
+    else if (isSamHap) baseFortuneScore += 1;
+    if (isYukChung) baseFortuneScore -= 2;
+    else if (isYukHae) baseFortuneScore -= 1;
+
+    // 각 항목별(총운, 애정운, 금전운, 건강운)로 태어난 월, 일의 정보와 고유 소수 가중치를 결합해
+    // 점수를 다채롭게 분산시킴 (1~5점)
     const itemMultipliers = [7, 13, 19, 23];
-    const scores = itemMultipliers.map((mult) => 1 + ((yearZodiacIdx * mult + dayGanjiIdx * 3 + mult) % 5));
+    const scores = itemMultipliers.map((mult, index) => {
+      const variant = (month + day + index) * mult + dayGanjiIdx;
+      const offset = (variant % 3) - 1; // -1, 0, 1 중 하나
+      let score = baseFortuneScore + offset;
+      return Math.max(1, Math.min(5, score));
+    });
 
     // 풍부한 15종 운세 문구 풀 (점수대별 맞춤 문구 제공)
     const messagePool = [
@@ -490,13 +536,13 @@ export function createAmusementAnsiBuilders(deps) {
 
     const getMessage = (score, itemIdx) => {
       let poolIdx = score <= 2 ? 0 : score === 3 ? 1 : score === 4 ? 2 : 3;
-      const subIdx = (yearZodiacIdx + dayGanjiIdx + itemIdx) % messagePool[poolIdx].length;
+      const subIdx = (yearZodiacIdx + month + day + dayGanjiIdx + itemIdx) % messagePool[poolIdx].length;
       return messagePool[poolIdx][subIdx];
     };
 
     const parts = [
       buildTopHeader(['오락실', '오늘의 운세']),
-      c(11, `${ANSI_BOLD}  ${year}년생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${dateText(target)} (오늘의 일진: ${dayGanjiStr}일)${ANSI_RESET}`),
+      c(11, `${ANSI_BOLD}  ${year}년생 ${animal}띠 (${month}월 ${day}일생)${ANSI_RESET}  ${ansiColor(8)}${dateText(target)} (오늘의 일진: ${dayGanjiStr}일)${ANSI_RESET}`),
       ''
     ];
 
@@ -733,14 +779,102 @@ function calculateMbtiFromAnswers(answers) {
     const animal1 = ZODIAC[((birth1.getFullYear() - 4) % 12 + 12) % 12];
     return [buildTopHeader(['오락실', '궁합']), c(11, `${ANSI_BOLD}  ${dateText(birth1)}생 ${animal1}띠${ANSI_RESET}`), '', c(14, '  두 번째 사람의 생년월일을 입력하세요.'), c(11, '  입력 예) 1995-05-05 또는 19950505')].join('\n');
   }
+  // [LOG: 20260724_1004] 세로 스크롤바 방지를 위한 문단 간 빈 줄 압축 적용
+  // [LOG: 20260724_1006] 실제 십이지(띠) 합·충·살 역학을 계산하는 정밀 궁합 연산 알고리즘 도입
   function buildCompatAnsi(birth1, birth2) {
-    const animal1 = ZODIAC[((birth1.getFullYear() - 4) % 12 + 12) % 12];
-    const animal2 = ZODIAC[((birth2.getFullYear() - 4) % 12 + 12) % 12];
-    const seed = Math.abs(Math.round((birth1.getTime() - birth2.getTime()) / 86400000)) % 41;
-    const score = 60 + seed;
+    const idx1 = ((birth1.getFullYear() - 4) % 12 + 12) % 12;
+    const idx2 = ((birth2.getFullYear() - 4) % 12 + 12) % 12;
+    const animal1 = ZODIAC[idx1];
+    const animal2 = ZODIAC[idx2];
 
-    const detailIdx = seed % COMPAT_DETAILS.length;
-    const [title, personality, chemistry, caution, tip] = COMPAT_DETAILS[detailIdx];
+    // 1. 역학 관계 계산
+    // 삼합 (4칸 또는 8칸 차이)
+    const diff = Math.abs(idx1 - idx2);
+    const isSamhap = (diff === 4 || diff === 8);
+    // 육합 (자축0-1, 인해2-11, 묘술3-10, 진유4-9, 사신5-8, 오미6-7 등 합이 11 혹은 23인 관계)
+    const isYukhap = ((idx1 + idx2) === 11 || (idx1 + idx2) === 23 || (idx1 === 0 && idx2 === 1) || (idx1 === 1 && idx2 === 0));
+    // 육충 (6칸 차이)
+    const isChung = (diff === 6);
+    // 원진살 (자미0-7, 축오1-6, 인유2-9, 묘신3-8, 진해4-11, 사술5-10)
+    const wonjinPairs = [[0,7],[7,0],[1,6],[6,1],[2,9],[9,2],[3,8],[8,3],[4,11],[11,4],[5,10],[10,5]];
+    const isWonjin = wonjinPairs.some(([a, b]) => idx1 === a && idx2 === b);
+    // 상해살 (자미0-7, 축오1-6, 인사2-5, 묘진3-4, 신해8-11, 유술9-10)
+    const sanghaePairs = [[0,7],[7,0],[1,6],[6,1],[2,5],[5,2],[3,4],[4,3],[8,11],[11,8],[9,10],[10,9]];
+    const isSanghae = sanghaePairs.some(([a, b]) => idx1 === a && idx2 === b);
+
+    // 2. 점수 산출
+    let score = 75; // 기본 점수
+    let title = '서로 노력이 필요한 궁합';
+    let relationType = 'normal';
+
+    if (isSamhap) {
+      score += 20;
+      title = '삼합(三合)의 천생연분 궁합';
+      relationType = 'samhap';
+    } else if (isYukhap) {
+      score += 15;
+      title = '육합(六合)의 이심전심 궁합';
+      relationType = 'yukhap';
+    } else if (isChung) {
+      score -= 20;
+      title = '충(沖)이 있어 마찰하는 궁합';
+      relationType = 'chung';
+    } else if (isWonjin) {
+      score -= 15;
+      title = '원진살(怨嗔煞)이 낀 애증 궁합';
+      relationType = 'wonjin';
+    } else if (isSanghae) {
+      score -= 10;
+      title = '해(害)가 있는 조율의 궁합';
+      relationType = 'sanghae';
+    } else {
+      // 일반적인 생일 차이 시드 보정
+      const dayDiff = Math.abs(Math.round((birth1.getTime() - birth2.getTime()) / 86400000)) % 11;
+      score += (dayDiff - 5); // -5 ~ +5 보정
+      relationType = 'normal';
+      if (score >= 76) title = '서로에게 은은하게 물드는 궁합';
+      else if (score <= 74) title = '서로 존중이 필요한 친구 궁합';
+      else title = '조화롭고 무난한 평탄 궁합';
+    }
+    score = Math.max(50, Math.min(100, score));
+
+    // 3. 역학 관계에 따른 영역별 설명문 구성
+    let personality = '';
+    let chemistry = '';
+    let caution = '';
+    let tip = '';
+
+    if (relationType === 'samhap') {
+      personality = `두 사람은 삼합(三合)을 이루어 성격과 가치관의 궁합이 매우 조화롭습니다. ${animal1}띠와 ${animal2}띠의 만남은 물 흐르듯 서로를 자연스럽게 이해하고 깊은 신뢰를 구축하기 가장 이상적입니다.`;
+      chemistry = `가장 강력한 인연의 기운이 작용합니다. 특별히 맞춰가려고 애쓰지 않아도 정서적인 교감이 빠르며, 두 사람이 함께 뜻을 모아 일을 도모하면 배가되는 큰 성공의 기운이 깃듭니다.`;
+      caution = `서로에 대한 편안함과 확신이 너무 큰 나머지, 역으로 무례해지거나 당연하게 생각하며 감사함을 잊어버리는 권태와 소홀함을 가장 조심하셔야 합니다.`;
+      tip = `늘 고마움을 솔직히 표현하는 말버릇을 들이고, 주말에 분위기 좋은 조용한 공간을 함께 방문하여 편안한 대화를 통해 초심을 늘 환기하는 것이 최선입니다.`;
+    } else if (relationType === 'yukhap') {
+      personality = `육합(六合)의 조화로 정서적으로 매우 끈끈한 결속력을 가집니다. 성격이 다르더라도 서로의 든든한 등받이가 되어주며 은은하면서도 깊은 소울메이트 같은 공감대가 자연스럽게 형성됩니다.`;
+      chemistry = `눈빛만 보아도 상대의 진심과 상황을 직감할 수 있을 정도로 이심전심의 영적 호흡이 잘 맞습니다. 서로의 삶에 긍정적인 자극이 되며 서로를 지지하는 에너지가 대단합니다.`;
+      caution = `상대방이 내 생각을 전부 알아줄 것이라 지레짐작하여 중요한 소통이나 말 표현을 은연중에 생략하다가 오해의 불씨를 남기는 실수를 경계해야 합니다.`;
+      tip = `아무리 가까워도 하루에 한 번씩 서로의 사소한 고민이나 일상을 나누는 따뜻한 통화나 메신저 대화를 거르지 않는 것이 소중한 관계를 지키는 길입니다.`;
+    } else if (relationType === 'chung') {
+      personality = `정반대의 방향에 위치한 띠로 충(沖)을 이루고 있습니다. 가치관과 행동 스타일이 판이하게 달라 첫눈에 강하게 끌리지만, 시간이 지날수록 부딪치는 빈도가 높아질 수 있는 관계입니다.`;
+      chemistry = `서로를 신선하게 자극하는 힘은 뛰어나지만 성격이 조급해질 때 마찰이 불꽃처럼 튀기 쉽습니다. 서로 다른 삶의 속도를 이해하기 전까지는 감정 기복이 클 수 있는 기운입니다.`;
+      caution = `서로의 주관과 의견 차이가 발생했을 때, 자신의 성향만이 옳다고 고집을 피우며 상대방의 스타일을 강압적으로 뜯어고치려 드는 지배적 태도를 금해야 합니다.`;
+      tip = `대립이 시작될 때는 말을 잠시 멈추고 3초간 숨을 고르세요. "서로 다르기 때문에 끌렸다"는 사실을 머리에 늘 되새기며 한 걸음 양보하는 훈련이 필요합니다.`;
+    } else if (relationType === 'wonjin') {
+      personality = `원진살(怨嗔煞)의 기운이 작용하여 애증의 감정이 교차할 수 있습니다. 함께 있으면 티격태격 미워하면서도, 막상 떨어져 있으면 서로의 안부가 간절해지는 묘한 성격적 자극을 지닙니다.`;
+      chemistry = `묘한 집착이나 감정적 밀당이 생기기 쉽습니다. 깊은 애정을 바탕으로 두고 있지만 오해가 생기면 겉으로 내뱉는 직설적인 가시 돋친 언행으로 서로에게 큰 상처를 주기 쉽습니다.`;
+      caution = `갈등 상황에서 옛날 일까지 끄집어내어 상대방의 약점이나 자존심을 긁는 독한 언사를 퍼붓거나 감정의 끝을 보려 드는 감정 싸움을 반드시 멈추셔야 합니다.`;
+      tip = `의견이 격해지면 즉시 각자만의 방이나 공간으로 잠시 격리하여 이성을 되찾은 뒤에 차분히 대화하세요. 화해할 때는 맛있는 음식을 함께 나누는 것이 즉효약입니다.`;
+    } else if (relationType === 'sanghae') {
+      personality = `서로에게 은근한 오해와 스트레스를 유발하기 쉬운 상해(害)의 역학에 해당합니다. 악의는 없으나 상대의 의도와 말을 오해하여 혼자서 소심하게 꽁해 있는 정서적 피로가 누적될 수 있습니다.`;
+      chemistry = `가랑비에 옷 젖듯 사소한 가치관 차이로 긴장감이 스며들기 쉽습니다. 하지만 이를 잘 조율하고 이해하기 시작하면 누구보다 꼼꼼하게 상대방의 구멍을 메워주는 건설적인 보조가 됩니다.`;
+      caution = `상대의 사소한 말 한마디를 나쁜 뜻으로 확대해석하여 혼자만의 편견의 벽을 쌓거나 뒤돌아 혼자 섭섭해하는 소극적이고 폐쇄적인 마음가짐을 자제해야 합니다.`;
+      tip = `조금이라도 오해나 서운함이 생기면 마음에 묵혀두지 말고, 그 자리에서 "아까 그 말은 혹시 이런 뜻이었어?"라고 부드럽고 가볍게 물어서 오해를 즉각 해소해야 합니다.`;
+    } else {
+      personality = `두 사람은 충이나 살이 없는 매우 무난하고 평탄한 성격 궁합을 지녔습니다. 튀는 대립도 없지만 지나친 자극도 없는, 편안하고 든든한 친구 같은 가치관을 공유합니다.`;
+      chemistry = `오래 알고 지낸 동료나 가족처럼 평화롭고 안도감이 높은 기운을 자랑합니다. 서로의 예의를 지켜주며 은은한 신뢰가 세월과 함께 대기만성형으로 굳건히 쌓이는 인연입니다.`;
+      caution = `관계가 너무 평화롭고 자극이 없다 보니 서로에게 익숙해져 설렘이나 연애 세포가 시들해지고 공기처럼 덤덤하게 대하게 되는 매너리즘을 조심해야 합니다.`;
+      tip = `가끔은 예상치 못한 깜짝 이벤트나 평소에 가보지 않았던 생소하고 이색적인 여행지를 탐방하며 서로에게 새로운 자극과 활력을 수시로 공급해 주는 노력이 큰 도움이 됩니다.`;
+    }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -757,15 +891,12 @@ function calculateMbtiFromAnswers(answers) {
     ];
 
     wrapAnsiText(personality, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
-    parts.push('');
 
     parts.push(c(11, '  [ 연애 & 인연 기운 ]'));
     wrapAnsiText(chemistry, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
-    parts.push('');
 
     parts.push(c(13, '  [ 다툼 예방 & 주의할 점 ]'));
     wrapAnsiText(caution, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
-    parts.push('');
 
     parts.push(c(10, '  [ 관계를 위한 황금 팁 ]'));
     wrapAnsiText(tip, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
@@ -776,23 +907,105 @@ function calculateMbtiFromAnswers(answers) {
   function buildTojeongIntroAnsi() {
     return [buildTopHeader(['오락실', '토정비결']), c(15, '  생년월일로 올해 열두 달의 운세를 풀어봅니다.'), '', c(14, '  생년월일을 입력하세요.'), c(11, '  입력 예) 1990-01-01 또는 19900101')].join('\n');
   }
-  // [LOG: 20260723_1652] 월 뒤에 공백 1칸 추가하여 띄어쓰기 개선
+  // [LOG: 20260724_1009] 정통 토정비결 조견상수 및 한국식 세는나이 작괘공식 반영
   function buildTojeongAnsi(birth, target = new Date()) {
     const animal = ZODIAC[((birth.getFullYear() - 4) % 12 + 12) % 12];
     const year = target.getFullYear();
-    // [LOG_ID: 20260719_2300] 임의 해시 대신 태어난 해와 보는 해의 실제 연주(年柱, 60갑자)를
-    // 시드로 쓴다 — 사용자 요청("토정비결도 정확하게"). TOJEONG_MESSAGES가 정확히 12개라
-    // (personYearSeed + month - 1) % 12는 1~12월에 서로 다른 문구를 하나씩 배정하는 전단사라,
-    // 같은 사람·같은 해 안에서는 두 달이 같은 문구를 받는 일이 없다(이전엔 8개 문구로 4개월이 겹쳤다).
+
     const birthGanjiIdx = getYearGanjiIndex(birth.getFullYear());
     const targetGanjiIdx = getYearGanjiIndex(year);
+
+    // 1. 3자리 괘 생성 (상괘 1~8, 중괘 1~6, 하괘 1~3)
+    const birthYear = birth.getFullYear();
+    const birthMonth = birth.getMonth() + 1;
+    const birthDay = birth.getDate();
+
+    const GAN_CONSTANTS = [9, 8, 7, 6, 5, 9, 8, 7, 6, 5]; // 甲(9) ~ 癸(5)
+    const JI_CONSTANTS = [9, 8, 7, 6, 5, 9, 8, 7, 6, 5, 9, 8]; // 子(9) ~ 亥(8)
+
+    const birthGan = birthGanjiIdx % 10;
+    const targetGan = targetGanjiIdx % 10;
+    const targetJi = targetGanjiIdx % 12;
+
+    const age = year - birthYear + 1; // 한국식 세는나이
+
+    const sangSum = GAN_CONSTANTS[targetGan] + GAN_CONSTANTS[birthGan] + age;
+    const sang = (sangSum % 8) || 8;
+
+    const jungSum = birthMonth + JI_CONSTANTS[targetJi];
+    const jung = (jungSum % 6) || 6;
+
+    const yearOffset = (targetGanjiIdx % 3) + 1;
+    const haSum = birthDay + yearOffset;
+    const ha = (haSum % 3) || 3;
+
+    const gwaNo = `${sang}${jung}${ha}`;
+    const sangNames = ['천(天)', '지(地)', '수(水)', '화(火)', '풍(風)', '뢰(雷)', '산(山)', '택(澤)'];
+    const jungNames = ['인(人)', '의(義)', '예(禮)', '지(智)', '신(信)', '화(和)'];
+    const haNames = ['일(日)', '월(月)', '성(星)'];
+    const gwaName = `${sangNames[sang - 1]}${jungNames[jung - 1]}${haNames[ha - 1]} 괘`;
+
+    // 2. 괘에 따른 총론 조립
+    const introSubjects = [
+      '만물에 따스한 봄바람이 불어와 푸른 새싹이 돋아나듯',
+      '깊은 어둠 속에서 마침내 앞을 밝히는 등불을 얻은 격이니',
+      '영험한 용이 여의주를 얻어 비구름을 뚫고 솟구치듯',
+      '가문 땅에 촉촉한 단비가 내려 백곡이 스스로 윤택해지듯',
+      '험준한 산맥을 벗어나 사방이 탁 트인 넓은 길로 달려가듯',
+      '도도히 흐르던 물결이 마침내 드넓은 대양에 이르러 품을 넓히듯',
+      '차가운 서리 속에 고고히 피어난 매화가 향기를 뿜어내듯',
+      '높은 지덕을 지닌 귀인이 문 밖에서 서성이며 길을 안내하듯'
+    ];
+    const introVerbs = [
+      '그동안 막혀있던 재물과 신수가 활짝 열리며 경사가 끊이지 않는 상서로운 해입니다.',
+      '뜻밖의 귀인과 동료의 긴밀한 도움으로 도모하는 큰 계획을 마침내 성취할 대길한 기회입니다.',
+      '다소 간의 험난함이 있어도 흔들리지 않는 굳건한 노력으로 끝내 큰 안정을 일구어 냅니다.',
+      '과도한 욕심을 부리지 않고 정직하게 순리를 따르면 명예와 풍요가 스스로 따르게 됩니다.',
+      '초반에는 곤고한 기운이 돌겠으나, 하반기부터 인덕이 만발하여 평안함을 찾게 될 운세입니다.',
+      '공연한 시비와 타인의 구설을 지혜롭게 피하여 내실을 다지면 무탈하고 안전한 형국입니다.',
+      '멀리 이동하거나 새로운 변화를 꾀하는 기운이 대단히 길하니 용기 있게 나아가면 유익합니다.',
+      '가정의 결속을 단단히 하고 심신을 차분히 돌보면 근심이 가시고 안락한 세월이 지속됩니다.'
+    ];
+    const introText = `[총론] ${introSubjects[(sang + jung) % 8]} ${introVerbs[(jung + ha) % 8]}`;
+
+    // 3. 월별 운세 조립 데이터 정의
+    const monthSubjects = [
+      '뜻밖의 재물과 실리가', '가까운 동반자와의 단단한 신뢰가', '추진하는 창의적인 계획이', '신체와 심신의 편안한 안정이',
+      '집안 내부의 화합과 풍요가', '소속된 곳에서의 눈부신 결과가', '어려울 때 돕는 고마운 인연의 손길이', '오랜 시간 염원해 온 바람이',
+      '주변 지인과의 원활한 소통과 우정이', '기대했던 경제적 이권과 계약이', '새로이 시도하려는 크고 작은 이동이', '가슴 한구석을 짓누르던 근심이'
+    ];
+    const monthVerbs = [
+      '아무런 장애 없이 순탄하게 풀려나가며 가정과 생활이 안락합니다.',
+      '적재적소에서 찾아오는 귀인의 조력으로 보다 크고 화려하게 피어납니다.',
+      '스스로 기울인 정직한 땀방울보다 훨씬 더 풍성한 알곡을 맺어 냅니다.',
+      '공연한 마찰이나 타인의 불필요한 시비를 경계해야 화를 피할 수 있습니다.',
+      '허황된 과욕을 부려 함정에 빠지지 않고 제 자리를 지키는 것이 최고입니다.',
+      '생각지 못한 마찰이 예상되니 부드럽고 정중한 말씨로 대응하셔야 이롭니다.',
+      '봄눈이 햇살에 씻기듯 흔적도 없이 완전히 해소되어 평화가 찾아옵니다.',
+      '자연스러운 순리에 맡겨 두고 서둘러 억지로 채우려 들지 마십시오.'
+    ];
+
     const targetGanjiStr = ganjiText(targetGanjiIdx);
-    const personYearSeed = (birthGanjiIdx + targetGanjiIdx) % TOJEONG_MESSAGES.length;
-    const parts = [buildTopHeader(['오락실', '토정비결']), c(11, `${ANSI_BOLD}  ${dateText(birth)}생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${year}년(${targetGanjiStr}년) 신수${ANSI_RESET}`), ''];
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+
+    const parts = [
+      buildTopHeader(['오락실', '토정비결']),
+      c(11, `${ANSI_BOLD}  ${dateText(birth)}생 ${animal}띠${ANSI_RESET}  ${ansiColor(8)}${year}년(${targetGanjiStr}년) 신수${ANSI_RESET}`),
+      c(14, `  [ 신수 괘: 제 ${gwaNo}괘 - ${gwaName} ]`),
+      c(15, `  ${introText}`),
+      c(8, `  ${'─'.repeat(targetCols - 4)}`),
+      ''
+    ];
+
     for (let month = 1; month <= 12; month += 1) {
-      const seed = (personYearSeed + month - 1) % TOJEONG_MESSAGES.length;
-      parts.push(`  ${c(14, fitCell(`${String(month).padStart(2, ' ')}월`, 4))} ${c(15, TOJEONG_MESSAGES[seed])}`);
+      const subIdx = (sang + jung + month) % 12;
+      const verbIdx = (jung + ha + month) % 8;
+      const text = `${monthSubjects[subIdx]} ${monthVerbs[verbIdx]}`;
+      parts.push(`  ${c(11, fitCell(`${String(month).padStart(2, ' ')}월`, 4))} ${c(15, text)}`);
     }
+
     return parts.join('\n');
   }
 

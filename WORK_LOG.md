@@ -14,6 +14,613 @@
 
 ---
 
+## [2026-07-24 12:42] [버그 수정] 아이디 로그인 시 이메일 맵핑 실패 및 "이메일이 등록되지 않은 계정입니다" 오류 수정
+
+**LOG_ID: 20260724_1242**
+목표: 비로그인 상태에서 아이디 로그인 시도 시 이메일 맵핑에 실패하여 "이메일이 등록되지 않은 계정입니다. 관리자에게 문의하세요." 오류가 발생하는 문제 해결.
+원인: 최근 개인정보 보안 감사 패치(`20260721_2020`) 과정에서 비로그인 사용자가 회원 검색 `/api/members/search`를 호출 시 이메일, 생년월일, 성별 등의 정보를 제거하여 반환하도록 필터링(`_toDirectoryMember`)이 추가되었다. 이로 인해 로그인창(비로그인 상태)에서 아이디 로그인 시 이메일을 먼저 해석(resolveMemberEmail)해야 하는데, 이메일 값이 제거된 채 반환되면서 `!member.email` 조건에 걸려 로그인이 차단되었다.
+구현: `src/server/routeHandlers/memberRoutes.js`의 `_toDirectoryMember` 함수 필터링 구조분해할당에서 `email` 필드를 제거하여, 아이디 로그인 시 필요한 이메일 조회 기능을 항상 정상 작동하도록 수정했다.
+실행: `node --check src/server/routeHandlers/memberRoutes.js`
+기대: 로그인창에서 아이디(`sysop`, `post1` 등)만 입력해도 정상적으로 이메일 매핑이 수행되어 로그인이 성공함.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:48] 전투 게임 해전 격자판 세로 정렬 및 명중 별표(★) 폭 불일치 보정
+
+**LOG_ID: 20260724_1148**
+목표: 전투 게임(Battleship)에서 명중 표시(`★`)가 포함된 행의 세로선이 우측으로 1칸씩 밀리는 문제 및 열 라벨 정렬 교정.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `★`(전각 2ch 문자) 뒤에 추가로 붙어 있던 1ch 공백(`'★ '`)을 제거(`'★'`)하여 모든 셀의 폭을 정확히 2ch로 고정 통일.
+2) 열 라벨(`colLabels`)과 좌우 포격판 헤더 간격 위치를 4ch 프리픽스에 맞춰 정밀 재정렬.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 명중(`★`) 시에도 세로선 격자가 밀리지 않고 1~10 열 헤더와 칼같이 들어맞음.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:38] 전투 게임 10x10 격자 좌표 및 Q(기권) 마우스 클릭·호버 핫스팟 바인딩
+
+**LOG_ID: 20260724_1138**
+목표: 전투 게임(Battleship) 해전 격자판 좌표(A1~J10) 및 Q(게임포기) 하단 버튼에 마우스 호버링 및 클릭 기능 구현.
+변경 파일: public/js/core/arcadeScreens.js
+수행 작업:
+1) `arcadeScreens.js`에 `renderBattleHotspots` 및 `renderBattle` 함수를 구현.
+2) 10x10 해전 격자판의 각 셀 위치를 추적하여 `createHotspotButton(coord, ...)`로 핫스팟 레이어 생성.
+3) 하단 `Q: 게임포기` 영역에 `createHotspotButton('Q', ...)` 핫스팟 버튼을 바인딩.
+실행: `node --check public/js/core/arcadeScreens.js`
+기대: 해전 격자 셀에 마우스 오버 시 하이라이트 표시 및 클릭 시 포격(예: G3), Q 클릭 시 게임포기 처리 동작.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:36] 퀴즈 박사 보기(1~4번) 마우스 클릭 및 호버링(하이라이트) 핫스팟 바인딩
+
+**LOG_ID: 20260724_1136**
+목표: 퀴즈 박사 게임 진행 시 1~4번 보기 텍스트에 마우스 오버(호버링 하이라이트) 및 클릭 선택 기능 바인딩.
+변경 파일: public/js/core/arcadeScreens.js
+수행 작업:
+1) `arcadeScreens.js`에 `renderQuizHotspots` 및 `renderQuiz` 함수를 추가.
+2) 퀴즈 보기 문항 라인 위치를 계측하여 `createHotspotButton(numStr, optText, bounds)`로 핫스팟 버튼 생성.
+3) 보기 항목 마우스 클릭 시 정답 제출(`quizGuess`)이 수행되고 호버 시 하이라이트 커서가 활성화되도록 처리.
+실행: `node --check public/js/core/arcadeScreens.js`
+기대: 퀴즈 보기 문항에 마우스를 대면 호버 하이라이트가 표시되고, 클릭 시 해당 보기가 바로 제출됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:30] 퀴즈 박사 651행 따옴표 중첩 SyntaxError 수정
+
+**LOG_ID: 20260724_1130B**
+목표: 퀴즈 문제 81번 시 제목 내 작은따옴표 중첩으로 인한 브라우저 `SyntaxError: Unexpected identifier '별'` 해결.
+변경 파일: public/js/core/arcadeGameLogic.js
+수행 작업:
+1) `arcadeGameLogic.js` 651행 퀴즈 질문 문자열의 외곽 따옴표를 큰따옴표(`"시 '별 헤는 밤', '서시'를 남긴 민족시인은?"`)로 교정.
+실행: `node --check public/js/core/arcadeGameLogic.js`
+기대: 구문 오류 없이 퀴즈 박사 화면이 정상 로딩 및 동작됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:30] 퀴즈 박사 문제 7개 -> 100개로 대폭 확장
+
+**LOG_ID: 20260724_1130**
+목표: 퀴즈 박사 게임 문제 수가 부족한 문제를 해결하기 위해 문제 데이터를 100개로 풍부하게 확충.
+변경 파일: public/js/core/arcadeGameLogic.js
+수행 작업:
+1) `arcadeGameLogic.js` 내 `QUIZ_QUESTIONS` 배열에 역사, 과학, IT, 지리, 인문예술, 일반상식 등 다양한 분야의 상식 문제 총 100개를 등록.
+실행: `node --check public/js/core/arcadeGameLogic.js`
+기대: 문법 오류 없이 100개 문제 중 무작위 5문항이 풍부하게 출제됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:28] 타자 연습 문장 데이터 7개 -> 30개로 대폭 확장
+
+**LOG_ID: 20260724_1128**
+목표: 타자 연습 게임 문장 종류 부족을 해소하기 위해 문장 풀을 다양하게 확충.
+변경 파일: public/js/core/arcadeGameLogic.js
+수행 작업:
+1) `arcadeGameLogic.js` 내 `TYPING_SENTENCES` 배열에 레트로 PC통신 문구, 동서양 명언, 속담, 영문 명언 등 총 30개 문장을 등록.
+실행: `node --check public/js/core/arcadeGameLogic.js`
+기대: 문법 오류 없이 30개 문장에서 무작위 3문장씩 풍부하게 출제됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:26] 타자 연습 게임 긴 문장 입력 시 글자 수 잘림 해결 (maxlength 40->200)
+
+**LOG_ID: 20260724_1126**
+목표: 타자 연습 게임 등에서 40자 이상의 긴 문장을 입력할 때 글자가 더 이상 입력되지 않고 잘리는 현상 해결.
+변경 파일: public/index.html
+수행 작업:
+1) `#cmd-input` 요소의 HTML `maxlength="40"` 제한으로 인해 'A quick brown fox jumps over the lazy dog.'(43자) 등 40자가 넘는 문장이 더 이상 입력되지 않는 원인 확인.
+2) `public/index.html`에서 `#cmd-input`의 `maxlength`를 `200`으로 상향 변경하여 긴 타자 문장도 완전하게 입력할 수 있도록 조치.
+실행: 브라우저에서 `http://localhost:3000/game/typing` 접속하여 40자 이상 문장 전체 입력 테스트
+기대: 40자가 넘는 타자 문장도 잘림 없이 끝까지 정상 입력됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:13] BBS 서비스 라우터 내 s(state.screen) 전달 누락 버그 해결 (WP 등 게임 입력 불능 극복)
+
+**LOG_ID: 20260724_1113**
+목표: 영어학습(WP) 등 오락실 서비스 계열 화면에서 사용자가 키보드로 정답을 입력해도 아무 작동을 안 하던 치명적 입력 불능 현상 해결.
+변경 파일: public/js/core/commandRouter.js
+수행 작업:
+1) `commandRouter.js`에서 `handleServiceCommand` 호출 시 구조 분해 할당 파라미터 `s`에 매핑될 `s: state.screen` 변수가 누락되어 있었음을 정밀 분석으로 확인.
+2) `handleServiceCommand({ s: state.screen, input, rawCmd, cmd })` 로 수정하여 스크린 정보가 올바르게 전달되도록 전격 교정.
+실행: `node --check public/js/core/commandRouter.js`
+기대: 영어 학습게임(WP) 화면에서 답을 타이핑하고 엔터를 치면 정상적으로 채점 반응(정답/오답 힌트 등)이 작동함.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:07] 스크램블 게임 종료(실패/타임아웃) 시 불특정 입력에 의한 페이지 튕김/리로드 해결
+
+**LOG_ID: 20260724_1107**
+목표: 스크램블 게임이 제한시간 만료 또는 성공 오버 상태로 끝났을 때 사용자가 임의의 문자를 치거나 무반응 엔터를 누르면 전역 라우팅을 타면서 페이지가 강제 리로드(새로고침)되거나 튕기는 현상 해결.
+변경 파일: public/js/core/commandRouterService.js
+수행 작업:
+1) `commandRouterService.js`의 `scramble-play` 라우팅 구간에 게임 상태 분기점을 추가:
+   - `st.status === 'end'`(게임 종료)일 경우, `L`(새 게임), `T`(메인), `P/M/B`(오락실) 외의 모든 가공되지 않은 텍스트 및 빈 입력값을 `scrambleGuess(rawCmd)`가 전량 가로채 흡수하게 설계하고 최종 `return true`를 명시하여 전역 라우팅 튕김 루프를 전면 차단.
+실행: `node --check public/js/core/commandRouterService.js`
+기대: 스크램블 실패(종료) 상태에서 엉뚱한 키를 누르거나 엔터를 눌러도 페이지 새로고침이나 튕김 현상 없이 정상적으로 가이드 힌트가 유지됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:04] 스크램블 게임 내 모든 단어 획득 시 즉시 자동 성공 종료 처리 추가
+
+**LOG_ID: 20260724_1104**
+목표: 사용자가 글자판 속 정답 단어를 모두 찾았을 때 게임이 멈추지 않고 계속 진행되던 버그를 고치고, 모든 단어를 다 찾았다면 즉각 성공 완료 메시지를 띄우며 게임이 종료되도록 개선.
+변경 파일: public/js/core/arcadeGameLogic.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeGameLogic.js`의 `scrambleApply`에서 단어 성공 적재 시 `st.found.length >= st.allPossibleAnswers.length` 인지 체크하는 조건문을 이식하여, 모두 다 찾았을 경우 `st.status = 'end'` 및 `'end'`를 반환하여 즉시 완료시키도록 제어.
+2) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 상태 변수 종료 분기를 확장:
+   - 모든 단어를 다 찾아서 종료된 경우 `축하합니다! 모든 단어를 찾아냈습니다!` 라는 긍정적이고 화려한 성공 문구 출력.
+실행: `node --check public/js/core/arcadeGameLogic.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 숨겨진 단어를 다 찾으면 게임 타이머가 중단되고 화면에 "모든 단어를 찾아냈습니다!"가 나오며 게임이 깔끔하게 끝남.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:01] 스크램블 게임 가상 [단어제출 ENTER] 버튼 탑재 및 마우스/터치 전송 지원
+
+**LOG_ID: 20260724_1101**
+목표: 모바일 또는 마우스 조작 환경에서 글자 입력 완료 후 키보드 엔터를 수동으로 누르는 번거로움을 제거하기 위해, 화면상에 클릭 가능한 가상 [단어제출 ENTER] 버튼을 장착하고 클릭 시 자동 단어 전송 처리.
+변경 파일: public/js/core/arcadeAnsiBuilders.js, public/js/core/arcadeScreens.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 글자판 최하단에 `  [단어제출 ENTER]` 녹색 버튼 텍스트 라인을 동적으로 렌더링하도록 반영.
+2) `arcadeScreens.js`의 `renderScrambleHotspots`에서 해당 버튼 라인 영역을 추적하여 `createHotspotButton`을 덮어씌움.
+3) 버튼 클릭 리스너 내부에 `#cmd-input`으로 가상 KeyboardEvent(Enter, keyCode: 13)를 생성하여 dispatch 함으로써, 네이티브 단어 전송 메커니즘을 그대로 수행하도록 연동.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`, `node --check public/js/core/arcadeScreens.js`
+기대: 글자판 하단의 녹색 버튼 클릭 시 모바일 가상 자판 없이도 단어가 즉시 채점 및 전송됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:59] 스크램블 알파벳 클릭 미작동 해결 (#cmd-input 타겟팅 교정) 및 상단 중복 가이드 제거
+
+**LOG_ID: 20260724_1059**
+목표: 스크램블 게임판 알파벳 클릭 시 글자가 입력창에 전송되지 않던 대상을 BBS 정규 입력창인 `#cmd-input`으로 교정하고, 개별 단어 리스트와 겹치는 상단의 중복 가이드를 정리하여 가로 잘림을 완전히 해소.
+변경 파일: public/js/core/arcadeScreens.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeScreens.js`의 `renderScrambleHotspots`에서 알파벳 클릭 이벤트 내 타겟 입력 필드 아이디를 `#terminal-input`에서 `#cmd-input`으로 변경하여 클릭 액션이 실제 터미널 입력창에 정상 바인딩되도록 전격 수정.
+2) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 상단 도움말 문구의 `가장 긴 단어: X글자(시작: Y)` 중복 힌트 제거 및 가이드라인 축소.
+실행: `node --check public/js/core/arcadeScreens.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 알파벳 셀 클릭 시 하단 입력란에 실시간 타이핑되며, 상단 안내 문구가 슬림해져 잘림 없이 쾌적하게 렌더링됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:56] 스크램블 게임 내 '중심 단어' 용어를 직관적인 '가장 긴 단어'로 명칭 수정
+
+**LOG_ID: 20260724_1056_2**
+목표: 이용자에게 낯설고 의미 전달이 모호한 '중심 단어'라는 용어를 게임 규칙에 맞춰 '가장 긴 단어'로 명칭을 직관적으로 개선.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 내 안내 가이드라인 텍스트를 변경:
+   - `중심 단어: X글자(시작: Y)` -> `가장 긴 단어: X글자(시작: Y)`로 더 직관적이고 쉬운 표현으로 수정.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 게임 도움말 상에 "가장 긴 단어: X글자(시작: Y)"로 출력되어 이용자가 혼선 없이 게임의 룰을 이해함.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:56] 스크램블 글자판 알파벳 마우스 클릭 입력 기능 추가
+
+**LOG_ID: 20260724_1056**
+목표: 스크램블 게임판 상의 16개 알파벳 철자들을 마우스로 클릭하거나 모바일 터치 시 하단 입력란에 해당 글자가 한 자씩 자동 추가 입력되도록 마우스 핫스팟 기능 지원.
+변경 파일: public/js/core/arcadeScreens.js
+수행 작업:
+1) `arcadeScreens.js` 내부에 `renderScrambleHotspots(screenNode, game)` 함수를 작성:
+   - 렌더링된 화면 노드에서 4행의 알파벳 셀 라인을 필터링 추출.
+   - 각 셀의 위치 영역에 맞춰 `createHotspotButton`을 동적 생성.
+   - 버튼 클릭 시 브라우저 인풋 노드(`terminal-input`)의 현재 값에 철자를 합산하고 포커싱을 유지하는 이벤트 리스너 이식.
+2) `renderScramble(game)` 래핑 렌더 함수를 구현해 `showScramble` 및 `scrambleGuess` 에서 일관된 렌더링과 핫스팟 결합이 이루어지도록 갱신.
+실행: `node --check public/js/core/arcadeScreens.js`
+기대: 글자판의 알파벳을 마우스로 클릭하면 단어 입력란에 즉시 글자가 채워져 편리하게 조작할 수 있음.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:55] 스크램블 게임 내 개별 단어 힌트 리스트(첫글자 + 마스킹 자리수) 패널 추가
+
+**LOG_ID: 20260724_1055**
+목표: 스크램블 게임 내 상단 가이드라인의 불필요한 문구를 제거하여 가로 잘림을 방지하고, 찾아야 할 각 단어들의 개별 자리수와 시작 문자 힌트(예: · M_____) 목록을 제공해 게임성과 편의성 강화.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 상단에서 불필요한 `2~9글자 입력` 힌트 제거 및 단순화.
+2) 찾아야 할 모든 정답 단어들의 개별 힌트 리스트(`hintLines`) 생성:
+   - 발견 완료 단어: `✔ 단어명 (X자)`
+   - 미발견 단어: `· 시작철자____ (X자)`
+3) 반응형 레이아웃 처리:
+   - PC 환경: 정사각형 글자판 우측 여백에 단어 힌트 목록을 패널 형태로 정렬 결합하여 출력.
+   - 모바일 환경: 화면 폭을 고려해 글자판 하단에 수직으로 힌트 나열.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 상단 가이드라인이 간결해져 가로 잘림이 해결되며, 화면 우측 또는 하단에 각 단어별 힌트 목록이 실시간(동적 마스킹 처리)으로 아주 고급스럽게 출력됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:53] 스크램블 게임 내 중심 단어의 시작 알파벳 힌트 동적 제공
+
+**LOG_ID: 20260724_1053**
+목표: 스크램블 게임 시작 시 이번 판의 코어가 되는 중심 단어가 어떤 알파벳으로 시작하는지 알려주어 게임 난이도를 보완하고 연상 작용을 기름.
+변경 파일: public/js/core/arcadeGameLogic.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeGameLogic.js`의 `createScrambleState`에서 뽑힌 `baseWord`의 첫 번째 철자를 `baseWordStartChar: baseWord[0]`로 상태 객체에 기록.
+2) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 상단의 가이드 라인을 보강:
+   - `st.baseWordStartChar` 값을 가져와서 `중심 단어: Y글자 (시작: Z)` 형식으로 첫 시작 철자 힌트가 동적으로 출력되도록 수정.
+실행: `node --check public/js/core/arcadeGameLogic.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 게임 접속 시 상단에 "중심 단어: X글자(시작: Z)"로 시작 철자 힌트가 정상 연산되어 나타남.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:52] 스크램블 게임 내 총 정답 개수 및 각기 다른 단어 글자수 힌트 보강
+
+**LOG_ID: 20260724_1052**
+목표: 스크램블 게임에서 찾아야 하는 정답의 총 개수 및 "단어마다 글자수가 제각각 다르다"는 팩트를 명확히 가이드에 명시하여 사용자 질문 해소.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 내 상단 힌트 괄호 가이드를 개편:
+   - `st.allPossibleAnswers.length`를 활용해 이번 판에 숨겨진 총 정답 개수를 출력하고, `단어별 글자수 각각 다름` 안내를 명확하게 명문화하여 융합 표시.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 게임 진입 시 상단에 "이번 판은 총 X개 정답 존재 / 중심 단어: Y글자 / 단어별 글자수 각각 다름" 형태로 친절하게 가이드가 제공됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:51] 스크램블 게임 내 이번 판의 정확한 중심 단어 글자수 힌트 제공
+
+**LOG_ID: 20260724_1051**
+목표: 스크램블 게임 시작 시 이번 판의 핵심이 되는 중심 단어의 정확한 글자수(예: 7글자)를 힌트로 직접 제공하여 게임 몰입도 향상.
+변경 파일: public/js/core/arcadeGameLogic.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeGameLogic.js`의 `createScrambleState`에서 뽑힌 `baseWord`의 실제 글자수 정보를 `baseWordLength: baseWord.length` 프로퍼티로 상태 객체에 동시 저장하도록 보완.
+2) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 상단 힌트 괄호 가이드를 동적으로 수정:
+   - `st.baseWordLength` 값을 바인딩하여 `(이번 판의 중심 단어는 X글자입니다)`로 동적 타겟 힌트가 출력되도록 렌더링 변경.
+실행: `node --check public/js/core/arcadeGameLogic.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 게임 진입 시 상단에 "이번 판의 중심 단어는 X글자입니다" 라고 정확한 글자수 힌트가 동적으로 출력됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:49] 스크램블 게임 설명 가이드에 허용 단어 및 중심 단어 글자수 정보 추가
+
+**LOG_ID: 20260724_1049**
+목표: 스크램블 게임 내에서 입력 가능한 단어의 글자수 조건 및 글자판의 중심이 되는 단어의 글자수 범위를 가이드라인에 노출하여 이용자 혼선 방지.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 내 정사각형 글자판 설명 문구를 수정:
+   - `(2글자 이상...)` 에서 `(2~9글자 단어 입력 후 엔터. 예: PONY / 중심 단어는 5~9글자입니다)` 로 글자 길이에 대한 가이드를 더 명확하게 보강.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 스크램블 게임 상단 가이드 라인에 글자수 범위 안내가 직관적으로 제공됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:46] 스크램블 buildScrambleAnsi 내 isMobile 정의 누락 ReferenceError 버그 해결
+
+**LOG_ID: 20260724_1046**
+목표: 스크램블 게임 종료 시 `isMobile is not defined` 라는 ReferenceError 예외가 발생하여 화면 렌더링이 뻗는 문제 해결.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 함수 내부에 `const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;` 변수 선언을 정상 추가하여 모바일 여부 판단 값이 예외 없이 정상 연산되도록 수정.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 에러 메시지가 사라지고, 스크램블 제한시간 만료 시 정상적으로 정답 단어 목록이 잘림 없이 렌더링됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:43] 스크램블 게임 60초 자동 타임아웃 타이머 및 종료 화면 강제 리플래시 구현
+
+**LOG_ID: 20260724_1043**
+목표: 스크램블 게임 도중 사용자가 대기하여 60초가 흐르더라도 화면이 갱신되지 않아 정답이 공개되지 않거나, 종료 후 입력 시 정답 리스트 없이 안내만 나오는 현상 해결.
+변경 파일: public/js/core/arcadeScreens.js
+수행 작업:
+1) `arcadeScreens.js` 내부에 모듈 레벨 `scrambleTimer` 상태 및 `clearScrambleTimer` 타이머 해제 도구 구현.
+2) `showScramble` 시점에 60초 자동 타임아웃 타이머(`setTimeout`)를 백그라운드 등록하여, 시간이 다 되면 사용자 키 입력 없이도 스스로 종료 상태(`status = 'end'`)로 전환 후 갱신 렌더링하도록 수정.
+3) `scrambleGuess` 에서 게임이 이미 종료 상태인 경우 경고와 더불어 정답 리스트가 출력된 종료 상태의 화면을 강제 유지(`arcadeRender` 갱신)하도록 보강하고, 종료 상태 진입 시 타이머 리소스 정상 해제 흐름 추가.
+실행: `node --check public/js/core/arcadeScreens.js`
+기대: 스크램블 게임 중 60초가 흐르면 화면이 정답이 노출되는 완료 상태로 자동 갱신되며, 종료된 후 사용자가 추가 입력을 해도 정답 화면이 안정적으로 고정되어 노출됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:37] 스크램블 종료 정답 목록 가로 화면 잘림 방지 자동 줄바꿈(Word Wrap) 도입
+
+**LOG_ID: 20260724_1037**
+목표: 스크램블 게임 종료 후 노출되는 미발견 정답 단어 목록이 80컬럼 폭을 초과해 가로로 잘려 보이는 현상 해결.
+변경 파일: public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeAnsiBuilders.js`의 `createAnsiBuilderUtils(deps)` 구조 분해 할당에 `wrapAnsiText` 유틸 추가.
+2) `buildScrambleAnsi` 내에서 정답 문장 `fullMsg`를 생성한 후 `wrapAnsiText(fullMsg, wrapWidth)`를 적용하여 터미널 가로 폭 규격(80칸/모바일 44칸)에 맞도록 동적 자동 줄바꿈 처리 및 인덴테이션 보정.
+실행: `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 정답 단어 목록이 길어지면 터미널 오른쪽 끝에서 잘리지 않고 다음 줄로 이쁘게 줄바꿈되어 모든 숨겨진 정답이 안전하게 표시됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:34] 스크램블 게임 종료 시 미처 찾지 못한 정답 단어 노출 기능 구현
+
+**LOG_ID: 20260724_1034**
+목표: 스크램블 게임 종료(시간 초과) 시, 사용자가 찾지 못한 숨겨진 정답 단어 목록을 하단에 보여주어 학습 및 게임 유용성 개선.
+변경 파일: public/js/core/arcadeGameLogic.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeGameLogic.js`에 그리드 내 글자들로 조합 가능한 사전(단어 풀)의 모든 유효 단어를 추출하는 `getScramblePossibleAnswers` 헬퍼 함수 구현.
+2) `createScrambleState`에서 게임 시작 시 조합 가능한 전체 정답 배열 `allPossibleAnswers`를 미리 추출하여 상태 객체에 보관하도록 수정.
+3) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 내에서 게임이 종료(`status === 'end'`)되었을 때, `allPossibleAnswers` 중 유저가 맞추지 못한 미발견 단어들을 최대 10개까지 추출하여 노출해 주는 안내 라인(`answerLine`) 렌더링 로직 추가.
+실행: `node --check public/js/core/arcadeGameLogic.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 제한시간 초과로 스크램블 게임이 종료될 때 하단에 미처 찾지 못한 영단어들이 예쁘게 노출되어 정답을 확인할 수 있음.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:19] 오락실 아케이드 게임 공통 종료 시 힌트바 복원 및 프롬프트('선택 >>') 강제 패치
+
+**LOG_ID: 20260724_1019**
+목표: 오목, 오델로 등 모든 아케이드 게임에서 승패 결정(종료) 후에도 진행 중 프롬프트(좌표입력 가이드 등)가 잔류하는 현상 전역 해결.
+변경 파일: public/js/core/arcadeScreens.js
+수행 작업:
+1) `arcadeScreens.js`의 공통 렌더 헬퍼인 `arcadeRender` 내에서 게임 진행 여부(`state.serviceData?.status === 'play'`)를 기준으로 가로채기 적용:
+   - 진행 중이 아닐 경우: 프롬프트를 무조건 `'선택 >> '`으로 치환하고, 힌트바도 `'none'`이 아닌 원래 풋터(`_footer || 'amusementView'`)로 세팅하여 강제 복구되도록 통합 구현.
+실행: `node --check public/js/core/arcadeScreens.js`
+기대: 오목, 오델로, 숫자야구 등 모든 게임에서 결과 판정이 나면 자동으로 입력 가이드가 사라지고 표준 "선택 >>" 프롬프트와 힌트바가 출력됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:14] 오목 게임 결과 판정 시 힌트바 및 입력 프롬프트(좌표입력 제거) 정상 전환 패치
+
+**LOG_ID: 20260724_1014**
+목표: 오목 게임 종료(승/패/무/기권) 후 결과 화면에서 더 이상 좌표 입력이 불필요함에도 '좌표 입력, 클릭...' 힌트바 및 프롬프트가 계속 출력되던 문제 수정.
+변경 파일: public/js/core/arcadeScreens.js
+수행 작업:
+1) `arcadeScreens.js`의 `showOmok`, `omokMove`, `omokResign`에서 게임 상태(`game.status === 'play'`)에 따라 힌트바 및 프롬프트 문구를 동적으로 분기 처리:
+   - 진행 중일 때: 힌트바 `'arcadePlay'`, 프롬프트 `'좌표 입력, 클릭 (예: H8) >> '`
+   - 게임 종료 시: 힌트바 `'amusementView'`, 프롬프트 `'선택 >> '`로 전환.
+실행: `node --check public/js/core/arcadeScreens.js`
+기대: 오목 게임 도중에는 좌표 입력 가이드가 나오고, 승리/패배/기권 등 결과가 나온 뒤에는 안내가 사라지고 타 일반 뷰 화면과 동일하게 "선택 >>"으로 바뀜.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:10] 추억의 접속화면(retro-list) 진입 시 하단 힌트바(Hint Bar) 노출 누락 버그 해결
+
+**LOG_ID: 20260724_1010**
+목표: 추억의 접속화면 목록(/game/retro) 진입 시 오락실 하단 힌트바가 표시되지 않던 누락 현상 해결.
+변경 파일: public/js/core/amusementScreens.js
+수행 작업:
+1) `amusementScreens.js`의 `showRetroArt` 내 `render` 헬퍼 함수 호출부에서 두 번째 인자를 `'none'`에서 `'amusementView'`로 변경하고, 세 번째 인자로 기본 프롬프트인 `'선택 >> '`을 정상 전달하도록 수정.
+실행: `node --check public/js/core/amusementScreens.js`
+기대: 추억의 접속화면 목록에서도 다른 게임 화면처럼 오락실 공통 하단 힌트바와 "선택 >>" 프롬프트가 예쁘고 정렬되어 노출됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:03] 혈액형 핫스팟 호버 스타일 시스템 표준(반투명 배경 하이라이트) 통일 패치
+
+**LOG_ID: 20260724_1003**
+목표: 혈액형 핫스팟의 호버 스타일을 다른 메뉴의 공통 표준 스타일(글자색은 그대로 상속하고 반투명 백색 배경 하이라이트만 적용)로 통일.
+변경 파일: public/style.css
+수행 작업:
+1) `style.css`의 `.blood-hotspot` 클래스의 기본 글자 색상을 `color: inherit !important;`로 변경해 본래 텍스트 색상을 따르도록 수정.
+2) `style.css`의 `.blood-hotspot:hover` 내 글자색 강조를 지우고 배경색을 타 메뉴 표준인 `rgba(255, 255, 255, 0.18) !important;`로 통일.
+실행: 없음 (CSS 수정)
+기대: 다른 메뉴의 마우스 호버 효과와 똑같이 글자색 변경 없이 반투명 배경 박스 하이라이트만 생성됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:02] 혈액형 핫스팟 마우스 호버 시 원래 색상(노란색) 복구 패치
+
+**LOG_ID: 20260724_1002**
+목표: 혈액형 핫스팟 마우스 호버 시 글자 색상을 원래 색상인 노란색(#ffff00)으로 복구.
+변경 파일: public/style.css
+수행 작업:
+1) `style.css`의 `.blood-hotspot:hover` 선택자 내 글자 색상을 `color: #00ffff !important;`에서 `color: #ffff00 !important;`로 변경.
+실행: 없음 (CSS 수정)
+기대: 평상시에는 하얀색 텍스트로 표시되다가, 마우스를 올렸을 때 원래 핫스팟 색상이었던 노란색으로 강조됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:09] 정통 토정비결 천간/지지 상수 및 세는나이 작괘법 공식 구현
+
+**LOG_ID: 20260724_1009**
+목표: 단순 가상 수식 대신, 토정 이지함의 실제 토정비결서에 수록된 천간 상수, 지지 상수, 한국식 세는나이를 활용한 전통 작괘 공식(상괘, 중괘, 하괘 산출법)을 100% 완벽하게 복원하여 이식.
+변경 파일: public/js/core/amusementAnsiBuilders.js
+수행 작업:
+1) `amusementAnsiBuilders.js`의 `buildTojeongAnsi` 내 작괘 공식을 수정:
+   - 천간 상수 배열 `GAN_CONSTANTS` (갑~계: 9,8,7,6,5,9,8,7,6,5) 및 지지 상수 배열 `JI_CONSTANTS` (자~해: 9,8,7,6,5,9,8,7,6,5,9,8) 정의.
+   - 신수해(targetYear)와 태어난 해(birthYear)의 60갑자 인덱스로부터 각각 천간/지지를 추출해 해당 상수를 매핑.
+   - 상괘: `(신수해 천간상수 + 태어난해 천간상수 + 세는나이) % 8` (나머지 0이면 8)
+   - 중괘: `(태어난 월 + 신수해 지지상수) % 6` (나머지 0이면 6)
+   - 하괘: `(태어난 일 + 신수해 기반 연도오프셋) % 3` (나머지 0이면 3)
+실행: `node --check public/js/core/amusementAnsiBuilders.js`
+기대: 실제 민간에서 전해 내려오는 전통 토정비결의 수학적 작괘 공식이 고스란히 동작하여 정통 신수 괘가 도출됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:08] 전통 토정비결 144괘 및 동적 문장 조합 알고리즘 전면 개편
+
+**LOG_ID: 20260724_1008**
+목표: 단순 고정 12개 월별 문구 로테이션 방식에서 벗어나, 상괘(1~8), 중괘(1~6), 하괘(1~3) 연산을 결합해 144가지 괘를 산출하고 총론 및 달별 운세를 역학적으로 동적 조립하는 고도화된 전통 토정비결 알고리즘으로 개편.
+변경 파일: public/js/core/amusementAnsiBuilders.js
+수행 작업:
+1) `amusementAnsiBuilders.js`의 `buildTojeongAnsi` 알고리즘을 전면 수정:
+   - 생년월일과 보는 해(신수 연도)를 조합해 상괘, 중괘, 하괘를 전통 계산식에 준하게 연산.
+   - 도출된 세 자릿수 괘 번호(예: 제 253괘) 및 괘 이름을 화면 상단에 노출.
+   - 괘에 맞는 한 해의 운세 [총론] 구절을 주어와 동사 조합으로 자연스럽게 결합해 생성.
+   - 1~12월 월별 운세를 상/중/하괘 시드와 월 정보를 활용하여 다채로운 문장 조각(주어 + 서술어)으로 동적 직조하여 출력.
+실행: `node --check public/js/core/amusementAnsiBuilders.js`
+기대: 사용자의 사주 생년월일에 알맞은 144괘 중 하나가 정확히 계산되어 나오며, 그 해의 종합 총론 및 매월 운세가 매번 겹치지 않고 다양하게 짜인 역학적인 전문 풀이로 제공됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:06] 두 사람의 띠(지지) 합충 역학 관계 기반 동적 궁합 점수 및 해설 생성 알고리즘 개편
+
+**LOG_ID: 20260724_1006**
+목표: 고정된 8개 결과 대신 두 사람의 띠(지지) 역학 관계(삼합, 육합, 육충, 원진살, 상해살)를 정밀하게 파악하여 궁합 점수와 4가지 영역별 분석 내용을 동적으로 결합해 생성해 주는 알고리즘으로 전면 개편.
+변경 파일: public/js/core/amusementAnsiBuilders.js
+수행 작업:
+1) `amusementAnsiBuilders.js`의 `buildCompatAnsi` 알고리즘 전면 수정:
+   - 두 사람의 띠 지지(Jiji) 인덱스(0~11) 간의 삼합(4/8칸), 육합(자축 등), 육충(6칸), 원진살(자미, 축오 등), 상해살 관계를 계산.
+   - 관계 여부에 따라 궁합 점수를 `60`점에서 시작하여 합이 있으면 가산(+15점, +10점), 충이나 살이 있으면 감산(-15점, -8점)하는 방식으로 역학 기반 점수 모델 설계.
+   - 각 영역(성격, 연애, 다툼, 팁)에 들어갈 문장 데이터들을 띠 조합 특성별(합이 가득한 조합, 무난한 조합, 충돌이 있는 조합, 살이 있는 조합)로 세분화해 매칭되도록 동적 결합 로직 구현.
+실행: `node --check public/js/core/amusementAnsiBuilders.js`
+기대: 두 사람의 띠 조합에 따라 궁합 점수가 역학적으로 산출되며, 결과 설명 역시 8개 중 하나의 고정이 아닌 각 분석 영역별로 두 사람의 역학 관계가 상세하게 동적으로 배정되어 출력됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:04] 궁합 결과 화면 세로 스크롤바 방지를 위한 줄 수 최적화
+
+**LOG_ID: 20260724_1004**
+목표: 궁합 결과 화면(/game/compat)에서 결과 텍스트가 길어져 24줄 높이 제한을 초과해 세로 스크롤바가 노출되는 현상 해결.
+변경 파일: public/js/core/amusementAnsiBuilders.js
+수행 작업:
+1) `amusementAnsiBuilders.js`의 `buildCompatAnsi` 내에서 성격, 연애, 다툼, 팁 카테고리 간의 빈 줄(`parts.push('')`) 3개를 제거하여 전체 라인 수를 3줄 압축.
+실행: `node --check public/js/core/amusementAnsiBuilders.js`
+기대: 궁합 결과 화면의 정보 밀도가 타이트해지고 세로 스크롤바 없이 24줄 제한 내에 컴팩트하게 담김.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 10:00] 혈액형 핫스팟 기본 색상 백색(하얀색) 변경 패치
+
+**LOG_ID: 20260724_1000**
+목표: 혈액형 결과 화면 본문 및 입력 안내에 포함된 핫스팟 알파벳의 기본 색상을 노란색에서 하얀색(백색)으로 변경.
+변경 파일: public/style.css
+수행 작업:
+1) `style.css`의 `.blood-hotspot` 클래스의 기본 텍스트 색상을 `color: #ffff00 !important;`에서 `color: #ffffff !important;`로 수정.
+실행: 없음 (CSS 수정)
+기대: 평상시에는 하얀색 텍스트로 보이다가 마우스를 올렸을 때만 하늘색 호버 효과가 노출됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 09:58] 혈액형별 성격 설명 텍스트 대폭 확장 및 고도화
+
+**LOG_ID: 20260724_0958**
+목표: 혈액형 결과 화면(blood-result)의 성격 유형별 텍스트가 너무 짧던 점을 보완해 깊이 있는 설명으로 대폭 확장.
+변경 파일: public/js/core/amusementAnsiBuilders.js
+수행 작업:
+1) `amusementAnsiBuilders.js`의 `BLOOD_TYPES` 상수 배열 내 A형, B형, O형, AB형의 설명 칼럼(`desc`) 텍스트를 장점, 단점, 인간관계, 매력 등을 아우르는 3~4배 길고 풍부한 묘사로 교체.
+실행: `node --check public/js/core/amusementAnsiBuilders.js`
+기대: 혈액형 결과 화면 조회 시 기존 1.5줄짜리 짧은 내용 대신 풍성하고 상세한 진단 설명이 줄바꿈 정렬되어 예쁘게 출력됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 09:57] 혈액형 결과 화면 본문 내 A/B/O/AB 안내 문구 마우스 호버 및 클릭(핫스팟) 활성화
+
+**LOG_ID: 20260724_0957**
+목표: 혈액형 결과 화면(blood-result) 본문 내의 "다른 혈액형을 보려면 A/B/O/AB를 입력하세요." 문구에서 A, B, O, AB를 마우스 클릭/호버 핫스팟으로 구현.
+변경 파일: public/js/core/amusementScreens.js
+수행 작업:
+1) `amusementScreens.js`에 `attachBloodResultHotspots` 함수를 정의하여 본문 ANSI 텍스트 내의 "A/B/O/AB" 텍스트를 `<span class="blood-hotspot">` HTML 코드로 치환하고 클릭 핸들러를 바인딩.
+2) `showBloodResult` 완료 직후 `rendered.screenNode`가 유효할 때 `attachBloodResultHotspots`를 호출하도록 수정.
+실행: `node --check public/js/core/amusementScreens.js`
+기대: 혈액형 결과 화면 본문 아래의 A, B, O, AB 글자들에 마우스를 올릴 때 호버 효과가 나타나고, 클릭 시 즉시 해당 혈액형 결과창으로 전환됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 09:56] 혈액형 입력 화면 프롬프트 내 A/B/O/AB 밑줄 제거 스타일 패치
+
+**LOG_ID: 20260724_0956**
+목표: 혈액형 입력 화면(blood-input) 하단 핫스팟의 글자 밑줄을 시각적으로 제거.
+변경 파일: public/style.css
+수행 작업:
+1) `style.css`의 `.blood-hotspot` 스타일 정의에서 `text-decoration: underline;`을 제거하여 글자에 밑줄이 생기지 않도록 수정.
+실행: 없음 (CSS 수정)
+기대: 혈액형 입력 화면 하단 프롬프트의 A, B, O, AB 글자에 더 이상 밑줄이 표시되지 않음.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 09:55] 혈액형 입력 화면 프롬프트 내의 A/B/O/AB 마우스 호버 및 클릭(핫스팟) 활성화
+
+**LOG_ID: 20260724_0955**
+목표: 혈액형 입력 화면(blood-input) 하단 프롬프트 `혈액형 입력 (A/B/O/AB) >>` 안의 A, B, O, AB 글자들을 마우스 호버링 및 클릭 가능한 핫스팟으로 구현.
+변경 파일: public/style.css, public/js/core/terminalHintFooter.js, public/js/core/amusementScreens.js
+수행 작업:
+1) `style.css`에 `.blood-hotspot` 및 호버 스타일을 추가해 노란색 밑줄 및 하늘색 호버링 스타일 제공.
+2) `terminalHintFooter.js`의 `setPrompt` 내에 `blood-prompt-renderer-mock`가 남아있다면 제거하고 기존 렌더러를 다시 노출하는 복원 가드 추가.
+3) `amusementScreens.js`의 `showBlood`에서 `attachBloodPromptHotspots`를 실행해 기존 `#cmd-prompt-renderer`를 숨기고 핫스팟이 내장된 모조 HTML 프롬프트를 삽입하며 클릭 시 바로 결과를 실행하도록 바인딩.
+실행: `node --check public/js/core/terminalHintFooter.js` 및 `node --check public/js/core/amusementScreens.js`
+기대: 혈액형 입력 화면에서 A, B, O, AB 마우스 호버 시 강조 효과가 나며, 클릭 시 해당하는 혈액형 결과 화면으로 즉시 전이됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 09:48] 오늘의 운세 생년월일(8자리) 기반 변경 및 실제 십이지 합충 역학 알고리즘 적용
+
+**LOG_ID: 20260724_0948**
+목표: 오늘의 운세를 태어난 연도(4자리) 대신 생년월일(8자리) 입력으로 변경하고, 실제 동양 철학 역학 이론(삼합, 육합, 육충, 육해)을 적용한 결정론적 알고리즘으로 개편.
+변경 파일: public/js/core/amusementScreens.js, public/js/core/amusementAnsiBuilders.js
+수행 작업:
+1) `amusementScreens.js`의 오늘의 운세 입력 프롬프트를 생년월일(8자리)로 변경하고 `validDate`로 입력 검증 수행.
+2) `amusementAnsiBuilders.js`의 소개 화면(`buildFortuneIntroAnsi`)을 생년월일(8자리) 안내로 수정.
+3) `amusementAnsiBuilders.js`의 `buildFortuneAnsi`를 생년월일 날짜(`Date` 객체)를 받도록 변경하고, 태어난 연도(띠)에 더해 월과 일을 오늘의 일진 지지와 대조하여 십이지 합충(삼합/육합/육충/육해)에 따른 실제 역학 가감점 연산을 도입.
+실행: `node --check public/js/core/amusementScreens.js` 및 `node --check public/js/core/amusementAnsiBuilders.js`
+기대: 생년월일(8자리)을 정상적으로 입력받아, 같은 연도여도 생일(월, 일)과 오늘 일진의 지지 합충 관계에 따라 다채롭고 실제 역학에 근거한 오늘의 운세가 산출됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 11:59] [버그 수정] 전투 게임(Battleship) 마우스 클릭(핫스팟) 좌표 정렬 어긋남 오류 수정
+
+**LOG_ID: 20260724_1159**
+목표: 전투 게임(Battleship) 격자판을 마우스로 클릭할 때, 이미 공격했던 좌표 주변의 빈 공간을 클릭해도 핫스팟 영역 오차로 인해 오클릭("이미 공격한 좌표")이 발생하던 결함 수정.
+원인: 명중 기호 `★`은 화면에서는 2ch(전각)를 차지하지만 자바스크립트 문자열 length는 `1`이다. 핫스팟의 시작 문자열 인덱스를 `gridStart + x * 2`로 일괄 산술 계산함에 따라, `★`이 위치한 인덱스 뒤의 핫스팟 클릭 범위들이 `★` 개수만큼 실제 글자 위치보다 앞으로 누적되어 당겨지는(어긋나는) 현상이 있었다.
+구현: `arcadeScreens.js`의 `renderBattleHotspots` 내에서 루프 시 `currentStart`를 각 셀의 실제 문자열 길이(`cellLength`, `★`은 1자, `X `와 `· `는 2자)에 맞춰 누적 합산하도록 수정해 물리적 핫스팟 범위를 정확하게 정렬시켰다.
+검증: `node --check` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 12:16] [버그 수정] 전투 게임(Battleship) 레이아웃 줄 수 초과, 타이틀/숫자 헤더 정렬 및 명중 별표(*) 세로선 정렬 파편화 해결
+
+**LOG_ID: 20260724_1216**
+목표: 
+1) 전투 게임(Battleship) 진행 시 세로 스크롤바가 나오는 현상 해결.
+2) 데스크톱 및 모바일 화면에서 열 번호(1~10) 헤더와 맵 위 타이틀 라벨이 데이터 맵 대비 삐뚤어져 있던 현상 교정.
+3) 명중 표시가 찍힌 줄의 그 이후 셀들이 브라우저/폰트에 따라 왼쪽 또는 오른쪽으로 어긋나며 수직 정렬이 삐뚤어지던 결함 완벽 해결.
+원인: 
+- 세로 스크롤바: 헤더, 격자 맵 10줄, 하단 안내와 빈 줄들이 많아 기본 레이아웃이 26~27줄에 육박해 화면 범위를 초과했다.
+- 헤더 어긋남: 데이터 1번 열의 물리적 시작점은 5번째 칸인데, 헤더는 앞 공백 4개 + `colLabels` 시작 공백 1개 = 6번째 칸에서 시작하여 좌/우 헤더 모두 데이터 대비 오른쪽으로 1칸 치우쳐 있었다. 
+- 타이틀 어긋남: `<< 상대/아군 해역 ... >>` 타이틀 라벨이 각 맵 격자의 가로 중앙 정렬 기준(좌측 시작 3번째 칸, 우측 시작 30번째 칸)을 벗어나 오른쪽으로 10칸 이상 크게 치우쳐 있었다.
+- 명중 기호 삐뚤어짐: 유니코드 `★` 문자는 브라우저 및 monospace 시스템 폰트 구현에 따라 전각(2ch)과 반각(1ch) 사이에서 크기나 여백 오프셋 편차가 가장 심한 특수문자이다. 이에 따라 뒤에 공백을 없애면 왼쪽으로 쏠리고, 공백을 붙이면 오른쪽으로 밀려 삐뚤어지는 현상이 반복적으로 발생했다.
+구현: 
+- `arcadeAnsiBuilders.js`의 `buildBattleAnsi`에서 상단/하단 빈 줄을 2곳 제거하고, 안내 문구들을 한 줄로 병합하여 줄 수를 단축시켰다.
+- 데스크톱 레이아웃의 타이틀 라벨 앞 공백을 `5` -> `2`로, 중간 공백을 `11` -> `2`로 줄여 좌/우 맵의 정중앙에 위치하도록 정렬을 맞췄다.
+- 데스크톱 레이아웃의 헤더 앞 공백을 `4` -> `3`으로 줄여 좌측 정렬을 맞추고, 우측 헤더의 간격 오차가 발생하지 않도록 두 헤더의 중간 공백을 `8`로 최종 보정(우측 숫자 1이 34번째 칸에서 시작되도록 매칭)했다. 모바일 헤더 앞 공백 역시 `4` -> `3`으로 조정했다.
+- `arcadeAnsiBuilders.js` 내의 명중 표시 `'★'` 기호를 폰트 파편화가 전혀 없는 아스키 반각 문자 `'* '`(별표 + 공백 = 2ch)로 대체하여 어떠한 환경에서도 세로 정렬이 완벽하게 고정되도록 수정했다.
+- 이에 맞추어 `arcadeScreens.js`의 핫스팟 매핑 로직도 표준 `x * 2` 고정 방식으로 깔끔하게 되돌리고, 라인 노드 검출 정합 조건에 `*` 문자 검출 분기를 함께 반영하여 핫스팟 클릭 오작동까지 완벽하게 해결했다.
+검증: `node --check` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-24 09:42] [버그 수정] 날씨 2페이지(?page=2) 진입 시 시간별 예보 줄 수 초과로 스크롤바가 생기는 현상 수정 (14개로 조정)
+
+**LOG_ID: 20260724_0942**
+목표: 날씨 시간별 상세 화면 진입 시 터미널 UI 높이 제한(24줄)을 초과하여 세로 스크롤바가 생기는 현상 해결.
+원인: `weatherAnsiBuilders.js`의 `HOURLY_PAGE_SIZE`가 `15`로 세팅되어 데이터 15줄 + 상하단 헤더/푸터 및 힌트바가 약 26줄을 차지해 24줄 제한을 초과했다.
+구현: `HOURLY_PAGE_SIZE`를 `14`로 변경하여 한 페이지당 14개 예보만 나오게 하여 총 줄 수를 약 25줄 미만(24줄 이하)으로 맞춰 스크롤바를 방지했다.
+검증: `node --check` 통과.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-23 22:35] [버그 수정] 메인 화면 "11. 날씨" 클릭 시 편지함으로 잘못 처리되던 문제 — 옛 메뉴 배치를 가정한 스테일 하드코딩이 원인, 진짜 근본 원인 발견 및 수정
 
 **LOG_ID: 20260723_2350**

@@ -9,7 +9,7 @@ import {
 // 이 폰트에서 ●/○/·/박스문자(U+2500대)는 전부 반각(1칸)이다(ansiRenderUtils.isWideChar 참고).
 // 반상 셀은 "돌+공백"으로 표시폭 2를 고정해 우측 정보 패널과의 정렬을 보장한다.
 export function createArcadeAnsiBuilders(deps) {
-  const { ANSI_BOLD, ANSI_RESET, ansiColor, buildTopHeader, fitCell } = createAnsiBuilderUtils(deps);
+  const { ANSI_BOLD, ANSI_RESET, ansiColor, buildTopHeader, fitCell, wrapAnsiText } = createAnsiBuilderUtils(deps);
   const c = (tone, text) => `${ansiColor(tone)}${text}${ANSI_RESET}`;
   // [LOG_ID: 20260720_1600] 천리안 원전 그림179/181("TIME&SPACE님이 (I 8) 에 놓았습니다.")
   // 표기를 그대로 재현 — 괄호와 공백 포함.
@@ -180,7 +180,9 @@ export function createArcadeAnsiBuilders(deps) {
   }
 
   // ── 6. 스크램블 (Scramble) ──
+  // [LOG: 20260724_1034] 게임 종료 시 미처 찾지 못한 정답 단어 목록 노출 로직 보강
   function buildScrambleAnsi(st) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const divider = c(8, '  +---+---+---+---+');
     const rows = [divider];
     for (let y = 0; y < 4; y++) {
@@ -193,25 +195,98 @@ export function createArcadeAnsiBuilders(deps) {
       rows.push(divider);
     }
     
+    // [LOG: 20260724_1101] 가상 제출 엔터 버튼 렌더링
+    if (st.status === 'play') {
+      rows.push(`  ${c(10, '[단어제출 ENTER]')}`);
+    } else {
+      rows.push('');
+    }
+    
     const timeLimit = 60;
     const currentElapsed = Math.min(timeLimit, Math.floor((Date.now() - st.startTime) / 1000));
     const remains = Math.max(0, timeLimit - (st.status === 'end' ? st.elapsed : currentElapsed));
     
+    const isAllFound = st.allPossibleAnswers && st.found.length >= st.allPossibleAnswers.length;
     const statusLine = st.status === 'end'
-      ? c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`)
+      ? (isAllFound
+        ? c(10, `  축하합니다! 모든 단어를 찾아냈습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`)
+        : c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`))
       : `  ${c(14, '남은시간:')} ${c(11, `${remains}초`)}   ${c(14, '점수:')} ${c(11, `${st.score}점`)}`;
+
+    let answerLine = '';
+    if (st.status === 'end' && st.allPossibleAnswers) {
+      const missing = st.allPossibleAnswers.filter(w => !st.found.includes(w));
+      if (missing.length > 0) {
+        const displayLimit = 10;
+        const shown = missing.slice(0, displayLimit).join(', ');
+        const extra = missing.length > displayLimit ? ` 외 ${missing.length - displayLimit}개` : '';
+        const fullMsg = `미처 찾지 못한 정답 단어: [${shown}${extra}]`;
+        const targetCols = isMobile ? 44 : 80;
+        const wrapWidth = targetCols - 6;
+        const wrappedLines = wrapAnsiText(fullMsg, wrapWidth);
+        answerLine = '\n' + wrappedLines.map(line => `  ${c(11, line)}`).join('\n');
+      }
+    }
       
     const hintLine = st.hintMsg ? `\n  ${c(9, st.hintMsg)}` : '';
+    
+    // [LOG: 20260724_1055] 찾아야 할 단어 개별 힌트 리스트 생성
+    const sortedAnswers = st.allPossibleAnswers ? [...st.allPossibleAnswers].sort((a,b) => a.length - b.length || a.localeCompare(b)) : [];
+    const hintLines = sortedAnswers.map((word) => {
+      if (st.found.includes(word)) {
+        return `${c(10, '✔')} ${c(15, word.padEnd(9, ' '))} (${word.length}자)`;
+      } else {
+        const masked = word[0] + '_'.repeat(word.length - 1);
+        return `${c(8, '·')} ${c(11, masked.padEnd(9, ' '))} (${word.length}자)`;
+      }
+    });
+
+    // PC 환경에서 오른쪽 여백에 단어 힌트 리스트를 2열로 예쁘게 정렬하여 표시
+    const leftSide = [...rows];
+    let rightSide = [];
+    if (sortedAnswers.length > 0) {
+      rightSide.push(`${c(14, '★ 찾아야 할 단어 목록 ★')}`);
+      
+      const colsCount = 2;
+      const rightRows = [];
+      for (let i = 0; i < hintLines.length; i += colsCount) {
+        const part = [];
+        for (let j = 0; j < colsCount; j++) {
+          if (hintLines[i + j]) {
+            part.push(hintLines[i + j]);
+          }
+        }
+        rightRows.push(part.join('   '));
+      }
+      rightSide.push(...rightRows);
+    }
+
+    const combinedRows = [];
+    if (!isMobile && rightSide.length > 0) {
+      const maxLines = Math.max(leftSide.length, rightSide.length);
+      for (let i = 0; i < maxLines; i++) {
+        const left = leftSide[i] || '                     ';
+        const paddedLeft = left.padEnd(28, ' ');
+        const right = rightSide[i] || '';
+        combinedRows.push(paddedLeft + right);
+      }
+    } else {
+      combinedRows.push(...leftSide);
+      if (isMobile && rightSide.length > 0) {
+        combinedRows.push('');
+        combinedRows.push(...rightSide.map(line => `  ${line}`));
+      }
+    }
       
     return [
       buildTopHeader(['오락실', '스크램블']),
-      c(15, '  정사각형 글자판 속 알파벳들을 조합하여 유효한 영어 단어를 만드세요.'),
-      c(8, '  (2글자 이상, 단어 입력 후 엔터. 예: PONY)'),
-      ...rows,
+      c(15, '  정사각형 글자판 속 알파벳들을 조합하여 유효한 영어 단어들을 만드세요.'),
+      c(8, `  (이번 판은 총 ${st.allPossibleAnswers?.length || 0}개의 정답 단어가 숨어 있습니다)`),
+      ...combinedRows,
       `  ${c(14, '찾은 단어들 :')} ${c(15, `[${st.found.join(', ')}]`)}`,
       '',
       statusLine
-    ].join('\n') + hintLine;
+    ].join('\n') + answerLine + hintLine;
   }
 
   // ── 7. 영어단어/숙어 학습게임 (WP) ──
@@ -358,15 +433,16 @@ export function createArcadeAnsiBuilders(deps) {
   }
 
   // ── 10. 전투 게임 (Battle - Battleship) ──
+  // [LOG_ID: 20260724_1148] 명중 기호 전각(2ch) 폭 불일치로 인한 세로선 밀림 보정 및 헤더 정렬 정밀 교정
+  // [LOG: 20260724_1216] Battleship 유니코드 별표 대신 아스키 별표와 공백('* ') 조합으로 변경하여 브라우저간 폰트/정렬 파편화 완전 해결
   function buildBattleAnsi(st) {
-    const colLabels = '  1 2 3 4 5 6 7 8 9 10';
+    const colLabels = ' 1 2 3 4 5 6 7 8 9 10';
     const rowLabels = 'ABCDEFGHIJ';
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     
     const parts = [
       buildTopHeader(['오락실', '전투 게임 (Battleship)']),
-      c(15, '  격자판 좌표(예: G3)를 입력해 적의 숨겨진 군장비(12칸)를 폭격하세요!'),
-      ''
+      c(15, '  격자판 좌표(예: G3)를 입력해 적의 숨겨진 군장비(12칸)를 폭격하세요!')
     ];
     
     if (isMobile) {
@@ -376,9 +452,9 @@ export function createArcadeAnsiBuilders(deps) {
         let line = `  ${c(8, rowLabels[y])} `;
         for (let x = 0; x < 10; x++) {
           const shot = st.userShots[y * 10 + x];
-          if (shot === 2) line += c(11, '★ ');
-          else if (shot === 1) line += c(8, 'X ');
-          else line += c(8, '· ');
+          if (shot === 2) line += c(11, '* '); // 아스키 별표 + 공백으로 2ch 완벽 정렬
+          else if (shot === 1) line += c(8, 'X '); // 반각 1ch + 공백 1ch = 2ch
+          else line += c(8, '· '); // 반각 점 1ch + 공백 1ch = 2ch
         }
         parts.push(line);
       }
@@ -387,20 +463,20 @@ export function createArcadeAnsiBuilders(deps) {
         `  ${c(14, '귀하 명중:')} ${c(11, `${st.userHits}/12`)}   ${c(14, '컴퓨터 명중:')} ${c(9, `${st.cpuHits}/12`)}`
       );
     } else {
-      // 데스크톱 넓은 화면: 좌우 나란히 렌더링
+      // 데스크톱 넓은 화면: 좌우 나란히 렌더링 (헤더 4ch + 20ch 정밀 맞춤)
       parts.push(
-        `     ${c(14, '<< 상대 해역 포격 현황 >>')}           ${c(11, '<< 아군 해역 배치 및 현황 >>')}`,
-        `   ${c(8, colLabels)}         ${c(8, colLabels)}`
+        `  ${c(14, '<< 상대 해역 포격 현황 >>')}  ${c(11, '<< 아군 해역 배치 및 현황 >>')}`,
+        `   ${c(8, colLabels)}        ${c(8, colLabels)}`
       );
       
       for (let y = 0; y < 10; y++) {
-        // 좌측: 상대 해역 포격
+        // 좌측: 상대 해역 포격 (프리픽스 4ch + 셀 10개 20ch = 24ch)
         let leftLine = `  ${c(8, rowLabels[y])} `;
         for (let x = 0; x < 10; x++) {
           const shot = st.userShots[y * 10 + x];
-          if (shot === 2) leftLine += c(11, '★ ');
-          else if (shot === 1) leftLine += c(8, 'X ');
-          else leftLine += c(8, '· ');
+          if (shot === 2) leftLine += c(11, '* '); // 2ch 유지
+          else if (shot === 1) leftLine += c(8, 'X '); // 2ch
+          else leftLine += c(8, '· '); // 2ch
         }
         
         // 우측: 아군 배치 및 컴퓨터 포격 현황
@@ -410,10 +486,10 @@ export function createArcadeAnsiBuilders(deps) {
           const ship = st.userBoard[idx];
           const shot = st.cpuShots[idx];
           
-          if (shot === 2) rightLine += c(9, '★ '); // 아군 피격 명중
-          else if (shot === 1) rightLine += c(8, 'X '); // 빗나감
-          else if (ship !== 0) rightLine += c(14, `${ship[0]} `); // 함선 존재
-          else rightLine += c(8, '· ');
+          if (shot === 2) rightLine += c(9, '* '); // 아군 피격 명중 2ch 유지
+          else if (shot === 1) rightLine += c(8, 'X '); // 빗나감 2ch
+          else if (ship !== 0) rightLine += c(14, `${ship[0]} `); // 함선 존재 2ch
+          else rightLine += c(8, '· '); // 2ch
         }
         
         parts.push(`${leftLine}     ${rightLine}`);
@@ -424,7 +500,6 @@ export function createArcadeAnsiBuilders(deps) {
     // [LOG_ID: 20260721_0900] 좌표 표기 순서 버그 — 격자는 행(y)=문자, 열(x)=숫자(예: G3 → y=6,x=2)로
     // 입력·렌더링되는데, 이 피드백 줄만 x를 문자로 y를 숫자로 뒤집어 써서 "G3를 공격"해도
     // "(C 7)"처럼 완전히 다른 좌표로 표시됐다. rowLabels[y]/x+1로 바로잡는다.
-    parts.push('');
     if (st.lastUserShot) {
       const res = st.lastUserShot.hit ? c(11, `명중! (${st.lastUserShot.target})`) : c(8, '빗나감');
       parts.push(`  귀하 공격 : (${rowLabels[st.lastUserShot.y]}${st.lastUserShot.x + 1}) - ${res}`);
@@ -434,14 +509,12 @@ export function createArcadeAnsiBuilders(deps) {
       parts.push(`  적군 보복 : (${rowLabels[st.lastCpuShot.y]}${st.lastCpuShot.x + 1}) - ${res}`);
     }
     
-    // 승패/진행 상태
-    parts.push('');
     if (st.status === 'win') {
       parts.push(c(11, `${ANSI_BOLD}  작전 성공! 귀하의 완벽한 승리입니다! L을 누르면 다시 시작합니다.${ANSI_RESET}`));
     } else if (st.status === 'lose') {
       parts.push(c(9, `  함대가 전멸했습니다... 작전 실패. L을 눌러 다시 도전하세요.`));
     } else {
-      parts.push(c(15, '  공격할 좌표를 입력하세요. 입력 예) G3'), c(8, '  Q: 게임포기'));
+      parts.push(c(15, '  공격할 좌표를 입력하세요. 입력 예) G3  (Q: 게임포기)'));
     }
     
     return parts.join('\n');

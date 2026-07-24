@@ -3112,5 +3112,18 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
     box-shadow: none !important;
 }
 
+/* [LOG_ID: 20260724_0955] 혈액형 입력 프롬프트용 핫스팟 스타일 */
+.blood-hotspot {
+    color: inherit !important;
+    cursor: pointer;
+    text-decoration: none !important;
+    font-weight: bold;
+    padding: 0 2px;
+    display: inline-block;
+}
+.blood-hotspot:hover {
+    background-color: rgba(255, 255, 255, 0.18) !important;
+}
+
 
 

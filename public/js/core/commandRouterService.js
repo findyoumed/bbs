@@ -81,8 +81,9 @@ export function createServiceCommandHandler(deps) {
     const goGame = async () => { await showBoardSelect('game'); return true; };
     if (s === 'bio-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showBiorhythmResult(rawCmd); return true; } return false; }
     if (s === 'bio-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showBiorhythm(); return true; } if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showBiorhythmResult(rawCmd); return true; } return false; }
-    if (s === 'fortune-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{4}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
-    if (s === 'fortune-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showFortune(); return true; } if (/^\d{4}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
+    // [LOG: 20260724_0948] 오늘의 운세 생년월일 8자리 입력 라우팅 정규식 수정
+    if (s === 'fortune-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
+    if (s === 'fortune-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showFortune(); return true; } if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
     if (['mbti-intro', 'mbti-test', 'mbti-list', 'mbti-detail'].includes(s)) {
       if (cmd === 'T') { await showMain(); return true; }
       if (s === 'mbti-test') {
@@ -120,7 +121,22 @@ export function createServiceCommandHandler(deps) {
     // [LOG_ID: 20260720_2020] scramble/wp/typing은 자유 텍스트 추측을 받다 보니 "GO XXX"까지
     // 전부 추측으로 삼켜서 GO 명령으로 못 빠져나가는 함정이 있었다(감사 중 발견 — P/M/B/T/L은
     // 되는데 GO만 안 됨). GO 문법은 추측보다 먼저 걸러 전역 GO 핸들러로 넘긴다.
-    if (s === 'scramble-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showScramble(); return true; } if (/^GO\s+/i.test(rawCmd)) return false; if (rawCmd) return await scrambleGuess(rawCmd); return false; }
+    if (s === 'scramble-play') {
+      const isEnd = state.serviceData?.status === 'end';
+      if (isEnd) {
+        if (cmd === 'T') { await showMain(); return true; }
+        if (['P', 'M', 'B'].includes(cmd)) return goGame();
+        if (cmd === 'L') { await showScramble(); return true; }
+        await scrambleGuess(rawCmd);
+        return true;
+      }
+      if (cmd === 'T') { await showMain(); return true; }
+      if (['P', 'M', 'B'].includes(cmd)) return goGame();
+      if (cmd === 'L') { await showScramble(); return true; }
+      if (/^GO\s+/i.test(rawCmd)) return false;
+      if (rawCmd) return await scrambleGuess(rawCmd);
+      return false;
+    }
     if (s === 'wp-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showWp(); return true; } if (/^GO\s+/i.test(rawCmd)) return false; if (rawCmd) return await wpGuess(rawCmd); return false; }
     if (s === 'typing-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showTyping(); return true; } if (/^GO\s+/i.test(rawCmd)) return false; if (input) return await typingGuess(input); return false; }
     if (s === 'quiz-play') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showQuiz(); return true; } if (/^[1-4]$/.test(cmd)) return await quizGuess(cmd); return false; }

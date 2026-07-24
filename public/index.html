@@ -122,10 +122,9 @@
                              근본 원인이었다. size="1"로 기본 폭을 최소화하면 JS가 정확한 폭을 설정하기 전에도
                              시각적 갭이 거의 0에 수렴한다. -->
                         <input id="cmd-prompt-renderer" type="text" readonly tabindex="-1" aria-hidden="true" size="1">
-                        <!-- [LOG_ID: 20260711_2140] enterkeyhint="go": 모바일 OS 키보드의 엔터키 라벨을 "이동/Go"로
-                             표시해 엔터가 명령 제출(화면 이동)임을 드러낸다. 참고 프로젝트(01410.coroke.net) 분석 중
-                             모바일 입력 속성을 점검하다 누락 확인. -->
-                        <input id="cmd-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="명령어 입력" maxlength="40" spellcheck="false" enterkeyhint="go">
+                        <!-- [LOG_ID: 20260724_1126] maxlength="200": 타자 연습 게임 등 40자가 넘는 긴 문장 입력 시
+                             글자가 잘리는 현상을 해결하기 위해 입력창 최대 길이를 200자로 확대. -->
+                        <input id="cmd-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="명령어 입력" maxlength="200" spellcheck="false" enterkeyhint="go">
                     </div>
                     <!-- [LOG: 20260613_1205] 별도 알림 영역 추가 (단축키 힌트 가림 방지) -->
                     <div id="terminal-notification" class="terminal-notification-row" style="display: none;"></div>

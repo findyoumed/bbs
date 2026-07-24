@@ -190,14 +190,16 @@ async function getNavigation(repo, boardId, postId) {
   }
   const localPid = Number(post.localId || post.id);
 
-  const latestQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
+  const extractNavId = (row) => (row ? Number(row.local_id ?? row.id ?? 0) : null);
+
+  const latestQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
   const { data: latestData } = await applyPostOrdering(latestQuery, repo, capabilities).limit(1).maybeSingle();
 
   if (capabilities.threaded) {
     const familyId = Number(post.family || 0);
     const sortOrder = Number(post.orderby || 0);
 
-    let prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
+    let prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
     prevQuery = prevQuery
       .or(`family_id.gt.${familyId},and(family_id.eq.${familyId},sort_order.lt.${sortOrder})`)
       .order('family_id', { ascending: true })
@@ -205,7 +207,7 @@ async function getNavigation(repo, boardId, postId) {
       .limit(1);
     const { data: prevData } = await prevQuery.maybeSingle();
 
-    let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
+    let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
     nextQuery = nextQuery
       .or(`family_id.lt.${familyId},and(family_id.eq.${familyId},sort_order.gt.${sortOrder})`)
       .order('family_id', { ascending: false })
@@ -214,24 +216,25 @@ async function getNavigation(repo, boardId, postId) {
     const { data: nextData } = await nextQuery.maybeSingle();
 
     return {
-      latestId: latestData ? Number(latestData.local_id) : null,
-      prevId: prevData ? Number(prevData.local_id) : null,
-      nextId: nextData ? Number(nextData.local_id) : null
+      latestId: extractNavId(latestData),
+      prevId: extractNavId(prevData),
+      nextId: extractNavId(nextData)
     };
   }
 
   // [LOG: 20260429_0508] Non-threaded boards render in descending id order,
   // so previous/next ids must follow that visible order instead of numeric order.
-  const prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
-  const { data: prevData } = await prevQuery.gt('local_id', localPid).order('local_id', { ascending: true }).limit(1).maybeSingle();
+  const idCol = capabilities.localId || 'id';
+  const prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+  const { data: prevData } = await prevQuery.gt(idCol, localPid).order(idCol, { ascending: true }).limit(1).maybeSingle();
 
-  const nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id'), boardId);
-  const { data: nextData } = await nextQuery.lt('local_id', localPid).order('local_id', { ascending: false }).limit(1).maybeSingle();
+  const nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+  const { data: nextData } = await nextQuery.lt(idCol, localPid).order(idCol, { ascending: false }).limit(1).maybeSingle();
 
   return {
-    latestId: latestData ? Number(latestData.local_id) : null,
-    prevId: prevData ? Number(prevData.local_id) : null,
-    nextId: nextData ? Number(nextData.local_id) : null
+    latestId: extractNavId(latestData),
+    prevId: extractNavId(prevData),
+    nextId: extractNavId(nextData)
   };
 }
 

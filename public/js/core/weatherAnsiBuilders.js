@@ -47,7 +47,8 @@ export function createWeatherAnsiBuilders(deps) {
     const allItems = data?.items || [];
     const dailyItems = data?.daily || [];
     const dayGroups = groupWeatherByDay(allItems);
-    const HOURLY_PAGE_SIZE = 15;
+    // [LOG: 20260724_0942] 15개 시 세로 스크롤바가 생기는 현상을 해결하기 위해 예보 표시 개수를 14로 줄임
+    const HOURLY_PAGE_SIZE = 14;
 
     const subPageInfo = [];
     subPageInfo.push({ type: 'summary' });

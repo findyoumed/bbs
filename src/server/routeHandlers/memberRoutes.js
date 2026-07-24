@@ -98,7 +98,8 @@ class MemberRouter extends BaseRouter {
     if (!member) return member;
     const isSelfOrAdmin = Boolean(context?.isAdmin) || context?.userId === (targetUserId ?? member.userId);
     if (isSelfOrAdmin) return member;
-    const { email, birthday, sex, lastLoginDateTime, ...rest } = member;
+    // [LOG: 20260724_1242] 아이디 로그인 시 이메일 맵핑 처리가 필수적이므로 email은 비로그인 필터링 대상에서 제외함
+    const { birthday, sex, lastLoginDateTime, ...rest } = member;
     return rest;
   }
 

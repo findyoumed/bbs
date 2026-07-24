@@ -297,6 +297,15 @@ export function createTerminalHintFooter(deps) {
   // 사용자 결정으로 제거 — 기본 프롬프트는 항상 '선택 >>'. 아래 사용자 정의(SET PROMPT) 처리는
   // 20260711_2340 SET 수정과 짝이므로 유지한다.
   function setPrompt(text) {
+    // [LOG_ID: 20260724_0955] 혈액형 핫스팟 모조 프롬프트 복원 가드
+    const mock = document.getElementById('blood-prompt-renderer-mock');
+    if (mock) {
+      mock.remove();
+    }
+    if (cmdPromptRendererEl && cmdPromptRendererEl.style.display === 'none') {
+      cmdPromptRendererEl.style.display = '';
+    }
+
     // applyCommandFooter는 파싱된 기본 프롬프트('선택 >>')를 명시 문자열로 전달하므로,
     // 기본 프롬프트와 동일한 텍스트도 사용자 정의 치환 대상으로 취급한다.
     // envVars.PROMPT의 초기값 '>>'는 settingsService가 넣는 "사용자 정의 없음" 센티널이므로
