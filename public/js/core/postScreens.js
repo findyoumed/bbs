@@ -18,7 +18,7 @@ export function createPostScreens(deps) {
 
   const handlers = {
     showPostList: (id, p, o, f) => showPostList(id, p, o, f),
-    showPostView: (id, pid, f) => showPostView(id, pid, f),
+    showPostView: (id, pid, f, pageNo) => showPostView(id, pid, f, pageNo),
     showPostWrite: (m, r) => showPostWrite(handlers, m, r),
     handleWriteSubmit: () => handleWriteSubmit(handlers),
     cancelPostWrite: () => cancelPostWrite(handlers),
