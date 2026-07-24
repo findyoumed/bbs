@@ -197,7 +197,55 @@ export function createAmusementScreens(deps) {
 
   // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현 — 혈액형 성격진단/궁합/토정비결.
   // 결과는 URL로 복원하지 않는다(바이오리듬/오늘의운세/MBTI와 동일하게, 새로고침 시 입력 화면으로 복귀).
-  async function showBlood(fromHistory = false) { state.screen = 'blood-input'; state.serviceData = { kind: 'blood' }; if (!fromHistory) updateURL(); await render(buildBloodIntroAnsi(), 'amusementInput', '혈액형 입력 (A/B/O/AB) >> '); inlineMount('blood-prompt-host', 'game-prompt-host'); }
+  // [LOG_ID: 20260724_0955] 혈액형 입력 프롬프트 내 마우스 호버 및 클릭(핫스팟) 적용
+  function attachBloodPromptHotspots() {
+    const promptRow = document.querySelector('#blood-prompt-host #terminal-prompt-row');
+    if (!promptRow) return;
+    let mock = promptRow.querySelector('#blood-prompt-renderer-mock');
+    if (mock) mock.remove();
+    const realRenderer = promptRow.querySelector('#cmd-prompt-renderer');
+    if (!realRenderer) return;
+
+    realRenderer.style.display = 'none';
+
+    mock = document.createElement('div');
+    mock.id = 'blood-prompt-renderer-mock';
+    mock.style.cssText = `
+      display: inline-block;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      color: #ffffff;
+      background: var(--bgcolor, #000);
+      margin: 0;
+      padding: 0;
+      box-sizing: content-box;
+      vertical-align: middle;
+      white-space: pre;
+      user-select: none;
+    `;
+    mock.innerHTML = `혈액형 입력 (<span class="blood-hotspot" data-val="A">A</span>/<span class="blood-hotspot" data-val="B">B</span>/<span class="blood-hotspot" data-val="O">O</span>/<span class="blood-hotspot" data-val="AB">AB</span>) >> `;
+
+    const hotspots = mock.querySelectorAll('.blood-hotspot');
+    hotspots.forEach(el => {
+      el.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const val = el.getAttribute('data-val');
+        await showBloodResult(val);
+      });
+    });
+
+    realRenderer.parentNode.insertBefore(mock, realRenderer);
+  }
+
+  async function showBlood(fromHistory = false) {
+    state.screen = 'blood-input';
+    state.serviceData = { kind: 'blood' };
+    if (!fromHistory) updateURL();
+    await render(buildBloodIntroAnsi(), 'amusementInput', '혈액형 입력 (A/B/O/AB) >> ');
+    inlineMount('blood-prompt-host', 'game-prompt-host');
+    attachBloodPromptHotspots();
+  }
   async function showBloodResult(input, fromHistory = false) { const type = findBloodType(input); if (!type) { setHint('혈액형을 A, B, O, AB 중에서 입력하세요.'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'blood-result'; state.serviceData = { kind: 'blood', bloodCode: type.code }; if (!fromHistory) updateURL(); await render(buildBloodAnsi(type), 'amusementView', '선택 >> '); return true; }
 
   async function showCompat(fromHistory = false) { state.screen = 'compat-input'; state.serviceData = { kind: 'compat' }; if (!fromHistory) updateURL(); await render(buildCompatIntroAnsi(), 'amusementInput', '첫 번째 사람 생년월일 입력 (예: 19900101) >> '); inlineMount('compat-prompt-host', 'game-prompt-host'); }

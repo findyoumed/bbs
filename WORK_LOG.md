@@ -1,3 +1,18 @@
+## [2026-07-24 09:55] 혈액형 입력 화면 프롬프트 내의 A/B/O/AB 마우스 호버 및 클릭(핫스팟) 활성화
+
+**LOG_ID: 20260724_0955**
+목표: 혈액형 입력 화면(blood-input) 하단 프롬프트 `혈액형 입력 (A/B/O/AB) >>` 안의 A, B, O, AB 글자들을 마우스 호버링 및 클릭 가능한 핫스팟으로 구현.
+변경 파일: public/style.css, public/js/core/terminalHintFooter.js, public/js/core/amusementScreens.js
+수행 작업:
+1) `style.css`에 `.blood-hotspot` 및 호버 스타일을 추가해 노란색 밑줄 및 하늘색 호버링 스타일 제공.
+2) `terminalHintFooter.js`의 `setPrompt` 내에 `blood-prompt-renderer-mock`가 남아있다면 제거하고 기존 렌더러를 다시 노출하는 복원 가드 추가.
+3) `amusementScreens.js`의 `showBlood`에서 `attachBloodPromptHotspots`를 실행해 기존 `#cmd-prompt-renderer`를 숨기고 핫스팟이 내장된 모조 HTML 프롬프트를 삽입하며 클릭 시 바로 결과를 실행하도록 바인딩.
+실행: `node --check public/js/core/terminalHintFooter.js` 및 `node --check public/js/core/amusementScreens.js`
+기대: 혈액형 입력 화면에서 A, B, O, AB 마우스 호버 시 강조 효과가 나며, 클릭 시 해당하는 혈액형 결과 화면으로 즉시 전이됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 09:48] 오늘의 운세 생년월일(8자리) 기반 변경 및 실제 십이지 합충 역학 알고리즘 적용
 
 **LOG_ID: 20260724_0948**
