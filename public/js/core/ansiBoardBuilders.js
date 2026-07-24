@@ -296,14 +296,25 @@ export function createBoardAnsiBuilders(deps) {
     const highlightedContent = highlightText(rawContent, highlightTerm, 14, 15);
     const contentLines = wrapAnsiText(highlightedContent, targetCols);
 
+    // [LOG_ID: 20260724_2020] 페이지당 렌더 캔버스는 항상 이 줄 수로 고정된다(아래 while 패딩
+    // 루프가 이 값까지 빈 줄로 채운다) — 페이징 계산도 같은 상수를 기준으로 삼아야 한다.
+    const totalLines = 24;
+
     // 본문 페이징 시뮬레이션 계산
     let headerLineCount = 3; // 제목(1줄) + 올린이(1줄) + 구분선(1줄)
     if (isMobile) {
       headerLineCount = 4; // 제목(1줄) + 번호/저자(1줄) + 메타데이터(1줄) + 구분선(1줄)
     }
-    const lastPageFooterLines = 1; // "마지막 페이지입니다" 등 푸터 줄
-    // 가용 본문 라인을 13행 기준으로 산출하여 약 9~10행 수준으로 제한 (F키 페이징 지원 및 스크롤 완전 차단)
-    const baseLines = Math.max(5, 13 - headerLineCount); 
+    // "13행 기준"이라는 근거 없는 상수로 가용 본문 줄 수를 9~10줄로 제한해와서, 실제 렌더
+    // 캔버스(totalLines=24, buildTopHeader 자체가 이미 4줄을 차지)보다 페이지마다 6~8줄이
+    // 그냥 빈 줄로 낭비됐다(사용자 보고: "글이 아래에 여백이 많아"). buildTopHeader가 실제로
+    // 반환하는 줄 수(topLine+headerLine+구분선+빈줄 = 4줄)를 명시적으로 빼서, 24줄 캔버스
+    // 예산을 페이지당 최대한 채우도록 계산한다.
+    // (참고: Playwright로 확인해보니 이 화면은 이 변경과 무관하게 이전부터 24줄을 다 채우면
+    // 컨테이너 대비 약 10px의 미세한 세로 오버플로가 있었다 — 원래 코드에서도 동일하게
+    // 재현되는 기존 현상이라 이번 수정 범위에서는 건드리지 않는다.)
+    const topHeaderLines = 4; // buildTopHeader() 반환 줄 수
+    const baseLines = Math.max(5, totalLines - topHeaderLines - headerLineCount);
 
     const pages = [];
     let currentLineIdx = 0;
@@ -350,8 +361,6 @@ export function createBoardAnsiBuilders(deps) {
       parts.push(ansiColor(15) + line + ANSI_RESET);
     });
 
-
-    const totalLines = 24;
     const joinedLines = parts.join('\n').split('\n');
     while (joinedLines.length < totalLines) {
       joinedLines.push(ANSI_RESET);
