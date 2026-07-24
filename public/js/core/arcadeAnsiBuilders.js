@@ -180,6 +180,7 @@ export function createArcadeAnsiBuilders(deps) {
   }
 
   // ── 6. 스크램블 (Scramble) ──
+  // [LOG: 20260724_1034] 게임 종료 시 미처 찾지 못한 정답 단어 목록 노출 로직 보강
   function buildScrambleAnsi(st) {
     const divider = c(8, '  +---+---+---+---+');
     const rows = [divider];
@@ -200,6 +201,17 @@ export function createArcadeAnsiBuilders(deps) {
     const statusLine = st.status === 'end'
       ? c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`)
       : `  ${c(14, '남은시간:')} ${c(11, `${remains}초`)}   ${c(14, '점수:')} ${c(11, `${st.score}점`)}`;
+
+    let answerLine = '';
+    if (st.status === 'end' && st.allPossibleAnswers) {
+      const missing = st.allPossibleAnswers.filter(w => !st.found.includes(w));
+      if (missing.length > 0) {
+        const displayLimit = 10;
+        const shown = missing.slice(0, displayLimit).join(', ');
+        const extra = missing.length > displayLimit ? ` 외 ${missing.length - displayLimit}개` : '';
+        answerLine = `\n  ${c(11, `미처 찾지 못한 정답 단어: [${shown}${extra}]`)}`;
+      }
+    }
       
     const hintLine = st.hintMsg ? `\n  ${c(9, st.hintMsg)}` : '';
       
@@ -211,7 +223,7 @@ export function createArcadeAnsiBuilders(deps) {
       `  ${c(14, '찾은 단어들 :')} ${c(15, `[${st.found.join(', ')}]`)}`,
       '',
       statusLine
-    ].join('\n') + hintLine;
+    ].join('\n') + answerLine + hintLine;
   }
 
   // ── 7. 영어단어/숙어 학습게임 (WP) ──

@@ -1,3 +1,18 @@
+## [2026-07-24 10:34] 스크램블 게임 종료 시 미처 찾지 못한 정답 단어 노출 기능 구현
+
+**LOG_ID: 20260724_1034**
+목표: 스크램블 게임 종료(시간 초과) 시, 사용자가 찾지 못한 숨겨진 정답 단어 목록을 하단에 보여주어 학습 및 게임 유용성 개선.
+변경 파일: public/js/core/arcadeGameLogic.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeGameLogic.js`에 그리드 내 글자들로 조합 가능한 사전(단어 풀)의 모든 유효 단어를 추출하는 `getScramblePossibleAnswers` 헬퍼 함수 구현.
+2) `createScrambleState`에서 게임 시작 시 조합 가능한 전체 정답 배열 `allPossibleAnswers`를 미리 추출하여 상태 객체에 보관하도록 수정.
+3) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi` 내에서 게임이 종료(`status === 'end'`)되었을 때, `allPossibleAnswers` 중 유저가 맞추지 못한 미발견 단어들을 최대 10개까지 추출하여 노출해 주는 안내 라인(`answerLine`) 렌더링 로직 추가.
+실행: `node --check public/js/core/arcadeGameLogic.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 제한시간 초과로 스크램블 게임이 종료될 때 하단에 미처 찾지 못한 영단어들이 예쁘게 노출되어 정답을 확인할 수 있음.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:19] 오락실 아케이드 게임 공통 종료 시 힌트바 복원 및 프롬프트('선택 >>') 강제 패치
 
 **LOG_ID: 20260724_1019**

@@ -298,6 +298,36 @@ export function puzzle15Apply(st, num) {
 // [LOG: 20260720_2000] 신규 오락실 게임 5종 (스크램블 / 영어학습 WP / 타자게임 / 퀴즈박사 / 배틀쉽 Battle)
 
 // ── 6. 스크램블 (Scramble) ──────────────────────────────────────────────────
+// [LOG: 20260724_1034] 스크램블 글자판 글자들로 조합 가능한 정답 단어 추출 유틸리티
+function getScramblePossibleAnswers(grid) {
+  const gridCounts = {};
+  for (const ch of grid) {
+    gridCounts[ch] = (gridCounts[ch] || 0) + 1;
+  }
+  
+  const answers = [];
+  for (const pair of HANGMAN_WORDS) {
+    const word = pair[0];
+    if (word.length < 2) continue;
+    
+    const wordCounts = {};
+    let ok = true;
+    for (const ch of word) {
+      wordCounts[ch] = (wordCounts[ch] || 0) + 1;
+      if (!gridCounts[ch] || wordCounts[ch] > gridCounts[ch]) {
+        ok = false;
+        break;
+      }
+    }
+    
+    if (ok) {
+      answers.push(word);
+    }
+  }
+  
+  return answers;
+}
+
 export function createScrambleState() {
   // 영어단어 맞추기 단어 풀에서 하나 골라 글자판 베이스로 삼는다
   const wordPair = HANGMAN_WORDS[Math.floor(Math.random() * HANGMAN_WORDS.length)];
@@ -322,6 +352,8 @@ export function createScrambleState() {
     grid[i] = grid[j];
     grid[j] = temp;
   }
+
+  const answers = getScramblePossibleAnswers(grid);
   
   return {
     grid,
@@ -329,7 +361,8 @@ export function createScrambleState() {
     elapsed: 0,
     found: [],
     score: 0,
-    status: 'play'
+    status: 'play',
+    allPossibleAnswers: answers
   };
 }
 
