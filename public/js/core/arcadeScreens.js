@@ -343,6 +343,48 @@ export function createArcadeScreens(deps) {
       scrambleTimer = null;
     }
   }
+  function renderScrambleHotspots(screenNode, game) {
+    if (!screenNode || game.status !== 'play') return;
+    const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
+    const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
+    const scrambleLines = lineNodes.filter(node => {
+      const txt = node.textContent || '';
+      return txt.includes('|') && !txt.includes('+');
+    });
+    if (scrambleLines.length !== 4) return;
+    
+    const layer = createHotspotLayer();
+    scrambleLines.forEach((lineNode, y) => {
+      for (let x = 0; x < 4; x++) {
+        const char = game.grid[y * 4 + x];
+        const start = 3 + x * 4;
+        const bounds = measureLineSegmentBounds(screenNode, lineNode, start, start + 3);
+        if (!bounds) continue;
+        
+        const btn = createHotspotButton('', `알파벳 ${char} 입력`, bounds);
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const inputEl = document.getElementById('terminal-input') || document.querySelector('.terminal-input-input');
+          if (inputEl) {
+            inputEl.value = (inputEl.value || '') + char;
+            inputEl.focus();
+            const event = new Event('input', { bubbles: true });
+            inputEl.dispatchEvent(event);
+          }
+        });
+        layer.appendChild(btn);
+      }
+    });
+    if (layer.childElementCount > 0) screenNode.appendChild(layer);
+  }
+  async function renderScramble(game) {
+    const promptText = game.status === 'play' ? '단어 입력 >> ' : '선택 >> ';
+    const rendered = await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', promptText);
+    if (rendered && rendered.screenNode) {
+      renderScrambleHotspots(rendered.screenNode, game);
+    }
+  }
   async function showScramble(fromHistory = false) {
     clearScrambleTimer();
     state.screen = 'scramble-play';
@@ -355,11 +397,11 @@ export function createArcadeScreens(deps) {
       if (activeGame && activeGame.status === 'play') {
         activeGame.status = 'end';
         activeGame.elapsed = 60;
-        await arcadeRender(buildScrambleAnsi(activeGame), 'arcadePlay', '선택 >> ');
+        await renderScramble(activeGame);
       }
     }, 60000);
 
-    await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
+    await renderScramble(game);
   }
   async function scrambleGuess(word) {
     const game = sd('scramble');
@@ -367,7 +409,7 @@ export function createArcadeScreens(deps) {
     if (game.status !== 'play') {
       clearScrambleTimer();
       setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.');
-      await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '선택 >> ');
+      await renderScramble(game);
       return true;
     }
     
@@ -375,13 +417,13 @@ export function createArcadeScreens(deps) {
     const res = scrambleApply(game, word);
     if (res === 'end' || game.status === 'end') {
       clearScrambleTimer();
-      await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '선택 >> ');
+      await renderScramble(game);
       return true;
     }
     if (res === 'already') { game.hintMsg = '이미 찾은 단어입니다.'; }
     if (res === 'invalid') { game.hintMsg = '유효하지 않은 단어이거나 글자판에 없는 단어입니다.'; }
     
-    await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
+    await renderScramble(game);
     return true;
   }
 
