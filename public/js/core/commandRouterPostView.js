@@ -198,6 +198,18 @@ export function createPostViewCommandHandler(deps) {
       }
     }
 
+    // [LOG_ID: 20260724_1935] 위 주석("F/B/엔터 가로채기")과 달리 B는 실제로 구현된 적이
+    // 없어, 페이지 중간(2쪽 이상)에서 B를 눌러도 이전 페이지로 못 가고 그대로 아래 L281의
+    // window.history.back() 폴백까지 흘러갔다 — 딥링크로 들어와 브라우저 히스토리 스택이
+    // 얕은 경우 "상위메뉴"(초기화면)까지 튕겨 나가는 버그로 실측 재현됨(사용자 보고:
+    // "이전 페이지 누르니까 상위메뉴로 가는데"). F와 대칭으로 본문 내 이전 페이지 이동을
+    // 여기서 직접 처리하고, 이미 1쪽이면(본문상 더 갈 곳이 없으면) 아래 목록 이동 폴백으로
+    // 넘어가도록 return하지 않는다.
+    if (cmd === 'B' && postPageNo > 1) {
+      await showPostView(state.board.id, state.post.localId ?? state.post.id, false, postPageNo - 1);
+      return true;
+    }
+
     // 엔터 입력 시 아직 본문 다음 페이지가 남아 있으면 다음 페이지로 우선 이동
     if (cmd === '') {
       if (postPageNo < postPageCount) {
@@ -278,12 +290,10 @@ export function createPostViewCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'B') {
-      window.history.back();
-      return true;
-    }
-
-    if (cmd === 'P' || cmd === 'M') {
+    // [LOG_ID: 20260724_1935] window.history.back()은 딥링크로 들어와 히스토리 스택이 얕을 때
+    // 목록이 아니라 초기화면까지 튕겨 나가는 등 결과를 예측할 수 없다 — P/M과 똑같이 상태 기반
+    // showPostList로 목록에 확실히 도달하도록 통일한다(20260724_1754 로그의 원래 의도).
+    if (cmd === 'B' || cmd === 'P' || cmd === 'M') {
       await showPostList(state.board.id, state.page, {
         menuPath: state.boardMenuPath,
         menuTitle: state.boardMenuTitle,
