@@ -779,6 +779,7 @@ function calculateMbtiFromAnswers(answers) {
     const animal1 = ZODIAC[((birth1.getFullYear() - 4) % 12 + 12) % 12];
     return [buildTopHeader(['오락실', '궁합']), c(11, `${ANSI_BOLD}  ${dateText(birth1)}생 ${animal1}띠${ANSI_RESET}`), '', c(14, '  두 번째 사람의 생년월일을 입력하세요.'), c(11, '  입력 예) 1995-05-05 또는 19950505')].join('\n');
   }
+  // [LOG: 20260724_1004] 세로 스크롤바 방지를 위한 문단 간 빈 줄 압축 적용
   function buildCompatAnsi(birth1, birth2) {
     const animal1 = ZODIAC[((birth1.getFullYear() - 4) % 12 + 12) % 12];
     const animal2 = ZODIAC[((birth2.getFullYear() - 4) % 12 + 12) % 12];
@@ -803,15 +804,12 @@ function calculateMbtiFromAnswers(answers) {
     ];
 
     wrapAnsiText(personality, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
-    parts.push('');
 
     parts.push(c(11, '  [ 연애 & 인연 기운 ]'));
     wrapAnsiText(chemistry, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
-    parts.push('');
 
     parts.push(c(13, '  [ 다툼 예방 & 주의할 점 ]'));
     wrapAnsiText(caution, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
-    parts.push('');
 
     parts.push(c(10, '  [ 관계를 위한 황금 팁 ]'));
     wrapAnsiText(tip, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));

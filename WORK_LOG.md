@@ -25,6 +25,19 @@
 
 ---
 
+## [2026-07-24 10:04] 궁합 결과 화면 세로 스크롤바 방지를 위한 줄 수 최적화
+
+**LOG_ID: 20260724_1004**
+목표: 궁합 결과 화면(/game/compat)에서 결과 텍스트가 길어져 24줄 높이 제한을 초과해 세로 스크롤바가 노출되는 현상 해결.
+변경 파일: public/js/core/amusementAnsiBuilders.js
+수행 작업:
+1) `amusementAnsiBuilders.js`의 `buildCompatAnsi` 내에서 성격, 연애, 다툼, 팁 카테고리 간의 빈 줄(`parts.push('')`) 3개를 제거하여 전체 라인 수를 3줄 압축.
+실행: `node --check public/js/core/amusementAnsiBuilders.js`
+기대: 궁합 결과 화면의 정보 밀도가 타이트해지고 세로 스크롤바 없이 24줄 제한 내에 컴팩트하게 담김.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:00] 혈액형 핫스팟 기본 색상 백색(하얀색) 변경 패치
 
 **LOG_ID: 20260724_1000**
