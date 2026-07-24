@@ -1,3 +1,17 @@
+## [2026-07-24 09:57] 혈액형 결과 화면 본문 내 A/B/O/AB 안내 문구 마우스 호버 및 클릭(핫스팟) 활성화
+
+**LOG_ID: 20260724_0957**
+목표: 혈액형 결과 화면(blood-result) 본문 내의 "다른 혈액형을 보려면 A/B/O/AB를 입력하세요." 문구에서 A, B, O, AB를 마우스 클릭/호버 핫스팟으로 구현.
+변경 파일: public/js/core/amusementScreens.js
+수행 작업:
+1) `amusementScreens.js`에 `attachBloodResultHotspots` 함수를 정의하여 본문 ANSI 텍스트 내의 "A/B/O/AB" 텍스트를 `<span class="blood-hotspot">` HTML 코드로 치환하고 클릭 핸들러를 바인딩.
+2) `showBloodResult` 완료 직후 `rendered.screenNode`가 유효할 때 `attachBloodResultHotspots`를 호출하도록 수정.
+실행: `node --check public/js/core/amusementScreens.js`
+기대: 혈액형 결과 화면 본문 아래의 A, B, O, AB 글자들에 마우스를 올릴 때 호버 효과가 나타나고, 클릭 시 즉시 해당 혈액형 결과창으로 전환됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 09:56] 혈액형 입력 화면 프롬프트 내 A/B/O/AB 밑줄 제거 스타일 패치
 
 **LOG_ID: 20260724_0956**

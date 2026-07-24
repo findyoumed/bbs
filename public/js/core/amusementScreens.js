@@ -246,7 +246,32 @@ export function createAmusementScreens(deps) {
     inlineMount('blood-prompt-host', 'game-prompt-host');
     attachBloodPromptHotspots();
   }
-  async function showBloodResult(input, fromHistory = false) { const type = findBloodType(input); if (!type) { setHint('혈액형을 A, B, O, AB 중에서 입력하세요.'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'blood-result'; state.serviceData = { kind: 'blood', bloodCode: type.code }; if (!fromHistory) updateURL(); await render(buildBloodAnsi(type), 'amusementView', '선택 >> '); return true; }
+  // [LOG_ID: 20260724_0957] 혈액형 결과 화면 본문 안내문 내 A/B/O/AB 클릭 가능하게 치환 적용
+  function attachBloodResultHotspots(screenNode) {
+    if (!screenNode) return;
+    const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
+    const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
+    const targetLine = lineNodes.find(ln => (ln.textContent || '').includes('다른 혈액형을 보려면'));
+    if (!targetLine) return;
+
+    let html = targetLine.innerHTML;
+    const replacement = '<span class="blood-hotspot" data-val="A">A</span>/<span class="blood-hotspot" data-val="B">B</span>/<span class="blood-hotspot" data-val="O">O</span>/<span class="blood-hotspot" data-val="AB">AB</span>';
+    if (html.includes('A/B/O/AB')) {
+      targetLine.innerHTML = html.replace('A/B/O/AB', replacement);
+    }
+
+    const hotspots = targetLine.querySelectorAll('.blood-hotspot');
+    hotspots.forEach(el => {
+      el.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const val = el.getAttribute('data-val');
+        await showBloodResult(val);
+      });
+    });
+  }
+
+  async function showBloodResult(input, fromHistory = false) { const type = findBloodType(input); if (!type) { setHint('혈액형을 A, B, O, AB 중에서 입력하세요.'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'blood-result'; state.serviceData = { kind: 'blood', bloodCode: type.code }; if (!fromHistory) updateURL(); const rendered = await render(buildBloodAnsi(type), 'amusementView', '선택 >> '); if (rendered && rendered.screenNode) { attachBloodResultHotspots(rendered.screenNode); } return true; }
 
   async function showCompat(fromHistory = false) { state.screen = 'compat-input'; state.serviceData = { kind: 'compat' }; if (!fromHistory) updateURL(); await render(buildCompatIntroAnsi(), 'amusementInput', '첫 번째 사람 생년월일 입력 (예: 19900101) >> '); inlineMount('compat-prompt-host', 'game-prompt-host'); }
   async function showCompatStep2(input, fromHistory = false) {
