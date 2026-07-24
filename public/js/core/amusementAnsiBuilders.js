@@ -359,23 +359,46 @@ export function createAmusementAnsiBuilders(deps) {
     ].join('\n');
   }
 
+  // [LOG_ID: 20260724_2250] 사용자 지적 — "결과물도 가로폭 넘치는데"(생체 리듬 차트 자체가
+  // 화면 밖으로 넘침). 이 차트는 한 달 전체(최대 31일 × 3칸 + 라벨 5칸 = 98칸)를 폭 제한 없이
+  // 그렸다 — isMobile 분기 자체가 아예 없어서 모바일(44칸)은 물론 데스크톱(80칸) 기준으로도
+  // 이미 넘치고 있었다(다른 화면들은 전부 지키는 targetCols 관례를 이 함수만 빠뜨렸음). 매달
+  // 전체를 다 보여주는 대신, 화면 폭에 맞는 만큼만(오늘을 중심으로) 보여준다 — 페이지네이션
+  // 컨트롤을 새로 추가하는 대신(B가 이미 "게임 메뉴로" 의미로 쓰이고 있어 충돌 위험), 가장
+  // 실용적인 "오늘 근처 며칠"만 보여주는 창(window)으로 좁혀 넘침 자체를 원천 차단한다.
   function buildBiorhythmAnsi(birth, target = new Date(), userName = '사용자') {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    const labelWidth = 5;
+    const maxDaysVisible = Math.max(5, Math.floor((targetCols - labelWidth) / 3));
+
     const year = target.getFullYear();
     const month = target.getMonth() + 1;
     const daysInMonth = new Date(year, month, 0).getDate();
+    const today = target.getDate();
+
+    let startDay = 1;
+    let endDay = daysInMonth;
+    if (daysInMonth > maxDaysVisible) {
+      const half = Math.floor(maxDaysVisible / 2);
+      startDay = Math.max(1, Math.min(today - half, daysInMonth - maxDaysVisible + 1));
+      endDay = Math.min(daysInMonth, startDay + maxDaysVisible - 1);
+    }
+    const isWindowed = startDay > 1 || endDay < daysInMonth;
 
     const birthFormatted = `${birth.getFullYear()}/${String(birth.getMonth() + 1).padStart(2, '0')}/${String(birth.getDate()).padStart(2, '0')}`;
     const getDaysForDate = (dObj) => Math.round((dObj.getTime() - birth.getTime()) / 86400000);
 
+    const rangeLabel = isWindowed ? `${month}월 ${startDay}~${endDay}일` : `${year}년 ${month}월`;
     const parts = [
       buildTopHeader(['오락실', '생체 리듬 서비스']),
-      c(15, `  생 일 : ${birthFormatted}(양)   <${year}년 ${month}월>   ${userName}님의 신체리듬`),
+      c(15, `  생 일 : ${birthFormatted}(양)   <${rangeLabel}>   ${userName}님의 신체리듬`),
       ''
     ];
 
     const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
     let dayOfWeekLine = '     ';
-    for (let day = 1; day <= daysInMonth; day++) {
+    for (let day = startDay; day <= endDay; day++) {
       const dObj = new Date(year, month - 1, day);
       // 한글 요일(2칸) + 반각 공백 1칸 = 총 3칸
       dayOfWeekLine += daysOfWeek[dObj.getDay()] + ' ';
@@ -388,7 +411,7 @@ export function createAmusementAnsiBuilders(deps) {
 
       if (yLevel === 0) {
         let zeroLine = ' 0-';
-        for (let day = 1; day <= daysInMonth; day++) {
+        for (let day = startDay; day <= endDay; day++) {
           const dObj = new Date(year, month - 1, day);
           const elapsed = getDaysForDate(dObj);
           const pVal = Math.round(rhythm(elapsed, 23) / 100 * 5);
@@ -411,7 +434,7 @@ export function createAmusementAnsiBuilders(deps) {
         continue;
       }
 
-      for (let day = 1; day <= daysInMonth; day++) {
+      for (let day = startDay; day <= endDay; day++) {
         const dObj = new Date(year, month - 1, day);
         const elapsed = getDaysForDate(dObj);
         const pVal = Math.round(rhythm(elapsed, 23) / 100 * 5);
@@ -439,7 +462,7 @@ export function createAmusementAnsiBuilders(deps) {
     }
 
     let dateNumberLine = '     ';
-    for (let day = 1; day <= daysInMonth; day++) {
+    for (let day = startDay; day <= endDay; day++) {
       if (day % 2 === 1) {
         // 날짜 2자리 + 반각 공백 1칸 = 총 3칸
         dateNumberLine += String(day).padStart(2, ' ') + ' ';
