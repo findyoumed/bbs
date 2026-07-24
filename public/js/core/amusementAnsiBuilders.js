@@ -389,6 +389,35 @@ export function createAmusementAnsiBuilders(deps) {
     const birthFormatted = `${birth.getFullYear()}/${String(birth.getMonth() + 1).padStart(2, '0')}/${String(birth.getDate()).padStart(2, '0')}`;
     const getDaysForDate = (dObj) => Math.round((dObj.getTime() - birth.getTime()) / 86400000);
 
+    // [LOG_ID: 20260724_2310] 사용자 요청 — "모바일은 오래전 ui처럼 점수와 막대로 표시할까".
+    // 달력형 차트는 좁은 화면에서 며칠만 보여줘도 여전히 빽빽하다 — 모바일은 오늘 하루의
+    // 3대 리듬을 점수+막대(row 헬퍼, 원래 이 파일에 이미 있었지만 실제로는 어디서도 호출되지
+    // 않던 구현)로 보여주는 게 훨씬 읽기 쉽다. 데스크톱은 기존 달력형 차트(위 윈도잉 로직)를
+    // 그대로 유지한다.
+    if (isMobile) {
+      const elapsed = getDaysForDate(target);
+      const phy = rhythm(elapsed, 23);
+      const emo = rhythm(elapsed, 28);
+      const int = rhythm(elapsed, 33);
+      // 요약 문구·범례는 문장이 길어 44칸 한 줄에 다 안 들어간다 — wrapAnsiText로 감싼다.
+      const summaryLines = wrapAnsiText(getBiorhythmSummary(phy, emo, int, phy), targetCols - 2)
+        .map((line) => c(8, `  ${line}`));
+      const legendLines = wrapAnsiText('P:신체(23일)  E:감성(28일)  I:지성(33일)', targetCols - 2)
+        .map((line) => c(8, `  ${line}`));
+      return [
+        buildTopHeader(['오락실', '생체 리듬 서비스']),
+        c(15, `  생일 ${birthFormatted}  오늘 ${dateText(target)}`),
+        '',
+        row('신체', phy, true),
+        row('감성', emo, true),
+        row('지성', int, true),
+        '',
+        ...summaryLines,
+        '',
+        ...legendLines
+      ].join('\n');
+    }
+
     const rangeLabel = isWindowed ? `${month}월 ${startDay}~${endDay}일` : `${year}년 ${month}월`;
     const parts = [
       buildTopHeader(['오락실', '생체 리듬 서비스']),
