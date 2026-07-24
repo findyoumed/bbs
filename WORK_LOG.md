@@ -1,3 +1,14 @@
+## [2026-07-24 21:00] [버그 수정] 글보기 D(삭제) 확인 문구가 본문과 동떨어진 화면 맨 아래에 붙던 문제 수정
+
+**LOG_ID: 20260724_2100**
+목표: 사용자 보고(스크린샷 포함) — `/notice/2`에서 D로 삭제 시 UI가 이상함. 실측: 본문이 "안녕하세요" 한 줄뿐인 짧은 글인데, "정말 삭제하시겠습니까?" 확인 문구가 본문 바로 아래가 아니라 화면 맨 아래(빈 줄 15줄 이상 떨어진 위치)에 동떨어져 표시됨.
+원인: 글보기 D/DD 핸들러가 `deps.showConfirm()`(terminalDialog.js)을 썼는데, 이 함수의 `appendTranscript()`는 확인 문구를 `screenEl`에 직접 DOM으로 append한다. 그런데 글보기 화면은 언제나 24줄로 패딩된 정적 ANSI 스냅샷이라(짧은 글일수록 빈 줄이 많음), 그 뒤에 이어붙이면 확인 문구가 본문과 완전히 분리된 화면 맨 밑에 나타난다. 반면 게시판 목록(post-list)의 삭제 확인(`commandRouterBrowse.js`의 `beginDeleteConfirm`)은 애초에 `screenEl`을 건드리지 않고 `setHint`/`setPrompt`만 바꿔 이 문제 자체가 없었다.
+구현: 글보기 D/DD도 post-list와 같은 패턴으로 통일 — `state._postDeleteConfirmStage`에 삭제 대상 정보를 저장하고 `setHint`(삭제할 글 제목)/`setPrompt`("정말 삭제하시겠습니까? (Y/N) [N] >>")만 바꾼다. `handlePostViewCommand` 최상단에서 이 stage가 있으면 다음 입력을 Y/N 응답으로 가로채 처리(Y→실제 삭제+목록 이동+토스트, 그 외→"삭제를 취소했습니다" 후 프롬프트 복귀)하고 stage를 정리한다. 기존 `showConfirm` 기반 다이얼로그 호출은 제거.
+검증: `node --check` 통과. 헤드리스 Node 하네스로 `createPostViewCommandHandler`를 모의 의존성(deletePost/showPostList 모킹, 실제 DB 미접촉)으로 직접 구동 — D 입력 시 `state._postDeleteConfirmStage`가 채워지고 프롬프트만 "정말 삭제하시겠습니까? (Y/N) [N] >>"로 바뀜(힌트/본문은 그대로) 확인 → N 입력 시 삭제 미호출·stage 정리·"삭제를 취소했습니다" 확인 → 다시 D 후 Y 입력 시에만 실제 deletePost·showPostList(토스트 포함) 호출 확인. `npm run smoke:boards`, `smoke:command-parity` 통과. (운영 DB에 연결된 환경이라 실제 삭제는 이 헤드리스 모의 테스트로만 검증하고 브라우저로는 재현하지 않았다.)
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 20:20] [버그 수정] 글보기 본문 페이지당 표시 줄 수를 근거 없는 "13행 기준" 상수 대신 실제 24줄 캔버스 예산으로 계산
 
 **LOG_ID: 20260724_2020**

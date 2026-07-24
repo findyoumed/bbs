@@ -27,9 +27,54 @@ export function createPostViewCommandHandler(deps) {
   // [LOG_ID: 20260713_0930] LV 등급 별칭 — 서버 BoardRepositoryAccess.LEVEL_NAME_MAP과 동일하게 유지
   const LEVEL_LABELS = { 1: '일반회원', 2: '특별회원', 99: '운영자' };
 
+  // [LOG_ID: 20260724_2100] 종전엔 deps.showConfirm(다이얼로그)이 "정말 삭제하시겠습니까?" 줄을
+  // screenEl에 직접 append했는데(terminalDialog.js appendTranscript), 글보기 화면은 언제나
+  // 24줄로 패딩된 정적 스냅샷이라 그 뒤에 이어 붙으면 짧은 글일수록 본문과 한참 떨어진 화면
+  // 맨 아래에 질문만 동떨어져 보였다(사용자 보고: "d로 삭제할때 ui가 이상해" — 스크린샷 실측:
+  // "안녕하세요" 한 줄 본문과 "정말 삭제하시겠습니까?" 사이에 빈 줄이 15줄 넘게 벌어짐).
+  // post-list의 삭제 확인(commandRouterBrowse.js beginDeleteConfirm)은 애초에 이 문제가 없다 —
+  // screenEl은 그대로 두고 setHint/setPrompt만 바꿔 질문을 힌트/프롬프트 줄에만 띄운다. 같은
+  // 방식으로 통일한다.
+  function beginPostDeleteConfirm(post) {
+    state._postDeleteConfirmStage = {
+      boardId: state.board?.id,
+      postId: post.localId ?? post.id,
+      page: state.page,
+      menuPath: state.boardMenuPath,
+      menuTitle: state.boardMenuTitle,
+      searchParams: { ...(state.searchParams || {}) }
+    };
+    setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
+    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [N] >>`);
+  }
+
   return async function handlePostViewCommand({ cmd, context }) {
     if (state.screen !== 'post-view' && state.screen !== 'attachment-list') {
       return false;
+    }
+
+    if (state.screen === 'post-view' && state._postDeleteConfirmStage) {
+      const deleteStage = state._postDeleteConfirmStage;
+      state._postDeleteConfirmStage = null;
+      const normalizedInput = String(cmd || '').trim().toUpperCase();
+      if (normalizedInput === 'Y' || normalizedInput === 'YES') {
+        try {
+          await deletePost(deleteStage.boardId, deleteStage.postId);
+          await showPostList(deleteStage.boardId, deleteStage.page, {
+            menuPath: deleteStage.menuPath,
+            menuTitle: deleteStage.menuTitle,
+            searchParams: { ...(deleteStage.searchParams || {}) }
+          });
+          deps.showToast?.(UI_TEXT.POST_DELETE_SUCCESS, 2000, 'success');
+        } catch (error) {
+          setHint(`${UI_TEXT.ERROR}: ${error.message}`);
+          setPrompt('선택 >>');
+        }
+      } else {
+        setHint('삭제를 취소했습니다.');
+        setPrompt('선택 >>');
+      }
+      return true;
     }
 
     if (state.screen === 'attachment-list') {
@@ -372,20 +417,7 @@ export function createPostViewCommandHandler(deps) {
       }
       const canDelete = state.user.isAdmin || state.user.userId === (state.post.authorUserId || state.post.userId);
       if (canDelete) {
-        const confirmed = await deps.showConfirm(UI_TEXT.POST_DELETE_CONFIRM);
-        if (confirmed) {
-          try {
-            await deletePost(state.board.id, state.post.localId ?? state.post.id);
-            await showPostList(state.board.id, state.page, {
-              menuPath: state.boardMenuPath,
-              menuTitle: state.boardMenuTitle,
-              searchParams: { ...(state.searchParams || {}) }
-            });
-            deps.showToast?.(UI_TEXT.POST_DELETE_SUCCESS, 2000, 'success');
-          } catch (error) {
-            setHint(`${UI_TEXT.ERROR}: ${error.message}`);
-          }
-        }
+        beginPostDeleteConfirm(state.post);
       } else {
         setHint(UI_TEXT.POST_DELETE_MY_ONLY);
       }
