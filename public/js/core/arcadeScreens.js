@@ -336,21 +336,46 @@ export function createArcadeScreens(deps) {
   }
 
   // ── 스크램블 ──
+  let scrambleTimer = null;
+  function clearScrambleTimer() {
+    if (scrambleTimer) {
+      clearTimeout(scrambleTimer);
+      scrambleTimer = null;
+    }
+  }
   async function showScramble(fromHistory = false) {
+    clearScrambleTimer();
     state.screen = 'scramble-play';
     state.serviceData = { kind: 'scramble', ...createScrambleState(), hintMsg: '' };
     if (!fromHistory) updateURL();
-    await arcadeRender(buildScrambleAnsi(state.serviceData), 'arcadePlay', '단어 입력 >> ');
+    
+    const game = state.serviceData;
+    scrambleTimer = setTimeout(async () => {
+      const activeGame = sd('scramble');
+      if (activeGame && activeGame.status === 'play') {
+        activeGame.status = 'end';
+        activeGame.elapsed = 60;
+        await arcadeRender(buildScrambleAnsi(activeGame), 'arcadePlay', '선택 >> ');
+      }
+    }, 60000);
+
+    await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
   }
   async function scrambleGuess(word) {
     const game = sd('scramble');
     if (!game) { await showScramble(); return true; }
-    if (game.status !== 'play') { setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.'); return true; }
+    if (game.status !== 'play') {
+      clearScrambleTimer();
+      setHint('게임이 끝났습니다. L을 누르면 새 게임을 시작합니다.');
+      await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '선택 >> ');
+      return true;
+    }
     
     game.hintMsg = '';
     const res = scrambleApply(game, word);
-    if (res === 'end') {
-      await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '단어 입력 >> ');
+    if (res === 'end' || game.status === 'end') {
+      clearScrambleTimer();
+      await arcadeRender(buildScrambleAnsi(game), 'arcadePlay', '선택 >> ');
       return true;
     }
     if (res === 'already') { game.hintMsg = '이미 찾은 단어입니다.'; }
