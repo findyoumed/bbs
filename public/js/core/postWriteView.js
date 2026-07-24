@@ -119,8 +119,10 @@ export function createPostWriteView(deps) {
     return hintOnly || '저장:S 또는 /s  취소:P/M/B 또는 /q';
   }
 
+  // [LOG_ID: 20260724_0010] 본문 단계는 일반 화면의 P/S/H 힌트만으로는 줄 편집 명령(/E, /D, /I,
+  // /L)을 알 수 없어, 본문 입력 중에는 이 명령들을 직접 안내하는 전용 힌트를 쓴다.
   function setBodyEditorHint() {
-    setHint(getWriteHintText());
+    setHint('저장:/s 또는 S  취소:/q 또는 P  목록:/l  수정:/e[번호]  삭제:/d[번호]  삽입:/i[번호]');
   }
 
   function clearPostWriteEditor() {
@@ -171,15 +173,29 @@ export function createPostWriteView(deps) {
     renderLineEditor(editor);
   }
 
+  // [LOG_ID: 20260724_0010] 하이텔/천리안/나우누리 책의 라인 에디터 방식 — 줄마다 번호를 매겨
+  // 보여주고, "/E 번호"로 그 줄을 바꿔 쓰고 "/D 번호[-번호]"로 지우고 "/I 번호"로 그 줄 앞에
+  // 새 줄을 끼워 넣는다(원본 명령 관례를 따라 "/" 접두어로 본문 텍스트와 구분). 사용자 지적—
+  // "글쓰기와 글수정이 불편하게 구현되어 있는데" — 이전에는 본문을 한 줄씩 뒤에 追加만 할 수
+  // 있었고(특히 글수정은 기존 내용을 절대 고치지 못하고 뒤에 새 줄만 덧붙이는 구조), 어느 줄이
+  // 몇 번째인지 알 방법도 없었다.
+  function appendNumberedBody(editor) {
+    editor.bodyLines.forEach((line, index) => {
+      appendTranscriptLine(editor, `${String(index + 1).padStart(3, ' ')}: ${line}`);
+    });
+  }
+
   function enterBodyStage(editor) {
     editor.stage = 'body';
+    editor.pendingLineOp = null;
     appendTranscriptLine(editor, '');
-    appendTranscriptLine(editor, '본문을 입력하십시오. 저장은 S 또는 /s, 취소는 P/M/B 또는 /q 입니다.');
+    appendTranscriptLine(editor, '본문을 입력하십시오. (저장 /s 또는 S, 취소 /q 또는 P/M/B)');
+    appendTranscriptLine(editor, '줄 수정 /e 번호, 줄 삭제 /d 번호[-번호], 줄 삽입 /i 번호, 줄 목록 /l');
     if (editor.bodyLines.length) {
       appendTranscriptLine(editor, '');
       appendTranscriptLine(editor, '--- 현재 본문 ---');
-      editor.bodyLines.forEach((line) => appendTranscriptLine(editor, line));
-      appendTranscriptLine(editor, '--- 이어서 입력 ---');
+      appendNumberedBody(editor);
+      appendTranscriptLine(editor, '--- 이어서 입력하거나 위 명령으로 수정하십시오 ---');
     }
     appendTranscriptLine(editor, '');
     setBodyEditorHint();
@@ -195,6 +211,47 @@ export function createPostWriteView(deps) {
   function isSaveWriteCommand(raw) {
     const input = String(raw || '').trim();
     return input === '/s' || input.toUpperCase() === 'S';
+  }
+
+  // [LOG_ID: 20260724_0010] "/L", "/E 3", "/D 2-4", "/I 5" 형태의 줄 편집 명령을 인식한다.
+  // 본문 텍스트가 우연히 "/"로 시작하는 경우와 구분하기 위해, 알려진 편집 명령 글자
+  // (L/E/D/I) 형태와 정확히 일치할 때만 명령으로 처리하고, 그 외 "/"로 시작하는 줄은
+  // 그대로 본문 텍스트로 취급한다.
+  function parseLineCommand(raw) {
+    const input = String(raw || '').trim();
+    const match = input.match(/^\/([LEDIeldi])\s*(.*)$/);
+    if (!match) return null;
+    const type = match[1].toUpperCase();
+    const rest = match[2].trim();
+
+    if (type === 'L') return { type: 'list' };
+
+    if (type === 'E') {
+      const n = Number(rest);
+      if (!Number.isInteger(n) || n < 1) return { type: 'invalid', reason: `줄 번호를 지정하십시오. 예) /E 3` };
+      return { type: 'edit', index: n };
+    }
+
+    if (type === 'I') {
+      const n = Number(rest);
+      if (!Number.isInteger(n) || n < 1) return { type: 'invalid', reason: `줄 번호를 지정하십시오. 예) /I 3` };
+      return { type: 'insert', index: n };
+    }
+
+    if (type === 'D') {
+      const rangeMatch = rest.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (rangeMatch) {
+        const from = Number(rangeMatch[1]);
+        const to = Number(rangeMatch[2]);
+        if (from < 1 || to < from) return { type: 'invalid', reason: `줄 범위가 올바르지 않습니다. 예) /D 2-4` };
+        return { type: 'delete', from, to };
+      }
+      const n = Number(rest);
+      if (!Number.isInteger(n) || n < 1) return { type: 'invalid', reason: `줄 번호를 지정하십시오. 예) /D 3 또는 /D 2-4` };
+      return { type: 'delete', from: n, to: n };
+    }
+
+    return null;
   }
 
   function showPostWrite(handlers, mode = 'create', refPost = null) {
@@ -351,6 +408,100 @@ export function createPostWriteView(deps) {
         
         await handlers.handleWriteSubmit();
         return true;
+      }
+
+      // [LOG_ID: 20260724_0010] /E 또는 /I로 지정한 줄의 새 내용을 기다리는 중이면, 이번 입력은
+      // 명령이 아니라 그 줄의 실제 텍스트다.
+      if (activeEditor.pendingLineOp) {
+        const op = activeEditor.pendingLineOp;
+        activeEditor.pendingLineOp = null;
+        if (isCancelWriteCommand(line)) {
+          appendTranscriptLine(activeEditor, line);
+          appendTranscriptLine(activeEditor, '입력을 취소했습니다.');
+          renderLineEditor(activeEditor);
+          return true;
+        }
+        appendTranscriptLine(activeEditor, line);
+        if (op.type === 'edit') {
+          activeEditor.bodyLines[op.index - 1] = line;
+          appendTranscriptLine(activeEditor, `${op.index}번 줄을 수정했습니다.`);
+        } else {
+          activeEditor.bodyLines.splice(op.index - 1, 0, line);
+          appendTranscriptLine(activeEditor, `${op.index}번 줄 앞에 삽입했습니다.`);
+        }
+        appendTranscriptLine(activeEditor, '');
+        appendNumberedBody(activeEditor);
+        appendTranscriptLine(activeEditor, '');
+        renderLineEditor(activeEditor);
+        return true;
+      }
+
+      const lineCommand = parseLineCommand(line);
+      if (lineCommand) {
+        appendTranscriptLine(activeEditor, line);
+
+        if (lineCommand.type === 'invalid') {
+          appendTranscriptLine(activeEditor, lineCommand.reason);
+          renderLineEditor(activeEditor);
+          return true;
+        }
+
+        if (lineCommand.type === 'list') {
+          appendTranscriptLine(activeEditor, '');
+          if (activeEditor.bodyLines.length) {
+            appendNumberedBody(activeEditor);
+          } else {
+            appendTranscriptLine(activeEditor, '(아직 입력한 줄이 없습니다)');
+          }
+          appendTranscriptLine(activeEditor, '');
+          renderLineEditor(activeEditor);
+          return true;
+        }
+
+        if (lineCommand.type === 'edit') {
+          if (lineCommand.index > activeEditor.bodyLines.length) {
+            appendTranscriptLine(activeEditor, `${lineCommand.index}번 줄이 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
+            renderLineEditor(activeEditor);
+            return true;
+          }
+          activeEditor.pendingLineOp = { type: 'edit', index: lineCommand.index };
+          appendTranscriptLine(activeEditor, `현재 ${lineCommand.index}번 줄: ${activeEditor.bodyLines[lineCommand.index - 1]}`);
+          appendTranscriptLine(activeEditor, '새 내용을 입력하십시오.');
+          renderLineEditor(activeEditor);
+          return true;
+        }
+
+        if (lineCommand.type === 'insert') {
+          if (lineCommand.index > activeEditor.bodyLines.length + 1) {
+            appendTranscriptLine(activeEditor, `${lineCommand.index}번 줄 앞에 넣을 수 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
+            renderLineEditor(activeEditor);
+            return true;
+          }
+          activeEditor.pendingLineOp = { type: 'insert', index: lineCommand.index };
+          appendTranscriptLine(activeEditor, `${lineCommand.index}번 줄 앞에 넣을 내용을 입력하십시오.`);
+          renderLineEditor(activeEditor);
+          return true;
+        }
+
+        if (lineCommand.type === 'delete') {
+          if (lineCommand.from > activeEditor.bodyLines.length) {
+            appendTranscriptLine(activeEditor, `${lineCommand.from}번 줄이 없습니다. (현재 ${activeEditor.bodyLines.length}줄)`);
+            renderLineEditor(activeEditor);
+            return true;
+          }
+          const to = Math.min(lineCommand.to, activeEditor.bodyLines.length);
+          const removed = activeEditor.bodyLines.splice(lineCommand.from - 1, to - lineCommand.from + 1);
+          appendTranscriptLine(activeEditor, `${removed.length}줄을 삭제했습니다.`);
+          appendTranscriptLine(activeEditor, '');
+          if (activeEditor.bodyLines.length) {
+            appendNumberedBody(activeEditor);
+          } else {
+            appendTranscriptLine(activeEditor, '(아직 입력한 줄이 없습니다)');
+          }
+          appendTranscriptLine(activeEditor, '');
+          renderLineEditor(activeEditor);
+          return true;
+        }
       }
 
       if (isSaveWriteCommand(line)) {
