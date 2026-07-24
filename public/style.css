@@ -536,7 +536,7 @@ body.theme-nownuri .write-field textarea {
     white-space: pre;
 }
 
-#terminal-prompt-row label:not(.signup-confirm-prompt-label):not(.myinfo-delete-confirm-prompt-label) {
+#terminal-prompt-row label:not(.signup-confirm-prompt-label):not(.myinfo-delete-confirm-prompt-label):not(.postview-delete-confirm-prompt-label) {
     /* [LOG: 20260615_1621] Keep the real label for accessibility; visual prompt is rendered by #cmd-prompt-renderer. */
     position: absolute !important;
     width: 1px !important;
@@ -701,7 +701,8 @@ body.theme-nownuri .write-field textarea {
 }
 
 #cmd-prompt.signup-confirm-prompt-label + #cmd-prompt-renderer,
-#cmd-prompt.myinfo-delete-confirm-prompt-label + #cmd-prompt-renderer {
+#cmd-prompt.myinfo-delete-confirm-prompt-label + #cmd-prompt-renderer,
+#cmd-prompt.postview-delete-confirm-prompt-label + #cmd-prompt-renderer {
     display: none !important;
 }
 

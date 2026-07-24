@@ -35,6 +35,45 @@ export function createPostViewCommandHandler(deps) {
   // post-list의 삭제 확인(commandRouterBrowse.js beginDeleteConfirm)은 애초에 이 문제가 없다 —
   // screenEl은 그대로 두고 setHint/setPrompt만 바꿔 질문을 힌트/프롬프트 줄에만 띄운다. 같은
   // 방식으로 통일한다.
+  //
+  // [LOG_ID: 20260724_2140] 사용자가 이어서 지적 — "거기도 y n 두 글자는 클릭과 호버링
+  // 가능합니다"(프롬프트 줄 "(Y/N)" 자체도 클릭돼야 함). #cmd-prompt-renderer는 <input
+  // readonly>라 태생적으로 HTML을 못 담아 그 안의 텍스트는 절대 클릭될 수 없다 — 대신 이
+  // 코드베이스에는 이미 같은 문제를 해결한 선례가 있다(myInfoRenderer.js의 회원 탈퇴 확인,
+  // signupEmailForm.js의 가입 확인): 평소엔 스크린리더 전용으로 숨겨져 있는 실제 <label
+  // id="cmd-prompt">에 전용 클래스를 얹어 그 숨김을 해제하고, renderer input은 대신 숨기며,
+  // 라벨 안에 진짜 클릭 가능한 .cmd-token 요소를 직접 만들어 넣는다. 그 패턴을 그대로 재사용.
+  function decoratePostDeleteConfirmPromptLabel() {
+    const promptLabel = document.getElementById('cmd-prompt');
+    if (!promptLabel) return;
+
+    promptLabel.classList.add('postview-delete-confirm-prompt-label');
+    promptLabel.textContent = '';
+    promptLabel.append(document.createTextNode(`${UI_TEXT.POST_DELETE_CONFIRM} (`));
+
+    const yesChoice = document.createElement('span');
+    yesChoice.className = 'cmd-token cmd-clickable';
+    yesChoice.dataset.cmd = 'Y';
+    yesChoice.dataset.tip = '예(Y)';
+    yesChoice.textContent = 'Y';
+    promptLabel.append(yesChoice);
+
+    promptLabel.append(document.createTextNode('/'));
+
+    const noChoice = document.createElement('span');
+    noChoice.className = 'cmd-token cmd-clickable';
+    noChoice.dataset.cmd = 'N';
+    noChoice.dataset.tip = '아니오(N)';
+    noChoice.textContent = 'N';
+    promptLabel.append(noChoice);
+
+    promptLabel.append(document.createTextNode(') [N] >>'));
+  }
+
+  function clearPostDeleteConfirmPromptLabel() {
+    document.getElementById('cmd-prompt')?.classList.remove('postview-delete-confirm-prompt-label');
+  }
+
   function beginPostDeleteConfirm(post) {
     state._postDeleteConfirmStage = {
       boardId: state.board?.id,
@@ -44,12 +83,9 @@ export function createPostViewCommandHandler(deps) {
       menuTitle: state.boardMenuTitle,
       searchParams: { ...(state.searchParams || {}) }
     };
-    // [LOG_ID: 20260724_2130] 사용자 요청 — "삭제하겠습니까 Y N 도 클릭되고 호버링 되어야지".
-    // setHint는 renderHintMarkup을 거쳐 "CMD:라벨" 표기를 다른 힌트 토큰(F/B/P 등)과 똑같이
-    // 클릭 가능·호버 툴팁이 붙는 .cmd-token으로 바꿔준다(CMD_META에 없는 명령도 동작 — Y/N을
-    // 새로 등록할 필요 없음). setPrompt의 "(Y/N) [N] >>"는 여전히 키보드 타이핑용으로 남긴다.
-    setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}\nY:예 N:아니오`);
+    setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
     setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [N] >>`);
+    decoratePostDeleteConfirmPromptLabel();
   }
 
   return async function handlePostViewCommand({ cmd, context }) {
@@ -60,6 +96,7 @@ export function createPostViewCommandHandler(deps) {
     if (state.screen === 'post-view' && state._postDeleteConfirmStage) {
       const deleteStage = state._postDeleteConfirmStage;
       state._postDeleteConfirmStage = null;
+      clearPostDeleteConfirmPromptLabel();
       const normalizedInput = String(cmd || '').trim().toUpperCase();
       if (normalizedInput === 'Y' || normalizedInput === 'YES') {
         try {

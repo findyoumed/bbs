@@ -1,3 +1,14 @@
+## [2026-07-24 21:30] [기능 개선] 글보기 삭제 확인의 "(Y/N)" 프롬프트 문구 자체를 클릭·호버 가능하게 변경
+
+**LOG_ID: 20260724_2140**
+목표: 사용자 재확인 — "거기도 y n 두 글자는 클릭과 호버링 가능합니다"(직전 수정에서 별도 힌트 줄에 추가한 "예(Y) 아니오(N)" 토큰 말고, 프롬프트 줄 "(Y/N)" 자체도 클릭돼야 함).
+원인/제약: `#cmd-prompt-renderer`는 커서·글자폭을 입력창과 픽셀 단위로 맞추기 위한 `<input readonly>`라, 태생적으로 HTML을 담을 수 없어 그 안의 텍스트는 절대 클릭 요소가 될 수 없다. 다만 이 문제를 이미 해결한 선례가 코드베이스에 있었다 — 평소엔 스크린리더 전용으로 시각적으로 숨겨진(clip) 실제 `<label id="cmd-prompt">`에, 회원 탈퇴 확인(`myInfoRenderer.js`)과 가입 확인(`signupEmailForm.js`)이 전용 클래스를 얹어 그 숨김을 해제하고 renderer input은 대신 숨긴 뒤, 라벨 안에 진짜 `.cmd-token.cmd-clickable` 요소를 직접 만들어 넣는 패턴.
+구현: 동일 패턴을 재사용해 `postview-delete-confirm-prompt-label` 클래스를 신설(`style.css`의 두 규칙 — 라벨 숨김 예외 목록, renderer input 숨김 목록 — 에 각각 추가). `commandRouterPostView.js`에 `decoratePostDeleteConfirmPromptLabel()`(라벨을 비우고 "정말 삭제하시겠습니까? (" + 클릭 가능한 Y 토큰 + "/" + 클릭 가능한 N 토큰 + ") [N] >>"로 재구성)과 `clearPostDeleteConfirmPromptLabel()`(클래스 제거, 다음 화면부터 평소처럼 renderer input이 다시 보이게 복귀)을 추가. `beginPostDeleteConfirm`이 setPrompt 직후 decorate를 호출하고, Y/N 응답을 처리하는 분기 진입 시 즉시 clear를 호출해 정리. 직전에 추가했던 별도 힌트 줄의 "Y:예 N:아니오" 토큰은 이제 중복이라 제거하고 힌트는 "삭제할 글: 제목"만 남김.
+검증: `node --check` 통과. `global.document`를 최소 스텁으로 채운 헤드리스 Node 하네스로 상태 전이(D→프롬프트/힌트 텍스트 정확 확인→N=취소·미삭제→D+Y=실제 삭제 호출) 재확인. 브라우저 쪽은 실제 DOM이 필요해 Playwright로 로컬 서버에 직접 라벨 데코레이션 로직을 주입해 검증 — footer가 완전히 로드된 뒤 `#cmd-prompt-renderer`(input)는 `display:none`, `#cmd-prompt`(label) 안의 Y/N 토큰은 실측 bounding box를 가지며 `elementFromPoint`가 정확히 그 토큰 자신을 가리킴(다른 요소에 가려지지 않음) 확인. 커스텀 툴팁(`#cmd-tooltip`, 이 앱은 네이티브 title이 아니라 document mouseover 위임 방식)도 N 토큰 위에서 정상적으로 "아니오(N)" 텍스트를 표시함을 확인. `npm run smoke:command-parity`, `smoke:menu-wiring` 통과. (실제 삭제는 운영 DB라 브라우저로 재현하지 않음.)
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 21:15] [기능 개선] 글보기 삭제 확인의 예(Y)/아니오(N)를 클릭·호버 가능한 힌트 토큰으로 노출
 
 **LOG_ID: 20260724_2130**
