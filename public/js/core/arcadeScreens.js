@@ -28,16 +28,17 @@ export function createArcadeScreens(deps) {
   // [LOG_ID: 20260723_1102] 아케이드 게임 공통 — footer를 항상 'none'으로 강제하고 렌더 후 인라인 마운트.
   // 기존의 개별 footer 인자('arcadePlay', 'hangmanPlay')를 무시하고, 모든 아케이드 게임이 힌트바 없이
   // 본문 안에 프롬프트를 마운트하도록 한다.
-  // [LOG: 20260723_1750] 게임 진행 중(play)에만 footer를 숨기고 인라인 마운트, 게임이 종료되면 하단 힌트바(footer) 복원
+  // [LOG: 20260724_1019] 게임 진행 중(play)에만 footer를 숨기고 인라인 마운트, 게임이 종료되면 하단 힌트바(footer) 복원 및 프롬프트 '선택 >>' 강제 적용
   async function arcadeRender(ansi, _footer, prompt) {
     const isPlaying = state.serviceData?.status === 'play';
-    const footerToUse = isPlaying ? 'none' : _footer;
+    const footerToUse = isPlaying ? 'none' : (_footer || 'amusementView');
+    const promptToUse = isPlaying ? prompt : '선택 >> ';
     
     if (!isPlaying && typeof restorePromptRow === 'function') {
       restorePromptRow();
     }
     
-    const rendered = await render(ansi, footerToUse, prompt);
+    const rendered = await render(ansi, footerToUse, promptToUse);
     if (isPlaying && screenEl && typeof mountPromptRow === 'function') {
       const kind = state.serviceData?.kind || 'arcade';
       const hostId = `${kind}-prompt-host`;
