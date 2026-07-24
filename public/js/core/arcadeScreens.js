@@ -365,7 +365,7 @@ export function createArcadeScreens(deps) {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          const inputEl = document.getElementById('terminal-input') || document.querySelector('.terminal-input-input');
+          const inputEl = document.getElementById('cmd-input');
           if (inputEl) {
             inputEl.value = (inputEl.value || '') + char;
             inputEl.focus();

@@ -1,3 +1,17 @@
+## [2026-07-24 10:59] 스크램블 알파벳 클릭 미작동 해결 (#cmd-input 타겟팅 교정) 및 상단 중복 가이드 제거
+
+**LOG_ID: 20260724_1059**
+목표: 스크램블 게임판 알파벳 클릭 시 글자가 입력창에 전송되지 않던 대상을 BBS 정규 입력창인 `#cmd-input`으로 교정하고, 개별 단어 리스트와 겹치는 상단의 중복 가이드를 정리하여 가로 잘림을 완전히 해소.
+변경 파일: public/js/core/arcadeScreens.js, public/js/core/arcadeAnsiBuilders.js
+수행 작업:
+1) `arcadeScreens.js`의 `renderScrambleHotspots`에서 알파벳 클릭 이벤트 내 타겟 입력 필드 아이디를 `#terminal-input`에서 `#cmd-input`으로 변경하여 클릭 액션이 실제 터미널 입력창에 정상 바인딩되도록 전격 수정.
+2) `arcadeAnsiBuilders.js`의 `buildScrambleAnsi`에서 상단 도움말 문구의 `가장 긴 단어: X글자(시작: Y)` 중복 힌트 제거 및 가이드라인 축소.
+실행: `node --check public/js/core/arcadeScreens.js`, `node --check public/js/core/arcadeAnsiBuilders.js`
+기대: 알파벳 셀 클릭 시 하단 입력란에 실시간 타이핑되며, 상단 안내 문구가 슬림해져 잘림 없이 쾌적하게 렌더링됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-24 10:56] 스크램블 게임 내 '중심 단어' 용어를 직관적인 '가장 긴 단어'로 명칭 수정
 
 **LOG_ID: 20260724_1056_2**
