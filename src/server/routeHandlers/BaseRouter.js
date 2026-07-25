@@ -95,12 +95,11 @@ class BaseRouter {
             await this.getContext(route.needBody);
           }
 
-          // 3. Declarative validation
-          if (route.validate) {
-            this.validateRequest(route.validate);
-          }
-
-          // 4. Execute middlewares if defined
+          // 3. Execute middlewares if defined
+          // [LOG_ID: 20260725_1900] 원래 유효성 검사(400)가 미들웨어(401/403)보다 먼저 실행됐다 —
+          // 비로그인 요청도 body 형식만 틀리면 인증 검사 전에 400과 상세 유효성 메시지를 받아,
+          // 인증 없이 스키마 정보를 탐색할 수 있었고 smoke-full-traversal의 "게스트 비밀번호
+          // 변경은 401" 기대와도 어긋났다. 인증/권한 가드를 먼저 태우고 나서 유효성을 검사한다.
           if (Array.isArray(route.middlewares)) {
             let middlewareContext = this._context;
             for (const middleware of route.middlewares) {
@@ -119,6 +118,11 @@ class BaseRouter {
                 await fn.call(this, matchResult, middlewareContext);
               }
             }
+          }
+
+          // 4. Declarative validation
+          if (route.validate) {
+            this.validateRequest(route.validate);
           }
 
           // 5. Execute final handler

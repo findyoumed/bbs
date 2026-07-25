@@ -473,7 +473,13 @@ async function stopServer(serverHandle) {
 
 function isBrowserLaunchBlocked(error) {
     const message = String(error?.message || error || '');
-    return message.includes('spawn EPERM');
+    // [LOG_ID: 20260725_1900] 'spawn EPERM'(샌드박스가 프로세스 생성 차단)만 폴백 대상이었는데,
+    // 설치된 브라우저 버전이 playwright 핀 버전과 어긋난 환경에서는 "Executable doesn't exist"로
+    // 실패해 — 폴백이 있는데도 — 테스트가 통째로 실패 처리됐다. 바이너리 부재도 "이 환경에서
+    // 브라우저를 못 띄우는 경우"이므로 동일하게 HTTP 폴백을 태운다.
+    return message.includes('spawn EPERM')
+        || message.includes("Executable doesn't exist")
+        || message.includes('npx playwright install');
 }
 
 function hasNonEmptyText(value) {
@@ -540,8 +546,8 @@ async function fetchJsonResponse(pathname, options = {}) {
     };
 }
 
-async function fetchJsonData(pathname) {
-    const response = await fetchJsonResponse(pathname);
+async function fetchJsonData(pathname, options = {}) {
+    const response = await fetchJsonResponse(pathname, options);
     if (!response.ok) {
         throw new Error(`HTTP ${response.status} at ${pathname}`);
     }
@@ -1592,7 +1598,20 @@ async function verifyHttpActiveUsersCoverage(errors) {
 async function verifyHttpSystemInfoCoverage(errors) {
     console.log('🖥️ Checking system-info API coverage via HTTP fallback...');
     try {
-        const systemInfo = await fetchJsonData('/api/system/info');
+        // [LOG_ID: 20260725_1900] /api/system/info가 ensureAdmin으로 잠기면서(20260721_0400)
+        // 익명 호출은 403이 정상이 됐다 — 보안 동작을 먼저 검증한 뒤, 개발환경 루프백 전용
+        // 수동 신원 헤더로 관리자 컨텍스트를 만들어 페이로드 형태 검사를 이어간다.
+        const anonymous = await fetchJsonResponse('/api/system/info');
+        if (anonymous.status !== 403) {
+            errors.push(`Anonymous /api/system/info should be 403 (got ${anonymous.status})`);
+        }
+        const systemInfo = await fetchJsonData('/api/system/info', {
+            headers: {
+                'x-bbs-user-id': 'smoke-traversal-admin',
+                'x-bbs-nick-name': 'smoke-admin',
+                'x-bbs-admin': '1'
+            }
+        });
         const hasNumericField = (value) => Number.isFinite(Number(value));
         const repositoryHealth = systemInfo?.repositoryHealth;
         const repositoryMetrics = systemInfo?.repositoryMetrics;
@@ -2533,7 +2552,13 @@ async function verifyBoardPostWriteHarness(errors, options) {
 
     function createFakeDom() {
         const elements = new Map();
-        const screenEl = {};
+        // [LOG_ID: 20260725_1900] ansiTopbarScreen.js(모듈 그래프에 포함)가 screenEl?.querySelector를
+        // 호출한다 — 스텁이 없어 하네스가 통째로 죽었다. null 반환이면 호출부의 옵셔널 체이닝/가드가
+        // 그대로 동작한다.
+        const screenEl = {
+            querySelector() { return null; },
+            querySelectorAll() { return []; }
+        };
 
         Object.defineProperty(screenEl, 'innerHTML', {
             get() {
@@ -2597,6 +2622,13 @@ async function verifyBoardPostWriteHarness(errors, options) {
         source = source.replace(/import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"];?/g, (_match, bindings, specifier) => {
             const resolvedImportPath = path.resolve(path.dirname(resolvedPath), specifier);
             return `const { ${bindings.trim()} } = __loadModule(${JSON.stringify(resolvedImportPath)});`;
+        });
+        // [LOG_ID: 20260725_1900] ansiTopbarScreen.js가 export async function을 쓰는데 이 로더에만
+        // 해당 규칙이 없어(아래 5700번대 다른 로더에는 이미 있음) "Unexpected token 'export'"로
+        // 하네스가 통째로 죽고, 그 여파로 이후 게시글 상세/삭제 검사까지 연쇄 실패했다.
+        source = source.replace(/export async function (\w+)\s*\(/g, (_match, name) => {
+            exportNames.push(name);
+            return `async function ${name}(`;
         });
         source = source.replace(/export function (\w+)\s*\(/g, (_match, name) => {
             exportNames.push(name);
@@ -3763,7 +3795,14 @@ async function verifyHttpBoardCoverage(errors) {
             errors.push(`Board post create payload shape is invalid at /api/boards/${boardId}/posts`);
             return;
         }
-        createdPostId = Number(createResponse.data.post.id);
+        // [LOG_ID: 20260725_1900] 게시글 상세/수정/삭제 API는 게시판별 번호(localId)로 주소를 잡는다
+        // (클라이언트도 항상 post.localId ?? post.id를 씀, Supabase 드라이버의 fetchPostByLocalId 참고).
+        // 전역 row id(post.id)로 조회하던 종전 코드는 메모리 드라이버(둘이 같은 값)에서만 우연히
+        // 통과했고 Supabase에서는 상세 조회부터 404가 났다.
+        createdPostId = Number(createResponse.data.post.localId ?? createResponse.data.post.id);
+        // family_id(답글 스레드 묶음)는 부모의 전역 row id를 가리키므로 스레드 대조용으로 따로 든다.
+        const createdPostGlobalId = Number(createResponse.data.post.id);
+        const extractPostLocalId = (post) => Number(post?.localId ?? post?.id ?? 0);
 
         const boardListResponse = await expectJsonResponse(`/api/boards/${encodeURIComponent(boardId)}?page=1`, {}, 200, `Board list failed at /api/boards/${boardId}?page=1`);
         const boardInfo = boardListResponse.data?.board;
@@ -3773,14 +3812,14 @@ async function verifyHttpBoardCoverage(errors) {
         }
 
         const boardItems = extractBoardItems(boardListResponse.data);
-        if (!boardItems.some((post) => Number(post?.id) === createdPostId)) {
+        if (!boardItems.some((post) => extractPostLocalId(post) === createdPostId)) {
             errors.push(`Created board post did not appear at /api/boards/${boardId}?page=1`);
             return;
         }
         const countReplyThreadItems = (items = []) => items.filter((post) => {
-            const itemId = Number(post?.id || 0);
+            const itemId = extractPostLocalId(post);
             const familyId = Number(post?.family ?? post?.familyId ?? 0);
-            return itemId === createdPostId || familyId === createdPostId;
+            return itemId === createdPostId || familyId === createdPostGlobalId;
         }).length;
         const threadItemCountBeforeReply = countReplyThreadItems(boardItems);
 
@@ -3798,7 +3837,7 @@ async function verifyHttpBoardCoverage(errors) {
 
         const postDetailResponse = await expectJsonResponse(`/api/boards/${encodeURIComponent(boardId)}/posts/${encodeURIComponent(createdPostId)}?view=1`, {}, 200, `Board post detail failed at /api/boards/${boardId}/posts/${createdPostId}?view=1`);
         const postDetail = postDetailResponse.data;
-        if (!postDetail?.board || extractBoardId(postDetail.board) !== boardId || Number(postDetail?.post?.id) !== createdPostId) {
+        if (!postDetail?.board || extractBoardId(postDetail.board) !== boardId || extractPostLocalId(postDetail?.post) !== createdPostId) {
             errors.push(`Board post detail payload shape is invalid at /api/boards/${boardId}/posts/${createdPostId}?view=1`);
             return;
         }
@@ -3836,7 +3875,7 @@ async function verifyHttpBoardCoverage(errors) {
                 content: updatedContent
             })
         }, 200, `Board post update failed at /api/boards/${boardId}/posts/${createdPostId}`);
-        if (extractBoardId(updateSuccessResponse.data?.board) !== boardId || Number(updateSuccessResponse.data?.post?.id) !== createdPostId) {
+        if (extractBoardId(updateSuccessResponse.data?.board) !== boardId || extractPostLocalId(updateSuccessResponse.data?.post) !== createdPostId) {
             errors.push(`Board post update payload shape is invalid at /api/boards/${boardId}/posts/${createdPostId}`);
             return;
         }
@@ -4027,7 +4066,7 @@ async function verifyHttpBoardCoverage(errors) {
             method: 'POST',
             headers: recommendHeaders
         }, 200, `Board recommend failed at /api/boards/${boardId}/posts/${createdPostId}/recommend`);
-        if (extractBoardId(recommendSuccessResponse.data?.board) !== boardId || Number(recommendSuccessResponse.data?.post?.id) !== createdPostId) {
+        if (extractBoardId(recommendSuccessResponse.data?.board) !== boardId || extractPostLocalId(recommendSuccessResponse.data?.post) !== createdPostId) {
             errors.push(`Board recommend success payload shape is invalid at /api/boards/${boardId}/posts/${createdPostId}/recommend`);
             return;
         }
@@ -4072,7 +4111,7 @@ async function verifyHttpBoardCoverage(errors) {
         }
 
         const deleteDetailAfterForbiddenResponse = await expectJsonResponse(`/api/boards/${encodeURIComponent(boardId)}/posts/${encodeURIComponent(createdPostId)}`, {}, 200, `Board post detail after forbidden delete failed at /api/boards/${boardId}/posts/${createdPostId}`);
-        if (Number(deleteDetailAfterForbiddenResponse.data?.post?.id) !== createdPostId) {
+        if (extractPostLocalId(deleteDetailAfterForbiddenResponse.data?.post) !== createdPostId) {
             errors.push(`Board post detail is missing after forbidden delete at /api/boards/${boardId}/posts/${createdPostId}`);
             return;
         }
@@ -4112,11 +4151,11 @@ async function verifyHttpBoardCoverage(errors) {
                 content: `board fallback reply body ${smokeSuffix}`
             })
         }, 201, `Board reply create failed at /api/boards/${boardId}/posts/${createdPostId}/reply`);
-        if (extractBoardId(replyResponse.data?.board) !== boardId || !Number(replyResponse.data?.post?.id) || Number(replyResponse.data?.post?.id) === createdPostId) {
+        if (extractBoardId(replyResponse.data?.board) !== boardId || !extractPostLocalId(replyResponse.data?.post) || extractPostLocalId(replyResponse.data?.post) === createdPostId) {
             errors.push(`Board reply payload shape is invalid at /api/boards/${boardId}/posts/${createdPostId}/reply`);
             return;
         }
-        replyPostId = Number(replyResponse.data.post.id);
+        replyPostId = extractPostLocalId(replyResponse.data.post);
 
         const deleteReplyResponse = await expectJsonResponse(`/api/boards/${encodeURIComponent(boardId)}/posts/${encodeURIComponent(replyPostId)}`, {
             method: 'DELETE',
@@ -4126,7 +4165,7 @@ async function verifyHttpBoardCoverage(errors) {
                 nickName: smokeNickName
             })
         }, 200, `Board reply delete failed at /api/boards/${boardId}/posts/${replyPostId}`);
-        if (Number(deleteReplyResponse.data?.post?.id) !== replyPostId) {
+        if (extractPostLocalId(deleteReplyResponse.data?.post) !== replyPostId) {
             errors.push(`Board reply delete payload shape is invalid at /api/boards/${boardId}/posts/${replyPostId}`);
             return;
         }
@@ -4140,7 +4179,7 @@ async function verifyHttpBoardCoverage(errors) {
                 nickName: smokeNickName
             })
         }, 200, `Board post delete failed at /api/boards/${boardId}/posts/${createdPostId}`);
-        if (Number(deleteCreatedResponse.data?.post?.id) !== createdPostId) {
+        if (extractPostLocalId(deleteCreatedResponse.data?.post) !== createdPostId) {
             errors.push(`Board post delete payload shape is invalid at /api/boards/${boardId}/posts/${createdPostId}`);
             return;
         }

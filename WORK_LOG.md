@@ -1,3 +1,22 @@
+## [2026-07-25 19:00] [전수검사 2차] 자동 검증 도구 전체 실행으로 발견한 서버 1건 + 테스트 스크립트 5건 수정
+
+**LOG_ID: 20260725_1900**
+목표: 사용자 요청 — "에러 검색해서 수정. 전수검사". 이번엔 파일 재독이 아니라 자동 검증 도구를 전부 돌려(전 JS 파일 `node --check`, 스모크 테스트 13종) 어긋난 곳을 찾는 방식.
+발견·수정(서버 실코드 1건):
+- **`BaseRouter.handle()`의 실행 순서 결함**: 선언적 유효성 검사(400)가 인증/권한 미들웨어(401/403)보다 먼저 실행되고 있었다 — 비로그인 요청도 body 형식만 틀리면 인증 검사 전에 400과 상세 유효성 메시지를 받아, 인증 없이 요청 스키마를 탐색할 수 있었고(정보 노출), "게스트 비밀번호 변경은 401" 같은 당연한 기대와도 어긋났다. 미들웨어 → 유효성 검사 순으로 교정. 서버 스모크 전체(boards/auth-bridge/chat-rooms/command-parity/vercel-ready/runtime-diagnostics) 재실행으로 무회귀 확인.
+발견·수정(테스트 스크립트 5건 — 모두 "코드는 바뀌었는데 테스트가 안 따라온" 케이스):
+- `smoke-runtime-diagnostics.js`: 20260721_0400에서 `/api/system/info`를 ensureAdmin으로 잠글 때 이 스크립트 갱신이 누락돼 403으로 통째로 깨져 있었다. 개발환경 루프백 전용 수동 신원 헤더(`x-bbs-admin: 1`)로 관리자 컨텍스트를 만들어 호출하고, 동시에 "익명 요청은 403"이라는 보안 동작 자체도 검증에 추가.
+- `smoke-full-traversal.js`의 system-info 검사: 같은 문제, 같은 방식으로 수정(+익명 403 검증).
+- `smoke-full-traversal.js`의 `isBrowserLaunchBlocked()`: 'spawn EPERM'만 폴백 대상이라, 브라우저 바이너리가 없거나 버전이 어긋난 환경에서는 "Executable doesn't exist"로 실패해 — HTTP 폴백이 있는데도 — 테스트가 통째로 실패했다. 바이너리 부재도 폴백 대상에 포함.
+- `smoke-full-traversal.js`의 board write 하네스 모듈 로더: `export async function` 처리 규칙 누락(다른 로더에는 있음) — 모듈 그래프에 포함된 `ansiTopbarScreen.js`가 이 구문을 써서 "Unexpected token 'export'"로 하네스가 통째로 죽었다. 규칙 추가 + fake screenEl에 `querySelector` 스텁 추가.
+- **`smoke-full-traversal.js`의 게시글 주소 지정 방식 오류**: 게시글 상세/수정/삭제 API는 게시판별 번호(`localId`)로 주소를 잡는 계약인데(클라이언트도 항상 `post.localId ?? post.id` 사용, Supabase `fetchPostByLocalId` 참고), 테스트는 전역 row id(`post.id`)로 조회하고 있었다. 메모리 드라이버(두 값이 동일)에서만 우연히 통과했고 Supabase에서는 상세부터 404. localId 기준으로 8개 비교 지점 일괄 교정 — 이 수정으로 게시글 생성→상세→수정→추천→답글→삭제 API 체인 전체가 Supabase에서도 통과. (처음엔 서버 버그로 의심해 로컬 서버+Supabase 실데이터로 재현·추적했으나, `local_id`는 DB에서 정상 부여되고 있었고 테스트 쪽 잘못으로 판명.)
+발견만 하고 보류한 항목:
+- **HTTP 폴백 하네스 스위트 전반의 노후화(~70건)**: `runHttpTraversal()`의 화면 복원/명령 하네스들은 Playwright가 안 뜨는 환경 전용 폴백인데, 개발 기기에서는 Playwright가 항상 성공해 이 경로가 한 번도 실행되지 않았고, 그동안의 의도적 변경들(게스트 myinfo가 리다이렉트 대신 guest-blocked 모드로 바뀐 것(20260722_2300), 글쓰기가 `w-title`/`write-form` 폼에서 `bbs-ed-*` 박스 에디터로 바뀐 것(20260724_1517), terminalUiCore에 setLoading 추가 등)을 하나도 반영하지 못한 채 썩어 있었다. 스텁 몇 개가 아니라 기대치 자체가 두 세대 전 UI 기준이라 전면 재작성 규모 — 별도 작업으로 보류. (개발 기기의 Playwright 경로·운영에는 영향 없음.)
+- `npm test`가 참조하는 `archive/dev-only/tests/unit/`은 git 미추적 로컬 전용 폴더라 새로 클론한 환경에서는 실행 불가(러너가 즉시 실패). 의도된 로컬 전용 구조로 보여 기록만 남김.
+- 트래버설 중 1회 관측된 "인증된 비밀번호 변경 502"는 재현 불가(로컬 서버 직접 재현 시 200 + `authPasswordSyncReason: auth-user-not-found` 정상 응답, 이후 재실행에서도 미재발) — Supabase admin API의 일시 오류로 판정.
+검증: 전 JS 파일 `node --check` 통과. 서버 스모크 6종 + menu-wiring/ui-layout/ui-geometry/renderer-ui/rss-services 전부 통과. full-traversal은 위 수정으로 게시판 API 체인이 Supabase에서 통과하게 됐고, 남은 실패는 전부 위 "보류" 항목의 폴백 하네스 노후분.
+결과: ✅ 완료(서버 실코드 1건 + 테스트 5건 수정, 대형 노후 스위트는 보류 기록).
+
 ## [2026-07-25 18:00] [전수조사] 오늘 수정 파일들 재검토 — 글쓰기 화면에서 키보드가 열리면 제목 입력창이 스크롤로 가려지던 문제 발견·수정 + 발견만 하고 보류한 항목 기록
 
 **LOG_ID: 20260725_1800**
