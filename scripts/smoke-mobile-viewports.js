@@ -38,28 +38,28 @@ async function runMobileSmokeTests() {
     await waitForServer(3199);
     console.log('✅ [Mobile Smoke] Test server ready.');
 
-    const browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({
-      viewport: { width: 390, height: 844 },
-      isMobile: true,
-      hasTouch: true,
-      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1'
-    });
+    // [LOG_ID: 20260725_2200] 이 환경에 미리 설치된 Chromium 리비전이 playwright 패키지가 기대하는
+    // 리비전과 어긋나 기본 launch()가 "Executable doesn't exist"로 항상 실패했다(smoke-full-traversal.js의
+    // Playwright 폴백 감지에서도 같은 원인으로 확인된 패턴) — 미리 설치된 바이너리를 직접 가리킨다.
+    const executablePath = '/opt/pw-browsers/chromium';
+    const browser = await chromium.launch({ headless: true, executablePath });
 
-    const page = await context.newPage();
-    const errors = [];
-
-    page.on('pageerror', (err) => {
-      console.error('  ❌ Page Uncaught Error:', err.message);
-      errors.push({ type: 'pageerror', message: err.message });
-    });
-
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        console.error('  ❌ Console Error:', msg.text());
-        errors.push({ type: 'console', message: msg.text() });
+    // [LOG_ID: 20260725_2200] 뷰포트 1개(iPhone 390x844)만 검사하면 그보다 좁은 실기기(작은
+    // 안드로이드)에서만 나타나는 가로 오버플로우를 놓친다 — 폭이 다른 뷰포트 2개를 함께 돈다.
+    const viewportsToTest = [
+      {
+        label: 'iPhone 14 (390x844)',
+        viewport: { width: 390, height: 844 },
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1'
+      },
+      {
+        label: '소형 안드로이드 (360x740)',
+        viewport: { width: 360, height: 740 },
+        userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-A135F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
       }
-    });
+    ];
+
+    const errors = [];
 
     const routesToTest = [
       { name: '메인 대문', path: 'http://localhost:3199/' },
@@ -76,31 +76,102 @@ async function runMobileSmokeTests() {
       { name: '퀴즈박사 게임', path: 'http://localhost:3199/game/quiz' },
       { name: '전투 게임', path: 'http://localhost:3199/game/battle' },
       { name: '로그인 화면', path: 'http://localhost:3199/entry/login' },
-      { name: '회원가입 화면', path: 'http://localhost:3199/signup' }
+      { name: '회원가입 화면', path: 'http://localhost:3199/signup' },
+      // [LOG_ID: 20260725_2200] 전수조사 요청("폭/높이·모바일 확인") — 오락실/로그인류 위주였던
+      // 목록을 이번 세션에서 실제로 폭/높이 버그가 났던 화면들까지 넓힌다.
+      { name: '자료실(PDS) 목록', path: 'http://localhost:3199/pds' },
+      { name: '날씨', path: 'http://localhost:3199/service/weather' },
+      { name: '뉴스', path: 'http://localhost:3199/service/news' },
+      { name: '전체 메뉴 안내', path: 'http://localhost:3199/index' },
+      { name: '도움말', path: 'http://localhost:3199/help' },
+      { name: '이용 내역', path: 'http://localhost:3199/history' },
+      { name: '여론광장(투표) 목록', path: 'http://localhost:3199/agora' },
+      { name: '토론의 광장', path: 'http://localhost:3199/forum' },
+      { name: '내 정보(게스트 안내)', path: 'http://localhost:3199/myinfo' },
+      { name: '쪽지함(게스트 안내)', path: 'http://localhost:3199/memo' },
+      { name: '대화실 로비', path: 'http://localhost:3199/chat' },
+      { name: '이용약관', path: 'http://localhost:3199/policy/tos' }
     ];
 
-    console.log(`📱 [Mobile Smoke] Testing ${routesToTest.length} routes in 390x844 mobile viewport...\n`);
+    for (const vp of viewportsToTest) {
+      console.log(`\n📱 [Mobile Smoke] ${vp.label} — testing ${routesToTest.length} routes...\n`);
 
-    for (const route of routesToTest) {
-      process.stdout.write(`  Testing ${route.name} (${route.path}) ... `);
-      await page.goto(route.path, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(300);
+      const context = await browser.newContext({
+        viewport: vp.viewport,
+        isMobile: true,
+        hasTouch: true,
+        userAgent: vp.userAgent
+      });
+      const page = await context.newPage();
 
-      // 모바일 컨테이너 존재 및 가로 폭 오버플로우 체크
-      const container = await page.$('#terminal-container');
-      if (!container) {
-        throw new Error(`#terminal-container missing on ${route.name}`);
-      }
-
-      const hasHorizontalScroll = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > window.innerWidth;
+      page.on('pageerror', (err) => {
+        console.error('  ❌ Page Uncaught Error:', err.message);
+        errors.push({ type: 'pageerror', viewport: vp.label, message: err.message });
       });
 
-      if (hasHorizontalScroll) {
-        console.warn('⚠️ (Horizontal Overflow detected)');
-      } else {
+      page.on('console', (msg) => {
+        if (msg.type() === 'error') {
+          console.error('  ❌ Console Error:', msg.text());
+          errors.push({ type: 'console', viewport: vp.label, message: msg.text() });
+        }
+      });
+
+      for (const route of routesToTest) {
+        process.stdout.write(`  Testing ${route.name} (${route.path}) ... `);
+        await page.goto(route.path, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(300);
+
+        // 모바일 컨테이너 존재 및 가로 폭 오버플로우 체크
+        const container = await page.$('#terminal-container');
+        if (!container) {
+          throw new Error(`#terminal-container missing on ${route.name} (${vp.label})`);
+        }
+
+        const geometry = await page.evaluate(() => {
+          const footer = document.getElementById('terminal-footer');
+          const cmdInput = document.getElementById('cmd-input');
+          const footerRect = footer?.getBoundingClientRect() || null;
+          const cmdInputRect = cmdInput?.getBoundingClientRect() || null;
+          return {
+            scrollWidth: document.documentElement.scrollWidth,
+            innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            footerBottom: footerRect ? footerRect.bottom : null,
+            cmdInputBottom: cmdInputRect ? cmdInputRect.bottom : null
+          };
+        });
+
+        const hasHorizontalScroll = geometry.scrollWidth > geometry.innerWidth;
+        // [LOG_ID: 20260725_2200] 사용자 요청("모바일에서 가로폭이 넘치면 안 된다", 이 세션 이전
+        // 회차에서 이미 확정된 요구사항)에 맞춰 가로 오버플로우를 경고가 아니라 실패로 승격한다 —
+        // 지금까지는 감지만 하고 통과 처리해 회귀를 잡지 못했다.
+        if (hasHorizontalScroll) {
+          console.error(`❌ (Horizontal Overflow: scrollWidth=${geometry.scrollWidth} > innerWidth=${geometry.innerWidth})`);
+          errors.push({
+            type: 'horizontal-overflow',
+            viewport: vp.label,
+            message: `${route.name}: scrollWidth ${geometry.scrollWidth} exceeds innerWidth ${geometry.innerWidth}`
+          });
+          continue;
+        }
+
+        // 하단 명령창/힌트바가 뷰포트 아래로 밀려 잘리지 않는지(세로 높이 문제) 함께 확인한다.
+        const footerClipped = geometry.footerBottom !== null && geometry.footerBottom > geometry.innerHeight + 1;
+        const cmdInputClipped = geometry.cmdInputBottom !== null && geometry.cmdInputBottom > geometry.innerHeight + 1;
+        if (footerClipped || cmdInputClipped) {
+          console.error(`❌ (Footer/Command input clipped below viewport: footerBottom=${geometry.footerBottom}, cmdInputBottom=${geometry.cmdInputBottom}, innerHeight=${geometry.innerHeight})`);
+          errors.push({
+            type: 'vertical-clip',
+            viewport: vp.label,
+            message: `${route.name}: footer/cmd-input extends past viewport height ${geometry.innerHeight}`
+          });
+          continue;
+        }
+
         console.log('OK');
       }
+
+      await context.close();
     }
 
     await browser.close();
