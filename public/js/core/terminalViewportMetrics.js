@@ -1,5 +1,5 @@
 // [LOG: 20260617_1005] Mobile visual viewport metrics split from terminalUiCore.js.
-export function createTerminalViewportMetrics({ screenEl }) {
+export function createTerminalViewportMetrics({ screenEl, state }) {
   let mobileKeyboardVisible = false;
   let stableViewportHeight = 0;
 
@@ -84,7 +84,12 @@ export function createTerminalViewportMetrics({ screenEl }) {
     // 밀려올라가는거야" — 일반 채팅앱처럼 최신/아래 내용이 남고 위쪽이 스크롤되어 사라지길 원함).
     // 키보드가 막 열린 순간 맨 아래로 스크롤해 그 기대에 맞춘다. CSS 오버라이드가 적용되어
     // scrollHeight가 실제로 늘어날 시간이 필요해 keyboardJustClosed와 동일하게 rAF+지연 재시도.
-    if (keyboardJustOpened && screenEl) {
+    // [LOG_ID: 20260725_1800] 글쓰기 화면(post-write)은 제목 입력창이 맨 위에 있고 진입 시
+    // 거기에 포커스가 간다 — 이 화면에까지 "맨 아래로 스크롤"을 적용하면 막 포커스한 제목
+    // 입력창이 바로 스크롤 밖으로 밀려나 버린다(박스 에디터는 이미 자체 overflow-y:auto
+    // 래퍼(20260725_1710)로 필요한 스크롤을 알아서 처리하므로 이중으로 건드릴 필요도 없다).
+    // 전수조사로 발견 — 글쓰기 화면에서는 건너뛴다.
+    if (keyboardJustOpened && screenEl && state?.screen !== 'post-write') {
       const scrollToBottom = () => {
         screenEl.scrollTop = screenEl.scrollHeight;
       };

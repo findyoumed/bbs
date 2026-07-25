@@ -26,7 +26,7 @@ export function createTerminalUiCore(deps) {
   } = deps;
   let outputListener = null;
   const terminalFooter = document.getElementById('terminal-footer');
-  const { syncVisualViewportMetrics, resetStableViewportHeight } = createTerminalViewportMetrics({ screenEl });
+  const { syncVisualViewportMetrics, resetStableViewportHeight } = createTerminalViewportMetrics({ screenEl, state });
 
   function setOutputListener(callback) {
     outputListener = callback;
