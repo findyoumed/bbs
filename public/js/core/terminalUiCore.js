@@ -188,11 +188,19 @@ export function createTerminalUiCore(deps) {
     showEditor: terminalDialog.showEditor
   };
 
+  // [LOG_ID: 20260725_1635] 키보드가 열리는 ~300ms 애니메이션 동안 syncVisualViewportMetrics()를
+  // 150ms 디바운스 뒤에야(즉 애니메이션이 다 끝난 뒤) 단 한 번 실행했다. 그 지연 구간 동안엔
+  // --mobile-visual-viewport-height가 아직 옛 값(키보드 없음 기준)이라 레이아웃이 줄어들지 않고,
+  // 브라우저가 대신 자체적으로 "포커스된 입력창을 보이게" 화면을 스크롤/팬 시켜버려(사용자 실측
+  // 영상: 메뉴 항목들이 위로 스쳐 지나가다 뒤늦게 축소된 정상 레이아웃으로 튐) 키보드 여닫을 때마다
+  // "화면이 위로 갔다가 다시 내려가는" 듯한 요동으로 보였다. 뷰포트 치수 갱신(가볍다 — CSS 변수
+  // 몇 개 설정)은 매 이벤트마다 즉시 실행해 우리 축소 로직이 키보드 애니메이션과 실시간으로
+  // 함께 움직이도록 하고, 무거운 후속 작업(힌트바 트리밍·커서 위치·자동 줌)만 디바운스로 미룬다.
   let _resizeTimeout = null;
   const _onResize = () => {
+    syncVisualViewportMetrics();
     if (_resizeTimeout) clearTimeout(_resizeTimeout);
     _resizeTimeout = setTimeout(() => {
-      syncVisualViewportMetrics();
       trimHintEntriesToFit();
       if (cmdInput && document.activeElement === cmdInput) {
         updateCursorPosition();
