@@ -280,11 +280,14 @@ async function probeChatRoomContract(repository, env) {
     }
 
     const leftAuthA = await repository.leave(roomNo, { sessionKey: sessionAuthA }, authUser);
+    // [LOG_ID: 20260725_2130] 전수조사 중 재현: 개설자(방장)의 마지막 세션이 나가면 원본 규칙
+    // ("방장이 나가면 방 종료")에 따라 방 전체가 즉시 삭제된다 — 게스트가 아직 남아있어도 함께
+    // 퇴장 처리된다. Memory/Supabase 두 드라이버 모두 동일하게 구현돼 있고 smoke-chat-counts.js가
+    // 이미 이 계약을 공식적으로 단언하고 있다(`the owner's last session leaving should close the
+    // whole room`). 이 프로브는 그 계약이 확정되기 전 버전 그대로 남아 있어, leaveAuthB 직후
+    // (이미 삭제된) 방에 leaveGuest를 호출해 404로 매번 죽고 있었다 — 실제 서버 결함이 아니라
+    // 이 진단 스크립트 자체가 폐기된 계약을 검사하고 있었던 것.
     const leftAuthB = await repository.leave(roomNo, { sessionKey: sessionAuthB }, authUser);
-    const leftGuest = await repository.leave(roomNo, { sessionKey: sessionGuest }, {
-      userId: 'guest',
-      nickName: '손님'
-    });
     const afterLeaveList = await repository.list();
 
     assert(created.userCount === 0, 'chat contract probe room should start with zero occupancy');
@@ -312,14 +315,11 @@ async function probeChatRoomContract(repository, env) {
     assert(leftAuthA.authUserCount === 1, 'chat contract probe partial auth leave should keep auth occupancy');
     assert(leftAuthA.sessionCount === 2, 'chat contract probe partial auth leave should reduce live sessions only');
 
-    assert(leftAuthB.userCount === 1, 'chat contract probe final auth leave should release auth occupancy');
-    assert(leftAuthB.authUserCount === 0, 'chat contract probe final auth leave should clear auth occupancy');
-    assert(leftAuthB.guestSessionCount === 1, 'chat contract probe guest occupancy should remain after auth leaves');
-    assert(leftAuthB.sessionCount === 1, 'chat contract probe guest session should remain as the only live session');
-
-    assert(leftGuest.userCount === 0, 'chat contract probe final guest leave should clear occupancy');
-    assert(leftGuest.sessionCount === 0, 'chat contract probe final guest leave should clear live sessions');
-    assert(afterLeaveList.some((room) => room.no === roomNo), 'chat contract probe supabase room metadata should persist after leave');
+    assert(leftAuthB.userCount === 0, "chat contract probe owner's last session leaving should close the whole room");
+    assert(leftAuthB.authUserCount === 0, 'chat contract probe room closure should clear auth occupancy');
+    assert(leftAuthB.guestSessionCount === 0, 'chat contract probe room closure should clear guest occupancy even though the guest never left');
+    assert(leftAuthB.sessionCount === 0, 'chat contract probe room closure should clear live sessions');
+    assert(!afterLeaveList.some((room) => room.no === roomNo), 'chat contract probe ephemeral room should be fully removed once the owner has no sessions left');
 
     return {
       ok: true,
@@ -332,8 +332,7 @@ async function probeChatRoomContract(repository, env) {
       mixedLiveSessions: mixedRoom?.sessionCount ?? null,
       partialLeaveOccupancy: leftAuthA.userCount,
       finalAuthLeaveOccupancy: leftAuthB.userCount,
-      finalGuestLeaveOccupancy: leftGuest.userCount,
-      metadataPersistsAfterLeave: afterLeaveList.some((room) => room.no === roomNo),
+      roomRemovedAfterOwnerLeaves: !afterLeaveList.some((room) => room.no === roomNo),
       contract: {
         authJoinOccupancy: joinedAuthA.userCount,
         authSecondSessionOccupancy: joinedAuthB.userCount,

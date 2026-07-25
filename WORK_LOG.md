@@ -1,3 +1,15 @@
+## [2026-07-25 21:30] [전수조사 3차] npm 스크립트 전체(24개) 재실행 — 진단 스크립트 3개가 폐기된 채팅방 계약을 검사하던 문제 + 라이브 Supabase 스모크 2개의 localId 버그 발견·수정
+
+**LOG_ID: 20260725_2130**
+목표: 사용자 요청 — "다시 누락분 전수조사"(직전 502 재시도 수정 이후 한 번 더 확인). 이번엔 이 세션에서 아직 실행해보지 않은 나머지 `npm run` 스크립트를 전부 돌려보는 방식으로 접근(직전까지는 smoke-full-traversal과 서버 스모크 일부만 반복 실행하고 있었음).
+발견 1 — **`npm run check`(`check-supabase-ready.js`)의 채팅방 계약 프로브가 매번 실패**: `probeChatRoomContract()`가 방장(auth 사용자)의 두 세션을 모두 내보낸 뒤 게스트도 명시적으로 내보내는 순서로 짜여 있었는데, `leave()`(Memory·Supabase 드라이버 공통, LOG_ID 20260721_0500)는 "방장의 마지막 세션이 나가면 게스트가 남아있어도 방 전체를 즉시 종료"하는 게 이미 확정되고 `smoke-chat-counts.js`가 공식적으로 단언하고 있는 계약이다("the owner's last session leaving should close the whole room"). 이 프로브는 그 계약이 정해지기 전 버전 그대로 남아 있어 `leftAuthB` 직후 이미 삭제된 방에 `leaveGuest`를 호출해 404로 죽고 있었다 — 서버 결함이 아니라 진단 스크립트가 폐기된 기대치를 검사하고 있었던 것.
+발견 2 — **`smoke-chat-members-supabase.js`도 동일한 낡은 계약**: 같은 원인으로 같은 지점에서 죽고 있었고, 추가로 "방 종료 후에도 auth 회원의 `chat_room_members` 행에 `left_at`이 찍혀야 한다"는 단언도 갖고 있었다 — 직접 Supabase에 질의해 확인해보니 `chat_room_members.room_id`에 `ON DELETE CASCADE` 외래키가 걸려 있어 방이 삭제되면 그 행 자체가 통째로 함께 삭제된다(따라서 `persistLeave()`가 방 종료 경로에서 호출되지 않는 게 맞는 동작 — 애초에 남아있지 않을 행의 `left_at`을 검사하고 있었다).
+발견 3 — **`smoke-supabase-live.js`/`smoke-supabase-auth-write.js`가 게시글 전역 row id를 게시판별 번호(localId) 자리에 그대로 넘김**: 이전(20260725_1900)에 `smoke-full-traversal.js`에서 고쳤던 것과 완전히 같은 유형의 버그 — `replyToPost`/`getPost`/`deletePost`는 `fetchPostByLocalId`로 조회하는데 `created.post.id`(전역 id)를 넘겨 각각 "Parent post was not found."/"게시글을 찾을 수 없습니다." 404로 죽고 있었다. `created.post.localId ?? created.post.id`로 교정.
+조사 방법: 재현마다 `.env`를 직접 읽어 실제 Supabase 프로젝트에 대고 최소 재현 스크립트(작성 후 즉시 삭제)를 돌려 정확한 실패 지점을 좁혔다 — 특히 발견 2는 `chat_room_members` 행이 "left_at 미기록으로 남아있는지" 대 "행 자체가 사라졌는지"를 직접 질의로 구분해, 진단 스크립트의 단언이 원래도 성립 불가능한 것이었음을 확인했다.
+검증: `node --check` 4개 파일 통과. `npm run check`/`smoke:chat-members-supabase`/`smoke:supabase-live`/`smoke:supabase-auth-write`를 각 2회씩 재실행해 모두 안정적으로 통과 확인. 그 김에 이번 세션에서 아직 안 돌려본 나머지 스크립트도 전부 실행: `smoke:signup-ime`, `smoke:chat-counts`, `smoke:chat-rooms-supabase`, `smoke:supabase-realtime`, `smoke:ui-layout`, `smoke:ui-geometry`, `qa:final`, `loop:verify`(9종 게이트) — 전부 통과. `smoke-boards.js`도 같은 `.post.id` 패턴을 쓰지만 인메모리 드라이버 대상이라(id===localId 항상 일치) 문제없음을 확인하고 손대지 않음.
+범위 밖(이번엔 실행 안 함): `fix-favicon.js`/`fix-member-auth-metadata.js`/`diagnose-member-email-conflicts.js` 등은 검증이 아니라 실 데이터를 변경하는 1회성 유틸리티 스크립트라 — 진단/검증 스크립트 전수조사와 성격이 달라 임의로 실행하지 않았다.
+결과: ✅ 완료 — 서버 실코드 결함은 없었고(직전 502 재시도 수정이 유일한 실코드 변경), 전부 진단/스모크 스크립트 자체의 결함(폐기된 계약 검사 2건 + localId 오사용 2건)이었다.
+
 ## [2026-07-25 21:00] [버그 수정] 누락 확인 중 발견 — 인증된 회원 API(비밀번호 변경 등)가 5회 중 1~2회꼴로 502를 내던 실제 결함
 
 **LOG_ID: 20260725_2100**

@@ -31,14 +31,18 @@ async function main() {
   try {
     const before = await repository.listPosts('plaza', { page: 1, pageSize: 5 });
     const created = await repository.createPost('plaza', payload, payload);
-    createdId = created.post.id;
+    // [LOG_ID: 20260725_2130] 전수조사 중 재현: 게시글 상세/답글/수정/삭제 API는 게시판별 번호
+    // (localId)로 주소를 잡는 계약인데(fetchPostByLocalId 참고, smoke-full-traversal.js에서
+    // 20260725_1900에 이미 고친 것과 동일 유형) 이 라이브 스모크는 전역 row id를 그대로 넘기고
+    // 있었다 — 답글 생성에서 "Parent post was not found."로 매번 죽었다.
+    createdId = created.post.localId ?? created.post.id;
     const replied = await repository.replyToPost('plaza', createdId, {
       title: `${payload.title} reply`,
       content: `${payload.content} reply`,
       userId,
       nickName: payload.nickName
     }, payload);
-    replyId = replied.post.id;
+    replyId = replied.post.localId ?? replied.post.id;
 
     const fetched = await repository.getPost('plaza', createdId, {
       incrementHit: false,

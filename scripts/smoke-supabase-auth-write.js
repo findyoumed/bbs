@@ -51,9 +51,13 @@ async function main() {
     userId: context.userId,
     nickName: context.nickName
   }, context);
+  // [LOG_ID: 20260725_2130] 전수조사 중 재현: 게시글 상세/삭제 API는 게시판별 번호(localId)로
+  // 주소를 잡는 계약인데(smoke-supabase-live.js에서 같은 유형으로 이미 고침) 전역 row id를
+  // 그대로 넘겨 매번 404로 죽었다.
+  const createdId = created.post.localId ?? created.post.id;
 
   try {
-    const viewed = await repository.getPost('plaza', created.post.id, {
+    const viewed = await repository.getPost('plaza', createdId, {
       incrementHit: false,
       viewerId: context.userId
     });
@@ -64,12 +68,12 @@ async function main() {
 
     console.log(JSON.stringify({
       ok: true,
-      createdId: created.post.id,
+      createdId,
       authorId: viewed.post.userId,
       nickName: viewed.post.nickName
     }, null, 2));
   } finally {
-    await repository.deletePost('plaza', created.post.id, context);
+    await repository.deletePost('plaza', createdId, context);
   }
 }
 

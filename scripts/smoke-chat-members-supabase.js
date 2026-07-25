@@ -110,26 +110,19 @@ async function main() {
 
     const leftA = await repository.leave(created.no, { sessionKey: sessionKeyA }, authUser);
     const activeAfterPartialLeave = await listActiveMemberRows(client, membersTable, roomRow.id, authUser.userId);
+    // [LOG_ID: 20260725_2130] 전수조사 중 재현: 개설자(방장)의 마지막 세션이 나가면 원본 규칙
+    // ("방장이 나가면 방 종료")에 따라 방 자체가 즉시 삭제된다(smoke-chat-counts.js가 이미 이
+    // 계약을 단언 — "the owner's last session leaving should close the whole room"). 이 뒤에
+    // 게스트 leave를 호출하면 이미 삭제된 방이라 404로 매번 죽었다 — 이 진단 스크립트가 그
+    // 계약이 확정되기 전 버전 그대로 남아 있었던 것.
     const leftB = await repository.leave(created.no, { sessionKey: sessionKeyB }, authUser);
-    const leftGuest = await repository.leave(created.no, { sessionKey: guestSessionKey }, {
-      userId: 'guest',
-      nickName: '손님'
-    });
 
+    // [LOG_ID: 20260725_2130] 방 폐쇄는 chat_rooms 행 삭제이고, chat_room_members.room_id에
+    // ON DELETE CASCADE 외래키가 걸려 있어(직접 조회로 확인) 이 auth 사용자의 참여 행 자체가
+    // left_at 기록 없이 그냥 함께 삭제된다 — persistLeave()가 호출되지 않는 게 맞는 동작이다.
+    // 그래서 이제 남은 행이 있는지만 확인하면 되고, "가장 최근 행에 left_at이 찍혔는지" 검사는
+    // 애초에 그 행이 남아있지 않아 항상 무의미했다.
     const activeRows = await listActiveMemberRows(client, membersTable, roomRow.id, authUser.userId);
-
-    const { data: latestRow, error: latestError } = await client
-      .from(membersTable)
-      .select('left_at')
-      .eq('room_id', roomRow.id)
-      .eq('user_id', authUser.userId)
-      .order('joined_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (latestError) {
-      throw latestError;
-    }
 
     assert(joinedA.userCount === 1, 'auth join should increment hybrid occupancy count');
     assert(joinedA.authUserCount === 1, 'auth join should increment auth occupancy count');
@@ -153,17 +146,12 @@ async function main() {
     assert(leftA.sessionCount === 2, 'partial auth leave should reduce live sessions only');
     assert(activeAfterPartialLeave.length === 1, 'partial auth leave should keep the active member row open');
 
-    assert(leftB.userCount === 1, 'leaving the last auth session should release auth occupancy');
-    assert(leftB.authUserCount === 0, 'leaving the last auth session should clear auth occupancy count');
-    assert(leftB.guestSessionCount === 1, 'guest occupancy should remain after auth leaves');
-    assert(leftB.sessionCount === 1, 'guest session should remain as the only live session');
+    assert(leftB.userCount === 0, "leaving the owner's last session should close the whole room");
+    assert(leftB.authUserCount === 0, 'room closure should clear auth occupancy count');
+    assert(leftB.guestSessionCount === 0, 'room closure should clear guest occupancy even though the guest never left');
+    assert(leftB.sessionCount === 0, 'room closure should clear live sessions');
 
-    assert(leftGuest.userCount === 0, 'leaving the last guest should clear occupancy');
-    assert(leftGuest.guestSessionCount === 0, 'leaving the last guest should clear guest occupancy count');
-    assert(leftGuest.sessionCount === 0, 'leaving the last guest should clear live sessions');
-
-    assert(Array.isArray(activeRows) && activeRows.length === 0, 'leave should clear active auth member rows');
-    assert(latestRow?.left_at, 'leave should stamp left_at on the latest auth member row');
+    assert(Array.isArray(activeRows) && activeRows.length === 0, 'room closure should clear active auth member rows');
 
     console.log(JSON.stringify({
       ok: true,
