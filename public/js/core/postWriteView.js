@@ -204,6 +204,9 @@ export function createPostWriteView(deps) {
 
     function cleanup() {
       editor._textareaActive = false;
+      editor._saving = false;
+      titleEl.disabled = false;
+      bodyEl.disabled = false;
       if (promptRow) {
         promptRow.style.display = savedPromptDisplay;
       }
@@ -215,14 +218,26 @@ export function createPostWriteView(deps) {
       bodyEl.removeEventListener('keydown', onBodyKey);
     }
 
+    // [LOG_ID: 20260725_1420] 종전엔 저장(Ctrl+S) 누르자마자 cleanup()을 먼저 실행해 숨겨뒀던
+    // 공용 명령창(cmdInput)/프롬프트 줄을 곧바로 되살리고 포커스까지 줬는데, 그 뒤 onSave()(실제
+    // createPost/updatePost API 호출)는 await 없이 fire-and-forget으로만 던졌다. 그래서 저장 요청이
+    // 서버 응답을 기다리는 그 짧은 틈에 cmdInput이 이미 살아있어, 그 사이 들어온 입력이 글쓰기 화면
+    // 전용 라우팅(state._terminalInputHandler)으로 안전하게 흡수되지 못하고 — 저장이 그새 완료돼
+    // 핸들러가 지워졌다면 — 엉뚱하게 전역 명령(Q/X/EXIT 등 종료 확인)으로 처리되는 경쟁 상태가
+    // 있었다(사용자 보고 스크린샷: 글쓰기 화면 그대로인데 힌트/프롬프트만 "종료가 취소되었습니다."로
+    // 덮어써짐). onSave()가 실제로 끝난 뒤에만 cleanup()을 실행해 그 틈을 없앤다. 저장 중 이중 제출도
+    // 함께 막는다.
     function doSave() {
+      if (editor._saving) return;
+      editor._saving = true;
       const titleVal = titleEl.value.trim();
       const lines = bodyEl.value.split('\n');
       if (lines.length > 0 && lines[lines.length - 1].trim() === '.') lines.pop();
       editor.title = titleVal;
       editor.bodyLines = lines;
-      cleanup();
-      onSave();
+      titleEl.disabled = true;
+      bodyEl.disabled = true;
+      Promise.resolve(onSave()).finally(cleanup);
     }
 
     function isOnFirstLine(ta) {

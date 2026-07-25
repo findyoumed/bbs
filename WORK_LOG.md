@@ -1,3 +1,12 @@
+## [2026-07-25 14:20] [버그 수정] 글쓰기 화면 Ctrl+S 저장 중 경쟁 상태로 "종료가 취소되었습니다" 오표시
+
+**LOG_ID: 20260725_1420**
+목표: 사용자 스크린샷 신고("화면좀 이상해") — 글쓰기(글 쓰기) 화면에서 제목/본문을 입력한 상태 그대로인데 힌트바/프롬프트만 "종료가 취소되었습니다." / "선택 >>" 으로 바뀌어 있음. 함께 첨부된 공지사항 삭제 확인 화면(본문 1~15줄 + 하단 "정말 삭제하시겠습니까?")은 코드 확인 결과 20260724_2100/2140에서 의도한 대로(screenEl은 고정 24줄 스냅샷 그대로 두고 힌트/프롬프트에만 확인 질문을 띄우는 설계) 정상 동작 — 새 버그 아님.
+조사: "종료가 취소되었습니다."는 `commandRouterGlobalNavigation.js`의 전역 종료 확인(Q/X/EXIT/LOGOUT → `state._exitConfirm`) 흐름에서만 나오는 문구인데, 글쓰기 화면은 자체 BBS 에디터(`postWriteView.js`의 `renderBbsEditor`)가 `titleEl`/`bodyEl`에 직접 `keydown` 리스너를 달아 Ctrl+S/Esc를 처리하고, 편집 중엔 공용 명령창(`cmdInput`)과 프롬프트 줄을 `display:none`으로 숨겨 두어(그래야 전역 명령이 끼어들 수 없음) 안전하다. 그런데 `doSave()`가 `cleanup()`(cmdInput/프롬프트 즉시 재노출 + 포커스, `state._terminalInputHandler` 관련 값은 그대로 둠)을 `onSave()`(`createPost`/`updatePost` API 호출, 실제로는 await 없이 fire-and-forget)보다 **먼저** 동기적으로 실행하고 있었다. 즉 저장 버튼(Ctrl+S)을 누른 그 즉시 cmdInput이 다시 살아나 포커스를 받는데, 실제 서버 응답은 아직 오지 않은 상태 — 그 짧은 틈에 들어온 입력이 있으면: (a) 저장이 아직 안 끝나 `state._postWriteEditor`/`_terminalInputHandler`가 남아있을 때는 글쓰기 전용 라인 에디터로 잘못 흡수되어 화면이 옛 트랜스크립트 스타일로 바뀌거나, (b) 저장이 그새 완료돼 `clearPostWriteEditor()`로 핸들러가 이미 지워졌을 때는 완전히 무관한 전역 명령(Q/X 등)으로 처리되어 종료 확인 시퀀스가 발동한다 — 스크린샷은 (b) 경로: 화면(screenEl)은 이전 글쓰기 폼 그대로 남아있는데(다음 화면으로의 비동기 전환이 아직 안 끝났거나 새 명령 실행으로 가로채여짐) 힌트/프롬프트만 종료-확인-취소 문구로 덮어써진 상태.
+구현: `public/js/core/postWriteView.js` — `doSave()`가 `cleanup()`을 더 이상 즉시 호출하지 않고, `onSave()`가 반환한 프라미스가 실제로 settle된 뒤(`.finally(cleanup)`)에만 cmdInput/프롬프트를 되살리도록 순서를 바꿔 경쟁 구간 자체를 없앴다. 저장 중에는 `editor._saving` 플래그로 이중 제출(Ctrl+S 연타)도 막고, `titleEl`/`bodyEl`을 `disabled`로 잠가 시각적으로도 저장 중임을 표시한다. `cleanup()`에서 `_saving`/`disabled` 상태를 원복해 저장 실패 후 재시도도 정상 동작.
+검증: `node --check public/js/core/postWriteView.js` 통과. `scripts/smoke-full-traversal.js`의 글쓰기 관련 모듈 하네스(`verifyBoardPostWriteHarness`)는 이 저장소의 실제 로컬 Playwright 브라우저(`/opt/pw-browsers/chromium`)가 아닌 기본 headless_shell을 요구해 이번 환경에서 실행 불가했고, 별개로 그 하네스 자체가 `w-title`/`w-body`(구버전 폼 구조) ID를 기대해 20260724_1517에 도입된 현재 BBS 에디터(`bbs-ed-title`/`bbs-ed-body`)와 이미 맞지 않는 상태(기존 drift, 이번 변경과 무관) — 실제 로그인 세션으로의 브라우저 E2E 재현은 이번 환경에서 자격증명이 없어 수행하지 못했고, 코드 경로 정독으로 원인·수정 지점을 확정함.
+결과: ✅ 완료 (postView.js 수정, 커밋/푸시 예정). 참고: `w-title`/`w-body` 기준의 오래된 `verifyBoardPostWriteHarness` 하네스는 현재 BBS 에디터 구조와 어긋나 있어 향후 별도 정리가 필요함(이번 작업 범위 밖).
+
 ## [2026-07-25 10:30] [기능 개선] help/policy/menuIndex/newsList 힌트바를 postView/weatherView와 동일한 짧은 스타일로 통일 + policy/menu-index F/B 숨김판정 버그 수정
 
 **LOG_ID: 20260725_1030**
