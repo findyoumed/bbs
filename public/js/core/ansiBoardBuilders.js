@@ -167,7 +167,14 @@ export function createBoardAnsiBuilders(deps) {
         let line = ansiColor(15) + fitCell(String((post.localId ?? post.id) || ''), P.no, 'right') + ' ';
         if (P.id) line += ansiColor(11) + fitCell(post.userId || post.authorUserId || '', P.id) + ' ';
         if (P.date) line += ansiColor(8) + fitCell(formatShortDate(post.createdAt).slice(3), P.date) + ' ';
-        line += ansiColor(15) + fitCell(String(post.fileName || ''), P.file) + ' '
+        // [LOG_ID: 20260725_2230] 모바일(showTitle:false)은 제목 칸이 아예 없이 파일명 칸에만
+        // 공간을 몰아주는데, 첨부파일이 없는 글(fileName 빈 값)은 그 칸도 비어 번호만 있고
+        // 아무 내용도 안 보이는 빈 줄로 렌더링됐다(실기기 스크린샷으로 재현: PDS 목록의 모든
+        // 행이 번호만 있고 텅 비어 보임). 데스크톱은 title 칸이 별도로 있어 이 문제가 없었다.
+        // fileName이 없으면 제목으로 대체해 최소한 어떤 글인지는 보이게 한다.
+        const fileLabel = post.fileName || (!P.showTitle ? String(post.title || '') : '');
+        const fileText = highlightText(fileLabel, highlightTerm, 14, 15);
+        line += ansiColor(15) + fitCell(fileText, P.file) + ' '
           + ansiColor(8) + fitCell(formatSize(post.fileSize), P.size, 'right') + ' ';
         if (P.dn) line += ansiColor(8) + fitCell(String(post.downloadCount || 0), P.dn, 'right') + ' ';
         if (P.showTitle && pTitleWidth > 0) {
