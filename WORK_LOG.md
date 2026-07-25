@@ -2,10 +2,357 @@
 
 **LOG_ID: 20260725_1420**
 목표: 사용자 스크린샷 신고("화면좀 이상해") — 글쓰기(글 쓰기) 화면에서 제목/본문을 입력한 상태 그대로인데 힌트바/프롬프트만 "종료가 취소되었습니다." / "선택 >>" 으로 바뀌어 있음. 함께 첨부된 공지사항 삭제 확인 화면(본문 1~15줄 + 하단 "정말 삭제하시겠습니까?")은 코드 확인 결과 20260724_2100/2140에서 의도한 대로(screenEl은 고정 24줄 스냅샷 그대로 두고 힌트/프롬프트에만 확인 질문을 띄우는 설계) 정상 동작 — 새 버그 아님.
-조사: "종료가 취소되었습니다."는 `commandRouterGlobalNavigation.js`의 전역 종료 확인(Q/X/EXIT/LOGOUT → `state._exitConfirm`) 흐름에서만 나오는 문구인데, 글쓰기 화면은 자체 BBS 에디터(`postWriteView.js`의 `renderBbsEditor`)가 `titleEl`/`bodyEl`에 직접 `keydown` 리스너를 달아 Ctrl+S/Esc를 처리하고, 편집 중엔 공용 명령창(`cmdInput`)과 프롬프트 줄을 `display:none`으로 숨겨 두어(그래야 전역 명령이 끼어들 수 없음) 안전하다. 그런데 `doSave()`가 `cleanup()`(cmdInput/프롬프트 즉시 재노출 + 포커스, `state._terminalInputHandler` 관련 값은 그대로 둠)을 `onSave()`(`createPost`/`updatePost` API 호출, 실제로는 await 없이 fire-and-forget)보다 **먼저** 동기적으로 실행하고 있었다. 즉 저장 버튼(Ctrl+S)을 누른 그 즉시 cmdInput이 다시 살아나 포커스를 받는데, 실제 서버 응답은 아직 오지 않은 상태 — 그 짧은 틈에 들어온 입력이 있으면: (a) 저장이 아직 안 끝나 `state._postWriteEditor`/`_terminalInputHandler`가 남아있을 때는 글쓰기 전용 라인 에디터로 잘못 흡수되어 화면이 옛 트랜스크립트 스타일로 바뀌거나, (b) 저장이 그새 완료돼 `clearPostWriteEditor()`로 핸들러가 이미 지워졌을 때는 완전히 무관한 전역 명령(Q/X 등)으로 처리되어 종료 확인 시퀀스가 발동한다 — 스크린샷은 (b) 경로: 화면(screenEl)은 이전 글쓰기 폼 그대로 남아있는데(다음 화면으로의 비동기 전환이 아직 안 끝났거나 새 명령 실행으로 가로채여짐) 힌트/프롬프트만 종료-확인-취소 문구로 덮어써진 상태.
-구현: `public/js/core/postWriteView.js` — `doSave()`가 `cleanup()`을 더 이상 즉시 호출하지 않고, `onSave()`가 반환한 프라미스가 실제로 settle된 뒤(`.finally(cleanup)`)에만 cmdInput/프롬프트를 되살리도록 순서를 바꿔 경쟁 구간 자체를 없앴다. 저장 중에는 `editor._saving` 플래그로 이중 제출(Ctrl+S 연타)도 막고, `titleEl`/`bodyEl`을 `disabled`로 잠가 시각적으로도 저장 중임을 표시한다. `cleanup()`에서 `_saving`/`disabled` 상태를 원복해 저장 실패 후 재시도도 정상 동작.
-검증: `node --check public/js/core/postWriteView.js` 통과. `scripts/smoke-full-traversal.js`의 글쓰기 관련 모듈 하네스(`verifyBoardPostWriteHarness`)는 이 저장소의 실제 로컬 Playwright 브라우저(`/opt/pw-browsers/chromium`)가 아닌 기본 headless_shell을 요구해 이번 환경에서 실행 불가했고, 별개로 그 하네스 자체가 `w-title`/`w-body`(구버전 폼 구조) ID를 기대해 20260724_1517에 도입된 현재 BBS 에디터(`bbs-ed-title`/`bbs-ed-body`)와 이미 맞지 않는 상태(기존 drift, 이번 변경과 무관) — 실제 로그인 세션으로의 브라우저 E2E 재현은 이번 환경에서 자격증명이 없어 수행하지 못했고, 코드 경로 정독으로 원인·수정 지점을 확정함.
-결과: ✅ 완료 (postView.js 수정, 커밋/푸시 예정). 참고: `w-title`/`w-body` 기준의 오래된 `verifyBoardPostWriteHarness` 하네스는 현재 BBS 에디터 구조와 어긋나 있어 향후 별도 정리가 필요함(이번 작업 범위 밖).
+조사: "종료가 취소되었습니다."는 `commandRouterGlobalNavigation.js`의 전역 종료 확인(Q/X/EXIT/LOGOUT → `state._exitConfirm`) 흐름에서만 나오는 문구다. 글쓰기 화면(`postWriteView.js`의 `renderBbsEditor`)에서 입력한 내용이 서버로 전송되는 동안(`doSave()` → `onSave()` = `handleWriteSubmit()`의 `createPost`/`updatePost` API 호출) 이 요청을 **await하지 않고** `cleanup()`을 곧바로 실행해버렸다. `cleanup()`은 `state._postWriteEditor`/`_terminalInputHandler`는 그대로 둔 채 title/body 필드의 키다운 리스너만 떼는데, 저장 응답이 오기 전 그 틈에 들어온 입력은 아직 살아있는 `_terminalInputHandler`(글쓰기 전용 라인 에디터)로 흡수되지만, 저장이 그새 완료돼 `handleWriteSubmit()`이 `clearPostWriteEditor()`로 핸들러를 지운 뒤에 도착한 입력은 완전히 무관한 전역 명령(Q/X/EXIT 등)으로 처리되어 종료 확인 시퀀스가 발동한다 — 화면(screenEl)은 다음 화면으로의 비동기 전환이 아직 안 끝나 이전 글쓰기 폼 그대로 남아있는데, 힌트/프롬프트만 종료-확인-취소 문구로 덮어써진 게 스크린샷 증상. (참고: 같은 시각 main에 병합된 별도 커밋(13:35, 다른 세션/작업자)이 이 에디터의 Tab 내비게이션(제목↔본문↔공용 명령창) UX를 손봤는데, 그 변경으로 공용 명령창이 편집 중에도 항상 보이고 포커스 가능해져 있어 — 저장 경쟁과 별개로 — 이 틈에 들어온 입력이 실제로 명령창까지 도달하기가 더 쉬워졌다.)
+구현: `public/js/core/postWriteView.js` — `doSave()`가 `cleanup()`을 더 이상 즉시 호출하지 않고, `onSave()`가 반환한 프라미스가 실제로 settle된 뒤(`.finally(cleanup)`)에만 실행하도록 순서를 바꿔 경쟁 구간 자체를 없앴다. 저장 중에는 `editor._saving` 플래그로 이중 제출(Ctrl+S 연타)도 막고, `titleEl`/`bodyEl`을 `disabled`로 잠가 시각적으로도 저장 중임을 표시한다. `cleanup()`에서 `_saving`/`disabled` 상태를 원복해 저장 실패 후 재시도도 정상 동작. main의 Tab-내비게이션 변경과 병합 시 충돌 없이 자동으로 합쳐짐(양쪽 다 `cleanup()`/`doSave()`를 건드렸으나 겹치지 않는 부분이었음) — 병합 후 문법 검사로 재확인.
+검증: `node --check public/js/core/postWriteView.js` 통과(병합 후 재확인). `scripts/smoke-full-traversal.js`의 글쓰기 관련 모듈 하네스(`verifyBoardPostWriteHarness`)는 이 환경의 로컬 Playwright 브라우저(`/opt/pw-browsers/chromium`)가 아닌 기본 headless_shell을 요구해 실행 불가했고, 별개로 그 하네스 자체가 `w-title`/`w-body`(구버전 폼 구조) ID를 기대해 20260724_1517에 도입된 현재 BBS 에디터(`bbs-ed-title`/`bbs-ed-body`)와 이미 맞지 않는 상태(기존 drift, 이번 변경과 무관) — 실제 로그인 세션을 통한 브라우저 E2E 재현은 자격증명이 없어 수행하지 못했고, 코드 경로 정독으로 원인·수정 지점을 확정함.
+결과: ✅ 완료. 참고: `w-title`/`w-body` 기준의 오래된 `verifyBoardPostWriteHarness` 하네스는 현재 BBS 에디터 구조와 어긋나 있어 향후 별도 정리가 필요함(이번 작업 범위 밖).
+
+## [2026-07-25 13:38] [버그 수정] 게시글 보기 화면 하단 구분선 잘림 현상 조율 (페이지 당 행수 16줄로 안전 조율)
+
+**LOG_ID: 20260725_1338**
+목표: 사용자 보고 — 게시글 보기 화면(`http://localhost:3000/notice/2`)에서 1페이지 맨 마지막 라인(17번 줄)이 하단 구분선에 잘려 보이는 현상 수정.
+원인 분석: `buildPostViewAnsi`의 가용 본문 줄 수(`baseLines`)가 17줄로 잡혀 24줄 캔버스 예산상 하단 footer 구분선 위치와 미세하게 겹치는 오버플로가 발생했음.
+변경 파일: 
+- `public/js/core/ansiBoardBuilders.js`
+수행 작업: 
+1. `buildPostViewAnsi` 내 1페이지당 본문 라인 계산 수인 `baseLines`를 16줄로 1줄 안전 조율하여, 본문 마지막 줄이 구분선과 겹쳐 잘리지 않고 쾌적하게 렌더링되도록 수정.
+실행: `node --check public/js/core/ansiBoardBuilders.js`, `npm run smoke:vercel-ready`
+기대: 문법검사 및 스모크 테스트 통과, 1페이지에 본문이 깔끔하게 잘림 없이 표시됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 13:33] [버그 수정] 전역 .ansi-screen-body Flex 스타일 영향 차단 및 메인 화면 정렬 복구
+
+**LOG_ID: 20260725_1333**
+목표: 사용자 보고 — 초기 메인 화면(`http://localhost:3000/`)의 메뉴 텍스트 정렬이 배포본(Vercel)과 달리 중앙 부근으로 들여쓰기 쏠림 현상이 발생하던 부작용 수정.
+원인 분석: 아까 에디터 세로 높이를 늘리기 위해 추가했던 전역 `.ansi-screen-body` (`display: flex; flex-direction: column;`) 규칙이 메인 초기화면(main)에도 전역으로 적용되면서 라인 렌더링에 영향을 주었음.
+변경 파일: 
+- `public/style.css`
+- `public/index.html`
+수행 작업: 
+1. `public/style.css` 하단의 flex 세로 확장 규칙을 `body[data-screen="post-write"]` 에디터 화면 전용으로 명시적 바인딩 범위(scope) 제한.
+2. 메인 화면(main) 등 타 화면은 전역 CSS 영향을 받지 않고 배포본(Vercel: `https://01410.vercel.app/`)과 100% 동일한 원본 스타일로 완전 복원.
+3. `public/index.html`의 CSS 버전 캐시 파라미터를 `20260725_1333`으로 업데이트.
+실행: `node --check public/js/core/postWriteView.js`, `npm run smoke:vercel-ready`
+기대: 메인 초기화면이 Vercel 배포본과 똑같이 정상적인 왼쪽 정렬로 복원되고, 글 작성/수정 화면은 세로 확장 유지.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 13:22] [버그 수정] 글 수정 에디터 화면 .ansi-screen-body 세로 Flex 높이 상속 복원
+
+**LOG_ID: 20260725_1322**
+목표: 사용자 보고 — 글 수정 에디터 화면(`http://localhost:3000/notice/2/edit`)에서 내용 입력 영역 아래에 큰 빈 공간이 생기고 `textarea` 상하 길이가 늘어나지 않는 문제 해결.
+원인 분석: `git restore` 과정에서 `.ansi-screen` 및 `.ansi-screen-body`의 세로 flex 높이 물려받기 규칙(`height: 100%; flex: 1; min-height: 0;`)이 삭제되어 에디터 본문 `textarea`가 뷰포트 하단까지 높이를 채우지 못했음.
+변경 파일: 
+- `public/style.css`
+- `public/index.html`
+수행 작업: 
+1. `public/style.css` 하단에 `.ansi-screen` (`height: 100%; display: flex; flex-direction: column;`) 및 `.ansi-screen-body` (`flex: 1; min-height: 0; display: flex; flex-direction: column;`) CSS 규칙 추가.
+2. `public/index.html`의 CSS 버전 캐시 파라미터를 `20260725_1322`로 업데이트하여 즉시 반영되도록 함.
+실행: `node --check public/js/core/postWriteView.js`, `npm run smoke:vercel-ready`
+기대: 에디터 폼 본문 입력창(`textarea`)이 하단 안내선 바로 앞까지 세로 공간 전체를 채워 시원하게 늘어남.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 13:12] [UI 개선] 글 작성 및 수정 에디터 본문 내용 입력창(textarea) 상하 높이 확장
+
+**LOG_ID: 20260725_1312**
+목표: 사용자 요청 — 글 수정/작성 에디터에서 본문 내용 입력 영역(textarea)의 상하 높이가 짧아 보이는 답답함을 해결하기 위해 세로 공간 확장.
+변경 파일: 
+- `public/js/core/postWriteView.js`
+수행 작업: 
+1. `postWriteView.js` 내 `textareaStyle`의 고정 세로폭(`height: 18.2em`)을 제거하고 `height: 100%; min-height: 14em;`으로 지정하여, 남은 세로 공간(flex)을 시원하게 채우도록 개선.
+실행: `node --check public/js/core/postWriteView.js`, `npm run smoke:vercel-ready`
+기대: 문법검사 및 스모크 테스트 통과, 본문 입력창 상하 길이가 뷰포트에 맞게 넉넉히 확장됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 12:45] 게시물 수정 포커스 픽스 및 초기화면 좌측 정렬 복구
+
+**LOG_ID: 20260725_1245**
+목표: 게시물 수정 모드(/notice/2/edit) 첫 포커스 지정 오류 해결 및 메인 화면 가운데 정렬 문제 롤백
+변경 파일: 
+- public/js/core/postWriteView.js
+- public/style.css
+수행 작업: 
+1) postWriteView.js에서 게시물 수정 시 커맨드 입력창으로 포커스가 넘어가는 라우팅 기본 동작을 피하기 위해, setTimeout으로 지연시켜 제목창에 정상적으로 포커스되게 수정함 (LOG_ID: 20260725_1154).
+2) 사용자 요청에 따라 메인 화면(main) 및 게시판 선택 화면(board-select)이 브라우저 창 중앙에 뜨던 것(margin: 0 auto;)을 CSS를 추가해 왼쪽 정렬(margin-left: 0)되도록 원래대로 복구함 (LOG_ID: 20260725_1245).
+실행: npm run smoke:vercel-ready
+기대: 스모크 테스트 통과 및 화면 레이아웃 정상 적용
+결과: ✅ 완료
+
+## [2026-07-25 12:12] [UI 개선] 글 수정 에디터에서 선택>> 프롬프트 항상 노출 유지
+
+**LOG_ID: 20260725_1212**
+목표: 사용자 보고 — "편집 화면에서 탭 키로 선택>>으로 이동해야 하는데 처음부터 안 보인다."
+원인 분석: `renderBbsEditor` 진입 시 `promptRow`와 `cmdInput`을 `display:none`으로 숨기는 초기화 코드 및 `hidePromptRow` 함수가 적용되어 있었음.
+구현:
+1. `postWriteView.js` — 초기 숨김 코드, `hidePromptRow` 함수, 포커스 이벤트 리스너(`focus→hidePromptRow`) 제거. `onCmdKey` Shift+Tab 처리에서 `hidePromptRow()` 호출 제거. `onBodyKey` Tab 핸들러에서 불필요한 display 복구 코드 제거.
+검증: `node --check postWriteView.js` 통과, `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 11:54] [UI 개선] 게시글 보기 화면 힌트 바 추천(V) 중복 문구 제거 및 V 키 입력 동작 보존
+
+**LOG_ID: 20260725_1154**
+목표: 사용자 보고 — "추천(OK), 추천(V) 추천문구가 2개가 뜨는데 추천(OK)만 보이게 하고 V는 안보이지만 작동은 똑같이 하게 해줘".
+원인 분석:
+1. `commandFooterText.js` 의 `postView` 푸터 토큰 배열에 `'OK:추천'` 과 `'V:추천'` 이 모두 등록되어 있어 힌트 바에 중복 표시되었음.
+2. `commandRouterPostView.js` 내에 이미 `cmd === 'OK' || cmd === 'V'` 처리 코드가 존재하므로 힌트 표시 토큰만 수정하면 됨.
+구현:
+1. `public/js/core/commandFooterText.js` 의 `postView` 배열에서 `'V:추천'` 토큰 제거 (`'OK:추천'` 만 남김).
+2. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1154`로 업데이트.
+검증: `node --check public/js/core/commandFooterText.js` 통과, `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 11:50] [버그 수정] 글 수정 완료 후 낡은 게시글 상태 캐시 재사용 방지 및 최신 내용 갱신 보완
+
+**LOG_ID: 20260725_1150**
+목표: 사용자 보고 — "수정을 했는데 왜 보이는건 수정전이야?" (http://localhost:3000/notice/2 수정을 마치고 이동한 게시글 보기 화면에서 이전 수정 전 데이터가 보여지던 캐시 문제 해결).
+원인 분석:
+1. `postViewView.js` 의 `canReuse` 가 `state.post` 에 남아있던 이전 낡은 게시글 객체를 재사용하도록 판단하여 `loadPost` 를 통한 백엔드 최신 조회 로직을 스킵했음.
+구현:
+1. `postWriteView.js` 의 `handleWriteSubmit` 수정 완료 시 `state.post = null` 지정을 추가하여 이전 낡은 데이터 재사용을 강제 무효화.
+2. `postService.js` 의 `updatePost` 에 `postCache` 삭제 대상을 확실하게 보완.
+3. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1150`으로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js`, `postService.js`), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 11:23] [버그 수정] 게시글 수정(PATCH) 및 삭제(DELETE) 라우트 인증 미들웨어 누락 원인 해결
+
+**LOG_ID: 20260725_1123**
+목표: 사용자 보고 — "http://localhost:3000/notice/2/edit 수정한 후에 왜 저장이 안되는거야" (게시글 수정 후 저장 요청 시 403 Forbidden 오류로 저장이 거부되던 문제 해결).
+원인 분석:
+1. `src/server/routeHandlers/boardRoutes.js` 의 `updatePost` (`PATCH`) 및 `deletePost` (`DELETE`) 라우트 정의에 `middlewares: ['ensureAuthenticated']` 가 누락되어 있어, 백엔드 요청 처리 시 `context.userId` 가 `undefined` 로 전달되어 `assertPostMutable` 검사에서 403 Forbidden 에러가 발생했음.
+구현:
+1. `src/server/routeHandlers/boardRoutes.js` 의 `updatePost` 및 `deletePost` 라우트 설정에 `middlewares: ['ensureAuthenticated']` 미들웨어 추가.
+2. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1123`으로 업데이트.
+검증: `node --check src/server/routeHandlers/boardRoutes.js` 통과, `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 10:32] [버그 수정] 화면 전환 시 명령어 입력창 노출 복구 및 글 수정 완료 뷰 전환 보완
+
+**LOG_ID: 20260725_1032**
+목표: 사용자 보고 — "수정 후 저장도 안되거니와. 명령어 입력창이 없어져 버렸어." (글 수정/작성 종료 후 다른 화면으로 나갔을 때 하단 선택>> 프롬프트 행이 display:none 상태로 남아 사라지는 현상 해결 및 글 수정 성공 후 뷰 전환 보완).
+원인 분석:
+1. `postWriteView.js` 에디터 초기화 시 지정한 `display: none` 스타일이 에디터 탈출/화면 전환 후에도 원복되지 않아 다른 모든 화면에서 하단 명령어 입력줄이 소멸했음.
+2. `handleWriteSubmit` 에서 글 수정 완료 시 `showPostView` 로의 복귀 라우팅 및 cleanup 미비.
+구현:
+1. `postWriteView.js` 의 `cleanup()` 및 `clearPostWriteEditor()` 에 무조건 `promptRow.style.display = ''` 리셋 적용.
+2. `ansiTopbarScreen.js` 의 화면 렌더링 함수에 `state.screen !== 'post-write'` 환경 하단 입력창 전역 노출 가드 추가.
+3. `handleWriteSubmit` 수정 성공 시 `showPostView` 우선 복귀 및 `finally` 블록에서 `clearPostWriteEditor()` 실행.
+4. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1032`로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js`, `ansiTopbarScreen.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 10:26] [버그 수정] 글 수정/작성 화면에서 저장(Ctrl+S, . + Enter) 동작 실패 수정
+
+**LOG_ID: 20260725_1026**
+목표: 사용자 보고 — "http://localhost:3000/notice/2/edit 어떤 저장도 동작을 안하는데. 실제 수정이 안되나봐" (글 수정/작성 에디터에서 Ctrl+S, 마침표 엔터 등 저장 명령 시 실제 저장이 이뤄지지 않던 문제 수정).
+원인 분석:
+1. `postWriteView.js` 의 `openPostEditor` 에서 `_onSave` / `_onCancel` 콜백 정의 시 모듈 내부 함수인 `handleWriteSubmit(handlers)` 대신 `handlers.handleWriteSubmit()` 객체 메서드를 직접 참조하여 `Uncaught TypeError: handlers.handleWriteSubmit is not a function` 예외가 발생하며 저장이 실패했음.
+구현:
+1. `public/js/core/postWriteView.js` 의 `_onSave` 및 `_onCancel` 콜백 바인딩을 `handleWriteSubmit(handlers)` 및 `cancelPostWrite(handlers)` 모듈 함수 직접 호출로 교체.
+2. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1026`으로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 10:16] [기능 개선] 글쓰기/수정 폼 포커스 중 하단 프롬프트 완전 숨김 및 Tab 이동 시 동적 노출 구현
+
+**LOG_ID: 20260725_1016**
+목표: 사용자 보고 — "아직도 선택 옆 커서가 있는데" (제목/본문 입력 중일 때 하단 선택>> 프롬프트 및 커서 잔상을 100% 안 보이게 숨기고, Tab 이동 시에만 동적으로 켜도록 보완).
+원인 분석:
+1. `postWriteView.js` 에서 `cmdInput` 과 `terminal-prompt-row` 가 노출된 상태로 남아있어 포커스가 제목/본문에 있을 때 하단 프롬프트에 커서 잔상이 남았음.
+구현:
+1. `postWriteView.js` 에디터 초기화 시 `#terminal-prompt-row` 및 `cmdInput` 을 `display: 'none'` 으로 완전 숨김 처리.
+2. `bodyEl` 에서 `Tab` 누를 시 `#terminal-prompt-row` 및 `cmdInput` 의 `display`를 동적으로 켜고 `cmdInput.focus()` 연결.
+3. `cmdInput` 에서 `Shift+Tab` 또는 `ArrowUp` 누를 시 다시 `display: 'none'` 으로 숨기고 `bodyEl` 로 포커스 복귀.
+4. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1016`으로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 10:14] [버그 수정] 폼 에디터(제목/본문) 포커스 시 하단 명령어 입력줄 커서 이중 깜빡임 억제 및 ReferenceError 수정
+
+**LOG_ID: 20260725_1010**
+목표: 사용자 보고 — "선택에 커서위치에 깜빡거리는데 http://localhost:3000/notice/2/edit" (글 수정/작성 시 제목이나 본문에 포커스가 있는데 하단 선택>> 프롬프트 옆에 터미널 커서가 이중으로 깜빡거리는 현상 해결).
+원인 분석:
+1. `terminalInputUi.js` 의 `shouldRenderCursor()` 가 포커스 위치와 무관하게 `cmdInput` 이 DOM에 존재하면 항상 하단 터미널 블록 커서를 `visibility: visible` 로 렌더링했음.
+2. `shouldRenderCursor()` 내부 치환 과정에서 `isFormTextareaActive` 변수 선언부가 누락되어 브라우저 콘솔에서 `Uncaught ReferenceError: isFormTextareaActive is not defined` 가 일어남.
+구현:
+1. `public/js/core/terminalInputUi.js` 의 `shouldRenderCursor()` 내에 `const isFormTextareaActive = ...` 선언부를 바르게 배치하여 ReferenceError 수정 및 커서 억제 조건 정립.
+2. `focusin` / `focusout` 이벤트 발생 시 `syncCursorVisibility()` 를 즉시 재호출하도록 이벤트 리스너 등록.
+3. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1014`로 업데이트.
+검증: `node --check` 통과 (`terminalInputUi.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 10:07] [기능 개선] 글 수정 모드 진입 시 첫 포커스 위치를 제목(titleEl)으로 변경
+
+**LOG_ID: 20260725_1007**
+목표: 사용자 보고 — "수정했을 때 첫번째 마우스 포인트는 제목에 있어야지." (글 수정 모드 진입 시 첫 포커스를 제목 입력창으로 고정).
+원인 분석:
+1. `postWriteView.js` 의 에디터 포커스 초기화 로직에서 `editor.mode === 'edit'` 인 경우 본문(`bodyEl`)으로 포커스를 주도록 분기되어 있었음.
+구현:
+1. `public/js/core/postWriteView.js` 의 포커스 초기화 로직을 수정하여 작성/수정 구분 없이 진입 시 무조건 `titleEl.focus()` 를 실행하도록 변경.
+2. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1007`로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 10:05] [기능 개선] 글쓰기 화면 Tab/Shift+Tab 순환 포커스 체인 구현 (제목 ↔ 내용 ↔ 명령어줄)
+
+**LOG_ID: 20260725_1005**
+목표: 사용자 보고 — "Tab: 이동이 안되는데. 제목에서 탭하면 내용으로 포커스가 가고, 내용에서 포커스 하면 힌트바명령어줄로 가야하는거 아냐" (글쓰기 화면 폼 요소 간 Tab 순환 체인 구현).
+원인 분석:
+1. 글쓰기 에디터 진입 시 `cmdInput` 과 `terminal-prompt-row` 가 `display: none` 으로 강제 숨김 처리되어 있어 `cmdInput` 으로 포커스를 보낼 수 없었음.
+2. `onBodyKey` 핸들러에 `Tab` 키(Shift 안 누름) 입력 시 `cmdInput` 으로 이동시키는 이벤트 분기 처리가 부재했음.
+구현:
+1. `public/js/core/postWriteView.js` 의 `renderBbsEditor` 에서 `cmdInput` 숨김 조치를 해제하고 하단 명령어줄 노출 유지.
+2. `onBodyKey` 내에 `e.key === 'Tab' && !e.shiftKey` 분기를 추가하여 `cmdInput.focus()` 연결.
+3. 에디터 활성화 상태 시 `cmdInput` 이벤트에 `Shift+Tab` 또는 `ArrowUp` 입력 시 내용(`bodyEl`)으로 포커스를 복귀시키는 `onCmdKey` 핸들러 추가.
+4. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_1005`로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 09:59] [버그 수정] 글쓰기 화면 하단 안내문구(div[4]) 잘림 현상 근본 해결 (CSS Flex 상속 계층 최적화)
+
+**LOG_ID: 20260725_0959**
+목표: 사용자 보고 — "마지막 줄이 화면이 잘린다니까. //*[@id='terminal-screen']/div/div[2]/div/div[4]" (글쓰기 화면 폼 에디터 노출 시 캔버스 높이 상속 문제로 안내문구가 스크린 밖으로 잘려 삐져나가는 현상 해결).
+원인 분석:
+1. `div.ansi-screen` 및 `div.ansi-screen-body` 에 명시적인 높이 상속(`min-height: inherit; height: 100%`) 속성이 부재하여 에디터 최상위 부모 높이의 % 상속이 무시되었음.
+2. `textarea` 가 `height: 22.4em` 고정값으로 인해 화면 세로폭이 충분하지 않은 환경에서 수축하지 않아 전체 높이가 스크린 바운더리를 침범해 오버플로 잘림이 발생했음.
+구현:
+1. `public/style.css` 최하단에 `.ansi-screen` 와 `.ansi-screen-body` 규칙을 생성하여 `display: flex; flex-direction: column; height: 100%; min-height: inherit;` 를 추가함.
+2. `public/js/core/postWriteView.js` 에서 `textareaStyle` 의 세로 높이를 `18.2em` 로 조율하고, `min-height: 10em` 및 `flex: 1` 을 추가해 안전마진 확보와 반응형 수축이 정상 작동하도록 개선.
+3. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_0959`로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 09:57] [버그 수정] 글쓰기 화면 textarea 세로 높이 복원 및 제목 Enter 포커스 이동 구현
+
+**LOG_ID: 20260725_0957**
+목표: 사용자 보고 — "textarea 상하가 너무 좁아졌잖아. 그리고 제목에서 엔터치면 내용으로 넘어가야지" (글쓰기 화면 폼 에디터 높이 복원 및 사용성 개선).
+원인 분석:
+1. 부모 컨테이너의 `height: 100%`가 `#terminal-screen`의 `height: auto` 조건 때문에 무시되어, `flex: 1`만 가지고 있던 `textarea`가 기본 auto 높이(약 2줄 분량)로 찌부러졌음.
+2. 제목(`titleEl`)의 키 이벤트 핸들러 `onTitleKey(e)`에 Enter 키 처리 분기가 빠져 있어 다음 본문 입력창으로 넘어가지 못했음.
+구현:
+1. `public/js/core/postWriteView.js`의 `textareaStyle`에 `height: 22.4em;`를 명시적으로 재설정하여 세로폭 복원.
+2. `public/js/core/postWriteView.js`의 `onTitleKey(e)` 핸들러 내에 `e.key === 'Enter'` 분기를 추가하여 `bodyEl.focus()` 및 셀렉션 초기화 처리.
+3. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_0957`로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 09:54] [버그 수정] 글쓰기 화면 하단 안내문구 겹침 및 잘림 현상 수정 (에디터 레이아웃 Flex 속성 튜닝)
+
+**LOG_ID: 20260725_0954**
+목표: 사용자 보고 — "글쓰기 에서 아래에 글씨가 잘려있는데" (글쓰기 화면 폼 에디터 노출 시 브라우저 창 높이가 작아질 때, 하단 안내 문구가 겹쳐 짤리는 현상 해결).
+원인 분석:
+1. 글쓰기 폼 에디터의 `textarea` 높이가 고정 `22.4em`로 설정되어 있었기 때문에, 창 높이가 찌부러질 때 `textarea`가 축소되지 못해 flex 부모의 높이 한도를 초과했음.
+2. 부모 컨테이너가 축소될 때 `flex-shrink` 설정이 없던 하단의 안내문 `div`가 강제로 수축되면서 내부의 글씨들이 찌그러지고 겹쳐 잘리는 현상이 발생했음.
+구현:
+1. `public/js/core/postWriteView.js`의 `textareaStyle`에서 고정 높이 `height: 22.4em;`를 제거하고 `flex: 1; min-height: 0;`으로 수정.
+2. 글쓰기 레이아웃(`bodyHtml`)의 고정 높이가 필요한 텍스트 요소들(제목 영역, 구분선, 내용 타이틀, 하단 안내문)에 `flex-shrink: 0;`을 추가해 축소 방지 보장.
+3. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_0954`로 업데이트.
+검증: `node --check` 통과 (`postWriteView.js` 정적 구문 체크 완료), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 09:51] [버그 수정] 터미널 캔버스 24번째 마지막 줄 구분선 미세 짤림 보정 (#terminal-screen min-height 안전 마진 확대)
+
+**LOG_ID: 20260725_0951**
+목표: 사용자 보고 — "자세히 확대해 줄께. 살짝 짤린 부분이 보일거야. 전수조사 해줘" (본문 하단의 가로 구분선이 미세하게 짤려 얇게 노출되는 현상 해결).
+원인 분석:
+1. 24줄 터미널 캔버스 높이인 33.6em(24 * line-height 1.4)이 브라우저에서 소수점 픽셀 올림/내림 오차 등으로 인해 실제 높이보다 미세하게 작아질 때, 마지막 줄의 아랫부분이 스크롤 잠금 상태에서 강제 오버플로 클리핑되어 잘렸음.
+구현:
+1. `public/style.css`에서 `#terminal-screen`의 최소 높이인 `min-height: 33.6em !important`를 `min-height: 33.8em !important`로 확대하여 안전 높이 마진 확보.
+2. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_0951`로 업데이트.
+검증: `node --check` 해당없음(CSS 변경), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 09:47] [버그 수정] 데스크톱 환경 세로 짤림 근본적 문제 수정 (.ansi-line min-height em 유연화 및 데스크톱 폰트 clamp 추가)
+
+**LOG_ID: 20260725_0947**
+목표: 사용자 보고 — "마지막 줄이 짤리잖아 다시 전수조사 해봐" (폰트 크기를 모바일용 0.025로 낮췄음에도 데스크톱 창 높이가 찌부러질 때 마지막 줄이 여전히 잘리는 문제의 원인 확인 및 근본 해결).
+원인 분석:
+1. 데스크톱 기본 상태에서 개별 텍스트 행인 `.ansi-line`에 `min-height: 24px`가 강제로 박혀 있어, 폰트 크기가 줄어들더라도 줄 높이가 24px 미만으로 수축하지 못했음. 이로 인해 24줄 전체의 실제 렌더링 높이가 화면의 뷰포트 제한을 초과해 밑단이 잘리는 것이었음.
+2. 또한, 데스크톱 환경(`min-width: 769px`)에서는 폰트 크기가 `17px` 고정으로 잡혀 있어, 세로 뷰포트가 극도로 작아질 때 터미널 프레임 전체를 담을 수 없었음.
+구현:
+1. `public/style.css`에서 `.ansi-line`의 `min-height: 24px` 규칙을 상대 단위인 `min-height: 1.4em`로 대체하여 폰트 크기 수축에 비례한 줄 높이 감소 보장.
+2. `public/style.css`의 데스크톱 미디어 쿼리(`@media (min-width: 769px)`)에 `#terminal-container, .ansi-screen, .ansi-line` 폰트 clamp 규칙(`calc(var(--stable-vh, 100vh) * 0.026)`)을 추가하여 데스크톱에서도 창 높이가 작아질 때 글씨 크기가 부드럽게 줄어들도록 개선.
+3. `public/index.html`에서 `style.css` 캐시 버스팅 버전을 `20260725_0947`로 업데이트.
+검증: `node --check` 해당없음(CSS 변경), `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 09:44] [버그 수정] 글보기 화면 텍스트 하단 잘림 현상 수정 (폰트 크기 비율 조정)
+
+**LOG_ID: 20260725_0944**
+목표: 사용자 요청 — "마우스 휠로 스크롤은 안되는데 글씨가 살짝 짤렸어. 이것도 전수조사 해줘" (글보기 화면 스크롤 잠금 후 폰트 크기가 커서 24줄이 뷰포트 바닥을 초과해 텍스트 하단이 잘리는 현상 해결).
+분석:
+1. `post-view` 화면은 세로 스크롤이 잠김에 따라 다른 24줄 고정 프레임 화면들과 마찬가지로 화면 크기에 비례해 글자 크기가 작아져야 함.
+2. 하지만 현재 `post-view`는 `0.025` 폰트 축소 그룹(`news-list`/`news-view`/`help`/`omok-play`)에서 빠져 있어 일반 화면과 동일한 `0.027` 폰트 크기가 적용되고 있었음. 이로 인해 24줄 전체의 높이가 모바일/PC 뷰포트 크기를 초과해 밑부분이 잘리는 현상이 발생함.
+구현:
+1. `public/style.css`에서 `body[data-screen="post-view"] #terminal-container`를 `0.025` 폰트 크기 비율 그룹에 추가하여 24줄이 화면에 꼭 들어맞게 축소되도록 수정.
+2. `public/index.html`에서 `style.css` 캐시 버스팅 파라미터 버전을 `20260725_0944`로 업데이트.
+검증: `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 09:42] [버그 수정] 글보기 화면 및 전체 터미널 화면 세로 스크롤 완전 차단 (마우스 휠 스크롤 비활성화)
+
+**LOG_ID: 20260725_0942**
+목표: 사용자 요청 — "글의 길이가 길어서 그런지 마우스휠을 사용하면 스크롤이 되는데. 스크롤도 안되게 전수조사 해줘" (마우스 휠 굴릴 때 스크롤이 되는 브라우저/요소 스크롤을 원천 차단).
+분석:
+1. `style.css`에서 `body[data-screen="post-view"]` 및 하위 클래스들(`.app-shell`, `#terminal-wrapper`, `#terminal-screen`)에 대해 세로 스크롤을 허용(`overflow-y: visible !important`, `position: static`, `height: auto`)하고 있었음.
+2. 또한, `#terminal-screen` 자체도 `style.css` 아랫단(Line 319)에서 `overflow-y: auto !important`로 지정되어 있어 콘텐츠가 조금이라도 넘치면 스크롤이 가능했음.
+구현:
+1. `public/style.css`에서 `post-view` 스크롤 관련 예외 처리 블록(2704~2740줄 근처)을 완전히 삭제하여 기본 고정 레이아웃으로 환원.
+2. `#terminal-screen`의 `overflow-y: auto !important`를 `overflow-y: hidden !important`로 변경하여 모든 화면에서 스크롤을 원천 차단.
+3. `public/index.html`에서 `style.css` 캐시 버스팅 버전을 `20260725_0942`로 업데이트하여 변경 사항 즉시 반영.
+검증: `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
+
+## [2026-07-25 09:35] [기능 제거] 마우스 휠 스크롤 이벤트 제거 (키보드 F/B로만 페이지 이동)
+
+**LOG_ID: 20260725_0935**
+목표: 사용자 요청 — "C안: 스크롤 이벤트 완전 제거 (키보드 F/B로만 페이지 이동)".
+구현: `public/js/core/appEvents.js` 파일에서 `wheel` 이벤트 리스너 제거.
+검증: `node --check public/js/core/appEvents.js` 통과, `npm run smoke:vercel-ready` 통과.
+결과: ✅ 완료
+
+---
 
 ## [2026-07-25 10:30] [기능 개선] help/policy/menuIndex/newsList 힌트바를 postView/weatherView와 동일한 짧은 스타일로 통일 + policy/menu-index F/B 숨김판정 버그 수정
 
