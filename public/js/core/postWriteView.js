@@ -184,8 +184,8 @@ export function createPostWriteView(deps) {
     <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내 용 :</div>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
   </div>
-  <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:nowrap;user-select:none;font-family:inherit;flex-shrink:0;">
-    상하화살표/Tab:이동  |  저장: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Esc
+  <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;flex-shrink:0;">
+    저장: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Esc
   </div>
 </div>`;
 
