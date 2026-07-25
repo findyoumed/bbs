@@ -805,6 +805,18 @@ export function createPostWriteView(deps) {
         handlers.cancelPostWrite();
         return true;
       }
+      // [LOG_ID: 20260725_1735] 이 아래(줄을 본문에 그냥 추가 + renderLineEditor)는 옛 줄 단위
+      // 에디터(stage: 'title'/'body' 등) 전용 폴백이다. 지금 쓰는 BBS 박스 에디터(stage:
+      // 'bbs-form')는 제목/본문을 화면에 뜬 실제 input/textarea로 직접 입력받고, 저장(S)·취소
+      // (P/M/B/Esc)는 위에서 이미 처리됐다 — 그 외 cmdInput으로 들어온 입력(예: Tab으로 본문↔
+      // 명령창 이동 기능(20260725_1212)을 쓰다 실수로 Enter를 친 경우)이 여기까지 흘러오면
+      // 안 되는데, 예전에는 그걸 "새 본문 줄"로 취급해 조용히 옛 트랜스크립트 UI로 화면을
+      // 통째로 바꿔버렸다 — 사용자가 한창 쓰던 박스 에디터가 갑자기 "제목을 입력하십시오"
+      // 화면으로 바뀌어 보였다(사용자 보고: "글쓰기를 완료했을때 왜 제목을 입력하라고 나오지").
+      // bbs-form 단계에서는 인식 못한 입력을 조용히 무시한다(화면·상태 그대로 유지).
+      if (activeEditor.stage === 'bbs-form') {
+        return true;
+      }
       activeEditor.bodyLines.push(line);
       appendTranscriptLine(activeEditor, line);
       renderLineEditor(activeEditor);

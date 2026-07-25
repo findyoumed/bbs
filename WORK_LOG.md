@@ -1,3 +1,12 @@
+## [2026-07-25 17:35] [버그 수정] 글쓰기 완료(또는 편집 중 실수) 시 박스 에디터가 갑자기 옛 "제목을 입력하십시오" 화면으로 바뀌던 문제
+
+**LOG_ID: 20260725_1735**
+목표: 사용자 스크린샷 신고 — 공지사항 글쓰기 도중(또는 완료 시) 화면이 "글 쓰기 / 제목을 입력하십시오." 로 바뀌며 "본문 >>" 프롬프트가 뜸("글쓰기를 완료했을때 왜 제목을 입력하라고 나오지"). 방금 쓰던 박스형(제목 입력창+본문 textarea) 에디터가 사라지고 옛날 방식의 줄 단위 트랜스크립트 화면으로 전환된 것.
+조사: `postWriteView.js`의 `handlePostWriteLine()`은 raw 입력(`state._terminalInputHandler`를 통해 cmdInput에서 들어온 줄)을 단계별(header/title/keyword/body 등)로 처리하다가, 어느 것에도 안 걸리면 최종 폴백으로 `activeEditor.bodyLines.push(line); renderLineEditor(activeEditor);`를 실행 — 이건 옛 줄 단위 에디터(제목을 한 줄 받고 본문을 한 줄씩 받는 방식) 전용 로직인데, 지금 기본으로 쓰는 새 박스 에디터(stage: 'bbs-form')는 제목/본문을 화면에 뜬 실제 input/textarea로 직접 입력받아 이 폴백을 탈 일이 없어야 정상이다. 그런데 같은 날 병합된 다른 세션의 커밋(20260725_1212, 탭키로 본문↔공용 명령창(cmdInput) 이동 기능 추가)으로 cmdInput이 편집 중에도 항상 살아있게 됐고, 거기서 저장(S)/취소(P·M·B) 외의 텍스트를 입력한 채 Enter를 치면(Tab으로 잘못 넘어가거나 자동완성 등) 이 폴백에 걸려 — 방금 쓰던 박스 에디터 화면을 통째로 `renderLineEditor()`(옛 트랜스크립트 UI, `renderInitialTranscript()`가 이미 채워둔 "글 쓰기 / 제목을 입력하십시오.")로 덮어써 버렸다. `getWritePrompt()`도 'bbs-form'을 인식 못 해 기본값 "본문 >>"을 반환 — 스크린샷과 정확히 일치.
+구현: `public/js/core/postWriteView.js` — `handlePostWriteLine()`의 최종 폴백 바로 앞에 `activeEditor.stage === 'bbs-form'` 가드 추가. 이 단계에서 저장/취소가 아닌, 인식 못한 입력은 (박스 에디터 화면·상태를 그대로 두고) 조용히 무시한다.
+검증: 모듈을 Node 하네스로 직접 로드해(가짜 DOM) `showPostWrite()` 호출 후 `state._postWriteInputHandler('아무말이나')`로 재현 — 수정 후 `handled:true`, `screenEl.innerHTML` 완전히 불변, `editor.stage`는 여전히 `'bbs-form'`, `editor.bodyLines`도 빈 배열 그대로임을 확인(수정 전이었다면 화면이 트랜스크립트 UI로 바뀌고 "아무말이나"가 본문에 추가됐을 것). `node --check`, `npm run smoke:menu-wiring` 통과.
+결과: ✅ 완료. 참고: 같은 스크린샷 배치에서 GUIDE(서비스안내) 메뉴 "1"번 진입 시 "연결하는 중입니다."에서 멈춘 것으로 보이는 화면도 함께 신고됐으나, 사용자가 설명 도중 메시지를 중단(interrupt)하고 다른 화면 질문으로 넘어가 이번 수정 범위에서는 제외 — 재확인 필요 시 후속 조치.
+
 ## [2026-07-25 17:25] [버그 수정] 글쓰기 에디터에서 타이핑 중 본문과 안내문구가 계속 겹쳐 보이던 진짜 원인 — textarea 자체의 독립된 min-height:14em
 
 **LOG_ID: 20260725_1725**
