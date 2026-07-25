@@ -2665,12 +2665,16 @@ body[data-print-view="true"] .ansi-screen {
         display: block !important;
     }
 
+    /* [LOG_ID: 20260725_1655] padding-bottom:6px가 스크롤이 필요 없는 짧은 화면(예: 공지사항
+       1건)에서도 무조건 붙어 #terminal-screen 높이가 그만큼 늘어나 하단 힌트바/프롬프트가
+       키보드 유무에 따라 미세하게(스크린샷 픽셀 기준 24px = CSS 6px) 밀렸다 눌렸다 했다(사용자
+       스크린샷 대조: "키보드가 없을때와 있을때의 스크린이 다른데"). 스크롤 여유 공간 목적이면
+       실제로 스크롤 가능한(내용이 넘치는) 화면에서만 의미가 있으므로 무조건 적용을 제거한다. */
     body[data-mobile-keyboard="visible"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
         overscroll-behavior-y: contain !important;
-        padding-bottom: 6px !important;
     }
 
     /* [LOG_ID: 20260710_1815] 뉴스 목록/기사 화면은 본문 줄 수가 고정이라 작은 모바일 뷰포트에서
