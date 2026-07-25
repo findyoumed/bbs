@@ -144,9 +144,12 @@ export function createPostWriteView(deps) {
       min-width: 0;
     `;
 
+    // [LOG_ID: 20260725_1312] 게시글 수정/작성 에디터 본문 textarea 상하 높이를 남은 세로 공간 전체(100%)로 확장하여 유연하게 채움
     const textareaStyle = `
       width: 100%;
-      height: 22.4em; /* 약 16행 분량의 넉넉한 세로폭 */
+      height: 100%;
+      min-height: 14em;
+      flex: 1;
       background: transparent;
       border: none;
       color: #ffffff !important;
@@ -162,18 +165,18 @@ export function createPostWriteView(deps) {
     `;
 
     const bodyHtml = `
-<div style="display:flex;flex-direction:column;height:100%;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;">
-  <div style="display:flex;align-items:center;padding:2px 0;gap:0;">
+<div style="display:flex;flex-direction:column;height:100%;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
+  <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
     <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">제 목 :&nbsp;</span>
     <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" style="${inputStyle}"/>
   </div>
-  <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;">${sep}</div>
+  <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   ${headerLine}
-  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;">
-    <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;">내 용 :</div>
+  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:0;">
+    <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내 용 :</div>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
   </div>
-  <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:nowrap;user-select:none;font-family:inherit;">
+  <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:nowrap;user-select:none;font-family:inherit;flex-shrink:0;">
     상하화살표/Tab:이동  |  저장: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Esc
   </div>
 </div>`;
@@ -188,31 +191,28 @@ export function createPostWriteView(deps) {
     titleEl.value = editor.title || '';
     bodyEl.value  = editor.bodyLines.join('\n');
 
-    // 터미널 프롬프트 행만 숨김 (하단 힌트바 #cmd-hint는 계속 노출)
+    // [LOG_ID: 20260725_1212] 선택>> 프롬프트 행은 에디터 진입 후에도 항상 노출 유지
+    // — 탭키로 제목→본문→선택>> 이동이 가능하므로 숨기면 내비게이션이 불가능해짐.
     const promptRow = document.getElementById('terminal-prompt-row');
-    let savedPromptDisplay = '';
-    if (promptRow) {
-      savedPromptDisplay = promptRow.style.display || '';
-      promptRow.style.display = 'none';
-    }
+    if (promptRow) promptRow.style.display = '';
+    if (cmdInput) cmdInput.style.display = '';
 
-    // cmdInput 숨김
-    const savedCmdDisplay = cmdInput ? cmdInput.style.display : '';
-    if (cmdInput) cmdInput.style.display = 'none';
     editor._textareaActive = true;
     setHint(getWriteHintText());
 
     function cleanup() {
       editor._textareaActive = false;
       if (promptRow) {
-        promptRow.style.display = savedPromptDisplay;
+        promptRow.style.display = '';
       }
       if (cmdInput) {
-        cmdInput.style.display = savedCmdDisplay;
-        setTimeout(() => cmdInput?.focus(), 0);
+        cmdInput.style.display = '';
       }
       titleEl.removeEventListener('keydown', onTitleKey);
       bodyEl.removeEventListener('keydown', onBodyKey);
+      if (cmdInput) {
+        cmdInput.removeEventListener('keydown', onCmdKey);
+      }
     }
 
     function doSave() {
@@ -232,6 +232,12 @@ export function createPostWriteView(deps) {
     function onTitleKey(e) {
       if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        bodyEl.focus();
+        bodyEl.setSelectionRange(0, 0);
+        return;
+      }
       if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault();
         bodyEl.focus();
@@ -242,6 +248,14 @@ export function createPostWriteView(deps) {
     function onBodyKey(e) {
       if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
+      if (e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        if (cmdInput) {
+          cmdInput.focus();
+          cmdInput.select();
+        }
+        return;
+      }
       if ((e.key === 'ArrowUp' && isOnFirstLine(bodyEl)) || (e.key === 'Tab' && e.shiftKey)) {
         e.preventDefault();
         titleEl.focus();
@@ -256,18 +270,31 @@ export function createPostWriteView(deps) {
       }
     }
 
+    function onCmdKey(e) {
+      if ((e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowUp') {
+        e.preventDefault();
+        bodyEl.focus();
+        bodyEl.setSelectionRange(bodyEl.value.length, bodyEl.value.length);
+        return;
+      }
+    }
+
     titleEl.addEventListener('keydown', onTitleKey);
     bodyEl.addEventListener('keydown', onBodyKey);
+    if (cmdInput) {
+      cmdInput.addEventListener('keydown', onCmdKey);
+    }
     editor._textareaCleanup = cleanup;
 
-    // 신규 작성: 제목 포커스 / 수정: 본문 포커스
-    if (editor.mode === 'edit' || editor.bodyLines.length) {
-      bodyEl.focus();
-      bodyEl.setSelectionRange(0, 0);
-    } else {
-      titleEl.focus();
-      titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
-    }
+    // [LOG_ID: 20260725_1007] 신규 작성/수정 상관없이 글쓰기 에디터 진입 시 첫 포커스는 제목(titleEl)에 위치
+    // [LOG_ID: 20260725_1212] hidePromptRow() 호출 제거 — 선택>> 항상 노출 유지
+    // [LOG_ID: 20260725_1226] 라우터의 cmdInput 자동 포커스를 덮어쓰기 위해 setTimeout 사용
+    setTimeout(() => {
+      if (titleEl) {
+        titleEl.focus();
+        titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
+      }
+    }, 10);
   }
 
   // [LOG_ID: 20260710_1640] getSupportedFooterText()는 "명령 힌트\n선택 >>"처럼 프롬프트 줄까지
@@ -290,6 +317,13 @@ export function createPostWriteView(deps) {
   }
 
   function clearPostWriteEditor() {
+    if (state._postWriteEditor?._textareaCleanup) {
+      try { state._postWriteEditor._textareaCleanup(); } catch (e) {}
+    }
+    const promptRow = document.getElementById('terminal-prompt-row');
+    if (promptRow) promptRow.style.display = '';
+    if (cmdInput) cmdInput.style.display = '';
+
     if (state._terminalInputHandler === state._postWriteInputHandler) {
       state._terminalInputHandler = null;
     }
@@ -471,8 +505,8 @@ export function createPostWriteView(deps) {
       transcript: [],
       targetPost: activePost,
       targetPostId,
-      _onSave: async () => handlers.handleWriteSubmit(),
-      _onCancel: () => { clearPostWriteEditor(); handlers.cancelPostWrite(); }
+      _onSave: async () => handleWriteSubmit(handlers),
+      _onCancel: () => cancelPostWrite(handlers)
     };
 
     renderInitialTranscript(editor);
@@ -805,13 +839,28 @@ export function createPostWriteView(deps) {
 
     try {
       const payload = { title: storedTitle, content: body };
-      if (state.writeMode === 'edit' && postId) await updatePost(boardId, postId, payload);
-      else if (state.writeMode === 'reply' && postId) await replyPost(boardId, postId, payload);
-      else await createPost(boardId, payload);
+      const currentMode = state.writeMode;
+      if (currentMode === 'edit' && postId) {
+        await updatePost(boardId, postId, payload);
+      } else if (currentMode === 'reply' && postId) {
+        await replyPost(boardId, postId, payload);
+      } else {
+        await createPost(boardId, payload);
+      }
+
       clearPostWriteEditor();
-      await showPostList(boardId, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
+
+      if (currentMode === 'edit' && postId && handlers.showPostView) {
+        state.post = null;
+        await handlers.showPostView(boardId, postId, false);
+      } else {
+        state.posts = null;
+        await showPostList(boardId, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
+      }
     } catch (e) {
       setHint(`저장 실패: ${e.message}`);
+    } finally {
+      clearPostWriteEditor();
     }
   }
 

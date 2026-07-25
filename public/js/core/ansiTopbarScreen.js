@@ -251,9 +251,18 @@ export async function renderAnsiScreenWithTopbarSequential({ ansiText, ansiToHTM
     }
   } finally {
     // 4. 본문+footer 콘텐츠가 모두 준비된 시점에만 하단을 드러낸다. 중단/예외 시에도 하단이
-    // 영영 숨겨진 채로 고착되지 않도록 finally에서 보장한다.
+    // 영영 숨겨진 채로 고착되지 않도록 게다가 post-write 외 화면에서는 display:none이 남지 않도록 보장한다.
     if (hintEl) hintEl.style.removeProperty('visibility');
-    if (promptRowEl) promptRowEl.style.removeProperty('visibility');
+    if (promptRowEl) {
+      promptRowEl.style.removeProperty('visibility');
+      if (typeof state === 'undefined' || state?.screen !== 'post-write') {
+        promptRowEl.style.display = '';
+      }
+    }
+    const globalCmdInput = document.getElementById('terminal-command-input');
+    if (globalCmdInput && (typeof state === 'undefined' || state?.screen !== 'post-write')) {
+      globalCmdInput.style.display = '';
+    }
     footerEl?.classList.remove('is-divider-pending');
     // [LOG_ID: 20260710_1815] 스트리밍 완료 후 화면 스크롤을 원점(상단바)으로 복원한다.
     // 본문 스트리밍 중 scrollIntoView는 줄을 따라 내려가며 조상 스크롤러의 scrollTop도 함께

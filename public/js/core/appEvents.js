@@ -351,19 +351,6 @@ export function bindAppEvents(deps) {
     }
   }
 
-  // [LOG_ID: 20260724_1705] 마우스 휠 스크롤 억제 및 본문 페이징 연동
-  window.addEventListener('wheel', (event) => {
-    if (event.target.closest('textarea, input, select')) return;
-    event.preventDefault();
-
-    if (state.screen === 'post-view' && typeof handleCmd === 'function') {
-      if (event.deltaY > 0) {
-        void handleCmd('F');
-      } else if (event.deltaY < 0) {
-        void handleCmd('B');
-      }
-    }
-  }, { passive: false });
 
   // [LOG: 20260610_1145] Enable smooth text selection by disabling pointer-events on hotspots during dragging
   document.addEventListener('selectionchange', () => {

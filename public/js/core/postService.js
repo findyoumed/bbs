@@ -100,8 +100,9 @@ export function createPostService(deps) {
 
   async function updatePost(boardId, postId, payload) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}`, { method: 'PATCH', body: JSON.stringify(payload) });
-    postCache.delete(`${boardId}_${postId}`); // 본문 캐시 삭제
-    invalidateListCache(boardId); // 목록 캐시 무효화
+    postCache.delete(`${boardId}_${postId}`);
+    if (state.board?.id) postCache.delete(`${state.board.id}_${postId}`);
+    invalidateListCache(boardId);
     return result;
   }
 

@@ -313,8 +313,10 @@ export function createBoardAnsiBuilders(deps) {
     // (참고: Playwright로 확인해보니 이 화면은 이 변경과 무관하게 이전부터 24줄을 다 채우면
     // 컨테이너 대비 약 10px의 미세한 세로 오버플로가 있었다 — 원래 코드에서도 동일하게
     // 재현되는 기존 현상이라 이번 수정 범위에서는 건드리지 않는다.)
+    // [LOG_ID: 20260725_1338] 하단 footer 구분선과의 미세 오버플로로 인한 마지막 줄(17번 줄) 자름 현상 방지를 위해
+    // 뷰포트 본문 가용 라인 수를 1줄 조율(16줄)하여 잘림 없이 쾌적하게 페이징 처리.
     const topHeaderLines = 4; // buildTopHeader() 반환 줄 수
-    const baseLines = Math.max(5, totalLines - topHeaderLines - headerLineCount);
+    const baseLines = Math.max(5, totalLines - topHeaderLines - headerLineCount - 1);
 
     const pages = [];
     let currentLineIdx = 0;

@@ -181,6 +181,11 @@ export function createTerminalInputUi(deps) {
     const container = getTerminalContainer();
     const hasLoadingScreen = Boolean(screenEl?.querySelector('.loading'));
 
+    // [LOG_ID: 20260725_1010] 폼 에디터(글쓰기/수정 등) 활성화 상태에서 포커스가 title/body 등 다른 입력 필드에 있는 경우 하단 cmdInput의 커서를 숨김
+    const isFormTextareaActive = typeof document !== 'undefined'
+      && (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA')
+      && document.activeElement !== cmdInput;
+
     // [LOG_ID: 20260708_2015] !cmdInput.disabled 조건을 제거한다. setLoading()이 데이터 로딩(예:
     // showMain()의 await Promise.all(...)) 시작과 동시에 cmdInput.disabled=true를 걸어두는데,
     // 이 시점엔 아직 renderAnsiScreenWithTopbarSequential이 시작 전이라 화면(프롬프트 텍스트 "선택 >>"
@@ -195,6 +200,7 @@ export function createTerminalInputUi(deps) {
       && cursorEl
       && useCustomCursor
       && !hasLoadingScreen
+      && !isFormTextareaActive
       // [LOG: 20260707_1750] CSS(retro-terminal.css .fonts-loading .terminal-cursor)와 판단 기준을 일치시킨다.
       // JS가 fonts-loading을 무시하고 visible로 판단하면 재시도가 종료된 채 CSS만 숨겨 커서가 사라진 상태로 고착됐다.
       && !document.documentElement.classList.contains('fonts-loading')
@@ -362,6 +368,10 @@ export function createTerminalInputUi(deps) {
     cmdInput.addEventListener('select', syncCursorVisibility);
     cmdInput.addEventListener('compositionupdate', syncCursorVisibility);
     cmdInput.addEventListener('compositionend', syncCursorVisibility);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focusin', syncCursorVisibility);
+      window.addEventListener('focusout', syncCursorVisibility);
+    }
     cmdInput.addEventListener('focus', () => {
       syncMaskedInputDisplay();
       syncCursorVisibility();

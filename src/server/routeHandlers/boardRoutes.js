@@ -45,8 +45,22 @@ class BoardRouter extends BaseRouter {
         middlewares: ['ensureAuthenticated']
       },
       { method: 'GET', pattern: '/api/boards/:boardId/posts/:postId', handler: 'getPost', needContext: true },
-      { method: 'PATCH', pattern: '/api/boards/:boardId/posts/:postId', handler: 'updatePost', needContext: true, needBody: true },
-      { method: 'DELETE', pattern: '/api/boards/:boardId/posts/:postId', handler: 'deletePost', needContext: true, needBody: true },
+      {
+        method: 'PATCH',
+        pattern: '/api/boards/:boardId/posts/:postId',
+        handler: 'updatePost',
+        needContext: true,
+        needBody: true,
+        middlewares: ['ensureAuthenticated']
+      },
+      {
+        method: 'DELETE',
+        pattern: '/api/boards/:boardId/posts/:postId',
+        handler: 'deletePost',
+        needContext: true,
+        needBody: true,
+        middlewares: ['ensureAuthenticated']
+      },
       { method: 'GET', pattern: '/api/boards/:boardId/posts/:postId/attachments', handler: 'listAttachments', needContext: true },
       { method: 'POST', pattern: '/api/boards/:boardId/posts/:postId/attachments', handler: 'addAttachment', needContext: true, needBody: true },
       { method: 'GET', pattern: '/api/boards/:boardId/posts/:postId/attachments/:attachmentId', handler: 'handleAttachmentItem', needContext: true, needBody: true },

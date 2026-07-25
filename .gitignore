@@ -42,3 +42,5 @@ docs/책_할수있다 나우누리에서 인터넷까지.pdf
 
 # docs/책/ 폴더: 62MB 원본만 제외, OCR part 파일들은 Git LFS로 추적
 docs/책/책_hitel길라잡이.pdf
+*.pdf
+olddos-bbs-main
