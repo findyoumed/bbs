@@ -2,7 +2,7 @@
 
 const { normalizeRequestUserId } = require('./RequestIdentityHelpers');
 const { maybeUuid } = require('./httpUtils');
-const { createBridgeError, normalizeAuthEmail } = require('./AuthBridgeUtils');
+const { createBridgeError, normalizeAuthEmail, withAuthAdminRetry } = require('./AuthBridgeUtils');
 
 async function syncMemberAuthProfile(bridge, member, options = {}) {
   if (!bridge.client) {
@@ -60,10 +60,10 @@ async function syncMemberAuthProfile(bridge, member, options = {}) {
     return { synced: false, reason: 'noop', user: authUser };
   }
 
-  const { data, error } = await bridge.client.auth.admin.updateUserById(authUser.id, {
+  const { data, error } = await withAuthAdminRetry(() => bridge.client.auth.admin.updateUserById(authUser.id, {
     email: normalizedEmail,
     user_metadata: nextMetadata
-  });
+  }));
   if (error) {
     throwAdminError('인증 프로필 동기화', error);
   }
@@ -78,7 +78,7 @@ async function syncMemberAuthProfile(bridge, member, options = {}) {
 async function resolveAuthUser(bridge, options = {}) {
   const authUserId = maybeUuid(options.authUserId);
   if (authUserId) {
-    const { data, error } = await bridge.client.auth.admin.getUserById(authUserId);
+    const { data, error } = await withAuthAdminRetry(() => bridge.client.auth.admin.getUserById(authUserId));
     if (error) {
       throwAdminError('Supabase Auth 사용자 조회', error);
     }
@@ -125,7 +125,7 @@ async function findAuthUser(bridge, predicate) {
   const perPage = 200;
   const maxPages = 50;
   for (let page = 1; page <= maxPages; page += 1) {
-    const { data, error } = await bridge.client.auth.admin.listUsers({ page, perPage });
+    const { data, error } = await withAuthAdminRetry(() => bridge.client.auth.admin.listUsers({ page, perPage }));
     if (error) {
       throwAdminError('Supabase Auth 사용자 목록 조회', error);
     }

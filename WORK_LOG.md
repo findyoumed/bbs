@@ -1,3 +1,13 @@
+## [2026-07-25 21:00] [버그 수정] 누락 확인 중 발견 — 인증된 회원 API(비밀번호 변경 등)가 5회 중 1~2회꼴로 502를 내던 실제 결함
+
+**LOG_ID: 20260725_2100**
+목표: 사용자 요청 — "누락된 부분 확인후 수정"(직전 하네스 재작성 작업에 빠진 게 없는지 재점검).
+조사: 재작성한 `smoke-full-traversal.js`를 3~4회 반복 실행하며 무회귀를 재확인하던 중 "Authenticated myinfo password change ... expected 200, got 502"가 간헐적으로(3회 중 2회) 재발했다. 이전 세션(20260725_1900)에서는 "재현 불가, 일시 오류"로 판정해 넘어갔던 항목인데, 로컬 서버에 직접 5연속 curl을 쳐보니 실제로 5회 중 1~2회꼴로 재현됐다 — "일시적"이 아니라 상당한 빈도로 실패하는 진짜 결함이었다. 응답 본문을 확인하니 `Supabase Auth 사용자 목록 조회 실패: invalid JWT: unable to parse or verify signature ... unrecognized JWT kid <nil> for algorithm ES256` — 같은 서비스 롤 키로 만든 같은 클라이언트 인스턴스로 바로 다음 요청을 다시 보내면 대부분 정상 응답한다(요청 자체는 문제 없음). Supabase GoTrue 쪽 JWKS 조회의 일시적 지연/캐시 미스로 보이며, 코드가 그 순간의 실패를 그대로 사용자에게 502로 노출하고 있었다. `members` 테이블 90명, auth 사용자 목록 2페이지뿐이라 페이지네이션 부하 문제는 아님을 먼저 배제했다.
+영향 범위: `auth.admin.getUserById`/`listUsers`/`updateUserById`/`deleteUser` 호출부 5곳(`AuthBridgeSync.js` 3곳, `memberRoutes.js`의 비밀번호 변경·회원 탈퇴 2곳) — 즉 실사용자의 비밀번호 변경, 이메일 변경, 회원 탈퇴가 이 빈도로 실패했을 것으로 추정.
+구현: `AuthBridgeUtils.js`에 `isTransientAuthAdminError()`(메시지에 `invalid jwt`/`unrecognized jwt kid` 포함 여부 판정)와 `withAuthAdminRetry()`(그 오류일 때만 짧은 지연 후 최대 2회 재시도, 그 외 오류는 즉시 그대로 반환)를 추가하고 위 5개 호출부 전체를 감쌌다. 영구 실패(재시도 후에도 안 되는 경우)는 그대로 502로 표면화되므로 실제 장애를 숨기지 않는다.
+검증: 수정 전 코드로 8연속 요청 → 2회 502(재현 확인) / 수정 후 새 서버 프로세스로 12연속 요청 → 12회 모두 200. `npm run smoke:full-traversal`을 연속 3회 재실행해 모두 통과 확인(수정 전엔 3회 중 2회 이 지점에서 실패했었음). `node --check` 4개 파일, `smoke:auth-bridge`(32 checks)·`smoke:vercel-ready` 무회귀 확인.
+결과: ✅ 완료. "재현 불가"로 넘겼던 항목이 실은 빈도 높은 실제 결함이었음 — 전수검사에서 한 번 확인이 안 됐다고 바로 일시 오류로 단정하지 말고 여러 번 재현을 시도해야 한다는 교훈.
+
 ## [2026-07-25 20:30] [폴백 하네스 전면 재작성] smoke-full-traversal.js HTTP 폴백 스위트 노후분(~82건) 전부 정리
 
 **LOG_ID: 20260725_2030**

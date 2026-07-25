@@ -6,6 +6,7 @@ const {
   getReservedNicknameMessage,
   validateReservedNickname
 } = require('../ReservedNicknamePolicy');
+const { withAuthAdminRetry } = require('../AuthBridgeUtils');
 const logger = require('../logger');
 
 /**
@@ -468,9 +469,9 @@ class MemberRouter extends BaseRouter {
       return { synced: false, reason: 'auth-user-not-found' };
     }
 
-    const { error } = await authBridge.client.auth.admin.updateUserById(authUser.id, {
+    const { error } = await withAuthAdminRetry(() => authBridge.client.auth.admin.updateUserById(authUser.id, {
       password
-    });
+    }));
     if (error) {
       if (typeof authBridge._throwAdminError === 'function') {
         authBridge._throwAdminError('Supabase Auth 비밀번호 변경', error);
@@ -487,7 +488,7 @@ class MemberRouter extends BaseRouter {
     if (!id || typeof authBridge?.client?.auth?.admin?.deleteUser !== 'function') {
       return { attempted: false, deleted: false, error: '' };
     }
-    const { error } = await authBridge.client.auth.admin.deleteUser(id);
+    const { error } = await withAuthAdminRetry(() => authBridge.client.auth.admin.deleteUser(id));
     if (error) {
       return { attempted: true, deleted: false, error: error.message };
     }
