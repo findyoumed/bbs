@@ -213,19 +213,17 @@ export function createTerminalUiCore(deps) {
   window.addEventListener('orientationchange', () => {
     window.setTimeout(resetStableViewportHeight, 150);
   });
-  // [LOG_ID: 20260711_1320] VirtualKeyboard API(Chromium Android): 가상 키보드를 오버레이 모드로
-  // 전환해 키보드 개폐 시 브라우저의 레이아웃/시각 뷰포트 리사이즈(이중 리플로우·점프)를 없앤다.
-  // 이 모드에서는 visualViewport 높이가 줄지 않으므로 키보드 높이는 geometrychange 이벤트와
-  // boundingRect로 받아 terminalViewportMetrics가 기존 CSS 변수 파이프라인에 그대로 공급한다.
-  // 미지원 브라우저(iOS Safari 등)는 이 블록을 건너뛰고 기존 visualViewport 경로를 유지한다.
-  if (typeof navigator !== 'undefined' && 'virtualKeyboard' in navigator) {
-    try {
-      navigator.virtualKeyboard.overlaysContent = true;
-      navigator.virtualKeyboard.addEventListener('geometrychange', _onResize);
-    } catch (error) {
-      console.warn('[TerminalUI] VirtualKeyboard API setup failed:', error?.message);
-    }
-  }
+  // [LOG_ID: 20260725_1610] 20260711_1320에서 Chromium Android의 VirtualKeyboard API를 오버레이
+  // 모드(overlaysContent=true)로 전환했었는데, 이 모드에서는 브라우저가 키보드 개폐로 더 이상
+  // visualViewport를 자동으로 줄여주지 않아 "키보드가 열리면 화면이 밀려 올라가는" 표준 동작이
+  // 사라지고, 대신 앱이 geometrychange/boundingRect로 직접 키보드 높이를 계산해 보정해야 했다.
+  // 실기기에서 이 보정이 항상 즉시·정확히 반영되지 않아 키보드가 하단 UI(입력창 포함)를 그냥
+  // 덮어버리는 문제로 사용자에게 재보고됨(20260725, 참고 스크린샷: 일반 앱처럼 키보드가 뜨면
+  // 기존 콘텐츠가 위로 밀려야 한다는 지적). 오버레이 모드 강제를 제거해 브라우저 기본 동작
+  // (resizes-visual — visualViewport가 실제로 줄어듦)으로 되돌린다. terminalViewportMetrics.js의
+  // 기존 visualViewport 기반 계산 경로(--stable-vh로 폰트 크기는 그대로 고정, 20260721_1500)가
+  // 그 축소값을 그대로 받아 --mobile-visual-viewport-height/--mobile-keyboard-inset을 갱신하므로
+  // 폰트 출렁임 없이 레이아웃만 정상적으로 키보드 위로 밀려 올라간다.
 
   return core;
 }

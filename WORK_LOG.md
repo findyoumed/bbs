@@ -1,3 +1,12 @@
+## [2026-07-25 16:10] [기능 개선] 모바일 소프트웨어 키보드가 열릴 때 화면이 위로 밀려 올라가지 않던 문제 — VirtualKeyboard 오버레이 모드 강제 해제
+
+**LOG_ID: 20260725_1610**
+목표: 사용자 지적 — "프로젝트에서 모바일화면일때 키보드가 올라오면 화면 아래부분이 가리는데, 보통 키보드가 아래에서 올라오면서 기존에 있는 부분이 위로 올라가게 구현하는데. 지금 스크린샷도 키보드가 아래부분을 위로 들어올리면서 나오잖아"(일반 앱처럼 키보드가 뜨면 기존 화면이 위로 밀려야 함). 과거(20260721_1500/1535) 이 프로젝트가 "폰트 크기 고정 + 스크롤" 방식을 명시적으로 선택한 이력이 있어(키보드 열고 닫을 때마다 vh 기반 폰트 크기가 출렁이던 버그의 해결책), 되돌릴지 사용자에게 먼저 확인(AskUserQuestion) — "화면 전체를 위로 밀어올림"으로 명시적 결정.
+조사: `terminalUiCore.js`가 Chromium Android에서 `navigator.virtualKeyboard.overlaysContent = true`를 강제로 켜고 있었다(20260711_1320, "이중 리플로우·점프 방지" 목적). 이 오버레이 모드에서는 브라우저가 키보드 개폐 시 `visualViewport`를 더 이상 자동으로 줄여주지 않아(키보드가 콘텐츠 위에 그냥 덮어씌워짐), 표준 "키보드 뜨면 화면 밀려 올라감" 동작이 사라지고 대신 앱이 `geometrychange`/`boundingRect`로 키보드 높이를 직접 계산해 CSS 변수(`--mobile-visual-viewport-height` 등, `terminalViewportMetrics.js`)로 보정해야 했다. 이 보정이 실기기에서 항상 즉시·정확히 반영되지 않아 키보드가 하단 UI(입력창 포함)를 그대로 덮어버리는 현상으로 재현된 것으로 보인다. Playwright로 CSS 파이프라인만 따로 검증(`--mobile-visual-viewport-height`를 직접 350px로 낮춰 봄) — `.app-shell`/`#terminal-container`/`#terminal-screen`이 정상적으로 압축되고 `#terminal-footer`(입력창 포함)가 항상 축소된 뷰포트 하단에 붙어 있음을 확인 — 즉 CSS 쪽 파이프라인 자체(20260721_1500에서 만든 폰트 고정 로직 포함)는 문제가 없고, 문제는 오버레이 모드 강제로 인해 이 파이프라인에 공급되는 값이 브라우저 네이티브 축소값이 아니라 불안정한 자체 계산값으로 바뀌어 있었다는 점.
+구현: `public/js/core/terminalUiCore.js` — `navigator.virtualKeyboard.overlaysContent = true` 강제 설정과 `geometrychange` 리스너를 제거. 브라우저 기본 동작(`resizes-visual` — 키보드가 열리면 `visualViewport.height`가 실제로 줄어듦)으로 되돌아가면, 기존 `terminalViewportMetrics.js`의 `visualViewport` 기반 계산 경로(비-오버레이 분기)가 그 축소값을 그대로 받아 `--mobile-visual-viewport-height`/`--mobile-keyboard-inset`을 갱신한다. `--stable-vh` 기반 폰트 크기 고정 로직(20260721_1500)은 그대로 유지되므로 예전에 사용자가 겪었던 "키보드 열고 닫을 때 폰트 크기 출렁임" 버그는 재발하지 않는다.
+검증: `node --check public/js/core/terminalUiCore.js` 통과. Playwright로 `navigator.virtualKeyboard.overlaysContent`가 수정 후 `false`(브라우저 기본값)로 유지됨을 확인, 콘솔/페이지 에러 없음. `npm run smoke:menu-wiring` 통과. 실제 모바일 기기의 소프트웨어 키보드로만 재현 가능한 `visualViewport resize` 이벤트 자체는 이 환경(헤드리스 Playwright)에서 낼 수 없어 CSS 파이프라인 단위 검증(위 조사 항목)으로 대체함 — 실기기 최종 확인은 사용자 몫으로 남음.
+결과: ✅ 완료.
+
 ## [2026-07-25 15:30] [버그 수정] 삭제 확인 프롬프트의 클릭 가능한 Y/N 토큰이 모바일에서 문장과 어긋난 큰 chip으로 보임
 
 **LOG_ID: 20260725_1530**
