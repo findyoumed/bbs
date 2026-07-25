@@ -85,7 +85,12 @@ export function createMemoScreens(deps) {
             screenEl,
             isMobile
         });
-        setHint(safeMessage);
+        // [LOG_ID: 20260725_2300] 이전엔 setHint(safeMessage)로 본문과 완전히 동일한 문장을
+        // 힌트바에도 그대로 반복 출력해 화면에 같은 안내가 두 번 보였다(모바일 UI 육안 점검에서
+        // 발견). myinfo의 guest-blocked 패턴(본문 안내 + 별도의 짧은 행동 유도 힌트)을 따라
+        // T 입력 시 초기화면으로 이동한다는 실제 동작(위 handleMemoCommand의 모든 memo-list/
+        // memo-view 분기에 공통으로 있는 cmd === 'T' 처리)을 안내하는 문구로 교체한다.
+        setHint('T를 입력하면 초기화면으로 이동합니다.');
         setPrompt('>>');
         // [LOG: 20260617_1005] Guest/direct memo status screens finish without applyCommandFooter.
         setReady?.(true);
