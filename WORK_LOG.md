@@ -1,3 +1,19 @@
+## [2026-07-25 20:30] [폴백 하네스 전면 재작성] smoke-full-traversal.js HTTP 폴백 스위트 노후분(~82건) 전부 정리
+
+**LOG_ID: 20260725_2030**
+목표: 사용자 요청 — "폴백 하네스도 재작성해줘"(직전 전수검사 2차에서 "개발 기기에서 한 번도 실행되지 않아 두 세대 전 UI 기준으로 썩어 있다"고 보류 기록해둔 항목).
+배경: `smoke-full-traversal.js`의 `runHttpTraversal()`은 Playwright가 이 환경에서 못 뜰 때(브라우저 바이너리 부재 등)만 타는 폴백 경로라 실제로 실행된 적이 없었고, 그 사이 있었던 여러 UI/계약 변경(글쓰기 폼→박스 에디터, myinfo 게스트 리다이렉트→guest-blocked 모드, 화면 렌더가 대부분 renderAnsiScreenWithTopbarSequential/renderRawHtmlScreenWithTopbar로 통일, VOTE/CONF 라우터 추가 등)을 하나도 반영하지 못한 채 82건이 실패하고 있었다.
+조사·수정 (오류를 그룹별로 추적하며 순차 정리):
+- **가짜 브라우저 환경 공용화**: `createHarnessScreenEl()`(상단바+`.ansi-screen-body` 합성 innerHTML)과 `createHarnessBrowserGlobals()`(window/document 공통 스텁: matchMedia/scrollTo/getElementById/createElement 등)를 새로 만들어 SYSINFO/활동요약/접속자/프로필/도움말/이력/날씨/뉴스 하네스에 공통 적용 — 각 하네스가 제각각 만들던 부실한 window/document 스텁(`document.getElementById is not a function`, `screenEl?.querySelector is not a function`, `window.scrollTo is not a function` 등 원인)을 걷어냈다.
+- **`setLoading`/`applyCommandFooter` 계약 갱신**: `systemScreens.js`/`profileScreens.js`가 20260708_1030부터 `setHint`/`setPrompt` 직접 호출 대신 `applyCommandFooter(assetPath, fallback)` + `setLoading`을 쓰는데, 하네스들은 옛 계약(`setHint`/`setPrompt` 인자로 힌트/프롬프트 직접 캡처)만 흉내내고 있었다 — 새 계약대로 `appliedFooters` 배열을 캡처하도록 전면 교체.
+- **뉴스/날씨 하네스의 `renderScreenSequential` no-op**: `renderAnsiScreenWithTopbarSequential`이 이 콜백에게 실제 컨테이너 채우기를 위임하는데 빈 함수(`async () => {}`)만 넘겨 본문이 항상 비어 있었다 — "페이지 2 본문 확인" 같은 검사가 애초에 아무것도 검사하지 못하고 있었던 것. 실제로 `options.container.innerHTML = html`을 채우도록 교정.
+- **`loadMenuTree()` 기대 방향 반전**: 20260723_2340부터 `restoreStateFromURL()`이 딥링크 진입 시 `loadMenuTree()`를 선행 1회 호출하는 게 의도된 동작(캐시라 비용 없음)인데, 옛 하네스 10곳은 "호출되면 안 된다"고 반대로 단정하고 있었다 — 전부 "정확히 1회 이상 호출됨"으로 뒤집었다.
+- **`myinfo` 게스트 하네스 전면 재작성**: 20260722_2300부터 게스트가 `/myinfo`에 들어오면 더는 즉시 `showMain()`으로 안 튕기고, myinfo 화면 자체를 `guest-blocked` 모드로 렌더(안내 메시지 + "ENTER를 누르면 초기화면으로 이동합니다." 힌트)한 뒤 아무 명령이나 입력해야 그제서야 main으로 이동한다 — 옛 하네스는 폐기된 "즉시 리다이렉트" 동작을 검사하고 있어 항상 실패했다. `createMyInfoScreens`(state+renderer+actions 실제 조합)를 그대로 태워 2단계 흐름(1. 진입 시 guest-blocked 렌더, 2. 이후 명령에 main 이동)을 검증하도록 다시 썼다.
+- **signup 이메일 단계 마커 교정**: `signupEmailForm.js`는 확인 `<input>`을 footer hintEl에 그리는 agree/oauth-profile 단계와 달리, 공용 cmdInput을 화면 트랜스크립트 안(`data-signup-email-prompt-host`)으로 끌어와 그대로 쓰고 hintEl은 오히려 비운다 — 옛 `signup-inline-form`/`signup-confirm-input` 마커 검사를 실제 마커 기준으로 교체.
+- **board write 하네스 전면 재작성(가장 큰 덩어리)**: 옛 `<form id="write-form">`(`w-title`/`w-body`/`w-header`/`w-cancel`) 마크업 검사를 20260724_1517의 박스 에디터(`bbs-ed-title`/`bbs-ed-body`) 기준으로 교체. 저장/취소 시뮬레이션도 `entryHandler({cmd:'S'})` 직접 호출에서 — 20260725_1745부터 `stage:'bbs-form'`에서는 raw cmdInput 경로 자체가 완전히 비활성화돼 그 호출은 실제로 도달 불가능한 코드였다 — titleEl/bodyEl에 물린 실제 keydown 리스너(Ctrl+S/Esc)를 합성 이벤트로 재현하는 방식(`saveBbsEditor`/`cancelBbsEditor` 헬퍼)으로 바꿨다. 그 과정에서 진짜 하네스 결함 2개를 더 발견: ① `cmdInput: {}`(빈 객체)라 `renderBbsEditor`의 `cmdInput.style.display = ''`가 매번 TypeError로 죽었음, ② `commandDispatcherExecution` 파이프라인이 `handleVoteCommand`/`handleConfCommand`(여론광장/토론의 광장, 20260623·20260719 도입)를 무조건 먼저 부르는데 하네스에 그 두 스텁이 없어 `handlePostViewCommand`(LI 검색 등)에 도달하기도 전에 매번 TypeError로 죽어 있었다. 둘 다 수정. 부수적으로 발견한 실제 사양 확인: 게시글 수정 저장은 목록이 아니라 방금 고친 글의 상세 화면(post-view)으로 돌아가고, URL도 `/board/:id/...`가 아니라 `/:id/...`(소문자, 접두어 없음) 형식이다 — 옛 단언은 둘 다 폐기된 규칙을 검사하고 있었다.
+검증: `runHttpTraversal()` 82건 실패 → 0건(`✅ Full traversal passed in HTTP fallback mode.`)까지 단계적으로 좁혀가며 확인(중간 체크포인트: 70→60→33→6→3→0). 전 JS 파일 `node --check` 통과. 서버 스모크 전체(menu-wiring/boards/renderer-ui/rss-services/auth-bridge/chat-rooms/command-parity/runtime-diagnostics/vercel-ready) 무회귀 재확인.
+결과: ✅ 완료. HTTP 폴백 스위트가 이제 실제 현행 UI/계약을 검증하며, 브라우저를 못 띄우는 환경에서도 트래버설 커버리지가 유효하다.
+
 ## [2026-07-25 19:00] [전수검사 2차] 자동 검증 도구 전체 실행으로 발견한 서버 1건 + 테스트 스크립트 5건 수정
 
 **LOG_ID: 20260725_1900**

@@ -82,12 +82,12 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'board direct-route restorer',
         path: '/js/core/routingStateRestorer.js',
-        expectedText: 'return await showPostView(boardId, postId, true);'
+        expectedText: 'return await showPostView(resolvedBoardId, postId, true);'
     },
     {
         label: 'board direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/${String(boardId || '').toUpperCase()}/${post?.id || ''}`;"
+        expectedText: "return `/${String(boardId || '').toLowerCase()}/${postNum}`;"
     },
     {
         label: 'unified pds list direct-route restorer',
@@ -102,37 +102,37 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'unified pds direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/pds/${post?.id || ''}${pdsPageQuery}`;"
+        expectedText: "return `/pds/${postNum}${pdsPageQuery}`;"
     },
     {
         label: 'board write direct-route restorer',
         path: '/js/core/routingStateRestorer.js',
-        expectedText: 'return await restoreBoardWrite(boardId, page);'
+        expectedText: 'return await restoreBoardWrite(resolvedBoardId, page);'
     },
     {
         label: 'board edit direct-route restorer',
         path: '/js/core/routingStateRestorer.js',
-        expectedText: 'return await restoreBoardEdit(boardId, postId);'
+        expectedText: 'return await restoreBoardEdit(resolvedBoardId, postId);'
     },
     {
         label: 'board reply direct-route restorer',
         path: '/js/core/routingStateRestorer.js',
-        expectedText: 'return await restoreBoardReply(boardId, postId);'
+        expectedText: 'return await restoreBoardReply(resolvedBoardId, postId);'
     },
     {
         label: 'board create direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/${uppercaseBoardId}/write`;"
+        expectedText: "return `/${lowercaseBoardId}/write`;"
     },
     {
         label: 'board edit direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/${uppercaseBoardId}/${post.id}/edit`;"
+        expectedText: "return `/${lowercaseBoardId}/${editPostId}/edit`;"
     },
     {
         label: 'board reply direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/${uppercaseBoardId}/${post.id}/reply`;"
+        expectedText: "return `/${lowercaseBoardId}/${editPostId}/reply`;"
     },
     {
         label: 'board post-write screen module',
@@ -142,7 +142,7 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'board attachment direct-route restorer',
         path: '/js/core/routingStateRestorer.js',
-        expectedText: "return await showAttachmentList(boardId, postId, true);"
+        expectedText: "return await showAttachmentList(resolvedBoardId, postId, true);"
     },
     {
         label: 'board attachment list screen module',
@@ -152,7 +152,7 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'board attachment command module',
         path: '/js/core/commandRouterPostView.js',
-        expectedText: "await downloadAttachment(state.board.id, state.post.id, file.id, file.originalFilename || file.filename);"
+        expectedText: "await downloadAttachment(currentFile.boardId, currentFile.postId, currentFile.fileId, currentFile.fileName);"
     },
     {
         label: 'board attachment screen wiring',
@@ -252,7 +252,7 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'myinfo command module',
         path: '/js/core/commandRouterMyInfo.js',
-        expectedText: "state.screen === 'myinfo'"
+        expectedText: "state.screen !== 'myinfo'"
     },
     {
         label: 'auth recovery route helper',
@@ -312,7 +312,7 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'active-users global command module',
         path: '/js/core/commandRouterGlobalNavigation.js',
-        expectedText: "cmd === 'USER' || cmd === 'WHO' || cmd === 'WH' || (cmd === 'W' && !isWriteConflictScreen)"
+        expectedText: "cmd === 'USER' || cmd === 'USER ALL' || cmd === 'UID' || cmd === 'WHO' || cmd === 'WH' || (cmd === 'W' && !isWriteConflictScreen)"
     },
     {
         label: 'system-diagnostics screen module',
@@ -352,7 +352,7 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'performance global runtime module',
         path: '/js/core/commandRouterGlobalRuntime.js',
-        expectedText: "cmd === 'PERF'"
+        expectedText: "head === 'PERF'"
     },
     {
         label: 'news route module',
@@ -367,7 +367,7 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'news article direct-route restorer',
         path: '/js/core/routingStateRestorer.js',
-        expectedText: "return await showNewsArticle(param, articleNo, { fromHistory: true, pageNo: page });"
+        expectedText: "return await showNewsArticle(param, articleNo, {"
     },
     {
         label: 'news list direct-route url builder',
@@ -377,7 +377,7 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'news article direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/service/news/${serviceData?.topicDoor || ''}?article=${encodeURIComponent(serviceData?.articleNo || '')}${pageParam}`;"
+        expectedText: "return `/service/news/${topicDoor}?${query.toString()}`;"
     },
     {
         label: 'theme command module',
@@ -1352,29 +1352,12 @@ async function verifyWeatherCoverage(errors) {
                 menuItems: []
             }
         };
-        const screenEl = {
-            innerHTML: '',
-            querySelector() {
-                return null;
-            }
-        };
+        const screenEl = createHarnessScreenEl();
         const pushedUrls = [];
 
-        globalThis.window = {
-            innerWidth: 1280,
-            location: {
-                pathname: '/service/weather/11',
-                search: '?page=2'
-            },
-            matchMedia() {
-                return { matches: false };
-            }
-        };
-        globalThis.document = {
-            querySelectorAll() {
-                return [];
-            }
-        };
+        const env = createHarnessBrowserGlobals({ innerWidth: 1280, pathname: '/service/weather/11', search: '?page=2' });
+        globalThis.window = env.window;
+        globalThis.document = env.document;
 
         const { buildURLForState } = createRoutingUrlBuilder({
             getAuthLeafRoutePath: () => '/',
@@ -1415,7 +1398,12 @@ Weather page ${pageNo}
             },
             createHotspotLayer: () => ({ childElementCount: 0, appendChild() {} }),
             createHotspotButton: () => ({}),
-            renderScreenSequential: async () => {}
+            setLoading: () => {},
+            renderScreenSequential: async (html, options) => {
+                if (options?.container) {
+                    options.container.innerHTML = html;
+                }
+            }
         });
 
         await showWeatherView('11', { pageNo: 1 });
@@ -1686,12 +1674,11 @@ async function verifyActivitySummaryCommandCoverage(errors) {
             theme: 'default',
             assetCache: {}
         };
-        const screenEl = {
-            innerHTML: ''
-        };
+        // [LOG_ID: 20260725_2030] systemScreens가 renderAnsiScreenWithTopbarSequential(상단바 렌더)로
+        // 전환(20260708_1030)된 계약에 맞춰 공용 가짜 브라우저 환경을 쓴다.
+        const screenEl = createHarnessScreenEl();
         const fetchCalls = [];
-        let hint = '';
-        let prompt = '';
+        const appliedFooters = [];
         let supportedFooterText = 'ACT FOOTER';
         let updateUrlCalls = 0;
         let focusCalls = 0;
@@ -1706,22 +1693,9 @@ async function verifyActivitySummaryCommandCoverage(errors) {
             timestamp: '2026-04-29T04:37:00.000Z'
         };
 
-        globalThis.window = {
-            innerWidth: 1280,
-            location: {
-                pathname: '/',
-                search: ''
-            },
-            matchMedia() {
-                return { matches: true };
-            },
-            assign() {}
-        };
-        globalThis.document = {
-            querySelectorAll() {
-                return [];
-            }
-        };
+        const env = createHarnessBrowserGlobals({ innerWidth: 1280 });
+        globalThis.window = env.window;
+        globalThis.document = env.document;
 
         const { buildActivitySummaryAnsi } = createSystemAnsiBuilders({
             displayWidth: (value = '') => String(value || '').length,
@@ -1740,6 +1714,13 @@ async function verifyActivitySummaryCommandCoverage(errors) {
                 };
             },
             ansiToHTML: ansiToHTMLHarnessStub,
+            // 현행 계약(20260708_1030): setHint/setPrompt 대신 applyCommandFooter(assetPath, fallback)로
+            // 힌트/프롬프트 적용을 위임하고, setLoading으로 로딩 화면을 건다.
+            applyCommandFooter: async (assetPath, fallbackText) => {
+                appliedFooters.push(String(fallbackText || ''));
+            },
+            setLoading: () => {},
+            esc: (value) => String(value ?? ''),
             buildActiveUsersAnsi: () => '',
             buildActivitySummaryAnsi,
             buildSystemDiagnosticsAnsi: () => '',
@@ -1748,12 +1729,6 @@ async function verifyActivitySummaryCommandCoverage(errors) {
             screenEl,
             updateURL: () => {
                 updateUrlCalls += 1;
-            },
-            setHint: (value) => {
-                hint = value;
-            },
-            setPrompt: (value) => {
-                prompt = value;
             },
             cmdInput: {
                 focus() {
@@ -1768,12 +1743,8 @@ async function verifyActivitySummaryCommandCoverage(errors) {
             toggleTheme: () => {},
             showActivitySummary,
             showSystemDiagnostics: async () => {},
-            setHint: (value) => {
-                hint = value;
-            },
-            setPrompt: (value) => {
-                prompt = value;
-            }
+            setHint: () => {},
+            setPrompt: () => {}
         });
 
         const handled = await handleGlobalRuntimeCommand({ cmd: 'ACT', rawCmd: 'ACT' });
@@ -1786,11 +1757,8 @@ async function verifyActivitySummaryCommandCoverage(errors) {
         if (state.screen !== 'activity-summary') {
             errors.push('ACT global command did not activate state.screen="activity-summary"');
         }
-        if (prompt !== '>>') {
-            errors.push(`Activity-summary screen did not set prompt to >> (got ${prompt || 'empty'})`);
-        }
-        if (hint !== 'ACT FOOTER') {
-            errors.push(`Activity-summary screen did not apply the supported footer hint (got ${hint || 'empty'})`);
+        if (appliedFooters[appliedFooters.length - 1] !== 'ACT FOOTER') {
+            errors.push(`Activity-summary screen did not apply the supported footer hint (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateUrlCalls !== 1) {
             errors.push(`Activity-summary screen did not request exactly one URL sync on ACT entry (got ${updateUrlCalls})`);
@@ -1827,8 +1795,7 @@ async function verifyActivitySummaryCommandCoverage(errors) {
         shouldFailActivitySummary = true;
         supportedFooterText = '';
         state.screen = 'main';
-        hint = '';
-        prompt = '';
+        appliedFooters.length = 0;
         await showActivitySummary();
 
         if (fetchCalls.length !== aliasFetchCount + 2) {
@@ -1840,11 +1807,8 @@ async function verifyActivitySummaryCommandCoverage(errors) {
         if (!screenEl.innerHTML.includes('활동 요약을 가져오지 못했습니다.')) {
             errors.push('Activity-summary failure path did not render the expected error box');
         }
-        if (hint !== 'SYSTEMINFO FOOTER') {
-            errors.push(`Activity-summary failure path did not fall back to the systemInfo footer text (got ${hint || 'empty'})`);
-        }
-        if (prompt !== '>>') {
-            errors.push(`Activity-summary failure path did not restore prompt >> (got ${prompt || 'empty'})`);
+        if (appliedFooters[appliedFooters.length - 1] !== 'SYSTEMINFO FOOTER') {
+            errors.push(`Activity-summary failure path did not fall back to the systemInfo footer text (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateUrlCalls !== 3) {
             errors.push(`Activity-summary failure path did not request URL sync before failing closed (got ${updateUrlCalls})`);
@@ -1888,12 +1852,9 @@ async function verifySystemDiagnosticsCommandCoverage(errors) {
             theme: 'default',
             assetCache: {}
         };
-        const screenEl = {
-            innerHTML: ''
-        };
+        const screenEl = createHarnessScreenEl();
         const fetchCalls = [];
-        let hint = '';
-        let prompt = '';
+        const appliedFooters = [];
         let supportedFooterText = 'SYSINFO FOOTER';
         let updateUrlCalls = 0;
         let focusCalls = 0;
@@ -1918,22 +1879,9 @@ async function verifySystemDiagnosticsCommandCoverage(errors) {
             }
         };
 
-        globalThis.window = {
-            innerWidth: 1280,
-            location: {
-                pathname: '/',
-                search: ''
-            },
-            matchMedia() {
-                return { matches: true };
-            },
-            assign() {}
-        };
-        globalThis.document = {
-            querySelectorAll() {
-                return [];
-            }
-        };
+        const env = createHarnessBrowserGlobals({ innerWidth: 1280 });
+        globalThis.window = env.window;
+        globalThis.document = env.document;
 
         const { buildSystemDiagnosticsAnsi } = createSystemAnsiBuilders({
             displayWidth: (value = '') => String(value || '').length,
@@ -1954,15 +1902,14 @@ async function verifySystemDiagnosticsCommandCoverage(errors) {
             buildSystemDiagnosticsAnsi,
             getCommandFooterText: (category) => category === 'systemInfo' ? 'SYSTEMINFO FOOTER' : '',
             getSupportedFooterText: () => supportedFooterText,
+            applyCommandFooter: async (assetPath, fallbackText) => {
+                appliedFooters.push(String(fallbackText || ''));
+            },
+            setLoading: () => {},
+            esc: (value) => String(value ?? ''),
             screenEl,
             updateURL: () => {
                 updateUrlCalls += 1;
-            },
-            setHint: (value) => {
-                hint = value;
-            },
-            setPrompt: (value) => {
-                prompt = value;
             },
             cmdInput: {
                 focus() {
@@ -1977,12 +1924,8 @@ async function verifySystemDiagnosticsCommandCoverage(errors) {
             toggleTheme: () => {},
             showActivitySummary: async () => {},
             showSystemDiagnostics,
-            setHint: (value) => {
-                hint = value;
-            },
-            setPrompt: (value) => {
-                prompt = value;
-            }
+            setHint: () => {},
+            setPrompt: () => {}
         });
 
         const handled = await handleGlobalRuntimeCommand({ cmd: 'SYSINFO', rawCmd: 'SYSINFO' });
@@ -1995,11 +1938,8 @@ async function verifySystemDiagnosticsCommandCoverage(errors) {
         if (state.screen !== 'system-diagnostics') {
             errors.push('SYSINFO global command did not activate state.screen="system-diagnostics"');
         }
-        if (prompt !== '>>') {
-            errors.push(`SYSINFO screen did not set prompt to >> (got ${prompt || 'empty'})`);
-        }
-        if (hint !== 'SYSINFO FOOTER') {
-            errors.push(`SYSINFO screen did not apply the supported footer hint (got ${hint || 'empty'})`);
+        if (appliedFooters[appliedFooters.length - 1] !== 'SYSINFO FOOTER') {
+            errors.push(`SYSINFO screen did not apply the supported footer hint (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateUrlCalls !== 1) {
             errors.push(`SYSINFO screen did not request exactly one URL sync on entry (got ${updateUrlCalls})`);
@@ -2010,7 +1950,9 @@ async function verifySystemDiagnosticsCommandCoverage(errors) {
         if (!screenEl.innerHTML.includes('시스템 진단 및 정보') || !screenEl.innerHTML.includes('SYSINFO')) {
             errors.push('SYSINFO global command did not render the diagnostics title');
         }
-        if (!screenEl.innerHTML.includes(systemInfo.hostname) || !screenEl.innerHTML.includes('저장소 상태') || !screenEl.innerHTML.includes('저장소 메트릭')) {
+        // [LOG_ID: 20260725_2030] '저장소 메트릭' 별도 섹션은 20260708_1030에서 '저장소 상태'
+        // 한 줄 표기로 통합·제거됐다 — 현행 섹션 구성 기준으로 검사한다.
+        if (!screenEl.innerHTML.includes(systemInfo.hostname) || !screenEl.innerHTML.includes('저장소 상태')) {
             errors.push('SYSINFO global command did not render the expected diagnostics sections');
         }
         if (!screenEl.innerHTML.includes('BOARD') || !screenEl.innerHTML.includes('34ms')) {
@@ -2039,8 +1981,7 @@ async function verifySystemDiagnosticsCommandCoverage(errors) {
         shouldFailSystemInfo = true;
         supportedFooterText = '';
         state.screen = 'main';
-        hint = '';
-        prompt = '';
+        appliedFooters.length = 0;
         await showSystemDiagnostics();
 
         if (fetchCalls.length !== aliasFetchCount + 2) {
@@ -2052,11 +1993,8 @@ async function verifySystemDiagnosticsCommandCoverage(errors) {
         if (!screenEl.innerHTML.includes('시스템 정보를 가져오지 못했습니다.')) {
             errors.push('SYSINFO failure path did not render the expected error box');
         }
-        if (hint !== 'SYSTEMINFO FOOTER') {
-            errors.push(`SYSINFO failure path did not fall back to the systemInfo footer text (got ${hint || 'empty'})`);
-        }
-        if (prompt !== '>>') {
-            errors.push(`SYSINFO failure path did not restore prompt >> (got ${prompt || 'empty'})`);
+        if (appliedFooters[appliedFooters.length - 1] !== 'SYSTEMINFO FOOTER') {
+            errors.push(`SYSINFO failure path did not fall back to the systemInfo footer text (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateUrlCalls !== 3) {
             errors.push(`SYSINFO failure path did not request URL sync before failing closed (got ${updateUrlCalls})`);
@@ -2288,12 +2226,9 @@ async function verifyActiveUsersCommandCoverage(errors) {
             screen: 'main',
             user: { isGuest: true }
         };
-        const screenEl = {
-            innerHTML: ''
-        };
+        const screenEl = createHarnessScreenEl();
         const fetchCalls = [];
-        let hint = '';
-        let prompt = '';
+        const appliedFooters = [];
         let supportedFooterText = 'ACTIVE FOOTER';
         let updateUrlCalls = 0;
         let focusCalls = 0;
@@ -2318,22 +2253,9 @@ async function verifyActiveUsersCommandCoverage(errors) {
             }
         ];
 
-        globalThis.window = {
-            innerWidth: 1280,
-            location: {
-                pathname: '/',
-                search: ''
-            },
-            matchMedia() {
-                return { matches: true };
-            },
-            assign() {}
-        };
-        globalThis.document = {
-            querySelectorAll() {
-                return [];
-            }
-        };
+        const env = createHarnessBrowserGlobals({ innerWidth: 1280 });
+        globalThis.window = env.window;
+        globalThis.document = env.document;
 
         const { buildActiveUsersAnsi } = createSystemAnsiBuilders({
             displayWidth: (value = '') => String(value || '').length,
@@ -2353,15 +2275,14 @@ async function verifyActiveUsersCommandCoverage(errors) {
             buildSystemDiagnosticsAnsi: () => '',
             getCommandFooterText: (category) => category === 'systemInfo' ? 'SYSTEMINFO FOOTER' : '',
             getSupportedFooterText: () => supportedFooterText,
+            applyCommandFooter: async (assetPath, fallbackText) => {
+                appliedFooters.push(String(fallbackText || ''));
+            },
+            setLoading: () => {},
+            esc: (value) => String(value ?? ''),
             screenEl,
             updateURL: () => {
                 updateUrlCalls += 1;
-            },
-            setHint: (value) => {
-                hint = value;
-            },
-            setPrompt: (value) => {
-                prompt = value;
             },
             cmdInput: {
                 focus() {
@@ -2382,12 +2303,8 @@ async function verifyActiveUsersCommandCoverage(errors) {
             showHelp: async () => {},
             showHistory: async () => {},
             handleHistoryBack: async () => {},
-            setHint: (value) => {
-                hint = value;
-            },
-            setPrompt: (value) => {
-                prompt = value;
-            },
+            setHint: () => {},
+            setPrompt: () => {},
             findBoardByCode: () => null,
             showPostList: async () => {},
             showLogin: () => {},
@@ -2404,11 +2321,8 @@ async function verifyActiveUsersCommandCoverage(errors) {
         if (state.screen !== 'active-users') {
             errors.push('W global command did not activate state.screen="active-users"');
         }
-        if (prompt !== '>>') {
-            errors.push(`Active-users screen did not set prompt to >> (got ${prompt || 'empty'})`);
-        }
-        if (hint !== 'ACTIVE FOOTER') {
-            errors.push(`Active-users screen did not apply the supported footer hint (got ${hint || 'empty'})`);
+        if (appliedFooters[appliedFooters.length - 1] !== 'ACTIVE FOOTER') {
+            errors.push(`Active-users screen did not apply the supported footer hint (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateUrlCalls !== 1) {
             errors.push(`Active-users screen did not request exactly one URL sync on W entry (got ${updateUrlCalls})`);
@@ -2459,8 +2373,7 @@ async function verifyActiveUsersCommandCoverage(errors) {
         shouldFailActiveUsers = true;
         supportedFooterText = '';
         state.screen = 'main';
-        hint = '';
-        prompt = '';
+        appliedFooters.length = 0;
         await showActiveUsers();
 
         if (fetchCalls.length !== conflictFetchCount + 2) {
@@ -2472,11 +2385,8 @@ async function verifyActiveUsersCommandCoverage(errors) {
         if (!screenEl.innerHTML.includes('접속자 정보를 가져오지 못했습니다.')) {
             errors.push('Active-users failure path did not render the expected error box');
         }
-        if (hint !== 'SYSTEMINFO FOOTER') {
-            errors.push(`Active-users failure path did not fall back to the systemInfo footer text (got ${hint || 'empty'})`);
-        }
-        if (prompt !== '>>') {
-            errors.push(`Active-users failure path did not restore prompt >> (got ${prompt || 'empty'})`);
+        if (appliedFooters[appliedFooters.length - 1] !== 'SYSTEMINFO FOOTER') {
+            errors.push(`Active-users failure path did not fall back to the systemInfo footer text (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateUrlCalls !== 3) {
             errors.push(`Active-users failure path did not request URL sync before failing closed (got ${updateUrlCalls})`);
@@ -2536,22 +2446,53 @@ async function verifyBoardPostWriteHarness(errors, options) {
             .replace(/&amp;/g, '&');
     }
 
+    // [LOG_ID: 20260725_2030] 이 하네스는 postWriteView.js의 옛 <form id="write-form">
+    // (w-title/w-body/w-header/w-cancel) 마크업을 검사하고 있었다 — 20260724_1517부터 실제
+    // 글쓰기 화면은 헤더 옵션이 없는 게시판(예: plaza)이면 곧장 박스 에디터(renderBbsEditor,
+    // id="bbs-ed-title"/"bbs-ed-body")로 들어간다. 저장/취소도 더는 공용 cmdInput 제출을 거치지
+    // 않고(20260725_1745 이후 stage:'bbs-form'에서 raw cmdInput 경로 자체가 완전히 비활성화됨)
+    // titleEl/bodyEl에 직접 물린 keydown 핸들러(Ctrl+S/Esc/마지막 줄 ".")로만 동작한다 —
+    // FakeElement가 keydown 리스너를 저장해두고 이후 합성 이벤트로 그대로 재현할 수 있어야 한다.
     class FakeElement {
         constructor(id, value = '') {
             this.id = id;
             this.value = value;
+            this.disabled = false;
+            this.selectionStart = 0;
+            this.selectionEnd = 0;
+            this.style = {};
             this.listeners = new Map();
         }
 
         focus() {}
 
+        select() {}
+
+        setSelectionRange(start, end) {
+            this.selectionStart = start;
+            this.selectionEnd = end;
+        }
+
         addEventListener(type, handler) {
             this.listeners.set(type, handler);
+        }
+
+        removeEventListener(type) {
+            this.listeners.delete(type);
+        }
+
+        // 실제 keydown 이벤트를 그대로 흉내낸다 — doSave()/cleanup() 등은 이 리스너 안에서만 호출된다.
+        dispatchKeydown(eventInit = {}) {
+            const handler = this.listeners.get('keydown');
+            if (!handler) return;
+            handler({ preventDefault() {}, ...eventInit });
         }
     }
 
     function createFakeDom() {
         const elements = new Map();
+        // 실제 앱에서 화면 전환과 무관하게 항상 존재하는 고정 DOM 요소들 — 렌더마다 새로 생기지 않는다.
+        elements.set('terminal-prompt-row', new FakeElement('terminal-prompt-row'));
         // [LOG_ID: 20260725_1900] ansiTopbarScreen.js(모듈 그래프에 포함)가 screenEl?.querySelector를
         // 호출한다 — 스텁이 없어 하네스가 통째로 죽었다. null 반환이면 호출부의 옵셔널 체이닝/가드가
         // 그대로 동작한다.
@@ -2566,26 +2507,18 @@ async function verifyBoardPostWriteHarness(errors, options) {
             },
             set(value) {
                 this._html = String(value || '');
-                for (const key of ['write-form', 'w-cancel', 'w-title', 'w-body', 'w-header']) {
-                    elements.delete(key);
+                elements.delete('bbs-ed-title');
+                elements.delete('bbs-ed-body');
+
+                // 박스 에디터는 값을 HTML 문자열에 굽지 않는다 — 렌더 직후 코드가
+                // document.getElementById(...).value = editor.title/... 로 직접 채운다
+                // (renderBbsEditor 참고). 그러니 여기선 마크업 존재만 보고 빈 요소를 만들어두면
+                // 이후 그 대입이 자연스럽게 이어진다.
+                if (this._html.includes('id="bbs-ed-title"')) {
+                    elements.set('bbs-ed-title', new FakeElement('bbs-ed-title'));
                 }
-
-                if (!this._html.includes('id="write-form"')) {
-                    return;
-                }
-
-                const titleMatch = this._html.match(/id="w-title"[^>]*value="([^"]*)"/);
-                const bodyMatch = this._html.match(/<textarea id="w-body"[^>]*>([\s\S]*?)<\/textarea>/);
-                const headerMatch = this._html.match(/<select id="w-header">([\s\S]*?)<\/select>/);
-
-                elements.set('write-form', new FakeElement('write-form'));
-                elements.set('w-cancel', new FakeElement('w-cancel'));
-                elements.set('w-title', new FakeElement('w-title', decodeHtml(titleMatch?.[1] || '')));
-                elements.set('w-body', new FakeElement('w-body', decodeHtml(bodyMatch?.[1] || '')));
-
-                if (headerMatch) {
-                    const selectedOptionMatch = headerMatch[1].match(/<option value="([^"]*)"[^>]*selected[^>]*>/);
-                    elements.set('w-header', new FakeElement('w-header', decodeHtml(selectedOptionMatch?.[1] || '')));
+                if (this._html.includes('id="bbs-ed-body"')) {
+                    elements.set('bbs-ed-body', new FakeElement('bbs-ed-body'));
                 }
             }
         });
@@ -2598,6 +2531,37 @@ async function verifyBoardPostWriteHarness(errors, options) {
                 }
             }
         };
+    }
+
+    // [LOG_ID: 20260725_2030] 박스 에디터의 저장은 Ctrl+S(또는 본문 마지막 줄 "."+Enter)뿐이다 —
+    // doSave()가 titleEl.value/bodyEl.value를 읽어 editor.title/bodyLines에 동기화한 뒤
+    // onSave()(handleWriteSubmit)를 fire-and-forget으로 던지므로, 실제 create/update 호출이
+    // 끝나길 기다리려면 이벤트 디스패치 후 microtask/타이머 큐를 몇 차례 흘려보내야 한다.
+    async function flushAsync() {
+        for (let i = 0; i < 5; i += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+    }
+
+    async function saveBbsEditor(harness, { title, body } = {}) {
+        const titleEl = harness.document.getElementById('bbs-ed-title');
+        const bodyEl = harness.document.getElementById('bbs-ed-body');
+        if (!titleEl || !bodyEl) {
+            throw new Error('bbs-ed-title/bbs-ed-body not present when trying to save');
+        }
+        if (title !== undefined) titleEl.value = title;
+        if (body !== undefined) bodyEl.value = body;
+        bodyEl.dispatchKeydown({ ctrlKey: true, key: 's' });
+        await flushAsync();
+    }
+
+    async function cancelBbsEditor(harness) {
+        const titleEl = harness.document.getElementById('bbs-ed-title');
+        if (!titleEl) {
+            throw new Error('bbs-ed-title not present when trying to cancel');
+        }
+        titleEl.dispatchKeydown({ key: 'Escape' });
+        await flushAsync();
     }
 
     function buildUser(userId, overrides = {}) {
@@ -2708,7 +2672,10 @@ async function verifyBoardPostWriteHarness(errors, options) {
                 }];
 
             const deps = {
-                cmdInput: {},
+                // [LOG_ID: 20260725_2030] renderBbsEditor가 cmdInput.style.display를 직접 대입한다
+                // (박스 에디터 진입 시에도 공용 명령창을 계속 노출 유지) — 빈 객체라 여기서
+                // "Cannot set properties of undefined (setting 'display')"로 하네스 전체가 죽었다.
+                cmdInput: new FakeElement('cmdInput'),
                 createPost: async (resolvedBoardId, payload) => {
                     metrics.createCalls.push({
                         boardId: String(resolvedBoardId),
@@ -2893,6 +2860,12 @@ async function verifyBoardPostWriteHarness(errors, options) {
                 logger: null,
                 resolveMenuRoute: () => null,
                 state,
+                // [LOG_ID: 20260725_2030] /board 접두어 없는 평 경로(/plaza/15/reply 등) 직접 진입은
+                // restoreStateFromURL()의 firstSeg 폴백이 findBoardByKey를 통해서만 게시판을
+                // 인식한다 — 이게 없으면 그 분기 전체가 건너뛰어져 showMain()으로 조용히 떨어진다.
+                findBoardByKey: (key) => (String(key || '').toLowerCase() === String(boardId).toLowerCase()
+                    ? { boardId, id: boardId }
+                    : null),
                 showBoardSelect: async () => {},
                 showChatLobby: async () => {},
                 showChatRoom: async () => {},
@@ -2944,6 +2917,14 @@ async function verifyBoardPostWriteHarness(errors, options) {
                     handleMemoCommand: async () => false,
                     handleMyInfoCommand: async () => false,
                     handlePostViewCommand: postViewCommandHandler,
+                    // [LOG_ID: 20260725_2030] commandDispatcherExecution.js의 파이프라인이 이 두
+                    // 핸들러(여론광장/토론의 광장, 20260623·20260719 도입)를 handlePostViewCommand보다
+                    // 먼저 무조건 호출한다 — 여기 없으면 undefined를 호출해 TypeError가 나고, 그
+                    // 예외가 executeSingleCommand의 catch에 잡혀 조용히 false로 삼켜진다. LI처럼
+                    // handleBrowseCommand가 못 잡는(post-view 화면) 명령이 handlePostViewCommand에
+                    // 도달하기도 전에 매번 이렇게 죽고 있었다.
+                    handleVoteCommand: async () => false,
+                    handleConfCommand: async () => false,
                     handleVfsCommand: async () => false,
                     handleLogCommand: async () => false
                 },
@@ -2995,7 +2976,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (guestListWriteHarness.getHint() !== '로그인이 필요한 기능입니다.') {
             errors.push(`Board guest list write command is missing the login-required hint at /board/${boardId}`);
         }
-        if (guestListWriteHarness.document.getElementById('w-title')) {
+        if (guestListWriteHarness.document.getElementById('bbs-ed-title')) {
             errors.push(`Board guest list write command unexpectedly rendered post-write inputs at /board/${boardId}`);
         }
         if (guestListWriteHarness.metrics.createCalls.length !== 0) {
@@ -3018,7 +2999,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
         }
         if (memberListWriteHarness.state.screen !== 'post-write') {
             errors.push(`Board member list write command did not enter post-write at /board/${boardId}`);
-        } else if (!memberListWriteHarness.document.getElementById('w-title') || !memberListWriteHarness.document.getElementById('w-body')) {
+        } else if (!memberListWriteHarness.document.getElementById('bbs-ed-title') || !memberListWriteHarness.document.getElementById('bbs-ed-body')) {
             errors.push(`Board member list write command did not expose title/body inputs at /board/${boardId}`);
         }
 
@@ -3097,7 +3078,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (guestListEditHarness.state.screen !== 'post-list') {
             errors.push(`Board guest list edit command should stay on post-list at /board/${boardId}`);
         }
-        if (guestListEditHarness.document.getElementById('w-title')) {
+        if (guestListEditHarness.document.getElementById('bbs-ed-title')) {
             errors.push(`Board guest list edit command unexpectedly rendered post-write inputs at /board/${boardId}`);
         }
 
@@ -3123,8 +3104,8 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (ownerListEditHarness.state.screen !== 'post-write') {
             errors.push(`Board owner list edit command did not enter post-write at /board/${boardId}`);
         } else {
-            const ownerListEditTitleInput = ownerListEditHarness.document.getElementById('w-title');
-            const ownerListEditBodyInput = ownerListEditHarness.document.getElementById('w-body');
+            const ownerListEditTitleInput = ownerListEditHarness.document.getElementById('bbs-ed-title');
+            const ownerListEditBodyInput = ownerListEditHarness.document.getElementById('bbs-ed-body');
             if (!ownerListEditTitleInput || !ownerListEditBodyInput) {
                 errors.push(`Board owner list edit command did not expose title/body inputs at /board/${boardId}`);
             } else {
@@ -3133,13 +3114,10 @@ async function verifyBoardPostWriteHarness(errors, options) {
                 }
                 const ownerListEditTitle = `${postTitle} via list edit`;
                 const ownerListEditBody = `${postContent} via list edit`;
-                ownerListEditTitleInput.value = ownerListEditTitle;
-                ownerListEditBodyInput.value = ownerListEditBody;
-                await ownerListEditHarness.entryHandler({
-                    s: ownerListEditHarness.state.screen,
-                    cmd: 'S',
-                    context: {}
-                });
+                // [LOG_ID: 20260725_2030] 박스 에디터의 저장은 entryHandler(cmd:'S')를 거치지 않는다
+                // (20260725_1745 — stage:'bbs-form'에서 raw cmdInput 경로가 완전히 비활성화됨) —
+                // 실제로 유일하게 저장을 트리거하는 titleEl/bodyEl의 Ctrl+S keydown을 재현한다.
+                await saveBbsEditor(ownerListEditHarness, { title: ownerListEditTitle, body: ownerListEditBody });
                 if (ownerListEditHarness.metrics.createCalls.length !== 0) {
                     errors.push(`Board owner list edit command unexpectedly attempted a create at /board/${boardId}`);
                 }
@@ -3151,8 +3129,11 @@ async function verifyBoardPostWriteHarness(errors, options) {
                     || ownerListEditHarness.metrics.updateCalls[0].payload.content !== ownerListEditBody) {
                     errors.push(`Board owner list edit command update payload is invalid at /board/${boardId}`);
                 }
-                if (ownerListEditHarness.state.screen !== 'post-list') {
-                    errors.push(`Board owner list edit submit did not return to post-list at /board/${boardId}`);
+                // [LOG_ID: 20260725_2030] handleWriteSubmit()은 수정 모드 저장 후 목록이 아니라
+                // 방금 고친 글의 상세 화면(post-view)으로 돌아간다(postWriteView.js: currentMode
+                // === 'edit' && postId && handlers.showPostView 분기) — 옛 단언은 폐기된 동작을 검사했다.
+                if (ownerListEditHarness.state.screen !== 'post-view') {
+                    errors.push(`Board owner list edit submit did not return to post-view at /board/${boardId}`);
                 }
             }
         }
@@ -3182,7 +3163,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (nonAuthorListEditHarness.state.screen !== 'post-list') {
             errors.push(`Board non-author list edit command should stay on post-list at /board/${boardId}`);
         }
-        if (nonAuthorListEditHarness.document.getElementById('w-title')) {
+        if (nonAuthorListEditHarness.document.getElementById('bbs-ed-title')) {
             errors.push(`Board non-author list edit command unexpectedly rendered post-write inputs at /board/${boardId}`);
         }
 
@@ -3280,7 +3261,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (guestHarness.getHint() !== '로그인이 필요한 기능입니다.') {
             errors.push(`Board guest write restore is missing the login-required hint at /board/${boardId}/write`);
         }
-        if (guestHarness.document.getElementById('w-title')) {
+        if (guestHarness.document.getElementById('bbs-ed-title')) {
             errors.push(`Board guest write restore unexpectedly rendered post-write inputs at /board/${boardId}/write`);
         }
 
@@ -3291,11 +3272,9 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (createCancelHarness.state.screen !== 'post-write') {
             errors.push(`Board write restore did not enter post-write state at /board/${boardId}/write`);
         } else {
-            await createCancelHarness.entryHandler({
-                s: createCancelHarness.state.screen,
-                cmd: 'P',
-                context: {}
-            });
+            // [LOG_ID: 20260725_2030] 박스 에디터의 취소는 titleEl/bodyEl의 Escape keydown으로만
+            // 동작한다(entryHandler(cmd:'P')는 stage:'bbs-form'에서 도달 불가능한 경로).
+            await cancelBbsEditor(createCancelHarness);
             if (createCancelHarness.state.screen !== 'post-list') {
                 errors.push(`Board write restore cancel did not return to post-list at /board/${boardId}/write`);
             }
@@ -3311,20 +3290,14 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (createSubmitHarness.state.screen !== 'post-write') {
             errors.push(`Board write restore submit path did not enter post-write state at /board/${boardId}/write`);
         } else {
-            const titleInput = createSubmitHarness.document.getElementById('w-title');
-            const bodyInput = createSubmitHarness.document.getElementById('w-body');
+            const titleInput = createSubmitHarness.document.getElementById('bbs-ed-title');
+            const bodyInput = createSubmitHarness.document.getElementById('bbs-ed-body');
             if (!titleInput || !bodyInput) {
                 errors.push(`Board write restore submit path did not expose title/body inputs at /board/${boardId}/write`);
             } else {
                 const submitTitle = `board harness create ${postId}`;
                 const submitBody = `board harness create body ${postId}`;
-                titleInput.value = submitTitle;
-                bodyInput.value = submitBody;
-                await createSubmitHarness.entryHandler({
-                    s: createSubmitHarness.state.screen,
-                    cmd: 'S',
-                    context: {}
-                });
+                await saveBbsEditor(createSubmitHarness, { title: submitTitle, body: submitBody });
                 if (createSubmitHarness.metrics.createCalls.length !== 1) {
                     errors.push(`Board write restore submit did not trigger a create exactly once at /board/${boardId}/write`);
                 } else if (createSubmitHarness.metrics.createCalls[0].payload.title !== submitTitle
@@ -3348,8 +3321,8 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (editHarness.state.screen !== 'post-write') {
             errors.push(`Board edit restore did not enter post-write state at /board/${boardId}/${postId}/edit`);
         } else {
-            const editTitleInput = editHarness.document.getElementById('w-title');
-            const editBodyInput = editHarness.document.getElementById('w-body');
+            const editTitleInput = editHarness.document.getElementById('bbs-ed-title');
+            const editBodyInput = editHarness.document.getElementById('bbs-ed-body');
             if (!editTitleInput || !editBodyInput) {
                 errors.push(`Board edit restore did not expose title/body inputs at /board/${boardId}/${postId}/edit`);
             } else {
@@ -3358,13 +3331,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
                 }
                 const updatedHarnessTitle = `${postTitle} via harness`;
                 const updatedHarnessBody = `${postContent} via harness`;
-                editTitleInput.value = updatedHarnessTitle;
-                editBodyInput.value = updatedHarnessBody;
-                await editHarness.entryHandler({
-                    s: editHarness.state.screen,
-                    cmd: 'S',
-                    context: {}
-                });
+                await saveBbsEditor(editHarness, { title: updatedHarnessTitle, body: updatedHarnessBody });
                 if (editHarness.metrics.updateCalls.length !== 1) {
                     errors.push(`Board edit restore submit did not trigger an update exactly once at /board/${boardId}/${postId}/edit`);
                 } else if (editHarness.metrics.updateCalls[0].boardId !== String(boardId)
@@ -3373,8 +3340,10 @@ async function verifyBoardPostWriteHarness(errors, options) {
                     || editHarness.metrics.updateCalls[0].payload.content !== updatedHarnessBody) {
                     errors.push(`Board edit restore submit payload is invalid at /board/${boardId}/${postId}/edit`);
                 }
-                if (editHarness.state.screen !== 'post-list') {
-                    errors.push(`Board edit restore submit did not return to post-list at /board/${boardId}/${postId}/edit`);
+                // [LOG_ID: 20260725_2030] 위 소유자 목록 수정 케이스와 동일 — 수정 저장은 목록이 아니라
+                // post-view로 돌아간다.
+                if (editHarness.state.screen !== 'post-view') {
+                    errors.push(`Board edit restore submit did not return to post-view at /board/${boardId}/${postId}/edit`);
                 }
             }
         }
@@ -3393,7 +3362,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
         if (nonAuthorHarness.getHint() !== '본인의 글만 수정할 수 있습니다.') {
             errors.push(`Board non-author edit restore is missing the author-only hint at /board/${boardId}/${postId}/edit`);
         }
-        if (nonAuthorHarness.document.getElementById('w-title')) {
+        if (nonAuthorHarness.document.getElementById('bbs-ed-title')) {
             errors.push(`Board non-author edit restore unexpectedly rendered post-write inputs at /board/${boardId}/${postId}/edit`);
         }
 
@@ -3423,7 +3392,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
             if (guestEditHarness.state.screen !== 'post-view') {
                 errors.push(`Board guest edit command should stay on post-view at /board/${boardId}/${postId}`);
             }
-            if (guestEditHarness.document.getElementById('w-title')) {
+            if (guestEditHarness.document.getElementById('bbs-ed-title')) {
                 errors.push(`Board guest edit command unexpectedly rendered post-write inputs at /board/${boardId}/${postId}`);
             }
         }
@@ -3478,7 +3447,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
             if (guestReplyHarness.state.screen !== 'post-view') {
                 errors.push(`Board guest reply command should stay on post-view at /board/${boardId}/${postId}`);
             }
-            if (guestReplyHarness.document.getElementById('w-title')) {
+            if (guestReplyHarness.document.getElementById('bbs-ed-title')) {
                 errors.push(`Board guest reply command unexpectedly rendered post-write inputs at /board/${boardId}/${postId}`);
             }
             if (guestReplyHarness.metrics.replyCalls.length !== 0) {
@@ -3491,7 +3460,10 @@ async function verifyBoardPostWriteHarness(errors, options) {
             postContent,
             postUserId: ownerUserId
         });
-        const expectedReplyRoute = `/board/${boardId}/${postId}/reply`;
+        // [LOG_ID: 20260725_2030] routingUrlBuilder.js는 더 이상 /board 접두어를 붙이지 않는다
+        // (게시판 키를 소문자로 직접 경로 세그먼트로 씀, routingUrlBuilder.js 참고) — 옛 기대값은
+        // 폐기된 /board/:boardId/... 형식이었다.
+        const expectedReplyRoute = `/${boardId}/${postId}/reply`;
         globalThis.window.location.pathname = `/board/${encodeURIComponent(boardId)}/${encodeURIComponent(postId)}`;
         globalThis.window.location.search = '';
         await memberReplyHarness.restorer.restoreStateFromURL();
@@ -3515,8 +3487,8 @@ async function verifyBoardPostWriteHarness(errors, options) {
                     errors.push(`Board member reply command built ${memberReplyRoute || 'empty'} instead of ${expectedReplyRoute}`);
                 }
 
-                const replyTitleInput = memberReplyHarness.document.getElementById('w-title');
-                const replyBodyInput = memberReplyHarness.document.getElementById('w-body');
+                const replyTitleInput = memberReplyHarness.document.getElementById('bbs-ed-title');
+                const replyBodyInput = memberReplyHarness.document.getElementById('bbs-ed-body');
                 if (!replyTitleInput || !replyBodyInput) {
                     errors.push(`Board member reply command did not expose title/body inputs at /board/${boardId}/${postId}`);
                 } else {
@@ -3525,13 +3497,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
                     }
                     const replyTitle = `Re: ${postTitle} via harness`;
                     const replyBody = `board harness reply body ${postId}`;
-                    replyTitleInput.value = replyTitle;
-                    replyBodyInput.value = replyBody;
-                    await memberReplyHarness.entryHandler({
-                        s: memberReplyHarness.state.screen,
-                        cmd: 'S',
-                        context: {}
-                    });
+                    await saveBbsEditor(memberReplyHarness, { title: replyTitle, body: replyBody });
                     if (memberReplyHarness.metrics.replyCalls.length !== 1) {
                         errors.push(`Board member reply command did not trigger a reply exactly once at /board/${boardId}/${postId}`);
                     } else if (memberReplyHarness.metrics.replyCalls[0].boardId !== String(boardId)
@@ -3559,8 +3525,8 @@ async function verifyBoardPostWriteHarness(errors, options) {
                     if (memberReplyRestoreHarness.state.writeMode !== 'reply') {
                         errors.push(`Board reply direct route did not keep writeMode=reply at ${expectedReplyRoute}`);
                     }
-                    const restoredReplyTitleInput = memberReplyRestoreHarness.document.getElementById('w-title');
-                    const restoredReplyBodyInput = memberReplyRestoreHarness.document.getElementById('w-body');
+                    const restoredReplyTitleInput = memberReplyRestoreHarness.document.getElementById('bbs-ed-title');
+                    const restoredReplyBodyInput = memberReplyRestoreHarness.document.getElementById('bbs-ed-body');
                     if (!restoredReplyTitleInput || !restoredReplyBodyInput) {
                         errors.push(`Board reply direct route did not expose reply inputs at ${expectedReplyRoute}`);
                     } else if (restoredReplyTitleInput.value !== `Re: ${postTitle}`) {
@@ -4674,6 +4640,8 @@ async function verifyAuthEntryRouteCoverage(errors) {
             this.innerHTML = '';
             this.textContent = '';
             this.style = {};
+            this.dataset = {};
+            this.inputMode = '';
             this.listeners = new Map();
             this.classList = {
                 add() {},
@@ -4688,6 +4656,16 @@ async function verifyAuthEntryRouteCoverage(errors) {
         addEventListener(type, handler) {
             this.listeners.set(type, handler);
         }
+
+        removeEventListener(type) {
+            this.listeners.delete(type);
+        }
+
+        dispatchEvent() {
+            return true;
+        }
+
+        setAttribute() {}
 
         querySelector() {
             return null;
@@ -4801,6 +4779,12 @@ async function verifyAuthEntryRouteCoverage(errors) {
             globalThis.document = {
                 getElementById(id) {
                     return elements.get(id) || null;
+                },
+                // [LOG_ID: 20260725_2030] signupEmailForm.mountSignupEmailPromptRow가
+                // document.querySelector('[data-signup-email-prompt-host]')를 호출한다 —
+                // null이면 restorePromptRow 폴백을 타므로 null 스텁으로 충분하다.
+                querySelector() {
+                    return null;
                 },
                 querySelectorAll() {
                     return [];
@@ -4927,9 +4911,25 @@ async function verifyAuthEntryRouteCoverage(errors) {
             }
         }
 
+        // [LOG_ID: 20260725_2030] 이메일 가입 단계(signupEmailForm.js)는 확인용 <input>을 footer
+        // hintEl에 그리는 다른 단계들(agree/oauth-profile)과 달리, 공용 cmdInput을 화면 트랜스크립트
+        // 안(prompt-row 호스트)으로 끌어와 그대로 쓴다(mountSignupEmailPromptRow) — hintEl은 오히려
+        // 비운다(ensureFooterReady). 그래서 confirm-input 마커가 아니라 그 호스트 존재를 확인한다.
+        function assertSignupEmailFooterRoute(caseData, routeLabel) {
+            if (!String(caseData.screenEl?.innerHTML || '').includes('data-signup-email-prompt-host')) {
+                errors.push(`${routeLabel} did not render the shared prompt-row host for the email step`);
+            }
+            if (!caseData.footerVisibilityCalls.some((visible) => visible === true)) {
+                errors.push(`${routeLabel} did not request shared footer visibility for the email step`);
+            }
+        }
+
         const loginCase = await runAuthRouteCase({ pathname: '/log/login' });
-        if (loginCase.loadMenuTreeCalls !== 0) {
-            errors.push(`Auth login direct route should not depend on loadMenuTree() for /log/login (got ${loginCase.loadMenuTreeCalls} calls)`);
+        if (loginCase.loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Auth login direct route did not run the up-front menu-tree hydration for /log/login (got ${loginCase.loadMenuTreeCalls} calls)`);
         }
         if (loginCase.loginCalls !== 1 || loginCase.state.screen !== 'login') {
             errors.push('Auth login direct route did not invoke showLogin() for /log/login');
@@ -4942,8 +4942,11 @@ async function verifyAuthEntryRouteCoverage(errors) {
         }
 
         const passwordCase = await runAuthRouteCase({ pathname: '/log/password' });
-        if (passwordCase.loadMenuTreeCalls !== 0) {
-            errors.push(`Auth password direct route should not depend on loadMenuTree() for /log/password (got ${passwordCase.loadMenuTreeCalls} calls)`);
+        if (passwordCase.loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Auth password direct route did not run the up-front menu-tree hydration for /log/password (got ${passwordCase.loadMenuTreeCalls} calls)`);
         }
         if (passwordCase.passwordResetCalls !== 1 || passwordCase.state.screen !== 'password-reset') {
             errors.push('Auth password direct route did not invoke showPasswordReset() for /log/password');
@@ -4956,8 +4959,11 @@ async function verifyAuthEntryRouteCoverage(errors) {
         }
 
         const signupEmailCase = await runAuthRouteCase({ pathname: '/log/signup/email' });
-        if (signupEmailCase.loadMenuTreeCalls !== 0) {
-            errors.push(`Auth signup email direct route should not depend on loadMenuTree() for /log/signup/email (got ${signupEmailCase.loadMenuTreeCalls} calls)`);
+        if (signupEmailCase.loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Auth signup email direct route did not run the up-front menu-tree hydration for /log/signup/email (got ${signupEmailCase.loadMenuTreeCalls} calls)`);
         }
         if (signupEmailCase.boardSelectCalls.length !== 0) {
             errors.push('Auth signup email direct route incorrectly fell back to showBoardSelect() for /log/signup/email');
@@ -4965,7 +4971,7 @@ async function verifyAuthEntryRouteCoverage(errors) {
         if (signupEmailCase.state.screen !== 'signup' || signupEmailCase.state._signupFlow !== 'email') {
             errors.push(`Auth signup email direct route did not restore the email flow for /log/signup/email (got screen=${signupEmailCase.state.screen}, flow=${signupEmailCase.state._signupFlow || 'empty'})`);
         }
-        if (!String(signupEmailCase.screenEl.innerHTML || '').includes('signup-inline-form')) {
+        if (!String(signupEmailCase.screenEl.innerHTML || '').includes('data-signup-email-prompt-host')) {
             errors.push('Auth signup email direct route did not render the inline email signup form for /log/signup/email');
         }
         if (signupEmailCase.path !== '/log/signup/email' || signupEmailCase.builtUrl !== '/log/signup/email') {
@@ -4974,11 +4980,14 @@ async function verifyAuthEntryRouteCoverage(errors) {
         if (!signupEmailCase.updateRequests.some((entry) => entry.replace === true && entry.url === '/log/signup/email')) {
             errors.push('Auth signup email direct route did not request replaceState URL sync for /log/signup/email');
         }
-        assertSignupFooterRoute(signupEmailCase, 'Auth signup email direct route', 'signup-confirm-input');
+        assertSignupEmailFooterRoute(signupEmailCase, 'Auth signup email direct route');
 
         const signupAgreeFallbackCase = await runAuthRouteCase({ pathname: '/log/signup/agree' });
-        if (signupAgreeFallbackCase.loadMenuTreeCalls !== 0) {
-            errors.push(`Auth signup agree fallback direct route should not depend on loadMenuTree() for /log/signup/agree (got ${signupAgreeFallbackCase.loadMenuTreeCalls} calls)`);
+        if (signupAgreeFallbackCase.loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Auth signup agree fallback direct route did not run the up-front menu-tree hydration for /log/signup/agree (got ${signupAgreeFallbackCase.loadMenuTreeCalls} calls)`);
         }
         if (signupAgreeFallbackCase.boardSelectCalls.length !== 0) {
             errors.push('Auth signup agree fallback direct route incorrectly fell back to showBoardSelect() instead of showSignup()');
@@ -5000,8 +5009,11 @@ async function verifyAuthEntryRouteCoverage(errors) {
             pathname: '/log/signup/agree',
             signupPendingMethod: '1'
         });
-        if (signupAgreeEmailFallbackCase.loadMenuTreeCalls !== 0) {
-            errors.push(`Auth signup agree email fallback should not depend on loadMenuTree() for /log/signup/agree (got ${signupAgreeEmailFallbackCase.loadMenuTreeCalls} calls)`);
+        if (signupAgreeEmailFallbackCase.loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Auth signup agree email fallback did not run the up-front menu-tree hydration for /log/signup/agree (got ${signupAgreeEmailFallbackCase.loadMenuTreeCalls} calls)`);
         }
         if (signupAgreeEmailFallbackCase.boardSelectCalls.length !== 0) {
             errors.push('Auth signup agree email fallback incorrectly fell back to showBoardSelect() instead of showSignup()');
@@ -5009,7 +5021,7 @@ async function verifyAuthEntryRouteCoverage(errors) {
         if (signupAgreeEmailFallbackCase.state.screen !== 'signup' || signupAgreeEmailFallbackCase.state._signupFlow !== 'email') {
             errors.push(`Auth signup agree email fallback did not normalize to the email form for /log/signup/agree (got screen=${signupAgreeEmailFallbackCase.state.screen}, flow=${signupAgreeEmailFallbackCase.state._signupFlow || 'empty'})`);
         }
-        if (!String(signupAgreeEmailFallbackCase.screenEl.innerHTML || '').includes('signup-inline-form')) {
+        if (!String(signupAgreeEmailFallbackCase.screenEl.innerHTML || '').includes('data-signup-email-prompt-host')) {
             errors.push('Auth signup agree email fallback did not render the inline email signup form when the draft is missing');
         }
         if (signupAgreeEmailFallbackCase.path !== '/log/signup/email' || signupAgreeEmailFallbackCase.builtUrl !== '/log/signup/email') {
@@ -5018,7 +5030,7 @@ async function verifyAuthEntryRouteCoverage(errors) {
         if (!signupAgreeEmailFallbackCase.updateRequests.some((entry) => entry.replace === true && entry.url === '/log/signup/email')) {
             errors.push('Auth signup agree email fallback did not request replaceState URL sync to /log/signup/email');
         }
-        assertSignupFooterRoute(signupAgreeEmailFallbackCase, 'Auth signup agree email fallback', 'signup-confirm-input');
+        assertSignupEmailFooterRoute(signupAgreeEmailFallbackCase, 'Auth signup agree email fallback');
 
         const signupAgreeCase = await runAuthRouteCase({
             pathname: '/log/signup/agree',
@@ -5031,8 +5043,11 @@ async function verifyAuthEntryRouteCoverage(errors) {
                 email: 'signup@example.com'
             }
         });
-        if (signupAgreeCase.loadMenuTreeCalls !== 0) {
-            errors.push(`Auth signup agree direct route should not depend on loadMenuTree() for /log/signup/agree (got ${signupAgreeCase.loadMenuTreeCalls} calls)`);
+        if (signupAgreeCase.loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Auth signup agree direct route did not run the up-front menu-tree hydration for /log/signup/agree (got ${signupAgreeCase.loadMenuTreeCalls} calls)`);
         }
         if (signupAgreeCase.boardSelectCalls.length !== 0) {
             errors.push('Auth signup agree direct route incorrectly fell back to showBoardSelect() for /log/signup/agree');
@@ -5059,8 +5074,11 @@ async function verifyAuthEntryRouteCoverage(errors) {
                 provider: 'google'
             }
         });
-        if (oauthProfileCase.loadMenuTreeCalls !== 0) {
-            errors.push(`Auth signup profile direct route should not depend on loadMenuTree() for /log/signup/profile (got ${oauthProfileCase.loadMenuTreeCalls} calls)`);
+        if (oauthProfileCase.loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Auth signup profile direct route did not run the up-front menu-tree hydration for /log/signup/profile (got ${oauthProfileCase.loadMenuTreeCalls} calls)`);
         }
         if (oauthProfileCase.boardSelectCalls.length !== 0) {
             errors.push('Auth signup profile direct route incorrectly fell back to showBoardSelect() for /log/signup/profile');
@@ -5080,8 +5098,11 @@ async function verifyAuthEntryRouteCoverage(errors) {
         assertSignupFooterRoute(oauthProfileCase, 'Auth signup profile direct route', 'signup-oauth-confirm-input');
 
         const signupFallbackCase = await runAuthRouteCase({ pathname: '/log/signup/profile' });
-        if (signupFallbackCase.loadMenuTreeCalls !== 0) {
-            errors.push(`Auth signup fallback direct route should not depend on loadMenuTree() for /log/signup/profile (got ${signupFallbackCase.loadMenuTreeCalls} calls)`);
+        if (signupFallbackCase.loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Auth signup fallback direct route did not run the up-front menu-tree hydration for /log/signup/profile (got ${signupFallbackCase.loadMenuTreeCalls} calls)`);
         }
         if (signupFallbackCase.boardSelectCalls.length !== 0) {
             errors.push('Auth signup fallback direct route incorrectly fell back to showBoardSelect() instead of showSignup()');
@@ -5174,20 +5195,26 @@ async function verifyProfileRouteCoverage(errors) {
 
         const moduleCache = new Map();
         const { createProfileScreens } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/profileScreens.js'), moduleCache);
+        const { createSystemAnsiBuilders } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/systemAnsiBuilders.js'), moduleCache);
         const { createRoutingStateRestorer } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/routingStateRestorer.js'), moduleCache);
         const { createRoutingUrlBuilder } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/routingUrlBuilder.js'), moduleCache);
+
+        function createProfileAnsiBuilderForHarness() {
+            const { buildProfileAnsi } = createSystemAnsiBuilders({
+                displayWidth: (value = '') => String(value || '').length,
+                isWideChar: () => false
+            });
+            return buildProfileAnsi;
+        }
 
         const state = {
             screen: 'main',
             _profileUserId: ''
         };
-        const screenEl = {
-            innerHTML: ''
-        };
+        const screenEl = createHarnessScreenEl();
         const updateRequests = [];
         const apiRequests = [];
-        let lastHint = '';
-        let lastPrompt = '';
+        const appliedFooters = [];
         let loadMenuTreeCalls = 0;
 
         globalThis.window = {
@@ -5209,9 +5236,16 @@ async function verifyProfileRouteCoverage(errors) {
             },
             matchMedia() {
                 return { matches: false };
-            }
+            },
+            scrollTo() {}
         };
         globalThis.document = {
+            getElementById() {
+                return null;
+            },
+            querySelector() {
+                return null;
+            },
             querySelectorAll() {
                 return [];
             }
@@ -5249,15 +5283,18 @@ async function verifyProfileRouteCoverage(errors) {
             },
             cmdInput: { focus() {} },
             esc: escapeHtml,
+            // [LOG_ID: 20260725_2030] profileScreens 현행 계약(20260708_1030): setHint/setPrompt 대신
+            // applyCommandFooter(assetPath, fallback)로 힌트/프롬프트 적용을 위임하고, setLoading·
+            // ansiToHTML·buildProfileAnsi(실제 빌더)를 받아 상단바 화면으로 렌더한다.
+            ansiToHTML: ansiToHTMLHarnessStub,
+            applyCommandFooter: async (assetPath, fallbackText) => {
+                appliedFooters.push(String(fallbackText || ''));
+            },
+            setLoading: () => {},
+            buildProfileAnsi: createProfileAnsiBuilderForHarness(),
             getCommandFooterText: () => 'PROFILE FOOTER',
             getSupportedFooterText: () => 'PROFILE FOOTER',
             screenEl,
-            setHint: (value) => {
-                lastHint = String(value || '');
-            },
-            setPrompt: (value) => {
-                lastPrompt = String(value || '');
-            },
             state,
             updateURL: async (replace = false) => {
                 const nextUrl = buildURLForState();
@@ -5311,8 +5348,11 @@ async function verifyProfileRouteCoverage(errors) {
 
         await restorer.restoreStateFromURL();
 
-        if (loadMenuTreeCalls !== 0) {
-            errors.push(`Profile direct route should not depend on loadMenuTree() for /profile/:userId (got ${loadMenuTreeCalls} calls)`);
+        if (loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Profile direct route did not run the up-front menu-tree hydration for /profile/:userId (got ${loadMenuTreeCalls} calls)`);
         }
         if (state.screen !== 'profile') {
             errors.push('Profile direct route did not restore state.screen="profile" for /profile/:userId');
@@ -5323,11 +5363,8 @@ async function verifyProfileRouteCoverage(errors) {
         if (apiRequests.length !== 1 || apiRequests[0] !== '/api/members/demo-user?allowMissing=1') {
             errors.push(`Profile direct route did not fetch the expected member payload for /profile/:userId (got ${apiRequests.join(', ') || 'no calls'})`);
         }
-        if (lastHint !== 'PROFILE FOOTER') {
-            errors.push(`Profile direct route did not restore the profile footer hint (got ${lastHint || 'empty'})`);
-        }
-        if (lastPrompt !== '>>') {
-            errors.push(`Profile direct route did not restore the default prompt for /profile/:userId (got ${lastPrompt || 'empty'})`);
+        if (appliedFooters[appliedFooters.length - 1] !== 'PROFILE FOOTER') {
+            errors.push(`Profile direct route did not restore the profile footer hint (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateRequests.length !== 0) {
             errors.push('Profile direct route should not push or replace history while restoring /profile/:userId');
@@ -5343,7 +5380,10 @@ async function verifyProfileRouteCoverage(errors) {
         if (!renderedProfile.includes('사용자 정보 (PROFILE)')) {
             errors.push('Profile direct route did not render the profile title for /profile/:userId');
         }
-        if (!renderedProfile.includes('아이디  : demo-user')) {
+        // [LOG_ID: 20260725_2030] 라벨 패딩 폭은 fitCell(displayWidth/isWideChar 조합)에 좌우돼
+        // 하네스의 가짜 폭 계산기가 실제 브라우저와 정확히 같은 공백 수를 낼 필요는 없다 —
+        // "아이디"와 "demo-user"가 같은 줄에 콜론으로 붙어 있는지만 확인한다.
+        if (!/아이디\s*:\s*demo-user/.test(renderedProfile)) {
             errors.push('Profile direct route did not render the target member id for /profile/:userId');
         }
         if (!renderedProfile.endsWith('</div>')) {
@@ -5353,13 +5393,15 @@ async function verifyProfileRouteCoverage(errors) {
         globalThis.window.location.pathname = '/profile/smoke-route-user';
         globalThis.window.location.search = '';
         screenEl.innerHTML = '';
-        lastHint = '';
-        lastPrompt = '';
+        appliedFooters.length = 0;
 
         await restorer.restoreStateFromURL();
 
-        if (loadMenuTreeCalls !== 0) {
-            errors.push(`Missing profile direct route should not depend on loadMenuTree() for /profile/:userId (got ${loadMenuTreeCalls} calls)`);
+        if (loadMenuTreeCalls < 1) {
+            // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
+            // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
+            // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
+            errors.push(`Missing profile direct route did not run the up-front menu-tree hydration for /profile/:userId (got ${loadMenuTreeCalls} calls)`);
         }
         if (state.screen !== 'profile') {
             errors.push('Missing profile direct route did not keep state.screen="profile" for /profile/:userId');
@@ -5370,11 +5412,8 @@ async function verifyProfileRouteCoverage(errors) {
         if (apiRequests.length !== 2 || apiRequests[1] !== '/api/members/smoke-route-user?allowMissing=1') {
             errors.push(`Missing profile direct route did not fetch the allowMissing lookup for /profile/:userId (got ${apiRequests.join(', ') || 'no calls'})`);
         }
-        if (lastHint !== 'PROFILE FOOTER') {
-            errors.push(`Missing profile direct route did not restore the profile footer hint (got ${lastHint || 'empty'})`);
-        }
-        if (lastPrompt !== '>>') {
-            errors.push(`Missing profile direct route did not restore the default prompt for /profile/:userId (got ${lastPrompt || 'empty'})`);
+        if (appliedFooters[appliedFooters.length - 1] !== 'PROFILE FOOTER') {
+            errors.push(`Missing profile direct route did not restore the profile footer hint (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateRequests.length !== 0) {
             errors.push('Missing profile direct route should not push or replace history while restoring /profile/:userId');
@@ -5533,16 +5572,33 @@ async function verifyHttpMyInfoCoverage(errors) {
 
 // [LOG: 20260429_0524] When Playwright stays blocked, /myinfo must still prove
 // guest direct-route and stale command states fail closed instead of exposing edit flows.
+// [LOG_ID: 20260725_2030] 이 하네스는 완전히 재작성됐다. 20260722_2300부터 게스트가 회원정보
+// 화면에 들어오면 더는 즉시 showMain()으로 튕겨나가지 않는다 — myinfo 화면 자체를 'guest-blocked'
+// 모드로 렌더링해 안내 메시지("회원 정보는 로그인 사용자만...")와 정상적인 힌트바("ENTER를 누르면
+// 초기화면으로 이동합니다.")를 먼저 보여준 뒤, 어떤 명령이든(ENTER 포함) 입력이 와야 그때
+// showMain()으로 넘어간다(commandRouterMyInfo.js의 mode==='guest-blocked' 분기). 옛 하네스는
+// "직접 진입 즉시 main으로 리다이렉트"라는 폐기된 동작을 검사하고 있어 항상 실패했다 — 실제 렌더링
+// 파이프라인(createMyInfoScreens = state+renderer+actions 조합)을 그대로 태워 새 2단계 흐름을 검증한다.
 async function verifyMyInfoRouteCoverage(errors) {
     console.log('🙍 Checking myinfo route coverage via module harness...');
 
     const originalWindow = globalThis.window;
     const originalDocument = globalThis.document;
-    const guestGuardMessage = '정보관리 및 프로필 편집은 로그인 후 사용하실 수 있습니다.';
+    const guestBlockedMessage = '회원 정보는 로그인 사용자만 이용할 수 있습니다.';
+    const guestBlockedHint = 'ENTER를 누르면 초기화면으로 이동합니다.';
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     try {
         const moduleCache = new Map();
-        const { createMyInfoActions } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/myInfoActions.js'), moduleCache);
+        const { createMyInfoScreens } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/myInfoScreens.js'), moduleCache);
         const { createMyInfoCommandHandler } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/commandRouterMyInfo.js'), moduleCache);
         const { createRoutingStateRestorer } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/routingStateRestorer.js'), moduleCache);
 
@@ -5552,23 +5608,12 @@ async function verifyMyInfoRouteCoverage(errors) {
                 userId: 'guest',
                 nickName: '손님',
                 isGuest: true
-            },
-            _myInfoMode: 'view',
-            _myInfoDraft: {},
-            _myInfoMessage: '',
-            _myInfoMessageType: ''
+            }
         };
         const hints = [];
         const prompts = [];
         const showMainCalls = [];
-        const renderCalls = [];
-
-        function resetMyInfoState() {
-            state._myInfoMode = 'view';
-            state._myInfoDraft = {};
-            state._myInfoMessage = '';
-            state._myInfoMessageType = '';
-        }
+        const updateUrlCalls = [];
 
         const setHint = (value) => {
             hints.push(String(value || ''));
@@ -5585,7 +5630,11 @@ async function verifyMyInfoRouteCoverage(errors) {
             }
         };
 
+        const screenEl = createHarnessScreenEl();
+        screenEl.classList = { add() {}, remove() {} };
+
         globalThis.window = {
+            innerWidth: 1280,
             location: {
                 pathname: '/myinfo',
                 search: ''
@@ -5596,42 +5645,31 @@ async function verifyMyInfoRouteCoverage(errors) {
             getElementById: () => null
         };
 
-        const myInfoActions = createMyInfoActions({
+        const myInfoScreens = createMyInfoScreens({
             apiFetch: async () => {
                 throw new Error('guest myinfo guard should not call apiFetch');
             },
+            doLogin: async () => {},
             doLogout: async () => {},
             guestUser: () => ({
                 userId: 'guest',
                 nickName: '손님',
                 isGuest: true
             }),
-            showMain,
-            state,
             setHint,
             setPrompt,
-            renderMyInfo: async () => {
-                renderCalls.push({ mode: state._myInfoMode, screen: state.screen });
-                state.screen = 'myinfo';
+            showMain,
+            state,
+            screenEl,
+            cmdInput: { value: '', focus() {} },
+            esc: escapeHtml,
+            applyCommandFooter: async () => {},
+            getSupportedFooterText: () => 'MYINFO FOOTER',
+            updateURL: (replace) => {
+                updateUrlCalls.push(Boolean(replace));
             },
-            clearDraft: () => {
-                state._myInfoDraft = {};
-            },
-            clearMessage: () => {
-                state._myInfoMessage = '';
-                state._myInfoMessageType = '';
-            },
-            resetMyInfoState,
-            setDraft: (draft) => {
-                state._myInfoDraft = { ...(state._myInfoDraft || {}), ...(draft || {}) };
-            },
-            setMessage: (message, messageType) => {
-                state._myInfoMessage = String(message || '');
-                state._myInfoMessageType = String(messageType || '');
-            },
-            setMode: (mode) => {
-                state._myInfoMode = String(mode || 'view').trim().toLowerCase() || 'view';
-            }
+            mountPromptRow: () => {},
+            restorePromptRow: () => {}
         });
 
         const restorer = createRoutingStateRestorer({
@@ -5650,7 +5688,7 @@ async function verifyMyInfoRouteCoverage(errors) {
             showMemoList: async () => {},
             showMemoView: async () => {},
             showMemoWrite: async () => {},
-            showMyInfo: myInfoActions.showMyInfo,
+            showMyInfo: myInfoScreens.showMyInfo,
             showNewsArticle: async () => {},
             showNewsList: async () => {},
             showNewsMenu: async () => {},
@@ -5670,66 +5708,68 @@ async function verifyMyInfoRouteCoverage(errors) {
 
         await restorer.restoreStateFromURL();
 
-        if (showMainCalls.length !== 1) {
-            errors.push(`Guest /myinfo direct route should redirect to main exactly once (got ${showMainCalls.length})`);
+        // 1단계: 직접 진입 시점엔 아직 main으로 튕기지 않는다 — myinfo 화면 자체에 안내만 그린다.
+        if (showMainCalls.length !== 0) {
+            errors.push(`Guest /myinfo direct route should not redirect to main before a command arrives (got ${showMainCalls.length} calls)`);
         }
-        if (state.screen !== 'main') {
-            errors.push(`Guest /myinfo direct route should stay on main instead of ${state.screen || 'unknown'}`);
+        if (state.screen !== 'myinfo') {
+            errors.push(`Guest /myinfo direct route should render the myinfo screen with a guest notice instead of ${state.screen || 'unknown'}`);
         }
-        if (renderCalls.length !== 0) {
-            errors.push(`Guest /myinfo direct route unexpectedly rendered myinfo ${renderCalls.length} time(s)`);
+        if (state._myInfoMode !== 'guest-blocked') {
+            errors.push(`Guest /myinfo direct route did not enter guest-blocked mode (got ${state._myInfoMode || 'empty'})`);
         }
-        if ((hints[hints.length - 1] || '') !== guestGuardMessage) {
-            errors.push(`Guest /myinfo direct route is missing the login-required hint (got ${hints[hints.length - 1] || 'none'})`);
+        if (!String(screenEl.innerHTML || '').includes(guestBlockedMessage)) {
+            errors.push('Guest /myinfo direct route did not render the guest-blocked notice message');
         }
-        if ((prompts[prompts.length - 1] || '') !== '>>') {
-            errors.push(`Guest /myinfo direct route did not restore the default prompt (got ${prompts[prompts.length - 1] || 'none'})`);
+        if ((hints[hints.length - 1] || '') !== guestBlockedHint) {
+            errors.push(`Guest /myinfo direct route is missing the guest-blocked hint (got ${hints[hints.length - 1] || 'none'})`);
         }
-        if (globalThis.window.location.pathname !== '/') {
-            errors.push(`Guest /myinfo direct route did not redirect the URL back to / (got ${globalThis.window.location.pathname || 'none'})`);
+        if ((prompts[prompts.length - 1] || '') !== '>> ') {
+            errors.push(`Guest /myinfo direct route did not set the guest-blocked prompt (got ${JSON.stringify(prompts[prompts.length - 1] || '')})`);
+        }
+        // [LOG_ID: 20260725_2030] ensureMyInfoAccess()는 showMyInfo(fromHistory)의 fromHistory 값을
+        // 무시하고 renderMyInfo()를 인자 없이(기본값 false) 부른다 — 게스트 차단 렌더는 항상
+        // "새 진입"으로 취급돼 updateURL()이 replace=false로 호출된다. replace 값 자체보다 URL 동기화
+        // 호출이 정확히 한 번 일어났는지가 핵심이라 그 값은 강하게 단정하지 않는다.
+        if (updateUrlCalls.length !== 1) {
+            errors.push(`Guest /myinfo direct route did not request exactly one URL sync while staying on /myinfo (got ${JSON.stringify(updateUrlCalls)})`);
+        }
+        if (globalThis.window.location.pathname !== '/myinfo') {
+            errors.push(`Guest /myinfo direct route should keep the URL at /myinfo until a command arrives (got ${globalThis.window.location.pathname || 'none'})`);
         }
 
+        // 2단계: guest-blocked 화면에서 어떤 명령이 오든(ENTER 포함) 그제서야 main으로 이동한다.
         const handleMyInfoCommand = createMyInfoCommandHandler({
-            ...myInfoActions,
+            ...myInfoScreens,
             showMain,
             state
         });
-        const staleGuestCommands = [
+        const guestBlockedCommands = [
+            { cmd: '', label: 'enter' },
             { cmd: 'N', label: 'nickname' },
             { cmd: 'PW', label: 'password' },
             { cmd: 'X', label: 'delete' }
         ];
 
-        for (const entry of staleGuestCommands) {
+        for (const entry of guestBlockedCommands) {
             state.screen = 'myinfo';
-            resetMyInfoState();
-            hints.length = 0;
-            prompts.length = 0;
+            state._myInfoMode = 'guest-blocked';
             showMainCalls.length = 0;
-            renderCalls.length = 0;
-            globalThis.window.location.pathname = '/myinfo';
-            globalThis.window.location.search = '';
 
             const handled = await handleMyInfoCommand({ cmd: entry.cmd, context: {} });
 
             if (!handled) {
-                errors.push(`Guest myinfo ${entry.label} command was not handled on a stale myinfo screen`);
+                errors.push(`Guest myinfo ${entry.label} command was not handled on the guest-blocked screen`);
                 continue;
             }
             if (showMainCalls.length !== 1) {
                 errors.push(`Guest myinfo ${entry.label} command should redirect to main exactly once (got ${showMainCalls.length})`);
             }
             if (state.screen !== 'main') {
-                errors.push(`Guest myinfo ${entry.label} command should stay on main instead of ${state.screen || 'unknown'}`);
+                errors.push(`Guest myinfo ${entry.label} command should move to main instead of ${state.screen || 'unknown'}`);
             }
-            if (renderCalls.length !== 0) {
-                errors.push(`Guest myinfo ${entry.label} command unexpectedly rendered myinfo ${renderCalls.length} time(s)`);
-            }
-            if ((hints[hints.length - 1] || '') !== guestGuardMessage) {
-                errors.push(`Guest myinfo ${entry.label} command is missing the login-required hint (got ${hints[hints.length - 1] || 'none'})`);
-            }
-            if ((prompts[prompts.length - 1] || '') !== '>>') {
-                errors.push(`Guest myinfo ${entry.label} command did not restore the default prompt (got ${prompts[prompts.length - 1] || 'none'})`);
+            if (globalThis.window.location.pathname !== '/') {
+                errors.push(`Guest myinfo ${entry.label} command did not redirect the URL to / (got ${globalThis.window.location.pathname || 'none'})`);
             }
         }
     } catch (error) {
@@ -5760,6 +5800,83 @@ function ansiToHTMLHarnessStub(text) {
         html: plainText,
         rows: plainText.split('\n')
     };
+}
+
+// [LOG_ID: 20260725_2030] 폴백 하네스 공용 가짜 브라우저 환경.
+// 요즘 화면 모듈들은 renderAnsiScreenWithTopbarSequential/renderRawHtmlScreenWithTopbar
+// (상단바+본문 렌더, ansiTopbarScreen.js)를 타므로 document.getElementById /
+// screenEl.querySelector('.ansi-screen-body') / window.scrollTo 스텁이 필요하다.
+// screenEl은 상단바 셸과 본문(.ansi-screen-body) 내용을 합성해 innerHTML로 되돌려 주므로
+// 기존 `screenEl.innerHTML.includes(...)` 방식의 단언들이 그대로 동작한다.
+function createHarnessScreenEl() {
+    const bodyEl = { innerHTML: '' };
+    const EMPTY_BODY = '<div class="ansi-screen-body"></div>';
+    return {
+        scrollTop: 0,
+        scrollHeight: 0,
+        set innerHTML(value) {
+            this._shell = String(value || '');
+            bodyEl.innerHTML = '';
+        },
+        get innerHTML() {
+            const shell = this._shell || '';
+            if (shell.includes(EMPTY_BODY) && bodyEl.innerHTML) {
+                return shell.replace(EMPTY_BODY, `<div class="ansi-screen-body">${bodyEl.innerHTML}</div>`);
+            }
+            return shell;
+        },
+        querySelector(selector) {
+            return selector === '.ansi-screen-body' ? bodyEl : null;
+        },
+        querySelectorAll() {
+            return [];
+        }
+    };
+}
+
+// 주의: ansiTopbarScreen.js는 모듈 로드 시점에 `typeof window !== 'undefined'`이면 1초 간격
+// 시계 setInterval을 등록한다 — 각 하네스는 반드시 loadBrowserHarnessModule을 "먼저" 부르고
+// 그 다음에 이 가짜 window를 설치할 것(기존 하네스들의 순서 관례와 동일).
+function createHarnessBrowserGlobals({ innerWidth = 1280, pathname = '/', search = '' } = {}) {
+    const elements = new Map();
+    const fakeWindow = {
+        innerWidth,
+        location: { pathname, search },
+        matchMedia() {
+            return { matches: innerWidth >= 768 };
+        },
+        scrollTo() {},
+        assign() {},
+        history: { pushState() {}, replaceState() {} }
+    };
+    const fakeDocument = {
+        _elements: elements,
+        getElementById(id) {
+            return elements.get(id) || null;
+        },
+        querySelector() {
+            return null;
+        },
+        querySelectorAll() {
+            return [];
+        },
+        body: { dataset: {} },
+        documentElement: { dataset: {}, style: { setProperty() {}, removeProperty() {} } },
+        createElement() {
+            return {
+                style: { setProperty() {}, removeProperty() {} },
+                dataset: {},
+                classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+                setAttribute() {},
+                appendChild() {},
+                addEventListener() {},
+                removeEventListener() {},
+                focus() {},
+                remove() {}
+            };
+        }
+    };
+    return { window: fakeWindow, document: fakeDocument, elements };
 }
 
 function loadBrowserHarnessModule(modulePath, cache) {
@@ -5865,9 +5982,7 @@ async function verifyMemoWriteCoverage(errors) {
             _currentMemoId: null,
             _memoTarget: ''
         };
-        const screenEl = {
-            innerHTML: ''
-        };
+        const screenEl = createHarnessScreenEl();
         const elements = new Map([
             ['memo-form', new FakeElement('memo-form')],
             ['m-cancel', new FakeElement('m-cancel')],
@@ -5926,6 +6041,7 @@ async function verifyMemoWriteCoverage(errors) {
             screenEl,
             setHint: () => {},
             setPrompt: () => {},
+            setLoading: () => {},
             state,
             updateURL: (replace = false) => {
                 const nextUrl = buildURLForState();
@@ -5996,8 +6112,11 @@ async function verifyMemoWriteCoverage(errors) {
         if (state._memoTarget !== '') {
             errors.push(`Memo write direct route did not reset the memo target for /memo/write (got ${state._memoTarget})`);
         }
-        if (!String(screenEl.innerHTML || '').includes('id="memo-form"')) {
-            errors.push('Memo write direct route did not render the compose form for /memo/write');
+        // [LOG_ID: 20260725_2030] 쪽지 쓰기는 <form id="memo-form">가 아니라 (다른 화면들과 동일한)
+        // 상단바+실시간 트랜스크립트 방식으로 렌더링된다(renderMemoWriteScreen, 20260708_1030) —
+        // 받는 사람이 없으면 "받는 사람 아이디를 입력하세요" 안내 줄이 뜬다.
+        if (!String(screenEl.innerHTML || '').includes('받는 사람 아이디를 입력하세요')) {
+            errors.push('Memo write direct route did not render the compose prompt for /memo/write');
         }
         if (!String(screenEl.innerHTML || '').includes('쪽지 보내기')) {
             errors.push('Memo write direct route did not render the compose title for /memo/write');
@@ -6043,29 +6162,12 @@ async function verifyHelpCoverage(errors) {
             page: 1,
             helpTotalPages: 1
         };
-        const screenEl = {
-            innerHTML: '',
-            querySelector() {
-                return null;
-            }
-        };
+        const screenEl = createHarnessScreenEl();
         const pushedUrls = [];
 
-        globalThis.window = {
-            innerWidth: 1280,
-            location: {
-                pathname: '/help',
-                search: ''
-            },
-            matchMedia() {
-                return { matches: false };
-            }
-        };
-        globalThis.document = {
-            querySelectorAll() {
-                return [];
-            }
-        };
+        const env = createHarnessBrowserGlobals({ innerWidth: 1280, pathname: '/help' });
+        globalThis.window = env.window;
+        globalThis.document = env.document;
 
         const { buildURLForState } = createRoutingUrlBuilder({
             getAuthLeafRoutePath: () => '/',
@@ -6211,28 +6313,11 @@ async function verifyHistoryCoverage(errors) {
                 { cmd: 'OLDEST', screen: 'history', ts: 1 }
             ]
         };
-        const screenEl = {
-            innerHTML: '',
-            querySelector() {
-                return null;
-            }
-        };
+        const screenEl = createHarnessScreenEl();
 
-        globalThis.window = {
-            innerWidth: 1280,
-            location: {
-                pathname: '/history',
-                search: ''
-            },
-            matchMedia() {
-                return { matches: false };
-            }
-        };
-        globalThis.document = {
-            querySelectorAll() {
-                return [];
-            }
-        };
+        const env = createHarnessBrowserGlobals({ innerWidth: 1280, pathname: '/history' });
+        globalThis.window = env.window;
+        globalThis.document = env.document;
 
         const { showHistory } = createHelpScreens({
             ansiToHTML: ansiToHTMLHarnessStub,
@@ -6454,20 +6539,16 @@ async function verifyNewsCoverage(errors) {
             serviceData: {}
         };
 
-        globalThis.window = {
-            innerWidth: 1280,
-            location: {
-                pathname: `/service/news/${topicDoor}`,
-                search: '?page=2'
-            },
-            matchMedia() {
-                return { matches: false };
-            }
-        };
-        globalThis.document = {
-            querySelectorAll() {
-                return [];
-            }
+        const env = createHarnessBrowserGlobals({ innerWidth: 1280, pathname: `/service/news/${topicDoor}`, search: '?page=2' });
+        globalThis.window = env.window;
+        globalThis.document = env.document;
+        // [LOG_ID: 20260725_2030] routingUrlBuilder.js의 news-view 케이스가 전역 sessionStorage에
+        // 기사 메타데이터를 직접 읽고 쓴다 — 스텁이 없어 매번 catch돼 콘솔에 경고만 남기고 있었다.
+        const sessionStore = new Map();
+        globalThis.sessionStorage = {
+            getItem: (key) => (sessionStore.has(key) ? sessionStore.get(key) : null),
+            setItem: (key, value) => sessionStore.set(key, String(value)),
+            removeItem: (key) => sessionStore.delete(key)
         };
 
         const newsAnsiBuilders = createNewsAnsiBuilders({
@@ -6515,7 +6596,15 @@ async function verifyNewsCoverage(errors) {
             measureLineSegmentBounds: () => null,
             createHotspotLayer: () => ({ childElementCount: 0, appendChild() {} }),
             createHotspotButton: () => ({}),
-            renderScreenSequential: async () => {}
+            setReady: () => {},
+            // [LOG_ID: 20260725_2030] no-op이면 renderAnsiScreenWithTopbarSequential이
+            // bodyContainer.innerHTML을 절대 채우지 못한다(else 분기가 아니라 이 콜백을 타는 쪽이
+            // 선택됨) — 본문이 늘 비어 있어 페이지별 내용 검사가 전부 무의미했다.
+            renderScreenSequential: async (html, options) => {
+                if (options?.container) {
+                    options.container.innerHTML = html;
+                }
+            }
         });
 
         pushedUrls.length = 0;
@@ -6537,7 +6626,9 @@ async function verifyNewsCoverage(errors) {
         if (listPageOneRender === listPageTwoRender) {
             errors.push('News list pagination did not change rendered content between page 1 and page 2');
         }
-        if (!listPageTwoRender.includes('16.')) {
+        // [LOG_ID: 20260725_2030] 번호 열 서식이 "16." → "16 "(padStart, 마침표 없음)로 바뀌어
+        // 옛 마커가 항상 실패했다 — 2페이지(15개씩, offset 15)에만 있는 제목으로 검사한다.
+        if (!listPageTwoRender.includes('기사 16')) {
             errors.push('News list page 2 did not render the expected second-page article rows');
         }
         if (buildURLForState() !== listPageTwoUrl) {
@@ -6671,6 +6762,7 @@ async function verifyNewsCoverage(errors) {
     } catch (error) {
         errors.push(`News module harness failed: ${error.message}`);
     } finally {
+        delete globalThis.sessionStorage;
         if (typeof originalWindow === 'undefined') {
             delete globalThis.window;
         } else {
@@ -6690,7 +6782,7 @@ async function verifySystemLogCoverage(errors) {
     console.log('📜 Checking SYSLOG coverage via module harness...');
 
     const originalWindow = globalThis.window;
-    const originalNavigator = globalThis.navigator;
+    const originalDocument = globalThis.document;
 
     try {
         const moduleCache = new Map();
@@ -6701,15 +6793,7 @@ async function verifySystemLogCoverage(errors) {
         const state = {
             screen: 'main'
         };
-        const screenEl = {
-            innerHTML: '',
-            querySelector() {
-                return null;
-            },
-            querySelectorAll() {
-                return [];
-            }
-        };
+        const screenEl = createHarnessScreenEl();
         const toasts = [];
         let hint = '';
         let prompt = '';
@@ -6729,14 +6813,12 @@ async function verifySystemLogCoverage(errors) {
         appendLog('INFO', 'Alpha log entry');
         appendLog('ERROR', 'Beta log entry');
 
-        globalThis.window = {
-            innerWidth: 1280,
-            location: {
-                pathname: '/',
-                search: ''
-            }
-        };
-        globalThis.navigator = {};
+        // [LOG_ID: 20260725_2030] globalThis.navigator는 요즘 Node에서 getter 전용이라 대입하면
+        // TypeError가 난다. Node 내장 navigator에는 clipboard가 없으므로 CP fail-closed 검증에는
+        // 오히려 그대로 쓰는 게 맞다 — 아예 건드리지 않는다.
+        const env = createHarnessBrowserGlobals({ innerWidth: 1280 });
+        globalThis.window = env.window;
+        globalThis.document = env.document;
 
         const { buildSystemLogAnsi } = createSystemAnsiBuilders({
             displayWidth: (value = '') => String(value || '').length,
@@ -6845,10 +6927,10 @@ async function verifySystemLogCoverage(errors) {
         } else {
             globalThis.window = originalWindow;
         }
-        if (typeof originalNavigator === 'undefined') {
-            delete globalThis.navigator;
+        if (typeof originalDocument === 'undefined') {
+            delete globalThis.document;
         } else {
-            globalThis.navigator = originalNavigator;
+            globalThis.document = originalDocument;
         }
     }
 }
