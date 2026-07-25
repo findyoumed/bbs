@@ -164,15 +164,23 @@ export function createPostWriteView(deps) {
       resize: none;
     `;
 
+    // [LOG_ID: 20260725_1710] 모바일 키보드가 뜨면 #terminal-screen이 크게 줄어드는데, 이 폼의
+    // "내용:" 구획(flex:1; min-height:0)이 그 압박을 받아 실제로 0에 가깝게 짜부라진다. 그 안의
+    // "내 용 :" 라벨은 flex-shrink:0이라 줄어들지 않고 원래 크기로 그려지는데, 부모가 그만한
+    // 공간을 확보하지 못한 채 다음 형제(하단 안내문구, 역시 flex-shrink:0)가 바로 이어 배치되면서
+    // 두 텍스트가 같은 자리에 겹쳐 그려졌다(사용자 스크린샷: "내 용 :"과 "상하화살표/Tab:이동..."이
+    // 겹쳐 보임). "내용:" 구획에 라벨 한 줄 + 최소 몇 줄 분량의 바닥을 보장해 0까지 짜부라지지
+    // 않게 하고, 그래도 전체가 안 맞으면(아주 작은 키보드 여유 공간) 짜부라뜨리는 대신 바깥
+    // 래퍼 전체가 스크롤되도록 한다.
     const bodyHtml = `
-<div style="display:flex;flex-direction:column;height:100%;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
+<div style="display:flex;flex-direction:column;height:100%;overflow-y:auto;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
   <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
     <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">제 목 :&nbsp;</span>
     <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" style="${inputStyle}"/>
   </div>
   <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   ${headerLine}
-  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:0;">
+  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
     <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내 용 :</div>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
   </div>
