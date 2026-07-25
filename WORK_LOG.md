@@ -1,3 +1,12 @@
+## [2026-07-25 16:45] [기능 개선] 모바일 키보드가 열릴 때 목록 아래쪽(입력창 근처)이 잘리던 것을 위쪽이 스크롤되어 사라지도록 변경
+
+**LOG_ID: 20260725_1645**
+목표: 사용자 스크린샷 재지적 — 키보드가 열리면 목록이 위(1~4번)부터 그대로 보이고 아래쪽(5~10번, 입력창에 가까운 부분)이 잘려 있는데, "원하는건 아래쪽이 보이고, 위쪽은 위로 밀려올라가는거야"(일반 채팅앱처럼 최신/아래 내용이 남고 위쪽이 스크롤되어 사라지길 원함).
+조사: 키보드가 뜨면 `body[data-mobile-keyboard="visible"] #terminal-screen`에 `overflow-y:auto`가 걸려 내부 콘텐츠가 잘리지 않고 스크롤 가능해지지만(20260625 도입), 스크롤 시작 위치가 항상 기본값(맨 위, `scrollTop:0`)이라 축소된 뷰포트에는 콘텐츠의 "위쪽"만 보이고 "아래쪽"(입력창과 가까운, 보통 더 중요한 부분)이 잘려 안 보였다. 정반대로 키보드가 닫힐 때는 이미 `keyboardJustClosed` 분기가 `scrollTop=0`으로 리셋하고 있었다(대칭되는 "열릴 때" 처리만 빠져 있었음).
+구현: `public/js/core/terminalViewportMetrics.js` — `keyboardJustClosed`와 대칭인 `keyboardJustOpened` 신호를 추가하고, 키보드가 막 열린 순간 `screenEl.scrollTop = screenEl.scrollHeight`(맨 아래로 스크롤)를 동일한 rAF+120ms 재시도 패턴(CSS `overflow-y:auto` 오버라이드가 실제로 적용되어 `scrollHeight`가 늘어날 시간 확보)으로 실행.
+검증: `node --check`. 모듈을 Node 하네스로 직접 로드해(가짜 `screenEl`/`window.visualViewport`) `syncVisualViewportMetrics()` 호출 시퀀스를 검증 — 키보드 열림 감지 시 `scrollTop`이 `scrollHeight`(900)로, 닫힘 감지 시 `0`으로 정확히 설정됨을 확인. `npm run smoke:menu-wiring` 통과.
+결과: ✅ 완료(실기기 재확인 필요).
+
 ## [2026-07-25 16:35] [버그 수정] 모바일 키보드 열릴 때 화면이 위로 갔다가 잠깐 아래로 튀는 현상 — 뷰포트 치수 갱신 디바운스 제거
 
 **LOG_ID: 20260725_1635**

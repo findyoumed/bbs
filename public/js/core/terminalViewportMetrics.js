@@ -51,6 +51,7 @@ export function createTerminalViewportMetrics({ screenEl }) {
     const viewportWidth = vv ? vv.width : (window.innerWidth || document.documentElement?.clientWidth || 0);
     const keyboardVisible = keyboardInset >= 96;
     const keyboardJustClosed = mobileKeyboardVisible && !keyboardVisible;
+    const keyboardJustOpened = !mobileKeyboardVisible && keyboardVisible;
 
     // 키보드가 떠 있을 때만 건너뛴다 — 주소창 접힘/펼침 등 다른 정당한 높이 변화는 항상 반영한다.
     if (!keyboardVisible) {
@@ -74,6 +75,22 @@ export function createTerminalViewportMetrics({ screenEl }) {
       window.requestAnimationFrame(() => {
         resetScrollPosition();
         window.setTimeout(resetScrollPosition, 120);
+      });
+    }
+
+    // [LOG_ID: 20260725_1645] 키보드가 열려 #terminal-screen이 줄어들면(위 CSS의
+    // body[data-mobile-keyboard="visible"] 오버라이드) 기본 스크롤 위치(맨 위)라 목록의 아래쪽
+    // (입력창에 가까운 부분)이 잘려 보였다(사용자 지적: "원하는건 아래쪽이 보이고, 위쪽은 위로
+    // 밀려올라가는거야" — 일반 채팅앱처럼 최신/아래 내용이 남고 위쪽이 스크롤되어 사라지길 원함).
+    // 키보드가 막 열린 순간 맨 아래로 스크롤해 그 기대에 맞춘다. CSS 오버라이드가 적용되어
+    // scrollHeight가 실제로 늘어날 시간이 필요해 keyboardJustClosed와 동일하게 rAF+지연 재시도.
+    if (keyboardJustOpened && screenEl) {
+      const scrollToBottom = () => {
+        screenEl.scrollTop = screenEl.scrollHeight;
+      };
+      window.requestAnimationFrame(() => {
+        scrollToBottom();
+        window.setTimeout(scrollToBottom, 120);
       });
     }
 
