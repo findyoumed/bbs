@@ -1978,8 +1978,12 @@ body[data-print-view="true"] .ansi-screen {
         min-height: 24px;
     }
 
-    /* [LOG: Mobile Portrait] fixed touch target sizes for command tokens */
-    .cmd-token {
+    /* [LOG_ID: 20260725_1530] 원래 풋터 힌트바(#cmd-hint)의 탭 타겟 확대용이었는데 셀렉터가
+       `.cmd-token` 전체를 잡아, 문장 중간에 끼워 넣는 삭제 확인 Y/N 토큰(postview/myinfo/signup의
+       "정말 삭제하시겠습니까? (Y/N)" 등, cmd-prompt 라벨 안)까지 32px 높이의 chip 박스로 부풀려
+       vertical-align:top과 겹치며 문장 기준선에서 붕 뜬 채로 작게 보였다(사용자 보고: "y n
+       글자폰트가 이상하잖어"). 힌트바에만 적용되도록 스코프를 좁힌다. */
+    #cmd-hint .cmd-token {
         padding: 4px 8px;
         margin: 2px 1px;
         min-height: 32px;

@@ -1,3 +1,12 @@
+## [2026-07-25 15:30] [버그 수정] 삭제 확인 프롬프트의 클릭 가능한 Y/N 토큰이 모바일에서 문장과 어긋난 큰 chip으로 보임
+
+**LOG_ID: 20260725_1530**
+목표: 사용자 지적 — "y n 글자폰트가 이상하잖어. 클릭은 가능한가" (공지 삭제 확인 "정말 삭제하시겠습니까? (Y/N)"의 Y/N 글자가 이상하게 보임. 클릭 가능 여부 문의).
+조사: `commandRouterPostView.js`의 `decoratePostDeleteConfirmPromptLabel()`이 Y/N을 `<span class="cmd-token cmd-clickable" data-cmd="Y">` 형태로 프롬프트 라벨(`#cmd-prompt`) 문장 중간에 끼워 넣는다. 클릭 자체는 `appEvents.js`의 문서 전체 캡처 클릭 리스너(`[data-cmd]` 셀렉터, `#cmd-hint` 범위 제한 없음)가 처리하므로 정상 동작 확인. 문제는 시각적 크기 — `style.css`의 `@media (max-width: 768px)` 블록 안 "fixed touch target sizes for command tokens" 규칙이 `.cmd-token`(스코프 없음)에 `min-height:32px; padding:4px 8px; display:inline-flex; align-items:center`를 강제하고 있었다. 이 규칙은 원래 풋터 힌트바(`#cmd-hint`)의 탭 히트박스를 키우려는 의도(20260711 계열)였는데, 셀렉터가 `.cmd-token` 전체를 잡아 문장 속에 끼워 넣는 삭제 확인 Y/N에도 그대로 적용됐다. Playwright로 `#cmd-prompt`에 실제 함수와 동일한 DOM(390px 모바일 뷰포트)을 재현해 계산된 스타일을 찍어보니 라벨 높이 15.2px인데 토큰만 32px `inline-flex` 박스(+`vertical-align:top`)로 부풀어 있어 — 문장 기준선에서 붕 뜬 채 작게 보이는 원인을 확인.
+구현: `public/style.css` — 해당 규칙 셀렉터를 `.cmd-token` → `#cmd-hint .cmd-token`으로 좁혀 풋터 힌트바에만 적용되도록 수정. 같은 `cmd-token`/`cmd-clickable` 패턴을 쓰는 myInfoRenderer.js(회원 탈퇴 확인)·signupEmailForm.js(가입 확인)의 Y/N도 동일하게 정상 크기로 돌아옴(부수 효과가 아니라 같은 버그의 공통 수정).
+검증: Playwright(390×300, `/opt/pw-browsers/chromium`)로 `#cmd-prompt`에 실제 함수와 동일한 DOM을 재현해 수정 전/후 계산된 스타일 비교 — 수정 전: 토큰 `display:inline-flex, height:32px`(라벨 15.2px와 불일치); 수정 후: 토큰 `display:inline-block, height:15.2px`(라벨과 완전히 일치). 스크린샷으로 Y/N이 문장과 같은 줄에 자연스럽게 놓이는 것도 확인. `python3`으로 `style.css` 전체 중괄호 균형 확인(461/461).
+결과: ✅ 완료.
+
 ## [2026-07-25 14:20] [버그 수정] 글쓰기 화면 Ctrl+S 저장 중 경쟁 상태로 "종료가 취소되었습니다" 오표시
 
 **LOG_ID: 20260725_1420**
