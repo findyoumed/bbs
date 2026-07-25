@@ -1,3 +1,12 @@
+## [2026-07-25 17:45] [버그 수정] 제목을 입력했는데도 "제목을 입력하십시오"가 뜨던 문제 — raw cmdInput 경로 자체를 bbs-form 단계에서 완전 차단
+
+**LOG_ID: 20260725_1745**
+목표: 20260725_1735 수정 직후 사용자 재보고 — 제목("test")·본문("5")을 다 입력한 상태에서도 여전히 하단에 "제목을 입력하십시오." / "선택 >>"가 뜸("제목입력했는데 입력하라고 나오네").
+조사: 20260725_1735은 handlePostWriteLine()의 "인식 못한 입력" 폴백(줄을 본문에 추가+옛 UI로 전환)만 막았는데, 이번엔 "인식하는" 입력이 문제였다. cmdInput에서 대문자 'S' 한 글자만 쳐도 `isSaveWriteCommand('S')`가 참이 되어 곧장 `handlers.handleWriteSubmit()`을 호출하는데, 이 경로는 (Ctrl+S/. 로 저장할 때 거치는) `doSave()`를 거치지 않는다 — `doSave()`가 `editor.title = titleEl.value.trim()`으로 화면의 실제 입력값을 동기화하는 역할을 하는데, raw cmdInput 경로는 이를 건너뛰어 `editor.title`이 여전히 초기값(빈 문자열)인 채로 `handleWriteSubmit()`의 `if (!title) { setHint('제목을 입력하십시오.'); return; }` 검사에 걸린 것. 화면엔 "test"가 뻔히 보이는데 내부 상태(editor.title)는 그걸 모르고 있었다.
+구현: `public/js/core/postWriteView.js` — `handlePostWriteLine()` 맨 앞(`activeEditor`/`state.screen` 검사 직후)으로 `if (activeEditor.stage === 'bbs-form') return true;` 가드를 옮겨, header/title/keyword/body 단계별 분기는 물론 저장(S)·취소(P/M/B) 인식 로직까지 포함해 이 함수 전체를 bbs-form 단계에서는 아예 타지 않도록 함. 박스 에디터는 저장·취소 모두 titleEl/bodyEl에 직접 물린 keydown 핸들러(Ctrl+S/Esc/마지막 줄 ".")로만 하도록 완전히 분리 — cmdInput으로 들어오는 어떤 raw 텍스트도(내용이 무엇이든) 이제 조용히 무시된다. 20260725_1735에서 뒤쪽에 추가했던 동일 가드는 이제 도달 불가능한 코드가 되어 제거.
+검증: 모듈 하네스로 재현 — cmdInput에 'S'/'P'/무작위 텍스트를 순서대로 보내 세 경우 모두 `handled:true`, `handleWriteSubmit`/`cancelPostWrite` 미호출, `screenEl.innerHTML` 완전히 불변, `hint`도 비어있음(제목 없음 오류 미발생)을 확인. `node --check`, `npm run smoke:menu-wiring` 통과.
+결과: ✅ 완료.
+
 ## [2026-07-25 17:35] [버그 수정] 글쓰기 완료(또는 편집 중 실수) 시 박스 에디터가 갑자기 옛 "제목을 입력하십시오" 화면으로 바뀌던 문제
 
 **LOG_ID: 20260725_1735**
