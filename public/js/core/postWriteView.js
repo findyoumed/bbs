@@ -145,10 +145,16 @@ export function createPostWriteView(deps) {
     `;
 
     // [LOG_ID: 20260725_1312] 게시글 수정/작성 에디터 본문 textarea 상하 높이를 남은 세로 공간 전체(100%)로 확장하여 유연하게 채움
+    // [LOG_ID: 20260725_1725] 위 min-height:14em이 부모(.min-height:4.4em, 20260725_1710)와
+    // 무관하게 독자적인 하한선으로 작동해, 모바일 키보드로 부모가 눌려도 textarea는 14em 아래로
+    // 못 줄어들고 부모 밖으로 넘쳐 다음 형제(하단 안내문구)와 겹쳐 보였다(배경이 transparent라
+    // 두 텍스트가 그대로 비쳐 보임 — 사용자 스크린샷: "다"/"라" 타이핑 줄과 "저장: Ctrl+S..." 겹침).
+    // min-height를 0으로 낮춰 flex:1/height:100%만으로 남은 공간에 맞게 자연스럽게 줄어들도록 한다
+    // (공간이 넉넉한 데스크톱/키보드 없음 상황에서는 flex:1이 이미 넉넉하게 채워주므로 체감 차이 없음).
     const textareaStyle = `
       width: 100%;
       height: 100%;
-      min-height: 14em;
+      min-height: 0;
       flex: 1;
       background: transparent;
       border: none;
@@ -185,7 +191,7 @@ export function createPostWriteView(deps) {
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
   </div>
   <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;flex-shrink:0;">
-    저장: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Esc
+    저장: Ctrl+S 또는 마지막 줄에 . 후 Enter
   </div>
 </div>`;
 
