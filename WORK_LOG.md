@@ -1,3 +1,12 @@
+## [2026-07-26 15:15] [/loop 계속] 인라인 프롬프트 세로 오버플로 수정을 공용 함수로 중앙화 — 리팩터링(로그인·비밀번호 재설정·내 정보 편집·회원가입 이메일까지 자동 커버)
+
+**LOG_ID: 20260726_1515**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 두 라운드(아케이드/오락실)에서 각 호출부에 개별적으로 `scrollIntoView`를 추가하던 중, `mountPromptRow` 사용처가 실제로는 7개 파일(`terminalHintFooter.js`(정의부), `arcadeScreens.js`, `amusementScreens.js`, `myInfoRenderer.js`, `signupScreens.js`/`signupEmailForm.js`, `authScreens.js`)에 걸쳐 있고, 그중 로그인/비밀번호 재설정/내 정보 편집/회원가입 이메일 인증까지 아직 점검하지 못한 호출부가 남아 있음을 확인.
+재검토: `myInfoRenderer.js`(내 정보 비밀번호 변경 트랜스크립트), `signupEmailForm.js`(회원가입 이메일 인증), `authScreens.js`(로그인 ID/비밀번호 2곳, 비밀번호 재설정 1곳) 전부 동일한 "footer가 아니라 스크롤 가능한 화면 본문에 인라인 마운트, scrollIntoView 없음" 패턴이었다.
+구현: 매 호출부마다 개별로 패치하는 대신, 이 모든 호출부가 공유하는 실제 정의부(`terminalHintFooter.js`의 `mountPromptRow(targetEl)`)에 `targetEl.scrollIntoView({ block: 'nearest' })`를 단 한 번 추가해 근본적으로 해결 — 이미 존재하는 6개 호출부는 물론 앞으로 추가될 호출부에도 자동 적용된다. 직전 두 라운드에서 각 호출부(`arcadeScreens.js`/`amusementScreens.js`)에 개별로 추가했던 `scrollIntoView` 중복 호출은 이번에 중앙화된 함수로 대체되어 불필요해졌으므로 함께 정리(제거)했다 — 동작은 동일하고 중복 코드만 없앤 리팩터링.
+검증: 스크램블 게임(320x568)을 5회 반복 재현 — 힌트 줄 수가 20~22로 매번 달라져도 `cmdInputBottom`이 항상 567.53(뷰포트 568 이내)으로 이전과 동일하게 안정적임을 확인(회귀 없음). 로그인 화면도 `cmdInputBottom` 159.9/568로 정상. `scripts/smoke-mobile-viewports.js`(3뷰포트×27라우트)/`smoke:full-traversal`/`smoke:renderer-ui`/`smoke:menu-wiring`/`smoke:auth-bridge` 전부 통과.
+결과: ✅ 완료 — 새 버그 수정이 아니라, 최근 두 라운드에서 발견한 버그 클래스의 수정을 여러 곳에 흩어진 패치에서 단일 공용 지점으로 중앙화한 리팩터링 라운드. 로그인/비밀번호 재설정/내 정보 편집/회원가입 이메일 인증(다단계 트랜스크립트라 세로 공간을 많이 쓸 수 있는 화면들)까지 코드 추가 없이 안전망이 자동으로 확장됐다.
+
 ## [2026-07-26 15:00] [/loop 계속] 오락실(amusement) 화면군 — 아케이드와 동일한 인라인 프롬프트 세로 오버플로 재발 방지, 27번째
 
 **LOG_ID: 20260726_1500**

@@ -215,6 +215,13 @@ export function createTerminalHintFooter(deps) {
     targetEl.appendChild(promptRowEl);
     promptRowEl.classList.add('terminal-prompt-row--inline');
     terminalFooter?.classList.add('terminal-footer--prompt-detached');
+    // [LOG_ID: 20260726_1515] 이 함수로 인라인 마운트되는 프롬프트(오락실/아케이드/로그인/
+    // 비밀번호 재설정/내 정보 편집 등 모든 호출부 공용)는 footer가 아니라 스크롤 가능한
+    // 화면 본문 안에 붙는다 — 본문이 길어지면(라운드별 힌트 목록, 여러 단계 트랜스크립트 등)
+    // 이 프롬프트가 뷰포트 밖으로 밀릴 수 있다(320x568 실측으로 발견: 스크램블 게임).
+    // 호출부마다 개별적으로 처리하는 대신 이 공용 함수 한 곳에서 처리해 향후 호출부가
+    // 추가돼도 자동으로 적용되게 한다. block:'nearest'라 이미 보이면 아무 것도 하지 않는다.
+    targetEl.scrollIntoView({ block: 'nearest' });
 
     if (cmdInput) {
       cmdInput.disabled = false;
