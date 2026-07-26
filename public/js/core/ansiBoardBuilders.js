@@ -287,6 +287,12 @@ export function createBoardAnsiBuilders(deps) {
     const rawTitle = String(post?.title || '').trim();
     const highlightTerm = String(searchParams.lt || '').trim();
     const title = highlightText(rawTitle, highlightTerm, 14, 15);
+    // [LOG_ID: 20260726_0210] 제목은 서버에서 최대 60자까지 저장되는데(BoardRepositoryShared.js
+    // MAX_TITLE_LENGTH) 글쓰기 입력창엔 클라이언트 쪽 길이 제한이 없다 — 한글 60자면 표시폭
+    // 120칸으로 모바일(44칸)은 물론 데스크톱(80칸)도 넘어 제목 줄이 화면 밖으로 조용히 잘려
+    // 보인다(오락실 게임과 동일한 버그 클래스, 소스 감사 중 발견). wrapAnsiText로 자동 줄바꿈하고
+    // 아래 페이징 계산의 headerLineCount에도 실제 줄 수를 반영한다.
+    const titleLines = wrapAnsiText(ansiColor(14) + '제목 : ' + ansiColor(15) + title + ANSI_RESET, targetCols);
 
     // [LOG_ID: 20260718_1000] 종전엔 `#305/?` 처럼 물음표가 그대로 노출됐다. state.totalCount는
     // 목록 화면이 채우는 값인데, URL로 글에 바로 들어오면(/board/plaza/305) 목록을 거치지 않아
@@ -312,6 +318,9 @@ export function createBoardAnsiBuilders(deps) {
     if (isMobile) {
       headerLineCount = 4; // 제목(1줄) + 번호/저자(1줄) + 메타데이터(1줄) + 구분선(1줄)
     }
+    // [LOG_ID: 20260726_0210] 제목이 길어 여러 줄로 접히면 그만큼 본문 가용 줄 수가 줄어야
+    // 24줄 캔버스를 넘기지 않는다 — 기본 가정(제목 1줄)에서 늘어난 만큼만 더한다.
+    headerLineCount += Math.max(0, titleLines.length - 1);
     // "13행 기준"이라는 근거 없는 상수로 가용 본문 줄 수를 9~10줄로 제한해와서, 실제 렌더
     // 캔버스(totalLines=24, buildTopHeader 자체가 이미 4줄을 차지)보다 페이지마다 6~8줄이
     // 그냥 빈 줄로 낭비됐다(사용자 보고: "글이 아래에 여백이 많아"). buildTopHeader가 실제로
@@ -347,7 +356,7 @@ export function createBoardAnsiBuilders(deps) {
     // 해소되고, 목록(125행)과 동일한 config 방식이라 목록↔글읽기 전환 시 상단바가 흔들리지 않는다.
     const parts = [buildTopHeader({ leftLabel: boardCode || 'READ', centerLabel: boardName }, pageLabel, targetCols)];
 
-    parts.push(ansiColor(14) + '제목 : ' + ansiColor(15) + title + ANSI_RESET);
+    parts.push(...titleLines);
 
     if (isMobile) {
       parts.push(ansiColor(8) + metaNumber + ' ' + author + (authorId ? `(${authorId})` : '') + ANSI_RESET);
