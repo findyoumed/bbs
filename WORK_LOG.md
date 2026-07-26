@@ -1,3 +1,15 @@
+## [2026-07-27 07:00] [/loop 계속] 남은 미등록 화면 최종 점검 — 화이트리스트 감사 마무리, 새 버그 없음
+
+**LOG_ID: 20260727_0700**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 지난 3라운드 내내 이어온 "min-height:24px 화이트리스트 누락" 각도를 마무리하기 위해 남은 미등록 `state.screen`들의 실제 빌더 코드를 하나씩 읽어 위험 여부 확인(이번엔 인위적 줄 주입 테스트 대신 실제 콘텐츠 생성 로직을 근거로 판단).
+
+확인:
+- `retro-list`(추억의 접속화면 목록) — `buildRetroArtListAnsi`가 `DOOR_ART.map`으로 전부 렌더하지만 `DOOR_ART.length`가 8개뿐인 고정 큐레이션 목록이라 안전.
+- `mbti-test`(문항별 진행 화면)/`bio-input`/`blood-input`/`compat-input`/`compat-input2`/`fortune-input`/`tojeong-input`/`conf-agenda-new`/`conf-room-create`/`vote-create`/`pt-prepare` — 전부 짧은 고정 안내문구+입력 프롬프트 화면이라 가변 길이 위험이 없음(mbti-test는 문항당 옵션 2개만 wrapAnsiText하는데 이미 짧은 자연어 문장이라 여유 있음).
+- `system-log`(로그 슬라이스 이미 `-10/-18` bound), `system-diagnostics`(고정 필드+저장소 헬스 객체, 이미 이전 라운드에 검토 완료), `activity-summary`(최대 5건 고정), `member-search`/`profile`(고정 레이아웃) — 전부 이미 검토했거나 재확인 결과 안전.
+
+결과: ❌ 새 버그 없음(감사 마무리) — 지난 3라운드(20260727_0545/0630/0645)에 걸쳐 이어온 min-height:24px 화이트리스트 감사를 이걸로 완결한다고 판단한다. 총 21개 화면(history/chat-lobby/memo-list/attachment-list/active-users/conf-rooms/conf-agendas/pt-view/post-list/vote-list/weather-menu/menu-index/main/compat-result/blood-result/mbti-detail/tojeong-result/retro-view/weather-view/fortune-result/bio-result)을 이 세 라운드에 걸쳐 화이트리스트에 추가했다. 다음 라운드는 완전히 새로운 20번째 각도를 찾아야 한다.
+
 ## [2026-07-27 06:45] [/loop 계속] 오락실/철학관 결과 화면 8개 + 날씨 상세 — 같은 min-height:24px 화이트리스트 누락 발견 및 수정
 
 **LOG_ID: 20260727_0645**
