@@ -2713,7 +2713,12 @@ body[data-print-view="true"] .ansi-screen {
     /* [LOG_ID: 20260720_2010] 오목(15x15 반상)도 같은 증상 — 모바일에서 우측 패널을 반상 아래로
        내리면서(가로 잘림 수정) 총 줄 수가 29줄까지 늘어나 기본 23~24줄 예산을 넘는다.
        뉴스/도움말과 동일한 완화를 확장한다(사용자 지적: "omok 글씨가 잘리는데"). */
-    body[data-screen="omok-play"] #terminal-screen {
+    body[data-screen="omok-play"] #terminal-screen,
+    /* [LOG_ID: 20260726_0630] 대화방(CHAT)도 같은 증상 — 메시지 하나가 서버 허용 최대 2000자까지
+       가능한데 기존엔 fitCell 한 줄 절삭이라 안 보이던 게, wrapAnsiText로 전체 내용을 보존하게
+       고치면서(chatAnsiBuilders.js) 긴 메시지가 여러 줄을 차지해 고정 16줄 예산을 넘을 수 있다.
+       뉴스/도움말/오목과 동일한 완화를 확장한다. */
+    body[data-screen="chat-room"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;

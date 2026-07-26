@@ -8,7 +8,8 @@ export function createChatAnsiBuilders(deps) {
     buildTopHeader,
     displayWidth,
     fitCell,
-    truncateDisplayText
+    truncateDisplayText,
+    wrapAnsiText
   } = createAnsiBuilderUtils(deps);
 
   // [LOG_ID: 20260713_1000] 대기실 상황판(ST) 원전 레이아웃(그림 6.1) 재현
@@ -174,6 +175,11 @@ export function createChatAnsiBuilders(deps) {
       return true;
     });
 
+    // [LOG_ID: 20260726_0630] 대화 메시지는 서버에서 최대 2000자까지 저장되는데(chatServiceRoutes.js
+    // `content.length > 2000` 검증) fitCell 한 줄 절삭이라 조금만 길어도 나머지가 화면에서 아예
+    // 사라졌다(게시글/안건/쪽지/프로필과 같은 버그 클래스지만, fitCell이 문자열 자체를 잘라버려
+    // 스크롤로도 복구 불가능하다는 점에서 더 심각했다). wrapAnsiText로 여러 줄로 접어 전체 내용을
+    // 보존한다 — 반환값을 배열로 바꿔 메시지 하나가 여러 줄을 차지할 수 있게 한다.
     function msgLine(message) {
       const who = String(message.nickName || message.userId || '?');
       const senderId = String(message.userId || '').trim().toLowerCase();
@@ -185,7 +191,7 @@ export function createChatAnsiBuilders(deps) {
         const idLabel = senderId ? `(${message.userId})` : '';
         const verb = message.eventType === 'leave' ? '퇴장' : '입장';
         const line = `■■ ${who}${idLabel} 님이 ${verb}하였습니다. ■■`;
-        return ansiColor(14) + fitCell(line, targetCols - 2) + ANSI_RESET;
+        return [ansiColor(14) + fitCell(line, targetCols - 2) + ANSI_RESET];
       }
 
       let text = String(message.content || message.message || '');
@@ -197,13 +203,16 @@ export function createChatAnsiBuilders(deps) {
         const actualText = whisperMatch[2].trim();
         const isFromMe = senderId === myIdNormalized;
 
-        const prefix = isFromMe 
-          ? `[귓속말 -> ${recipient}] ` 
+        const prefix = isFromMe
+          ? `[귓속말 -> ${recipient}] `
           : `[귓속말][${who}] `;
-          
+
         const maxText = (targetCols - 2) - displayWidth(prefix);
+        const indent = ' '.repeat(displayWidth(prefix));
         // 귓속말은 Hitel 원전 감성을 살려 핑크색(13)으로 표시
-        return ansiColor(13) + prefix + ansiColor(15) + fitCell(actualText, maxText) + ANSI_RESET;
+        return wrapAnsiText(actualText, maxText).map((line, i) => (
+          ansiColor(13) + (i === 0 ? prefix : indent) + ansiColor(15) + line + ANSI_RESET
+        ));
       }
 
       // [LOG_ID: 20260722_2700] 하이텔 책(그림 6.2 "대화실 참여") 실측 대조 — 원전은
@@ -215,11 +224,14 @@ export function createChatAnsiBuilders(deps) {
       const labelWidth = isMobile ? 12 : 18;
       const prefix = fitCell(label, labelWidth) + '  ';
       const maxText = (targetCols - 2) - displayWidth(prefix);
+      const indent = ' '.repeat(displayWidth(prefix));
 
       const isMe = who === userNick;
       const color = isMe ? ansiColor(10) : ansiColor(11);
 
-      return color + prefix + ansiColor(15) + fitCell(text, maxText) + ANSI_RESET;
+      return wrapAnsiText(text, maxText).map((line, i) => (
+        color + (i === 0 ? prefix : indent) + ansiColor(15) + line + ANSI_RESET
+      ));
     }
 
     // [LOG: 20260707_1424] 대화방도 4줄 상단바 헤더 필수 — 누락 시 첫 메시지가 로고로 오인되고
@@ -227,10 +239,13 @@ export function createChatAnsiBuilders(deps) {
     const header = buildTopHeader({ leftLabel: 'CHAT', centerLabel: roomName }, '', targetCols);
     // [LOG: 20260707_1424] 상단바 4줄이 본문 앞에 추가되므로 메시지 슬롯은 16줄이 화면 예산(80x24)에 맞는다.
     // (18줄이면 하단 상태줄이 잘리고 세로 스크롤이 생긴다)
+    // [LOG_ID: 20260726_0630] 메시지 하나가 wrapAnsiText로 여러 줄을 차지할 수 있으므로
+    // 더는 "메시지 수 = 줄 수"가 아니다 — 16줄 예산은 그대로 유지하되 넘치면 아래 CSS
+    // 스크롤 완화(body[data-screen="chat-room"] #terminal-screen)가 처리한다.
     const parts = [];
     const shown = filteredMessages.slice(-16);
     for (const message of shown) {
-      parts.push(msgLine(message));
+      parts.push(...msgLine(message));
     }
 
     while (parts.length < 16) {
