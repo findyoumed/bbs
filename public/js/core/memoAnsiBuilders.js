@@ -118,6 +118,14 @@ export function createMemoAnsiBuilders(deps) {
       parts.push(ansiColor(8) + emptyText + ANSI_RESET);
     } else {
       memos.slice(0, 16).forEach((memo, index) => parts.push(memoLine(memo, index)));
+      // [LOG_ID: 20260727_0445] 쪽지함은 `/api/memos?box=...`가 페이지 파라미터 없이 전체를
+      // 받아오는데(memoScreens.js) 이 화면은 16통 넘으면 안내 없이 잘랐다 — 헤더의 "(총 N통)"은
+      // 진짜 총량을 보여주면서 정작 목록엔 그 차이를 설명하는 안내가 없었다(회의실/안건 목록과
+      // 같은 버그 클래스). 이 함수는 끝에서 24줄까지 빈 줄만 채우고 잘라내지 않으므로(패딩 전용)
+      // 안내 줄 하나 추가는 항상 안전하다.
+      if (memos.length > 16) {
+        parts.push(ansiColor(8) + `   ... 외 ${memos.length - 16}통 더 있습니다.` + ANSI_RESET);
+      }
     }
 
     // buildTopHeader의 4줄은 renderAnsiScreenWithTopbar가 본문에서 떼어내므로,
