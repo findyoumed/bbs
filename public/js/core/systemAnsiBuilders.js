@@ -145,6 +145,19 @@ export function createSystemAnsiBuilders(deps) {
     return parts.join('\n');
   }
 
+  // [LOG_ID: 20260726_0230] W(WHO) 화면의 "위치" 칸은 API 경로(user.path, 예: "/api/boards/notice")를
+  // 그대로 fitCell로 자르는데, 컬럼 폭(모바일 15/데스크톱 24)보다 흔히 더 긴 경로가 많아
+  // "/api/boards/not"처럼 잘려서 마치 다른(존재하지 않는) 경로처럼 오인되기 쉬웠다(실측 확인 —
+  // 실제 값은 "/api/boards/notice"). 관리자 진단 화면이라 정확한 값 파악이 중요하므로, 잘렸을 땐
+  // 말줄임표를 붙여 "이 값은 잘린 것"임을 명시한다.
+  function fitCellEllipsis(text, maxWidth) {
+    const source = String(text || '');
+    if (displayWidth(source) <= maxWidth) {
+      return fitCell(source, maxWidth);
+    }
+    return fitCell(`${truncateDisplayText(source, Math.max(1, maxWidth - 1))}…`, maxWidth);
+  }
+
   function buildActiveUsersAnsi(users) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -170,13 +183,13 @@ export function createSystemAnsiBuilders(deps) {
         if (isMobile) {
           const id = fitCell(user.userId || 'guest', 12);
           const nick = fitCell(user.nickName || '손님', 12);
-          const path = fitCell(user.path || '/', 15);
+          const path = fitCellEllipsis(user.path || '/', 15);
           const color = user.isAdmin ? 13 : (user.isGuest ? 8 : 15);
           parts.push(`${buddyPrefix}${ansiColor(color)}${id} ${nick} ${ansiColor(14)}${path}${ANSI_RESET}`);
         } else {
           const id = fitCell(user.userId || 'guest', 15);
           const nick = fitCell(user.nickName || '손님', 16);
-          const path = fitCell(user.path || '/', 24);
+          const path = fitCellEllipsis(user.path || '/', 24);
           const time = (user.lastSeenAt || '').split('T')[1]?.split('.')[0] || '--:--:--';
           const color = user.isAdmin ? 13 : (user.isGuest ? 8 : 15);
           parts.push(`${buddyPrefix}${ansiColor(color)}${id} ${nick} ${ansiColor(14)}${path} ${ansiColor(7)}${time}${ANSI_RESET}`);
@@ -294,11 +307,17 @@ export function createSystemAnsiBuilders(deps) {
     const targetCols = isMobile ? 44 : 80;
 
     const parts = [
-      buildTopHeader({ leftLabel: 'LOG', centerLabel: '시스템 로그 (SYSTEM DIAGNOSTIC LOGS)' }, `(최근 ${logs.length}건)`, targetCols)
+      // [LOG_ID: 20260726_0230] 원래 문구("SYSTEM DIAGNOSTIC LOGS")가 표시폭 36칸으로,
+      // 우측 페이지 라벨("(최근 N건)")까지 더해지면 모바일(44칸) 상단바 예산을 넘겨
+      // 가운데 제목이 두 줄로 줄바꿈돼 잘려 보였다(다른 화면들과 실측 비교로 확인 —
+      // ACT/SYSINFO 등 페이지 라벨이 없는 화면은 폭 여유가 더 있어 문제없었음). SYSINFO
+      // 화면처럼 명령어 이름을 그대로 괄호에 쓰는 방식으로 줄인다.
+      buildTopHeader({ leftLabel: 'LOG', centerLabel: '시스템 로그 (SYSLOG)' }, `(최근 ${logs.length}건)`, targetCols)
     ];
 
     if (isMobile) {
-      parts.push(`${ansiColor(11)}  시간   레벨 메시재${ANSI_RESET}`);
+      // [LOG_ID: 20260726_0230] "메시재"는 "메시지"의 오타 — 모바일 육안 점검 중 발견.
+      parts.push(`${ansiColor(11)}  시간   레벨 메시지${ANSI_RESET}`);
     } else {
       parts.push(`${ansiColor(11)}  시간       레벨   메시지${ANSI_RESET}`);
     }
@@ -317,8 +336,11 @@ export function createSystemAnsiBuilders(deps) {
         else if (l.level === 'CMD') levelColor = 10;
         else if (l.level === 'INFO') levelColor = 14;
 
+        // [LOG_ID: 20260726_0230] W(WHO) 화면과 동일한 이유로 — 로그 메시지가 칸 폭보다 길면
+        // 말줄임표 없이 그냥 잘려 다른 메시지처럼 오인되기 쉬웠다(예: "Command: SYSLOG (norm:
+        // SYSLO" — 원문은 "...SYSLOG)"). 잘렸을 땐 말줄임표를 붙인다.
         const maxMsg = targetCols - (isMobile ? 16 : 20);
-        const msg = truncateDisplayText(l.message, maxMsg);
+        const msg = fitCellEllipsis(l.message, maxMsg).replace(/\s+$/g, '');
         parts.push(`  ${ansiColor(8)}${time} ${ansiColor(levelColor)}${level} ${ansiColor(15)}${msg}${ANSI_RESET}`);
       });
     }
