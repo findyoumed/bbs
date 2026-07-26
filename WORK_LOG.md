@@ -1,3 +1,12 @@
+## [2026-07-26 13:45] [/loop 계속] 건의하기(TOSYSOP) 트랜스크립트 — 서버 길이 제한조차 없는 인라인 입력창 오버플로 수정, 24번째
+
+**LOG_ID: 20260726_1345**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드(쪽지 보내기)에서 발견한 "raw-HTML 트랜스크립트 화면이 `.ansi-line`의 전역 `white-space:pre`를 그대로 써서 자유 텍스트가 안 잘림" 패턴이 다른 화면에도 있는지, `renderRawHtmlScreenWithTopbar` 사용처(postWriteView/memoScreens/contactSysopScreen/systemScreens) 나머지를 마저 점검 — `contactSysopScreen.js`(건의하기, GUIDE 메뉴의 실제 살아있는 기능)에서 같은 클래스의 버그를 발견.
+발견: 이 화면은 두 겹으로 문제였다. (1) 확정된 트랜스크립트 줄(제목/본문 각 `*N:` 줄, "--- 보낼 내용 미리보기 ---" 블록)은 쪽지 보내기와 동일하게 `.ansi-line`(전역 `white-space:pre`)에 줄바꿈 처리가 전혀 없었다. (2) 더 심각하게, 제목/본문을 입력받는 인라인 `<input>`(`.inline-tosysop-input`)이 `maxlength` 속성 자체가 없고(쪽지 보내기는 최소한 공용 입력창의 `maxlength=200`이 있었다), 서버 API(`contactRoutes.js`)도 길이 검증이 전혀 없어 **입력 길이에 끝이 없다.** 게다가 JS(`adjustWidth`)가 타이핑되는 글자수만큼 이 입력창의 `width`를 실시간으로 계속 늘리는데 `max-width`가 없어, 평범한 문장을 타이핑하는 도중(제출 전부터) 화면이 가로로 계속 밀려나는, 쪽지 보내기보다 체감이 더 나쁜 형태의 버그였다.
+구현: (1) `body[data-screen="contact-sysop"] .ansi-line`에 쪽지 보내기와 동일한 `pre-wrap` 스코프 규칙 추가 — 확정된 텍스트 줄의 오버플로 해소. (2) `.inline-tosysop-input`에 `max-width:100%; box-sizing:border-box;` 추가 — JS가 계속 늘리는 `width:NNch` 인라인 스타일이 뷰포트 폭에서 캡되고, 그 이상의 글자는 입력창 자체의 브라우저 기본 가로 스크롤로 흡수되어 페이지 전체가 밀려나지 않는다.
+검증: 로그인 필요 화면이라 DOM에 동일 CSS 클래스로 정적 텍스트 줄과 (JS `adjustWidth` 동작을 그대로 흉내낸) 인라인 입력창을 직접 주입해 확인 — 수정 후 정적 줄 `scrollWidth`/`clientWidth` 390/390(오버플로 0), 인라인 입력창은 `style.width`가 "132ch"로 여전히 크게 설정되지만 `computed maxWidth`가 "100%"로 캡되어 실제 렌더 폭(`offsetWidth`)이 390으로 정확히 제한됨을 확인. 대조군(스코프 없는 기본 상태)은 정적 줄 1005/390, 입력창 실제 폭 990px까지 벌어짐을 확인해 수정 전 실제로 이만큼 깨져 있었음을 검증. `npm run smoke:full-traversal`/`smoke:renderer-ui`/`scripts/smoke-mobile-viewports.js`(27×2) 전부 통과.
+결과: ✅ 완료 — 이번 세션 24번째 버그. 서버·클라이언트 어디에도 길이 제한이 없어 평범한 건의 내용을 타이핑하는 것만으로 제출 전부터 화면이 깨지는, 발견 난이도와 실사용 영향도 모두 높은 사례였다.
+
 ## [2026-07-26 13:30] [/loop 계속] 쪽지 보내기(MEMO WRITE) 트랜스크립트 줄바꿈 누락 — 평범한 문장 길이에서도 재현되는 오버플로 수정, 23번째
 
 **LOG_ID: 20260726_1330**

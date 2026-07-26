@@ -1333,6 +1333,16 @@ body[data-screen="memo-write"] .ansi-line {
     overflow-wrap: break-word;
 }
 
+/* [LOG_ID: 20260726_1345] 건의하기(TOSYSOP)도 같은 증상 — 제목/본문 각 줄이 확정되어 순수
+   텍스트로 굳으면(입력창이 아닌 상태) 위 쪽지 보내기와 동일하게 전역 white-space:pre 때문에
+   줄바꿈되지 않고 잘렸다("--- 보낼 내용 미리보기 ---" 단계에서 특히 잘 보임). 인라인 입력창
+   자체의 오버플로는 위 .inline-tosysop-input의 max-width로 별도 처리했다. */
+body[data-screen="contact-sysop"] .ansi-line {
+    white-space: pre-wrap;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+}
+
 .ansi-line .wc {
     display: inline-block;
     width: 2ch;
@@ -3230,6 +3240,14 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
        ch폭으로 덮어쓰기 전까지 아주 짧게 화면에 스치며, 그 사이 클릭하면 글자 뒤가 아닌
        입력창 우측 빈 공간을 클릭하게 된다 — JS 최소값(5ch)과 맞춰 그 틈을 없앤다. */
     width: 5ch;
+    /* [LOG_ID: 20260726_1345] adjustWidth()가 타이핑 글자수만큼 width를 계속 늘리는데(서버
+       API·이 입력창 모두 길이 제한이 없다) 이 요소는 max-width가 없어 뷰포트보다 넓어질 수
+       있었다 — 부모 .ansi-line(white-space:pre)과 맞물려 타이핑 중 화면이 가로로 계속
+       밀려나며 잘렸다(제목/본문 한 줄 모두 재현, 쪽지 보내기와 같은 버그 클래스지만 서버
+       길이 제한조차 없어 더 쉽게 재현). max-width:100%로 뷰포트 폭에서 캡 — 그 이상은
+       입력창 자체의 기본 가로 스크롤(브라우저 내장 동작)로 흡수된다. */
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
