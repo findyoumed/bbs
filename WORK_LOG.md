@@ -1,3 +1,12 @@
+## [2026-07-26 04:45] [/loop 계속] 비밀번호 찾기 화면 — 입력값 echo 줄이 CSS 레벨에서 안 잘리던 버그(6번째, 이번엔 ANSI 그리드가 아니라 flex 레이아웃 원인) 수정
+
+**LOG_ID: 20260726_0410**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 아직 점검하지 않았던 비밀번호 찾기(`/log/password`) 흐름 점검. 오류 메시지가 사용자 입력을 그대로 되돌려 보여주는 화면은 이 세션 초반(SSTI 오탐 발견)에서도 그랬듯 폭 관련 결함이 숨어 있기 좋은 자리라 판단해 일부러 아주 긴 문자열을 입력해 재현 시도.
+발견: 120자짜리 입력값을 넣어보니 echo 줄이 뷰포트 밖으로 그대로 잘렸다(`document.documentElement.scrollWidth`는 안 늘어남 — 이 세션에서 여러 번 확인된 "조상 요소의 overflow-x:hidden" 패턴과 동일 증상). 다만 이번엔 원인이 지금까지와 달랐다 — 게시글 제목/안건/쪽지/프로필/생체리듬은 전부 ANSI 고정폭 텍스트(`fitCell`/직접 보간) 문제였는데, 이 화면(`authScreens.js`의 `renderPasswordResetTranscript`)은 애초에 진짜 HTML `<div class="entry-password-line">`를 쓰고 `white-space`도 기본값(normal)이라 겉보기엔 안전해 보였다. 실제 원인은 CSS였다 — 이 div의 부모(`.entry-password-transcript`)가 `display:flex; flex-direction:column`인데, flex 자식의 기본 `min-width`는 `auto`(내용 크기 기준)라 좁은 화면에서 줄어들지 못했고, white-space:normal이어도 컨테이너 자체가 줄어들지 않으니 줄바꿈이 발동할 공간이 없어 그대로 조상의 overflow-x:hidden에 잘렸다.
+구현: `.entry-password-line`/`.entry-password-prompt-row`에 `min-width: 0`(줄어들 수 있게 허용 — 상단바 grid 사례(20260726_0310)와 같은 처방이지만 이번엔 flex-column이라 형제 요소와 폭을 다투지 않아 그때 겪었던 겹침 회귀 위험이 없다)과 `word-break: break-all`(공백 없는 긴 문자열도 줄바꿈되도록)을 추가.
+검증: 120자 입력 재현 테스트 — 수정 전 한 줄로 잘림 → 수정 후 3줄로 정확히 줄바꿈. 기존 정상 길이 입력(초기 화면, 짧은 안내문)은 스크린샷으로 무회귀 확인. `npm run smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 통과.
+결과: ✅ 완료 — 같은 "긴 자유 텍스트가 잘림" 증상의 6번째 사례지만, 처음으로 ANSI 그리드가 아니라 순수 CSS flex 레이아웃이 원인인 경우를 발견 — 이 버그 클래스가 렌더링 방식(ANSI 고정폭 vs HTML)을 가리지 않고 나타날 수 있음을 확인.
+
 ## [2026-07-26 04:25] [/loop 계속] 생체 리듬(오락실) 데스크톱 화면 — 긴 닉네임 줄이 80칸도 넘던 버그(5번째, 같은 원인의 다른 파일) 수정
 
 **LOG_ID: 20260726_0400**

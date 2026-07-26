@@ -437,6 +437,14 @@
     font-size: inherit;
     line-height: inherit;
     min-height: 1.65em;
+    /* [LOG_ID: 20260726_0410] flex 자식의 기본 min-width는 auto(=내용 크기)라, 이메일/아이디
+       입력값을 그대로 echo하는 이 줄이 좁은 화면에서 줄어들지 못하고 조상 요소의
+       overflow-x:hidden(모바일 미디어쿼리)에 잘려 보였다(실측: 120자 입력 시 뷰포트 밖으로
+       그대로 잘림, white-space는 기본값 normal인데도 줄바꿈이 전혀 안 됨 — 컨테이너가 줄어들지
+       못해 줄바꿈 자체가 발동하지 않았기 때문). min-width:0으로 줄어들 수 있게 해 정상적으로
+       줄바꿈되도록 한다. */
+    min-width: 0;
+    word-break: break-all;
 }
 
 .entry-screen--password-reset .entry-password-prompt-row {
