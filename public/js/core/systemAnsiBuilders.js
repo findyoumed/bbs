@@ -13,7 +13,8 @@ export function createSystemAnsiBuilders(deps) {
     ansiHLine,
     buildTopHeader,
     formatLongDate,
-    truncateDisplayText
+    truncateDisplayText,
+    wrapAnsiText
   } = createAnsiBuilderUtils({ displayWidth, isWideChar });
 
   // [LOG_ID: 20260708_1030] 사용자 프로필(WHO/PF) 화면. 기존엔 .bbs-box 원시 HTML로만 그려져
@@ -42,10 +43,24 @@ export function createSystemAnsiBuilders(deps) {
     }
 
     const row = (label, value) => `  ${ansiColor(11)}${fitCell(label, labelWidth)}${ANSI_RESET}: ${ansiColor(15)}${value}${ANSI_RESET}`;
+    // [LOG_ID: 20260726_0350] 닉네임은 한글 20자(표시폭 40칸)까지 허용되는데(authRoutes.js
+    // maxLength:20) 이 row()는 값에 폭 제한이 전혀 없었다 — 게시글/안건/쪽지 제목처럼 자르기라도
+    // 했던 앞선 3건과 달리 아예 아무 처리가 없어 뷰포트 밖으로 그대로 흘러넘쳤다(실측 재현: 20자
+    // 닉네임으로 가입 후 프로필 조회 — documentElement.scrollWidth는 안 늘어나는데 화면 오른쪽
+    // 끝을 넘어 잘려 보임, 조상 요소의 overflow-x:hidden 때문에 자동 오버플로 검사로는 못 잡는
+    // 종류의 결함). 아이디는 영문/숫자 20자 제한(표시폭 20칸)이라 안전하지만 닉네임만 별도로
+    // wrapAnsiText 처리한다.
+    const rowWrapped = (label, value) => {
+      const labelText = fitCell(label, labelWidth);
+      const indent = ' '.repeat(labelWidth + 2);
+      return wrapAnsiText(String(value), targetCols - labelWidth - 2).map((line, i) => (
+        `  ${ansiColor(11)}${i === 0 ? labelText : indent}${ANSI_RESET}${i === 0 ? ': ' : '  '}${ansiColor(15)}${line}${ANSI_RESET}`
+      )).join('\n');
+    };
 
     parts.push('');
     parts.push(row('아이디', member.userId || '정보 없음'));
-    parts.push(row('닉네임', member.nickName || '정보 없음'));
+    parts.push(rowWrapped('닉네임', member.nickName || '정보 없음'));
     // [LOG_ID: 20260713_0930] 특별회원(레벨 2) 라벨 반영 — 서버 BoardRepositoryAccess.LEVEL_NAME_MAP과 동일
     parts.push(row('회원등급', `${member.level || 1} (${member.isAdmin ? '운영자' : (Number(member.level) >= 2 ? '특별회원' : '일반회원')})`));
     parts.push(row('가입일', formatLongDate(member.registrationDateTime) || '정보 없음'));
