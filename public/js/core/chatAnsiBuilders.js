@@ -78,7 +78,19 @@ export function createChatAnsiBuilders(deps) {
     if (!users.length) {
       parts.push(ansiColor(8) + '   접속 중인 사용자가 없습니다.' + ANSI_RESET);
     } else {
-      users.slice(0, maxUsersToShow).forEach((user, index) => parts.push(userLine(user, index)));
+      // [LOG_ID: 20260727_0400] 바로 아래 방 목록 섹션은 "외 N명"으로 초과분을 안내하는데
+      // (참여자 미리보기 등) 이 대기실 접속자 목록만 안내 없이 6명(모바일 4명) 넘으면 조용히
+      // 잘렸다 — 같은 화면 안에서도 짝이 안 맞던 누락(WHO 접속자 목록과 같은 버그 클래스).
+      // 안내 줄을 그냥 추가만 하면 24줄 고정 예산을 넘겨 아래 방 목록의 안내 줄이 되레
+      // 밀려날 수 있으므로(직접 측정으로 발견), 넘칠 때는 사용자 한 명을 안내 줄로 교체해
+      // 이 섹션이 쓰는 줄 수 자체는 그대로 유지한다.
+      const visibleUsers = users.length > maxUsersToShow
+        ? users.slice(0, maxUsersToShow - 1)
+        : users;
+      visibleUsers.forEach((user, index) => parts.push(userLine(user, index)));
+      if (users.length > maxUsersToShow) {
+        parts.push(ansiColor(8) + `   ... 외 ${users.length - visibleUsers.length}명 더 있습니다.` + ANSI_RESET);
+      }
     }
 
     parts.push(ansiHLine(targetCols, 8));
@@ -112,7 +124,10 @@ export function createChatAnsiBuilders(deps) {
     if (!rooms || !rooms.length) {
       parts.push(ansiColor(8) + '   개설된 대화방이 없습니다.' + ANSI_RESET);
     } else {
-      rooms.slice(0, maxRoomsToShow).forEach((room) => {
+      // [LOG_ID: 20260727_0400] 위 접속자 목록과 동일한 이유로, 넘칠 때는 방 하나를 안내 줄로
+      // 교체한다(방 하나가 최소 1줄이므로 안내 줄 한 줄은 항상 확보됨).
+      const visibleRoomCount = rooms.length > maxRoomsToShow ? maxRoomsToShow - 1 : maxRoomsToShow;
+      rooms.slice(0, visibleRoomCount).forEach((room) => {
         const ownerNick = String(room.ownerName || room.ownerNick || room.owner || 'guest');
         const pubStr = room.visibility === '비밀방' ? '비공개' : '공개';
         const occStr = `${room.userCount}/${room.maxUser}`;
@@ -136,6 +151,12 @@ export function createChatAnsiBuilders(deps) {
           parts.push(ansiColor(8) + fitCell(`   ${previewText}`, targetCols - 1) + ANSI_RESET);
         }
       });
+      // [LOG_ID: 20260727_0400] 방 안 참여자 미리보기는 "외 N명"으로 안내하면서 정작 방 목록
+      // 자체는 maxRoomsToShow(개설방 최대 100개 중 4개/모바일 3개만)를 넘으면 안내 없이 잘렸다 —
+      // 위 접속자 목록과 같은 누락.
+      if (rooms.length > maxRoomsToShow) {
+        parts.push(ansiColor(8) + `   ... 외 ${rooms.length - visibleRoomCount}개 방 더 있습니다.` + ANSI_RESET);
+      }
     }
 
     // 예산(24줄)에 맞게 패딩 줄 추가
