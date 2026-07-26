@@ -128,14 +128,28 @@ export function createVoteAnsiBuilders(deps) {
         color = ansiColor(10); // 본인이 참여한 항목은 초록색 하이라이트
       }
 
+      // [LOG_ID: 20260726_0700] 선택지 문구는 서버(VoteRepositoryMemory/Supabase)에서 길이 제한이
+      // 전혀 없는데 fitCell 한 줄 절삭이라 조금만 길어도 그냥 잘렸다(대화 메시지와 같은 버그
+      // 클래스). wrapAnsiText로 접되, 짧아서 원래도 한 줄에 들어가는 경우(대다수)는 기존과
+      // 완전히 동일한 한 줄 레이아웃을 유지하고, 넘칠 때만 들여쓴 줄을 추가한다.
+      const prefix = ` [${i + 1}] `;
+      const prefixWidth = displayWidth(prefix);
+      const indent = ' '.repeat(prefixWidth);
+
       if (isMobile) {
-        const optionLabel = fitCell(` [${i + 1}] ${option}`, targetCols - 1, 'left');
-        content += `${color}${optionLabel}${ANSI_RESET}\n`;
+        const maxLabel = (targetCols - 1) - prefixWidth;
+        wrapAnsiText(option, maxLabel).forEach((line, li) => {
+          content += `${color}${li === 0 ? prefix : indent}${line}${ANSI_RESET}\n`;
+        });
         content += `${color}   [${bar}] ${pct.toString().padStart(3, ' ')}% (${count}표)${ANSI_RESET}\n`;
       } else {
-        const optionLabel = ` [${i + 1}] ${option}`;
-        const optionText = fitCell(optionLabel, 26, 'left');
-        content += `${color}${optionText} [${bar}] ${pct.toString().padStart(3, ' ')}% (${count}표)${ANSI_RESET}\n`;
+        const maxLabel = 26 - prefixWidth;
+        const lines = wrapAnsiText(option, maxLabel);
+        const firstLineText = fitCell(prefix + lines[0], 26, 'left');
+        content += `${color}${firstLineText} [${bar}] ${pct.toString().padStart(3, ' ')}% (${count}표)${ANSI_RESET}\n`;
+        for (let li = 1; li < lines.length; li++) {
+          content += `${color}${fitCell(indent + lines[li], 26, 'left')}${ANSI_RESET}\n`;
+        }
       }
     }
 

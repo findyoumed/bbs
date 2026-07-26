@@ -2718,7 +2718,12 @@ body[data-print-view="true"] .ansi-screen {
        가능한데 기존엔 fitCell 한 줄 절삭이라 안 보이던 게, wrapAnsiText로 전체 내용을 보존하게
        고치면서(chatAnsiBuilders.js) 긴 메시지가 여러 줄을 차지해 고정 16줄 예산을 넘을 수 있다.
        뉴스/도움말/오목과 동일한 완화를 확장한다. */
-    body[data-screen="chat-room"] #terminal-screen {
+    body[data-screen="chat-room"] #terminal-screen,
+    /* [LOG_ID: 20260726_0700] 설문 상세(AGORA vote-detail)도 같은 증상 — 선택지 문구 길이뿐
+       아니라 개수 자체도 서버(VoteRepositoryMemory/Supabase)에 상한이 없어(최소 2개만 강제)
+       선택지가 많거나 길면 고정 줄 수 예산을 얼마든지 넘을 수 있다. 선택지 문구 절삭 버그를
+       wrapAnsiText로 고치면서(voteAnsiBuilders.js) 이 여지가 더 커져 동일한 완화를 확장한다. */
+    body[data-screen="vote-detail"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
