@@ -1,9 +1,37 @@
 import { UI_TEXT } from './i18n.js';
+import { isWideChar } from './ansiRenderUtils.js';
 
 /**
  * commandRouterPostView.js
  * [LOG: 20260426_2125] Evolution Mode: Integrated i18n and replaced unicode escapes.
  */
+
+// [LOG_ID: 20260726_1230] 파일명(한글 포함, 광폭 문자)을 .length(UTF-16 코드 유닛)로 잘라
+// "22자 이하"로 판단하면 한글이 대부분인 파일명은 표시폭이 그 2배까지 나와 44칸 예산을
+// 넘길 수 있다 — displayWidth 기반으로 정확히 자른다.
+function displayWidth(text) {
+  let width = 0;
+  for (const ch of String(text || '')) {
+    width += isWideChar(ch) ? 2 : 1;
+  }
+  return width;
+}
+
+function truncateWithEllipsis(text, maxWidth) {
+  const source = String(text || '');
+  if (displayWidth(source) <= maxWidth) {
+    return source;
+  }
+  let result = '';
+  let width = 0;
+  for (const ch of source) {
+    const charWidth = isWideChar(ch) ? 2 : 1;
+    if (width + charWidth > maxWidth - 1) break;
+    result += ch;
+    width += charWidth;
+  }
+  return `${result}…`;
+}
 
 export function createPostViewCommandHandler(deps) {
   const {
@@ -141,11 +169,30 @@ export function createPostViewCommandHandler(deps) {
           // 폴백되며 무지개색 노이즈로 깨졌다(투표 그래프와 동일 원인). 실측 확인된
           // '■'/'□'(폭 2칸)로 교체 — 폭이 2배가 되므로 barLength를 절반으로 줄여 원래의
           // 시각적 길이(표시폭)를 유지한다.
+          // [LOG_ID: 20260726_1230] 테두리 박스(┌─...─┐)가 padEnd(25) 기준 고정 54칸 폭이라
+          // targetCols와 무관하게 항상 그 너비로 그려졌다 — 모바일(44칸) 예산에서 매번(파일
+          // 다운로드마다 100% 재현) 뷰포트 밖으로 흘러넘쳤다(실측: 테두리 줄 표시폭 54칸,
+          // 44칸 초과). 데스크톱(targetCols=80)은 54<80이라 원래도 문제없었다. 모바일 전용으로
+          // 테두리 없는 단순 라벨:값 레이아웃을 추가한다.
+          const isMobile = targetCols < 60;
           const drawTransferBox = (file, percent) => {
             const barLength = Math.max(5, Math.floor((targetCols - 30) / 2));
             const filledLength = Math.floor((barLength * percent) / 100);
             const emptyLength = barLength - filledLength;
             const bar = '■'.repeat(filledLength) + '□'.repeat(emptyLength);
+
+            if (isMobile) {
+              // "  파일명 : " 프리픽스(표시폭 11칸)를 뺀 나머지를 파일명에 배정.
+              const name = truncateWithEllipsis(file.fileName, Math.max(10, targetCols - 12));
+              const sizeKb = `${Math.round(file.fileSize / 1024)} KB`;
+              return `\n\n` +
+                `  [ 화일 전송 프로토콜 ]\n\n` +
+                `  파일명 : ${name}\n` +
+                `  전송   : ${protocolName}\n` +
+                `  크기   : ${sizeKb}\n` +
+                `  진행   : ${percent} %\n` +
+                `  [${bar}]\n`;
+            }
 
             // 80칸 기준 TUI 전송 박스
             const padName = String(file.fileName).substring(0, 25).padEnd(25);
