@@ -1,3 +1,10 @@
+## [2026-07-26 14:15] [/loop 계속] 다이얼로그·로그인·검색 재검토 — 새 버그 없음, 안전 확인
+
+**LOG_ID: 20260726_1415**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 세 라운드(쪽지 보내기/건의하기/시스템 안내)와 같은 `.ansi-line` 미보호 패턴이 더 있는지 확인하기 위해, `class="ansi-line` 문자열을 `public/js/core/` 전체에서 재검색해 나머지 사용처(`terminalDialog.js`, `authScreens.js`, `postViewView.js`의 `.bbs-box`)를 점검.
+확인: (1) `terminalDialog.js`의 `showConfirm`/`showAlert`/`showPrompt`/`showEditor`(전역 다이얼로그 시스템)도 같은 미보호 `appendTranscript`/`appendEcho` 패턴을 갖고 있었으나, 실제 호출부를 찾아보니 `showAlert`는 나우누리 "접속방법" 안내(고정 정적 문자열, 이미 안전) 단 한 곳뿐이고 `showConfirm`/`showPrompt`는 실제 호출부가 전혀 없다 — 코드 주석(commandRouterPostView.js:58)이 "종전엔 deps.showConfirm을 썼는데 화면이 이상해져서 setHint/setPrompt 방식으로 교체했다"고 명시적으로 밝히듯, 이 다이얼로그 시스템은 대부분 대체되어 남은 사문화된 인프라였다 — 위험 노출이 없어 수정 대상에서 제외. (2) `authScreens.js`(로그인 화면)의 아이디/비밀번호 확정 줄은 `.ansi-line` div가 아니라 `<input readonly flex:1>`을 쓴다 — `<input>` 요소는 내용이 넘쳐도 자신의 박스 폭을 넘어 페이지 레이아웃을 밀어내지 않고 요소 내부적으로 흡수하므로, 애초에 이 버그 클래스에 안전한 설계였다(비밀번호 마스크 오버레이도 `position:absolute; inset:0`으로 부모 크기에 고정되어 레이아웃에 영향 없음). (3) `ansiBoardBuilders.js`의 게시판 검색 결과 헤더(`buildPostListAnsi`)는 총건수 접미사를 `centerBudget` 폭 체크 후에만 붙이는 기존 방어 로직이 이미 있어 안전. `postViewView.js`의 `.bbs-box` 잔존 사용처는 고정 짧은 오류 문구뿐이라 위험 없음.
+결과: ✅ 완료 — 새 버그는 없었다. `.ansi-line` 기반 raw-HTML 화면(쪽지 보내기·건의하기·시스템 안내·다이얼로그·로그인)에 대한 전수 재검토를 이 라운드로 마무리했고, 나머지는 전부 이미 안전하거나 사문화된 코드임을 확인했다.
+
 ## [2026-07-26 14:00] [/loop 계속] 시스템 안내/오류 화면(renderSystemInfo) — 예외 메시지 삽입 줄 오버플로 수정, 25번째
 
 **LOG_ID: 20260726_1400**
