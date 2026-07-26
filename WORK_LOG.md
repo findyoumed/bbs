@@ -1,3 +1,12 @@
+## [2026-07-26 13:30] [/loop 계속] 쪽지 보내기(MEMO WRITE) 트랜스크립트 줄바꿈 누락 — 평범한 문장 길이에서도 재현되는 오버플로 수정, 23번째
+
+**LOG_ID: 20260726_1330**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 나우누리 테마 라운드 이후 다른 나우누리 관련 분기(`isNownuriTheme`, buildBoardSelectAnsi)와 conf(회의실/토론) 파일을 재검토했으나 안전 확인, 이어서 지금까지 살펴보지 않은 raw-HTML 기반 화면(`renderRawHtmlScreenWithTopbar` 사용처: postWriteView/memoScreens/contactSysopScreen/systemScreens)을 점검하던 중 `memoScreens.js`의 `renderMemoWriteScreen`(쪽지 보내기 — 받는 사람/본문을 한 줄씩 입력하는 실제 사용 중인 트랜스크립트 에디터, dead code 아님)을 발견.
+발견: 각 트랜스크립트 줄이 `.ansi-line`(전역 CSS `white-space: pre`) 클래스를 그대로 쓰면서, `value`(받는 사람 콤마 목록 또는 본문 한 줄)에 `wrapAnsiText` 같은 줄바꿈 처리가 전혀 없었다. `value`는 공용 명령 입력창(`#cmd-input`, `maxlength="200"`)으로 입력되므로 최대 200자까지 가능한데, 이 줄이 44/80칸 ANSI 그리드처럼 사전에 폭에 맞춰 잘리지도, 줄바꿈되지도 않고 그대로 렌더된다 — 게시글 작성 구분선이나 PDS 전송 박스처럼 "긴 특수 입력"이 아니라 **평범한 길이의 문장 한 줄(약 35자 이상)만 입력해도 100% 재현**되는, 이번 세션에서 가장 낮은 진입장벽을 가진 오버플로였다. 로그인 필요 화면이라 브라우저 DOM에 동일 CSS 클래스로 테스트 `<div>`를 직접 주입해 확인 — 수정 전 `scrollWidth` 1050 vs `clientWidth` 390(거의 3배 오버플로).
+구현: 전역 `.ansi-line` 규칙(다른 화면의 표/구분선 정렬에 `white-space:pre`가 필요)은 그대로 두고, `body[data-screen="memo-write"] .ansi-line`에만 `white-space:pre-wrap; word-break:keep-all; overflow-wrap:break-word;`를 덧씌우는 스코프 규칙을 `style.css`에 추가(`document.body.dataset.screen`이 `state.screen` 값을 그대로 반영하는 기존 메커니즘 재사용, JS 변경 없이 CSS만으로 해결).
+검증: 같은 DOM 주입 방식으로 재측정 — `body[data-screen="memo-write"]` 스코프 적용 후 동일 긴 문장이 `scrollWidth`/`clientWidth` 모두 390으로 일치(오버플로 0), `getComputedStyle().whiteSpace`가 `pre-wrap`으로 정확히 반영됨과 렌더된 높이가 단일 줄(24px)보다 커져(59px) 실제로 여러 줄로 접혔음을 확인. 대조군(스코프 미적용, `data-screen="main"`)은 여전히 오버플로(1050/390)됨을 확인해 이 스코프 규칙 자체가 수정의 원인임을 검증. `npm run smoke:full-traversal`/`smoke:menu-wiring`/`smoke:renderer-ui`/`scripts/smoke-mobile-viewports.js`(27×2) 전부 통과.
+결과: ✅ 완료 — 이번 세션 23번째 버그. 지금까지 발견한 것 중 가장 흔한 사용 패턴(쪽지에 평범한 한 문장 쓰기)만으로도 재현되는, 실사용 영향도가 매우 높은 오버플로였다.
+
 ## [2026-07-26 13:15] [/loop 계속] 나우누리 테마 대문/가이드 화면 — 이번 세션 최대 오버플로(93/44, 2배 이상) 수정, 21·22번째
 
 **LOG_ID: 20260726_1315**

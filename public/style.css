@@ -1320,6 +1320,19 @@ body.theme-nownuri .write-field textarea {
     font-size: 17px;
 }
 
+/* [LOG_ID: 20260726_1330] 쪽지 보내기(MEMO WRITE)는 고정 44/80칸 ANSI 그리드가 아니라
+   줄 단위 트랜스크립트(renderMemoWriteScreen)를 이 .ansi-line 클래스로 그대로 재사용한다.
+   각 줄의 value(받는 사람 콤마 목록·본문 한 줄)는 공용 명령 입력창(#cmd-input maxlength=200)
+   길이만큼 길 수 있는데, 위 기본 규칙의 white-space:pre 때문에 줄바꿈되지 않고 조상의
+   overflow-x:hidden(#terminal-screen)에 조용히 잘렸다 — 보통 길이의 문장 한 줄만 넘겨도(약
+   35자 이상) 모바일에서 100% 재현되는 오버플로였다. 다른 화면(표/구분선)은 정렬을 위해
+   pre가 필요하므로 전역 규칙은 그대로 두고, 이 화면에만 줄바꿈을 허용한다. */
+body[data-screen="memo-write"] .ansi-line {
+    white-space: pre-wrap;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+}
+
 .ansi-line .wc {
     display: inline-block;
     width: 2ch;
