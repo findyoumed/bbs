@@ -6,6 +6,7 @@ export function createMemoCommandHandler(deps) {
         showMain,
         showMemoList,
         showMemoView,
+        showMemoViewPage,
         showMemoWrite,
         handleMemoRawInput,
         handleMemoSubmit,
@@ -407,6 +408,19 @@ export function createMemoCommandHandler(deps) {
         if (state.screen === 'memo-view') {
             if (state._memoDeleteConfirm) {
                 return await handleMemoDeleteConfirm(input || cmd);
+            }
+            // [LOG_ID: 20260726_0010] 본문 페이징 추가(buildMemoViewAnsi) — F는 이미 "쪽지 전달"에
+            // 쓰이고 있어 다른 페이징 화면과 달리 F를 다음쪽에 못 쓴다. 빈 엔터만 다음쪽으로,
+            // B는 게시글 보기와 동일하게 이전쪽(1쪽에서는 기존처럼 목록)으로 처리한다.
+            const memoPageNo = Number(state.memoViewPageNo || 1);
+            const memoPageCount = Number(state.memoViewPageCount || 1);
+            if (cmd === '' && memoPageNo < memoPageCount) {
+                await showMemoViewPage(memoPageNo + 1);
+                return true;
+            }
+            if (cmd === 'B' && memoPageNo > 1) {
+                await showMemoViewPage(memoPageNo - 1);
+                return true;
             }
             if (cmd === 'L') {
                 await showMemoList();

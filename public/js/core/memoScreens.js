@@ -152,7 +152,7 @@ export function createMemoScreens(deps) {
         }
     }
 
-    async function showMemoView(memoId, fromHistory = false) {
+    async function showMemoView(memoId, fromHistory = false, requestedPageNo = 1) {
         state.screen = 'memo-view';
         clearMemoWriteFlow();
         state._currentMemoId = memoId;
@@ -185,13 +185,18 @@ export function createMemoScreens(deps) {
                 state._memos = [hydratedMemo, ...existingMemos];
             }
 
-            const ansiText = buildMemoViewAnsi(hydratedMemo, state.user?.userId);
+            // [LOG_ID: 20260726_0010] 본문 페이징 추가 — 페이지 전환마다 서버 재조회 없이
+            // 재사용하도록 조회한 쪽지를 캐싱한다(토론의 광장 안건 보기와 동일한 절약 패턴).
+            state._currentMemoView = hydratedMemo;
+            const built = buildMemoViewAnsi(hydratedMemo, state.user?.userId, requestedPageNo);
+            state.memoViewPageNo = built.pageNo;
+            state.memoViewPageCount = built.pageCount;
             const deleteConfirm = state._memoDeleteConfirm;
             const deleteConfirmHtml = deleteConfirm && String(deleteConfirm.memoId || '') === String(state._currentMemoId || '')
                 ? '<div class="ansi-line ansi-yellow">[안내] 이 쪽지를 삭제하시겠습니까? (y/n)</div>'
                 : '';
             await renderAnsiScreenWithTopbarSequential({
-                ansiText,
+                ansiText: built.text,
                 ansiToHTML,
                 screenEl,
                 renderScreenSequential,
@@ -210,6 +215,26 @@ export function createMemoScreens(deps) {
         } catch (e) {
             renderMemoStatus(`쪽지를 읽지 못했습니다. ${String(e?.message || '알 수 없는 오류입니다.')}`);
         }
+    }
+
+    // 쪽지 보기 화면 안에서 페이지만 넘길 때 — 이미 캐싱된 쪽지를 재사용해 서버 재조회 없이 다시 그린다.
+    async function showMemoViewPage(requestedPageNo) {
+        const memo = state._currentMemoView;
+        if (!memo) return false;
+        const built = buildMemoViewAnsi(memo, state.user?.userId, requestedPageNo);
+        state.memoViewPageNo = built.pageNo;
+        state.memoViewPageCount = built.pageCount;
+        await renderAnsiScreenWithTopbarSequential({
+            ansiText: built.text,
+            ansiToHTML,
+            screenEl,
+            renderScreenSequential,
+            afterBodyRender: async () => {
+                await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
+            }
+        });
+        focusCommandInput();
+        return true;
     }
 
     function clearMemoWriteFlow() {
@@ -600,6 +625,7 @@ export function createMemoScreens(deps) {
         handleMemoSubmit,
         showMemoList,
         showMemoView,
+        showMemoViewPage,
         showMemoWrite
     };
 }

@@ -1,3 +1,14 @@
+## [2026-07-27 00:10] [/loop 시작] "다른 메뉴도 글자 잘림 전수조사" — 쪽지 보기(memo-view) 본문 페이징 부재로 최대 절반 이상 유실되던 버그 발견·수정
+
+**LOG_ID: 20260727_0010**
+목표: 사용자가 `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해. 5분단위로 반복해`로 5분 간격 반복 전수조사를 지시 — `state.screen` 전체 목록(약 65개)을 뽑아 `wrapAnsiText` 사용 화면부터 우선 점검.
+
+발견: `memoAnsiBuilders.js`의 `buildMemoViewAnsi`(쪽지 보기)가 토론의 광장 안건 보기(20260726_2300)와 완전히 동일한 결함 — 페이징 로직 없이 본문(쪽지 쓰기는 여러 줄을 계속 입력받아 `/s`로 등록하는 방식이라 길이 상한이 사실상 없음)을 무조건 이어붙였다. 직접 함수 호출로 실측: 짧은 문장 15개(약 900자)만으로 53줄이 나와 `ansiEngine.js`의 25행 고정 격자를 넘는 나머지가 HTML 렌더 이전에 버려짐을 확인.
+
+구현: `buildConfAgendaViewAnsi`와 동일한 페이징 패턴 적용. 단, **F 키는 이미 "쪽지 전달(forward)"에 쓰이고 있어** 다른 페이징 화면처럼 F를 다음쪽에 재사용할 수 없다는 게 새로 마주친 제약이었다 — 빈 엔터만 다음쪽으로 처리하고 F는 그대로 전달 기능으로 남긴다(B는 게시글 보기와 동일하게 1쪽에서만 목록으로 폴백). 배선: `memoScreens.js`(페이지 캐싱 `showMemoViewPage` 신설), `commandRouterMemo.js`(엔터/B 페이지 처리), `terminalHintMarkup.js`(페이지 상태), `commandFooterText.js`(`B:이전쪽` 힌트, 페이지 남아있을 때만 자동 표시).
+검증: 순수 함수 테스트로 15개 문단이 3페이지에 걸쳐 정확한 순서로 보존됨을 라인 덤프로 직접 확인. 실제 Supabase Auth 세션 + 실제 쪽지(API로 자기 자신에게 발송)로 Playwright 종단 검증 — 엔터로 3페이지 전부 순회하며 줄 번호 1~15가 정확히 노출, 마지막 페이지에서 엔터 반복 시 페이지 유지(경계 가드), B로 이전 페이지 정상 복귀, 힌트바 "이전쪽(B)"가 1쪽에서는 숨고 2·3쪽에서만 노출됨을 확인. `smoke:full-traversal`/`smoke-mobile-viewports.js`/`smoke:command-parity` 전부 통과. 테스트 데이터(쪽지·회원·Auth 계정) 정리 완료.
+결과: ✅ 완료 — 전수조사 루프의 첫 결실. 다음 반복에서 나머지 `wrapAnsiText` 사용 화면(activeUsers/systemDiagnostics/systemLog, arcade 게임 결과 화면들 등)을 계속 점검한다.
+
 ## [2026-07-26 23:50] 사용자 제보(이용 현황/ACCT 화면 하단 잘림) — 같은 "23줄 여유 없음" 패턴을 systemAnsiBuilders.js에서 발견·수정
 
 **LOG_ID: 20260726_2350**

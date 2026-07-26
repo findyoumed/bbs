@@ -153,6 +153,14 @@ export function createTerminalHintMarkup(deps) {
       };
     }
 
+    // [LOG_ID: 20260726_0010] 쪽지 보기(memo-view)도 본문이 길면 페이징된다 — 전용 필드 사용.
+    if (state.screen === 'memo-view') {
+      return {
+        pageNo: Math.max(1, Number(state.memoViewPageNo || 1)),
+        pageCount: Math.max(1, Number(state.memoViewPageCount || 1))
+      };
+    }
+
     return {
       pageNo: Math.max(1, Number(state.serviceData?.pageNo || 1)),
       pageCount: Math.max(1, Number(state.serviceData?.pageCount || 1))

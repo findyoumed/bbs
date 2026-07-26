@@ -18,6 +18,7 @@ export function createMemoAnsiBuilders(deps) {
     ANSI_RESET,
     ansiColor,
     ansiHLine,
+    buildPageLabel,
     buildTopHeader,
     displayWidth,
     fitCell,
@@ -134,7 +135,14 @@ export function createMemoAnsiBuilders(deps) {
   // 게시글 읽기(buildPostViewAnsi, 그림 5.5 재현)와 동일한 "라벨 : 값" 평문 줄 + 구분선 스타일로
   // 통일한다. 하이텔은 박스를 파일 전송 진행률 같은 대화상자(그림 10.4)에만 쓰고, 편지/게시물
   // 읽기 같은 일반 콘텐츠 화면엔 평문을 쓴다 — 기존 MEMO 보기만 이 관례에서 벗어나 있었다.
-  function buildMemoViewAnsi(memo, currentUserId) {
+  // [LOG_ID: 20260726_0010] 쪽지 본문은 페이징 없이 무조건 이어붙였다 — 토론의 광장 안건
+  // 보기(20260726_2300)와 완전히 동일한 버그 클래스. 쪽지 작성(memo-write)은 여러 줄을
+  // 계속 입력받아 /s로 등록하는 방식이라 본문 길이에 사실상 상한이 없다. 실측: 짧은 문장
+  // 15개(약 900자)만으로 53줄이 나와 ansiEngine.js의 25행 고정 격자를 넘는 나머지(절반 이상)가
+  // HTML 렌더 이전에 통째로 버려짐을 확인 — buildConfAgendaViewAnsi와 동일한 페이징 패턴을
+  // 적용한다. F는 이미 "쪽지 전달(forward)"에 쓰이고 있어 다른 페이징 화면처럼 F/엔터를 함께
+  // 쓸 수 없다 — 엔터(빈 명령)만 다음쪽으로 쓰고 F는 그대로 전달 기능으로 둔다(commandRouterMemo.js).
+  function buildMemoViewAnsi(memo, currentUserId, requestedPageNo = 1) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
 
@@ -148,13 +156,13 @@ export function createMemoAnsiBuilders(deps) {
     // 값을 그대로 이어붙이면 제목이 길 때 targetCols를 넘어섰다(모바일 44칸에서 실측 확인).
     const valueWidth = targetCols - labelWidth - 3;
 
-    const parts = [buildTopHeader({ leftLabel: 'MEMO', centerLabel: '쪽지 보기' }, '', targetCols)];
-    parts.push(ansiColor(14) + fitCell(userLabel, labelWidth) + ' : ' + ansiColor(15) + fitCell(userValue, valueWidth) + ANSI_RESET);
-    parts.push(ansiColor(14) + fitCell('받은날', labelWidth) + ' : ' + ansiColor(15) + fitCell(formatLongDate(memo.createdAt) || memo.createdAt || '', valueWidth) + ANSI_RESET);
+    const headerLines = [];
+    headerLines.push(ansiColor(14) + fitCell(userLabel, labelWidth) + ' : ' + ansiColor(15) + fitCell(userValue, valueWidth) + ANSI_RESET);
+    headerLines.push(ansiColor(14) + fitCell('받은날', labelWidth) + ' : ' + ansiColor(15) + fitCell(formatLongDate(memo.createdAt) || memo.createdAt || '', valueWidth) + ANSI_RESET);
     // [LOG_ID: 20260713_1660] 편지 종류(비밀/답장요망/지연 조합)를 보기 화면에도 명확히 표시 —
     // 이전엔 목록 요약 텍스트에만 대괄호 태그로 섞여 있어 상세보기에서는 아예 보이지 않았다.
     if (typeTag) {
-      parts.push(ansiColor(14) + fitCell('종류', labelWidth) + ' : ' + ansiColor(9) + fitCell(typeTag, valueWidth) + ANSI_RESET);
+      headerLines.push(ansiColor(14) + fitCell('종류', labelWidth) + ' : ' + ansiColor(9) + fitCell(typeTag, valueWidth) + ANSI_RESET);
     }
     if (cleanTitle) {
       // [LOG_ID: 20260726_0340] 제목은 서버에서 최대 60자까지 저장되는데(MemoRepositoryShared.js)
@@ -163,10 +171,10 @@ export function createMemoAnsiBuilders(deps) {
       const titleLabel = fitCell('제목', labelWidth);
       const titleIndent = ' '.repeat(labelWidth + 3);
       wrapAnsiText(cleanTitle, valueWidth).forEach((line, i) => {
-        parts.push(ansiColor(14) + (i === 0 ? `${titleLabel} : ` : titleIndent) + ansiColor(15) + line + ANSI_RESET);
+        headerLines.push(ansiColor(14) + (i === 0 ? `${titleLabel} : ` : titleIndent) + ansiColor(15) + line + ANSI_RESET);
       });
     }
-    parts.push(ansiHLine(targetCols, 8));
+    headerLines.push(ansiHLine(targetCols, 8));
 
     // [LOG_ID: 20260719_1200] 축하카드: content 맨 앞이 [CARD:key]면 카드 아트를 가운데 정렬해 렌더하고,
     // 마커 줄을 뺀 나머지를 인사말 본문으로 이어 보여준다.
@@ -178,19 +186,55 @@ export function createMemoAnsiBuilders(deps) {
       if (card) {
         card.art.forEach((artLine) => {
           const pad = Math.max(0, Math.floor((targetCols - displayWidth(artLine)) / 2));
-          parts.push(ansiColor(card.color || 15) + ' '.repeat(pad) + artLine + ANSI_RESET);
+          headerLines.push(ansiColor(card.color || 15) + ' '.repeat(pad) + artLine + ANSI_RESET);
         });
-        parts.push(ansiHLine(targetCols, 8));
+        headerLines.push(ansiHLine(targetCols, 8));
       }
     }
 
+    const contentLines = [];
     bodyText.split('\n').forEach((line) => {
       wrapAnsiText(line, targetCols).forEach((wrapped) => {
-        parts.push(ansiColor(15) + wrapped + ANSI_RESET);
+        contentLines.push(wrapped);
       });
     });
 
-    return parts.join('\n');
+    const totalLines = 24;
+    const topHeaderLines = 4; // buildTopHeader() 반환 줄 수
+    const baseLines = Math.max(3, totalLines - topHeaderLines - headerLines.length);
+
+    const pages = [];
+    let currentLineIdx = 0;
+    const totalBodyLines = Math.max(1, contentLines.length);
+    while (currentLineIdx < totalBodyLines) {
+      const isLastPage = (totalBodyLines - currentLineIdx) <= baseLines;
+      const allowedLines = isLastPage ? Math.max(3, baseLines) : baseLines;
+      const chunk = contentLines.slice(currentLineIdx, currentLineIdx + allowedLines);
+      pages.push(chunk);
+      currentLineIdx += chunk.length;
+    }
+
+    const pageCount = pages.length;
+    const currentPage = Math.min(Math.max(Number.parseInt(requestedPageNo, 10) || 1, 1), pageCount);
+    const visibleBodyLines = pages[currentPage - 1] || [];
+    const pageLabel = buildPageLabel(currentPage, pageCount);
+
+    const parts = [buildTopHeader({ leftLabel: 'MEMO', centerLabel: '쪽지 보기' }, pageLabel, targetCols)];
+    parts.push(...headerLines);
+    visibleBodyLines.forEach((line) => {
+      parts.push(ansiColor(15) + line + ANSI_RESET);
+    });
+
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < totalLines) {
+      joinedLines.push(ANSI_RESET);
+    }
+
+    return {
+      text: joinedLines.slice(0, totalLines).join('\n'),
+      pageNo: currentPage,
+      pageCount
+    };
   }
 
   return {
