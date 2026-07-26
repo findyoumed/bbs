@@ -103,7 +103,7 @@ export const CMD_ORDER = {
   // 서로 다른 용어(이전/상위, 대문/초기화면)를 썼다(사용자 지적: "메뉴가 이상하다"). 다른
   // 화면(postList/memoList 등)과 동일하게 표준 힌트바 토큰 체계로 흡수한다.
   voteList: ['P', 'T', 'GO', 'W:설문등록', 'H'],
-  voteDetail: ['B:목록', 'P', 'T', 'GO', 'H'],
+  voteDetail: ['B:목록', 'F', 'P', 'T', 'GO', 'H'],
   voteCreate: ['B:취소', 'P', 'T', 'GO', 'H'],
   // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 하단 힌트바
   confRooms: ['O:회의실개설', 'P', 'T', 'GO', 'H'],

@@ -70,7 +70,7 @@ export function createVoteScreens(deps) {
   }
 
   // 2. 설문조사 상세 및 결과 화면 표시
-  async function showVoteDetail(voteId, fromHistory = false) {
+  async function showVoteDetail(voteId, fromHistory = false, requestedPageNo = 1) {
     const id = Number(voteId);
     state.screen = 'vote-detail';
     state.serviceData = { kind: 'vote', voteId: id };
@@ -78,9 +78,11 @@ export function createVoteScreens(deps) {
 
     try {
       const vote = await apiFetch(`/api/votes/${id}`);
-      const ansi = buildVoteDetailAnsi(vote);
+      const built = buildVoteDetailAnsi(vote, requestedPageNo);
+      state.serviceData.pageNo = built.pageNo;
+      state.serviceData.pageCount = built.pageCount;
       const prompt = (vote.isActive && vote.userVotedOption === null) ? '투표 번호 입력 >> ' : '선택 >> ';
-      await render(ansi, 'voteDetail', prompt);
+      await render(built.text, 'voteDetail', prompt);
     } catch (e) {
       setHint('설문 정보를 가져오지 못했습니다: ' + e.message);
       await showVoteList(true);

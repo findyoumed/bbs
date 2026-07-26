@@ -91,15 +91,15 @@ export function createVoteAnsiBuilders(deps) {
   // 줄(라벨26+바30+퍼센트 = 60여칸)이 모바일 44칸에서 실측 오버플로우됐다. 제목은
   // wrapAnsiText로 감싸고(데스크톱 80칸은 no-op), createdBy는 방어적으로 클램프, 옵션
   // 줄은 모바일에서 라벨/그래프를 2줄로 분리하고 막대 길이를 절반(8칸)으로 줄인다.
-  function buildVoteDetailAnsi(vote) {
+  function buildVoteDetailAnsi(vote, requestedPageNo = 1) {
     const header = buildTopHeader({ leftLabel: 'AGORA', centerLabel: '설문 상세 결과' });
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
 
-    let content = '';
+    const topLines = [];
     const titleLines = wrapAnsiText(`설문 주제: ${ANSI_BOLD}${vote.title}`, targetCols - 1);
     for (const line of titleLines) {
-      content += ` ${ansiColor(11)}${line}${ANSI_RESET}\n`;
+      topLines.push(` ${ansiColor(11)}${line}${ANSI_RESET}`);
     }
     const createdByMax = isMobile ? 10 : 20;
     // [LOG_ID: 20260726_1015] 여기 주석은 "방어적으로 클램프"라고 했지만 실제로는 말줄임표 없는
@@ -110,8 +110,9 @@ export function createVoteAnsiBuilders(deps) {
     const createdByText = displayWidth(vote.createdBy) > createdByMax
       ? fitCellEllipsis(vote.createdBy, createdByMax).trim()
       : vote.createdBy;
-    content += ` ${ansiColor(14)}작성자  : ${createdByText}  |  상태: ${vote.isActive ? '진행중' : '종료됨'}${ANSI_RESET}\n`;
-    content += ansiHLine(targetCols, 8) + '\n\n';
+    topLines.push(` ${ansiColor(14)}작성자  : ${createdByText}  |  상태: ${vote.isActive ? '진행중' : '종료됨'}${ANSI_RESET}`);
+    topLines.push(ansiHLine(targetCols, 8));
+    topLines.push('');
 
     // [LOG_ID: 20260715_1130] '█'(U+2588)/'░'(U+2591)는 커스텀 픽셀 폰트(BbsPrimaryFont 등)에
     // 글리프가 없어 시스템 색상 폰트로 폴백되면서 무지개색 노이즈로 깨져 보였다(사용자 보고).
@@ -119,12 +120,16 @@ export function createVoteAnsiBuilders(deps) {
     // 문자)로 교체 — 폭이 2배가 되므로 칸 수를 절반(15칸)으로 줄여 시각적 길이를 유지한다.
     const maxGraphWidth = isMobile ? 8 : 15; // [■■■□□□] 길이(광폭 문자라 실제 표시폭은 2배)
 
-    for (let i = 0; i < vote.options.length; i++) {
-      const option = vote.options[i];
+    // [LOG_ID: 20260727_0245] 선택지 개수는 서버(VoteRepositoryMemory/Supabase)가 최소 2개만
+    // 강제할 뿐 상한이 전혀 없다(설문 등록 화면은 쉼표로 구분한 값을 그대로 다 받는다) — 선택지가
+    // 한 줄도 잘리지 않고 전부 렌더되던 이 함수가 옵션 10개 이상(실측: 15개 → 26줄)에서 25행 고정
+    // 격자를 넘겼다. 접속자 목록/첨부파일 목록과 달리 선택지는 전부 실제로 투표 가능해야 하므로
+    // 목록을 자르는 대신, 선택지를 (라벨+막대그래프) 묶음 단위로 페이지네이션한다 — 번호 입력으로
+    // 투표하는 방식은 어느 페이지에 있든 그대로 동작하므로 페이지를 나눠도 기능은 그대로 유지된다.
+    const optionBlocks = vote.options.map((option, i) => {
       const count = vote.counts[i] || 0;
       const pct = vote.totalVotes > 0 ? Math.round((count / vote.totalVotes) * 100) : 0;
 
-      // 그래프 바 조립
       const filledCount = Math.round((pct / 100) * maxGraphWidth);
       const emptyCount = maxGraphWidth - filledCount;
       const bar = '■'.repeat(filledCount) + '□'.repeat(emptyCount);
@@ -142,39 +147,73 @@ export function createVoteAnsiBuilders(deps) {
       const prefixWidth = displayWidth(prefix);
       const indent = ' '.repeat(prefixWidth);
 
+      const lines = [];
       if (isMobile) {
         const maxLabel = (targetCols - 1) - prefixWidth;
         wrapAnsiText(option, maxLabel).forEach((line, li) => {
-          content += `${color}${li === 0 ? prefix : indent}${line}${ANSI_RESET}\n`;
+          lines.push(`${color}${li === 0 ? prefix : indent}${line}${ANSI_RESET}`);
         });
-        content += `${color}   [${bar}] ${pct.toString().padStart(3, ' ')}% (${count}표)${ANSI_RESET}\n`;
+        lines.push(`${color}   [${bar}] ${pct.toString().padStart(3, ' ')}% (${count}표)${ANSI_RESET}`);
       } else {
         const maxLabel = 26 - prefixWidth;
-        const lines = wrapAnsiText(option, maxLabel);
-        const firstLineText = fitCell(prefix + lines[0], 26, 'left');
-        content += `${color}${firstLineText} [${bar}] ${pct.toString().padStart(3, ' ')}% (${count}표)${ANSI_RESET}\n`;
-        for (let li = 1; li < lines.length; li++) {
-          content += `${color}${fitCell(indent + lines[li], 26, 'left')}${ANSI_RESET}\n`;
+        const wrapped = wrapAnsiText(option, maxLabel);
+        const firstLineText = fitCell(prefix + wrapped[0], 26, 'left');
+        lines.push(`${color}${firstLineText} [${bar}] ${pct.toString().padStart(3, ' ')}% (${count}표)${ANSI_RESET}`);
+        for (let li = 1; li < wrapped.length; li++) {
+          lines.push(`${color}${fitCell(indent + wrapped[li], 26, 'left')}${ANSI_RESET}`);
         }
       }
-    }
+      return lines;
+    });
 
-    content += '\n';
-    content += ansiHLine(targetCols, 8) + '\n';
-
+    const bottomLines = [];
     if (vote.isActive && vote.userVotedOption === null) {
       for (const line of wrapAnsiText('아직 투표하지 않으셨습니다. 번호를 입력하여 투표해 주세요.', targetCols - 1)) {
-        content += ` ${ansiColor(11)}${line}${ANSI_RESET}\n`;
+        bottomLines.push(` ${ansiColor(11)}${line}${ANSI_RESET}`);
       }
     } else if (vote.userVotedOption !== null) {
       for (const line of wrapAnsiText(`회원님은 [${vote.userVotedOption + 1}]번에 이미 참여하셨습니다.`, targetCols - 1)) {
-        content += ` ${ansiColor(10)}${line}${ANSI_RESET}\n`;
+        bottomLines.push(` ${ansiColor(10)}${line}${ANSI_RESET}`);
       }
     } else {
-      content += ` ${ansiColor(8)}이 설문은 종료되었습니다.${ANSI_RESET}\n`;
+      bottomLines.push(` ${ansiColor(8)}이 설문은 종료되었습니다.${ANSI_RESET}`);
     }
 
-    return header + content;
+    // 고정 오버헤드(상단바 4줄 + 주제/작성자/구분선/빈줄 + 구분선 + 하단 안내줄 + F 안내줄)를
+    // 제외한 나머지를 선택지에 배정한다(buildCompatAnsi와 동일한 방식) — 단, 선택지는
+    // (라벨+막대) 묶음이 중간에 끊기지 않도록 줄 단위가 아니라 묶음 단위로 페이지를 나눈다.
+    // [LOG_ID: 20260727_0245] totalBudget을 25행 꽉 채운 값으로 잡으면(policy/my-stats에서 이미
+    // 겪은 것과 동일하게) 실기기에서 #terminal-screen이 살짝 눌릴 때 마지막 줄이 잘린다 — 여유
+    // 마진을 남겨둔다.
+    const topHeaderLineCount = header.split('\n').length;
+    const fixedLineCount = topHeaderLineCount + topLines.length + 1 /* hLine */ + 1 /* blank */ + bottomLines.length + 1 /* F 안내줄 */;
+    const totalBudget = isMobile ? 16 : 22;
+    const budgetForOptions = Math.max(2, totalBudget - fixedLineCount);
+
+    const pages = [];
+    let current = [];
+    let currentLineCount = 0;
+    optionBlocks.forEach((block) => {
+      if (current.length > 0 && currentLineCount + block.length > budgetForOptions) {
+        pages.push(current);
+        current = [];
+        currentLineCount = 0;
+      }
+      current.push(...block);
+      currentLineCount += block.length;
+    });
+    pages.push(current);
+
+    const pageCount = pages.length;
+    const pageNo = Math.min(Math.max(Number.parseInt(requestedPageNo, 10) || 1, 1), pageCount);
+    const visibleOptionLines = pages[pageNo - 1];
+
+    const parts = [header, ...topLines, ...visibleOptionLines, '', ansiHLine(targetCols, 8), ...bottomLines];
+    if (pageNo < pageCount) {
+      parts.push(ansiColor(8) + `  F:다음 페이지 (${pageNo}/${pageCount})` + ANSI_RESET);
+    }
+
+    return { text: parts.join('\n'), pageNo, pageCount };
   }
 
   // 3. 투표 생성 화면 ANSI 빌더

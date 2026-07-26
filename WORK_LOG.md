@@ -1,3 +1,28 @@
+## [2026-07-27 02:45] [/loop 계속] 설문조사 상세(buildVoteDetailAnsi) 선택지 무제한 렌더링 발견 — 페이지네이션으로 수정
+
+**LOG_ID: 20260727_0245**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드(첨부파일 목록)와 같은 각도(리스트 항목 수 무제한 렌더링)로 나머지 빌더 함수들을 전수조사. `amusementAnsiBuilders.js`/`arcadeAnsiBuilders.js`/`chatAnsiBuilders.js`/`weatherAnsiBuilders.js`/`systemAnsiBuilders.js`의 남은 forEach/map 호출을 모두 점검했고, 대부분 이미 slice로 제한돼 있거나(방 목록/참여자 미리보기 등) 고정 개수(MBTI 16종, 퀴즈 4지선다, 게임 시도 횟수 등)라 안전했다.
+
+발견:
+- `voteAnsiBuilders.js`의 `buildVoteDetailAnsi(vote)`가 `vote.options`를 한 줄도 자르지 않고 전부 렌더 — 개수 상한이 전혀 없음.
+- 서버(`VoteRepositoryMemory.js`/`VoteRepositorySupabase.js` `createVote`)는 선택지 최소 2개만 강제할 뿐(`options.length < 2` 검사) 상한이 없고, 설문 등록 UI(`commandRouterVote.js`)도 쉼표로 구분한 값을 그대로 다 받아 넘긴다 — 로그인한 사용자가 "1,2,3,...,15"처럼 선택지 15개짜리 설문을 실제로 만들 수 있는, 실사용 경로로 재현 가능한 버그.
+- 직접 함수 호출 테스트로 확인: 옵션 15개 → 26줄(25행 고정 격자 초과), 20개는 더 심함.
+
+구현:
+- 접속자 목록/첨부파일 목록과 달리, 설문 선택지는 전부 실제로 투표 가능해야 하므로(감춘 항목에는 투표를 못 하게 하면 안 됨) 목록을 자르는 `slice(0,N)` 패턴 대신 **페이지네이션**을 적용 — 번호 입력으로 투표하는 방식은 어느 페이지에 있든 그대로 동작하므로 기능 손실이 없다.
+- 각 선택지를 (라벨+막대그래프) 한 묶음으로 묶어 묶음 단위로 페이지를 나눠(줄 단위로 자르면 라벨과 막대가 서로 다른 페이지로 갈라질 위험이 있음), `buildCompatAnsi`와 동일한 고정 오버헤드 차감 방식 적용.
+- `totalBudget`을 25행 꽉 채운 값이 아니라 여유 마진을 둔 값(데스크톱 22, 모바일 16)으로 설정 — 이번 세션에 policy/my-stats에서 이미 겪은 "25행 딱 맞추면 실기기에서 컨테이너가 눌려 마지막 줄이 잘린다"는 교훈을 반영.
+- `voteScreens.js`의 `showVoteDetail(voteId, fromHistory, requestedPageNo=1)`이 `built.pageNo`/`built.pageCount`를 `state.serviceData`에 저장(compat-result와 동일한 패턴 재사용 — `terminalHintMarkup.js`의 범용 폴백 분기가 이미 `state.serviceData.pageNo/pageCount`를 읽으므로 별도 배선 불필요).
+- `commandRouterVote.js`의 `vote-detail` 블록에 F키 다음 페이지 처리 추가(B는 이미 "목록"으로 쓰이고 있어 이전 페이지 키는 두지 않음 — compat-result/blood-result와 동일하게 F만 지원하는 전방향 전용 페이지네이션).
+- `commandFooterText.js`의 `voteDetail` 배열에 `'F'`(라벨 기본값 "다음쪽") 추가 — 마지막 페이지에서는 `getFooterPageState()`의 범용 필터가 자동으로 숨김.
+
+검증:
+- `node --check`로 4개 수정 파일(voteAnsiBuilders.js/voteScreens.js/commandRouterVote.js/commandFooterText.js) 모두 문법 통과.
+- 직접 함수 호출 재현 테스트: 옵션 2/5/8/10개는 1페이지(13~21줄), 15/20/50개는 모두 2페이지 이상으로 분할되며 페이지당 최대 22줄(수정 전 옵션 15개 기준 26줄이 넘던 것 대비 25행 이내로 여유 있게 수렴) — 옵션 번호가 페이지 경계에서 중복되거나 누락되지 않고 정확히 한 번씩만 등장함을 확인.
+- `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`(3개 뷰포트 × 27개 라우트), `npm run smoke:command-parity` 모두 통과. (`npm test`는 이 환경에 `archive/dev-only/tests/unit` 디렉터리 자체가 없어 이번 세션과 무관하게 사전부터 실행 불가능한 상태 — 별도 조치 없이 스킵.)
+
+결과: ✅ 완료 — 접속자 목록/첨부파일 목록에 이어 세 번째로 발견한 "무제한 리스트 렌더링" 버그지만, 이번엔 목록을 자르면 기능이 깨지는(투표 불가) 경우라 페이지네이션으로 다르게 접근했다. 5번째 각도(무제한 리스트 렌더링)를 이번 라운드에서 최종적으로 소진 — 나머지 빌더 함수의 forEach/map 전수 재확인 결과 추가 인스턴스는 없음. 다음 라운드는 새로운 6번째 각도를 탐색해야 한다.
+
 ## [2026-07-27 02:30] [/loop 계속] PDS 첨부파일 목록(buildAttachmentListAnsi) 무제한 렌더링 발견 및 수정
 
 **LOG_ID: 20260727_0230**

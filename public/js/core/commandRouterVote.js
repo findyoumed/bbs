@@ -48,6 +48,17 @@ export function createVoteCommandHandler(deps) {
       if (cmd === 'P' || cmd === 'M') { await showBoardSelect('agora'); return true; }
       if (cmd === 'B') { await showVoteList(); return true; }
 
+      // [LOG_ID: 20260727_0245] 선택지가 많은 설문(옵션 10개+)은 이제 페이지네이션되므로,
+      // 다른 페이징 화면(궁합/사주 등)과 동일하게 F로 다음 페이지를 넘긴다.
+      if (cmd === 'F') {
+        const pageNo = state.serviceData?.pageNo || 1;
+        const pageCount = state.serviceData?.pageCount || 1;
+        if (pageNo < pageCount) {
+          await showVoteDetail(state.serviceData?.voteId, false, pageNo + 1);
+          return true;
+        }
+      }
+
       const voteId = state.serviceData?.voteId;
       const optionIndex = Number(rawCmd) - 1; // 1-based to 0-based
 
