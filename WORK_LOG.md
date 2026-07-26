@@ -1,3 +1,19 @@
+## [2026-07-27 05:15] [/loop 계속] 뉴스 PR(갈무리/fullView) 점검 — 오탐, 이미 안전 (+ ansiToHTML 이중 구현 발견·기록)
+
+**LOG_ID: 20260727_0515**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드에서 찾은 PT(제목 100건 출력)와 같은 "페이지 분할 없이 전체를 한 화면에 출력" 패턴을 다른 곳에서도 찾아 뉴스 PR(복사/갈무리) 명령의 `fullView` 모드를 점검.
+
+조사 과정:
+- `commandRouterService.js`의 `PR` 명령(`showNewsArticle(..., { fullView: true })`)과 `newsAnsiBuilders.js`의 `buildNewsArticleAnsi`가 `fullView` 모드에서 `pages.push(bodyLines)`로 본문 전체를 페이지 분할 없이 한 페이지에 몰아넣는 것을 발견 — PT와 동일한 "페이지네이션 우회" 패턴으로 보여 조사.
+- `padPartsToScreenHeight`가 부족한 줄만 채우고(패딩 전용) 넘치는 줄은 자르지 않는 것도 확인해 처음엔 PT와 같은 버그로 의심.
+- 그런데 이 화면은 `state.screen = 'news-view'`를 그대로 쓰는데(`fullView`와 무관하게 동일), `news-view`는 이번 세션 시작부터 있던 최초 4개 화이트리스트 화면(news-list/news-view/help/omok-play) 중 하나로, style.css의 `overflow-y:auto` 화이트리스트에 이미 폭넓게 등록돼 있음을 재확인.
+- Playwright로 모바일 세로(390×844)에서 `#terminal-screen`에 60줄짜리 인위적 긴 본문을 직접 주입하고 강제 스크롤 — `scrollTop`이 0→438로 정상 이동해 60줄 전체에 실제로 도달 가능함을 실측 확인(유실 아님). 직전 랜드스케이프 라운드(20260727_0300)와 동일한 "오탐" 패턴.
+- 조사 중 `ansiToHTML`이 코드베이스에 **두 개의 서로 다른 구현**으로 존재함을 발견: `ansiEngine.js`(ROWS=25 고정 격자, `putChar`가 `row>=25`면 그냥 버림)와 `ansiRenderUtils.js`(`ANSI_ROWS=1000`, "스크롤 가능한 콘텐츠를 위해 버퍼 확장"이라는 주석). `grep`으로 확인한 결과 **`ansiEngine.js`는 어디서도 import되지 않는 완전한 죽은 코드**이고, 실제 앱 전역에서 쓰이는 것은 `ansiRenderUtils.js`의 1000행 버전(`appFactory.js`가 이걸 import)이다.
+
+의미: 이 세션 대화 요약에 있던 "ansiEngine.js의 ROWS=25 하드 격자가 문자 단위로 조용히 버린다"는 설명은 실제로 실행되는 코드가 아니라 죽은 파일을 가리키고 있었다 — 그렇다고 이번 세션에 고친 버그들(접속자 목록·첨부파일 목록·설문 선택지·명령 이력·대화실 대기실·토론의 광장·쪽지함·PT)이 잘못된 수정이었다는 뜻은 아니다. 실제 유실 메커니즘은 (1000행 버퍼 자체는 넉넉하지만) **모바일 세로 화면에서 화면별 화이트리스트에 없는 화면은 `overflow:hidden`으로 재설정되는 CSS 규칙** — 이건 이번 세션 내내 Playwright 실측(scrollHeight/clientHeight)으로 검증해온 것과 정확히 일치하며, 그 수정들은 전부 유효하다. 다만 앞으로는 "ROWS=25 격자가 버린다"는 표현 대신 "화면별 CSS 화이트리스트 부재로 모바일 세로에서 overflow:hidden이 이긴다"로 더 정확히 서술해야 한다.
+
+결과: ❌ 새 버그 없음(오탐 정정) — 뉴스 PR/fullView는 이미 안전. 대신 향후 조사에 중요한 교훈(ansiToHTML 이중 구현, 실제 유실 메커니즘 정정)을 남긴다. 다음 라운드는 15번째 각도를 탐색해야 한다.
+
 ## [2026-07-27 05:00] [/loop 계속] PT(제목 일괄 출력) 명령 — 기능 목적(100건) 자체가 25행 격자를 넘던 설계 결함, 페이지네이션으로 수정
 
 **LOG_ID: 20260727_0500**
