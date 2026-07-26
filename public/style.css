@@ -1971,6 +1971,21 @@ body[data-print-view="true"] .ansi-screen {
         padding: 0 4px;
     }
 
+    /* [LOG_ID: 20260726_2130] .ansi-screen-body는 위에서 이미 max-width를 100%로 풀어 화면
+       가장자리까지 채우는데, compact 상단바(.retro-topbar-row1/row2/hr)는 이 미디어쿼리 밖의
+       고정 규칙(max-width: 44ch)만 적용받아 44ch(이 폰트 기준 약 330px)로 고정된 채 남아있었다
+       — 실기기 스크린샷 실측(393px 뷰포트): 상단바만 좌우 약 31.5px씩 안쪽으로 들어가 화면
+       중앙에 떠 있고, 바로 아래 본문(구분선/키·설명 목록 등)은 가장자리까지 꽉 차서, 상단바와
+       본문 사이 좌측 여백이 서로 어긋나 보였다(사용자 보고: "모바일화면 곳곳에 왼쪽 치우침이
+       보여" — 상단바가 있는 모든 화면에서 재현되는 문제). 본문과 동일하게 100%로 맞춘다.
+       (선택자를 그대로 유지해 이 미디어쿼리가 앞선 고정 규칙보다 소스 순서상 뒤에 오도록 해
+       동일 특정도에서 이 규칙이 이긴다.) */
+    .retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-row1,
+    .retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-row2,
+    .retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-hr {
+        max-width: 100%;
+    }
+
     .retro-topbar--ansi {
         font-size: 12px;
     }

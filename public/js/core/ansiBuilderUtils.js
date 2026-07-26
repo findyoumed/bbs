@@ -351,6 +351,15 @@ export function createAnsiBuilderUtils(deps) {
             lines.push(current);
             current = '';
             currentWidth = 0;
+            // [LOG_ID: 20260726_2130] 줄바꿈 경계가 하필 공백 바로 다음이면 그 공백이 새 줄의
+            // 맨 앞 글자로 그대로 넘어가, 이어지는 줄만 한 칸 밀려 보였다(실측: help 화면 "N"/"A"
+            // 행 — "목록에서 다음(더 낮은 번호) 글을" 다음 줄이 " 읽습니다."로 앞에 공백 하나가
+            // 붙어 표시됨. 원문은 "...글을 읽습니다."로, 줄바꿈 지점이 정확히 그 공백 위치라 생김).
+            // 표준 워드랩처럼 줄바꿈에 걸린 공백 한 칸은 다음 줄로 넘기지 않고 여기서 소비한다.
+            if (ch === ' ') {
+              i++;
+              continue;
+            }
           }
           current += ch;
           currentWidth += charWidth;
