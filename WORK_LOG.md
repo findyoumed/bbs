@@ -1,3 +1,14 @@
+## [2026-07-27 08:15] [/loop 계속] 24번째 각도: PT 명령 실제 상호작용 종단간 검증 + buildTopHeader centerLabel/leftLabel 재확인 — 새 버그 없음
+
+**LOG_ID: 20260727_0815**
+목표: `/loop 다음 수정` 계속 — 이번 라운드는 검증 방식을 바꿔, 지금까지 함수 단위 테스트로만 확인했던 PT 수정을 실제 사용자 입력(명령어 타이핑 → Enter)으로 종단간 재검증하고, `buildTopHeader`의 leftLabel/centerLabel 오버플로우 가능성도 재점검.
+
+확인:
+- Playwright로 실제 게시판(`/board/plaza`)에서 `PT` 입력 → Enter → 목록 복귀까지 실제 커맨드 라우팅으로 재현 — `pt-prepare` → `pt-view` → `post-list` 상태 전이가 정확히 일어나고 콘솔 에러 없음(처음엔 대기시간이 짧아 상태 전이 중간에 읽어 오탐할 뻔했으나 대기시간을 늘려 재확인).
+- `buildTopHeader`의 `centerLabel`은 이미 `truncateDisplayTextEllipsis`로 고쳐져 있음(LOG_ID 20260726_1030, 세션 이전에 이미 수정 완료)을 재확인. `leftLabel`은 `resolveHeaderLabels`의 고정 매핑 테이블(TOP/GUIDE/BOARD 등)에서만 나오는 짧고 고정된 값이라 오버플로우 위험 자체가 없음.
+
+결과: ❌ 새 버그 없음 — 이번 라운드는 기존 수정의 실제 상호작용 검증에 집중했고, 코드 변경 없이 마무리. 다음 라운드는 25번째 각도를 탐색한다.
+
 ## [2026-07-27 08:00] [/loop 계속] 23번째 각도: 초기화면 "작은공지" 배너 — 말줄임표 없는 절삭이지만 죽은 코드로 판명
 
 **LOG_ID: 20260727_0800**
