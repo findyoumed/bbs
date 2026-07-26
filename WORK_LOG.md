@@ -1,3 +1,12 @@
+## [2026-07-26 09:45] [/loop 계속] 하단 힌트바(#cmd-hint) 데스크톱 — 긴 메시지가 말줄임표 없이 잘리던 버그(13번째) 수정
+
+**LOG_ID: 20260726_0945**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 대화방 `/E TITLE` 명령(방 제목 최대 100자, chatServiceRoutes.js `title:{maxLength:100}`)이 성공 시 `setHint('방 제목이 [${value}](으)로 변경되었습니다.')`로 새 제목을 그대로 힌트바에 echo하는 걸 발견해, 여러 화면의 ANSI 그리드가 아니라 **하단 힌트바 자체**의 폭 처리를 점검.
+발견: `#cmd-hint`의 기본(데스크톱) CSS 규칙이 `overflow:hidden; text-overflow:clip; white-space:nowrap;`이었다 — `clip`은 말줄임표 없이 그냥 자르므로, 100자 제목이면 힌트바 폭을 넘는 부분이 아무 표시 없이 사라진다(이번 세션 반복 확인된 버그 클래스와 동일 증상, 이번엔 ANSI 그리드가 아니라 힌트바에서 처음 발견). `@media (max-width:768px)`에는 이미 `overflow:visible; white-space:normal`로 오버라이드되어 있어 **모바일은 실제로 잘리지 않고 여러 줄로 자동 줄바꿈**됨을 실측으로 확인(문제없음) — 데스크톱 전용 결함이었다.
+구현: 기본 규칙의 `text-overflow: clip`을 `text-overflow: ellipsis`로 교체(모바일 오버라이드는 그대로 유지, `.has-cmd-tokens` 모드는 이 규칙 자체를 오버라이드해 영향 없음).
+검증: 실제 브라우저로 힌트바에 260자 넘는 메시지를 직접 주입해 데스크톱(1280px)/모바일(390px) 양쪽 렌더 결과와 `getComputedStyle`을 대조 — 데스크톱은 `text-overflow: ellipsis` 적용되어 "...가나다라마바사아자…" 형태로 말줄임표가 붙어 잘림을 명시함을 스크린샷으로 확인, 모바일은 기존대로 `overflow: visible`/`white-space: normal`로 3줄에 걸쳐 완전히 보임(회귀 없음)을 확인. `npm run smoke:ui-geometry`/`smoke:ui-layout`(힌트 오버플로 로직 테스트 포함)/`smoke:renderer-ui`/`smoke:menu-wiring`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
+결과: ✅ 완료 — 같은 버그 클래스의 13번째 사례이자, 이번 세션 최초로 ANSI 그리드가 아니라 힌트바(모든 `setHint()` 호출이 공유하는 전역 UI) 자체에서 찾은 결함. `setHint`는 앱 전역에서 매우 자주 호출되므로 이 한 줄짜리 CSS 수정의 실사용 파급력이 크다.
+
 ## [2026-07-26 09:30] [/loop 계속] 이용자 검색(WHO/MEMBER) "찾을 수 없음" 메시지 — 검색어가 말줄임표 없이 잘리던 버그(12번째) 수정
 
 **LOG_ID: 20260726_0930**

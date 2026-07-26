@@ -401,7 +401,13 @@ body.theme-nownuri .write-field textarea {
 #cmd-hint {
     color: #fff;
     overflow: hidden;
-    text-overflow: clip;
+    /* [LOG_ID: 20260726_0945] 힌트바는 구조상 한 줄만 표시하는 UI(setHint로 방 제목 변경 확인,
+       회의실 LT 검색 결과 등 서버 상한(최대 100자)까지 가능한 자유 텍스트가 그대로 들어올 수
+       있다)라 wrap은 불가능하지만, text-overflow:clip이라 잘렸을 때 아무 표시 없이 그냥
+       끊겨 마치 원래 짧은 메시지였던 것처럼 보였다(이번 세션에서 반복 확인된 버그 클래스와
+       같은 증상). ellipsis로 바꿔 최소한 "잘렸다"는 것만은 알 수 있게 한다. cmd-token
+       모드(.has-cmd-tokens)는 이 규칙 자체를 오버라이드해 영향 없음. */
+    text-overflow: ellipsis;
     white-space: nowrap;
     font-family: inherit;
     font-size: inherit;
