@@ -1,3 +1,16 @@
+## [2026-07-27 01:45] [/loop 계속] style.css 화면별 whitelist 전체 재점검 완료 — 추가 누락 없음, 이 각도도 소진
+
+**LOG_ID: 20260727_0145**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드에서 남긴 숙제("style.css에 비슷한 화이트리스트가 더 있는지 점검") 수행. `data-screen="..."` 셀렉터가 여러 화면에 걸쳐 반복되는 그룹을 전부 나열해 분류.
+
+확인 — style.css에 존재하는 화면별 다중 셀렉터 그룹은 총 4개뿐이었다:
+1. `main/board-select/news-menu/weather-menu`의 `.ansi-screen-body{padding:0 1px}` — 항목 수가 고정된 정적 메뉴 화면 전용 여백 압축, 세로 잘림 버그 클래스와 무관(안전).
+2. `overflow-y:auto` whitelist(news-list/news-view/help/omok-play/chat-room/vote-detail/scramble-play/policy/my-stats) — 이번 세션에서 이미 완결.
+3. `min-height:1.32em` whitelist — 직전 라운드(20260727_0130)에서 이미 완결.
+4. `#terminal-container{font-size:...0.025}` whitelist(news-list/news-view/help/omok-play만) — post-view가 20260721_1630에 폭 계산 오류로 의도적으로 제외된 전력이 있어, 폭 캘리브레이션과 얽힌 별도 위험군으로 그대로 둔다(직전 라운드에도 동일하게 판단).
+새로 발견된 누락은 없었다.
+결과: ✅ 완료 — 새 버그 없음. "style.css 화면별 whitelist 누락" 각도도 이제 소진 상태(그룹 4개 중 3개는 이미 완결, 1개는 애초에 무관). 이번 세션에서 이 각도로만 실질 버그 2건(policy 20260726_2230, min-height 20260727_0130)을 찾았다는 점에서 가치 있는 탐색이었으나, 이제 더 훑을 대상이 남아있지 않다.
+
 ## [2026-07-27 01:30] [/loop 계속] 새 탐색 각도(짧은 세로 뷰포트) — CSS min-height 완화 화이트리스트에서 7개 화면 누락 발견·수정
 
 **LOG_ID: 20260727_0130**
