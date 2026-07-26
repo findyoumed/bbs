@@ -211,7 +211,14 @@ export function createSystemAnsiBuilders(deps) {
     if (users.length === 0) {
       parts.push(`\n${ansiColor(8)}  접속 중인 사용자가 없습니다.${ANSI_RESET}`);
     } else {
-      users.forEach((user, idx) => {
+      // [LOG_ID: 20260727_0030] 접속자 수는 activityRepository.list()가 상한 없이 그대로
+      // 반환하는데(ActivityRepository.js), 여기는 이 값을 한 줄도 자르지 않고 전부 렌더했다 —
+      // 동시 접속 20명(짧은 닉네임 기준으로도 26줄)만 되어도 ansiEngine.js의 25행 고정 격자를
+      // 넘겨 조용히 유실되는, 안건 보기/쪽지 보기와 동일한 버그 클래스(실측 확인). 회의실/안건
+      // 목록(confAnsiBuilders.js)이 이미 쓰는 "slice(0,N) + 안내 문구" 패턴을 그대로 적용한다.
+      const MAX_VISIBLE_USERS = 15;
+      const visibleUsers = users.slice(0, MAX_VISIBLE_USERS);
+      visibleUsers.forEach((user, idx) => {
         // [LOG_ID: 20260719_2200] 버디 강조(★) — ★는 이 폰트에서 광폭(2칸) 문자라 기존 leading
         // 공백 두 칸("  ")과 폭이 정확히 같으므로 그대로 치환해도 컬럼 정렬이 흐트러지지 않는다.
         const buddyPrefix = isBuddy(user.userId) ? `${ansiColor(11)}★${ANSI_RESET}` : '  ';
@@ -230,6 +237,9 @@ export function createSystemAnsiBuilders(deps) {
           parts.push(`${buddyPrefix}${ansiColor(color)}${id} ${nick} ${ansiColor(14)}${path} ${ansiColor(7)}${time}${ANSI_RESET}`);
         }
       });
+      if (users.length > MAX_VISIBLE_USERS) {
+        parts.push(`${ansiColor(8)}  ... 외 ${users.length - MAX_VISIBLE_USERS}명 더 접속 중입니다.${ANSI_RESET}`);
+      }
     }
 
     return parts.join('\n');

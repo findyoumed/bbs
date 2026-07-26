@@ -876,7 +876,11 @@ function calculateMbtiFromAnswers(answers) {
   }
   // [LOG: 20260724_1004] 세로 스크롤바 방지를 위한 문단 간 빈 줄 압축 적용
   // [LOG: 20260724_1006] 실제 십이지(띠) 합·충·살 역학을 계산하는 정밀 궁합 연산 알고리즘 도입
-  function buildCompatAnsi(birth1, birth2) {
+  // [LOG_ID: 20260727_0040] 궁합(compat) 결과는 personality/chemistry/caution/tip 4개 문단을
+  // 페이징 없이 전부 이어붙였다 — 혈액형(buildBloodAnsi, 20260725_0830)이 이미 겪고 고친 것과
+  // 완전히 같은 버그 클래스. 실측: 4개 문단 조합 하나로 36줄이 나와 ansiEngine.js의 25행
+  // 고정 격자를 훌쩍 넘김. buildBloodAnsi와 동일한 페이지네이션을 적용한다.
+  function buildCompatAnsi(birth1, birth2, pageNo = 1) {
     const idx1 = ((birth1.getFullYear() - 4) % 12 + 12) % 12;
     const idx2 = ((birth2.getFullYear() - 4) % 12 + 12) % 12;
     const animal1 = ZODIAC[idx1];
@@ -975,28 +979,39 @@ function calculateMbtiFromAnswers(answers) {
     const targetCols = isMobile ? 44 : 80;
     const wrapWidth = Math.max(30, targetCols - 14);
 
-    const parts = [
-      buildTopHeader(['오락실', '궁합']),
-      c(11, `${ANSI_BOLD}  ${dateText(birth1)}생 ${animal1}띠${ANSI_RESET}  ${ansiColor(15)}×${ANSI_RESET}  ${ansiColor(11)}${ANSI_BOLD}${dateText(birth2)}생 ${animal2}띠${ANSI_RESET}`),
-      c(8, `  ${'─'.repeat(Math.min(76, targetCols - 4))}`),
-      '',
-      `  ${c(14, '궁합 점수')} ${c(9, ANSI_BOLD + String(score) + '점' + ANSI_RESET)}  ${c(11, ANSI_BOLD + '★ '.repeat(Math.round(score / 20)) + ANSI_RESET)}${c(8, 'ㆍ '.repeat(5 - Math.round(score / 20)))}  ${c(14, `[ ${title} ]`)}`,
-      '',
-      c(14, '  [ 성격 및 가치관 궁합 ]')
-    ];
+    const header = buildTopHeader(['오락실', '궁합']);
+    const animalLine = c(11, `${ANSI_BOLD}  ${dateText(birth1)}생 ${animal1}띠${ANSI_RESET}  ${ansiColor(15)}×${ANSI_RESET}  ${ansiColor(11)}${ANSI_BOLD}${dateText(birth2)}생 ${animal2}띠${ANSI_RESET}`);
+    const hrLine = c(8, `  ${'─'.repeat(Math.min(76, targetCols - 4))}`);
+    const scoreLine = `  ${c(14, '궁합 점수')} ${c(9, ANSI_BOLD + String(score) + '점' + ANSI_RESET)}  ${c(11, ANSI_BOLD + '★ '.repeat(Math.round(score / 20)) + ANSI_RESET)}${c(8, 'ㆍ '.repeat(5 - Math.round(score / 20)))}  ${c(14, `[ ${title} ]`)}`;
 
-    wrapAnsiText(personality, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
+    const bodyLines = [];
+    bodyLines.push(c(14, '  [ 성격 및 가치관 궁합 ]'));
+    wrapAnsiText(personality, wrapWidth).forEach((line) => bodyLines.push(c(15, `    ${line}`)));
+    bodyLines.push(c(11, '  [ 연애 & 인연 기운 ]'));
+    wrapAnsiText(chemistry, wrapWidth).forEach((line) => bodyLines.push(c(15, `    ${line}`)));
+    bodyLines.push(c(13, '  [ 다툼 예방 & 주의할 점 ]'));
+    wrapAnsiText(caution, wrapWidth).forEach((line) => bodyLines.push(c(15, `    ${line}`)));
+    bodyLines.push(c(10, '  [ 관계를 위한 황금 팁 ]'));
+    wrapAnsiText(tip, wrapWidth).forEach((line) => bodyLines.push(c(15, `    ${line}`)));
 
-    parts.push(c(11, '  [ 연애 & 인연 기운 ]'));
-    wrapAnsiText(chemistry, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
+    // 고정 오버헤드(상단바 4줄 + 동물띠줄 + 구분선 + 빈줄 + 점수줄 + 빈줄 + 하단 안내줄) ≈ 9줄을
+    // 제외한 나머지를 본문에 배정한다(buildBloodAnsi와 동일한 방식).
+    const fixedOverhead = 9;
+    const totalBudget = isMobile ? 18 : 24;
+    const bodyLinesPerPage = Math.max(4, totalBudget - fixedOverhead);
+    const pageCount = Math.max(1, Math.ceil(bodyLines.length / bodyLinesPerPage));
+    const currentPage = Math.min(Math.max(Number.parseInt(pageNo, 10) || 1, 1), pageCount);
+    const startIdx = (currentPage - 1) * bodyLinesPerPage;
+    const visibleBody = bodyLines.slice(startIdx, startIdx + bodyLinesPerPage);
 
-    parts.push(c(13, '  [ 다툼 예방 & 주의할 점 ]'));
-    wrapAnsiText(caution, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
+    const parts = [header, animalLine, hrLine, '', scoreLine, '', ...visibleBody, ''];
+    if (currentPage < pageCount) {
+      parts.push(c(8, `  F:다음 페이지 (${currentPage}/${pageCount})`));
+    } else {
+      parts.push(c(8, '  다른 궁합을 보려면 L을 입력하세요.'));
+    }
 
-    parts.push(c(10, '  [ 관계를 위한 황금 팁 ]'));
-    wrapAnsiText(tip, wrapWidth).forEach((line) => parts.push(c(15, `    ${line}`)));
-
-    return parts.join('\n');
+    return { text: parts.join('\n'), pageNo: currentPage, pageCount };
   }
 
   function buildTojeongIntroAnsi() {

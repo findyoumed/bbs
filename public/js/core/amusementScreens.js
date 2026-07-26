@@ -286,7 +286,7 @@ export function createAmusementScreens(deps) {
     inlineMount('compat2-prompt-host', 'game-prompt-host');
     return true;
   }
-  async function showCompatResult(input, fromHistory = false) {
+  async function showCompatResult(input, fromHistory = false, pageNo = 1) {
     const birth2 = input instanceof Date ? input : validDate(input);
     if (!birth2) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1995-05-05'); return false; }
     const birth1Time = state.serviceData?.birth1;
@@ -294,9 +294,10 @@ export function createAmusementScreens(deps) {
     if (typeof restorePromptRow === 'function') { restorePromptRow(); }
     const birth1 = new Date(birth1Time);
     state.screen = 'compat-result';
-    state.serviceData = { kind: 'compat', birth1: birth1Time, birth2: birth2.getTime() };
+    const built = buildCompatAnsi(birth1, birth2, pageNo);
+    state.serviceData = { kind: 'compat', birth1: birth1Time, birth2: birth2.getTime(), pageNo: built.pageNo, pageCount: built.pageCount };
     if (!fromHistory) updateURL();
-    await render(buildCompatAnsi(birth1, birth2), 'amusementView', '선택 >> ');
+    await render(built.text, 'amusementView', '선택 >> ');
     return true;
   }
 

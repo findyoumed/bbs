@@ -1,3 +1,17 @@
+## [2026-07-27 00:30] [/loop 계속] 오락실 궁합(compat) 결과 페이징 부재 + WHO 접속자 목록 무제한 렌더 버그 발견·수정
+
+**LOG_ID: 20260727_0040**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — `systemAnsiBuilders.js`/`amusementAnsiBuilders.js` 나머지 `wrapAnsiText` 사용 화면 점검.
+
+발견 1 — 접속자 목록(WHO, active-users): `buildActiveUsersAnsi`가 `activityRepository.list()`(상한 없음, 전체 접속자를 정렬해 그대로 반환)의 결과를 한 줄도 자르지 않고 전부 렌더했다. 직접 함수 호출 실측: 동시 접속 20명(짧은 닉네임 기준)만 되어도 26줄이 나와 25행 고정 격자를 넘김 — 실제 서비스에서 동시 접속자가 몰리는 시간대에 충분히 재현 가능한 시나리오.
+발견 2(치명) — 오락실 궁합(compat-result): `buildCompatAnsi`가 personality/chemistry/caution/tip 4개 문단을 페이징 없이 전부 이어붙였다 — 혈액형 화면(`buildBloodAnsi`, 20260725_0830에 이미 이 정확한 버그로 한 번 고쳐진 전력이 있음)과 완전히 같은 결함이 궁합 화면엔 반영되지 않고 남아있었다. 실측: 4개 문단 조합 하나로 36줄, 25행 예산의 1.44배.
+
+구현:
+1. `buildActiveUsersAnsi` — `slice(0, 15)`로 표시 상한을 두고, 초과 시 "... 외 N명 더 접속 중입니다." 안내 추가(회의실/안건 목록이 이미 쓰는 `slice(0,12)+안내` 패턴과 동일).
+2. `buildCompatAnsi` — `buildBloodAnsi`와 동일한 페이지네이션(고정 오버헤드 9줄, 24/18줄 예산 기준 분할)을 적용, `pageNo` 매개변수 추가. `amusementScreens.js`의 `showCompatResult`가 페이지 상태를 `state.serviceData.pageNo/pageCount`에 저장(혈액형과 동일 필드 재사용 — 별도 배선 불필요, `commandFooterText.js`의 `amusementView` 카테고리가 이미 `F` 토큰과 `getFooterPageState()`의 기본 폴백 분기를 공유하고 있어 힌트바 자동 숨김도 추가 수정 없이 그대로 동작). `commandRouterService.js`의 `compat-result` 핸들러에 F 다음쪽 처리 추가(blood-result와 동일 패턴).
+검증: 순수 함수 테스트로 궁합 3페이지 전체에 4개 문단이 순서대로 보존됨을 확인. 게스트로 접근 가능한 실제 UI(로그인 불필요)에서 Playwright로 생년월일 두 개 입력 → 3페이지 F로 순회 — 힌트바 "다음쪽(F)"가 1·2쪽에서만 뜨고 3쪽(마지막)에서 사라짐, 3쪽에서 F 반복 입력 시 페이지 유지(경계 가드) 확인. `smoke:full-traversal`/`smoke-mobile-viewports.js`/`smoke:command-parity` 전부 통과.
+결과: ✅ 완료 — 전수조사 2번째 라운드. 다음 반복에서 나머지(postListView.js/voteAnsiBuilders.js의 vote-list·vote-create/chatAnsiBuilders.js의 chat-lobby/arcadeAnsiBuilders.js 잔여 게임)를 계속 점검한다.
+
 ## [2026-07-27 00:10] [/loop 시작] "다른 메뉴도 글자 잘림 전수조사" — 쪽지 보기(memo-view) 본문 페이징 부재로 최대 절반 이상 유실되던 버그 발견·수정
 
 **LOG_ID: 20260727_0010**
