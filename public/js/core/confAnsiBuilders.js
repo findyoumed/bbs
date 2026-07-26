@@ -3,7 +3,7 @@
  * 하이텔 (12)여론광장-1.토론의 광장 재현.
  */
 export function createConfAnsiBuilders(deps) {
-  const { ANSI_RESET, ansiColor, ansiHLine, buildTopHeader, fitCell, formatLongDate, wrapAnsiText, displayWidth } =
+  const { ANSI_RESET, ansiColor, ansiHLine, buildPageLabel, buildTopHeader, fitCell, formatLongDate, wrapAnsiText, displayWidth } =
     deps.ansiBuilderUtils;
 
   function frame(centerLabel, targetCols) {
@@ -79,7 +79,15 @@ export function createConfAnsiBuilders(deps) {
   }
 
   // 3. 안건 보기: 제목/발의자/재청수/본문
-  function buildConfAgendaViewAnsi(agenda) {
+  // [LOG_ID: 20260726_2300] 안건 본문(content)은 서버에서 최대 4000자까지 저장되는데
+  // (ConfRepositoryMemory/Supabase.js), 이 함수는 페이징 없이 wrapAnsiText로 접은 줄을
+  // 전부 그대로 이어붙이기만 했다 — ansiEngine.js가 25행 고정 격자(ROWS=25)라 그 이후 줄은
+  // HTML로 렌더되기도 전에 조용히 버려진다(게시글 보기가 이미 페이징으로 해결한 것과 동일한
+  // 버그 클래스). 실측: 2270자(4000자 상한의 절반 조금 넘음, 극단적 사례가 아닌 평범한 안건
+  // 분량)짜리 본문 하나로 129줄이 나와, 25행을 넘는 나머지(전체의 약 80%)가 통째로 사라짐을
+  // 확인 — 사용자에게는 안건 내용이 도중에 뚝 끊긴 것처럼 보인다. buildPostViewAnsi(게시글
+  // 보기)와 동일한 방식으로 가용 본문 줄 수를 계산해 페이지 단위로 나눈다.
+  function buildConfAgendaViewAnsi(agenda, requestedPageNo = 1) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
     const labelWidth = isMobile ? 6 : 8;
@@ -102,16 +110,57 @@ export function createConfAnsiBuilders(deps) {
       ));
     };
 
-    const parts = [frame('안건 보기', targetCols)];
-    parts.push(...rowWrapped('안건', `${agenda.no}. ${agenda.title || ''}`));
-    parts.push(...rowWrapped('발의자', agenda.authorName || agenda.author || '손님'));
+    const titleLines = rowWrapped('안건', `${agenda.no}. ${agenda.title || ''}`);
+    const authorLines = rowWrapped('발의자', agenda.authorName || agenda.author || '손님');
+    const contentLines = [];
+    String(agenda.content || '').split('\n').forEach((ln) => {
+      wrapAnsiText(ln, targetCols).forEach((w) => contentLines.push(w));
+    });
+
+    // ansiEngine.js의 고정 격자(ROWS=25)를 넘지 않도록 안전 여유를 둔 캔버스 크기(다른
+    // 페이징 화면들과 동일하게 25보다 살짝 작은 값을 쓴다 — post-view는 24, help/policy는 23).
+    const totalLines = 24;
+    const topHeaderLines = 4; // frame() = buildTopHeader() 반환 줄 수
+    // 제목/발의자 줄(가변) + 재청/발의일(고정 2줄) + 구분선(1줄)
+    const headerLineCount = titleLines.length + authorLines.length + 2 + 1;
+    const baseLines = Math.max(3, totalLines - topHeaderLines - headerLineCount);
+
+    const pages = [];
+    let currentLineIdx = 0;
+    const totalBodyLines = Math.max(1, contentLines.length);
+    while (currentLineIdx < totalBodyLines) {
+      const isLastPage = (totalBodyLines - currentLineIdx) <= baseLines;
+      const allowedLines = isLastPage ? Math.max(3, baseLines) : baseLines;
+      const chunk = contentLines.slice(currentLineIdx, currentLineIdx + allowedLines);
+      pages.push(chunk);
+      currentLineIdx += chunk.length;
+    }
+
+    const pageCount = pages.length;
+    const currentPage = Math.min(Math.max(Number.parseInt(requestedPageNo, 10) || 1, 1), pageCount);
+    const visibleBodyLines = pages[currentPage - 1] || [];
+    const pageLabel = buildPageLabel(currentPage, pageCount);
+
+    const parts = [buildTopHeader({ leftLabel: 'FORUM', centerLabel: '안건 보기' }, pageLabel, targetCols)];
+    parts.push(...titleLines);
+    parts.push(...authorLines);
     parts.push(row('재청', `${agenda.secondCount || 0}명${agenda.seconded ? ' (나 재청함)' : ''}`));
     parts.push(row('발의일', formatLongDate(agenda.createdAt) || agenda.createdAt || ''));
     parts.push(ansiHLine(targetCols, 8));
-    String(agenda.content || '').split('\n').forEach((ln) => {
-      wrapAnsiText(ln, targetCols).forEach((w) => parts.push(ansiColor(15) + w + ANSI_RESET));
+    visibleBodyLines.forEach((line) => {
+      parts.push(ansiColor(15) + line + ANSI_RESET);
     });
-    return parts.join('\n');
+
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < totalLines) {
+      joinedLines.push(ANSI_RESET);
+    }
+
+    return {
+      text: joinedLines.slice(0, totalLines).join('\n'),
+      pageNo: currentPage,
+      pageCount
+    };
   }
 
   return { buildConfRoomListAnsi, buildConfAgendaListAnsi, buildConfAgendaViewAnsi };

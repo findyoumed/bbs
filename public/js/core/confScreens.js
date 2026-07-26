@@ -99,7 +99,10 @@ export function createConfScreens(deps) {
   }
 
   // 3. 안건 보기
-  async function showConfAgenda(agendaId, fromHistory = false) {
+  // [LOG_ID: 20260726_2300] 본문이 길면(최대 4000자) 페이징이 필요해졌다(buildConfAgendaViewAnsi
+  // 참고) — 페이지 전환마다 서버를 다시 부르지 않도록, 게시글 보기(post-view)와 동일하게 이미
+  // 받아온 안건 객체를 state.serviceData.agenda에 캐싱해두고 재사용한다.
+  async function showConfAgenda(agendaId, fromHistory = false, requestedPageNo = 1) {
     const id = Number(agendaId);
     const roomNo = state.serviceData?.roomNo;
     state.screen = 'conf-agenda';
@@ -108,12 +111,27 @@ export function createConfScreens(deps) {
     try {
       const agenda = await apiFetch(`/api/conf/agendas/${id}`);
       state.serviceData.roomNo = agenda.roomNo;
-      await render(buildConfAgendaViewAnsi(agenda), 'confAgenda', 'R:재청  P:목록 >> ');
+      state.serviceData.agenda = agenda;
+      const built = buildConfAgendaViewAnsi(agenda, requestedPageNo);
+      state.confAgendaPageNo = built.pageNo;
+      state.confAgendaPageCount = built.pageCount;
+      await render(built.text, 'confAgenda', 'R:재청  P:목록 >> ');
     } catch (e) {
       setHint('안건을 가져오지 못했습니다: ' + e.message);
       if (roomNo) await showConfAgendas(roomNo, true);
       else await showConfRooms(true);
     }
+  }
+
+  // 안건 보기 화면 안에서 페이지만 넘길 때 — 이미 캐싱된 안건 객체를 재사용해 서버 재조회 없이 다시 그린다.
+  async function showConfAgendaPage(requestedPageNo) {
+    const agenda = state.serviceData?.agenda;
+    if (!agenda) return false;
+    const built = buildConfAgendaViewAnsi(agenda, requestedPageNo);
+    state.confAgendaPageNo = built.pageNo;
+    state.confAgendaPageCount = built.pageCount;
+    await render(built.text, 'confAgenda', 'R:재청  P:목록 >> ');
+    return true;
   }
 
   // 4. 회의실 개설 플로우 (제목 1줄)
@@ -187,6 +205,7 @@ export function createConfScreens(deps) {
     showConfRooms,
     showConfAgendas,
     showConfAgenda,
+    showConfAgendaPage,
     showConfRoomCreate,
     submitConfRoom,
     showConfAgendaNew,

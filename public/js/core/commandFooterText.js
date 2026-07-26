@@ -105,7 +105,9 @@ export const CMD_ORDER = {
   // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 하단 힌트바
   confRooms: ['O:회의실개설', 'P', 'T', 'GO', 'H'],
   confAgendas: ['N:안건발의', 'B:회의실', 'C:닫기', 'P', 'T', 'GO', 'H'],
-  confAgenda: ['R:재청', 'P:목록', 'T', 'GO', 'H'],
+  // [LOG_ID: 20260726_2300] 본문 페이징 추가(buildConfAgendaViewAnsi) — 게시글 보기와 동일하게
+  // F:다음/B:이전을 안내한다(B는 1쪽에서는 기존처럼 목록으로 동작, postView와 같은 관례).
+  confAgenda: ['R:재청', 'F:다음', 'B:이전', 'P:목록', 'T', 'GO', 'H'],
   confRoomCreate: ['P:취소', 'T', 'GO', 'H'],
   confAgendaNew: ['P:취소', 'T', 'GO', 'H'],
 

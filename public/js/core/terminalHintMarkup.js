@@ -143,6 +143,16 @@ export function createTerminalHintMarkup(deps) {
       };
     }
 
+    // [LOG_ID: 20260726_2300] 안건 보기(conf-agenda)도 본문이 길면 페이징된다 — help/policy와
+    // 같은 이유로 전용 필드(state.confAgendaPageNo/PageCount)를 쓴다(serviceData는 이미
+    // kind/roomNo/agendaId/agenda 캐시가 들어있어 재사용하면 다른 화면 잔여값 오류가 재현된다).
+    if (state.screen === 'conf-agenda') {
+      return {
+        pageNo: Math.max(1, Number(state.confAgendaPageNo || 1)),
+        pageCount: Math.max(1, Number(state.confAgendaPageCount || 1))
+      };
+    }
+
     return {
       pageNo: Math.max(1, Number(state.serviceData?.pageNo || 1)),
       pageCount: Math.max(1, Number(state.serviceData?.pageCount || 1))

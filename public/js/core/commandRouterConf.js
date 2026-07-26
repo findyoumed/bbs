@@ -6,6 +6,7 @@ export function createConfCommandHandler(deps) {
     showConfRooms,
     showConfAgendas,
     showConfAgenda,
+    showConfAgendaPage,
     showConfRoomCreate,
     submitConfRoom,
     showConfAgendaNew,
@@ -69,6 +70,18 @@ export function createConfCommandHandler(deps) {
     // 안건 보기
     if (s === 'conf-agenda') {
       if (cmd === 'T') { await showMain(); return true; }
+      // [LOG_ID: 20260726_2300] 본문이 길어 페이징이 생기면서(buildConfAgendaViewAnsi) 게시글
+      // 보기와 동일하게 F/엔터(다음쪽)·B(이전쪽, 단 첫 쪽에서는 기존처럼 목록으로)를 처리한다.
+      const pageNo = Number(state.confAgendaPageNo || 1);
+      const pageCount = Number(state.confAgendaPageCount || 1);
+      if ((cmd === 'F' || cmd === '') && pageNo < pageCount) {
+        await showConfAgendaPage(pageNo + 1);
+        return true;
+      }
+      if (cmd === 'B' && pageNo > 1) {
+        await showConfAgendaPage(pageNo - 1);
+        return true;
+      }
       if (cmd === 'P' || cmd === 'M' || cmd === 'B') {
         const roomNo = state.serviceData?.roomNo;
         if (roomNo) await showConfAgendas(roomNo, false);

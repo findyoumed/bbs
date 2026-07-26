@@ -1,3 +1,19 @@
+## [2026-07-26 23:00] "다른 화면도 더 훑어봐" 후속 전수조사 — 토론의 광장(안건 보기) 본문이 25행 고정 격자를 넘으면 80%까지 조용히 유실되던 치명 버그 발견·수정
+
+**LOG_ID: 20260726_2300**
+목표: 사용자 요청 "다른 화면도 더 훑어봐줘" — 직전(20260726_2230) policy 화면 잘림 수정에서 발견한 "화면별 whitelist 확장 패턴에서 신규 화면 하나 누락" 버그 클래스가 다른 화면에도 남아있는지 `wrapAnsiText` 사용처를 전수 검색.
+
+발견(핵심, 치명): `ansiEngine.js`가 `ROWS=25`의 하드코딩된 고정 격자를 쓰고, `putChar()`가 `if (row >= ROWS ...) return;`으로 25행을 넘는 글자를 HTML 렌더 이전에 완전히 버린다(CSS `overflow:hidden`으로 "보이지만 잘리는" 게 아니라 애초에 그려지지도 않음). `confAnsiBuilders.js`의 `buildConfAgendaViewAnsi`(토론의 광장 안건 보기)는 게시글 보기·help·policy와 달리 **페이징 로직 자체가 전혀 없이** 안건 본문(서버 상한 4000자, `ConfRepositoryMemory/Supabase.js`)을 `wrapAnsiText`로 감싼 줄을 전부 무조건 이어붙이기만 했다. 직접 함수 호출로 실측: 극단적 사례가 아닌 평범한 분량(2270자, 4000자 상한의 절반 조금 넘음)의 본문 하나로 **129줄**이 나왔고, 25행을 넘는 나머지(전체의 약 80%)가 통째로 사라짐을 확인 — 사용자가 안건을 열면 본문이 중간에 뚝 끊긴 것처럼 보이는, 이번 세션 통틀어 두 번째로 심각한 기능 버그(PDS local_id 충돌 다음).
+
+구현: `buildPostViewAnsi`(게시글 보기)와 동일한 패턴으로 `buildConfAgendaViewAnsi`에 페이징을 추가 — 헤더 줄 수(제목/발의자 줄바꿈 포함)를 계산해 24줄 캔버스에서 가용 본문 줄 수(`baseLines`)를 구하고, 본문을 페이지 단위로 분할해 `requestedPageNo`에 맞는 페이지만 반환(`{text, pageNo, pageCount}`). 관련 배선:
+- `confScreens.js`: `showConfAgenda`가 페이지 번호를 받아 빌더에 전달하고 `state.confAgendaPageNo/PageCount`에 저장. 페이지 전환마다 서버 재조회 없이 재사용하도록 안건 객체를 `state.serviceData.agenda`에 캐싱하는 `showConfAgendaPage(pageNo)` 신설(게시글 보기가 이미 쓰는 것과 동일한 절약 패턴).
+- `commandRouterConf.js`: `conf-agenda` 화면에 F/엔터(다음쪽)·B(이전쪽, 1쪽에서는 기존처럼 목록으로 폴백)를 게시글 보기와 동일한 우선순위로 추가.
+- `terminalHintMarkup.js`: `getFooterPageState()`에 `conf-agenda` 분기 추가(help/policy와 동일하게 전용 상태 필드 사용 — serviceData 재사용 시 발생했던 "잔여값 오류" 전력 있음).
+- `commandFooterText.js`: `confAgenda` 힌트바에 `F:다음`/`B:이전` 추가(postView와 동일한 라벨 문자열이라 기존 "마지막 쪽에서 F 자동 숨김" 로직에 별도 수정 없이 그대로 적용됨).
+
+검증: 순수 함수 테스트로 40개 문단(2270자) 전체가 8페이지에 걸쳐 한 글자도 유실 없이 보존됨을 확인. 실제 Supabase Auth 세션 + 실제 회의실/안건(API로 생성)으로 Playwright 종단 검증 — F로 8페이지 전부 순회하며 줄 번호 1~40이 정확한 순서로 전부 노출됨을 확인, 마지막 쪽(08/08)에서 "다음(F)" 힌트가 자동으로 사라짐과 다시 F를 눌러도 그대로 머무름(경계 가드)을 확인. `node --check` 5개 파일 전부 통과. `smoke:full-traversal`/`smoke-mobile-viewports.js`/`smoke:command-parity` 전부 통과. 테스트 데이터(회의실·안건·테스트 회원·Auth 계정) 전부 정리.
+결과: ✅ 완료 — CSS whitelist 패턴(policy 등)과는 다른, 더 근본적인 원인(페이징 자체의 부재)의 버그였다. 게시글 보기가 이미 확립한 "내용 길이가 이론상 무한할 수 있는 화면은 CSS 스크롤이 아니라 진짜 페이징으로 처리한다"는 원칙(20260721_1345 로그)을 안건 보기에도 확장 적용했다.
+
 ## [2026-07-26 22:30] 실기기 스크린샷 제보(이용약관 화면 하단 글자 잘림) — policy 화면이 기존 whitelist 패턴에서 누락됐던 것 발견·수정
 
 **LOG_ID: 20260726_2230**
