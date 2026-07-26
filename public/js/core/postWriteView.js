@@ -122,7 +122,11 @@ export function createPostWriteView(deps) {
     const bodyId  = 'bbs-ed-body';
 
     // PC통신 단말기 스타일 에디터 레이아웃
-    const sep = '─'.repeat(76);
+    // [LOG_ID: 20260726_1245] 데스크톱(80컬럼) 기준 76칸 구분선이 모바일(44컬럼)에서도
+    // 그대로 그려져 white-space:pre 특성상 줄바꿈되지 않고 컨테이너 밖으로 밀려나가
+    // overflow-x:hidden에 잘려 보이지 않게 잘렸다(scrollWidth 570 vs clientWidth 390 확인).
+    // 모바일 레이아웃 컬럼수(44)에 맞춰 여백을 제외한 40칸으로 축소.
+    const sep = '─'.repeat(isMobile ? 40 : 76);
     const headerLine = editor.selectedHeader
       ? `<div style="padding:1px 0;opacity:0.8;font-family:inherit;">[ 머리말 : ${editor.selectedHeader} ]</div>`
       : '';
