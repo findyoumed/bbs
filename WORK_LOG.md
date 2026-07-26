@@ -1,3 +1,21 @@
+## [2026-07-27 05:45] [/loop 계속] 이번 세션에 고친 8개 화면이 전부 CSS 화이트리스트 밖 — 짧은 뷰포트에서 여전히 클리핑 발견 및 수정
+
+**LOG_ID: 20260727_0545**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 16번째 각도로, 이번 세션 내내 써온 "slice(0,N) 안내 없는 절삭" 발견 방식을 뒤집어 재검토: 이번 세션에 그렇게 고친 화면들이 style.css의 `overflow-y:auto` 화이트리스트에도 실제로 반영됐는지 교차 확인.
+
+발견:
+- `state.screen` 전체 목록(38개)을 뽑아 style.css의 `data-screen="..."` 등장 횟수를 하나씩 대조 — history/chat-lobby/memo-list/attachment-list/active-users/conf-rooms/conf-agendas/pt-view 8개 화면이 이번 세션에 slice+안내 또는 페이지네이션으로 내용은 24행 캔버스에 맞게 줄였지만, **`overflow-y:auto` 화이트리스트에는 단 하나도 등록되지 않았음**을 확인 — policy/my-stats가 겪었던 것과 완전히 동일한 "내용은 줄였지만 짧은 실기기 뷰포트에서는 그 줄인 분량조차 못 담는다" 패턴이 방치돼 있었다.
+- Playwright로 360×400(짧은 세로)/360×560(주소창 노출, 일반적인 실사용) 두 뷰포트에서 22줄짜리 인위적 콘텐츠를 8개 화면 각각에 강제 주입해 실측 — 전부 `overflowY: hidden`, 360×400에서 218px(≈9줄), 360×560에서도 62px(≈2~3줄) 클리핑을 확인. 진짜 유실이었다(스크롤 자체가 안 됨).
+
+구현:
+- 8개 화면 전부를 `overflow-y:auto` 화이트리스트(2807번째 줄 부근)와 `.ansi-line{min-height:1.32em}` 화이트리스트(2929번째 줄 부근)에 나란히 추가 — 기존 9개 화면과 동일한 3종 완화(overflow-y:auto/overflow-x:hidden/-webkit-overflow-scrolling:touch/overscroll-behavior-y:contain)를 그대로 적용.
+
+검증:
+- 동일한 Playwright 재현 테스트로 재확인: `overflowY`가 `hidden→auto`로 바뀌었고, 360×400에서 218px→38px(스크롤로 도달 가능), 360×560에서는 62px→0px(더 이상 스크롤조차 필요 없음)로 개선됨을 확인.
+- `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`(3개 뷰포트 × 27개 라우트), `npm run smoke:command-parity` 모두 통과.
+
+결과: ✅ 완료 — 이번 세션에 내용 레벨로만 고치고 CSS 화이트리스트 갱신을 놓쳤던 8개 화면을 한 번에 보강했다. 이 "새로 고친 화면이 화이트리스트에 실제로 반영됐는지" 교차 검증 방식은 앞으로도 유효한 각도이므로, 다음에 새 slice+안내 수정을 할 때는 화이트리스트 추가를 매번 함께 확인해야 한다. 다음 라운드는 17번째 각도를 탐색해야 한다.
+
 ## [2026-07-27 05:30] [/loop 계속] 15번째 각도: 건의하기 트랜스크립트/날씨 예보 재점검 — 새 버그 없음
 
 **LOG_ID: 20260727_0530**

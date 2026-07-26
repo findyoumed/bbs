@@ -2804,7 +2804,22 @@ body[data-print-view="true"] .ansi-screen {
        마지막 줄 "접속 시간·요금은..."이 잘림). 본문 쪽에서 중복 빈 줄을 제거해 22줄로
        줄였지만(20260726_2350 코드 주석), 닉네임이 길어 2줄로 접히는 경우(20자, 표시폭
        40칸) 다시 23줄이 될 수 있어 안전망으로 동일한 완화를 추가한다. */
-    body[data-screen="my-stats"] #terminal-screen {
+    body[data-screen="my-stats"] #terminal-screen,
+    /* [LOG_ID: 20260727_0545] 이번 세션에 "안내 없는 절삭" 버그를 slice(0,N)+안내 문구로 고친
+       화면들(명령 이력/대화실 대기실/쪽지함/첨부파일 목록/접속자 목록/회의실·안건 목록/PT)이
+       이 화이트리스트엔 하나도 없었다 — 내용 줄 수를 24행 캔버스에 맞게 줄이긴 했지만, policy/
+       my-stats에서 이미 겪은 것과 똑같이 실기기의 짧은 뷰포트(주소창 노출 등)에서는 그 24행
+       조차도 못 들어간다(Playwright 실측: 360x400에서 218px, 360x560에서도 62px 클리핑 — 위
+       화면들 전부 동일 증상). 실제 유실을 막으려면 내용 절삭뿐 아니라 스크롤 허용도 함께
+       필요하다. */
+    body[data-screen="history"] #terminal-screen,
+    body[data-screen="chat-lobby"] #terminal-screen,
+    body[data-screen="memo-list"] #terminal-screen,
+    body[data-screen="attachment-list"] #terminal-screen,
+    body[data-screen="active-users"] #terminal-screen,
+    body[data-screen="conf-rooms"] #terminal-screen,
+    body[data-screen="conf-agendas"] #terminal-screen,
+    body[data-screen="pt-view"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
@@ -2911,7 +2926,19 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="policy"] .ansi-line,
     body[data-screen="my-stats"] .ansi-line,
     body[data-screen="conf-agenda"] .ansi-line,
-    body[data-screen="memo-view"] .ansi-line {
+    body[data-screen="memo-view"] .ansi-line,
+    /* [LOG_ID: 20260727_0545] 위 overflow-y:auto 화이트리스트 확장(20260727_0545)과 나란히 —
+       같은 이유로 history/chat-lobby/memo-list/attachment-list/active-users/conf-rooms/
+       conf-agendas/pt-view도 24px 고정 하한 대신 1.32em 하한을 써야 짧은 뷰포트에서 실제
+       스크롤 분량이 줄어든다. */
+    body[data-screen="history"] .ansi-line,
+    body[data-screen="chat-lobby"] .ansi-line,
+    body[data-screen="memo-list"] .ansi-line,
+    body[data-screen="attachment-list"] .ansi-line,
+    body[data-screen="active-users"] .ansi-line,
+    body[data-screen="conf-rooms"] .ansi-line,
+    body[data-screen="conf-agendas"] .ansi-line,
+    body[data-screen="pt-view"] .ansi-line {
         min-height: 1.32em;
     }
 
