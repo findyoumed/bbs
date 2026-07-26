@@ -38,7 +38,11 @@ export function createWeatherScreens(deps) {
     });
   }
 
-  function renderWeatherRegionHotspots(screenNode, items, regionStartLine, half) {
+  // [LOG_ID: 20260726_1300] cellW가 실제 렌더 컬럼수(모바일 44/데스크톱 80)와 무관하게 항상
+  // 80 고정으로 계산돼, 모바일에서는 폰트가 44컬럼 기준으로 더 크게 스케일되는데도 컬럼당
+  // 픽셀폭을 실제의 절반 가까이로 착각해 지역 선택 핫스팟이 텍스트와 어긋났다(buildWeatherMenuAnsi
+  // 본문 오버플로 수정과 같은 라운드에서 함께 발견). isMobile을 받아 실제 컬럼수로 계산한다.
+  function renderWeatherRegionHotspots(screenNode, items, regionStartLine, half, isMobile) {
     if (!screenNode || !items.length) return;
     const layer = createHotspotLayer();
     const bodyNode = screenNode.querySelector('.ansi-screen-body') || screenNode;
@@ -55,7 +59,8 @@ export function createWeatherScreens(deps) {
     const padRight = parseFloat(bodyStyle.paddingRight) || 0;
 
     const contentWidth = (bodyRect.width / scaleX) - padLeft - padRight;
-    const cellW = Math.max(8, contentWidth / 80);
+    const cols = isMobile ? 44 : 80;
+    const cellW = Math.max(8, contentWidth / cols);
     const contentLeft = ((bodyRect.left - screenRect.left) / scaleX) + padLeft;
 
     for (let row = 0; row < half; row++) {
@@ -65,7 +70,7 @@ export function createWeatherScreens(deps) {
       const rowTop = (lineRect.top - screenRect.top) / scaleY;
       const rowHeight = Math.max((lineRect.height / scaleY), 16);
       const leftItem = items[row];
-      const rightItem = items[row + half];
+      const rightItem = isMobile ? null : items[row + half];
 
       if (leftItem) {
         layer.appendChild(createHotspotButton(leftItem.door, leftItem.name, {
@@ -125,7 +130,7 @@ export function createWeatherScreens(deps) {
     });
     // [LOG: 20260428_1018] Header is 4 lines, so items start at (regionStartLine - 4) in the body container
     const bodyOffset = result.regionStartLine - 4;
-    renderWeatherRegionHotspots(rendered.screenNode, items, bodyOffset, result.half);
+    renderWeatherRegionHotspots(rendered.screenNode, items, bodyOffset, result.half, result.isMobile);
   }
 
   function normalizeRegionName(name) {

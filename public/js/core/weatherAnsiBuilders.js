@@ -247,12 +247,28 @@ export function createWeatherAnsiBuilders(deps) {
     return { text: parts.join('\n'), pageNo: 1, pageCount: 1 };
   }
 
+  // [LOG_ID: 20260726_1300] 지역 선택 2단 목록이 isMobile을 전혀 참조하지 않고 데스크톱
+  // 전제(52칸 구분선 + 20칸 이름 칸×2단 = 표시폭 54칸)로 항상 렌더돼, 모바일(44칸 예산)에서
+  // 날씨 메뉴를 열 때마다 100% 재현되는 오버플로였다(실측: 54 vs 44, overflow-x:hidden에
+  // 조용히 잘림). 모바일은 1단 목록으로 전환하고 구분선도 targetCols에 맞춘다.
   function buildWeatherMenuAnsi(regions) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
     const parts = [];
     parts.push(buildTopHeader(['날씨']));
     parts.push(`  ${ansiColor(14)}지역 선택${ANSI_RESET}`);
-    parts.push(`  ${ansiColor(8)}${'─'.repeat(52)}${ANSI_RESET}`);
+    parts.push(`  ${ansiColor(8)}${'─'.repeat(targetCols - 4)}${ANSI_RESET}`);
     const regionStartLine = parts.join('\n').split('\n').length;
+
+    if (isMobile) {
+      regions.forEach((region) => {
+        const door = String(region.door).padStart(2, ' ');
+        const name = region.name || region.title || '';
+        parts.push(`  ${ansiColor(15)}${door}. ${fitCell(name, 20)}${ANSI_RESET}`);
+      });
+      return { text: parts.join('\n'), regionStartLine, half: regions.length, isMobile };
+    }
+
     const half = Math.ceil(regions.length / 2);
     for (let i = 0; i < half; i++) {
       const left = regions[i];
@@ -267,7 +283,7 @@ export function createWeatherAnsiBuilders(deps) {
       }
       parts.push(line);
     }
-    return { text: parts.join('\n'), regionStartLine, half };
+    return { text: parts.join('\n'), regionStartLine, half, isMobile };
   }
 
   return {
