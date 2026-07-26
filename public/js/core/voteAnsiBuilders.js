@@ -5,6 +5,7 @@ export function createVoteAnsiBuilders(deps) {
     ANSI_RESET,
     ANSI_BOLD,
     fitCell,
+    fitCellEllipsis,
     buildTopHeader,
     ansiHLine,
     wrapAnsiText,
@@ -101,8 +102,13 @@ export function createVoteAnsiBuilders(deps) {
       content += ` ${ansiColor(11)}${line}${ANSI_RESET}\n`;
     }
     const createdByMax = isMobile ? 10 : 20;
+    // [LOG_ID: 20260726_1015] 여기 주석은 "방어적으로 클램프"라고 했지만 실제로는 말줄임표 없는
+    // fitCell 절삭이었다 — 작성자 닉네임(최대 20자)이 createdByMax(10/20)를 넘으면 이번 세션
+    // 내내 찾아온 것과 같은 버그 클래스(잘렸는지 알 수 없음)였다. fitCellEllipsis로 교체하되,
+    // 이 헬퍼는 항상 고정폭까지 패딩하므로(짧은 값일 때 뒤 "|" 앞에 불필요한 공백이 남는 문제)
+    // 넘칠 때만 쓰고 짧을 때는 원래처럼 패딩 없는 값을 그대로 쓴다.
     const createdByText = displayWidth(vote.createdBy) > createdByMax
-      ? fitCell(vote.createdBy, createdByMax, 'left')
+      ? fitCellEllipsis(vote.createdBy, createdByMax).trim()
       : vote.createdBy;
     content += ` ${ansiColor(14)}작성자  : ${createdByText}  |  상태: ${vote.isActive ? '진행중' : '종료됨'}${ANSI_RESET}\n`;
     content += ansiHLine(targetCols, 8) + '\n\n';
