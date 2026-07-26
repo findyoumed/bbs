@@ -56,6 +56,14 @@ async function runMobileSmokeTests() {
         label: '소형 안드로이드 (360x740)',
         viewport: { width: 360, height: 740 },
         userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-A135F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+      },
+      // [LOG_ID: 20260726_1430] 실기기 중 가장 좁은 축에 속하는 iPhone SE(1세대)/유사 소형
+      // 기기 폭(320px)이 기존 두 뷰포트(360/390)보다 좁아 그 사이에서만 드러나는 가로
+      // 오버플로우를 놓칠 수 있다 — 세 번째 뷰포트로 추가해 커버리지 공백을 메운다.
+      {
+        label: '초소형 iPhone SE (320x568)',
+        viewport: { width: 320, height: 568 },
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 12_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1.2 Mobile/15E148 Safari/604.1'
       }
     ];
 

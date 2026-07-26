@@ -2761,7 +2761,14 @@ body[data-print-view="true"] .ansi-screen {
        아니라 개수 자체도 서버(VoteRepositoryMemory/Supabase)에 상한이 없어(최소 2개만 강제)
        선택지가 많거나 길면 고정 줄 수 예산을 얼마든지 넘을 수 있다. 선택지 문구 절삭 버그를
        wrapAnsiText로 고치면서(voteAnsiBuilders.js) 이 여지가 더 커져 동일한 완화를 확장한다. */
-    body[data-screen="vote-detail"] #terminal-screen {
+    body[data-screen="vote-detail"] #terminal-screen,
+    /* [LOG_ID: 20260726_1430] 스크램블(오락실)도 같은 증상 — 모바일에서 단어 힌트 목록이
+       반상 오른쪽이 아니라 아래로 쌓이는데(같은 파일 20260725_2330 부근 combinedRows 분기),
+       그 판에 숨은 정답 단어 개수가 판마다 달라 총 줄 수가 고정이 아니다(vote-detail과 동일한
+       "개수 자체가 가변적" 특성). 320x568(iPhone SE급) 뷰포트를 스모크 테스트에 추가하면서
+       처음 발견 — footer/명령 입력줄이 뷰포트 아래 약 50px 밖으로 밀려나 있었다(실측:
+       cmdInputBottom=617.5 vs innerHeight=568). 동일한 완화를 확장한다. */
+    body[data-screen="scramble-play"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;

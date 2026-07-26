@@ -45,6 +45,15 @@ export function createArcadeScreens(deps) {
       let host = document.getElementById(hostId);
       if (!host) { host = document.createElement('div'); host.id = hostId; host.className = 'game-prompt-host'; screenEl.appendChild(host); }
       mountPromptRow(host);
+      // [LOG_ID: 20260726_1445] 프롬프트가 footer가 아니라 screenEl(스크롤 가능한 #terminal-screen)
+      // 안에 인라인으로 마운트되는데, 스크램블처럼 판 위에 붙는 힌트 목록 길이가 라운드마다
+      // 달라 총 줄 수가 예산을 넘으면 이 프롬프트가 뷰포트 아래로 밀려난다 — 아케이드 게임은
+      // 모바일에서 auto-focus를 안 하므로(키보드가 판 위로 불쑥 뜨는 것 방지) 포커스에 딸려오는
+      // 브라우저 기본 스크롤도 발동하지 않아, 320x568(초소형 뷰포트) 실측에서 실제로 화면 밖에
+      // 남아 있었다(cmdInputBottom 593~665 vs innerHeight 568). block:'nearest'로 이미 보이는
+      // 경우엔 아무 것도 안 하고, 밀려난 경우에만 최소한으로 스크롤해 매 수(턴)마다 화면이
+      // 불필요하게 튀지 않는다.
+      host.scrollIntoView({ block: 'nearest' });
     }
     return rendered;
   }
