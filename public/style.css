@@ -1430,6 +1430,18 @@ body.theme-nownuri .write-field textarea {
 .retro-topbar--ansi .retro-topbar-center {
     text-align: center;
     justify-self: center;
+    /* [LOG_ID: 20260726_0310] retro-topbar-row2는 grid-template-columns: 1fr auto 1fr —
+       가운데 칸(auto)은 내용 폭만큼 늘어나려 하지만, 좌우 1fr 칸과 공간이 부족하면 grid가
+       auto 트랙을 그 폭보다 좁게 줄여버려 white-space 기본값(normal)인 이 span의 텍스트가
+       두 줄로 줄바꿈됐다(제목 뒷부분이 잘려 사라져 보임 — SYSLOG의 긴 고정 문구, 채팅방의
+       긴 사용자 지정 제목 양쪽에서 실측 재현). JS 쪽에서 문자 폭 기준으로 미리 잘라주는
+       계산(buildTopHeader)이 이 grid의 실제 렌더 폭과 정확히 들어맞지 않을 수 있으므로,
+       CSS에서도 한 줄 유지 + 말줄임표를 강제해 어떤 화면의 어떤 제목이든 안전하게 만든다.
+       (.retro-topbar-line/.retro-topbar-url/.retro-topbar-clock에 이미 쓰인 것과 같은 패턴.) */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .retro-topbar--ansi .retro-topbar-url {
