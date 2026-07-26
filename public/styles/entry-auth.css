@@ -392,6 +392,12 @@
     color: var(--color);
     font-size: inherit;
     line-height: inherit;
+    /* [LOG_ID: 20260726_0420] 비밀번호 찾기 화면(20260726_0410)과 같은 원인 — 부모
+       (.entry-login-transcript)가 flex-column인데 이 줄들의 기본 min-width가 auto(내용 크기)라
+       좁은 화면에서 줄어들지 못해 긴 ID 입력값 echo("회원 ID >> aaaa...")가 뷰포트 밖으로
+       그대로 잘렸다(실측 재현). 같은 처방을 적용한다. */
+    min-width: 0;
+    word-break: break-all;
 }
 
 .entry-screen--login .entry-login-blank-line {
