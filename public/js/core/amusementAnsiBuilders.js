@@ -419,9 +419,13 @@ export function createAmusementAnsiBuilders(deps) {
     }
 
     const rangeLabel = isWindowed ? `${month}월 ${startDay}~${endDay}일` : `${year}년 ${month}월`;
+    // [LOG_ID: 20260726_0400] 닉네임은 한글 20자(표시폭 40칸)까지 허용되는데 이 줄은 고정
+    // 문구만으로도 이미 50여 칸이라, 긴 닉네임이면 데스크톱(80칸) 예산도 넘겼다(이 화면은
+    // isMobile 분기가 따로 있어 모바일에선 재현되지 않지만, 프로필 화면과 동일한 원인이라
+    // 데스크톱 잔존 위험을 함께 없앤다). wrapAnsiText로 감싼다.
     const parts = [
       buildTopHeader(['오락실', '생체 리듬 서비스']),
-      c(15, `  생 일 : ${birthFormatted}(양)   <${rangeLabel}>   ${userName}님의 신체리듬`),
+      ...wrapAnsiText(c(15, `  생 일 : ${birthFormatted}(양)   <${rangeLabel}>   ${userName}님의 신체리듬`), targetCols),
       ''
     ];
 
