@@ -50,10 +50,13 @@ export function createSystemAnsiBuilders(deps) {
     // 끝을 넘어 잘려 보임, 조상 요소의 overflow-x:hidden 때문에 자동 오버플로 검사로는 못 잡는
     // 종류의 결함). 아이디는 영문/숫자 20자 제한(표시폭 20칸)이라 안전하지만 닉네임만 별도로
     // wrapAnsiText 처리한다.
+    // [LOG_ID: 20260726_0830] 재검토 중 발견 — 아래 wrapAnsiText 폭 계산이 줄 앞의 "  "(2칸)를
+    // 빼먹어 실제 렌더 폭이 targetCols보다 2칸 더 길었다(예: 44칸 예산에서 46칸). "  "+label+": "
+    // +value = 2+labelWidth+2+valueWidth가 targetCols와 같아야 하므로 valueWidth는 -2가 아니라 -4.
     const rowWrapped = (label, value) => {
       const labelText = fitCell(label, labelWidth);
       const indent = ' '.repeat(labelWidth + 2);
-      return wrapAnsiText(String(value), targetCols - labelWidth - 2).map((line, i) => (
+      return wrapAnsiText(String(value), targetCols - labelWidth - 4).map((line, i) => (
         `  ${ansiColor(11)}${i === 0 ? labelText : indent}${ANSI_RESET}${i === 0 ? ': ' : '  '}${ansiColor(15)}${line}${ANSI_RESET}`
       )).join('\n');
     };
@@ -129,12 +132,25 @@ export function createSystemAnsiBuilders(deps) {
     }
 
     const row = (label, value) => `  ${ansiColor(11)}${fitCell(label, labelWidth)}${ANSI_RESET}: ${ansiColor(15)}${value}${ANSI_RESET}`;
+    // [LOG_ID: 20260726_0830] 닉네임(한글 20자, 표시폭 40칸까지 허용 — authRoutes.js
+    // nickName:{maxLength:20})을 위 row()가 폭 제한 전혀 없이 그대로 넣고 있었다 — 프로필
+    // 화면(20260726_0350)에서 고쳤던 것과 완전히 같은, 가장 심한 형태의 버그가 "내 이용 현황"
+    // (ACCT) 화면에도 있었다(실측: 모바일 44칸 예산에서 56칸으로 그대로 흘러넘침). 프로필과
+    // 동일하게 닉네임만 wrapAnsiText로 감싼다. 폭 계산도 처음부터 올바르게 -4로 맞춘다("  "+
+    // label+": "+value = 2+labelWidth+2+valueWidth가 targetCols와 같아야 함).
+    const rowWrapped = (label, value) => {
+      const labelText = fitCell(label, labelWidth);
+      const indent = ' '.repeat(labelWidth + 2);
+      return wrapAnsiText(String(value), targetCols - labelWidth - 4).map((line, i) => (
+        `  ${ansiColor(11)}${i === 0 ? labelText : indent}${ANSI_RESET}${i === 0 ? ': ' : '  '}${ansiColor(15)}${line}${ANSI_RESET}`
+      )).join('\n');
+    };
     const gradeName = stats.isAdmin ? '운영자' : (Number(stats.level) >= 2 ? '특별회원' : '일반회원');
 
     parts.push('');
     parts.push(`  ${ansiColor(14)}[ 계정 ]${ANSI_RESET}`);
     parts.push(row('아이디', stats.userId || '-'));
-    parts.push(row('닉네임', stats.nickName || '-'));
+    parts.push(rowWrapped('닉네임', stats.nickName || '-'));
     parts.push(row('회원등급', `${stats.level || 1} (${gradeName})`));
     parts.push(row('가입일', formatLongDate(stats.registrationDateTime) || '정보 없음'));
     parts.push(row('최근 접속', formatLongDate(stats.lastLoginDateTime) || '기록 없음'));
