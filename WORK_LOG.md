@@ -1,3 +1,10 @@
+## [2026-07-26 08:40] [/loop 계속] 오락실/접속자목록/뉴스/날씨 전수 재검토 — 추가 버그 없음
+
+**LOG_ID: 20260726_0840**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 두 라운드에서 "짧다/안전하다"고 과거에 판단했던 필드가 실제로는 회원 닉네임이었던 경우를 연달아 발견했으므로, 같은 방식으로 아직 완전히 재검토하지 않은 나머지 ANSI 빌더 전체(`amusementAnsiBuilders.js`/`arcadeAnsiBuilders.js`/`newsAnsiBuilders.js`/`weatherAnsiBuilders.js`/`systemAnsiBuilders.js`의 접속자 목록)를 처음부터 다시 읽었다.
+확인: `amusementAnsiBuilders.js`의 MBTI/혈액형 화면에서 쓰이는 `nick` 변수는 회원 닉네임이 아니라 `MBTI_TYPES`/`BLOOD_TYPES` 배열의 고정된 유형 이름("세상의 소금형" 등, 개발자가 하드코딩한 데이터)이라 안전했다. `buildRetroArtViewAnsi`의 `item`도 `DOOR_ART`라는 고정 배열(90년대 원본 접속화면 갤러리)이라 사용자 데이터가 아니었다. `arcadeAnsiBuilders.js`는 닉네임을 아예 표시하지 않는다(전수 검색 0건). `buildActiveUsersAnsi`(W 명령, 접속자 목록)의 닉네임 컬럼은 `fitCell`로 절삭되지만, 이건 여러 사용자를 나열하는 목록 행이라 게시판/대화실 목록과 같은 "의도된 목록 절삭" 패턴 — 상세보기가 아니므로 손대지 않는다. `newsAnsiBuilders.js`는 제목/본문 모두 이미 `wrapAnsiText`, 헤드라인은 `HEADLINE_TRUNCATION_SUFFIX`(말줄임표)까지 갖춰 안전했다.
+결과: ✅ 완료 — 이번 라운드는 새 버그를 찾지 못했지만, 지난 두 라운드에서 발견한 "과거 판단이 틀렸을 수 있다"는 우려를 남은 파일 전체에 대해 체계적으로 재확인해 닫았다. 이제 이 세션에서 다룬 ANSI 빌더 9개 파일(게시판/안건/쪽지/프로필/생체리듬/대화방/투표/시스템진단/뉴스·날씨) 전부가 "라벨: 자유 텍스트" 버그 클래스에 대해 재검토를 마쳤다.
+
 ## [2026-07-26 08:30] [/loop 계속] "내 이용 현황"(ACCT) 화면 닉네임 무제한 흘러넘침 버그(10번째) + 프로필/ACCT 공용 wrap 폭 계산의 2칸 오프바이원 수정
 
 **LOG_ID: 20260726_0830**
