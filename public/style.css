@@ -2819,7 +2819,18 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="active-users"] #terminal-screen,
     body[data-screen="conf-rooms"] #terminal-screen,
     body[data-screen="conf-agendas"] #terminal-screen,
-    body[data-screen="pt-view"] #terminal-screen {
+    body[data-screen="pt-view"] #terminal-screen,
+    /* [LOG_ID: 20260727_0630] min-height:1.32em 화이트리스트에 방금 추가한 post-list/vote-list/
+       weather-menu/menu-index/main도 같은 이유로 여기 추가한다 — help/policy처럼 이미 F/B
+       페이지네이션을 쓰는 화면이라도, 실기기 폰트 렌더링이 근소하게 커지는 극단적으로 짧은
+       뷰포트에서는(실측: min-height 수정 후에도 post-list 25px 잔여, help의 기존 25px 잔여와
+       동일 수준) 안전망으로 스크롤을 허용해야 한다(help가 이미 이 방식으로 안전망을 두고
+       있음 — 페이지네이션과 스크롤 안전망은 상충하지 않는다). */
+    body[data-screen="post-list"] #terminal-screen,
+    body[data-screen="vote-list"] #terminal-screen,
+    body[data-screen="weather-menu"] #terminal-screen,
+    body[data-screen="menu-index"] #terminal-screen,
+    body[data-screen="main"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
@@ -2938,7 +2949,19 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="active-users"] .ansi-line,
     body[data-screen="conf-rooms"] .ansi-line,
     body[data-screen="conf-agendas"] .ansi-line,
-    body[data-screen="pt-view"] .ansi-line {
+    body[data-screen="pt-view"] .ansi-line,
+    /* [LOG_ID: 20260727_0630] 직전 라운드에 post-list의 360x400 클리핑(163px)을 상단바 문제로
+       의심했었는데, 실측(getComputedStyle)해 보니 진짜 원인은 훨씬 단순했다 — line-height는
+       이미 15.84px(폰트 12px×1.32)로 옳게 계산되는데 min-height가 여전히 기본값 24px 고정이라
+       줄마다 8.16px씩 낭비되고 있었다(17줄×8.16px≈139px, 163px 초과분 대부분을 설명). 상단바를
+       건드리는 위험한 변경이 아니라, 그냥 이 화면들이 위 min-height:1.32em 화이트리스트에서
+       빠져 있었을 뿐이다. 같은 원인일 가능성이 높은 vote-list/weather-menu/menu-index/main도
+       함께 추가한다. */
+    body[data-screen="post-list"] .ansi-line,
+    body[data-screen="vote-list"] .ansi-line,
+    body[data-screen="weather-menu"] .ansi-line,
+    body[data-screen="menu-index"] .ansi-line,
+    body[data-screen="main"] .ansi-line {
         min-height: 1.32em;
     }
 

@@ -1,3 +1,23 @@
+## [2026-07-27 06:30] [/loop 계속] 직전 라운드 "상단바 오버헤드" 진단 정정 — 실제 원인은 min-height:1.32em 화이트리스트 누락, 안전하게 수정 완료
+
+**LOG_ID: 20260727_0630**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드에서 "상단바/프레임 공용 레이아웃 문제일 수 있어 위험하니 보류"라고 판단했던 post-list 클리핑을, `getComputedStyle`로 정밀 재측정해 실제 원인을 확정.
+
+정정된 진단:
+- `#terminal-screen`의 topbar(65.5px)+body(408px)=473.5px ≈ scrollHeight(473px)로 상단바 자체는 정상 크기였다. 진짜 원인은 body 쪽 — `getComputedStyle(line)`을 직접 찍어보니 `fontSize:12px, lineHeight:15.84px`(=12×1.32, 올바르게 계산됨)인데 `minHeight:24px`(기본값 고정)가 그 위에서 이기고 있었다. 17줄 × (24-15.84)px ≈ 139px로, 163px 초과분의 대부분을 설명한다.
+- 이건 상단바를 건드리는 위험한 전역 변경이 아니라, 이 세션에 이미 9개 화면(news-list/news-view/help/omok-play/chat-room/vote-detail/scramble-play/policy/my-stats)에 안전하게 적용해온 `min-height:1.32em` 화이트리스트에 post-list가 그냥 빠져 있었을 뿐이었다 — 직전 라운드의 "위험하니 보류" 판단은 성급한 오판이었다.
+
+구현:
+- post-list와 같은 원인일 가능성이 높은 vote-list/weather-menu/menu-index/main도 함께 `min-height:1.32em` 화이트리스트에 추가.
+- 위 5개 화면 모두 `overflow-y:auto` 화이트리스트에도 추가 — help/policy가 이미 F/B 페이지네이션을 쓰면서도 극단적으로 짧은 뷰포트를 위한 스크롤 안전망을 두고 있는 것과 동일한 근거(페이지네이션과 스크롤 안전망은 상충하지 않음).
+
+검증:
+- 수정 전/후 `getComputedStyle` 재측정: perLineHeight 24px→15.83px, bodyHeight 408px→269px, scrollHeight 473px→335px(잔여 25px, help의 기존 잔여와 동일 수준— 스크롤로 해결됨).
+- 5개 화면 × 4개 뷰포트(공식 320x568/360x740/390x844 + 극단 360x400) 전수 재확인: 공식 뷰포트 전부 0px(완전 해결), 극단 뷰포트에서도 post-list만 25px 잔여(스크롤 가능)이고 나머지 4개는 0px.
+- `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`(3개 뷰포트 × 27개 라우트), `npm run smoke:command-parity` 모두 통과.
+
+결과: ✅ 완료 — 직전 라운드의 신중한 보류가 오히려 더 정밀한 실측(getComputedStyle 직접 확인)으로 이어져 근본 원인을 정확히 찾아냈고, 위험 부담 없이 이번 세션의 검증된 화이트리스트 패턴만으로 안전하게 고쳤다. "성급한 판단을 피하고 한 단계 더 파고드니 실제로는 안전한 해법이었다"는 점에서 이번 세션의 신중함 원칙이 제대로 작동한 사례. 다음 라운드는 19번째 각도를 탐색해야 한다.
+
 ## [2026-07-27 06:15] [/loop 계속] post-list 360x400 클리핑 근본 원인 조사 — 상단바 오버헤드로 판명, 위험한 변경 회피
 
 **LOG_ID: 20260727_0615**
