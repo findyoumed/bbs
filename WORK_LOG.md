@@ -1,3 +1,17 @@
+## [2026-07-27 00:50] [/loop 계속] 나머지 wrapAnsiText 사용 화면 전수 점검 완료 — 새 버그 없음, `wrapAnsiText` 기준 전수조사 마무리
+
+**LOG_ID: 20260727_0050**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 지난 라운드에서 남긴 나머지 항목(`postListView.js`, `voteAnsiBuilders.js`의 vote-list/vote-create, `chatAnsiBuilders.js`의 chat-lobby, `arcadeAnsiBuilders.js`의 잔여 게임 8종)을 점검.
+
+확인 결과 — 전부 안전:
+- `postListView.js`: `wrapAnsiText`는 목록 행에 표시할 "쪽수" 숫자만 계산하는 용도이고, 실제 목록 행 자체는 여전히 `fitCell`로 한 줄 고정이라 위험 없음.
+- `voteAnsiBuilders.js`(vote-list): 서버 페이지네이션을 전제로 `12 - votes.length` 패딩 로직이 이미 있어 한 페이지당 12건으로 사실상 상한이 걸려 있음.
+- `chatAnsiBuilders.js`(chat-lobby): 이미 이전 라운드(20260722_2900 등 기존 로그)에서 "24줄 예산" 명시 주석과 함께 사용자/방/참여자 이름까지 전 층위에서 `slice()` 상한이 걸려 있어 안전.
+- `arcadeAnsiBuilders.js`(오델로/숫자야구/행맨/15퍼즐/스크램블/영어단어/타자연습/퀴즈/전투): `wrapAnsiText`는 전부 고정된 짧은 안내 문구나(퀴즈는 `QUIZ_QUESTIONS` 정적 배열, 문항당 보기 4개 고정) UI 폭 보정용이라 사용자 생성 콘텐츠처럼 길이가 무한정 늘어날 여지가 없음.
+
+이로써 이번 세션에서 시작한 `wrapAnsiText` 사용처 전수조사(help/policy/conf-agenda/memo-view/my-stats/active-users/compat-result 총 7건 수정)가 사실상 마무리됐다 — 남은 화면은 전부 (a) 서버/클라이언트 어느 한쪽에서 이미 상한이 걸려 있거나 (b) 애초에 길이가 고정된 정적 문구만 다뤄, 이 버그 클래스(25행 고정 격자 초과로 인한 조용한 콘텐츠 유실)에 해당하지 않는다.
+결과: ✅ 완료 — 새 버그 없음. `wrapAnsiText` 기준 전수조사는 이 라운드로 마무리로 판단되며, 사용자에게 계속 반복할지(다른 각도로 전환) 또는 5분 간격 반복 작업을 여기서 종료할지 확인이 필요하다.
+
 ## [2026-07-27 00:30] [/loop 계속] 오락실 궁합(compat) 결과 페이징 부재 + WHO 접속자 목록 무제한 렌더 버그 발견·수정
 
 **LOG_ID: 20260727_0040**
