@@ -1,3 +1,15 @@
+## [2026-07-27 05:30] [/loop 계속] 15번째 각도: 건의하기 트랜스크립트/날씨 예보 재점검 — 새 버그 없음
+
+**LOG_ID: 20260727_0530**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드에서 뉴스 PR 전용 `data-print-view` 메커니즘을 발견한 김에, 비슷하게 "페이지 분할 없이 전체 출력"이 필요한 다른 기능이 있는지, 그리고 아직 직접 안 본 나머지 화면 모듈들을 점검.
+
+확인:
+- `data-print-view`는 `screenName === 'news-view' && state.serviceData?._printView`로만 켜지는 뉴스 전용 하드코딩이지만, 다른 화면 중 이 메커니즘이 필요한데 못 받은 사례는 없었다(PT는 페이지네이션으로 이미 별도 해결).
+- `contactSysopScreen.js`(건의하기)는 `postWriteView.js`의 `getVisibleTranscriptLines`와 완전히 동일한 `MAX_VISIBLE_TRANSCRIPT_LINES=18` + "(...이전 N줄 생략...)" 안내 패턴이 이미 적용돼 있어 안전.
+- `weatherAnsiBuilders.js`의 지역별 예보(`buildWeatherAnsi`)는 이미 `subPageInfo` 기반으로 일별/시간별 페이지네이션이 완비돼 있고, 요약 페이지의 `dailyItems.forEach`는 날씨 API가 주는 고정된 소수(3~10일) 예보라 사용자 데이터처럼 자라지 않아 안전.
+
+결과: ❌ 새 버그 없음 — 이번 라운드도 코드 변경 없이 마무리. 지금까지 15개 각도(wrapAnsiText/fitCell/CSS whitelist×2/raw-HTML 트랜스크립트/무제한 리스트 렌더링(화면모듈 포함)/랜드스케이프(오탐)/정적 메뉴/글쓰기·회원가입/검색·힌트바/뉴스 PR(오탐)/건의하기·날씨)를 조사했다. 다음 라운드는 16번째 각도를 찾아야 한다.
+
 ## [2026-07-27 05:15] [/loop 계속] 뉴스 PR(갈무리/fullView) 점검 — 오탐, 이미 안전 (+ ansiToHTML 이중 구현 발견·기록)
 
 **LOG_ID: 20260727_0515**
