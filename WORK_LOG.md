@@ -1,3 +1,14 @@
+## [2026-07-26 05:25] [/loop 계속] 랜드스케이프 모바일(가로 방향, 844x390 등)에서 명령 입력창이 뷰포트 밖으로 완전히 밀려나던 심각한 버그 수정
+
+**LOG_ID: 20260726_0520**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 지금까지는 세로(portrait) 모바일 뷰포트만 점검해왔으므로, 폰을 눕힌 랜드스케이프(가로) 방향(예: 844x390 — 너비>높이)에서도 문제가 없는지 확인. main/pds/omok/chat 4개 라우트를 844x390 뷰포트로 스크린샷·측정.
+발견: main은 문제없었지만, pds(자료실 목록)와 omok(오목 게임)에서 심각한 버그를 발견 — 상단바가 화면 위로 잘려 보이고, 힌트바·명령 입력창(`#cmd-input`)이 스크린샷에 아예 나타나지 않았다. `getBoundingClientRect()`로 직접 측정한 결과 `cmdInputRect.top`이 `innerHeight`(390)를 넘어(예: 415~531) 완전히 뷰포트 밖에 위치했고, `#terminal-container`의 top도 음수(-116)로 나와 내용이 위아래로 대칭적으로 넘치고 있었다.
+근본 원인: `#terminal-screen`에 "본문이 항상 24행을 차지해 하단 입력창이 흔들리지 않게 한다"는 기존 정책(LOG 20260707_1735)으로 `min-height: 33.6em !important`가 걸려 있는데, 이 값은 랜드스케이프 저해상도 전용 미디어쿼리(`@media (max-height: 480px) and (orientation: landscape)`, style.css:2097)에서 오버라이드되지 않았다. 게다가 844px 너비는 일반 모바일 분기(`max-width: 768px`)도 건너뛰어 데스크톱 폰트(17px)가 그대로 적용되므로 33.6em=571px라는 고정 최소 높이가 390px 뷰포트를 크게 초과 — flex-column 안에서 이 자식(`#terminal-screen`)이 그 아래로 줄어들지 못해 형제(`#terminal-footer`)까지 통째로 화면 밖으로 밀려났다.
+구현: 해당 랜드스케이프 미디어쿼리 안에 `#terminal-screen { min-height: auto !important; }`를 추가해 이 뷰포트에서는 24행 고정 정책을 포기하고 실제 콘텐츠 높이에 맞춰 줄어들도록 함(`overflow-y: auto`가 원래도 걸려 있어 내부 스크롤이 대신 처리).
+시행착오: 처음엔 `#scroll-bottom-btn`("맨 아래로 스크롤" 버튼)을 오목처럼 화면 안 인라인 프롬프트를 쓰는 게임에서 자동으로 띄우도록 `terminalSequentialRenderer.js`/`ansiTopbarScreen.js`에 로직을 추가했으나, 이 버튼은 `retro-terminal.css:1269`에 "[LOG: 20260610_1150] 사용자 요청으로 시각적 숨김"이라는 명시적 과거 요청으로 `display: none !important` 처리되어 있어 실제로는 절대 보이지 않는 죽은 코드가 된다는 걸 뒤늦게 확인 — 과거 사용자 의도를 거스르지 않도록 두 JS 변경 모두 되돌리고 순수 CSS 수정만 남겼다.
+검증: `pds`/`chat`(하단 고정 명령 입력창 사용)는 수정 후 `cmdInputRect`가 완전히 390px 뷰포트 안에 들어와 스크롤 없이도 입력창이 보임(스크린샷 확인). `omok`(게임 보드 뒤에 인라인 프롬프트를 쓰는 화면)은 여전히 스크롤이 필요하지만 — 수정 전엔 페이지 자체가 넘치는 공간이 없어 절대 도달 불가능했던 것과 달리, 수정 후엔 `#terminal-screen`의 정상적인 내부 스크롤(`scrollHeight` 559 vs `clientHeight` 390)로 실제로 스크롤해서 도달 가능함을 직접 확인(스크롤 시 입력창이 뷰포트 맨 아래 정확히 걸쳐 보임). `npm run smoke:menu-wiring`/`smoke:boards`/`smoke:auth-bridge`/`smoke:chat-rooms`/`smoke:rss-services`/`smoke:renderer-ui`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2, 세로 방향) 재실행 전부 통과, 무회귀. (`npm test`는 이 샌드박스에 `archive/` 디렉터리 자체가 없어 이번 세션 전체에서 애초에 실행 불가능한 환경 문제 — 본 수정과 무관.)
+결과: ✅ 완료 — 이번 세션 최초로 세로가 아닌 가로(랜드스케이프) 방향 모바일을 점검했고, 지금까지의 "고정폭(가로) 넘침" 버그 클래스와는 별개로 "고정 최소 높이(세로) 넘침"이라는 새로운 버그 클래스를 찾아 수정. 하단 고정 입력창을 쓰는 대다수 화면은 스크롤 없이 완전히 정상화, 인라인 프롬프트를 쓰는 게임 화면은 최소한 스크롤로 도달 가능하도록 개선.
+
 ## [2026-07-26 05:00] [/loop 계속] 로그인 화면에도 같은 flex min-width 결함 발견·부분 수정 + 낮은 심각도 잔여 사례 기록
 
 **LOG_ID: 20260726_0420**

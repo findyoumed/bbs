@@ -2117,6 +2117,15 @@ body[data-print-view="true"] .ansi-screen {
         min-height: auto;
     }
 
+    /* [LOG_ID: 20260726_0430] #terminal-screen의 "본문 24행 고정" 정책(min-height: 33.6em !important,
+       style.css 상단부 참고)이 랜드스케이프 저해상도(844x390 등)에서 그대로 적용되면 데스크톱 폰트(17px)
+       기준 571px 최소높이가 뷰포트(390px)를 넘어서면서 #terminal-footer(명령 입력창)가 화면 밖으로
+       완전히 밀려나 버린다(오목 등 본문이 긴 화면에서 확인). 짧은 랜드스케이프 화면에서는 24행 고정을
+       포기하고 실제 콘텐츠 높이에 맞춰 줄어들도록(overflow-y: auto가 내부 스크롤을 대신 처리) 해제한다. */
+    #terminal-screen {
+        min-height: auto !important;
+    }
+
     .bbs-banner {
         padding: 4px 4px 8px;
     }
