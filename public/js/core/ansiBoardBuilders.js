@@ -509,13 +509,22 @@ export function createBoardAnsiBuilders(deps) {
     if (!attachments || attachments.length === 0) {
       parts.push(ansiColor(14) + '│ ' + ansiColor(8) + fitCell('첨부된 파일이 없습니다.', innerWidth, 'center') + ansiColor(14) + ' │' + ANSI_RESET);
     } else {
-      attachments.forEach((file, idx) => {
+      // [LOG_ID: 20260727_0230] 첨부파일 개수에 서버 상한이 없는데(AttachmentRepository*.js에
+      // 검사 없음) 이 목록은 한 줄도 자르지 않고 전부 렌더했다 — 접속자 목록(WHO)과 동일한
+      // 버그 클래스(실측: 첨부 20개만 되어도 26줄로 25행 고정 격자를 넘김). 동일한
+      // slice(0,N)+안내 패턴을 적용한다.
+      const MAX_VISIBLE_ATTACHMENTS = 15;
+      attachments.slice(0, MAX_VISIBLE_ATTACHMENTS).forEach((file, idx) => {
         const num = String(idx + 1).padStart(2);
         const nameWidth = innerWidth - 2 - 2 - 1 - 10;
         const name = fitCell(file.originalFilename || file.filename || '', nameWidth);
         const size = fitCell(`${Math.round(file.fileSize / 1024)} KB`, 10, 'right');
         parts.push(ansiColor(14) + '│ ' + ansiColor(11) + num + '. ' + ansiColor(15) + name + ' ' + ansiColor(8) + size + ansiColor(14) + ' │' + ANSI_RESET);
       });
+      if (attachments.length > MAX_VISIBLE_ATTACHMENTS) {
+        const overflowText = `... 외 ${attachments.length - MAX_VISIBLE_ATTACHMENTS}개 더 있습니다.`;
+        parts.push(ansiColor(14) + '│ ' + ansiColor(8) + fitCell(overflowText, innerWidth) + ansiColor(14) + ' │' + ANSI_RESET);
+      }
     }
 
     parts.push(ansiColor(14) + '└' + '─'.repeat(targetCols - 2) + '┘' + ANSI_RESET);

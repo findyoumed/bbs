@@ -1,3 +1,24 @@
+## [2026-07-27 02:30] [/loop 계속] PDS 첨부파일 목록(buildAttachmentListAnsi) 무제한 렌더링 발견 및 수정
+
+**LOG_ID: 20260727_0230**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 4개 각도(wrapAnsiText/fitCell/style.css whitelist ×2/raw-HTML 트랜스크립트) 소진 후, 5번째 각도로 아직 점검하지 않은 빌더 함수들의 "리스트 항목 수 무제한 렌더링" 여부를 재검토 (이전에 `buildActiveUsersAnsi`, `buildCompatAnsi`에서 같은 버그 클래스를 찾아 고친 전례가 있음).
+
+발견:
+- `ansiBoardBuilders.js`의 `buildAttachmentListAnsi(attachments)`가 `attachments.forEach`로 첨부파일 전부를 한 줄씩 렌더 — 개수 상한이 전혀 없음.
+- `AttachmentRepository*.js`(Memory/Supabase) 어디에도 게시글당 첨부 개수 제한이 없어, 이론상 무제한으로 쌓일 수 있음.
+- 직접 함수 호출 테스트로 확인: 첨부 20개 → 26줄(25행 고정 격자 초과), 25개 → 31줄.
+
+구현:
+- `buildActiveUsersAnsi`(접속자 목록)에 적용했던 것과 동일한 패턴 적용: `MAX_VISIBLE_ATTACHMENTS = 15`로 `slice(0, 15).forEach(...)`, 초과 시 `... 외 N개 더 있습니다.` 안내 줄 추가.
+- 렌더링만 잘라내고 `state._attachments`(다운로드 선택 핸들러 `commandRouterPostView.js`가 참조하는 실제 배열)는 그대로 두어, 화면에 보이는 1~15번 번호가 실제 데이터 인덱스와 계속 정확히 일치하도록 보존.
+
+검증:
+- `node --check ansiBoardBuilders.js` 통과.
+- 직접 함수 호출 재현 테스트: n=0→7줄, n=5→11줄, n=15→21줄, n=20→22줄(수정 전 26줄), n=25→22줄(초과 안내 줄 포함, 수정 전 31줄) — 모두 25행 이내로 확인.
+- `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`(3개 뷰포트 × 27개 라우트) 모두 통과.
+
+결과: ✅ 완료 — 접속자 목록(`buildActiveUsersAnsi`)과 동일한 "무제한 리스트 렌더링" 버그 클래스를 PDS 첨부파일 목록에서도 찾아 수정. 5번째 각도가 새 버그를 낳았으므로, 아직 점검하지 않은 다른 빌더 함수들(리스트를 다루는 나머지 함수들)에 대한 전수조사를 다음 라운드에도 이어간다.
+
 ## [2026-07-27 02:00] [/loop 계속] raw-HTML 트랜스크립트 화면(로그인/비번찾기/마이인포) 점검 — 새 버그 없음, 4번째 각도 소진
 
 **LOG_ID: 20260727_0200**
