@@ -3,7 +3,7 @@
  * 하이텔 (12)여론광장-1.토론의 광장 재현.
  */
 export function createConfAnsiBuilders(deps) {
-  const { ANSI_RESET, ansiColor, ansiHLine, buildPageLabel, buildTopHeader, fitCell, formatLongDate, wrapAnsiText, displayWidth } =
+  const { ANSI_RESET, ansiColor, ansiHLine, buildPageLabel, buildTopHeader, fitCell, fitCountCell, formatLongDate, wrapAnsiText, displayWidth } =
     deps.ansiBuilderUtils;
 
   function frame(centerLabel, targetCols) {
@@ -36,7 +36,9 @@ export function createConfAnsiBuilders(deps) {
       rooms.slice(0, 12).forEach((room) => {
         let line = ansiColor(15) + fitCell(String(room.no), COL.no, 'right') + ' ';
         if (COL.owner) line += ansiColor(11) + fitCell(room.ownerName || room.owner || '손님', COL.owner) + ' ';
-        if (COL.agenda) line += ansiColor(8) + fitCell(String(room.agendaCount || 0), COL.agenda, 'right') + ' ';
+        // [LOG_ID: 20260727_0715] 안건 수가 칸 폭(COL.agenda)을 넘으면 fitCell이 뒷자리를 잘라
+        // 실제보다 작은 값으로 보였다 — 조회수와 같은 버그 클래스. fitCountCell로 교체.
+        if (COL.agenda) line += ansiColor(8) + fitCountCell(room.agendaCount || 0, COL.agenda) + ' ';
         line += ansiColor(room.isOpen ? 10 : 8) + fitCell(room.isOpen ? '열림' : '닫힘', COL.state) + ' ';
         line += ansiColor(15) + fitCell(room.title || '회의실', titleWidth) + ANSI_RESET;
         parts.push(line);
@@ -77,7 +79,8 @@ export function createConfAnsiBuilders(deps) {
       agendas.slice(0, 12).forEach((a) => {
         let line = ansiColor(15) + fitCell(String(a.no), COL.no, 'right') + ' ';
         if (COL.author) line += ansiColor(11) + fitCell(a.authorName || a.author || '손님', COL.author) + ' ';
-        line += ansiColor(9) + fitCell(String(a.secondCount || 0), COL.second, 'right') + ' ';
+        // [LOG_ID: 20260727_0715] 재청 수도 같은 이유로 fitCountCell로 교체.
+        line += ansiColor(9) + fitCountCell(a.secondCount || 0, COL.second) + ' ';
         line += ansiColor(15) + fitCell(a.title || '안건', titleWidth) + ANSI_RESET;
         parts.push(line);
       });

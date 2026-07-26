@@ -20,6 +20,7 @@ export function createBoardAnsiBuilders(deps) {
     estimatePostPageCount,
     fitCell,
     fitCellEllipsis,
+    fitCountCell,
     formatLongDate,
     formatShortDate,
     highlightText,
@@ -177,7 +178,11 @@ export function createBoardAnsiBuilders(deps) {
         const fileText = highlightText(fileLabel, highlightTerm, 14, 15);
         line += ansiColor(15) + fitCell(fileText, P.file) + ' '
           + ansiColor(8) + fitCell(formatSize(post.fileSize), P.size, 'right') + ' ';
-        if (P.dn) line += ansiColor(8) + fitCell(String(post.downloadCount || 0), P.dn, 'right') + ' ';
+        // [LOG_ID: 20260727_0715] 다운로드 수가 칸 폭(P.dn)을 넘으면 fitCell이 뒷자리를 그냥
+        // 잘라 실제보다 작은 값으로 보였다(예: 12345 → "1234", 잘렸다는 티도 안 남) — 조회수와
+        // 같은 버그 클래스. fitCountCell로 교체해 넘칠 때 "999+"처럼 최소한 초과했다는 것만은
+        // 보이게 한다.
+        if (P.dn) line += ansiColor(8) + fitCountCell(post.downloadCount || 0, P.dn) + ' ';
         if (P.showTitle && pTitleWidth > 0) {
           const t = highlightText(String(post.title || ''), highlightTerm, 14, 15);
           line += ansiColor(15) + fitCell(t, pTitleWidth);
@@ -250,7 +255,10 @@ export function createBoardAnsiBuilders(deps) {
         + ansiColor(11) + userId + ' '
         + ansiColor(8) + date + ' ';
       if (COL.hit) {
-        line += ansiColor(8) + fitCell(String(post.hit || post.views || 0), COL.hit, 'right') + ' ';
+        // [LOG_ID: 20260727_0715] 조회수가 칸 폭(COL.hit=4)을 넘으면(예: 12345) fitCell이 뒷자리를
+        // 그냥 잘라 "1234"처럼 완전히 다른(더 작은) 값으로 보였다 — 텍스트 절삭과 달리 잘렸다는
+        // 티도 안 나서 더 위험하다(실측 확인). fitCountCell로 교체해 넘칠 때 "999+"로 표시한다.
+        line += ansiColor(8) + fitCountCell(post.hit || post.views || 0, COL.hit) + ' ';
       }
       if (COL.pages) {
         line += ansiColor(8) + fitCell(String(estimatePostPageCount(post)), COL.pages, 'right') + ' ';

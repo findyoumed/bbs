@@ -33,6 +33,7 @@ export function createPostListView(deps) {
     buildTopHeader,
     ansiHLine,
     fitCell,
+    fitCountCell,
     formatShortDate,
     wrapAnsiText,
     displayWidth
@@ -272,7 +273,9 @@ export function createPostListView(deps) {
       const author = fitCell(post.nickName || post.authorNickName || '', 8);
       const userId = fitCell(post.userId || post.authorUserId || '', 8);
       const date = fitCell(formatShortDate(post.createdAt), 5);
-      const hits = fitCell(String(post.hit || post.views || 0), 4, 'right');
+      // [LOG_ID: 20260727_0715] 조회수가 칸 폭(4)을 넘으면 fitCell이 뒷자리를 그냥 잘라 실제보다
+      // 작은 값으로 보였다(게시판 목록과 같은 버그 클래스). fitCountCell로 교체.
+      const hits = fitCountCell(post.hit || post.views || 0, 4);
 
       const sample = String(post.content || post.body || post.title || '').trim();
       const wrapLines = wrapAnsiText(sample, 60);

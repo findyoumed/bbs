@@ -95,6 +95,21 @@ export function createAnsiBuilderUtils(deps) {
     return fitCell(`${truncateDisplayText(source, Math.max(1, maxWidth - 1))}…`, maxWidth);
   }
 
+  // [LOG_ID: 20260727_0715] 조회수/다운로드수 등 정보성 숫자 칸에 fitCell을 그대로 쓰면
+  // 자릿수가 칸 폭을 넘길 때(예: 12345를 폭 4에 넣으면) 뒷자리부터 그냥 잘려 "1234"처럼
+  // 완전히 다른(더 작은) 값으로 보인다 — 텍스트 절삭과 달리 잘렸다는 티도 안 나서 더 위험하다
+  // (실측: hit=12345, width=4 → "1234"). ID처럼 사용자가 실제로 입력해 선택하는 값이 아니라
+  // 순수 표시용 숫자에만 쓴다 — width칸을 다 채우는 "9"들 뒤에 "+"를 붙여 "실제 값이 이보다
+  // 크다"는 것만은 알 수 있게 한다(예: width=4 → "999+").
+  function fitCountCell(value, maxWidth, align = 'right') {
+    const text = String(value ?? '');
+    if (displayWidth(text) <= maxWidth) {
+      return fitCell(text, maxWidth, align);
+    }
+    const overflowText = maxWidth >= 2 ? '9'.repeat(maxWidth - 1) + '+' : '+';
+    return fitCell(overflowText, maxWidth, align);
+  }
+
   // [LOG_ID: 20260726_1030] fitCellEllipsis는 항상 maxWidth까지 트레일링 공백으로 패딩한다
   // (표 컬럼 정렬용으로 설계됐기 때문) — buildTopHeader의 leftText/centerText처럼 반환값의
   // displayWidth를 그대로 후속 위치 계산(minCenterStart 등)에 쓰는 자리에 패딩된 값을 넣으면
@@ -426,6 +441,7 @@ export function createAnsiBuilderUtils(deps) {
     estimatePostPageCount,
     fitCell,
     fitCellEllipsis,
+    fitCountCell,
     formatLongDate,
     formatShortDate,
     highlightText,
