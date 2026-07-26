@@ -155,7 +155,13 @@ export function createSystemAnsiBuilders(deps) {
     };
     const gradeName = stats.isAdmin ? '운영자' : (Number(stats.level) >= 2 ? '특별회원' : '일반회원');
 
-    parts.push('');
+    // [LOG_ID: 20260726_2350] buildTopHeader()가 이미 자체적으로 끝에 빈 줄 하나를 포함해
+    // 반환하는데(topLine/headerLine/구분선/빈줄, 총 4줄), 여기서 또 빈 줄을 하나 더 넣어
+    // 헤더 바로 아래 빈 줄이 두 번 연달아 나왔다 — 이 화면은 총 23줄(다른 페이징 화면과
+    // 달리 캔버스 패딩 없이 내용 그대로 렌더)이라 마지막 줄("접속 시간·요금은...")이 여유
+    // 없이 딱 맞춰져, policy와 완전히 동일한 이유(실기기 렌더가 근소하게만 커도 컨테이너가
+    // 눌려 그 줄이 잘림)로 실측 재현됐다(사용자 스크린샷: sysop 계정 이용 현황 마지막 줄
+    // 잘림). 중복된 빈 줄을 제거해 1줄만큼 여유를 확보한다.
     parts.push(`  ${ansiColor(14)}[ 계정 ]${ANSI_RESET}`);
     parts.push(row('아이디', stats.userId || '-'));
     parts.push(rowWrapped('닉네임', stats.nickName || '-'));

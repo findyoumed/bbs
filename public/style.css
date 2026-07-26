@@ -2797,7 +2797,14 @@ body[data-print-view="true"] .ansi-screen {
        재현: "글 아래부분이 일부 잘렸어" — 헤드리스 재현에서는 경계가 정확히 들어맞았지만,
        실기기 폰트 렌더링이 근소하게 더 커 여유 없이 딱 맞춰둔 23줄 예산을 넘기면 전역 hidden
        규칙에 그대로 잘렸다). 동일한 완화를 확장한다. */
-    body[data-screen="policy"] #terminal-screen {
+    body[data-screen="policy"] #terminal-screen,
+    /* [LOG_ID: 20260726_2350] 내 이용 현황(ACCT, my-stats)도 같은 증상 — 이 화면은 페이징
+       캔버스 패딩조차 없이 내용 그대로 렌더되는데(systemAnsiBuilders.js buildMyStatsAnsi),
+       총 23줄이 나와 policy와 동일하게 여유가 없었다(실측 재현: sysop 계정 스크린샷에서
+       마지막 줄 "접속 시간·요금은..."이 잘림). 본문 쪽에서 중복 빈 줄을 제거해 22줄로
+       줄였지만(20260726_2350 코드 주석), 닉네임이 길어 2줄로 접히는 경우(20자, 표시폭
+       40칸) 다시 23줄이 될 수 있어 안전망으로 동일한 완화를 추가한다. */
+    body[data-screen="my-stats"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
