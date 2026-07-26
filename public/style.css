@@ -114,6 +114,15 @@ body {
     scrollbar-width: none !important;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
+    /* [LOG_ID: 20260726_0910] 이 앱은 자체 클램프(vw 기반) 글꼴 스케일링으로 화면 폭을
+       관리하므로(20260726_0555에서 확인한 --stable-vh/clamp 체계), 네이티브 핀치·더블탭
+       확대는 80x24 고정 격자라는 착시를 깨뜨리기만 한다. viewport meta나 개별 요소 어디에도
+       touch-action 방어가 없어, 오목판 핫스팟처럼 조밀한 탭 대상을 빠르게 두 번 두드리면
+       브라우저 기본 더블탭 확대 제스처가 걸릴 여지가 있었다(실기기 없이는 정확한 재현이
+       어려워 방어적 조치로 추가 — 이 앱처럼 자체 스케일링을 쓰고 핀치줌이 필요 없는 구조에서
+       흔히 쓰이는 표준 처방). 텍스트 선택(user-select)과는 별개 속성이라 무회귀.
+    */
+    touch-action: manipulation;
     margin: 0;
     padding: 0;
 }
