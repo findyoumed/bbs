@@ -1,3 +1,12 @@
+## [2026-07-26 15:00] [/loop 계속] 오락실(amusement) 화면군 — 아케이드와 동일한 인라인 프롬프트 세로 오버플로 재발 방지, 27번째
+
+**LOG_ID: 20260726_1500**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드에서 고친 arcadeScreens.js의 `arcadeRender`(인라인 프롬프트 마운트 + scrollIntoView 누락) 패턴이 다른 곳에도 있는지, `mountPromptRow`/`prompt-host` 사용처(`terminalInputUi.js`, `amusementScreens.js`, `arcadeScreens.js`(수정됨), `myInfoRenderer.js`, `signupScreens.js`, `authScreens.js`, `signupEmailForm.js`) 재검토.
+발견: `amusementScreens.js`(바이오리듬/오늘의운세/MBTI/혈액형/궁합/토정비결/추억의 접속화면)가 별도의 공용 헬퍼 `inlineMount(hostId, hostClass)`로 완전히 동일한 패턴을 쓰고 있었다 — footer가 아니라 `screenEl`(스크롤 가능한 `#terminal-screen`) 안에 프롬프트를 인라인 마운트하면서 `scrollIntoView` 호출이 없었다. 토정비결 결과(12개월 운세 목록)처럼 본문이 길어지는 화면에서 같은 클래스의 세로 오버플로 위험이 있었다.
+구현: `inlineMount()`에 `mountPromptRow(host)` 직후 `host.scrollIntoView({ block: 'nearest' })` 추가 — 이 헬퍼를 쓰는 8개 화면(바이오리듬/운세/MBTI 인트로·목록·상세/혈액형/궁합/토정비결/추억의 접속화면) 전체에 공통 적용되는 단일 지점 수정.
+검증: 320x568 뷰포트에서 바이오리듬/운세/MBTI/혈액형/궁합/토정비결 입력 화면 6종 전부 `cmdInputBottom < innerHeight` 확인. 실제 긴 콘텐츠 화면까지 재현하기 위해 토정비결에 생년월일(19900101)을 입력해 12개월 결과(17줄)까지 진행 — `cmdInputBottom` 553.4/568(여유 15px 미만, 수정이 실제로 작동하고 있음을 시사)로 안전 확인. MBTI 목록(16유형, 12줄)도 478/568로 안전. `scripts/smoke-mobile-viewports.js`(3뷰포트×27라우트)/`smoke:full-traversal`/`smoke:renderer-ui`/`smoke:menu-wiring` 전부 통과.
+결과: ✅ 완료 — 이번 세션 27번째 버그. 직전 라운드에서 발견한 새 버그 클래스(스크롤 가능한 인라인 프롬프트가 뷰포트 밖에 남는 문제)가 아케이드에 국한되지 않고 오락실 전반의 공용 패턴이었음을 확인하고 선제적으로 재발을 막았다 — 아직 사용자가 직접 겪지 않았을 수도 있는 잠재 결함을 같은 원인 계열에서 미리 찾아 고친 사례.
+
 ## [2026-07-26 14:45] [/loop 계속] 스모크 테스트에 초소형(320x568) 뷰포트 추가 — 즉시 아케이드 게임 프롬프트 세로 오버플로 발견·수정, 26번째
 
 **LOG_ID: 20260726_1445**

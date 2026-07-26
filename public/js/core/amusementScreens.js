@@ -12,7 +12,12 @@ export function createAmusementScreens(deps) {
 
   const focus = () => { if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) cmdInput.focus(); };
   // [LOG_ID: 20260723_1102] 오락실 입력 화면 공통 인라인 마운트 헬퍼
-  function inlineMount(hostId, hostClass) { if (screenEl && typeof mountPromptRow === 'function') { let host = document.getElementById(hostId); if (!host) { host = document.createElement('div'); host.id = hostId; host.className = hostClass; screenEl.appendChild(host); } mountPromptRow(host); } }
+  // [LOG_ID: 20260726_1500] arcadeScreens.js의 동일 패턴(arcadeRender)에서 발견한 것과 같은 버그 —
+  // 이 host도 footer가 아니라 screenEl(스크롤 가능한 #terminal-screen) 안에 인라인으로 붙는데,
+  // 토정비결/MBTI 목록처럼 본문이 길어지는 화면은 이 프롬프트가 스크롤 영역 아래쪽에 위치할 수
+  // 있다. 오락실 화면은 데스크톱에서만 auto-focus하므로(포커스에 딸려오는 기본 스크롤을 모바일은
+  // 못 받음) block:'nearest'로 이미 보이면 그대로 두고 벗어난 경우만 최소 스크롤한다.
+  function inlineMount(hostId, hostClass) { if (screenEl && typeof mountPromptRow === 'function') { let host = document.getElementById(hostId); if (!host) { host = document.createElement('div'); host.id = hostId; host.className = hostClass; screenEl.appendChild(host); } mountPromptRow(host); host.scrollIntoView({ block: 'nearest' }); } }
   // [LOG_ID: 20260707_2300] PC통신: 화면 전체(본문+하단 힌트/입력줄)가 위→아래로 이어서 나온다 —
   // afterBodyRender에서 footer 내용을 채운 뒤에야 renderAnsiScreenWithTopbarSequential이 하단을 드러낸다.
   const render = async (ansi, footer, prompt) => { const rendered = await renderAnsiScreenWithTopbarSequential({ ansiText: ansi, ansiToHTML, screenEl, renderScreenSequential, afterBodyRender: async () => { if (footer === 'none') { await applyCommandFooter(null, ''); if (prompt !== undefined) setPrompt(prompt); } else { await applyCommandFooter(getMenuNodeByKey('game')?.footer, getCommandFooterText(footer)); if (prompt !== undefined) setPrompt(prompt); } } }); focus(); return rendered; };
