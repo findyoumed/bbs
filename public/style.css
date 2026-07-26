@@ -1966,23 +1966,30 @@ body[data-print-view="true"] .ansi-screen {
         overflow-x: auto;
     }
 
+    /* [LOG_ID: 20260726_2200] 여기서 max-width:100%로 컨테이너만 화면 끝까지 늘렸었는데, 실제
+       렌더되는 텍스트(글자 수 기준 44칸 — ansiHLine 구분선, wrapAnsiText 줄바꿈 모두 포함)는
+       이 폰트에서 여전히 약 330px만 차지해(Range.getBoundingClientRect()로 실측, 393px
+       뷰포트) 컨테이너(391px)와 실제 글자 폭 사이에 61px 차이가 남는다 — 왼쪽 정렬 텍스트라
+       그 차이가 전부 "오른쪽"에 빈 여백으로 남는데, 상단바(.retro-topbar-hr 등)는 이미
+       max-width:44ch로 텍스트 폭에 맞춰 가운데 정렬돼 있어서, 본문만 컨테이너가 넓어 상단바와
+       본문의 좌측 시작 지점이 어긋나 보였다(사용자 보고 "왼쪽 치우침"). 이 정확히 같은 근본
+       원인이 2026-07-21에 post-view 한 화면에서 이미 발견·수정된 적이 있다(아래 주석,
+       commit 3d22688 — "컬럼 수를 늘려 폭을 채우는" 시도는 실기기 실측 오차로 문장이 화면 밖으로
+       잘리는 더 심각한 회귀를 냈던 전력이 있어 폐기됨) — 그 안전한 해법(컨테이너를 실제 텍스트
+       폭에 맞춰 줄이고 가운데 정렬)을 post-view/news-view 두 화면에만 국한하지 않고 전체
+       화면에 일반화한다. 데스크톱이 이미 calc(80ch+32px)로 상단바·본문을 동일하게 맞추는 것과
+       같은 패턴이라 회귀 위험이 낮다. */
     .ansi-screen-body {
-        max-width: 100%;
+        max-width: 44ch;
+        margin: 0 auto;
         padding: 0 4px;
     }
 
-    /* [LOG_ID: 20260726_2130] .ansi-screen-body는 위에서 이미 max-width를 100%로 풀어 화면
-       가장자리까지 채우는데, compact 상단바(.retro-topbar-row1/row2/hr)는 이 미디어쿼리 밖의
-       고정 규칙(max-width: 44ch)만 적용받아 44ch(이 폰트 기준 약 330px)로 고정된 채 남아있었다
-       — 실기기 스크린샷 실측(393px 뷰포트): 상단바만 좌우 약 31.5px씩 안쪽으로 들어가 화면
-       중앙에 떠 있고, 바로 아래 본문(구분선/키·설명 목록 등)은 가장자리까지 꽉 차서, 상단바와
-       본문 사이 좌측 여백이 서로 어긋나 보였다(사용자 보고: "모바일화면 곳곳에 왼쪽 치우침이
-       보여" — 상단바가 있는 모든 화면에서 재현되는 문제). 본문과 동일하게 100%로 맞춘다.
-       (선택자를 그대로 유지해 이 미디어쿼리가 앞선 고정 규칙보다 소스 순서상 뒤에 오도록 해
-       동일 특정도에서 이 규칙이 이긴다.) */
-    .retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-row1,
-    .retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-row2,
-    .retro-topbar--ansi[data-layout-mode="compact"] .retro-topbar-hr {
+    /* [LOG_ID: 20260726_2200] myinfo는 위 20260722_2400 주석대로 44칸 고정폭 ANSI 격자가 아니라
+       .myinfo-row(grid-template-columns: 12ch 1fr) 같은 자유 폭 HTML 패널이라, 44ch 폭 제한이
+       적용될 이유가 없다 — 셀렉터 특정도(class+attribute)가 위 규칙보다 높아 이 미디어쿼리
+       안에서 max-width만 도로 100%로 되돌린다(padding은 위 20260722_2400 규칙이 이미 담당). */
+    .ansi-screen-body[data-screen-kind="myinfo"] {
         max-width: 100%;
     }
 
