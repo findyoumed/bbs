@@ -1,3 +1,10 @@
+## [2026-07-26 10:45] [/loop 계속] 공용 유틸(ansiBuilderUtils.js) 나머지 함수 전수 재검토 — 추가 버그 없음
+
+**LOG_ID: 20260726_1045**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드에서 `buildTopHeader`(모든 화면 공유)가 이번 세션 최대 파급력 버그였던 만큼, 같은 파일(`ansiBuilderUtils.js`) 안의 나머지 공용 함수들도 유사한 문제가 없는지 전부 재확인.
+확인: `buildThreadPrefix`(답글 들여쓰기 접두사 생성만, 사용자 텍스트 없음)/`normalizeHeaderSegment`(공백 정리만)/`estimatePostPageCount`(길이 추정치 반환만, 렌더링 없음)/`highlightText`(검색어에 ANSI 색상 코드만 씌울 뿐 별도 절삭 없음 — 결과는 이후 wrapAnsiText/fitCell을 거치므로 이중 처리 안전)/`wrapAnsiText` 자체(ANSI 이스케이프 시퀀스를 폭 계산에서 올바르게 제외하고 와이드 문자도 정확히 처리함을 코드로 직접 재확인, 이스케이프 중간에서 줄바꿈이 끊기지 않음)/`formatShortDate`·`formatLongDate`(날짜 문자열 전용, 사용자 자유 텍스트 아님) 모두 안전을 재확인. `menuIndexScreens.js`의 `toLabelText(node)`도 `getMenuNodeLabel`이 앱이 정의한 고정 메뉴 라벨이라 안전.
+결과: ✅ 완료 — 이 세션에서 반복 발견해온 "공용 헬퍼 안에 숨은 결함" 패턴이 재발하지 않도록 buildTopHeader 발견 직후 같은 파일을 곧바로 전수 재검토했고, 추가 결함은 없었다. 이 파일(`ansiBuilderUtils.js`)은 이제 완전히 재검증됐다고 판단.
+
 ## [2026-07-26 10:30] [/loop 계속] 상단바 공용 엔진(buildTopHeader) — 모든 화면의 centerLabel이 말줄임표 없이 잘리던 버그(16번째, 이번 세션 최대 파급력) 수정 + 잘못된 1차 수정을 자체 발견해 재수정
 
 **LOG_ID: 20260726_1030**
