@@ -53,7 +53,14 @@ export function createPolicyScreens(deps) {
       });
     });
 
-    const linesPerPage = 19;
+    // [LOG_ID: 20260726_2330] 헤드리스 실측(20260726_2230)에서 이미 본문 마지막 줄과 컨테이너
+    // 경계가 "정확히" 일치(여유 0px)했다 — 실기기 폰트가 근소하게만 더 커도 그대로 잘린다.
+    // overflow-y:auto(20260726_2230)는 스크롤로 나머지를 볼 수는 있게 하지만, 스크린샷처럼
+    // 처음 그려진 화면 자체는 그대로 "잘린 것처럼" 보인다(사용자 재지적: "아직도 마찬가지로
+    // 아래 글자가 잘렸는데"). 캔버스 총 23줄은 그대로 두고 페이지당 본문을 19→18줄로 줄이면,
+    // 패딩 루프가 채우는 마지막 한 줄이 항상 빈 줄이 되어 — 여유가 부족해 무언가 잘리더라도
+    // 그 빈 줄이 잘리지, 실제 문장이 잘리는 일은 없다.
+    const linesPerPage = 18;
     const totalPages = Math.max(1, Math.ceil(bodyLines.length / linesPerPage));
     const finalPage = Math.max(1, Math.min(requestedPage, totalPages));
     const pageSlice = bodyLines.slice((finalPage - 1) * linesPerPage, finalPage * linesPerPage);
