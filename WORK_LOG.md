@@ -1,3 +1,10 @@
+## [2026-07-26 17:30] [/loop 계속] 전체 스모크 스위트 종합 회귀 점검 — 전 항목 통과, 세션 마일스톤 확인
+
+**LOG_ID: 20260726_1730**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 11개 라운드 연속 신규 결함 미발견 시점에서, 매 라운드 부분적으로만 돌리던 스모크 테스트를 이번엔 `package.json`에 등록된 전체 스위트(라이브 Supabase 전용 3종 제외)로 한 번에 실행해 이번 세션 28건의 수정 전체가 서로 간섭 없이 안정적인지 종합 확인.
+실행: `smoke:menu-wiring`, `smoke:ui-geometry`, `smoke:ui-layout`, `smoke:command-parity`, `smoke:runtime-diagnostics`, `smoke:signup-ime`, `smoke:chat-counts`, `smoke:boards`, `smoke:rss-services`, `smoke:auth-bridge`, `smoke:full-traversal`, `smoke:renderer-ui`, `smoke:chat-rooms`, `scripts/smoke-mobile-viewports.js`(3뷰포트×27라우트) — 총 14개 스위트.
+결과: ✅ 전부 통과. 이번 세션(이 `/loop` 연속 실행 구간)에서 누적된 28건의 실제 버그 수정 + 1건의 중앙화 리팩터링 + 320px/랜드스케이프 회귀 커버리지 추가가 이번 세션에서 개별적으로 돌렸던 하위 스모크뿐 아니라 command-parity/runtime-diagnostics/signup-ime/ui-geometry/ui-layout처럼 이번 세션엔 직접 손대지 않았던 인접 영역까지 포함해 전 스위트에서 안정적임을 확인 — 우발적 회귀가 없다는 강한 신호. 텍스트/레이아웃 폭 버그 클래스에 대한 전수조사는 이 지점에서 실질적으로 완료 상태로 판단되며, 사용자에게 계속/전환/종료 여부를 다시 안내한다.
+
 ## [2026-07-26 17:15] [/loop 계속] 이모지 `.wc` 박스 시각적 클리핑 후속 확인 — 경미한 트레이드오프로 수용, 추가 수정 없음
 
 **LOG_ID: 20260726_1715**
