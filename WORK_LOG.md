@@ -1,3 +1,13 @@
+## [2026-07-26 10:30] [/loop 계속] 상단바 공용 엔진(buildTopHeader) — 모든 화면의 centerLabel이 말줄임표 없이 잘리던 버그(16번째, 이번 세션 최대 파급력) 수정 + 잘못된 1차 수정을 자체 발견해 재수정
+
+**LOG_ID: 20260726_1030**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — `truncateDisplayText(` 사용처를 전부 재검색하던 중, `ansiBuilderUtils.js`의 `buildTopHeader()`(모든 화면이 공유하는 상단바 렌더러) 자신이 `leftText`/`centerText`에 이 말줄임표 없는 함수를 쓰고 있음을 발견 — 지난 세션에 `.retro-topbar-center`에 CSS `text-overflow:ellipsis`를 붙였던 수정(20260726_0310)이 사실 이 ANSI 텍스트 레벨 절삭 **이후**의 안전망이라, 텍스트가 이미 폭에 딱 맞게 잘린 뒤라 거의 발동하지 않는다는 걸 재확인.
+발견: 대화방/회의실 제목처럼 서버 상한(최대 100자)까지 가능한 자유 텍스트가 `centerLabel`로 들어오면, `truncateDisplayText`가 말줄임표 없이 그대로 잘라버린다 — `buildTopHeader`는 이 앱의 **모든 화면**이 공유하는 함수라 파급력이 이번 세션 findings 중 가장 컸다.
+1차 시도 실패 자체 발견: 처음엔 이미 있는 `fitCellEllipsis`로 바로 교체했는데, 하네스로 검증하기 전에 코드를 다시 읽다가 `fitCellEllipsis`가 표 컬럼 정렬용으로 **항상 maxWidth까지 트레일링 공백 패딩**을 붙인다는 걸 상기했다 — `leftText`의 `displayWidth`를 그대로 `minCenterStart`(가운데 라벨 시작 위치) 계산에 쓰는 자리라, 패딩된 값을 쓰면 위치 계산 자체가 깨져(패딩 폭만큼 가운데 라벨이 밀려나거나 화면 밖으로 나감) 새로운 회귀를 만들 뻔했다. 실제로 하네스를 돌리기 전에 이 문제를 알아채 패딩 없이 잘렸을 때만 말줄임표를 붙이는 새 헬퍼 `truncateDisplayTextEllipsis`를 별도로 만들어 교체했다.
+구현: `ansiBuilderUtils.js`에 `truncateDisplayTextEllipsis(text, maxWidth)` 추가(공용 반환값에도 등록) — `truncateDisplayText`와 마찬가지로 패딩 없이, 잘렸을 때만 "…"를 붙인다. `buildTopHeader`의 `leftText`/`centerText` 계산에 적용.
+검증: Node 하네스로 100자(서버 최대) 제목의 centerLabel을 rightLabel 유무·모바일/데스크톱 4가지 조합으로 렌더 — 전부 정확히 예산 폭(44/44, 80/80)에 맞고 말줄임표가 정확한 위치에 붙음을 확인, 짧은 라벨("대화실 대기실", "열린광장 (PLAZA)")은 수정 전과 정확히 동일하게 중앙 정렬됨(무회귀)도 확인. 파급력이 커서 회귀 스위트를 평소보다 넓게 실행: `smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:renderer-ui`/`smoke:auth-bridge`/`smoke:boards`/`smoke:chat-rooms`/`smoke:rss-services`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 전부 통과. 실제 브라우저로 게시판 목록(모바일)과 대화실 로비(데스크톱) 스크린샷까지 육안 확인 — 상단바 정렬 깨짐 없음.
+결과: ✅ 완료 — 같은 버그 클래스의 16번째이자 이번 세션 최대 파급력 사례(모든 화면 공통 렌더러). 동시에, 재사용 가능해 보이는 기존 헬퍼(`fitCellEllipsis`)를 새 자리에 그대로 가져다 쓰기 전에 그 헬퍼의 부작용(패딩)이 새 호출 맥락(폭 계산에 결과를 재사용)과 맞는지 반드시 확인해야 한다는 교훈을 얻었다 — 이번엔 실제로 배포하기 전에 스스로 발견해 막았다.
+
 ## [2026-07-26 10:15] [/loop 계속] 여론광장 설문 상세 "작성자" 필드 — "방어적으로 클램프"라던 주석과 달리 말줄임표 없이 잘리던 버그(15번째) 수정
 
 **LOG_ID: 20260726_1015**

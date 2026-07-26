@@ -95,6 +95,18 @@ export function createAnsiBuilderUtils(deps) {
     return fitCell(`${truncateDisplayText(source, Math.max(1, maxWidth - 1))}…`, maxWidth);
   }
 
+  // [LOG_ID: 20260726_1030] fitCellEllipsis는 항상 maxWidth까지 트레일링 공백으로 패딩한다
+  // (표 컬럼 정렬용으로 설계됐기 때문) — buildTopHeader의 leftText/centerText처럼 반환값의
+  // displayWidth를 그대로 후속 위치 계산(minCenterStart 등)에 쓰는 자리에 패딩된 값을 넣으면
+  // 폭 계산 자체가 깨진다. 패딩 없이 잘렸을 때만 말줄임표를 붙이는 버전을 별도로 둔다.
+  function truncateDisplayTextEllipsis(text, maxWidth) {
+    const source = String(text || '');
+    if (displayWidth(source) <= maxWidth) {
+      return truncateDisplayText(source, maxWidth);
+    }
+    return truncateDisplayText(`${truncateDisplayText(source, Math.max(1, maxWidth - 1))}…`, maxWidth);
+  }
+
   function writeDisplayText(cells, startCol, text) {
     const source = String(text || '');
     let cursor = Math.max(0, Number(startCol) || 0);
@@ -221,11 +233,20 @@ export function createAnsiBuilderUtils(deps) {
     const cells = Array.from({ length: targetWidth }, () => ' ');
     const rightWidth = displayWidth(rightLabel);
     const rightStart = rightLabel ? Math.max(0, targetWidth - rightWidth) : targetWidth;
-    const leftText = truncateDisplayText(leftLabel, rightLabel ? Math.max(0, rightStart - 2) : targetWidth);
+    // [LOG_ID: 20260726_1030] centerLabel은 대화방/회의실 제목처럼 서버 상한(최대 100자)까지
+    // 가능한 자유 텍스트를 그대로 받는데, truncateDisplayText는 말줄임표가 없어 여기서 이미
+    // 말줄임표 없이 조용히 잘렸다 — CSS 쪽에 나중에 붙인 .retro-topbar-center의
+    // text-overflow:ellipsis(20260726_0310)는 이 ANSI 텍스트 레벨 절삭이 이미 폭에 딱 맞게
+    // 자른 뒤라 사실상 발동하지 않는 안전망이었다. buildTopHeader는 모든 화면이 공유하므로
+    // truncateDisplayTextEllipsis로 교체해 실제 절삭 지점에서 "…"를 남긴다 — fitCellEllipsis가
+    // 아니라 이 변형을 쓰는 이유는, 반환값의 displayWidth를 아래 minCenterStart 계산에 그대로
+    // 쓰는데 fitCellEllipsis는 항상 maxWidth까지 패딩해 그 계산 자체를 깨뜨리기 때문(1차
+    // 구현에서 실제로 이 문제를 겪고 발견해 truncateDisplayTextEllipsis를 새로 추가했다).
+    const leftText = truncateDisplayTextEllipsis(leftLabel, rightLabel ? Math.max(0, rightStart - 2) : targetWidth);
     const leftWidth = displayWidth(leftText);
     const minCenterStart = leftText ? leftWidth + 1 : 0;
     const maxCenterWidth = Math.max(0, (rightLabel ? rightStart - 1 : targetWidth) - minCenterStart);
-    const centerText = truncateDisplayText(centerLabel, maxCenterWidth);
+    const centerText = truncateDisplayTextEllipsis(centerLabel, maxCenterWidth);
     const centerWidth = displayWidth(centerText);
     let centerStart = Math.max(minCenterStart, Math.floor((targetWidth - centerWidth) / 2));
 
@@ -401,6 +422,7 @@ export function createAnsiBuilderUtils(deps) {
     highlightText,
     normalizeHeaderSegment,
     truncateDisplayText,
+    truncateDisplayTextEllipsis,
     wrapAnsiText
   };
 }
