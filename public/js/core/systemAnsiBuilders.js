@@ -106,9 +106,16 @@ export function createSystemAnsiBuilders(deps) {
       parts.push('');
       // 모바일(44칸)에서는 검색어를 12칸으로 줄이고 문구도 짧게 — 아이디를 길게 넣으면
       // 원래 문구("...이용자를 찾을 수 없습니다.")가 45칸으로 1칸 넘쳤다(폭 검증에서 발견).
+      // [LOG_ID: 20260726_0930] 검색어(cmd-input maxlength=200)는 truncateDisplayText로
+      // 잘랐는데 말줄임표가 없어, 긴 검색어를 넣었을 때 마치 짧은 검색어였던 것처럼 보였다
+      // (명령 이력 화면과 같은 버그 클래스). fitCellEllipsis로 교체하되, 이 헬퍼는 표 정렬용
+      // 패딩 공백을 항상 붙이므로(짧은 검색어일 때 닫는 따옴표 앞에 공백이 남는 문제) 문장
+      // 안에 끼워 넣을 땐 trailing space를 잘라내야 한다.
+      const notFoundMobile = fitCellEllipsis(notFound, 12).replace(/\s+$/g, '');
+      const notFoundDesktop = fitCellEllipsis(notFound, 30).replace(/\s+$/g, '');
       parts.push(isMobile
-        ? `  ${ansiColor(12)}'${truncateDisplayText(notFound, 12)}' 이용자가 없습니다.${ANSI_RESET}`
-        : `  ${ansiColor(12)}'${truncateDisplayText(notFound, 30)}' 이용자를 찾을 수 없습니다.${ANSI_RESET}`);
+        ? `  ${ansiColor(12)}'${notFoundMobile}' 이용자가 없습니다.${ANSI_RESET}`
+        : `  ${ansiColor(12)}'${notFoundDesktop}' 이용자를 찾을 수 없습니다.${ANSI_RESET}`);
     }
 
     return parts.join('\n');
