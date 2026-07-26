@@ -10,6 +10,7 @@ export function createSystemAnsiBuilders(deps) {
     ANSI_RESET,
     ansiColor,
     fitCell,
+    fitCellEllipsis,
     ansiHLine,
     buildTopHeader,
     formatLongDate,
@@ -176,18 +177,8 @@ export function createSystemAnsiBuilders(deps) {
     return parts.join('\n');
   }
 
-  // [LOG_ID: 20260726_0230] W(WHO) 화면의 "위치" 칸은 API 경로(user.path, 예: "/api/boards/notice")를
-  // 그대로 fitCell로 자르는데, 컬럼 폭(모바일 15/데스크톱 24)보다 흔히 더 긴 경로가 많아
-  // "/api/boards/not"처럼 잘려서 마치 다른(존재하지 않는) 경로처럼 오인되기 쉬웠다(실측 확인 —
-  // 실제 값은 "/api/boards/notice"). 관리자 진단 화면이라 정확한 값 파악이 중요하므로, 잘렸을 땐
-  // 말줄임표를 붙여 "이 값은 잘린 것"임을 명시한다.
-  function fitCellEllipsis(text, maxWidth) {
-    const source = String(text || '');
-    if (displayWidth(source) <= maxWidth) {
-      return fitCell(source, maxWidth);
-    }
-    return fitCell(`${truncateDisplayText(source, Math.max(1, maxWidth - 1))}…`, maxWidth);
-  }
+  // [LOG_ID: 20260726_0900] fitCellEllipsis는 ansiBuilderUtils.js로 공용화됐다(20260726_0230에서
+  // W(WHO) 화면 전용으로 처음 만들었던 걸 helpScreens.js의 명령 이력에도 필요해져 승격).
 
   function buildActiveUsersAnsi(users) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;

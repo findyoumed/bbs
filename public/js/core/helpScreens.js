@@ -28,6 +28,7 @@ export function createHelpScreens(deps) {
     buildPageLabel,
     buildTopHeader,
     fitCell,
+    fitCellEllipsis,
     truncateDisplayText,
     wrapAnsiText
   } = createAnsiBuilderUtils({ displayWidth, isWideChar });
@@ -224,7 +225,10 @@ export function createHelpScreens(deps) {
       history.forEach((entry, idx) => {
         const cmd = typeof entry === 'string' ? entry : entry.cmd;
         const num = String(idx + 1).padStart(2, ' ');
-        parts.push(` ${ansiColor(14)}${num}. ${ansiColor(15)}${truncateDisplayText(cmd, targetCols - 6)}${ANSI_RESET}`);
+        // [LOG_ID: 20260726_0900] 타자연습/스크램블 등에서 입력한 긴 문장도 그대로 cmdHistory에
+        // 남는데, truncateDisplayText는 말줄임표 없이 잘라 실제로 짧은 명령이었던 것처럼 보였다
+        // (대화방/설문 선택지와 같은 버그 클래스 — 목록 한 줄 요약이라 wrap 대신 말줄임표로 처리).
+        parts.push(` ${ansiColor(14)}${num}. ${ansiColor(15)}${fitCellEllipsis(cmd, targetCols - 6)}${ANSI_RESET}`);
       });
     }
 

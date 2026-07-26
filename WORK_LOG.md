@@ -1,3 +1,12 @@
+## [2026-07-26 09:00] [/loop 계속] 명령 이력(/history) 화면 — 타자연습 등에서 입력한 긴 문장이 말줄임표 없이 잘리던 버그(11번째) 수정 + fitCellEllipsis 공용화
+
+**LOG_ID: 20260726_0900**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 아직 점검하지 않은 "이용 내역(/history)" 화면(사실은 최근 입력한 명령 목록)을 확인. 사용자가 실제로 입력하는 모든 값(타자연습/스크램블 정답, 검색어, 채팅 등)이 `state.cmdHistory`에 그대로 기록된다는 걸 코드 추적(`appEventsCommandInput.js`)으로 확인하고, 이 목록을 보여주는 `buildHistoryAnsi()`가 값을 어떻게 다루는지 점검.
+발견: `truncateDisplayText(cmd, targetCols - 6)`로 자르고 있었는데, 이 함수는 `fitCell` + 공백 제거일 뿐 말줄임표를 붙이지 않는다(WHO 화면의 원래 버그, 20260726_0230에서 이미 지적됐던 것과 동일한 결함이 다른 화면에도 있었던 셈) — 타자연습 게임에서 긴 문장을 입력했다면 그 이력이 짧게 잘려서 마치 원래 짧은 명령이었던 것처럼 보인다.
+구현: 이 문제를 이미 한 번 고쳤던 `fitCellEllipsis` 헬퍼가 `systemAnsiBuilders.js` 안에만 지역적으로 있어 재사용할 수 없었다 — 공용 `ansiBuilderUtils.js`로 승격시키고(`createAnsiBuilderUtils`의 반환값에 추가), `systemAnsiBuilders.js`의 중복 정의는 제거해 공용 버전을 쓰도록 정리, `helpScreens.js`의 `buildHistoryAnsi()`에서도 `truncateDisplayText` 대신 `fitCellEllipsis`를 쓰도록 교체했다.
+검증: Node 하네스로 긴 문장("바람과 함께...") 히스토리 항목이 말줄임표("…")를 달고 잘리는지, 짧은 명령("PDS")은 그대로인지 확인. 리팩터링으로 이동한 `buildActiveUsersAnsi`(W 화면)의 `fitCellEllipsis` 사용도 함께 재검증해 무회귀 확인(경로가 여전히 "…"로 정확히 잘림). `npm run smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:full-traversal`(history/active-users 모듈 하네스 케이스 포함)/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
+결과: ✅ 완료 — 같은 버그 클래스의 11번째 사례. 이번엔 처음으로 발견한 결함을 고치면서 동시에 기존 헬퍼를 공용 유틸로 승격시켜 재사용성을 개선했다 — 다음에 같은 패턴을 다른 화면에서 또 발견하면 바로 `fitCellEllipsis`를 가져다 쓸 수 있다.
+
 ## [2026-07-26 08:40] [/loop 계속] 오락실/접속자목록/뉴스/날씨 전수 재검토 — 추가 버그 없음
 
 **LOG_ID: 20260726_0840**

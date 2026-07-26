@@ -83,6 +83,18 @@ export function createAnsiBuilderUtils(deps) {
     return fitCell(text, width).replace(/\s+$/g, '');
   }
 
+  // [LOG_ID: 20260726_0900] systemAnsiBuilders.js(접속자 목록 W)에서만 쓰던 헬퍼를 공용으로
+  // 승격 — 목록 한 줄 요약처럼 wrap이 아니라 절삭이 맞는 자리에서, 잘렸을 때 말줄임표 없이
+  // 값이 다른 것처럼 보이는 문제(예: "/api/boards/notice"가 "/api/boards/not"로 잘림)를
+  // 막는다. helpScreens.js의 명령 이력(/history)에도 같은 결함이 있어 공용화한다.
+  function fitCellEllipsis(text, maxWidth) {
+    const source = String(text || '');
+    if (displayWidth(source) <= maxWidth) {
+      return fitCell(source, maxWidth);
+    }
+    return fitCell(`${truncateDisplayText(source, Math.max(1, maxWidth - 1))}…`, maxWidth);
+  }
+
   function writeDisplayText(cells, startCol, text) {
     const source = String(text || '');
     let cursor = Math.max(0, Number(startCol) || 0);
@@ -383,6 +395,7 @@ export function createAnsiBuilderUtils(deps) {
     displayWidth,
     estimatePostPageCount,
     fitCell,
+    fitCellEllipsis,
     formatLongDate,
     formatShortDate,
     highlightText,
