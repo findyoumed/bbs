@@ -1,3 +1,17 @@
+## [2026-07-27 03:00] [/loop 계속] 6번째 각도: 랜드스케이프(가로모드) 화면 클리핑 점검 — 오탐, 실제 버그 없음
+
+**LOG_ID: 20260727_0300**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 5번째 각도(무제한 리스트 렌더링) 소진 후 새 각도로, 이번 세션 내내 세로(portrait) 모바일 뷰포트만 검증해온 것을 깨닫고 가로(landscape) 방향을 처음으로 점검. `smoke-mobile-viewports.js`도 portrait 3종만 테스트해 테스트 커버리지 자체에 사각지대가 있었다.
+
+조사 과정(오탐 포함, 기록으로 남김):
+- style.css의 `overflow-y:auto` 화이트리스트가 전부 `@media (max-width:768px) and (orientation:portrait)`에만 있고, `@media (max-height:480px) and (orientation:landscape)` 등 landscape 블록에는 이에 대응하는 규칙이 전혀 없는 것을 발견 — 처음엔 "landscape는 스크롤 허용이 아예 없어 거의 모든 화면이 클리핑될 것"이라 판단했다.
+- Playwright로 844×390/932×430/667×375 랜드스케이프 뷰포트에서 11개 화면(대문/help/policy/account/omok/agora/board-plaza/weather/news/chat/index)의 `#terminal-screen` `scrollHeight - clientHeight`를 측정 — 대부분 화면에서 53~244px(옵션에 따라 최대 244px)의 "클리핑"으로 보이는 수치를 확인하고 이를 실버그로 오판, `#terminal-screen`에 landscape 전용 `overflow-y:auto` 규칙을 추가하는 수정을 실제로 적용했었다.
+- 수정 후에도 수치가 전혀 안 바뀌어 이상함을 느끼고 재검토 — style.css 323번째 줄(미디어쿼리 밖, 전역)에 이미 `#terminal-screen { overflow-y: auto !important; ... }`가 있다는 것을 발견했다. Portrait 미디어쿼리만 이 전역 규칙을 `overflow: hidden !important`로 되돌리고(그래서 portrait는 화면별 화이트리스트로 다시 켜줘야 했던 것), landscape 블록은 애초에 이 전역 규칙을 되돌리는 코드가 없어 계속 `auto` 상태로 남아있었다 — 즉 "클리핑"으로 보였던 수치는 실제로는 스크롤 가능한 여유분일 뿐, 유실된 내용이 아니었다.
+- git stash로 실제 서빙되는 CSS를 직접 확인하고(내가 추가한 규칙이 없는 상태) `#terminal-screen.scrollTop = 99999`를 강제 실행해 실측 검증: 244px 전부 스크롤로 도달 가능함을 확인(`scrollTop`이 0→244로 정상 이동, 하단 내용이 실제로 보임) — 화면 잘림이 아니라 처음부터 정상적으로 스크롤되는 화면이었다.
+- 적용했던 landscape 전용 `overflow-y:auto` 추가 규칙은 (전역 규칙과 사실상 중복이라) 아무 효과가 없는 무해한 코드였지만, 실제 버그를 고치는 게 아니므로 되돌렸다(`git checkout -- public/style.css`).
+
+결과: ❌ 버그 아님(오탐 정정) — landscape 방향은 이미 전역 규칙(323번째 줄)에 의해 스크롤이 정상 동작 중이었다. 이번 라운드는 실제 코드 변경 없이 마무리하며, 6번째 각도(랜드스케이프 방향)는 이걸로 소진됐다고 판단한다. 다음 라운드는 새로운 7번째 각도를 찾아야 한다.
+
 ## [2026-07-27 02:45] [/loop 계속] 설문조사 상세(buildVoteDetailAnsi) 선택지 무제한 렌더링 발견 — 페이지네이션으로 수정
 
 **LOG_ID: 20260727_0245**
