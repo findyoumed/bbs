@@ -2893,7 +2893,25 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="news-view"] .ansi-line,
     body[data-screen="help"] .ansi-line,
     body[data-screen="omok-play"] .ansi-line,
-    body[data-screen="post-view"] .ansi-line {
+    body[data-screen="post-view"] .ansi-line,
+    /* [LOG_ID: 20260727_0130] 이 목록은 위 overflow-y:auto 화이트리스트(20260710_1815~20260726_2350,
+       news-list/news-view/help/omok-play/chat-room/vote-detail/scramble-play/policy/my-stats)와
+       나란히 관리돼야 하는데, chat-room/vote-detail/scramble-play/policy/my-stats/conf-agenda/
+       memo-view 7개 화면이 여기서 누락돼 있었다 — 이 화면들은 여전히 기본 .ansi-line{min-height:24px}
+       (고정 픽셀 하한)를 쓰는데, 폰트 크기가 짧은 뷰포트에서 vh 기반으로 줄어들어도 줄 높이는
+       24px 밑으로 못 줄어 그만큼 세로 공간을 더 잡아먹는다. 실측(360x400 뷰포트): help는
+       scrollHeight-clientHeight 초과분이 25px(≈1줄)인데 policy는 187px(≈8줄)— 같은 overflow-y:auto
+       안전망이 있어도 실제로 스크롤해야 하는 분량이 7배 넘게 차이났다. 폭 계산(44칸 캘리브레이션,
+       #terminal-container의 font-size 0.025 비율 그룹)과는 무관한 순수 세로 줄 높이 완화이므로,
+       아래 font-size 0.025 그룹(post-view가 20260721_1630에 빠진 이유와 동일한 위험)에는 넣지
+       않고 이 min-height 완화만 확장한다. */
+    body[data-screen="chat-room"] .ansi-line,
+    body[data-screen="vote-detail"] .ansi-line,
+    body[data-screen="scramble-play"] .ansi-line,
+    body[data-screen="policy"] .ansi-line,
+    body[data-screen="my-stats"] .ansi-line,
+    body[data-screen="conf-agenda"] .ansi-line,
+    body[data-screen="memo-view"] .ansi-line {
         min-height: 1.32em;
     }
 

@@ -1,3 +1,14 @@
+## [2026-07-27 01:30] [/loop 계속] 새 탐색 각도(짧은 세로 뷰포트) — CSS min-height 완화 화이트리스트에서 7개 화면 누락 발견·수정
+
+**LOG_ID: 20260727_0130**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 2회 연속 무버그(wrapAnsiText, fitCell 각도) 이후 완전히 새로운 각도로 전환: `style.css`에서 이미 확인된 "화면별 whitelist 확장 패턴"(policy 버그의 근본 원인이었던 그 패턴)이 **다른 CSS 규칙에도** 남아있는지 재검색.
+
+발견: `.ansi-line{min-height:24px}`(고정 픽셀 하한)를 `min-height:1.32em`(폰트 크기에 비례, 뷰포트가 짧아져 폰트가 vh 기준으로 줄어들면 줄 높이도 함께 줄어듦)로 완화하는 별도의 화이트리스트가 있는데, `news-list/news-view/help/omok-play/post-view` 5개만 포함하고 이번 세션에서 overflow-y:auto 화이트리스트에 추가했던 `chat-room/vote-detail/scramble-play/policy/my-stats/conf-agenda/memo-view` 7개 화면이 전부 빠져 있었다. 실측(360×400 짧은 세로 뷰포트): `help`는 `scrollHeight-clientHeight` 초과분이 25px(≈1줄)인데 `policy`는 187px(≈8줄) — 같은 overflow-y:auto 안전망이 있어도 실제 스크롤해야 하는 분량이 7배 넘게 차이났다.
+
+구현: 위 7개 화면을 `.ansi-line{min-height:1.32em}` 화이트리스트에 추가. 단, 바로 아래 있는 별도의 `#terminal-container{font-size:...0.025}` 화이트리스트(post-view가 20260721_1630에 폭 계산 오류로 제외된 전력이 있는 그룹)에는 넣지 않았다 — 이건 44칸 폭 캘리브레이션과 얽혀 있어 잘못 확장하면 이미 고친 "왼쪽 쏠림" 버그(20260726_2200)를 다시 만들 위험이 있고, 이번에 고치는 문제는 순수 세로 줄 높이라 서로 무관하다.
+검증: 동일 조건(360×400) 재측정 — `policy`의 clippedPx가 187px→40px로 감소(약 4.7배 개선), `help`의 25px 기준에 근접. `smoke:full-traversal`/`smoke-mobile-viewports.js` 전부 통과. `@media(max-width:768px) and (orientation:portrait)` 안에 스코프돼 있어 데스크톱은 무관.
+결과: ✅ 완료 — 2회 연속 무버그 이후 각도 전환으로 찾은 세 번째 실질 결함. "화면별 whitelist 확장 패턴에서 신규 화면 누락"이라는 이번 세션의 대표 버그 클래스가 overflow-y:auto 목록뿐 아니라 인접한 min-height 목록에도 독립적으로 존재했다는 것을 확인 — 앞으로 유사한 화이트리스트가 style.css에 더 있는지도 다음 라운드에서 점검할 가치가 있다.
+
 ## [2026-07-27 01:00] [/loop 계속] 새 탐색 각도(말줄임표 없는 fitCell 단일행 절삭) 점검 — 새 버그 없음, 2회 연속 무버그
 
 **LOG_ID: 20260727_0100**
