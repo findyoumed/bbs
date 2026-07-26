@@ -677,12 +677,19 @@ export function createBrowseCommandHandler(deps) {
           return true;
         }
 
+        // [LOG_ID: 20260726_1800] PDS(자료실)처럼 여러 물리 게시판을 하나로 병합해 보여주는
+        // 가상 게시판은 local_id가 하위 게시판별로 독립 채번돼 서로 다른 하위 게시판에서
+        // local_id가 우연히 같은 글이 동시에 존재할 수 있다(실제 PDS 데이터에서 확인). 목록에
+        // 이미 로드된 글 객체는 자신의 실제 하위 게시판 id(post.boardId)를 갖고 있으므로,
+        // 이를 그대로 넘기면 병합 별칭("pds")으로 다시 찾을 때 생기는 모호성을 피해 정확히
+        // 그 글을 연다. 별칭으로만 조회 가능한 경로(서버 이전/다음글 탐색 등)는
+        // fetchPostByLocalId의 서버측 완화(최근 글 우선)로 최소한 조회 실패는 막는다.
         const [first, ...rest] = targets;
         state._continuousRead = {
           boardId: state.board.id,
-          queue: rest.map((post) => post.localId ?? post.id)
+          queue: rest.map((post) => ({ localId: post.localId ?? post.id, boardId: post.boardId || state.board.id }))
         };
-        await showPostView(state.board.id, first.localId ?? first.id);
+        await showPostView(first.boardId || state.board.id, first.localId ?? first.id);
         setHint(rest.length
           ? `연속읽기(${targets.length}건): [엔터] 다음 글 · 다른 명령 입력 시 종료`
           : '연속읽기: [엔터] 다음 글 · 다른 명령 입력 시 종료');
@@ -690,10 +697,14 @@ export function createBrowseCommandHandler(deps) {
       }
 
       const byPostId = state.posts.find((post) => String(post.localId ?? post.id) === rawCmd);
-      if (byPostId) { await showPostView(state.board.id, byPostId.localId ?? byPostId.id); return true; }
+      if (byPostId) { await showPostView(byPostId.boardId || state.board.id, byPostId.localId ?? byPostId.id); return true; }
 
       const n = parseInt(rawCmd, 10);
-      if (n >= 1 && state.posts[n - 1]) { await showPostView(state.board.id, state.posts[n - 1].localId ?? state.posts[n - 1].id); return true; }
+      if (n >= 1 && state.posts[n - 1]) {
+        const target = state.posts[n - 1];
+        await showPostView(target.boardId || state.board.id, target.localId ?? target.id);
+        return true;
+      }
 
       return false;
     }

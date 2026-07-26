@@ -218,6 +218,7 @@ export function createPostViewCommandHandler(deps) {
           const runTransferAnimation = async () => {
             let currentFile = state._pendingDownload;
             let lastPostId = currentFile.postId;
+            let lastFileBoardId = currentFile.boardId;
             let transferredCount = 0;
 
             while (currentFile) {
@@ -240,6 +241,7 @@ export function createPostViewCommandHandler(deps) {
               }
 
               lastPostId = currentFile.postId;
+              lastFileBoardId = currentFile.boardId;
               currentFile = null;
 
               while (state._downloadQueue?.queue?.length) {
@@ -277,7 +279,7 @@ export function createPostViewCommandHandler(deps) {
                 await showPostList(state.board.id, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
               }
             } else if (typeof showAttachmentList === 'function') {
-              await showAttachmentList(state.board.id, lastPostId);
+              await showAttachmentList(lastFileBoardId || state.board.id, lastPostId);
             }
           };
 
@@ -291,7 +293,7 @@ export function createPostViewCommandHandler(deps) {
       }
 
       if (cmd === 'P' || cmd === 'M' || cmd === 'B') {
-        await showPostView(state.board.id, state.post.localId ?? state.post.id);
+        await showPostView(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
         return true;
       }
       if (cmd === 'T') {
@@ -303,7 +305,7 @@ export function createPostViewCommandHandler(deps) {
         const file = state._attachments[idx - 1];
         // [LOG_ID: 20260713_1030] 파일 다운로드 즉시 실행 대신 프로토콜 선택 단계 개시
         state._pendingDownload = {
-          boardId: state.board.id,
+          boardId: state.post.boardId || state.board.id,
           postId: state.post.localId ?? state.post.id,
           fileId: file.id,
           fileName: file.originalFilename || file.filename,
@@ -323,7 +325,7 @@ export function createPostViewCommandHandler(deps) {
 
     if (cmd === 'F') {
       if (postPageNo < postPageCount) {
-        await showPostView(state.board.id, state.post.localId ?? state.post.id, false, postPageNo + 1);
+        await showPostView(state.post.boardId || state.board.id, state.post.localId ?? state.post.id, false, postPageNo + 1);
         return true;
       } else {
         setHint('마지막 페이지입니다.');
@@ -339,14 +341,14 @@ export function createPostViewCommandHandler(deps) {
     // 여기서 직접 처리하고, 이미 1쪽이면(본문상 더 갈 곳이 없으면) 아래 목록 이동 폴백으로
     // 넘어가도록 return하지 않는다.
     if (cmd === 'B' && postPageNo > 1) {
-      await showPostView(state.board.id, state.post.localId ?? state.post.id, false, postPageNo - 1);
+      await showPostView(state.post.boardId || state.board.id, state.post.localId ?? state.post.id, false, postPageNo - 1);
       return true;
     }
 
     // 엔터 입력 시 아직 본문 다음 페이지가 남아 있으면 다음 페이지로 우선 이동
     if (cmd === '') {
       if (postPageNo < postPageCount) {
-        await showPostView(state.board.id, state.post.localId ?? state.post.id, false, postPageNo + 1);
+        await showPostView(state.post.boardId || state.board.id, state.post.localId ?? state.post.id, false, postPageNo + 1);
         return true;
       }
     }
@@ -358,8 +360,11 @@ export function createPostViewCommandHandler(deps) {
       && String(state._continuousRead.boardId) === String(state.board?.id);
     if (continuousRead && cmd === '') {
       if (state._continuousRead.queue && state._continuousRead.queue.length > 0) {
-        const nextId = state._continuousRead.queue.shift();
-        await showPostView(state.board.id, nextId);
+        const nextItem = state._continuousRead.queue.shift();
+        // [LOG_ID: 20260726_1800] 큐 항목은 이제 {localId, boardId} 객체다 — PDS처럼 병합된
+        // 가상 게시판에서 local_id만으로는 어느 물리 게시판 글인지 모호할 수 있어(위
+        // showPostView 호출부 수정과 동일한 이유), 큐에 저장해둔 실제 하위 게시판 id를 쓴다.
+        await showPostView(nextItem.boardId || state.board.id, nextItem.localId);
         if (state._continuousRead.queue.length > 0) {
           setHint(`연속읽기(남은글 ${state._continuousRead.queue.length}건): [엔터] 다음 글 · 다른 명령 입력 시 종료`);
         } else {
@@ -493,8 +498,8 @@ export function createPostViewCommandHandler(deps) {
         setHint(UI_TEXT.LOGIN_REQUIRED);
         return true;
       }
-      await recommendPost(state.board.id, state.post.localId ?? state.post.id);
-      await showPostView(state.board.id, state.post.localId ?? state.post.id);
+      await recommendPost(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
+      await showPostView(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
       return true;
     }
 
@@ -513,7 +518,7 @@ export function createPostViewCommandHandler(deps) {
     }
 
     if (cmd === 'U') {
-      await showAttachmentList(state.board.id, state.post.localId ?? state.post.id);
+      await showAttachmentList(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
       return true;
     }
 

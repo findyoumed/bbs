@@ -1,3 +1,20 @@
+## [2026-07-26 18:00] PDS 업로드/다운로드 전체 플로우 전수조사 — local_id 충돌로 실서비스 글 15/16건 열람 불가였던 치명 버그 발견·수정, 죽은 키워드 입력 UI 복원
+
+**LOG_ID: 20260726_1800**
+목표: 사용자 요청 "PDS 업로드/다운로드 전체 플로우도 전수조사해줘" — 지금까지의 `/loop` 모바일 UI 폭 버그 사냥과 별개로, PDS(자료실) 게시판의 글쓰기(업로드)·첨부파일 다운로드 흐름을 실제 인증 세션으로 처음부터 끝까지 재현.
+
+발견 1 — 죽은 "자료 검색용 키워드 3개" 입력 UI: `postWriteView.js`의 박스 에디터(`renderBbsEditor`, 실제로 항상 쓰이는 `stage:'bbs-form'`)는 옛 줄단위 프롬프트 방식 에디터 시절 구현됐던 PDS 전용 키워드 3개 입력 단계(`keyword_1/2/3`)를 전혀 몰랐다 — 그 옛 스테이지 머신 자체가 박스 에디터 도입으로 완전히 도달 불가능해지면서, PDS 글쓰기에서 검색용 키워드를 받는 절차 자체가 조용히 사라져 있었다.
+
+발견 2(핵심, 치명) — PDS 병합 가상 게시판의 local_id 충돌: PDS는 `pds/pds_all/pds_util/pds_game/pds_graphic/pds_sound/pds_prog` 7개 물리 게시판을 하나의 "자료실"로 병합하는데(`BoardVirtualBoards.js`), `local_id`는 각 물리 게시판이 독립적으로 채번한다. `applyBoardFilter`가 병합 시 여러 board_id를 `.in()`으로 묶어 조회하므로, 서로 다른 하위 게시판에 우연히 같은 local_id가 존재하면 `fetchPostByLocalId`의 `.maybeSingle()`이 "복수 행" PostgREST 오류로 502를 던져 그 local_id를 가진 글은 전부 조회가 완전히 막힌다. 실측: 테스트 글(local_id 3) 열람 시도 중 "연결하는 중입니다"에서 무한 대기하는 것을 발견해 추적한 결과, 실제 서비스 데이터에서 local_id 1(6개 하위 게시판 충돌)·2(6개 충돌)·3(4개 충돌)이 전부 충돌 중이었다 — 즉 이 시점 실제 PDS 게시글 16건 중 15건이 이 버그로 완전히 열람 불가 상태였다(다운로드는 물론 첨부파일 목록조차 못 열었다).
+
+구현:
+1. `postWriteView.js` — 박스 에디터에 PDS 전용(수정 모드 제외) 키워드 입력 필드를 추가(`isPdsKeywordBoard`), Tab/Enter/화살표로 제목→키워드→본문 순 이동, 저장 시 공백 구분 정확히 3개를 요구하고 본문 끝에 `* 검색 키워드 : a / b / c` 형식으로 원작과 동일하게 append.
+2. `SupabaseBoardRepositoryPostReads.js`의 `fetchPostByLocalId` — `.maybeSingle()`(충돌 시 예외)를 `.order('created_at',{ascending:false}).limit(1)`(충돌 시에도 최신 글 하나를 결정적으로 반환)로 완화 — URL 직접 접근·이전/다음 글 탐색처럼 구체적 board_id를 모르는 경로를 위한 서버측 안전망.
+3. 클라이언트 3개 파일(`commandRouterBrowse.js`/`commandRouterPostView.js`/`postViewView.js`)의 모든 `showPostView`/`recommendPost`/`showAttachmentList` 호출부를 전수 점검해, 이미 로드되어 구체적 하위 게시판 id(`post.boardId`)를 알고 있는 경로는 병합 별칭("pds") 대신 그 구체적 id를 쓰도록 통일 — 목록 선택, PR 연속읽기 큐, 인접글 이동(A/N), 본문 페이징(F/B/엔터), 첨부 목록(U), 추천(V), 다운로드 큐 소진까지 전부 반영. 서버 안전망은 최근접 글을 "그럴듯하게" 보여주지만 여전히 틀린 글일 수 있어, 클라이언트가 이미 아는 값은 항상 그 값을 우선한다.
+
+검증: 서버 재기동 후 `curl /api/boards/pds/posts/3?userId=...` 502→200(정확히 테스트 글 반환) 확인. 첨부 추가(`ensureAttachmentWritable` 내부 getPost)도 "pds" 별칭으로 502 없이 통과해 인가 단계까지 도달함을 확인(403은 무인증 테스트 계정이라 별개, 기대된 결과). Playwright(390px, 실제 Supabase Auth 세션)로 글보기→U(첨부 목록, `pds_all`로 정확히 라우팅됨 확인)→파일 선택→프로토콜 선택(Zmodem)→전송 애니메이션(모바일 박스 없는 레이아웃)→실제 다운로드 이벤트 발생까지 업로드/다운로드 전체 플로우를 처음부터 끝까지 재현해 정상 동작 확인. `node --check` 5개 파일 전부 통과. `smoke:boards`/`smoke:full-traversal`/`smoke-mobile-viewports.js`(3뷰포트×27라우트)/`smoke:vercel-ready` 전부 통과. 테스트 데이터(글 181·첨부 128·테스트 회원·Auth 계정) 전부 정리 완료.
+결과: ✅ 완료 — "모바일 UI"라는 원래 프레이밍을 넘어, 실서비스 PDS 게시글의 93%(15/16)가 완전히 열람 불가였던 세션 통틀어 가장 심각한 기능 버그를 발견·수정했다. 서버측 안전망(단일 지점) + 클라이언트측 정밀 수정(호출부 전수)의 이중 방어로, 향후 새 병합 게시판이 추가되더라도 최소한 "조회 자체가 막히는" 최악의 경우는 방지된다.
+
 ## [2026-07-26 17:30] [/loop 계속] 전체 스모크 스위트 종합 회귀 점검 — 전 항목 통과, 세션 마일스톤 확인
 
 **LOG_ID: 20260726_1730**

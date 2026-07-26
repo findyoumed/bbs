@@ -96,13 +96,18 @@ export function createPostViewView(deps) {
     }
   }
 
+  // [LOG_ID: 20260726_1800] PDS 같은 병합 가상 게시판은 local_id가 하위 게시판별로 독립
+  // 채번돼 서로 다른 하위 게시판에서 값이 겹칠 수 있다 — 이미 로드된 목록 항목(post.boardId)이
+  // 있는 경로는 그 값을 그대로 써서 정확한 글을 연다. 서버가 준 _postNavigation.nextId/prevId는
+  // local_id뿐이라 여기선 병합 별칭을 쓸 수밖에 없는데, 서버측 fetchPostByLocalId가 이제
+  // 충돌 시에도 조회 실패 대신 하나를 결정적으로 골라 응답하도록 완화되어 있다.
   async function showAdjacentPost(direction, handlers) {
     const { showPostList } = handlers;
     const currentPosts = Array.isArray(state.posts) ? state.posts : [];
     const idx = currentPosts.findIndex((p) => String(p.id) === String(state.post?.id));
     if (idx >= 0) {
       const next = currentPosts[idx + direction];
-      if (next) { await showPostView(state.board.id, next.localId ?? next.id); return true; }
+      if (next) { await showPostView(next.boardId || state.board.id, next.localId ?? next.id); return true; }
     }
     const navigationTargetId = direction > 0 ? state._postNavigation?.nextId : state._postNavigation?.prevId;
     if (navigationTargetId) {
@@ -111,11 +116,15 @@ export function createPostViewView(deps) {
     }
     if (direction > 0 && state.page < state.totalPages) {
       await showPostList(state.board.id, state.page + 1, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
-      if (state.posts[0]) { await showPostView(state.board.id, state.posts[0].localId ?? state.posts[0].id); return true; }
+      if (state.posts[0]) { await showPostView(state.posts[0].boardId || state.board.id, state.posts[0].localId ?? state.posts[0].id); return true; }
     }
     if (direction < 0 && state.page > 1) {
       await showPostList(state.board.id, state.page - 1, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
-      if (state.posts.length) { await showPostView(state.board.id, state.posts[state.posts.length - 1].localId ?? state.posts[state.posts.length - 1].id); return true; }
+      if (state.posts.length) {
+        const last = state.posts[state.posts.length - 1];
+        await showPostView(last.boardId || state.board.id, last.localId ?? last.id);
+        return true;
+      }
     }
     return false;
   }

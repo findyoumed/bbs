@@ -165,6 +165,19 @@ async function fetchPost(repo, boardId, postId) {
   return mapPostRow(data);
 }
 
+// [LOG_ID: 20260726_1800] PDS(자료실)는 pds/pds_all/pds_util/pds_game/pds_graphic/pds_sound/
+// pds_prog 7개 물리 게시판을 하나의 가상 게시판("pds")으로 병합하는데(BoardVirtualBoards.js
+// MERGED_BOARD_SOURCES), local_id는 각 물리 게시판이 독립적으로 채번한다 — 즉 서로 다른
+// 하위 게시판에 local_id가 같은 글이 동시에 존재할 수 있다(실측: 이 시스템의 실제 PDS
+// 데이터에서 local_id 1/2/3이 전부 6개 하위 게시판에 걸쳐 충돌 중이었다). applyBoardFilter가
+// 병합 시 여러 board_id를 `.in()`으로 한 번에 조회하므로, .maybeSingle()은 이런 충돌에서
+// "복수 행" PostgREST 오류(502)를 던져 그 local_id를 가진 글은 전부 조회 자체가 막혔다
+// (사용자 요청 "PDS 업로드/다운로드 전체 플로우 전수조사"로 발견 — 실제 서비스 데이터의
+// 16건 중 15건이 이 충돌 때문에 열람 불가 상태였다). 정확한 대상은 호출부가 이미 아는
+// 구체적 board_id(목록에서 가져온 개별 글의 boardId)를 넘겨야 확실히 구분되지만(클라이언트
+// 쪽에서 별도로 고쳤다), URL 직접 접근·이전/다음 글 탐색처럼 구체적 board_id를 모르는
+// 경로도 있어 여기서는 최소한 "조용히 막히는" 대신 결정적으로 하나를 골라 응답한다(가장
+// 최근에 작성된 글 우선) — 완벽한 구분은 아니지만 오류로 완전히 막히는 것보다는 낫다.
 async function fetchPostByLocalId(repo, boardId, localId) {
   let query = repo.client
     .from(repo.tables.posts)
@@ -174,10 +187,11 @@ async function fetchPostByLocalId(repo, boardId, localId) {
 
   const { data, error } = await query
     .eq('local_id', Number(localId))
-    .maybeSingle();
+    .order('created_at', { ascending: false })
+    .limit(1);
 
   if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
-  return mapPostRow(data);
+  return mapPostRow(Array.isArray(data) ? (data[0] || null) : data);
 }
 
 async function getNavigation(repo, boardId, postId) {

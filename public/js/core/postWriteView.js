@@ -114,12 +114,28 @@ export function createPostWriteView(deps) {
   // [LOG: 20260724_1517] PC통신(BBS) 스타일 폼 에디터 최종 튜닝
   // 화살표키(ArrowUp, ArrowDown)로 제목과 본문 간 자유 이동 및 텍스트 수정 제공.
   // 에뮬레이터 폰트(BbsPrimaryFont, Sam3KRFont), 크기(17px), 행간(1.4)을 100% 동일하게 강제하여 터미널과 완벽한 일체감 제공.
+  // [LOG_ID: 20260713_1110] 자료실(PDS) 신규 글/답글 작성 시 검색용 키워드 3개를 받는 기능.
+  // [LOG_ID: 20260726_1745] 이 판정 로직과 수집한 키워드를 본문 꼬리에 붙이는 형식("* 검색 키워드 :
+  // kw1 / kw2 / kw3")은 옛 줄 단위 에디터(handlePostWriteLine의 keyword_1/2/3 스테이지, 지금은
+  // 'bbs-form'이 항상 먼저 걸려 도달 불가능한 죽은 코드)에만 있었다 — 박스 에디터(renderBbsEditor)
+  // 저장 경로(_onSave → handleWriteSubmit)는 이 스테이지를 전혀 몰라 곧장 제목+본문만 저장했다.
+  // 즉 에디터가 줄 단위 → 박스 형태로 바뀐 뒤로 PDS 검색 키워드 수집 기능 자체가 조용히
+  // 사문화되어 있었다(사용자 요청 "PDS 업로드/다운로드 전체 플로우 전수조사"로 발견). 3단계
+  // 순차 프롬프트를 그대로 되살리는 대신, 박스 에디터 안에 한 줄짜리 입력창을 추가해 공백으로
+  // 구분한 키워드 3개를 한 번에 받는다(기존보다 나은 UX, 결과 형식은 원본과 동일하게 유지).
+  function isPdsKeywordBoard(mode) {
+    const isPds = state.board?.id === 'pds' || state.board?.boardId === 'pds' || String(state.boardMenuTitle).includes('자료실');
+    return isPds && mode !== 'edit';
+  }
+
   function renderBbsEditor(editor, onSave, onCancel) {
     editor.stage = 'bbs-form';
     const boardCode = String(state.board?.id || state.board?.boardId || 'BBS').toUpperCase();
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const titleId = 'bbs-ed-title';
     const bodyId  = 'bbs-ed-body';
+    const keywordId = 'bbs-ed-keyword';
+    const showKeywordField = isPdsKeywordBoard(editor.mode);
 
     // PC통신 단말기 스타일 에디터 레이아웃
     // [LOG_ID: 20260726_1245] 데스크톱(80컬럼) 기준 76칸 구분선이 모바일(44컬럼)에서도
@@ -182,12 +198,20 @@ export function createPostWriteView(deps) {
     // 겹쳐 보임). "내용:" 구획에 라벨 한 줄 + 최소 몇 줄 분량의 바닥을 보장해 0까지 짜부라지지
     // 않게 하고, 그래도 전체가 안 맞으면(아주 작은 키보드 여유 공간) 짜부라뜨리는 대신 바깥
     // 래퍼 전체가 스크롤되도록 한다.
+    const keywordRow = showKeywordField
+      ? `<div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
+    <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">키워드 :&nbsp;</span>
+    <input id="${keywordId}" type="text" autocomplete="off" spellcheck="false" placeholder="검색용 키워드 3개, 공백으로 구분" style="${inputStyle}"/>
+  </div>`
+      : '';
+
     const bodyHtml = `
 <div style="display:flex;flex-direction:column;height:100%;overflow-y:auto;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
   <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
     <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">제 목 :&nbsp;</span>
     <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" style="${inputStyle}"/>
   </div>
+  ${keywordRow}
   <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   ${headerLine}
   <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
@@ -203,11 +227,13 @@ export function createPostWriteView(deps) {
 
     const titleEl = document.getElementById(titleId);
     const bodyEl  = document.getElementById(bodyId);
+    const keywordEl = showKeywordField ? document.getElementById(keywordId) : null;
     if (!titleEl || !bodyEl) return;
 
     // 값 할당
     titleEl.value = editor.title || '';
     bodyEl.value  = editor.bodyLines.join('\n');
+    if (keywordEl) keywordEl.value = (editor.keywords || []).join(' ');
 
     // [LOG_ID: 20260725_1212] 선택>> 프롬프트 행은 에디터 진입 후에도 항상 노출 유지
     // — 탭키로 제목→본문→선택>> 이동이 가능하므로 숨기면 내비게이션이 불가능해짐.
@@ -231,6 +257,10 @@ export function createPostWriteView(deps) {
       }
       titleEl.removeEventListener('keydown', onTitleKey);
       bodyEl.removeEventListener('keydown', onBodyKey);
+      if (keywordEl) {
+        keywordEl.disabled = false;
+        keywordEl.removeEventListener('keydown', onKeywordKey);
+      }
       if (cmdInput) {
         cmdInput.removeEventListener('keydown', onCmdKey);
       }
@@ -247,14 +277,30 @@ export function createPostWriteView(deps) {
     // 함께 막는다.
     function doSave() {
       if (editor._saving) return;
+      // [LOG_ID: 20260726_1745] PDS 신규 글/답글은 저장 전 키워드 3개(공백 구분)를 검증한다 —
+      // 옛 줄 단위 에디터의 keyword_1/2/3 스테이지가 정확히 3개를 요구했던 것과 동일한 기준.
+      let keywordParts = null;
+      if (keywordEl) {
+        keywordParts = keywordEl.value.trim().split(/\s+/).filter(Boolean);
+        if (keywordParts.length !== 3) {
+          setHint('자료 검색용 키워드를 공백으로 구분해 정확히 3개 입력하십시오.');
+          keywordEl.focus();
+          return;
+        }
+      }
       editor._saving = true;
       const titleVal = titleEl.value.trim();
       const lines = bodyEl.value.split('\n');
       if (lines.length > 0 && lines[lines.length - 1].trim() === '.') lines.pop();
+      if (keywordParts) {
+        editor.keywords = keywordParts;
+        lines.push('', `* 검색 키워드 : ${keywordParts.join(' / ')}`);
+      }
       editor.title = titleVal;
       editor.bodyLines = lines;
       titleEl.disabled = true;
       bodyEl.disabled = true;
+      if (keywordEl) keywordEl.disabled = true;
       Promise.resolve(onSave()).finally(cleanup);
     }
 
@@ -262,19 +308,37 @@ export function createPostWriteView(deps) {
       return ta.value.substring(0, ta.selectionStart).indexOf('\n') === -1;
     }
 
+    // [LOG_ID: 20260726_1745] 키워드 입력창이 있으면(PDS 신규 글/답글) 제목→키워드→본문 순으로,
+    // 없으면 기존과 동일하게 제목→본문 순으로 이동한다.
+    function focusFieldAfterTitle() {
+      const target = keywordEl || bodyEl;
+      target.focus();
+      if (target === bodyEl) bodyEl.setSelectionRange(0, 0);
+      else target.select();
+    }
+
     function onTitleKey(e) {
       if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+        e.preventDefault();
+        focusFieldAfterTitle();
+      }
+    }
+
+    function onKeywordKey(e) {
+      if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
+      if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
+      if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault();
         bodyEl.focus();
         bodyEl.setSelectionRange(0, 0);
         return;
       }
-      if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
         e.preventDefault();
-        bodyEl.focus();
-        bodyEl.setSelectionRange(0, 0);
+        titleEl.focus();
+        titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
       }
     }
 
@@ -291,8 +355,13 @@ export function createPostWriteView(deps) {
       }
       if ((e.key === 'ArrowUp' && isOnFirstLine(bodyEl)) || (e.key === 'Tab' && e.shiftKey)) {
         e.preventDefault();
-        titleEl.focus();
-        titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
+        if (keywordEl) {
+          keywordEl.focus();
+          keywordEl.select();
+        } else {
+          titleEl.focus();
+          titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
+        }
         return;
       }
       if (e.key === 'Enter') {
@@ -314,6 +383,9 @@ export function createPostWriteView(deps) {
 
     titleEl.addEventListener('keydown', onTitleKey);
     bodyEl.addEventListener('keydown', onBodyKey);
+    if (keywordEl) {
+      keywordEl.addEventListener('keydown', onKeywordKey);
+    }
     if (cmdInput) {
       cmdInput.addEventListener('keydown', onCmdKey);
     }
