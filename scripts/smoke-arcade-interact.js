@@ -38,7 +38,11 @@ async function runArcadeInteractTests() {
     await waitForServer(3198);
     console.log('✅ [Arcade Interact] Test server ready.');
 
-    const browser = await chromium.launch({ headless: true });
+    // [LOG_ID: 20260725_2330] 이 환경에 미리 설치된 Chromium 리비전이 playwright 패키지가
+    // 기대하는 리비전과 어긋나 기본 launch()가 "Executable doesn't exist"로 항상 실패했다
+    // (smoke-mobile-viewports.js/smoke-full-traversal.js와 동일 원인) — 이 스크립트는 그동안
+    // 이 환경에서 단 한 번도 실행된 적이 없었다.
+    const browser = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium' });
     const context = await browser.newContext({
       viewport: { width: 390, height: 844 },
       isMobile: true,
@@ -70,16 +74,20 @@ async function runArcadeInteractTests() {
     await page.waitForTimeout(300);
 
     // 2. 오델로 (othello)
+    // [LOG_ID: 20260725_2330] 실제 라우트 세그먼트는 'oth'다(routingStateRestorer.js) —
+    // 'othello'는 존재하지 않아 조용히 초기화면으로 폴백했다(모바일 UI 육안 재점검 중 발견).
     console.log('🎮 [2/10] Testing Othello (오델로) turn & click...');
-    await page.goto('http://localhost:3198/game/othello', { waitUntil: 'domcontentloaded' });
+    await page.goto('http://localhost:3198/game/oth', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(300);
     await cmdInput.fill('C4');
     await cmdInput.press('Enter');
     await page.waitForTimeout(300);
 
     // 3. 숫자야구 (baseball)
+    // [LOG_ID: 20260725_2330] 실제 라우트 세그먼트는 'base'다 — 'baseball'은 존재하지 않아
+    // 조용히 초기화면으로 폴백했다.
     console.log('🎮 [3/10] Testing Baseball (숫자야구) guess...');
-    await page.goto('http://localhost:3198/game/baseball', { waitUntil: 'domcontentloaded' });
+    await page.goto('http://localhost:3198/game/base', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(300);
     await cmdInput.fill('123');
     await cmdInput.press('Enter');
@@ -94,8 +102,10 @@ async function runArcadeInteractTests() {
     await page.waitForTimeout(300);
 
     // 5. 15-패즐 (puzzle15)
+    // [LOG_ID: 20260725_2330] 실제 라우트 세그먼트는 '16p'다 — 'puzzle15'는 존재하지 않아
+    // 조용히 초기화면으로 폴백했다.
     console.log('🎮 [5/10] Testing Puzzle15 (15-패즐) tile move...');
-    await page.goto('http://localhost:3198/game/puzzle15', { waitUntil: 'domcontentloaded' });
+    await page.goto('http://localhost:3198/game/16p', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(300);
     await cmdInput.fill('1');
     await cmdInput.press('Enter');

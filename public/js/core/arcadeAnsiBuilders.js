@@ -76,6 +76,15 @@ export function createArcadeAnsiBuilders(deps) {
 
   // ── 오델로 ──
   function buildOthelloAnsi(st) {
+    // [LOG_ID: 20260725_2330] 오목(buildOmokAnsi)과 달리 이 함수엔 isMobile 분기가 아예
+    // 없었다 — 진단: 스모크 스크립트가 실제 존재하지 않는 경로(/game/othello, 정확한 경로는
+    // /game/oth)를 검사해 매번 초기화면으로 조용히 폴백해 이 화면 자체가 한 번도 실제로
+    // 점검된 적이 없었다(모바일 UI 육안 재점검 중 발견). 실제 경로로 다시 캡처해보니 안내
+    // 문구 줄(countLine)과 상태 줄(statusLine)이 44칸을 넘어 문장 끝이 잘려 보였다.
+    // 오목처럼 문구별로 손으로 줄이는 대신, 이미 있는 wrapAnsiText로 표시폭 기준 자동
+    // 줄바꿈해 상태별 문구 길이가 서로 달라도 항상 안전하게 접히도록 한다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const wrapWidth = isMobile ? 44 : 80;
     const colLabels = '     ' + Array.from({ length: OTH_SIZE }, (_, i) => String.fromCharCode(65 + i)).join(' ');
     const legal = st.status === 'play' ? new Set(othelloLegalMoves(st.board, 1).map((m) => m.idx)) : new Set();
     const rows = [];
@@ -99,16 +108,27 @@ export function createArcadeAnsiBuilders(deps) {
       : st.passMsg ? c(9, `  ${st.passMsg}`)
       : st.lastCpu !== null ? c(15, `  컴퓨터가 ${coordText(st.lastCpu % OTH_SIZE, Math.floor(st.lastCpu / OTH_SIZE))} 에 놓았습니다. 좌표를 입력하세요.`)
       : c(15, '  귀하가 흑(●) 선공입니다. 놓을 좌표를 입력하세요. 입력 예) C4');
-    const hintLine = st.hintMsg ? `\n  ${c(9, st.hintMsg)}` : '';
-    return [buildTopHeader(['오락실', '오델로']), c(8, colLabels), ...rows, countLine, statusLine].join('\n') + hintLine;
+    const hintLine = st.hintMsg ? `\n${wrapAnsiText(`  ${c(9, st.hintMsg)}`, wrapWidth).join('\n')}` : '';
+    return [
+      buildTopHeader(['오락실', '오델로']),
+      c(8, colLabels),
+      ...rows,
+      ...wrapAnsiText(countLine, wrapWidth),
+      ...wrapAnsiText(statusLine, wrapWidth)
+    ].join('\n') + hintLine;
   }
 
   // ── 숫자야구 ──
   function buildBaseballAnsi(st) {
+    // [LOG_ID: 20260725_2330] 안내 문구/종료 문구가 44칸(모바일)을 넘겨 오른쪽 끝이 잘려
+    // 보이던 문제(오델로와 동일 원인 — isMobile 분기 자체가 없었음) — wrapAnsiText로
+    // 표시폭 기준 자동 줄바꿈한다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const wrapWidth = isMobile ? 44 : 80;
     const parts = [
       buildTopHeader(['오락실', '숫자야구']),
-      c(15, '  컴퓨터가 생각한 서로 다른 숫자 3자리를 맞추는 게임입니다.'),
-      c(8, '  자리와 숫자가 모두 맞으면 S(스트라이크), 숫자만 맞으면 B(볼)입니다.'),
+      ...wrapAnsiText(c(15, '  컴퓨터가 생각한 서로 다른 숫자 3자리를 맞추는 게임입니다.'), wrapWidth),
+      ...wrapAnsiText(c(8, '  자리와 숫자가 모두 맞으면 S(스트라이크), 숫자만 맞으면 B(볼)입니다.'), wrapWidth),
       ''
     ];
     st.tries.forEach((t, i) => {
@@ -116,9 +136,9 @@ export function createArcadeAnsiBuilders(deps) {
       parts.push(`  ${c(14, `${i + 1}회:`)} ${c(15, t.guess.split('').join(' '))}  →  ${judge}`);
     });
     if (st.status === 'win') {
-      parts.push('', c(11, `${ANSI_BOLD}  홈런! ${st.tries.length}회 만에 맞추셨습니다. 정답: ${st.answer}${ANSI_RESET}`));
+      parts.push('', ...wrapAnsiText(c(11, `${ANSI_BOLD}  홈런! ${st.tries.length}회 만에 맞추셨습니다. 정답: ${st.answer}${ANSI_RESET}`), wrapWidth));
     } else if (st.status === 'lose') {
-      parts.push('', c(9, `  아깝습니다. ${BASEBALL_MAX_TRIES}회를 모두 사용했습니다. 정답: ${st.answer}  L을 눌러 다시 도전하세요.`));
+      parts.push('', ...wrapAnsiText(c(9, `  아깝습니다. ${BASEBALL_MAX_TRIES}회를 모두 사용했습니다. 정답: ${st.answer}  L을 눌러 다시 도전하세요.`), wrapWidth));
     } else {
       parts.push('', c(15, `  남은 기회: ${BASEBALL_MAX_TRIES - st.tries.length}회  ${ansiColor(8)}입력 예) 123${ANSI_RESET}`));
     }
@@ -127,10 +147,14 @@ export function createArcadeAnsiBuilders(deps) {
 
   // ── 영어단어 맞추기 (책 원전 그림 178 화면 문구 재현) ──
   function buildHangmanAnsi(st) {
+    // [LOG_ID: 20260725_2330] 소개 문구·정답 공개 줄(단어 뜻은 데이터 의존 길이라 특히
+    // 위험)이 44칸(모바일)을 넘겨 잘려 보이던 문제 — wrapAnsiText로 자동 줄바꿈한다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const wrapWidth = isMobile ? 44 : 80;
     const masked = hangmanMasked(st).split('').join(' ');
     const parts = [
       buildTopHeader(['오락실', '영어단어 맞추기']),
-      c(15, '  숨겨진 영어단어의 알파벳을 하나씩 추측하여 맞추는 게임입니다.'),
+      ...wrapAnsiText(c(15, '  숨겨진 영어단어의 알파벳을 하나씩 추측하여 맞추는 게임입니다.'), wrapWidth),
       c(8, `  ${st.maxWrong}번 틀리면 실패합니다.`),
       '',
       `  ${c(14, '찾는단어 :')} ${c(11, `${ANSI_BOLD}${masked}${ANSI_RESET}`)}   ${c(15, `[${st.wrong}/${st.maxWrong}]`)} ${c(8, `(${st.word.length}글자)`)}`,
@@ -138,18 +162,22 @@ export function createArcadeAnsiBuilders(deps) {
       `  ${c(14, '선택한 알파벳 :')} ${c(15, `[${st.guessed.map((g) => g.toLowerCase()).join(' ')}]`)}`
     ];
     if (st.status === 'win') {
-      parts.push('', c(11, `${ANSI_BOLD}  맞추셨습니다! --> (${st.word.toLowerCase()}) : ${st.meaning}${ANSI_RESET}`), c(8, '  L을 누르면 새 단어가 나옵니다.'));
+      parts.push('', ...wrapAnsiText(c(11, `${ANSI_BOLD}  맞추셨습니다! --> (${st.word.toLowerCase()}) : ${st.meaning}${ANSI_RESET}`), wrapWidth), c(8, '  L을 누르면 새 단어가 나옵니다.'));
     } else if (st.status === 'lose') {
-      parts.push('', c(9, `  못 맞추셨습니다 --> (${st.word.toLowerCase()}) : ${st.meaning}`), c(8, '  L을 누르면 새 단어가 나옵니다.'));
+      parts.push('', ...wrapAnsiText(c(9, `  못 맞추셨습니다 --> (${st.word.toLowerCase()}) : ${st.meaning}`), wrapWidth), c(8, '  L을 누르면 새 단어가 나옵니다.'));
     } else {
       parts.push('', c(15, '  알파벳 한 글자를 입력하세요.'), c(8, '  0을 입력하면 포기하고 정답을 봅니다.'));
     }
-    if (st.hintMsg) parts.push('', c(9, `  ${st.hintMsg}`));
+    if (st.hintMsg) parts.push('', ...wrapAnsiText(c(9, `  ${st.hintMsg}`), wrapWidth));
     return parts.join('\n');
   }
 
   // ── 숫자판 맞추기 (4x4 15퍼즐) ──
   function buildPuzzle15Ansi(st) {
+    // [LOG_ID: 20260725_2330] 안내/상태 문구가 44칸(모바일)을 넘겨 잘려 보이던 문제 —
+    // wrapAnsiText로 자동 줄바꿈한다(오델로/숫자야구/영어단어 맞추기와 동일 원인·패턴).
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const wrapWidth = isMobile ? 44 : 80;
     // 박스 문자(─│┌…)는 이 폰트에서 글리프 폭이 숫자/공백과 미세하게 달라 격자가 어긋난다
     // (Playwright 실측) — 확실히 정렬되는 ASCII 괘선을 쓴다(PC통신 원전 감성과도 일치).
     const divider = c(8, '  +----+----+----+----+');
@@ -171,11 +199,11 @@ export function createArcadeAnsiBuilders(deps) {
     const hintLine = st.hintMsg ? `\n  ${c(9, st.hintMsg)}` : '';
     return [
       buildTopHeader(['오락실', '숫자판 맞추기']),
-      c(15, '  숫자를 움직여 1부터 15까지 차례대로 재배열하는 게임입니다.'),
+      ...wrapAnsiText(c(15, '  숫자를 움직여 1부터 15까지 차례대로 재배열하는 게임입니다.'), wrapWidth),
       c(8, '  제자리를 찾은 숫자는 밝게 표시됩니다.'),
       ...rows,
       '',
-      statusLine
+      ...wrapAnsiText(statusLine, wrapWidth)
     ].join('\n') + hintLine;
   }
 
@@ -183,6 +211,9 @@ export function createArcadeAnsiBuilders(deps) {
   // [LOG: 20260724_1034] 게임 종료 시 미처 찾지 못한 정답 단어 목록 노출 로직 보강
   function buildScrambleAnsi(st) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    // [LOG_ID: 20260725_2330] 이 함수는 answerLine에만 wrapAnsiText를 쓰고 있었고, 소개
+    // 문구·종료 상태줄은 빠져 있어 44칸(모바일)을 넘겨 잘려 보였다 — 동일하게 적용한다.
+    const wrapWidth = isMobile ? 44 : 80;
     const divider = c(8, '  +---+---+---+---+');
     const rows = [divider];
     for (let y = 0; y < 4; y++) {
@@ -209,8 +240,8 @@ export function createArcadeAnsiBuilders(deps) {
     const isAllFound = st.allPossibleAnswers && st.found.length >= st.allPossibleAnswers.length;
     const statusLine = st.status === 'end'
       ? (isAllFound
-        ? c(10, `  축하합니다! 모든 단어를 찾아냈습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`)
-        : c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`))
+        ? wrapAnsiText(c(10, `  축하합니다! 모든 단어를 찾아냈습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`), wrapWidth).join('\n')
+        : wrapAnsiText(c(9, `  제한시간이 다 되었습니다! 최종 점수: ${st.score}점   L을 누르면 새 게임`), wrapWidth).join('\n'))
       : `  ${c(14, '남은시간:')} ${c(11, `${remains}초`)}   ${c(14, '점수:')} ${c(11, `${st.score}점`)}`;
 
     let answerLine = '';
@@ -280,8 +311,8 @@ export function createArcadeAnsiBuilders(deps) {
       
     return [
       buildTopHeader(['오락실', '스크램블']),
-      c(15, '  정사각형 글자판 속 알파벳들을 조합하여 유효한 영어 단어들을 만드세요.'),
-      c(8, `  (이번 판은 총 ${st.allPossibleAnswers?.length || 0}개의 정답 단어가 숨어 있습니다)`),
+      ...wrapAnsiText(c(15, '  정사각형 글자판 속 알파벳들을 조합하여 유효한 영어 단어들을 만드세요.'), wrapWidth),
+      ...wrapAnsiText(c(8, `  (이번 판은 총 ${st.allPossibleAnswers?.length || 0}개의 정답 단어가 숨어 있습니다)`), wrapWidth),
       ...combinedRows,
       `  ${c(14, '찾은 단어들 :')} ${c(15, `[${st.found.join(', ')}]`)}`,
       '',
@@ -291,6 +322,10 @@ export function createArcadeAnsiBuilders(deps) {
 
   // ── 7. 영어단어/숙어 학습게임 (WP) ──
   function buildWpAnsi(st) {
+    // [LOG_ID: 20260725_2330] 안내 문구·문제 뜻(데이터 의존 길이)이 44칸(모바일)을 넘겨
+    // 잘려 보이던 문제 — wrapAnsiText로 자동 줄바꿈한다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const wrapWidth = isMobile ? 44 : 80;
     if (st.status === 'end') {
       return [
         buildTopHeader(['오락실', '영어 학습게임']),
@@ -325,10 +360,10 @@ export function createArcadeAnsiBuilders(deps) {
     
     return [
       buildTopHeader(['오락실', '영어 학습게임']),
-      c(15, '  제시된 뜻을 가진 알맞은 영어 단어/숙어를 입력하세요.'),
+      ...wrapAnsiText(c(15, '  제시된 뜻을 가진 알맞은 영어 단어/숙어를 입력하세요.'), wrapWidth),
       '',
       `  ${c(14, `[문제 ${st.currentIdx + 1} / 5]`)}`,
-      `  ${c(14, '뜻   :')} ${c(15, meaning)}`,
+      ...wrapAnsiText(`  ${c(14, '뜻   :')} ${c(15, meaning)}`, wrapWidth),
       `  ${c(14, '단어 :')} ${c(11, `${ANSI_BOLD}${masked}${ANSI_RESET}`)} ${c(8, `(${word.length}글자)`)}`,
       '',
       `  ${c(14, '틀린 횟수 :')} ${c(9, `${st.tries} / ${st.maxTries}`)}   ${c(14, '현재 점수 :')} ${c(11, `${st.score}점`)}`,
@@ -338,6 +373,10 @@ export function createArcadeAnsiBuilders(deps) {
 
   // ── 8. 타자 연습/게임 (Typing) ──
   function buildTypingAnsi(st) {
+    // [LOG_ID: 20260725_2330] 안내 문구·제시 문장(데이터 의존 길이)이 44칸(모바일)을 넘겨
+    // 잘려 보이던 문제 — wrapAnsiText로 자동 줄바꿈한다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const wrapWidth = isMobile ? 44 : 80;
     if (st.status === 'end') {
       const parts = [
         buildTopHeader(['오락실', '타자 연습/게임']),
@@ -368,10 +407,10 @@ export function createArcadeAnsiBuilders(deps) {
     const target = st.sentences[st.currentIdx];
     const parts = [
       buildTopHeader(['오락실', '타자 연습/게임']),
-      c(15, '  제시된 문장과 완전히 동일하게 입력창에 타이핑하세요.'),
+      ...wrapAnsiText(c(15, '  제시된 문장과 완전히 동일하게 입력창에 타이핑하세요.'), wrapWidth),
       '',
       `  ${c(14, `[문장 ${st.currentIdx + 1} / 3]`)}`,
-      `  ${c(14, '제시 :')} ${c(11, `${ANSI_BOLD}${target}${ANSI_RESET}`)}`,
+      ...wrapAnsiText(`  ${c(14, '제시 :')} ${c(11, `${ANSI_BOLD}${target}${ANSI_RESET}`)}`, wrapWidth),
       ''
     ];
     
@@ -386,6 +425,10 @@ export function createArcadeAnsiBuilders(deps) {
 
   // ── 9. 퀴즈박사 (Quiz) ──
   function buildQuizAnsi(st) {
+    // [LOG_ID: 20260725_2330] 안내 문구·퀴즈 문항(데이터 의존 길이)이 44칸(모바일)을 넘겨
+    // 잘려 보이던 문제 — wrapAnsiText로 자동 줄바꿈한다.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const wrapWidth = isMobile ? 44 : 80;
     if (st.status === 'end') {
       let grade = '초보';
       if (st.score >= 100) grade = '퀴즈박사';
@@ -406,15 +449,15 @@ export function createArcadeAnsiBuilders(deps) {
     const current = st.questions[st.currentIdx];
     const parts = [
       buildTopHeader(['오락실', '퀴즈박사']),
-      c(15, '  상식 퀴즈를 풀어보세요. 정답 번호(1~4)를 입력하세요.'),
+      ...wrapAnsiText(c(15, '  상식 퀴즈를 풀어보세요. 정답 번호(1~4)를 입력하세요.'), wrapWidth),
       '',
       `  ${c(14, `[문제 ${st.currentIdx + 1} / 5]`)}`,
-      `  ${c(15, `${ANSI_BOLD}Q. ${current.q}${ANSI_RESET}`)}`,
+      ...wrapAnsiText(`  ${c(15, `${ANSI_BOLD}Q. ${current.q}${ANSI_RESET}`)}`, wrapWidth),
       ''
     ];
-    
+
     current.options.forEach((opt) => {
-      parts.push(`  ${c(14, opt)}`);
+      parts.push(...wrapAnsiText(`  ${c(14, opt)}`, wrapWidth));
     });
     
     parts.push('', `  ${c(14, '현재 점수 :')} ${c(11, `${st.score}점`)}`);
@@ -439,10 +482,13 @@ export function createArcadeAnsiBuilders(deps) {
     const colLabels = ' 1 2 3 4 5 6 7 8 9 10';
     const rowLabels = 'ABCDEFGHIJ';
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    
+    // [LOG_ID: 20260725_2330] 격자(모바일 분기)는 폭 계산이 이미 있었지만, 안내/종료 문구
+    // 4곳은 그 계산에서 빠져 있어 44칸을 넘겨 잘려 보였다 — wrapAnsiText로 보강한다.
+    const wrapWidth = isMobile ? 44 : 80;
+
     const parts = [
       buildTopHeader(['오락실', '전투 게임 (Battleship)']),
-      c(15, '  격자판 좌표(예: G3)를 입력해 적의 숨겨진 군장비(12칸)를 폭격하세요!')
+      ...wrapAnsiText(c(15, '  격자판 좌표(예: G3)를 입력해 적의 숨겨진 군장비(12칸)를 폭격하세요!'), wrapWidth)
     ];
     
     if (isMobile) {
@@ -510,11 +556,11 @@ export function createArcadeAnsiBuilders(deps) {
     }
     
     if (st.status === 'win') {
-      parts.push(c(11, `${ANSI_BOLD}  작전 성공! 귀하의 완벽한 승리입니다! L을 누르면 다시 시작합니다.${ANSI_RESET}`));
+      parts.push(...wrapAnsiText(c(11, `${ANSI_BOLD}  작전 성공! 귀하의 완벽한 승리입니다! L을 누르면 다시 시작합니다.${ANSI_RESET}`), wrapWidth));
     } else if (st.status === 'lose') {
-      parts.push(c(9, `  함대가 전멸했습니다... 작전 실패. L을 눌러 다시 도전하세요.`));
+      parts.push(...wrapAnsiText(c(9, `  함대가 전멸했습니다... 작전 실패. L을 눌러 다시 도전하세요.`), wrapWidth));
     } else {
-      parts.push(c(15, '  공격할 좌표를 입력하세요. 입력 예) G3  (Q: 게임포기)'));
+      parts.push(...wrapAnsiText(c(15, '  공격할 좌표를 입력하세요. 입력 예) G3  (Q: 게임포기)'), wrapWidth));
     }
     
     return parts.join('\n');

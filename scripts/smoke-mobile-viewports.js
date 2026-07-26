@@ -66,16 +66,27 @@ async function runMobileSmokeTests() {
       { name: '게시판 목록 (열린광장)', path: 'http://localhost:3199/board/plaza' },
       { name: '오락실 메인', path: 'http://localhost:3199/game' },
       { name: '오목 게임', path: 'http://localhost:3199/game/omok' },
-      { name: '오델로 게임', path: 'http://localhost:3199/game/othello' },
-      { name: '숫자야구 게임', path: 'http://localhost:3199/game/baseball' },
+      // [LOG_ID: 20260725_2330] 실제 라우트 세그먼트(routingStateRestorer.js의 game() 핸들러)는
+      // othello/baseball/puzzle15가 아니라 oth/base/16p다 — 잘못된 경로 3개가 매번 조용히
+      // 초기화면으로 폴백해(routingStateRestorer.js의 !sub 아닌 fallthrough → showMain) 이
+      // 세 게임 화면 자체가 한 번도 실제로 검사된 적이 없었다(모바일 UI 육안 재점검 중 발견 —
+      // 실제 경로로 다시 캡처하자 오델로/숫자야구/15-퍼즐 모두 안내문이 44칸을 넘겨 잘려
+      // 보이는 실제 버그가 드러났다, arcadeAnsiBuilders.js에서 별도로 수정).
+      { name: '오델로 게임', path: 'http://localhost:3199/game/oth' },
+      { name: '숫자야구 게임', path: 'http://localhost:3199/game/base' },
       { name: '행맨 게임', path: 'http://localhost:3199/game/hangman' },
-      { name: '15-패즐 게임', path: 'http://localhost:3199/game/puzzle15' },
+      { name: '15-패즐 게임', path: 'http://localhost:3199/game/16p' },
       { name: '스크램블 게임', path: 'http://localhost:3199/game/scramble' },
       { name: '단어맞추기(WP) 게임', path: 'http://localhost:3199/game/wp' },
       { name: '타자연습 게임', path: 'http://localhost:3199/game/typing' },
       { name: '퀴즈박사 게임', path: 'http://localhost:3199/game/quiz' },
       { name: '전투 게임', path: 'http://localhost:3199/game/battle' },
-      { name: '로그인 화면', path: 'http://localhost:3199/entry/login' },
+      // [LOG_ID: 20260725_2330] /entry/login은 실제 라우팅 핸들러(routingStateRestorer.js에
+      // rootSegment 'entry' 핸들러 자체가 없음)에 없는 잘못된 경로였다 — 실제 로그인 경로는
+      // 'log' 루트 세그먼트 아래 leaf 'login'(menuService.js의 getAuthLeafRoutePath 기본값
+      // '/log/login')이다. 이 라우트도 지금까지 조용히 초기화면으로 폴백해 로그인 화면 자체가
+      // 한 번도 검사된 적이 없었다(위 오델로/숫자야구/15-퍼즐과 같은 유형의 결함).
+      { name: '로그인 화면', path: 'http://localhost:3199/log/login' },
       { name: '회원가입 화면', path: 'http://localhost:3199/signup' },
       // [LOG_ID: 20260725_2200] 전수조사 요청("폭/높이·모바일 확인") — 오락실/로그인류 위주였던
       // 목록을 이번 세션에서 실제로 폭/높이 버그가 났던 화면들까지 넓힌다.
@@ -125,6 +136,32 @@ async function runMobileSmokeTests() {
         const container = await page.$('#terminal-container');
         if (!container) {
           throw new Error(`#terminal-container missing on ${route.name} (${vp.label})`);
+        }
+
+        // [LOG_ID: 20260725_2330] 실측으로 드러난 회귀: 존재하지 않는 라우트 세그먼트로
+        // 요청하면(예: /game/othello — 실제는 /game/oth) routingStateRestorer.js가 조용히
+        // showMain()으로 폴백해 초기화면(TOP)을 그린다. 이 스모크는 그 화면을 "정상 로드"로
+        // 착각해 통과시켰고, 그 세 게임 화면(오델로/숫자야구/15-퍼즐)은 실제로 한 번도
+        // 검사된 적이 없었다 — 의도된 메인 라우트가 아닌데 TOP/초기화면이 뜨면 실패시킨다.
+        // 실측: 상단바 텍스트가 위 300ms 안에는 아직 비어 있는 경우가 있어(레이스), 최대
+        // 3초까지 채워지길 기다린 뒤 읽는다(대부분은 300ms 안에 이미 채워져 추가 대기 없음).
+        await page.waitForFunction(() => {
+          const el = document.querySelector('.retro-topbar-center');
+          return Boolean(el && el.textContent.trim().length > 0);
+        }, { timeout: 3000 }).catch(() => {});
+        const topbar = await page.evaluate(() => ({
+          leftLabel: document.querySelector('.retro-topbar-menu')?.textContent?.trim() || '',
+          centerLabel: document.querySelector('.retro-topbar-center')?.textContent?.trim() || ''
+        }));
+        const isMainRoute = route.name === '메인 대문';
+        if (!isMainRoute && topbar.leftLabel === 'TOP' && topbar.centerLabel === '초기화면') {
+          console.error(`❌ (Silently fell back to main menu — check the route path: ${route.path})`);
+          errors.push({
+            type: 'silent-fallback-to-main',
+            viewport: vp.label,
+            message: `${route.name}: route silently fell back to 초기화면(TOP) instead of loading — wrong path?`
+          });
+          continue;
         }
 
         const geometry = await page.evaluate(() => {
