@@ -157,7 +157,14 @@ export function createMemoAnsiBuilders(deps) {
       parts.push(ansiColor(14) + fitCell('종류', labelWidth) + ' : ' + ansiColor(9) + fitCell(typeTag, valueWidth) + ANSI_RESET);
     }
     if (cleanTitle) {
-      parts.push(ansiColor(14) + fitCell('제목', labelWidth) + ' : ' + ansiColor(15) + fitCell(cleanTitle, valueWidth) + ANSI_RESET);
+      // [LOG_ID: 20260726_0340] 제목은 서버에서 최대 60자까지 저장되는데(MemoRepositoryShared.js)
+      // fitCell 한 줄 절삭이라 긴 제목이 말줄임표 없이 그냥 잘렸다(게시글 상세보기/토론의 광장
+      // 안건 보기와 동일한 버그 클래스 — 실측 재현). wrapAnsiText로 여러 줄로 접는다.
+      const titleLabel = fitCell('제목', labelWidth);
+      const titleIndent = ' '.repeat(labelWidth + 3);
+      wrapAnsiText(cleanTitle, valueWidth).forEach((line, i) => {
+        parts.push(ansiColor(14) + (i === 0 ? `${titleLabel} : ` : titleIndent) + ansiColor(15) + line + ANSI_RESET);
+      });
     }
     parts.push(ansiHLine(targetCols, 8));
 
