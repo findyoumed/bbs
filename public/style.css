@@ -2790,7 +2790,14 @@ body[data-print-view="true"] .ansi-screen {
        "개수 자체가 가변적" 특성). 320x568(iPhone SE급) 뷰포트를 스모크 테스트에 추가하면서
        처음 발견 — footer/명령 입력줄이 뷰포트 아래 약 50px 밖으로 밀려나 있었다(실측:
        cmdInputBottom=617.5 vs innerHeight=568). 동일한 완화를 확장한다. */
-    body[data-screen="scramble-play"] #terminal-screen {
+    body[data-screen="scramble-play"] #terminal-screen,
+    /* [LOG_ID: 20260726_2230] 이용약관/개인정보처리방침(policy)도 같은 증상 — help와 완전히
+       동일한 19줄 페이징 로직(policyScreens.js buildPolicyAnsi, linesPerPage=19)을 쓰면서도
+       help(20260718_2340)를 고칠 때 이 목록에 함께 추가되지 못하고 누락됐다(실기기 스크린샷
+       재현: "글 아래부분이 일부 잘렸어" — 헤드리스 재현에서는 경계가 정확히 들어맞았지만,
+       실기기 폰트 렌더링이 근소하게 더 커 여유 없이 딱 맞춰둔 23줄 예산을 넘기면 전역 hidden
+       규칙에 그대로 잘렸다). 동일한 완화를 확장한다. */
+    body[data-screen="policy"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
