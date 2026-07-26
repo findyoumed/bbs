@@ -43,10 +43,15 @@ export function createSystemScreens(deps) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const safe = esc ? esc(String(message || '')) : String(message || '');
     const colorClass = options.isError === false ? '' : ' ansi-red';
+    // [LOG_ID: 20260726_1400] 이 줄은 대부분 짧은 고정 안내문이지만 showMyStats 등 일부 호출부는
+    // 잡은 예외의 e.message를 그대로 이어붙인다(예: fetch 네트워크 오류 메시지) — 길이가 정해져
+    // 있지 않은데 .ansi-line의 전역 white-space:pre 때문에 줄바꿈이 안 돼, 긴 오류 메시지가
+    // 모바일에서 조용히 잘릴 수 있었다(쪽지 보내기·건의하기와 같은 버그 클래스). 이 화면은
+    // 표/정렬이 필요 없는 단일 문장이라 인라인 스타일로 이 div에만 줄바꿈을 허용한다.
     renderRawHtmlScreenWithTopbar({
       leftLabel: options.leftLabel || 'INFO',
       centerLabel: options.centerLabel || '안내',
-      bodyHtml: `<div class="ansi-line${colorClass}">${safe}</div>`,
+      bodyHtml: `<div class="ansi-line${colorClass}" style="white-space: normal; word-break: keep-all; overflow-wrap: break-word;">${safe}</div>`,
       screenEl,
       isMobile
     });

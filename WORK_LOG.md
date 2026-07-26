@@ -1,3 +1,12 @@
+## [2026-07-26 14:00] [/loop 계속] 시스템 안내/오류 화면(renderSystemInfo) — 예외 메시지 삽입 줄 오버플로 수정, 25번째
+
+**LOG_ID: 20260726_1400**
+목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — `renderRawHtmlScreenWithTopbar` 사용처 마지막 남은 `systemScreens.js`를 앞선 두 라운드(쪽지 보내기·건의하기)와 같은 관점으로 점검.
+발견: `renderSystemInfo(message, options)`(WHO/ACT/SYSINFO/ACCT 공용 안내·오류 화면 헬퍼)가 만드는 `<div class="ansi-line">`에 줄바꿈 처리가 없었다. 대부분의 호출부는 짧은 고정 안내문이라 안전했지만, `showMyStats`(이용 현황, `/account`)의 오류 처리 분기(`이용 현황을 가져오지 못했습니다. ${e.message}`)는 잡은 예외의 메시지를 그대로 이어붙인다 — 네트워크 오류 메시지(예: "NetworkError when attempting to fetch resource ...") 등은 길이가 정해져 있지 않아, `.ansi-line`의 전역 `white-space:pre` 때문에 모바일에서 조용히 잘릴 수 있었다. 쪽지 보내기·건의하기보다는 발생 빈도가 낮은(정상 API 응답 시엔 안 보이는 에러 경로) 사례지만 같은 버그 클래스다.
+구현: 이 함수는 표/정렬이 필요 없는 단일 문장 화면이고 여러 `state.screen` 값에서 공유되어 CSS의 `data-screen` 스코프 방식이 맞지 않으므로, 이 div에만 인라인 스타일로 `white-space:normal; word-break:keep-all; overflow-wrap:break-word;`를 직접 부여해 다른 화면에 영향 없이 국소적으로 해결했다.
+검증: DOM에 동일한 긴 오류 메시지 문자열로 인라인 스타일 있음/없음 두 버전을 주입해 비교 — 스타일 없음(수정 전) `scrollWidth` 735 vs `clientWidth` 390(오버플로), 스타일 있음(수정 후) 390/390(오버플로 0). `npm run smoke:full-traversal`/`smoke:renderer-ui`/`scripts/smoke-mobile-viewports.js`(27×2) 전부 통과.
+결과: ✅ 완료 — 이번 세션 25번째 버그이자, `renderRawHtmlScreenWithTopbar` 기반 raw-HTML 트랜스크립트/안내 화면 전수 점검(쪽지 보내기 → 건의하기 → 시스템 안내)의 마지막 사례.
+
 ## [2026-07-26 13:45] [/loop 계속] 건의하기(TOSYSOP) 트랜스크립트 — 서버 길이 제한조차 없는 인라인 입력창 오버플로 수정, 24번째
 
 **LOG_ID: 20260726_1345**
