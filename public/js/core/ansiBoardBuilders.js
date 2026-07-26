@@ -305,6 +305,23 @@ export function createBoardAnsiBuilders(deps) {
     const metaRecom = `추천:${post?.recommend || post?.recommends || 0}`;
     const metaFile = (post?.attachments?.length > 0) ? `${ansiColor(11)} [U] 첨부파일: ${post.attachments.length}개${ANSI_RESET}` : '';
 
+    // [LOG_ID: 20260726_0800] 작성자 닉네임(nickName)은 서버에서 최대 20자(표시폭 40칸)까지
+    // 허용되는데(authRoutes.js `nickName:{maxLength:20}`), 모바일은 이 줄에 폭 제한이 아예
+    // 없어(실측: 20자 닉네임이면 표시폭 59칸으로 44칸 예산을 훌쩍 넘어 그냥 화면 밖으로
+    // 흘러넘침) 데스크톱은 `fitCell(author, 8)`로 4글자만 남기고 나머지가 말줄임표도 없이
+    // 통째로 사라졌다(제목과 같은 버그 클래스, 소스 재감사 중 발견). 제목과 동일하게
+    // wrapAnsiText로 감싸 전체 내용을 보존한다.
+    const metaLine = isMobile
+      ? ansiColor(8) + metaNumber + ' ' + ansiColor(15) + author + ansiColor(8) + (authorId ? `(${authorId})` : '') + ANSI_RESET
+      : ansiColor(8) + fitCell(metaNumber, 13) +
+        ansiColor(14) + ' 올린이 : ' +
+        ansiColor(15) + author +
+        ansiColor(8) + (authorId ? ` (${authorId})` : '') + '  ' +
+        `${metaDate}  ${metaHits}  ${metaRecom}` +
+        metaFile +
+        ANSI_RESET;
+    const metaLines = wrapAnsiText(metaLine, targetCols);
+
     const rawContent = post?.content || post?.body || '';
     const highlightedContent = highlightText(rawContent, highlightTerm, 14, 15);
     const contentLines = wrapAnsiText(highlightedContent, targetCols);
@@ -314,13 +331,16 @@ export function createBoardAnsiBuilders(deps) {
     const totalLines = 24;
 
     // 본문 페이징 시뮬레이션 계산
-    let headerLineCount = 3; // 제목(1줄) + 올린이(1줄) + 구분선(1줄)
+    let headerLineCount = 1; // 구분선(1줄) — 제목/저자(올린이) 줄 수는 아래서 더한다
     if (isMobile) {
-      headerLineCount = 4; // 제목(1줄) + 번호/저자(1줄) + 메타데이터(1줄) + 구분선(1줄)
+      headerLineCount = 2; // 메타데이터(1줄) + 구분선(1줄) — 제목/번호·저자 줄 수는 아래서 더한다
     }
     // [LOG_ID: 20260726_0210] 제목이 길어 여러 줄로 접히면 그만큼 본문 가용 줄 수가 줄어야
-    // 24줄 캔버스를 넘기지 않는다 — 기본 가정(제목 1줄)에서 늘어난 만큼만 더한다.
-    headerLineCount += Math.max(0, titleLines.length - 1);
+    // 24줄 캔버스를 넘기지 않는다 — 실제 줄 수(titleLines.length)를 그대로 더한다.
+    headerLineCount += titleLines.length;
+    // [LOG_ID: 20260726_0800] 작성자 줄도 이제 wrapAnsiText로 여러 줄이 될 수 있으므로
+    // 실제 줄 수(metaLines.length)를 그대로 더한다.
+    headerLineCount += metaLines.length;
     // "13행 기준"이라는 근거 없는 상수로 가용 본문 줄 수를 9~10줄로 제한해와서, 실제 렌더
     // 캔버스(totalLines=24, buildTopHeader 자체가 이미 4줄을 차지)보다 페이지마다 6~8줄이
     // 그냥 빈 줄로 낭비됐다(사용자 보고: "글이 아래에 여백이 많아"). buildTopHeader가 실제로
@@ -359,20 +379,12 @@ export function createBoardAnsiBuilders(deps) {
     parts.push(...titleLines);
 
     if (isMobile) {
-      parts.push(ansiColor(8) + metaNumber + ' ' + author + (authorId ? `(${authorId})` : '') + ANSI_RESET);
+      parts.push(...metaLines);
       parts.push(ansiColor(8) + `${metaDate} ${metaHits} ${metaRecom}` + metaFile + ANSI_RESET);
     } else {
       // [LOG_ID: 20260718_1000] '보낸이'는 편지(쪽지) 용어다 — 게시판 글의 작성자는 원전에서
       // '올린이'다(나우누리 실덤프: `올린이 : 이삭    (이란희  )    95/03/09 04:57    읽음 : 68`).
-      parts.push(
-        ansiColor(8) + fitCell(metaNumber, 13) +
-        ansiColor(14) + ' 올린이 : ' +
-        ansiColor(15) + fitCell(author, 8) +
-        (authorId ? ` (${authorId})` : '') + '  ' +
-        ansiColor(8) + `${metaDate}  ${metaHits}  ${metaRecom}` +
-        metaFile +
-        ANSI_RESET
-      );
+      parts.push(...metaLines);
     }
     parts.push(ansiHLine(targetCols, 8));
     visibleBodyLines.forEach((line) => {
