@@ -52,6 +52,17 @@ const EXACT_RESERVED_IDENTITY_KEYWORDS = buildReservedKeywordList([
       '시샵', '시솝', '시스옵', '공식', '공지', '알림', '고객센터',
       '헬프데스크', '게스트'
     ]
+  },
+  // [LOG_ID: 20260726_0250] 템플릿 인젝션(SSTI) 탐지 문구("{{7*7}}" 등)는 특수문자를 걷어내는
+  // normalizeReservedIdentityText를 거치면 죄다 "77"이라는 흔한 숫자 부분 문자열로 뭉개진다 —
+  // 원래 있던 substring-includes 목록(attack-payloads)에 남겨두면 "1977", "lucky777",
+  // "user1977"처럼 "77"을 포함하는 극히 평범한 아이디/닉네임/이메일이 전부 SSTI 페이로드로
+  // 오인돼 가입이 막히고, 에러 메시지에 "{{7*7}}"라는 내부 탐지 문구까지 그대로 노출됐다
+  // (모바일 회원가입 흐름 실측 중 발견 — 자동 생성한 테스트 아이디가 우연히 "77"을 포함해
+  // 재현됨). 다른 짧은 예약어처럼 "정확히 이 문자열일 때만" 차단하도록 옮긴다.
+  {
+    name: 'exact-ssti-canary',
+    keywords: ['{{7*7}}', '${7*7}', '<%= 7*7 %>', '#{7*7}', '*{7*7}']
   }
 ]);
 
@@ -282,8 +293,7 @@ const RESERVED_KEYWORD_CATEGORIES = [
       "${jndi:rmi://", "metadata.google.internal/computeMetadata",
       "169.254.169.254/latest/meta-data", "<!doctype foo [ <!entity xxe",
       "<!entity xxe system", "\"$ne\":null", "\"$regex\":\".*\"",
-      "$where:function(){return true}", "{{7*7}}", "${7*7}",
-      "<%= 7*7 %>", "#{7*7}", "*{7*7}", "__proto__[polluted]=true",
+      "$where:function(){return true}", "__proto__[polluted]=true",
       "constructor[prototype][polluted]=true", "runtime.getruntime().exec",
       "process.mainmodule.require", "subprocess.call(['sh','-c'",
       "os.system('cat /etc/passwd')", "file_get_contents('/etc/passwd')",
