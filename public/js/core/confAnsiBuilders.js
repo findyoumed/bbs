@@ -85,9 +85,21 @@ export function createConfAnsiBuilders(deps) {
     const labelWidth = isMobile ? 6 : 8;
     const valueWidth = targetCols - labelWidth - 3;
     const row = (label, value) => ansiColor(14) + fitCell(label, labelWidth) + ' : ' + ansiColor(15) + fitCell(String(value), valueWidth) + ANSI_RESET;
+    // [LOG_ID: 20260726_0330] 안건 제목은 최대 80자(ConfRepository*.js)까지 저장되는데
+    // row()의 fitCell은 한 줄로 자르기만 해 긴 제목이 말줄임표 없이 그냥 잘려 보였다(게시글
+    // 상세보기의 60자 제목과 동일한 버그 클래스 — 실측 재현: 80자 한글 제목이 15자쯤에서
+    // 끊김). 발의자/재청/발의일은 원래도 짧은 값이라 fitCell 그대로 두고, 제목만
+    // wrapAnsiText로 여러 줄로 접는다.
+    const rowWrapped = (label, value) => {
+      const labelText = fitCell(label, labelWidth);
+      const indent = ' '.repeat(labelWidth + 3);
+      return wrapAnsiText(String(value), valueWidth).map((line, i) => (
+        ansiColor(14) + (i === 0 ? `${labelText} : ` : indent) + ansiColor(15) + line + ANSI_RESET
+      ));
+    };
 
     const parts = [frame('안건 보기', targetCols)];
-    parts.push(row('안건', `${agenda.no}. ${agenda.title || ''}`));
+    parts.push(...rowWrapped('안건', `${agenda.no}. ${agenda.title || ''}`));
     parts.push(row('발의자', agenda.authorName || agenda.author || '손님'));
     parts.push(row('재청', `${agenda.secondCount || 0}명${agenda.seconded ? ' (나 재청함)' : ''}`));
     parts.push(row('발의일', formatLongDate(agenda.createdAt) || agenda.createdAt || ''));
