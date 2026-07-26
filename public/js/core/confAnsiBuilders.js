@@ -41,6 +41,13 @@ export function createConfAnsiBuilders(deps) {
         line += ansiColor(15) + fitCell(room.title || '회의실', titleWidth) + ANSI_RESET;
         parts.push(line);
       });
+      // [LOG_ID: 20260727_0430] 회의실 개설 개수에 서버 상한이 없는데(ConfRepositoryMemory/
+      // Supabase.js에 검사 없음) 12개 넘으면 안내 없이 조용히 잘렸다(접속자 목록/방 목록과 같은
+      // 버그 클래스). 이 화면은 끝에서 강제로 줄 수를 자르지 않고(19줄 기준) 여유가 있어,
+      // 항목을 줄이지 않고 안내 줄만 추가해도 25행 예산 안에 들어간다.
+      if (rooms.length > 12) {
+        parts.push(ansiColor(8) + `   ... 외 ${rooms.length - 12}개 회의실 더 있습니다.` + ANSI_RESET);
+      }
     }
     return parts.join('\n');
   }
@@ -74,6 +81,11 @@ export function createConfAnsiBuilders(deps) {
         line += ansiColor(15) + fitCell(a.title || '안건', titleWidth) + ANSI_RESET;
         parts.push(line);
       });
+      // [LOG_ID: 20260727_0430] 안건 발의 개수도 서버 상한이 없어(ConfRepositoryMemory/
+      // Supabase.js에 검사 없음) 12개 넘으면 회의실 목록과 동일하게 안내 없이 잘렸다.
+      if (agendas.length > 12) {
+        parts.push(ansiColor(8) + `   ... 외 ${agendas.length - 12}개 안건 더 있습니다.` + ANSI_RESET);
+      }
     }
     return parts.join('\n');
   }
