@@ -222,7 +222,18 @@ export function createHelpScreens(deps) {
     if (history.length === 0) {
       parts.push(ansiColor(8) + `  (${UI_TEXT.NO_HISTORY})` + ANSI_RESET);
     } else {
-      history.forEach((entry, idx) => {
+      // [LOG_ID: 20260727_0315] cmdHistory는 최대 50개까지 쌓이는데(appEventsCommandInput.js가
+      // unshift 후 length>50이면 pop) 이 화면은 그 전부를 한 줄씩 밀어넣고 함수 맨 끝에서
+      // joinedLines.slice(0,24)로 24행 고정 캔버스에 맞춰 잘랐다 — 안내 문구 하나 없이 조용히
+      // 잘려서, 세션 중 명령을 20개 남짓만 입력해도(흔한 사용 패턴) 오래된 이력이 사용자 모르게
+      // 사라졌다(WHO 접속자 목록/첨부파일 목록과 같은 버그 클래스). 고정 오버헤드(상단바 4줄 +
+      // 대괄호 제목줄 + 빈줄)를 뺀 나머지 예산만큼만 보여주고, 넘치면 안내 줄을 추가한다.
+      const fixedLineCount = parts.join('\n').split('\n').length;
+      const budgetWithoutNotice = Math.max(1, 24 - fixedLineCount);
+      const visibleHistory = history.length <= budgetWithoutNotice
+        ? history
+        : history.slice(0, Math.max(1, budgetWithoutNotice - 1));
+      visibleHistory.forEach((entry, idx) => {
         const cmd = typeof entry === 'string' ? entry : entry.cmd;
         const num = String(idx + 1).padStart(2, ' ');
         // [LOG_ID: 20260726_0900] 타자연습/스크램블 등에서 입력한 긴 문장도 그대로 cmdHistory에
@@ -230,6 +241,9 @@ export function createHelpScreens(deps) {
         // (대화방/설문 선택지와 같은 버그 클래스 — 목록 한 줄 요약이라 wrap 대신 말줄임표로 처리).
         parts.push(` ${ansiColor(14)}${num}. ${ansiColor(15)}${fitCellEllipsis(cmd, targetCols - 6)}${ANSI_RESET}`);
       });
+      if (history.length > visibleHistory.length) {
+        parts.push(ansiColor(8) + `  ... 외 ${history.length - visibleHistory.length}개 더 있습니다.` + ANSI_RESET);
+      }
     }
 
     const joinedLines = parts.join('\n').split('\n');
