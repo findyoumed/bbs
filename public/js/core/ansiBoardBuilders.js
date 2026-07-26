@@ -19,6 +19,7 @@ export function createBoardAnsiBuilders(deps) {
     // 목록의 '쪽' 컬럼 — 글이 몇 화면 분량인지. 하이텔/나우누리 원전 목록에 모두 있다.
     estimatePostPageCount,
     fitCell,
+    fitCellEllipsis,
     formatLongDate,
     formatShortDate,
     highlightText,
@@ -522,27 +523,61 @@ export function createBoardAnsiBuilders(deps) {
   }
 
   // [LOG_ID: 20260713_1155] 나우누리 전용 대문 ANSI 생성 함수
+  // [LOG_ID: 20260726_1315] 이 화면이 targetCols를 받으면서도 정작 제목줄·3단 메뉴 그리드는
+  // 전부 80칸 하드코딩(표시폭 93칸)이라 데스크톱(80칸)에서도 이미 조용히 잘리고 있었고,
+  // 모바일(44칸)에서는 예산의 2배 이상(93/44) 흘러넘쳤다 — 나우누리는 실제 선택 가능한 테마이고
+  // 이 화면은 그 테마의 대문(첫 화면)이라 이 세션에서 발견한 것 중 가장 트래픽이 높은 화면의
+  // 오버플로였다. 제목줄은 targetCols에 맞춰 자르고, 메뉴 그리드는 모바일에서 1단으로 재배치한다.
+  // 핫스팟은 buildMenuHotspotsFromRows가 "door. " 텍스트 패턴을 줄 단위로 스캔하므로(위치 좌표
+  // 계산이 아니라 텍스트 매칭) 1단으로 바꿔도 각 항목이 그대로 인식된다.
   function buildNownuriMainMenuAnsi(targetCols, noticeText) {
+    const isMobile = targetCols < 60;
     const parts = [];
-    
+
     // 나우누리 로고 타이틀 헤더
-    parts.push(ansiColor(14) + 'NowNuri Simulation 1.0' + ANSI_RESET + '  WMAIL                       자료-편지                   ☏ 02-590-3800');
-    parts.push('이용해 주셔서 감사합니다.(도움말(H) 입력)');
+    const titleFull = 'NowNuri Simulation 1.0  WMAIL                       자료-편지                   ☏ 02-590-3800';
+    parts.push(ansiColor(14) + fitCellEllipsis(titleFull, targetCols).replace(/\s+$/g, '') + ANSI_RESET);
+    parts.push(fitCellEllipsis('이용해 주셔서 감사합니다.(도움말(H) 입력)', targetCols).replace(/\s+$/g, ''));
     parts.push('');
-    parts.push('      ' + ansiColor(15) + '1. 서비스안내' + ANSI_RESET + '        ' + ansiColor(15) + '2. 나우로' + ANSI_RESET + '          ' + ansiColor(15) + '3. BOOK-NET' + ANSI_RESET);
-    parts.push('');
-    parts.push('     [ 서비스 ]           [ 안내 ]           [ 인터넷 ]');
-    parts.push('');
-    parts.push('     ' + ansiColor(15) + '11. 편지' + ANSI_RESET + '             ' + ansiColor(15) + '21. 뉴스/일반' + ANSI_RESET + '      ' + ansiColor(15) + '31. 인터넷' + ANSI_RESET);
-    parts.push('     ' + ansiColor(15) + '12. 게시판' + ANSI_RESET + '           ' + ansiColor(15) + '22. 토론/동호회' + ANSI_RESET + '    ' + ansiColor(15) + '32. 홈빌더' + ANSI_RESET);
-    parts.push('     ' + ansiColor(15) + '13. 대화실' + ANSI_RESET + '           ' + ansiColor(15) + '23. 정보/문화' + ANSI_RESET + '      ' + ansiColor(15) + '33. 홈쇼핑' + ANSI_RESET);
-    parts.push('     ' + ansiColor(15) + '14. 동호회' + ANSI_RESET + '           ' + ansiColor(15) + '24. 생활/경제' + ANSI_RESET + '      ' + ansiColor(15) + '34. 게임/오락' + ANSI_RESET);
-    parts.push('     ' + ansiColor(15) + '15. 모임' + ANSI_RESET + '             ' + ansiColor(15) + '25. 컴퓨터/통신' + ANSI_RESET);
-    parts.push('     ' + ansiColor(15) + '16. 자료실' + ANSI_RESET + '           ' + ansiColor(15) + '26. 교육/학습' + ANSI_RESET + '      [ 안내 ]');
-    parts.push('     ' + ansiColor(15) + '17. 인터넷' + ANSI_RESET + '           ' + ansiColor(15) + '27. 어린이/청소년' + ANSI_RESET + '  ' + ansiColor(15) + '41. 나우맵' + ANSI_RESET);
-    parts.push('     ' + ansiColor(15) + '18. 게임' + ANSI_RESET + '             ' + ansiColor(15) + '28. 스포츠' + ANSI_RESET);
-    parts.push('     ' + ansiColor(15) + '19. 정보' + ANSI_RESET + '             ' + ansiColor(15) + '29. 나우누리 CUG' + ANSI_RESET + '   ' + ansiColor(15) + '51. 인터넷' + ANSI_RESET);
-    parts.push('');
+
+    if (isMobile) {
+      parts.push(ansiColor(15) + '1. 서비스안내' + ANSI_RESET + '  ' + ansiColor(15) + '2. 나우로' + ANSI_RESET + '  ' + ansiColor(15) + '3. BOOK-NET' + ANSI_RESET);
+      parts.push('');
+      parts.push('[ 서비스 ]');
+      parts.push(ansiColor(15) + '11. 편지' + ANSI_RESET + '  ' + ansiColor(15) + '12. 게시판' + ANSI_RESET);
+      parts.push(ansiColor(15) + '13. 대화실' + ANSI_RESET + '  ' + ansiColor(15) + '14. 동호회' + ANSI_RESET);
+      parts.push(ansiColor(15) + '15. 모임' + ANSI_RESET + '  ' + ansiColor(15) + '16. 자료실' + ANSI_RESET);
+      parts.push(ansiColor(15) + '17. 인터넷' + ANSI_RESET + '  ' + ansiColor(15) + '18. 게임' + ANSI_RESET + '  ' + ansiColor(15) + '19. 정보' + ANSI_RESET);
+      parts.push('');
+      parts.push('[ 안내 ]');
+      parts.push(ansiColor(15) + '21. 뉴스/일반' + ANSI_RESET + '  ' + ansiColor(15) + '22. 토론/동호회' + ANSI_RESET);
+      parts.push(ansiColor(15) + '23. 정보/문화' + ANSI_RESET + '  ' + ansiColor(15) + '24. 생활/경제' + ANSI_RESET);
+      parts.push(ansiColor(15) + '25. 컴퓨터/통신' + ANSI_RESET + '  ' + ansiColor(15) + '26. 교육/학습' + ANSI_RESET);
+      parts.push(ansiColor(15) + '27. 어린이/청소년' + ANSI_RESET);
+      parts.push(ansiColor(15) + '28. 스포츠' + ANSI_RESET + '  ' + ansiColor(15) + '29. 나우누리 CUG' + ANSI_RESET);
+      parts.push('');
+      parts.push('[ 인터넷 ]');
+      parts.push(ansiColor(15) + '31. 인터넷' + ANSI_RESET + '  ' + ansiColor(15) + '32. 홈빌더' + ANSI_RESET);
+      parts.push(ansiColor(15) + '33. 홈쇼핑' + ANSI_RESET + '  ' + ansiColor(15) + '34. 게임/오락' + ANSI_RESET);
+      parts.push('');
+      parts.push('[ 안내 ]  ' + ansiColor(15) + '41. 나우맵' + ANSI_RESET + '  ' + ansiColor(15) + '51. 인터넷' + ANSI_RESET);
+      parts.push('');
+    } else {
+      parts.push('      ' + ansiColor(15) + '1. 서비스안내' + ANSI_RESET + '        ' + ansiColor(15) + '2. 나우로' + ANSI_RESET + '          ' + ansiColor(15) + '3. BOOK-NET' + ANSI_RESET);
+      parts.push('');
+      parts.push('     [ 서비스 ]           [ 안내 ]           [ 인터넷 ]');
+      parts.push('');
+      parts.push('     ' + ansiColor(15) + '11. 편지' + ANSI_RESET + '             ' + ansiColor(15) + '21. 뉴스/일반' + ANSI_RESET + '      ' + ansiColor(15) + '31. 인터넷' + ANSI_RESET);
+      parts.push('     ' + ansiColor(15) + '12. 게시판' + ANSI_RESET + '           ' + ansiColor(15) + '22. 토론/동호회' + ANSI_RESET + '    ' + ansiColor(15) + '32. 홈빌더' + ANSI_RESET);
+      parts.push('     ' + ansiColor(15) + '13. 대화실' + ANSI_RESET + '           ' + ansiColor(15) + '23. 정보/문화' + ANSI_RESET + '      ' + ansiColor(15) + '33. 홈쇼핑' + ANSI_RESET);
+      parts.push('     ' + ansiColor(15) + '14. 동호회' + ANSI_RESET + '           ' + ansiColor(15) + '24. 생활/경제' + ANSI_RESET + '      ' + ansiColor(15) + '34. 게임/오락' + ANSI_RESET);
+      parts.push('     ' + ansiColor(15) + '15. 모임' + ANSI_RESET + '             ' + ansiColor(15) + '25. 컴퓨터/통신' + ANSI_RESET);
+      parts.push('     ' + ansiColor(15) + '16. 자료실' + ANSI_RESET + '           ' + ansiColor(15) + '26. 교육/학습' + ANSI_RESET + '      [ 안내 ]');
+      parts.push('     ' + ansiColor(15) + '17. 인터넷' + ANSI_RESET + '           ' + ansiColor(15) + '27. 어린이/청소년' + ANSI_RESET + '  ' + ansiColor(15) + '41. 나우맵' + ANSI_RESET);
+      parts.push('     ' + ansiColor(15) + '18. 게임' + ANSI_RESET + '             ' + ansiColor(15) + '28. 스포츠' + ANSI_RESET);
+      parts.push('     ' + ansiColor(15) + '19. 정보' + ANSI_RESET + '             ' + ansiColor(15) + '29. 나우누리 CUG' + ANSI_RESET + '   ' + ansiColor(15) + '51. 인터넷' + ANSI_RESET);
+      parts.push('');
+    }
 
     // 작은공지 영역 렌더링
     if (noticeText) {
@@ -562,25 +597,59 @@ export function createBoardAnsiBuilders(deps) {
   }
 
   // [LOG_ID: 20260713_1165] 나우누리 가이드(GUIDE) 메뉴 ANSI 렌더링 함수
+  // [LOG_ID: 20260726_1315] 데스크톱(80칸)은 표시폭 77칸으로 이미 안전했지만, targetCols를
+  // 전혀 참조하지 않는 3단 고정 그리드라 모바일(44칸)에서는 최대 77칸까지 흘러넘쳤다
+  // (buildNownuriMainMenuAnsi와 같은 원인, 같은 라운드에서 함께 발견). 모바일만 1단으로 재배치.
   function buildNownuriGuideAnsi(targetCols) {
+    const isMobile = targetCols < 60;
     const parts = [];
-    parts.push(ansiColor(14) + 'GUIDE                           서비스 안내                     ☏ 02-590-3800' + ANSI_RESET);
-    parts.push('이용해 주셔서 감사합니다.(도움말(H) 입력)');
+    parts.push(ansiColor(14) + fitCellEllipsis('GUIDE                           서비스 안내                     ☏ 02-590-3800', targetCols).replace(/\s+$/g, '') + ANSI_RESET);
+    parts.push(fitCellEllipsis('이용해 주셔서 감사합니다.(도움말(H) 입력)', targetCols).replace(/\s+$/g, ''));
     parts.push('');
-    parts.push('   ' + ansiColor(15) + '1. 서비스안내' + ANSI_RESET + '           ' + ansiColor(15) + '2. 나우로안내' + ANSI_RESET + '        3. 가입/해지/요금안내');
-    parts.push('');
-    parts.push('  [ 서비스안내 ]              [ 이용자안내 ]          [ 커뮤니티 ]');
-    parts.push('');
-    parts.push('  ' + ansiColor(15) + '11. 메뉴안내' + ANSI_RESET + '               ' + ansiColor(15) + '31. 이용수칙' + ANSI_RESET + '            41. 나우맵');
-    parts.push('  ' + ansiColor(15) + '12. 이용약관' + ANSI_RESET + '               ' + ansiColor(15) + '32. 보안실' + ANSI_RESET + '            42. 나우누리 소식');
-    parts.push('  ' + ansiColor(15) + '13. 요금안내' + ANSI_RESET + '               33. CUG             43. 나우누리 모임');
-    parts.push('  ' + ansiColor(15) + '14. 접속방법' + ANSI_RESET + '               34. 회원주소록      44. 소설/수필/소통');
-    parts.push('                              35. 서비스소개      45. 동호회 소식');
-    parts.push('  [ 이용자권리 ]              36. 건의함');
-    parts.push('                              37. 질문방');
-    parts.push('  21. 개인정보 처리방침       38. 버그신고');
-    parts.push('  22. 개인정보 열람청구       39. 관련사이트');
-    parts.push('');
+
+    if (isMobile) {
+      parts.push(ansiColor(15) + '1. 서비스안내' + ANSI_RESET);
+      parts.push(ansiColor(15) + '2. 나우로안내' + ANSI_RESET);
+      parts.push('3. 가입/해지/요금안내');
+      parts.push('');
+      parts.push('[ 서비스안내 ]');
+      parts.push(ansiColor(15) + '11. 메뉴안내' + ANSI_RESET);
+      parts.push(ansiColor(15) + '12. 이용약관' + ANSI_RESET);
+      parts.push(ansiColor(15) + '13. 요금안내' + ANSI_RESET);
+      parts.push(ansiColor(15) + '14. 접속방법' + ANSI_RESET);
+      parts.push('');
+      parts.push('[ 이용자안내 ]');
+      parts.push(ansiColor(15) + '31. 이용수칙' + ANSI_RESET);
+      parts.push(ansiColor(15) + '32. 보안실' + ANSI_RESET + '  33. CUG');
+      parts.push('34. 회원주소록  35. 서비스소개');
+      parts.push('36. 건의함  37. 질문방');
+      parts.push('38. 버그신고  39. 관련사이트');
+      parts.push('');
+      parts.push('[ 커뮤니티 ]');
+      parts.push('41. 나우맵  42. 나우누리 소식');
+      parts.push('43. 나우누리 모임');
+      parts.push('44. 소설/수필/소통  45. 동호회 소식');
+      parts.push('');
+      parts.push('[ 이용자권리 ]');
+      parts.push('21. 개인정보 처리방침');
+      parts.push('22. 개인정보 열람청구');
+      parts.push('');
+    } else {
+      parts.push('   ' + ansiColor(15) + '1. 서비스안내' + ANSI_RESET + '           ' + ansiColor(15) + '2. 나우로안내' + ANSI_RESET + '        3. 가입/해지/요금안내');
+      parts.push('');
+      parts.push('  [ 서비스안내 ]              [ 이용자안내 ]          [ 커뮤니티 ]');
+      parts.push('');
+      parts.push('  ' + ansiColor(15) + '11. 메뉴안내' + ANSI_RESET + '               ' + ansiColor(15) + '31. 이용수칙' + ANSI_RESET + '            41. 나우맵');
+      parts.push('  ' + ansiColor(15) + '12. 이용약관' + ANSI_RESET + '               ' + ansiColor(15) + '32. 보안실' + ANSI_RESET + '            42. 나우누리 소식');
+      parts.push('  ' + ansiColor(15) + '13. 요금안내' + ANSI_RESET + '               33. CUG             43. 나우누리 모임');
+      parts.push('  ' + ansiColor(15) + '14. 접속방법' + ANSI_RESET + '               34. 회원주소록      44. 소설/수필/소통');
+      parts.push('                              35. 서비스소개      45. 동호회 소식');
+      parts.push('  [ 이용자권리 ]              36. 건의함');
+      parts.push('                              37. 질문방');
+      parts.push('  21. 개인정보 처리방침       38. 버그신고');
+      parts.push('  22. 개인정보 열람청구       39. 관련사이트');
+      parts.push('');
+    }
     return parts.join('\n');
   }
 
