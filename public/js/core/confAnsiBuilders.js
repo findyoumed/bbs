@@ -90,6 +90,10 @@ export function createConfAnsiBuilders(deps) {
     // 상세보기의 60자 제목과 동일한 버그 클래스 — 실측 재현: 80자 한글 제목이 15자쯤에서
     // 끊김). 발의자/재청/발의일은 원래도 짧은 값이라 fitCell 그대로 두고, 제목만
     // wrapAnsiText로 여러 줄로 접는다.
+    // [LOG_ID: 20260726_0730] "발의자는 원래도 짧다"는 위 가정이 틀렸다 — authorName은
+    // 회원 닉네임(최대 20자, 표시폭 40칸, authRoutes.js `nickName: {maxLength:20}`)이라
+    // 모바일 예산(valueWidth=35)을 넘는 실제 값이 존재한다(실측 재현: 20자 닉네임이 17자쯤에서
+    // 끊김 — 프로필 화면과 같은 버그가 여기도 있었다). 제목과 동일하게 wrap 처리한다.
     const rowWrapped = (label, value) => {
       const labelText = fitCell(label, labelWidth);
       const indent = ' '.repeat(labelWidth + 3);
@@ -100,7 +104,7 @@ export function createConfAnsiBuilders(deps) {
 
     const parts = [frame('안건 보기', targetCols)];
     parts.push(...rowWrapped('안건', `${agenda.no}. ${agenda.title || ''}`));
-    parts.push(row('발의자', agenda.authorName || agenda.author || '손님'));
+    parts.push(...rowWrapped('발의자', agenda.authorName || agenda.author || '손님'));
     parts.push(row('재청', `${agenda.secondCount || 0}명${agenda.seconded ? ' (나 재청함)' : ''}`));
     parts.push(row('발의일', formatLongDate(agenda.createdAt) || agenda.createdAt || ''));
     parts.push(ansiHLine(targetCols, 8));
