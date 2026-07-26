@@ -164,6 +164,10 @@ export function createPostListView(deps) {
   async function showPtPrepare(startNum) {
     state.screen = 'pt-prepare';
     state._ptStartNum = startNum;
+    // [LOG_ID: 20260727_0500] 새 PT 실행마다 이전 결과 캐시를 지워, 다음 showPtResult 페이지
+    // 이동이 옛 startNum 기준 결과를 그대로 재사용하지 않게 한다.
+    state._ptFilteredPosts = null;
+    state._ptFetchError = null;
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -195,23 +199,40 @@ export function createPostListView(deps) {
   }
 
   // [LOG_ID: 20260712_2200] PT 100건 제목 일괄 출력 구현
-  async function showPtResult() {
+  // [LOG_ID: 20260727_0500] 이름 그대로 최대 100건을 한 화면에 다 그렸는데, ansiEngine.js의
+  // 25행 고정 격자(putChar가 row>=25면 HTML로 렌더되기도 전에 문자를 그냥 버림)라 20건만
+  // 넘어도 나머지가 조용히 사라졌다 — 이 세션에서 찾은 것 중 "기능의 원래 목적(100건 출력)이
+  // 애초에 그 화면의 물리적 한계(25행)를 넘는" 가장 직접적인 형태의 버그. 단순 절삭+안내로는
+  // "100건 일괄 출력"이라는 기능 목적 자체가 무의미해지므로, 게시글 보기/설문 선택지처럼
+  // 페이지네이션을 적용한다. 재조회를 피하려고 첫 조회 결과를 state._ptFilteredPosts에 캐시.
+  const PT_LINES_PER_PAGE = 16;
+
+  async function showPtResult(requestedPageNo = 1) {
     state.screen = 'pt-view';
-    setLoading('출력하는 중입니다..');
 
-    const boardKey = String(state.board?.id || '').trim();
-    const url = `/api/boards/${encodeURIComponent(boardKey)}?page=1&pageSize=100`;
-    // [LOG_ID: 20260721_2040] 실패를 null로 삼켜 "지정 번호 이후의 글이 없습니다"와 구분이 안 됐다
-    // (사용자에겐 둘 다 빈 화면으로 보임) — 실패 사유를 별도로 표시한다.
-    let fetchError = null;
-    const responseData = await apiFetch(url).catch((error) => { fetchError = error; return null; });
+    let filtered;
+    let fetchError = state._ptFetchError || null;
+    if (requestedPageNo > 1 && Array.isArray(state._ptFilteredPosts)) {
+      filtered = state._ptFilteredPosts;
+    } else {
+      setLoading('출력하는 중입니다..');
 
-    setReady(true);
+      const boardKey = String(state.board?.id || '').trim();
+      const url = `/api/boards/${encodeURIComponent(boardKey)}?page=1&pageSize=100`;
+      // [LOG_ID: 20260721_2040] 실패를 null로 삼켜 "지정 번호 이후의 글이 없습니다"와 구분이 안 됐다
+      // (사용자에겐 둘 다 빈 화면으로 보임) — 실패 사유를 별도로 표시한다.
+      fetchError = null;
+      const responseData = await apiFetch(url).catch((error) => { fetchError = error; return null; });
 
-    const posts = Array.isArray(responseData?.items) ? responseData.items : (responseData?.posts || []);
-    const filtered = posts
-      .filter(post => Number(post.localId ?? post.id) >= (state._ptStartNum || 1))
-      .slice(0, 100);
+      setReady(true);
+
+      const posts = Array.isArray(responseData?.items) ? responseData.items : (responseData?.posts || []);
+      filtered = posts
+        .filter(post => Number(post.localId ?? post.id) >= (state._ptStartNum || 1))
+        .slice(0, 100);
+      state._ptFilteredPosts = filtered;
+      state._ptFetchError = fetchError;
+    }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -270,6 +291,10 @@ export function createPostListView(deps) {
         ANSI_RESET;
     }
 
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PT_LINES_PER_PAGE));
+    const pageNo = Math.min(Math.max(1, requestedPageNo), totalPages);
+    const pageSlice = filtered.slice((pageNo - 1) * PT_LINES_PER_PAGE, pageNo * PT_LINES_PER_PAGE);
+
     const lines = [
       header,
       columnHeader(),
@@ -281,13 +306,20 @@ export function createPostListView(deps) {
     } else if (!filtered.length) {
       lines.push(ansiColor(8) + ' 지정 번호 이후의 글이 없습니다.' + ANSI_RESET);
     } else {
-      filtered.forEach(post => {
+      pageSlice.forEach(post => {
         lines.push(postLine(post));
       });
     }
 
     lines.push(ansiHLine(targetCols, 8));
-    lines.push(ansiColor(15) + ' 아무 키나 누르시면 목록으로 돌아갑니다...' + ANSI_RESET);
+    if (pageNo < totalPages) {
+      lines.push(ansiColor(15) + ` F:다음 페이지, 다른 키:목록으로 돌아갑니다 (${pageNo}/${totalPages})` + ANSI_RESET);
+    } else {
+      lines.push(ansiColor(15) + ' 아무 키나 누르시면 목록으로 돌아갑니다...' + (totalPages > 1 ? ` (${pageNo}/${totalPages})` : '') + ANSI_RESET);
+    }
+
+    state._ptPageNo = pageNo;
+    state._ptPageCount = totalPages;
 
     renderAnsiScreenWithTopbar({
       ansiText: lines.join('\n'),
@@ -295,8 +327,8 @@ export function createPostListView(deps) {
       screenEl
     });
 
-    setPrompt('아무 키나 누르십시오 >>');
-    setHint('PT: 출력 완료 (목록 복귀 대기)');
+    setPrompt(pageNo < totalPages ? 'F=다음 페이지, 기타키=목록 >>' : '아무 키나 누르십시오 >>');
+    setHint(pageNo < totalPages ? `PT: 출력 완료 (${pageNo}/${totalPages}, F로 다음 페이지)` : 'PT: 출력 완료 (목록 복귀 대기)');
     if (shouldAutoFocusCommandInput()) {
       cmdInput.focus();
     }

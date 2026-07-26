@@ -92,6 +92,14 @@ export function createBrowseCommandHandler(deps) {
       return true;
     }
     if (s === 'pt-view') {
+      // [LOG_ID: 20260727_0500] PT 출력이 페이지네이션을 지원하게 되면서, F는 다음 페이지로
+      // 넘기고 그 외 키만 원래대로 목록으로 돌아간다(마지막 페이지에서는 F도 목록으로 감).
+      const pageNo = state._ptPageNo || 1;
+      const pageCount = state._ptPageCount || 1;
+      if (cmd === 'F' && pageNo < pageCount && typeof showPtResult === 'function') {
+        await showPtResult(pageNo + 1);
+        return true;
+      }
       await showPostList(state.board.id, state.page, {
         menuPath: state.boardMenuPath,
         menuTitle: state.boardMenuTitle,
