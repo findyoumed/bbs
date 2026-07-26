@@ -1,3 +1,21 @@
+## [2026-07-27 06:45] [/loop 계속] 오락실/철학관 결과 화면 8개 + 날씨 상세 — 같은 min-height:24px 화이트리스트 누락 발견 및 수정
+
+**LOG_ID: 20260727_0645**
+목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드에서 확정한 "min-height:1.32em 화이트리스트 누락" 원인을 나머지 미등록 `state.screen` 값 전체에 체계적으로 적용해 같은 문제가 더 있는지 확인.
+
+발견:
+- `compat-result`(궁합)/`blood-result`(사주)/`mbti-detail`(MBTI 유형별 설명)/`tojeong-result`(토정비결)/`retro-view`(회고록?)/`weather-view`(날씨 지역 상세)/`fortune-result`(운세)/`bio-result`(바이오리듬) 8개 화면 전부 `wrapAnsiText`로 접은 가변 길이 본문을 쓰는데(compat-result와 완전히 같은 성격) 어느 화이트리스트에도 없었다.
+- 인위적으로 data-screen을 강제 지정하고 18줄을 주입해 실측(360x400) — 8개 화면 전부 `overflowY:hidden`, `lineMinHeight:24px`, 클리핑 122px로 동일하게 나타남(compat-result처럼 이미 F키 페이지네이션이 있는 화면도 예외 없이 같은 문제).
+
+구현:
+- 8개 화면 전부를 `overflow-y:auto`와 `.ansi-line{min-height:1.32em}` 두 화이트리스트에 나란히 추가(직전 라운드와 동일한 검증된 패턴).
+
+검증:
+- 동일한 재현 테스트로 재확인: 8개 화면 전부 `overflowY:auto`, `lineMinHeight:15.84px`, 클리핑 122px→0px로 완전히 해소.
+- `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`(3개 뷰포트 × 27개 라우트), `npm run smoke:command-parity` 모두 통과.
+
+결과: ✅ 완료 — 직전 라운드에 발견한 근본 원인(min-height 화이트리스트 누락)이 예상대로 훨씬 더 광범위했음을 확인하고 한 번에 정리했다. 이제 이 세션에 새로 만들거나 고친 화면 중 이 두 화이트리스트에서 빠진 것은 없는지 다음 라운드에 한 번 더 전수 대조가 필요하다(정적 raw-HTML 화면과 고정 개수 게임 화면은 이미 확인 완료로 제외). 다음 라운드는 남은 미등록 화면(conf-agenda-new/conf-room-create/vote-create/pt-prepare 등 짧은 입력 폼) 마무리 점검 또는 20번째 각도를 탐색한다.
+
 ## [2026-07-27 06:30] [/loop 계속] 직전 라운드 "상단바 오버헤드" 진단 정정 — 실제 원인은 min-height:1.32em 화이트리스트 누락, 안전하게 수정 완료
 
 **LOG_ID: 20260727_0630**

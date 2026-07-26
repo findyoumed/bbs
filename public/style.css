@@ -2830,7 +2830,20 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="vote-list"] #terminal-screen,
     body[data-screen="weather-menu"] #terminal-screen,
     body[data-screen="menu-index"] #terminal-screen,
-    body[data-screen="main"] #terminal-screen {
+    body[data-screen="main"] #terminal-screen,
+    /* [LOG_ID: 20260727_0645] 오락실/철학관 결과 화면(궁합/사주/MBTI/토정비결/운세/바이오리듬/
+       띠운세)과 날씨 지역별 상세도 전부 wrapAnsiText로 접은 가변 길이 본문을 쓰는데(compat-result
+       와 완전히 같은 성격), 위 min-height:24px 문제로 동일하게 잘렸다(실측: 18줄 주입 시 122px
+       클리핑, 위 화면들 전부 동일 수치). 이미 F키 페이지네이션이 있는 화면(compat-result 등)도
+       post-list와 같은 이유로 안전망이 필요하다. */
+    body[data-screen="compat-result"] #terminal-screen,
+    body[data-screen="blood-result"] #terminal-screen,
+    body[data-screen="mbti-detail"] #terminal-screen,
+    body[data-screen="tojeong-result"] #terminal-screen,
+    body[data-screen="retro-view"] #terminal-screen,
+    body[data-screen="weather-view"] #terminal-screen,
+    body[data-screen="fortune-result"] #terminal-screen,
+    body[data-screen="bio-result"] #terminal-screen {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
@@ -2961,7 +2974,17 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="vote-list"] .ansi-line,
     body[data-screen="weather-menu"] .ansi-line,
     body[data-screen="menu-index"] .ansi-line,
-    body[data-screen="main"] .ansi-line {
+    body[data-screen="main"] .ansi-line,
+    /* [LOG_ID: 20260727_0645] 위 overflow-y:auto 확장과 나란히 — 오락실/철학관 결과 화면과
+       날씨 상세도 같은 min-height:24px 문제였다. */
+    body[data-screen="compat-result"] .ansi-line,
+    body[data-screen="blood-result"] .ansi-line,
+    body[data-screen="mbti-detail"] .ansi-line,
+    body[data-screen="tojeong-result"] .ansi-line,
+    body[data-screen="retro-view"] .ansi-line,
+    body[data-screen="weather-view"] .ansi-line,
+    body[data-screen="fortune-result"] .ansi-line,
+    body[data-screen="bio-result"] .ansi-line {
         min-height: 1.32em;
     }
 
