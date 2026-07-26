@@ -191,7 +191,14 @@ export function createChatAnsiBuilders(deps) {
         const idLabel = senderId ? `(${message.userId})` : '';
         const verb = message.eventType === 'leave' ? '퇴장' : '입장';
         const line = `■■ ${who}${idLabel} 님이 ${verb}하였습니다. ■■`;
-        return [ansiColor(14) + fitCell(line, targetCols - 2) + ANSI_RESET];
+        // [LOG_ID: 20260726_1000] who(닉네임, 최대 20자·표시폭 40칸)+idLabel(아이디 최대 20자)을
+        // 합치면 고정 문구까지 최대 약 87칸 — 44칸(모바일) 예산은 물론 80칸(데스크톱)도 넘을 수
+        // 있는데 fitCell 한 줄 절삭이라 실측 재현 시 "입장하였습니다" 문구 자체가 통째로
+        // 잘려나갔다(일반 메시지와 같은 버그 클래스, 이번 라운드에 재검토로 발견). wrapAnsiText로
+        // 감싼다.
+        return wrapAnsiText(line, targetCols - 2).map((wrapped) => (
+          ansiColor(14) + wrapped + ANSI_RESET
+        ));
       }
 
       let text = String(message.content || message.message || '');
