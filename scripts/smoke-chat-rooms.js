@@ -125,9 +125,11 @@ async function main() {
     const invalidJsonResponse = await requestRaw(base, '/api/chat/rooms', {
       body: '{"title":"broken"'
     });
+    // [LOG_ID: 20260727_1256] 전역 JSON 본문 상한이 1MB → 2MB로 올라갔다(httpUtils.js, PDS 첨부파일
+    // base64 인코딩 오버헤드를 감안한 조정) — 이 페이로드도 새 상한을 넉넉히 넘도록 맞춘다.
     const oversizedBodyResponse = await requestRaw(base, '/api/chat/rooms', {
       body: JSON.stringify({
-        title: `room-${'x'.repeat(1024 * 1024 + 32)}`,
+        title: `room-${'x'.repeat(2 * 1024 * 1024 + 1024)}`,
         greeting: 'too large'
       })
     });

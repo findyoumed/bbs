@@ -66,7 +66,7 @@ class MemoryChatRoomRepository {
     const room = {
       no: this.nextNo++,
       roomId: '',
-      title: title.slice(0, 60),
+      title: title.slice(0, 100),
       greeting: greeting.slice(0, 120),
       ownerUserId: normalizeText(context.userId, 'guest'),
       ownerName: normalizeText(context.nickName, '손님'),
@@ -193,7 +193,11 @@ class MemoryChatRoomRepository {
       if (!title) {
         throw createHttpError(400, '방 제목을 입력해 주세요.');
       }
-      room.title = title.slice(0, 60);
+      // [LOG_ID: 20260727_1256] 대화방 개설 API(POST /api/chat/rooms)는 제목을 100자로 검증·거부하는데
+      // (chatServiceRoutes.js validate, LOG_ID 20260727_1215) 여기 저장 상한은 60이라 61~100자 제목은
+      // 개설 시 검증을 통과해놓고 저장 단계에서 조용히 60자로 잘렸다(같은 버그가 이 설정변경(/E TITLE)
+      // 경로에도 있었다). 검증이 약속하는 값(100)을 저장 상한도 그대로 지키게 맞춘다.
+      room.title = title.slice(0, 100);
     }
     if (payload.maxUser !== undefined) {
       room.maxUser = normalizeMaxUser(payload.maxUser, room.maxUser);

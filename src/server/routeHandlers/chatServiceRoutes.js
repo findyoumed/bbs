@@ -21,7 +21,20 @@ class ChatServiceRouter extends BaseRouter {
       { method: 'POST', pattern: '/api/chat/rooms/:roomNo/leave', handler: 'handleRoomLeave', needContext: true, needBody: true },
       // [LOG_ID: 20260714_2200] 원전 /OUT(강퇴)·/E TITLE·/E USER(방 설정 변경) 재현
       { method: 'POST', pattern: '/api/chat/rooms/:roomNo/kick', handler: 'handleRoomKick', needContext: true, needBody: true },
-      { method: 'POST', pattern: '/api/chat/rooms/:roomNo/settings', handler: 'handleRoomSettings', needContext: true, needBody: true },
+      // [LOG_ID: 20260727_1256] 개설(POST /api/chat/rooms)엔 title maxLength:100 검증이 있는데
+      // 설정변경(/E TITLE)엔 없어, 저장소가 조용히 60자로 자르던(방금 고침) 것 외에도 100자를
+      // 넘긴 값이 명확한 거부 없이 그냥 100자로 잘려 저장될 수 있었다. 개설과 동일한 검증을 둔다.
+      {
+        method: 'POST',
+        pattern: '/api/chat/rooms/:roomNo/settings',
+        handler: 'handleRoomSettings',
+        needContext: true,
+        validate: {
+          body: {
+            title: { maxLength: 100 }
+          }
+        }
+      },
       { method: 'GET', pattern: '/api/chat/rooms/:roomNo/messages', handler: 'listChatMessages' },
       { 
         method: 'POST', 

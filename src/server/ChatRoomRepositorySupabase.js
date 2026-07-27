@@ -55,7 +55,10 @@ class SupabaseChatRoomRepository extends BaseRepository {
     for (let i = 0; i < 5; i++) {
       const nextNo = await this.queries.nextRoomNo();
       const { data, error } = await this.client.from(this.table).insert({
-        room_no: nextNo, room_key: roomKeyForNo(nextNo), name: title.slice(0, 60), description: greeting.slice(0, 120),
+        // [LOG_ID: 20260727_1256] 개설 API 경로(chatServiceRoutes.js validate)는 제목을 100자로
+        // 검증·거부하는데 여기 저장 상한은 60이라, 61~100자 제목은 검증을 통과해놓고 이 저장
+        // 단계에서 조용히 60자로 잘렸다(실측: 90자 제목 → 검증 통과 → 저장은 60자, 안내 없음).
+        room_no: nextNo, room_key: roomKeyForNo(nextNo), name: title.slice(0, 100), description: greeting.slice(0, 120),
         owner_user_id: normalizeText(context.userId, 'guest'), owner_name: normalizeText(context.nickName, '손님'),
         creator_id: maybeUuid(context.userId), max_user: normalizeMaxUser(payload.maxUser, 10), password, is_private: isPrivate, is_locked: false, last_activity_at: new Date().toISOString()
       }).select(this.queries._selectColumns()).single();
@@ -143,7 +146,11 @@ class SupabaseChatRoomRepository extends BaseRepository {
     if (payload.title !== undefined) {
       const title = normalizeRoomText(payload.title);
       if (!title) throw createHttpError(400, '방 제목을 입력해 주세요.');
-      updates.name = title.slice(0, 60);
+      // [LOG_ID: 20260727_1256] 개설 API(POST /api/chat/rooms)는 제목을 100자로 검증·거부하는데
+      // (chatServiceRoutes.js validate, LOG_ID 20260727_1215) 여기 저장 상한은 60이라 61~100자
+      // 제목은 검증을 통과해놓고 저장 단계에서 조용히 60자로 잘렸다. 검증이 약속하는 값(100)을
+      // 저장 상한도 그대로 지키게 맞춘다. DB 컬럼(chat_rooms.name)은 TEXT라 길이 제약 없음.
+      updates.name = title.slice(0, 100);
     }
     if (payload.maxUser !== undefined) {
       updates.max_user = normalizeMaxUser(payload.maxUser, room.max_user);

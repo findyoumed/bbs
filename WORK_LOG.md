@@ -1,3 +1,20 @@
+## [2026-07-27 13:05] [/loop 채팅 전수조사 2차] 대화방 제목이 개설 시 검증(100자)과 저장(60자)이 서로 달라 61~100자 제목이 조용히 잘려나가던 버그 발견·수정
+
+**LOG_ID: 20260727_1305**
+목표: 댓글/답글·PDS·회원정보수정·채팅 순환 조사 계속 — 댓글/답글 2차(무버그) → PDS 2차(업로드 기능 자체 부재 발견·구현) → 회원정보수정 2차(닉네임/이메일/비밀번호/탈퇴 4개 흐름 재검토, 무버그) → 이번 라운드는 채팅 2차. `/OUT`(강퇴)·`/IN`(초대)·`/EX`(수신거부)·`/E TITLE`·`/E USER`(방 설정변경) 등 이전 라운드에서 다루지 않은 명령들을 코드로 대조.
+
+발견: 대화방 개설 API(`chatServiceRoutes.js` `POST /api/chat/rooms`)는 제목을 100자로 검증해 초과 시 명확히 거부하는데(직전 라운드 LOG_ID 20260727_1215에서 클라이언트 사전검증까지 갖춤), 정작 그 검증을 통과한 값을 저장하는 저장소 계층(`ChatRoomRepositorySupabase.js`/`ChatRoomRepositoryMemory.js`의 `create()`/`updateRoom()`)은 여전히 `.slice(0, 60)`으로 조용히 잘랐다 — 61~100자 제목은 "허용된다"는 검증 응답을 받은 뒤에도 실제로는 60자까지만 저장되는 모순이 있었다. 게다가 방 설정변경(`/E TITLE`) 경로는 아예 100자 검증 자체가 없어(라우트 정의에 `validate` 없음) 100자를 훌쩍 넘는 제목도 에러 없이 60자로 잘려 저장됐고, 그 성공 메시지("방 제목이 [...]로 변경되었습니다")는 서버가 실제로 저장한 값이 아니라 사용자가 입력한 원본 값을 그대로 에코해 — 잘린 사실조차 화면에서 확인할 수 없는 이중 문제였다. 이번 세션에서 반복적으로 찾아낸 "선언된 제한과 실제 저장 제한이 다른" 버그 클래스(게시글 제목 60자, 답글 제목 자동채움)의 세 번째 사례. DB 컬럼(`chat_rooms.name`)은 `TEXT`(길이 제약 없음)라 저장 상한을 올려도 스키마 위험은 없음을 마이그레이션 파일로 확인.
+
+수정:
+1. `ChatRoomRepositorySupabase.js`(`create`/`updateRoom`), `ChatRoomRepositoryMemory.js`(`create`/`updateRoom`) 4곳 모두 저장 상한을 검증이 약속하는 값(100)에 맞춰 `.slice(0, 60)` → `.slice(0, 100)`.
+2. `chatServiceRoutes.js`: `/api/chat/rooms/:roomNo/settings` 라우트에 개설 라우트와 동일한 `validate: { body: { title: { maxLength: 100 } } }`을 추가해 설정변경도 명확히 거부하게 함(선택 필드라 `required`는 두지 않음 — `/E USER`처럼 제목 없이 정원만 바꾸는 요청도 그대로 통과).
+3. `commandRouterChat.js`의 `/E TITLE` 핸들러: 개설 흐름과 동일하게 100자 초과 시 왕복 없이 즉시 안내하는 클라이언트 사전검증 추가. 성공 메시지는 입력값(`value`) 대신 서버 응답의 실제 저장값(`updated.title`)을 보여주도록 수정.
+4. `scripts/smoke-chat-rooms.js`: 별건으로, 직전 PDS 라운드(20260727_1233)에서 전역 JSON 본문 상한을 1MB→2MB로 올린 여파로 이 스모크의 "본문 초과 시 413" 테스트 페이로드(1MB+32바이트)가 새 상한 아래로 들어와 통과해버려 회귀 실패 — 페이로드를 새 상한(2MB)보다 넉넉히 크게(2MB+1KB) 조정.
+
+검증: 로컬 서버(실제 Supabase 드라이버)에 curl로 직접 재현 — 90자 제목으로 방 개설 → 응답 `title.length === 90`(수정 전엔 60). 같은 방에 `/settings`로 다른 90자 제목 적용 → 역시 90자 그대로 저장. 105자 제목으로 `/settings` 시도 → `400 "제목은 100자 이하여야 합니다."`로 명확히 거부(수정 전엔 에러 없이 60자로 조용히 저장). `npm run smoke:chat-rooms`(수정 후 통과), `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 통과. (이번 라운드는 curl로만 검증해 `window.__debugState` 디버그 훅을 쓰지 않음 — `app.js` 변경 없음.)
+
+결과: ✅ 버그 수정 완료.
+
 ## [2026-07-27 12:33] [/loop PDS 전수조사 2차] PDS 파일 업로드 기능 자체가 클라이언트에 없던 구멍 발견·구현 (사용자 승인 후)
 
 **LOG_ID: 20260727_1233**

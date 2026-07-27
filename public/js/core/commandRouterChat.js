@@ -513,6 +513,12 @@ export function createChatCommandHandler(deps) {
           }
           const field = editMatch[1].toUpperCase();
           const value = editMatch[2].trim();
+          // [LOG_ID: 20260727_1256] 개설(/M 흐름) 제목 입력엔 100자 사전검증(20260727_1215)이
+          // 있는데 설정변경(/E TITLE)엔 없어 왕복 없이 바로 알려줄 기회가 없었다. 동일하게 맞춘다.
+          if (field === 'TITLE' && value.length > 100) {
+            setHint('대화방 제목은 100자 이하여야 합니다.');
+            return true;
+          }
           try {
             const payload = field === 'TITLE' ? { title: value } : { maxUser: parseInt(value, 10) };
             const updated = await apiFetch(`/api/chat/rooms/${encodeURIComponent(state._chatRoomId)}/settings`, {
@@ -520,7 +526,10 @@ export function createChatCommandHandler(deps) {
               body: JSON.stringify(payload)
             });
             state._chatRoom = { ...state._chatRoom, ...updated };
-            setHint(field === 'TITLE' ? `방 제목이 [${value}](으)로 변경되었습니다.` : `참여 제한 인원이 ${value}명으로 변경되었습니다.`);
+            // [LOG_ID: 20260727_1256] 입력값(value)을 그대로 에코하면, 서버가 실제로 저장한 값과
+            // 다를 수 있을 때(과거 60자 조용한 절삭 등) 사용자에게 거짓 확인을 보여주게 된다 —
+            // 실제 저장된 값(updated.title)을 보여줘 화면과 데이터가 항상 일치하게 한다.
+            setHint(field === 'TITLE' ? `방 제목이 [${updated?.title ?? value}](으)로 변경되었습니다.` : `참여 제한 인원이 ${value}명으로 변경되었습니다.`);
           } catch (e) {
             setHint(`설정 변경 실패: ${e.message}`);
           }
