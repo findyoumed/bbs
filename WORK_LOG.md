@@ -1,3 +1,16 @@
+## [2026-07-27 11:11] [/loop 글쓰기·글수정 전수조사 2] 글보기에서 시작한 수정(E)을 취소하면 원래 글이 아니라 엉뚱하게 게시판 목록으로 튕겨나가는 버그 발견·수정
+
+**LOG_ID: 20260727_1111**
+목표: `/loop 글쓰기기능, 글수정기능에서 이상한점 있는지 찾아내서 수정` 계속 — 답글/PDS 업로드 흐름 조사(이미 20260726_1800에 전수조사되어 정상 확인된 영역이라 재확인만 하고 통과), `cancelPostWrite()`의 이동 로직을 성공 경로와 대조하며 점검.
+
+발견: `handleWriteSubmit()`의 저장 **성공** 경로는 수정(edit) 모드일 때 `handlers.showPostView(...)`로 방금 수정한 글로 돌아가는데, **취소** 경로(`cancelPostWrite()`)는 모드 구분 없이 언제나 `showPostList(...)`(게시판 목록)로만 보냈다. 글보기 화면에서 E로 수정을 시작했다가 취소하면, 성공했을 때와 달리 방금 읽던 글이 아니라 목록으로 튕겨나갔다. 실측 재현: `/plaza/16` 글보기 → E(수정, 머리말 있는 게시판이라 1단계 선택 후 박스 에디터 진입) → Esc(취소) → `data-screen: "post-list"`(기대: `post-view`, `state.post` 여전히 16 유지).
+
+수정: `cancelPostWrite()`가 `clearPostWriteEditor()`로 에디터를 지우기 **전에** `editor.mode`/`editor.targetPostId`를 먼저 확인해, 수정 모드이고 대상 글 ID가 있으면 `handlers.showPostView(boardId, targetPostId)`로 돌아가도록 성공 경로와 맞췄다. 새 글 작성(create)과 답글(reply)은 원래부터 **성공 시에도** 목록으로 가므로(답글은 목록에서 스레드로 바로 보이는 게 의도된 동작) 취소도 그대로 목록 유지 — 함께 바꾸지 않았다.
+
+검증: 실제 브라우저로 세 가지 모두 확인 — ① 글보기에서 시작한 수정 취소 → `post-view`(postId 16, 수정 전) 복귀(수정 전 목록행 버그), ② 글보기에서 시작한 답글 취소 → 목록 유지(변화 없음, 의도된 그대로), ③ 목록에서 시작한 새 글쓰기 취소 → 목록 유지(변화 없음, 의도된 그대로). `npm run smoke:boards`, `smoke:command-parity`, `smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과. (테스트용 `window.__debugState` 디버그 훅은 `git checkout`으로 완전히 되돌려 커밋 미포함.)
+
+결과: ✅ 버그 수정 완료.
+
 ## [2026-07-27 10:12] [/loop 글쓰기·글수정 전수조사] 저장 실패 시 에디터가 파괴되어 재시도·취소 모두 불가능해지는 데이터 유실 버그 발견·수정
 
 **LOG_ID: 20260727_1012**

@@ -1027,8 +1027,22 @@ export function createPostWriteView(deps) {
   }
 
   function cancelPostWrite(handlers) {
-    const { showPostList } = handlers;
+    const { showPostList, showPostView } = handlers;
+    // [LOG_ID: 20260727_1040] handleWriteSubmit()의 저장 성공 경로는 수정(edit) 모드일 때 글보기
+    // (showPostView)로 돌아가는데, 취소 경로는 이 구분 없이 언제나 게시판 목록으로만 보냈다 —
+    // 글보기 화면에서 E로 수정을 시작했다가 취소하면 방금 읽던 글이 아니라 엉뚱하게 목록으로
+    // 튕겨나갔다(실측 재현). 성공/취소가 같은 곳으로 돌아가도록 맞춘다. 새 글 작성(create)과
+    // 답글(reply)은 성공 시에도 원래부터 목록으로 가므로(답글은 목록에서 스레드로 바로 보임)
+    // 그대로 둔다.
+    const editor = getWriteEditorState();
+    const isEditingExistingPost = editor?.mode === 'edit' && editor.targetPostId != null;
+    const boardId = state.board?.id;
     clearPostWriteEditor();
+    if (isEditingExistingPost && boardId && typeof showPostView === 'function') {
+      state.post = null;
+      void showPostView(boardId, editor.targetPostId, false);
+      return;
+    }
     if (state.board) {
       void showPostList(state.board.id, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
       return;
