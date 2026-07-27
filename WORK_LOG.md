@@ -1,3 +1,20 @@
+## [2026-07-27 10:12] [/loop 글쓰기·글수정 전수조사] 저장 실패 시 에디터가 파괴되어 재시도·취소 모두 불가능해지는 데이터 유실 버그 발견·수정
+
+**LOG_ID: 20260727_1012**
+목표: `/loop 글쓰기기능, 글수정기능에서 이상한점 있는지 찾아내서 수정` — `postWriteView.js` 전체(1015줄) 정독 + 실제 브라우저 재현.
+
+발견: `handleWriteSubmit()`의 `try { ... 저장 성공 시 clearPostWriteEditor() ... } catch (e) { setHint(...) } finally { clearPostWriteEditor(); }` 구조에서, **성공 경로는 이미 명시적으로 `clearPostWriteEditor()`를 부르는데 `finally`가 실패 경로에서도 무조건 한 번 더 부른다.** 저장이 실패(네트워크 오류, 서버 검증 거부, 세션 만료 등 흔한 상황)해도 화면엔 방금 쓴 제목/본문이 그대로 남아 있지만, `state._postWriteEditor`/`state._terminalInputHandler`는 파괴되어 있어 — Ctrl+S로 재시도해도(`renderBbsEditor`의 `cleanup()`이 `doSave()`의 `.finally()`에서 무조건 실행돼 titleEl/bodyEl의 keydown 리스너까지 이미 제거됨) 아무 반응이 없고, Esc로 취소도 안 되는 **완전히 죽은 화면**이 됐다. 사용자가 방금 쓴 글이 사실상 증발할 위험이 있는 심각한 결함.
+
+실측 재현: `page.route()`로 `POST /api/boards/*/posts`를 강제 500 실패시킨 뒤 Ctrl+S — 힌트에 "저장 실패: ..."는 뜨지만 `state._postWriteEditor`가 `null`, 이어서 Ctrl+S를 다시 눌러도 API 호출 자체가 발생하지 않음(완전히 먹통) 확인.
+
+수정:
+1. `handleWriteSubmit()`: `finally` 블록 제거, 성공 시 `return true`, 실패 시(catch) `return false`만 하고 `clearPostWriteEditor()`는 호출하지 않음(에디터 보존).
+2. `renderBbsEditor()`의 `doSave()`: `onSave()`(=`handleWriteSubmit`)의 반환값을 확인해, 성공(`!== false`)일 때만 `cleanup()`을 호출하고, 실패 시엔 `_saving` 플래그와 필드 비활성화만 되돌려(리스너는 유지) 그 자리에서 Ctrl+S로 바로 재시도할 수 있게 함.
+
+검증: 같은 강제 실패 재현에서 실패 후 `state._postWriteEditor`가 살아있고 제목/본문 값도 그대로임을 확인, 이어서 Ctrl+S 재시도 시 두 번째 POST가 실제로 발생하고(라우트를 통과시켜 성공하도록 설정) 정상적으로 게시판 목록으로 돌아가며 에디터가 깔끔히 정리됨을 확인. 부가로 게시판 헤더(머리말) 옵션이 있는 게시판(plaza)에서 관리자 권한으로 기존 글 수정(E 명령) 흐름도 별도 확인 — 머리말 선택→제목/본문 사전 채움까지 정상 동작, 새로운 결함 없음. `npm run smoke:boards`, `smoke:command-parity`, `smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과. (테스트에 사용한 `window.__debugState` 디버그 훅은 매번 `git checkout`으로 완전히 되돌려 커밋에 미포함.)
+
+결과: ✅ 버그 수정 완료.
+
 ## [2026-07-27 07:25] [사용자 직접 제보] "W로 글쓰기가 안 됨(sysop 로그인 상태)" — 한글 닉네임 헤더가 fetch()를 통째로 깨뜨리는 치명적 버그 + 건의하기 이탈 시 입력창 영구 잠김 버그 발견·수정
 
 **LOG_ID: 20260727_0725**

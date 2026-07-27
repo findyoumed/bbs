@@ -301,7 +301,26 @@ export function createPostWriteView(deps) {
       titleEl.disabled = true;
       bodyEl.disabled = true;
       if (keywordEl) keywordEl.disabled = true;
-      Promise.resolve(onSave()).finally(cleanup);
+      // [LOG_ID: 20260727_0900] onSave()(handleWriteSubmit)가 실패하면 이제 false를 돌려준다 —
+      // 그 경우 cleanup()(키다운 리스너 제거·에디터 파기)을 부르지 않고 필드만 다시 활성화해,
+      // 사용자가 방금 쓴 제목/본문을 그대로 두고 Ctrl+S로 바로 재시도할 수 있게 한다. 성공했을
+      // 때만 정리한다(위 20260725_1420이 막던 경쟁 상태는 이 경우에도 여전히 없다 — cleanup은
+      // onSave가 실제로 끝난 뒤에만 호출된다).
+      const releaseFields = () => {
+        editor._saving = false;
+        titleEl.disabled = false;
+        bodyEl.disabled = false;
+        if (keywordEl) keywordEl.disabled = false;
+      };
+      Promise.resolve(onSave())
+        .then((succeeded) => {
+          if (succeeded === false) {
+            releaseFields();
+            return;
+          }
+          cleanup();
+        })
+        .catch(() => releaseFields());
     }
 
     function isOnFirstLine(ta) {
@@ -994,10 +1013,16 @@ export function createPostWriteView(deps) {
         state.posts = null;
         await showPostList(boardId, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
       }
+      return true;
     } catch (e) {
+      // [LOG_ID: 20260727_0900] 예전엔 이 catch 뒤에 무조건 clearPostWriteEditor()를 또 부르는
+      // finally가 있었다 — 저장이 실패해도(네트워크 오류·서버 검증 거부 등) 화면엔 방금 쓴
+      // 제목/본문이 그대로 남아 있는데 정작 state._postWriteEditor/_terminalInputHandler는
+      // 사라져, 재시도(Ctrl+S)도 취소(Esc/P)도 전혀 먹히지 않는 죽은 화면이 됐다(실측 재현:
+      // 저장 강제 실패 후 Ctrl+S를 다시 눌러도 API 호출 자체가 발생하지 않음 — 사용자가 쓴 글이
+      // 그대로 증발할 위험). 실패 시엔 정리하지 않고 에디터를 살려둬 재시도할 수 있게 한다.
       setHint(`저장 실패: ${e.message}`);
-    } finally {
-      clearPostWriteEditor();
+      return false;
     }
   }
 
