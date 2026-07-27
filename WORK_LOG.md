@@ -1,3 +1,23 @@
+## [2026-07-27 07:25] [사용자 직접 제보] "W로 글쓰기가 안 됨(sysop 로그인 상태)" — 한글 닉네임 헤더가 fetch()를 통째로 깨뜨리는 치명적 버그 + 건의하기 이탈 시 입력창 영구 잠김 버그 발견·수정
+
+**LOG_ID: 20260727_0725**
+목표: 사용자 제보 — "/notice에서 W(또는 ㅈ)로 글쓰기가 왜 안되지? sysop으로 로그인했는데". 후속 확인: 힌트/화면이 "아무 것도" 안 바뀜(모든 케이스가 반드시 setHint를 부르므로 이례적) · 개인정보 화면에서 권한 레벨 99(관리자) 확인됨 · 입력줄을 마우스로 클릭 후 정상 타이핑함.
+
+조사: 프로덕션은 외부 Supabase라 직접 로그인 재현이 불가능해, `public/js/app.js`에 `window.__debugState = state`를 임시로 추가(테스트 후 완전히 되돌림, 커밋 미포함)해 `state.user`를 관리자로 흉내내며 실제 코드 경로를 브라우저에서 추적했다. 그 과정에서 브라우저 콘솔에 결정적 단서 발견: `Failed to execute 'fetch' on 'Window': ... String contains non ISO-8859-1 code point` — 이후 메뉴/게시판 로딩까지 전부 "데이터 통신망 오동작"으로 실패해 어떤 명령을 눌러도 화면이 전혀 안 바뀌는 것처럼 보였다(사용자가 겪은 정확한 증상과 일치).
+
+**원인 1 (치명적, 전역): `apiFetch.js`의 `createBaseHeaders()`**가 `state.token`이 비어 있고 `state.user`가 로그인 상태일 때 `X-BBS-Nick-Name` 헤더에 닉네임을 인코딩 없이 그대로 넣었다. HTTP 헤더 값은 ISO-8859-1(Latin-1)만 허용되는데 한글 닉네임(이 앱의 거의 모든 실사용자 닉네임)은 그 범위를 벗어나— 브라우저 `fetch()`가 헤더 구성 단계에서 그 즉시(요청이 나가기도 전에) 예외를 던진다. `state.token`이 비면서 `state.user`가 손님이 아닌 상태로 남는 상황(세션 갱신 경합 등)은 실제로 발생 가능하며, 한 번 걸리면 **그 이후 이 세션의 모든 API 호출**이 동일하게 실패해 앱 전체가 먹통이 된다 — scripts/smoke-boards.js가 이미 "헤더엔 한글 닉네임을 보내면 안 된다"고 명시적으로 우회하고 있던 바로 그 제약을 `apiFetch.js` 자신이 어기고 있었다.
+
+**원인 2 (부차적, 실측으로 드러남): `contactSysopScreen.js`(건의하기/TOSYSOP)**가 화면 진입 시 `#terminal-footer`를 인라인 `style.display='none'`으로 직접 숨기고 `cmdInput.disabled=true`로 만드는데, 이 상태를 되돌리는 `clearContactSysopFlow()`는 이 화면 자신의 취소/완료 경로(P/M/B 또는 발송완료)에서만 호출된다. 브라우저 뒤로가기(popstate)처럼 이 화면을 전혀 모르는 경로로 떠나면 정리가 실행되지 않아, 이후 어떤 화면에 가도 입력줄이 안 보이거나(`style.display` 잔류는 다른 화면의 정상적인 `setFooterVisibility(true)`로도 안 지워짐) 눌러도 반응이 없었다(`state._terminalInputHandler`가 여전히 이 화면의 핸들러를 가리켜 무조건 `true`로 삼킴). 실측 재현: 건의하기 진입 → 브라우저 뒤로가기 → 이후 어떤 명령도 무반응, Playwright조차 입력줄을 30초간 클릭 못 함.
+
+수정:
+1. `apiFetch.js`: 헤더로 나가는 `X-BBS-User-Id`/`X-BBS-Nick-Name`를 `encodeURIComponent`로 항상 ASCII-safe하게 만드는 `toHeaderSafe()` 추가.
+2. `RequestIdentityHelpers.js`(서버): 로컬 개발용 수동 신원 오버라이드가 헤더에서 값을 읽을 때 `decodeURIComponent`로 되돌리도록 대응(운영 환경은 이 오버라이드 자체가 비활성이라 영향 없음, 로컬 하네스 정합성만 위함).
+3. `contactSysopScreen.js`: (a) `handleContactSysopRawInput`에 memo-list/post-write와 동일한 자기 방어(`state.screen !== 'contact-sysop'`) 추가 + 감지 시 `clearContactSysopFlow()`로 자가 치유. (b) footer를 인라인 `style.display` 대신 `setFooterVisibility()`와 동일한 `data-footer-state` 속성으로만 숨겨, 다른 화면의 평범한 `setReady(true)` 호출 한 번으로 항상 정상 복구되게 함(더 이상 이 화면 고유의 정리 경로에 의존하지 않음).
+
+검증: 디버그 훅으로 "토큰 없음 + 관리자 + 한글 닉네임" 상태를 재현 — 수정 전엔 W 명령 즉시 `fetch` 예외로 전부 실패, 수정 후엔 정상적으로 글쓰기 화면 진입 확인. 건의하기 진입 후 브라우저 뒤로가기 재현 — 수정 전엔 `footerState` 인라인 스타일이 남아 입력줄 자체가 30초 넘게 클릭 불가(Playwright 타임아웃으로 확인), 수정 후엔 즉시 `footerState:"visible", disabled:false`로 복구되고 다음 명령이 정상 라우팅됨을 확인. 디버그 훅(`window.__debugState`)은 `git checkout`으로 완전히 되돌려 커밋에 포함되지 않음. `npm run smoke:boards`, `smoke:auth-bridge`, `smoke:command-parity`, `smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 버그 2건(치명도 상 1건 + 실측으로 발견한 부차 1건) 수정 완료.
+
 ## [2026-07-27 06:38] [사용자 직접 제보] 글쓰기 박스 에디터에서 Tab으로 cmd-input에 포커스를 옮기면 S/P 입력이 완전히 무시됨 — doSave/cancel 연결 복구
 
 **LOG_ID: 20260727_0638**

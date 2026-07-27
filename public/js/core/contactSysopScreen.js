@@ -148,9 +148,15 @@ export function createContactSysopScreen(deps) {
     if (!flow) return;
 
     // [LOG_ID: 20260722_1410] 건의하기 전체 과정 동안 하단 #terminal-footer 숨김 & cmdInput 비활성화
+    // [LOG_ID: 20260727_0715] 인라인 style.display까지 직접 건드리면, 뒤로가기처럼 이 화면 자신의
+    // 정리 경로(clearContactSysopFlow)를 안 거치고 떠났을 때 다른 화면의 setReady()/
+    // setFooterVisibility(true)(data-footer-state 속성만 되돌림)로는 이 인라인 스타일이 지워지지
+    // 않아 footer가 영원히 숨은 채로 남았다(사용자 보고: "W로 글쓰기가 왜 안되지" — 실측 재현:
+    // 건의하기 진입 후 뒤로가기 → 입력줄 자체가 안 보여서 클릭도 안 됨). setFooterVisibility와
+    // 동일하게 속성만 바꿔 CSS([data-footer-state="hidden"])가 표시를 담당하게 하면, 다음 화면의
+    // 정상적인 setReady(true) 호출 한 번으로 항상 복구된다.
     const footerEl = typeof document !== 'undefined' ? document.getElementById('terminal-footer') : null;
     if (footerEl) {
-      footerEl.style.display = 'none';
       footerEl.setAttribute('data-footer-state', 'hidden');
     }
     if (cmdInput) {
@@ -391,6 +397,20 @@ export function createContactSysopScreen(deps) {
   }
 
   async function handleContactSysopRawInput(raw) {
+    // [LOG_ID: 20260727_0715] 브라우저 뒤로가기 등 이 화면 자신의 취소·완료 경로(cancelContactSysop/
+    // clearContactSysopFlow)를 거치지 않고 떠나면(popstate는 이 화면을 전혀 모른다) state.screen만
+    // 바뀌고 state._contactSysopFlow/_terminalInputHandler는 그대로 남아, 이 핸들러가 이후
+    // 어떤 화면에서 어떤 명령을 눌러도(W 등) 계속 무조건 true로 삼켜버렸다(사용자 보고: "W 또는
+    // ㅈ로 글쓰기가 왜 안되지" — 실측 재현: 건의하기 진입 후 뒤로가기 → 이후 모든 명령 무반응).
+    // memo-list/post-write의 raw 핸들러처럼 화면이 실제로 이 화면인지 먼저 확인하고, 아니면
+    // clearContactSysopFlow()로 자가 치유(hidden footer·disabled cmdInput 복구)한 뒤 처리하지
+    // 않은 것으로 돌려보내 정상 라우팅이 이어지게 한다.
+    if (state.screen !== 'contact-sysop' || !state._contactSysopFlow) {
+      if (state._terminalInputHandler === handleContactSysopRawInput) {
+        clearContactSysopFlow();
+      }
+      return false;
+    }
     // 인라인 <input>에서 모든 키 처리를 담당하므로 raw 핸들러 통과 처리
     return true;
   }

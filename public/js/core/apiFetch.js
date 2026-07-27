@@ -16,6 +16,23 @@ import {
 
 export { ApiError };
 
+// [LOG_ID: 20260727_0700] HTTP 헤더 값은 ISO-8859-1(Latin-1)만 허용된다 — 한글 닉네임을
+// 그대로 X-BBS-Nick-Name에 넣으면 브라우저 fetch()가 "String contains non ISO-8859-1
+// code point"로 그 호출 하나가 아니라 이후의 모든 API 요청에서 즉시 예외를 던진다(사용자
+// 실측 재현: state.token이 비어 있고 state.user가 로그인 상태로 남는 순간 — 세션 갱신 경합
+// 등으로 실제 발생 가능 — 이후 메뉴/게시판 로딩까지 전부 "데이터 통신망 오동작"으로 실패해
+// 어떤 명령을 눌러도 화면이 전혀 안 바뀌는 것처럼 보였다). scripts/smoke-boards.js가 이미
+// 같은 이유로 "헤더엔 body.userId만 미러링하고 한글 nickName은 헤더로 안 보낸다"고 명시한
+// 것과 동일한 제약이다 — encodeURIComponent로 항상 ASCII-safe하게 만든다.
+function toHeaderSafe(value) {
+  const text = String(value ?? '');
+  try {
+    return encodeURIComponent(text);
+  } catch (error) {
+    return '';
+  }
+}
+
 function createBaseHeaders(state, fetchOptions) {
   const baseHeaders = { Accept: 'application/json' };
   if (fetchOptions.body !== undefined && !isFormDataBody(fetchOptions.body)) {
@@ -24,8 +41,8 @@ function createBaseHeaders(state, fetchOptions) {
   if (state.token) {
     baseHeaders['Authorization'] = `Bearer ${state.token}`;
   } else if (state.user && !state.user.isGuest) {
-    baseHeaders['X-BBS-User-Id'] = String(state.user.userId || '');
-    baseHeaders['X-BBS-Nick-Name'] = String(state.user.nickName || state.user.userId || '');
+    baseHeaders['X-BBS-User-Id'] = toHeaderSafe(state.user.userId);
+    baseHeaders['X-BBS-Nick-Name'] = toHeaderSafe(state.user.nickName || state.user.userId);
     baseHeaders['X-BBS-Level'] = String(state.user.level || 1);
     if (state.user.isAdmin) {
       baseHeaders['X-BBS-Admin'] = '1';

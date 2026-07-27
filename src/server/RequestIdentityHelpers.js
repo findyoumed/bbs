@@ -50,8 +50,19 @@ function buildManualRequestIdentity(req, body, options = {}) {
   };
   const headers = req?.headers || {};
   const allowOverride = allowManualRequestIdentity(req, env);
-  const requestedUserId = allowOverride ? (body?.userId || headers['x-bbs-user-id']) : undefined;
-  const requestedNickName = allowOverride ? (body?.nickName || headers['x-bbs-nick-name']) : undefined;
+  // [LOG_ID: 20260727_0700] HTTP 헤더는 ISO-8859-1만 허용돼 클라이언트(apiFetch.js)가 한글
+  // 닉네임 등을 encodeURIComponent로 인코딩해 보낸다 — 헤더로 온 값만 여기서 되돌린다(body는
+  // JSON이라 처음부터 인코딩 제약이 없어 그대로 둔다).
+  const decodeHeaderValue = (value) => {
+    if (typeof value !== 'string' || !value) return value;
+    try {
+      return decodeURIComponent(value);
+    } catch (error) {
+      return value;
+    }
+  };
+  const requestedUserId = allowOverride ? (body?.userId || decodeHeaderValue(headers['x-bbs-user-id'])) : undefined;
+  const requestedNickName = allowOverride ? (body?.nickName || decodeHeaderValue(headers['x-bbs-nick-name'])) : undefined;
   const requestedLevel = allowOverride ? (body?.level || headers['x-bbs-level']) : undefined;
   const requestedIsAdmin = allowOverride ? (body?.isAdmin === true || headers['x-bbs-admin'] === '1') : false;
   const userId = normalizeRequestUserId(requestedUserId, fallback.userId);
