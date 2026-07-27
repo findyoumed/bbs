@@ -1,3 +1,21 @@
+## [2026-07-27 13:55] [/loop 회원정보수정 전수조사 3차 — "오류날 것 같은 부분을 깊게 찾아"] 닉네임/이메일 DB 유니크 제약 부재 + 실제 운영 DB에 스모크테스트발 중복 회원 465명 발견·정리, 유니크 인덱스 마이그레이션 작성 (사용자 승인 후)
+
+**LOG_ID: 20260727_1355**
+목표: 직전 PDS 3차에서 "전역id/로컬id 혼동" 구조적 버그를 찾은 것과 같은 방식으로, 회원정보수정(MyInfo) 영역에서도 스키마·동시성 관점의 잠재적 결함을 깊게 조사.
+
+발견: `members` 테이블의 `nick_name`/`email` 컬럼엔 UNIQUE 제약이 전혀 없다(`idx_members_nick_name`/`idx_members_email`은 일반 인덱스일 뿐 — `0004_members_table_bootstrap.sql` 확인). 애플리케이션 코드(`memberRoutes.js`의 `updateProfile`/`setEmail`, `authRoutes.js` 가입)는 "먼저 `findByNickName`/`findByEmail`로 중복 조회 → 없으면 저장"하는 방식으로만 유일성을 지키고 있어 TOCTOU 경쟁조건에 근본적으로 취약하다. 실제 운영 Supabase DB에 직접 접속해 조회한 결과(REST API로), 회원 469명 중 **431명이 `<접두어>-<13자리 epoch ms>` 형태의 스모크테스트 산출물**이었다(`board-fallback-*`/`chat-fallback-*`/`memo-fallback-*` 각 109개, `board-recommend-*` 104개 — 전부 각각 "board-smoke"/"chat-fallback"/"memo-fallback"/"board-vote" 같은 동일 닉네임을 공유). 나머지 38명 중에서도 34명이 `mobiletest_*`/`myinfo-repro-*`/`posts-repro-*`/`pwfix-*`/`pwretry-*`/`pwtest-*`/`smoke-traversal-admin`/`otheruser`(이번 세션 내 제 자신의 권한 테스트가 만든 계정) 등 명백한 테스트 산출물이었다 — 실제 회원은 `postnews`/`sysop`/`sysop76`/`stressuser1234567890` 단 4명뿐이었다. 이 상태에서 닉네임으로 회원을 찾는 검색(`memberRoutes.js` `search`)·가입 중복확인(`authRoutes.js`) 경로는 동일 닉네임 중 임의의 한 명만 맞히는 구조였다(예: "memo-smoke" 검색 시 109명 중 정확히 누구를 찾을지 예측 불가).
+
+사용자 승인 절차: 스키마/데이터 조치가 필요한 규모라 `AskUserQuestion`으로 먼저 확인 — "모두 다 해결해" 선택(보고만/테스트계정만 정리/코드 방어만 중 전부를 포함하는 선택).
+
+조치:
+1. **데이터 정리**: 위 분류 기준으로 스모크테스트 산출물 465명을 Supabase REST API를 통해 직접 일괄 삭제(50명씩 청크). 삭제 전 `posts.user_id`/`attachments.user_id`/`chat_rooms.owner_user_id` 등이 `members.user_id`를 참조하는 외래키가 아님(일반 TEXT 컬럼)을 스키마로 먼저 확인해, 게시글·첨부·대화방 등 다른 데이터에는 전혀 영향이 없음을 검증한 뒤 진행. 삭제 후 남은 4명 모두 닉네임 중복 없음을 재확인.
+2. **마이그레이션 작성**: `supabase/migrations/0021_members_unique_nickname_email.sql` 신규 — `nick_name`/`email`에 부분 유니크 인덱스(빈 문자열 제외, `WHERE ... <> ''`) 추가. **이 세션의 네트워크 정책상 Supabase Postgres에 raw SQL/DDL로 직접 접속이 불가능해(REST API만 프록시를 통과) 실제 라이브 DB에는 아직 적용되지 않았다** — 파일만 작성해 두었으며, 별도 배포 절차로 적용해야 한다는 점을 마이그레이션 파일 상단에 명시했다.
+3. **코드 레벨 방어**: 이미 `BaseRepository.js`의 `_throwError()`가 Postgres 유니크 위반(코드 `23505`)을 409 "중복된 데이터가 발견되었습니다" 오류로 우아하게 처리하는 방어 로직을 갖추고 있음을 확인(내가 작성한 게 아니라 기존에 이미 있던 방어) — 위 마이그레이션이 적용되면 이 경로가 자동으로 TOCTOU 경쟁조건의 최종 방어선 역할을 하므로, 추가 코드 수정은 불필요하다고 판단.
+
+검증: 정리 전후 Supabase 직접 조회로 회원 수(469→4)와 중복 닉네임 목록(7개 그룹→0개) 대조 확인. FK 부재 여부는 `0001_initial_schema.sql` 스키마 정의로 확인(`posts`/`attachments`/`chat_rooms` 등 어디에도 `members`를 참조하는 FK 없음). `npm run smoke:auth-bridge`, `node scripts/smoke-command-parity.js` 재통과(이번 라운드는 코드 변경이 마이그레이션 파일 추가뿐이라 관련 스모크만 확인).
+
+결과: ✅ 데이터 정리 완료, 마이그레이션 파일 작성 완료(배포 담당자가 별도 적용 필요), 기존 코드 방어 확인 완료. 스모크테스트들이 자체 생성한 계정을 정리하지 않는 관행이 장기간 누적되어 운영 DB를 오염시키고 있었다는 점도 별도 위생 문제로 확인됨(이번엔 회원 테이블만 정리; 게시글/대화방 등 다른 테이블의 유사한 누적은 범위 밖으로 남겨둠).
+
 ## [2026-07-27 13:39] [/loop PDS 전수조사 3차 — 사용자 요청 "오류날 것 같은 부분을 깊게 찾아"] 첨부파일이 게시판별 로컬 번호를 전역 PK로 착각해 저장되어, 무관한 다른 게시판 글이 지워지면 CASCADE로 함께 사라질 수 있던 구조적 결함 발견·수정
 
 **LOG_ID: 20260727_1339**
