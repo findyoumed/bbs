@@ -107,9 +107,9 @@ class MemoryBoardRepository {
       target.title = '[삭제된 글입니다]';
       target.content = '';
       target.updatedAt = new Date().toISOString();
-      return { board, post: clonePost(target) };
+      return { board, tombstoned: true, post: clonePost(target) };
     }
-    const [deleted] = this.posts.splice(idx, 1); return { board, post: clonePost(deleted) };
+    const [deleted] = this.posts.splice(idx, 1); return { board, tombstoned: false, post: clonePost(deleted) };
   }
 
   _getNavigation(bid, pid) {

@@ -162,6 +162,7 @@ async function deletePost(repo, boardId, postId, context = {}) {
     if (count > 0) {
       return {
         board,
+        tombstoned: true,
         post: await mutation.updateMappedPost(
           repo,
           post.boardId,
@@ -181,6 +182,12 @@ async function deletePost(repo, boardId, postId, context = {}) {
 
   return {
     board,
+    // [LOG_ID: 20260727_1425] tombstone 경로(위)는 글 행 자체가 살아있어(스레드 구조 보존 목적)
+    // attachments.post_id의 ON DELETE CASCADE가 전혀 발동하지 않는다 — 첨부파일이 "삭제된 글"
+    // 표시 아래에서도 계속 목록·다운로드가 가능하게 남는 모순이 있었다(실측 확인). 완전 삭제는
+    // CASCADE로 이미 자동 정리되므로 별도 표시가 필요 없다 — boardRoutes.js가 이 플래그로
+    // tombstone된 경우에만 첨부를 별도로 정리한다.
+    tombstoned: false,
     post
   };
 }

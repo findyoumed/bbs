@@ -212,7 +212,32 @@ class BoardRouter extends BaseRouter {
     const postId = Number(params.postId);
     if (isNaN(postId)) this.validationError('Invalid post ID');
     const context = await this.getContext();
-    return this.send(200, await this.deps.boardRepository.deletePost(boardId, postId, context));
+    const result = await this.deps.boardRepository.deletePost(boardId, postId, context);
+    // [LOG_ID: 20260727_1425] 완전 삭제는 attachments.post_id의 ON DELETE CASCADE로 이미 정리되지만
+    // (20260727_1339에서 FK를 올바른 전역 id로 고친 뒤부터), "원글에 답글이 남아있어 자리표시자로
+    // 바뀌는" tombstone 경로는 글 행 자체가 살아있어 CASCADE가 아예 발동하지 않는다 — 첨부파일이
+    // 화면엔 "[삭제된 글입니다]"로 보이는 글 아래에서도 계속 목록·다운로드가 가능하게 남는 모순이
+    // 있었다(실측 확인). 여기서 명시적으로 정리한다 — Memory 드라이버(FK/CASCADE 없음)의 완전
+    // 삭제 경로도 원래 정리되지 않았으므로 tombstone 여부와 무관하게 항상 시도한다(Supabase
+    // 완전 삭제는 이미 비어 있어 그냥 아무 일도 안 함).
+    await this.cleanupAttachmentsForDeletedPost(boardId, result?.post?.id);
+    return this.send(200, result);
+  }
+
+  async cleanupAttachmentsForDeletedPost(boardId, globalPostId) {
+    const attachmentRepository = this.deps.attachmentRepository;
+    if (!attachmentRepository || !globalPostId) {
+      return;
+    }
+    try {
+      const attachments = await attachmentRepository.list(boardId, globalPostId);
+      for (const attachment of attachments || []) {
+        await attachmentRepository.delete(boardId, globalPostId, attachment.id);
+      }
+    } catch (error) {
+      // 첨부 정리는 부가 작업이다 — 실패해도 글 삭제 자체는 이미 끝났으므로 삼키지 않고 로그만.
+      logger.warn('삭제된 글의 첨부 정리 실패', { component: 'BoardRouter', boardId, globalPostId, error: error.message });
+    }
   }
 
   async listAttachments(params) {

@@ -1,3 +1,16 @@
+## [2026-07-27 14:30] [/loop PDS 전수조사 4차 — DB 스키마/FK/ID 혼동 관점 심화] 자리표시자(tombstone)로 바뀐 "삭제된 글"의 첨부파일이 여전히 목록·다운로드 가능하게 남아있던 모순 발견·수정 (직전 FK 수정의 파생 검증)
+
+**LOG_ID: 20260727_1430**
+목표: 직전 라운드(20260727_1339)에서 고친 attachments.post_id FK 버그의 실제 효과를 검증 — CASCADE가 이제 제대로 동작하는지, 그리고 "원글에 답글이 남아있어 완전 삭제 대신 자리표시자로 바뀌는" tombstone 경로(20260722_0010)와의 상호작용에 사각지대가 없는지 확인.
+
+발견: 완전 삭제 경로는 기대대로 잘 동작함을 확인(첨부 업로드 → 글 삭제 → `attachments` 테이블에서 CASCADE로 자동 소거, 별도 첨부 삭제 호출 없이도 정리됨 — 직전 수정의 효과). 하지만 tombstone 경로(원글에 답글이 남아있을 때 완전 삭제 대신 제목/본문만 "[삭제된 글입니다]"로 바꾸는 경로)는 **글 행 자체가 살아있어 CASCADE가 전혀 발동하지 않는다** — 실측 재현: 첨부파일이 달린 원글에 답글을 단 뒤 원글을 삭제하면 화면엔 "[삭제된 글입니다]"로 표시되지만, 첨부목록(U) 명령으로 들어가면 여전히 파일이 목록에 뜨고 다운로드까지 그대로 된다. 사용자 입장에서 "삭제됨"이라는 신호와 실제로는 파일이 계속 받아지는 동작이 모순된다.
+
+수정: `SupabaseBoardRepositoryWriteOps.js`/`MemoryBoardRepository.js`의 `deletePost()`가 반환값에 `tombstoned: true/false`를 추가(정보성 — 실제 정리 판단에는 사용하지 않음). `boardRoutes.js`의 `deletePost` 핸들러가 삭제 성공 후 항상(완전 삭제·tombstone 구분 없이) 해당 글의 첨부 목록을 조회해 전부 정리하도록 `cleanupAttachmentsForDeletedPost()`를 추가 — Supabase 완전 삭제는 이미 CASCADE로 비어 있어 그냥 아무 일도 안 하고, tombstone은 여기서 비로소 정리되며, FK/CASCADE가 없는 Memory 드라이버의 완전 삭제 경로(원래도 정리가 안 되던 별개의 사각지대)도 이 참에 함께 커버된다. 정리 실패는 부가 작업으로 취급해 글 삭제 자체를 막지 않고 로그만 남긴다.
+
+검증: 실제 Supabase로 재현 — 첨부 있는 글에 답글을 달아 tombstone 유도 → 삭제 후 첨부목록 조회가 빈 배열을 반환함을 확인(수정 전엔 그대로 남아 있었음). 완전 삭제 경로도 재확인(첨부 업로드 → 삭제 → CASCADE로 자동 정리, 회귀 없음). 테스트로 만든 글/답글/첨부는 모두 정리. `npm run smoke:boards`(Memory 드라이버 회귀 없음), `smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 버그 수정 완료 — 직전 FK 근본 수정이 실제로 CASCADE를 되살렸음을 확인한 성과이자, 그 CASCADE가 커버하지 못하는 tombstone 사각지대까지 마저 메운 후속 조치.
+
 ## [2026-07-27 14:10] [/loop 채팅 전수조사 3차 — DB 스키마/FK/ID 혼동 관점] 대화방 참여자 인증 기록(chat_room_members)이 애초에 UUID가 아닌 앱 자체 ID를 써서 한 번도 저장된 적 없던 죽은 경로 발견·수정
 
 **LOG_ID: 20260727_1410**
