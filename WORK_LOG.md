@@ -1,3 +1,16 @@
+## [2026-07-27 06:15] [사용자 직접 제보] 게시판 목록 삭제 확인 프롬프트의 "(Y/N)"이 클릭·호버 불가 — post-view의 기존 해법을 post-list에도 적용
+
+**LOG_ID: 20260727_0615**
+목표: 사용자 제보 — "//*[@id="cmd-prompt-renderer"] 정말 삭제하시겠습니까? (Y/N) [Y]: Y N Y 이거 왜 마우스클릭과 호버링이 안돼. 되어야 하는데" (게시판 목록에서 D로 삭제 시도 시 뜨는 확인 프롬프트).
+
+발견: 사용자가 지목한 `#cmd-prompt-renderer`는 `<input readonly>`라 태생적으로 안에 클릭 가능한 HTML을 담을 수 없다 — 즉 그 안의 "(Y/N)" 텍스트는 구조적으로 절대 클릭될 수 없다. 코드베이스를 조사해보니 이 정확히 같은 문제가 **이미 한 번 해결된 적이 있었다**: 글보기(post-view) 화면의 삭제 확인은 20260724_2140에 같은 사용자 지적("거기도 y n 두 글자는 클릭과 호버링 가능합니다")으로 수정되어, 평소 스크린리더 전용으로 숨겨진 `<label id="cmd-prompt">`를 노출하고 그 안에 진짜 `.cmd-token` 요소(전역 캡처 단계 클릭 핸들러 appEvents.js가 `data-cmd` 속성으로 인식)를 심는 방식으로 해결했다. 그런데 게시판 **목록**(post-list) 화면의 삭제 확인(`commandRouterBrowse.js`의 `beginDeleteConfirm`)에는 이 패턴이 적용되지 않은 채 남아 있었다 — 같은 기능이 두 화면에 따로 구현되면서 한쪽만 수정되고 다른 쪽은 누락된 경우.
+
+수정: `commandRouterBrowse.js`에 `decorateDeleteConfirmPromptLabel()`/`clearDeleteConfirmPromptLabel()`을 post-view와 동일한 방식으로 추가하고, `beginDeleteConfirm()`에서 decorate를, Y/N 확정 시점(두 곳) clear를 호출한다. 기존 CSS 선택자(`postview-delete-confirm-prompt-label`)가 이미 특정 화면에 국한되지 않은 범용 클래스 기반 규칙이라 이름 그대로 재사용해도 안전하다.
+
+검증: 이 장식 메커니즘 자체(라벨 노출/렌더러 숨김/호버 툴팁/클릭 시 전역 캡처 핸들러 무오류 동작)를 실제 브라우저에서 재현·확인 — 장식 적용 전후 `#cmd-prompt`/`#cmd-prompt-renderer`의 `display`/`position` 전환, `Y` 토큰의 `cursor:pointer`와 실제 hit box, hover 시 툴팁("예(Y)") 노출, 클릭 시 콘솔 에러 없음을 모두 확인 — post-view에서 이미 실사용자 검증을 거친 것과 동일한 코드다. (참고: 로컬 폴백 환경의 클라이언트 로그인이 Supabase 직접 호출을 시도해 실패해— 실제 D 명령 전체 흐름을 로그인 상태로 엔드투엔드 재현하지는 못했지만, 이 픽스가 건드리는 범위는 순수히 "언제 장식 함수를 부르고 지우는가"뿐이고 그 장식 함수 자체의 동작은 완전히 검증됐다.) `npm run smoke:boards`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 버그 수정 완료.
+
 ## [2026-07-27 05:50] [사용자 직접 제보] 게시글 본문(/notice/1 등 post-view) 데스크톱 마우스 휠 스크롤 — 24줄 이론상 최대치 사용으로 인한 10px 오버플로 수정
 
 **LOG_ID: 20260727_0550**

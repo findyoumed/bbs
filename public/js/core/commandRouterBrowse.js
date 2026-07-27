@@ -60,6 +60,44 @@ export function createBrowseCommandHandler(deps) {
     return state.user.isAdmin || state.user.userId === (post.authorUserId || post.userId);
   }
 
+  // [LOG_ID: 20260727_0630] 사용자 제보 — "Y N 이거 왜 마우스클릭과 호버링이 안돼" (게시판
+  // 목록에서 D로 삭제할 때 프롬프트 줄의 "(Y/N)"). commandRouterPostView.js가 글보기(post-view)
+  // 화면 삭제 확인에서 이미 같은 문제를 해결한 선례가 있는데(20260724_2140,
+  // decoratePostDeleteConfirmPromptLabel — #cmd-prompt-renderer는 readonly input이라 태생적으로
+  // 클릭 불가, 대신 숨겨진 <label id="cmd-prompt">를 노출하고 그 안에 진짜 클릭 가능한
+  // .cmd-token 요소를 넣는다), 목록 화면(post-list)의 삭제 확인은 이 패턴이 적용되지 않은 채
+  // 남아 있었다. 같은 패턴을 그대로 재사용한다.
+  function decorateDeleteConfirmPromptLabel() {
+    const promptLabel = document.getElementById('cmd-prompt');
+    if (!promptLabel) return;
+
+    promptLabel.classList.add('postview-delete-confirm-prompt-label');
+    promptLabel.textContent = '';
+    promptLabel.append(document.createTextNode(`${UI_TEXT.POST_DELETE_CONFIRM} (`));
+
+    const yesChoice = document.createElement('span');
+    yesChoice.className = 'cmd-token cmd-clickable';
+    yesChoice.dataset.cmd = 'Y';
+    yesChoice.dataset.tip = '예(Y)';
+    yesChoice.textContent = 'Y';
+    promptLabel.append(yesChoice);
+
+    promptLabel.append(document.createTextNode('/'));
+
+    const noChoice = document.createElement('span');
+    noChoice.className = 'cmd-token cmd-clickable';
+    noChoice.dataset.cmd = 'N';
+    noChoice.dataset.tip = '아니오(N)';
+    noChoice.textContent = 'N';
+    promptLabel.append(noChoice);
+
+    promptLabel.append(document.createTextNode(') [Y]:'));
+  }
+
+  function clearDeleteConfirmPromptLabel() {
+    document.getElementById('cmd-prompt')?.classList.remove('postview-delete-confirm-prompt-label');
+  }
+
   function beginDeleteConfirm(post) {
     state._deleteConfirmStage = {
       boardId: state.board?.id,
@@ -73,6 +111,7 @@ export function createBrowseCommandHandler(deps) {
     };
     setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
     setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [Y]:`);
+    decorateDeleteConfirmPromptLabel();
   }
 
   async function restoreDeleteConfirmList(deleteStage) {
@@ -203,6 +242,7 @@ export function createBrowseCommandHandler(deps) {
 
         if (!textInput || normalizedInput === 'Y' || normalizedInput === 'YES') {
           state._deleteConfirmStage = null;
+          clearDeleteConfirmPromptLabel();
           if (typeof deletePost !== 'function') {
             setHint(`${UI_TEXT.ERROR}: deletePost handler is not available.`);
             setPrompt('>>');
@@ -221,6 +261,7 @@ export function createBrowseCommandHandler(deps) {
 
         if (normalizedInput === 'N' || normalizedInput === 'NO') {
           state._deleteConfirmStage = null;
+          clearDeleteConfirmPromptLabel();
           await restoreDeleteConfirmList(deleteStage);
           return true;
         }
