@@ -60,7 +60,11 @@ class SupabaseChatRoomRepository extends BaseRepository {
         // 단계에서 조용히 60자로 잘렸다(실측: 90자 제목 → 검증 통과 → 저장은 60자, 안내 없음).
         room_no: nextNo, room_key: roomKeyForNo(nextNo), name: title.slice(0, 100), description: greeting.slice(0, 120),
         owner_user_id: normalizeText(context.userId, 'guest'), owner_name: normalizeText(context.nickName, '손님'),
-        creator_id: maybeUuid(context.userId), max_user: normalizeMaxUser(payload.maxUser, 10), password, is_private: isPrivate, is_locked: false, last_activity_at: new Date().toISOString()
+        // [LOG_ID: 20260727_1441] 20260727_1401(chat_room_members)과 동일한 혼동 — creator_id는
+        // auth.users(id)를 참조하는 UUID 컬럼인데 context.userId(앱 자체 텍스트 ID)를 넘겨왔다.
+        // maybeUuid()가 항상 걸러내 이 컬럼은 지금까지 모든 방에서 늘 null이었다(어디서도 읽지
+        // 않는 필드라 관측 가능한 영향은 없었음 — grep 확인). 진짜 Auth UUID로 바로잡는다.
+        creator_id: maybeUuid(context.authUserId), max_user: normalizeMaxUser(payload.maxUser, 10), password, is_private: isPrivate, is_locked: false, last_activity_at: new Date().toISOString()
       }).select(this.queries._selectColumns()).single();
       if (!error) return this._toPublicRoom(data);
       if (!this._isConflict(error)) throw createHttpError(502, `생성 실패: ${error.message}`);

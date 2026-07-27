@@ -1,3 +1,16 @@
+## [2026-07-27 14:45] [/loop 채팅 전수조사 4차 — DB 스키마/FK/ID 혼동 관점 심화] 대화방 개설자 UUID(creator_id)도 chat_room_members와 동일한 혼동으로 항상 null이었던 것 발견·수정
+
+**LOG_ID: 20260727_1445**
+목표: 직전 라운드(20260727_1401)에서 찾은 "context.userId(앱 텍스트 ID)를 Auth UUID 자리에 잘못 쓰는" 패턴이 코드베이스 다른 곳에도 더 있는지 전수 grep.
+
+발견: `maybeUuid(context....)` 패턴을 전체 서버 코드에서 검색한 결과, `ChatRoomRepositorySupabase.js`의 `create()`가 대화방 생성 시 `creator_id: maybeUuid(context.userId)`로 저장하고 있었다 — `chat_rooms.creator_id`도 `auth.users(id)`를 참조하는 UUID 컬럼이라 정확히 동일한 버그였다. `context.userId`가 항상 앱 자체 텍스트 ID라 `maybeUuid()`가 항상 걸러내, 지금까지 개설된 모든 대화방의 `creator_id`가 늘 `null`이었다. 다행히 `creator_id`는 `_toPublicRoom`/`publicRoom` 어디에도 노출되지 않고 서버 코드 전체에서 이 한 곳(쓰기)을 빼면 한 번도 읽히지 않는 완전히 죽은 필드였다(grep으로 확인) — `chat_room_members`(20260727_1401)보다도 더 철저히 미사용. 같은 grep으로 다른 곳엔 이 패턴이 더 없음을 확인(나머지 `maybeUuid()` 호출은 전부 이미 `authUserId`류 값에 정확히 쓰이고 있었음).
+
+수정: `creator_id: maybeUuid(context.userId)` → `creator_id: maybeUuid(context.authUserId)`.
+
+검증: dev-header 경로(이 세션에서 유일하게 가능한 테스트 경로 — context.authUserId가 애초에 비어 있음)로 방을 개설해 여전히 정상 동작함을 확인(회귀 없음, `creator_id`는 여전히 null — 실제 Auth 로그인이 없으니 당연한 결과). 이어서 Supabase에 직접 접속해 실제 Auth UUID(sysop 계정의 진짜 `auth_user_id`)로 `creator_id`를 갱신해봐도 FK 위반 없이 정상 저장됨을 확인해, 수정된 코드가 실제 로그인 사용자에 대해 올바르게 동작할 것임을 검증했다(직전 라운드와 동일한 검증 방식 — 실제 브라우저 로그인 흐름 자체는 이 세션 네트워크 정책상 재현 불가). 테스트로 만든 방은 정리. `npm run smoke:chat-rooms`, `smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 버그 수정 완료. 관측 가능한 사용자 영향은 없었지만(완전 미사용 필드), "선언된 스키마와 실제 코드가 쓰는 값이 다른" 이번 세션의 핵심 버그 클래스를 한 곳 더 제거했다.
+
 ## [2026-07-27 14:30] [/loop PDS 전수조사 4차 — DB 스키마/FK/ID 혼동 관점 심화] 자리표시자(tombstone)로 바뀐 "삭제된 글"의 첨부파일이 여전히 목록·다운로드 가능하게 남아있던 모순 발견·수정 (직전 FK 수정의 파생 검증)
 
 **LOG_ID: 20260727_1430**
