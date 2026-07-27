@@ -1,3 +1,16 @@
+## [2026-07-27 14:58] [/loop 댓글/답글 전수조사 5차 — DB 스키마/FK/ID 혼동 관점 심화] ID검색(LI)이 실제로는 항상 닉네임으로만 비교되고 있어 정확한 작성자 ID로 검색해도 못 찾던 버그 발견·수정
+
+**LOG_ID: 20260727_1458**
+목표: 채팅에서 두 차례 찾은 "context.userId(앱 텍스트 ID)를 auth.users UUID 자리에 잘못 쓰는" 패턴을 게시판/게시글 쪽에도 있는지 확인 — `posts.author_id UUID NULL REFERENCES auth.users(id)`도 동일 위험군이라 집중 조사.
+
+발견: `SupabaseBoardRepositoryMutation.js`의 저장 경로 자체는 이미 안전했다(`author_id`는 `isUuid()`로 게이트돼 거의 항상 NULL로 남을 뿐, `user_id`는 항상 정상 기록됨 — 크래시나 데이터 손상 없음). 하지만 스키마 능력 탐지(`SupabaseBoardRepositorySchema.js` `buildCapabilities`)가 **"userId 컬럼이 무엇인가"를 판단할 때 `author_id`(존재하지만 항상 비어있음)를 `user_id`(항상 채워짐)보다 먼저 확인**하고 있었다 — 이 라이브 스키마는 두 컬럼이 공존해서(`0011_posts_runtime_alignment.sql`), `capabilities.userId`가 사실상 언제나 `'author_id'`로 잘못 고정됐다. 이 값을 쓰는 검색 헬퍼(`SupabaseBoardRepositoryQueryHelpers.js`)는 `userIdField === 'author_id'`일 때 "UUID 컬럼은 텍스트로 못 찾으니" ID검색(LI)을 **조용히 닉네임 전용 검색으로 대체**하는 이미 있던 방어 분기를 타 왔다 — 즉 사용자가 정확한 작성자 ID(예: `sysop`)로 검색해도 항상 매칭이 안 됐다. 실제 서버로 재현: `LI sysop`(진짜 작성자 ID) → 0건, `LI 시샵`(그 사람의 닉네임) → 1건 정상 매칭 — ID검색이라는 기능명과 정반대로 동작하고 있었다.
+
+수정: `buildCapabilities()`의 `userId`/`nickName` 우선순위를 `mapPostRow()`가 이미 쓰는 순서(`user_id`/`nick_name` 우선, `author_id`/`author_nickname`은 폴백)와 일치하도록 뒤집었다.
+
+검증: 실제 Supabase로 재현 — 수정 전 `li=sysop`→0건/`li=시샵`→1건(대칭 확인), 서버 재시작(스키마 능력 캐시 초기화) 후 수정된 코드로 재검사 → `li=sysop`→1건(정상 매칭, ID검색이 실제로 ID를 보게 됨), `li=시샵`도 여전히 1건(LI는 원래 userId OR 닉네임 조합 검색이라 둘 다 매칭되는 게 맞는 동작 — 회귀 아님). `npm run smoke:boards`(Memory 드라이버는 이 탐지 로직 자체를 안 써서 무영향), `smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 버그 수정 완료. 이번엔 앞의 두 채팅 사례(죽은 필드)와 달리 실제 사용자가 매일 쓸 수 있는 검색 기능이 조용히 고장나 있던, 이번 세션 DB 스키마/ID 혼동 버그 클래스 중 체감 영향이 가장 큰 사례였다.
+
 ## [2026-07-27 14:45] [/loop 채팅 전수조사 4차 — DB 스키마/FK/ID 혼동 관점 심화] 대화방 개설자 UUID(creator_id)도 chat_room_members와 동일한 혼동으로 항상 null이었던 것 발견·수정
 
 **LOG_ID: 20260727_1445**
