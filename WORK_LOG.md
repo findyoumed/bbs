@@ -1,3 +1,18 @@
+## [2026-07-27 06:38] [사용자 직접 제보] 글쓰기 박스 에디터에서 Tab으로 cmd-input에 포커스를 옮기면 S/P 입력이 완전히 무시됨 — doSave/cancel 연결 복구
+
+**LOG_ID: 20260727_0638**
+목표: 사용자 제보 — "https://01410.vercel.app/notice/write //*[@id="cmd-input"] 이 부분에 입력해도 왜 동작 안하지" → 후속 확인: "글쓰기 박스 에디터(제목/본문 입력창)가 자동으로 뜨고 포커스도 자동으로 그쪽으로 가는데, 다만 포커스를 이동해서 cmd-input에 입력해도 입력 동작 안한다".
+
+조사: 실제 프로덕션(Vercel)은 외부 Supabase 인증을 쓰는데 이 세션의 네트워크 프록시로는 Playwright가 그 외부 호출에 접근하지 못해(연결 재설정) 로그인 자체를 재현할 수 없었다. 대신 `public/js/app.js`에 `window.__debugState = state`를 임시로 추가해(테스트 후 되돌림, 커밋에는 포함 안 됨) `state.user`를 관리자로 직접 주입하고 실제 앱 코드 경로를 그대로 브라우저에서 재현했다.
+
+원인: `postWriteView.js`의 박스 에디터(`renderBbsEditor`, 헤더 옵션이 없는 게시판은 진입 즉시 이 단계로 들어간다)는 "선택 >>" 프롬프트 줄(`#cmd-input`)을 Tab으로 이동 가능하게 **의도적으로 유지**하면서(주석 20260725_1212: "탭키로 제목→본문→선택>> 이동이 가능하므로 숨기면 내비게이션이 불가능해짐"), 정작 그 칸에 제출된 내용은 `handlePostWriteLine`의 `stage === 'bbs-form'` 분기가 **무조건 전부 무시**하도록 되어 있었다(20260725_1745에 `handleWriteSubmit`을 직접 불러 title/body 동기화 없이 저장하는 버그를 막으려고 통째로 비활성화한 임시조치). 동시에 화면 하단 명령 힌트바는 여전히 `postWrite: ['P:취소','S:저장','H']`를 그대로 광고하고 있어(클릭 가능한 토큰까지 노출) — Tab으로 갈 수 있고 힌트에도 뜨는데 실제로는 아무 것도 안 되는, 사용자 입장에서는 "입력이 안 먹는다"로만 보이는 상태였다.
+
+수정: `renderBbsEditor()`에서 클로저 내부의 실제 저장 함수(`doSave`, titleEl/bodyEl 값을 editor에 동기화한 뒤 저장 — 20260725_1745가 우회하려던 바로 그 함수)와 취소 로직(`cleanup(); onCancel();`)을 `editor._doSave`/`editor._doCancel`로 노출하고, `handlePostWriteLine`의 `bbs-form` 분기에서 기존 `isSaveWriteCommand`/`isCancelWriteCommand`(S·/s·"." / P·M·B·"/q") 판정을 재사용해 이 두 함수를 호출하도록 복구했다. `doSave`를 그대로 재사용하므로 20260725_1745가 막았던 "동기화 누락" 회귀는 재발하지 않는다.
+
+검증: 위 디버그 훅으로 관리자 세션을 흉내내 실제 브라우저에서 W→제목/본문 입력→Tab(본문→cmd-input, 포커스 실제 이동 확인)→"S"+Enter 흐름을 재현. **수정 전**: API 호출 자체가 발생하지 않고 힌트도 그대로("취소(P),저장(S),도움말(H),") — 사용자가 보고한 증상과 정확히 일치. **수정 후**: 동일 조작이 실제로 `POST /api/boards/notice/posts`를 발생시킴(이 로컬 환경은 진짜 로그인 토큰이 없어 서버가 401 상당의 네트워크 오류로 거부하지만, 이는 테스트 하네스의 인증 한계이지 클라이언트 로직 결함이 아님 — 클라이언트가 doSave를 올바르게 호출하는 것 자체가 핵심 검증 포인트). 디버그 훅(`window.__debugState`)은 `git checkout`으로 완전히 되돌려 커밋에 포함되지 않음을 확인. `npm run smoke:boards`, `smoke:command-parity`, `smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 버그 수정 완료.
+
 ## [2026-07-27 06:15] [사용자 직접 제보] 게시판 목록 삭제 확인 프롬프트의 "(Y/N)"이 클릭·호버 불가 — post-view의 기존 해법을 post-list에도 적용
 
 **LOG_ID: 20260727_0615**

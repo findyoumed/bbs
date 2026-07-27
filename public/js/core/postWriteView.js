@@ -390,6 +390,12 @@ export function createPostWriteView(deps) {
       cmdInput.addEventListener('keydown', onCmdKey);
     }
     editor._textareaCleanup = cleanup;
+    // [LOG_ID: 20260727_0645] handlePostWriteLine의 'bbs-form' 분기가 cmd-input을 통해 실행할 수
+    // 있도록 실제 저장/취소 로직을 editor에 노출한다 — doSave()는 titleEl/bodyEl의 현재 값을
+    // editor.title/bodyLines로 동기화한 뒤 저장하므로, 이 클로저 안의 doSave를 그대로 재사용해야
+    // 값 동기화 없이 빈 내용을 저장하는 사고를 막을 수 있다.
+    editor._doSave = doSave;
+    editor._doCancel = () => { cleanup(); onCancel(); };
 
     // [LOG_ID: 20260725_1007] 신규 작성/수정 상관없이 글쓰기 에디터 진입 시 첫 포커스는 제목(titleEl)에 위치
     // [LOG_ID: 20260725_1212] hidePromptRow() 호출 제거 — 선택>> 항상 노출 유지
@@ -630,8 +636,20 @@ export function createPostWriteView(deps) {
       // 여전히 비어 있는 옛 값이라 "제목을 입력하십시오."가 떴다(사용자 보고: "제목입력했는데
       // 입력하라고 나오네"). 박스 에디터(stage: 'bbs-form')는 저장·취소 모두 titleEl/bodyEl에
       // 직접 물린 keydown 핸들러(Ctrl+S, Esc, 마지막 줄 ".")로만 하게 되어 있으므로, 이 raw
-      // 줄 단위 경로 자체를 이 단계에서는 통째로 비활성화한다 — 저장이든 취소든 무엇이든 무시.
+      // 줄 단위 경로 자체를 이 단계에서는 원칙적으로 비활성화한다 — 단, 힌트바(P:취소/S:저장)와
+      // Tab 이동(본문→cmd-input)이 여전히 이 입력창에 도달 가능하다고 광고·허용하는 이상, S/P/M/B
+      // 만큼은 실제로 동작해야 한다(그렇지 않으면 클릭 가능한 힌트 토큰과 Tab 이동 자체가 눈속임이
+      // 된다 — 사용자 보고: "포커스를 이동해서 cmd-input에 입력해도 입력 동작 안한다"). doSave 경로
+      // 재사용으로 위 20260725_1745가 막았던 동기화 누락 버그도 재발하지 않는다.
       if (activeEditor.stage === 'bbs-form') {
+        if (isSaveWriteCommand(line)) {
+          activeEditor._doSave?.();
+          return true;
+        }
+        if (isCancelWriteCommand(line)) {
+          activeEditor._doCancel?.();
+          return true;
+        }
         return true;
       }
 
