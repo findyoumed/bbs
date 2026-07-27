@@ -33,6 +33,28 @@ export function createBrowseCommandHandler(deps) {
     showPtResult
   } = deps;
 
+  // [LOG_ID: 20260727_1515] LS/LD/KW 세 명령이 전부 board를 "pageSize=9999로 한 번에 통째로"
+  // 훑어왔다 — Supabase/PostgREST는 프로젝트 설정(db-max-rows)에 따라 응답 행 수를 조용히
+  // 잘라낼 수 있어(기본값 무제한이지만 배포마다 다름), 글이 그 상한을 넘는 게시판에서는 상한
+  // 너머의 글을 "해당 번호의 글이 존재하지 않습니다"로 잘못 안내하는 잠재적 결함이었다(현재
+  // 이 세션의 실제 데이터는 상한보다 훨씬 적어 재현되진 않지만, 상한 자체를 가정하지 않는
+  // 페이지 단위 순회로 바꾸는 편이 어떤 설정에서도 안전하다). page/pageSize 기반으로 실제
+  // 응답의 pageCount만큼 순회해 전체 글을 모은다.
+  async function fetchAllBoardPosts(boardId) {
+    const pageSize = 200;
+    const all = [];
+    let page = 1;
+    let pageCount = 1;
+    do {
+      const res = await apiFetch(`/api/boards/${boardId}?page=${page}&pageSize=${pageSize}`);
+      const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
+      all.push(...posts);
+      pageCount = Array.isArray(res) ? 1 : Number(res?.pagination?.pageCount || 1);
+      page += 1;
+    } while (page <= pageCount);
+    return all;
+  }
+
   function resolveVisiblePostTarget(rawValue) {
     const value = String(rawValue || '').trim();
     if (!value) {
@@ -486,9 +508,8 @@ export function createBrowseCommandHandler(deps) {
       if (lsMatch) {
         const targetPostId = Number(lsMatch[1]);
         setHint('번호 위치를 스캔 중입니다..');
-        apiFetch(`/api/boards/${state.board.id}?page=1&pageSize=9999`)
-          .then((res) => {
-            const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
+        fetchAllBoardPosts(state.board.id)
+          .then((posts) => {
             const idx = posts.findIndex((p) => Number(p.localId ?? p.id) === targetPostId);
             if (idx >= 0) {
               const targetPage = Math.floor(idx / 15) + 1;
@@ -521,9 +542,8 @@ export function createBrowseCommandHandler(deps) {
         }
 
         setHint('날짜 위치를 스캔 중입니다..');
-        apiFetch(`/api/boards/${state.board.id}?page=1&pageSize=9999`)
-          .then((res) => {
-            const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
+        fetchAllBoardPosts(state.board.id)
+          .then((posts) => {
             const currentYear = new Date().getFullYear();
             const targetDate = new Date(currentYear, targetMonth - 1, targetDay, 23, 59, 59);
 
@@ -575,9 +595,8 @@ export function createBrowseCommandHandler(deps) {
       // [LOG_ID: 20260713_1020] KW 주제어(말머리) 집계 목록 명령어 추가
       if (cmd === 'KW') {
         setHint('주제어를 수집 중입니다..');
-        apiFetch(`/api/boards/${state.board.id}?page=1&pageSize=9999`)
-          .then((res) => {
-            const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
+        fetchAllBoardPosts(state.board.id)
+          .then((posts) => {
             const keywordsSet = new Set();
             posts.forEach((p) => {
               const m = String(p.title || '').match(/\[([^\]]+)\]/);
