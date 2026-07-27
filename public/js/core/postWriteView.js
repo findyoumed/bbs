@@ -238,7 +238,15 @@ export function createPostWriteView(deps) {
     if (!titleEl || !bodyEl) return;
 
     // 값 할당
-    titleEl.value = editor.title || '';
+    // [LOG_ID: 20260727_1145] 위 titleMaxLength(maxlength 속성)는 사용자가 직접 타이핑할 때만
+    // 막아준다 — 답글(reply) 모드는 "Re: " + 원글 제목을 여기서 .value로 그대로 밀어넣는데,
+    // 원글 제목이 이미 60자에 가까우면 "Re: " 4자가 더해져 60자를 넘는다. .value 대입은
+    // maxlength의 영향을 받지 않으므로(브라우저가 사용자 타이핑만 제한) 그 초과분이 화면엔
+    // 그대로 보이다가 저장 시 서버가 다시 말없이 잘라냈다(실측 재현: 60자 원글에 답글 →
+    // 저장된 답글 제목이 64자가 아니라 60자로 조용히 잘림 — 위 20260727_1127과 같은 버그
+    // 클래스가 다른 경로로 재발). 대입 시점에 직접 잘라 입력창에 보이는 값과 실제 저장될
+    // 값이 항상 일치하게 한다.
+    titleEl.value = String(editor.title || '').slice(0, titleMaxLength);
     bodyEl.value  = editor.bodyLines.join('\n');
     if (keywordEl) keywordEl.value = (editor.keywords || []).join(' ');
 
