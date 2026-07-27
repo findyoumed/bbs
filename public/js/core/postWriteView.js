@@ -205,11 +205,18 @@ export function createPostWriteView(deps) {
   </div>`
       : '';
 
+    // [LOG_ID: 20260727_1125] 서버(BoardRepositoryShared.js MAX_TITLE_LENGTH=60)가 제목을 60자로
+    // 자르는데 이 입력창엔 그 제한이 전혀 없었다 — 60자를 넘겨 저장해도 아무 경고 없이 뒷부분이
+    // 조용히 잘려나갔다(실측: 84자 입력 → 정확히 60자로 잘려 저장, 힌트에 어떤 안내도 없음).
+    // 머리말이 있는 게시판은 저장 시 "[머리말] " 접두어가 이 필드 뒤에(정확히는 앞에) 더 붙으므로,
+    // 그만큼 여유를 뺀 값을 한도로 준다 — 안 그러면 머리말 접두어 때문에 총 길이가 60을 넘어
+    // 같은 문제가 재발한다.
+    const titleMaxLength = Math.max(1, 60 - (editor.selectedHeader ? editor.selectedHeader.length + 3 : 0));
     const bodyHtml = `
 <div style="display:flex;flex-direction:column;height:100%;overflow-y:auto;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
   <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
     <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">제 목 :&nbsp;</span>
-    <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" style="${inputStyle}"/>
+    <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" maxlength="${titleMaxLength}" style="${inputStyle}"/>
   </div>
   ${keywordRow}
   <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
