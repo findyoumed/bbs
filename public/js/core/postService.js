@@ -130,6 +130,17 @@ export function createPostService(deps) {
     return Array.isArray(result) ? result : [];
   }
 
+  // [LOG_ID: 20260727_1225] 서버(POST /attachments)는 이미 구현돼 있었지만 이를 호출하는
+  // 클라이언트 코드가 전혀 없어(PDS 게시판의 "UP(올리기)" 명령조차 글만 쓰고 파일은 절대
+  // 붙이지 못했다) 첨부파일 업로드 자체가 통째로 불가능했다 — 다운로드/목록 조회만 되던
+  // 반쪽짜리 기능이었다(사용자 요청 "PDS 업로드/다운로드 전수조사"로 발견).
+  async function uploadAttachment(boardId, postId, payload) {
+    return apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/attachments`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
   function pickAttachmentDownloadName(fileName, contentDisposition) {
     const preferredName = String(fileName || '').trim();
     if (preferredName) {
@@ -194,16 +205,17 @@ export function createPostService(deps) {
     postCache.clear();
   }
 
-  return { 
-    createPost, 
-    deletePost, 
+  return {
+    createPost,
+    deletePost,
     downloadAttachment,
-    loadPost, 
+    loadPost,
     loadAttachments,
-    loadPosts, 
-    recommendPost, 
-    replyPost, 
+    loadPosts,
+    recommendPost,
+    replyPost,
     updatePost,
+    uploadAttachment,
     clearCache,
     invalidateListCache
   };

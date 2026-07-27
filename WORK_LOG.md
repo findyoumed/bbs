@@ -1,3 +1,25 @@
+## [2026-07-27 12:33] [/loop PDS 전수조사 2차] PDS 파일 업로드 기능 자체가 클라이언트에 없던 구멍 발견·구현 (사용자 승인 후)
+
+**LOG_ID: 20260727_1233**
+목표: 댓글/답글·PDS·회원정보수정·채팅 순환 조사, 1차 순환 완료 후 댓글/답글 2차 점검(중첩 답글 생성/수정, 5라운드 연속 무버그 확인) → 사용자 확인 후 계속 → 이번 라운드는 PDS 업로드/다운로드 2차 점검.
+
+발견: 서버는 `POST /api/boards/:boardId/posts/:postId/attachments`(`AttachmentRepositorySupabase.js` `_add`)가 완전히 구현돼 있고 다운로드·목록 조회도 정상 동작하는데, **이를 호출하는 클라이언트 코드가 어디에도 없었다** — `postService.js`엔 `loadAttachments`/`downloadAttachment`만 있고 `uploadAttachment` 자체가 없었으며, `public/js` 전체에 `<input type="file">`이 단 하나도 없었다. PDS 게시판 목록의 "올리기(UP)" 명령(`commandRouterBrowse.js`)조차 실제로는 `showPostWrite('create')`만 호출해 텍스트 글만 쓸 뿐, 파일은 절대 붙지 않는 이름만 그럴듯한 명령이었다. 이전 라운드에서 찾은 "첨부파일 개별 삭제 버튼 없음"(기능 격차로 보류)은 사실 이 더 큰 구멍의 일부였다.
+
+부수 발견: 첨부 업로드 UI를 실측 검증하던 중, 서버 공통 JSON 본문 파서(`httpUtils.js` `readJsonBody`)의 전역 상한이 1MB로 고정돼 있는데 첨부파일은 이 본문 안에 base64로 실려(원본 대비 ~33% 팽창) 온다는 걸 발견 — 원본 1MB(첨부 자체의 상한, `AttachmentRepositoryShared.js`)에 가까운 파일은 본문이 ~1.4MB가 되어 첨부의 구체적 안내("1024KB 이하만 업로드할 수 있습니다")보다 먼저, 실효 한도 ~750KB에서 알아보기 힘든 일반 "Request body too large" 오류로 막혔을 것이다(실측: 900KB 파일 → 구버전 상한이면 413, 새 상한에선 201 성공; 1050KB 파일 → 이제는 첨부 자체의 구체적 1024KB 안내로 정확히 거부됨을 확인).
+
+사용자 승인 절차: 업로드 UI 구현은 기존 버그 수정보다 범위가 커(파일 선택/base64 인코딩/크기 검사 등) `AskUserQuestion`으로 먼저 확인 — "지금 논의" 선택 후 두 가지 요구사항 확정: ① 업로드 트리거는 글보기 화면(U, 첨부파일목록)에서 별도 명령으로 ② 한 글에 여러 파일 첨부 허용.
+
+수정:
+1. `postService.js`: `uploadAttachment(boardId, postId, payload)` 추가(기존 `createPost`/`replyPost`와 동일한 `apiFetch` 패턴).
+2. `appFactoryHandlers.js`: `handlePostViewCommand` 의존성에 `uploadAttachment: services.postService.uploadAttachment` 연결.
+3. `commandRouterPostView.js`: 첨부파일목록 화면(`attachment-list`)에 `UP`/`UL`/`UPLOAD` 명령 추가 — 서버(`ensureAttachmentWritable`)와 동일하게 글쓴이·운영자만 허용(게스트는 로그인 안내), 숨은 `<input type="file" multiple>`로 네이티브 파일 선택창을 띄우고(취소 시 `window` 포커스 복귀로 정리), 선택된 파일마다 클라이언트 측 1MB 사전 검사 후 base64로 읽어 순차 업로드, 완료 후 목록 새로고침 + 성공/실패 건수 안내.
+4. `commandFooterText.js`: `attachmentList` 하단 도움말에 `UP:파일첨부` 추가.
+5. `httpUtils.js`: `readJsonBody`의 전역 본문 상한을 1MB → 2MB로 상향(첨부 base64 팽창 + JSON 오버헤드를 감안해 첨부 자체 상한 1MB보다 넉넉히 위로).
+
+검증: `humor` 게시판에서 실제 브라우저로 글 작성 → 첨부목록(U) → UP → 파일 2개(정상 크기 1개, 1MB 초과 1개) 동시 선택 → 정상 크기 파일은 201로 업로드되어 목록에 즉시 반영, 초과 파일은 API 호출 없이 클라이언트에서 걸러져 "최대 1024KB 초과" 안내와 함께 실패 목록에 표시됨을 확인. 권한 없는 사용자/게스트 차단은 서버 로직과 동일한 조건으로 코드 대조 확인(별도 브라우저 재현은 생략). 본문 상한 수정은 900KB(구버전 상한이면 413)/1050KB(첨부 자체 상한 위반) 두 경계값을 curl로 직접 재현해 검증. 테스트 중 생성한 실제 Supabase 게시물·첨부파일은 모두 정리(DELETE)해 원상복구. `npm run smoke:boards`, `smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과. (테스트용 `window.__debugState` 디버그 훅은 `git checkout`으로 완전히 되돌려 커밋 미포함.)
+
+결과: ✅ 기능 구현 완료 (사용자 요구사항 승인 후 구현). 첨부 목록 화면의 크기 표시가 1KB 미만 파일에서 반올림으로 "0 KB"로 보이는 기존의 사소한 표시 문제를 발견했으나, 이번 작업 범위와 무관한 별개의 사소한 결함이라 손대지 않고 남겨둠.
+
 ## [2026-07-27 12:01] [/loop 채팅 전수조사] 대화방 개설 실패 시 구체적 오류 대신 로비로 조용히 튕겨나가며 5단계 입력 초안이 사실상 증발하던 버그 발견·수정
 
 **LOG_ID: 20260727_1201**

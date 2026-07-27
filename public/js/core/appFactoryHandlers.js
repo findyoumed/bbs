@@ -93,6 +93,7 @@ export function createAppFactoryHandlers(deps) {
     restoreStateFromURL: (...args) => refs.restoreStateFromURL(...args),
     showAttachmentList: screens.postScreens.showAttachmentList,
     downloadAttachment: services.postService.downloadAttachment,
+    uploadAttachment: services.postService.uploadAttachment,
     // [LOG_ID: 20260713_0930] LV 등급변경(운영자) — olddos-bbs 원작 명령 복원
     apiFetch: services.apiFetch
   });

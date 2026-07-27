@@ -48,9 +48,82 @@ export function createPostViewCommandHandler(deps) {
     showPostWrite,
     showAttachmentList,
     downloadAttachment,
+    uploadAttachment,
     renderScreenSequential,
     state
   } = deps;
+
+  // [LOG_ID: 20260727_1225] AttachmentRepositoryShared.js의 서버측 파일당 상한(1MB)과
+  // 동일한 값을 클라이언트에도 두어, 서버 왕복 없이 바로 안내한다(서버가 최종 방어선).
+  const MAX_ATTACHMENT_BYTES = 1024 * 1024;
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || '');
+        const commaIdx = result.indexOf(',');
+        resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error || new Error('파일을 읽을 수 없습니다.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function pickAttachmentFiles() {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = true;
+      input.style.display = 'none';
+      let settled = false;
+      const finish = (files) => {
+        if (settled) return;
+        settled = true;
+        if (input.isConnected) document.body.removeChild(input);
+        resolve(files);
+      };
+      input.addEventListener('change', () => finish(Array.from(input.files || [])), { once: true });
+      // 파일 선택 대화상자를 취소하면 change가 발생하지 않는다 — 창이 포커스를 되찾은 뒤에도
+      // 파일이 선택되지 않았다면 취소로 간주하고 정리한다.
+      window.addEventListener('focus', function onFocusBack() {
+        window.removeEventListener('focus', onFocusBack);
+        setTimeout(() => finish(Array.from(input.files || [])), 300);
+      }, { once: true });
+      document.body.appendChild(input);
+      input.click();
+    });
+  }
+
+  async function handleAttachmentUpload(boardId, postId) {
+    const files = await pickAttachmentFiles();
+    if (!files.length) return;
+
+    let successCount = 0;
+    const failures = [];
+    for (const file of files) {
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        failures.push(`${file.name}(${Math.round(file.size / 1024)}KB, 최대 ${Math.floor(MAX_ATTACHMENT_BYTES / 1024)}KB 초과)`);
+        continue;
+      }
+      try {
+        const contentBase64 = await readFileAsBase64(file);
+        await uploadAttachment(boardId, postId, {
+          originalName: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          contentBase64
+        });
+        successCount += 1;
+      } catch (error) {
+        failures.push(`${file.name}(${error.message})`);
+      }
+    }
+
+    await showAttachmentList(boardId, postId);
+    setHint(failures.length
+      ? `업로드 완료: ${successCount}건 성공, ${failures.length}건 실패 - ${failures.join(', ')}`
+      : `업로드 완료: ${successCount}건`);
+  }
 
   // [LOG_ID: 20260713_0930] LV 등급 별칭 — 서버 BoardRepositoryAccess.LEVEL_NAME_MAP과 동일하게 유지
   const LEVEL_LABELS = { 1: '일반회원', 2: '특별회원', 99: '운영자' };
@@ -300,6 +373,26 @@ export function createPostViewCommandHandler(deps) {
         await showMain();
         return true;
       }
+
+      // [LOG_ID: 20260727_1225] 첨부파일 목록 화면(U)엔 다운로드만 있고 업로드는 없었다 —
+      // 서버 API(POST /attachments)는 있는데 부르는 클라이언트가 전혀 없어 PDS에 파일을
+      // 실제로 올릴 방법이 아예 없었다(사용자 요청으로 발견). 글쓴이/운영자만 붙일 수 있게
+      // 서버(BoardRoutes.ensureAttachmentWritable)와 동일한 권한 규칙을 클라이언트에도 맞춘다.
+      if (cmd === 'UP' || cmd === 'UL' || cmd === 'UPLOAD') {
+        if (!state.user || state.user.isGuest) {
+          setHint(UI_TEXT.LOGIN_REQUIRED);
+          return true;
+        }
+        const canUpload = state.user.isAdmin || state.user.userId === (state.post.authorUserId || state.post.userId);
+        if (!canUpload) {
+          setHint('작성자만 첨부 파일을 올릴 수 있습니다.');
+          return true;
+        }
+        setHint('업로드할 파일을 선택하십시오. (여러 개 선택 가능)');
+        handleAttachmentUpload(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
+        return true;
+      }
+
       const idx = parseInt(cmd, 10);
       if (idx >= 1 && state._attachments?.[idx - 1]) {
         const file = state._attachments[idx - 1];

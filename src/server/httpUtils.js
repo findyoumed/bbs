@@ -82,7 +82,13 @@ function readJsonBody(req) {
       return;
     }
 
-    const maxBytes = 1024 * 1024;
+    // [LOG_ID: 20260727_1225] 첨부파일(AttachmentRepositoryShared.js maxBytes=1MB)은 이 JSON 본문
+    // 안에 base64로 인코딩되어 실려 온다 — base64는 원본보다 ~33% 커지므로, 원본 1MB 파일은
+    // 본문이 약 1.4MB가 되어 여기 1MB 상한에 먼저 걸려 첨부 자체의 "1024KB 이하" 안내보다
+    // 훨씬 낮은 실효 한도(약 750KB)에서 알아보기 힘든 일반 "Request body too large" 오류로
+    // 막혔다(첨부 업로드 UI 신설 중 실측 확인). base64 팽창 + JSON 오버헤드를 감안해
+    // 첨부 상한(1MB)보다 넉넉히 위인 2MB로 올린다.
+    const maxBytes = 2 * 1024 * 1024;
     let raw = '';
     let receivedBytes = 0;
     let settled = false;

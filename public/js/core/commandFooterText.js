@@ -80,7 +80,7 @@ export const CMD_ORDER = {
   passwordResetUpdate: ['P:취소', 'CHANGE:변경', 'H'],
   systemInfo: ['P', 'T', 'GO', 'H'],
   systemLog: ['P', 'T', 'GO', 'R:새로고침', 'C:지우기', 'CP:복사', 'H'],
-  attachmentList: ['P', 'T', 'GO', 'H'],
+  attachmentList: ['P', 'T', 'GO', 'UP:파일첨부', 'H'],
   // [LOG_ID: 20260725_1030] 짧은 라벨 + T 생략 구조로 통일(위 help 주석 참고)
   newsList: ['F:다음', 'B:이전', 'P', 'GO', 'H'],
   // [LOG_ID: 20260712_0030] PR 표기를 '연속읽기'로 통일(사용자 결정) — 게시판(postList)과 동일 용어.
