@@ -1,3 +1,16 @@
+## [2026-07-27 13:39] [/loop PDS 전수조사 3차 — 사용자 요청 "오류날 것 같은 부분을 깊게 찾아"] 첨부파일이 게시판별 로컬 번호를 전역 PK로 착각해 저장되어, 무관한 다른 게시판 글이 지워지면 CASCADE로 함께 사라질 수 있던 구조적 결함 발견·수정
+
+**LOG_ID: 20260727_1339**
+목표: 사용자가 모델을 바꾼 뒤 "진행하고 오류날 것 같은 부분을 깊게 찾아" / "오류수정 진행해"라고 명시적으로 요청 — 이번 라운드는 예정된 PDS 3차 대신, 직전에 새로 만든 업로드 기능(20260727_1233) 자체의 잠재적 결함을 더 깊이 파고들었다. 먼저 "업로드 중 다른 화면으로 이동하면 완료 후 강제로 첨부목록 화면으로 되돌아가는 것 아닌가" 하는 경쟁조건을 의심해 Playwright로 API 응답을 3초 지연시켜 재현을 시도했으나 실제로는 재현되지 않았다(원인 미상 — 별도 보호 장치가 있는 것으로 보이나 확인은 못함). 그 과정에서 테스트로 쌓인 첨부파일 데이터를 정리하다가 진짜 문제를 발견했다.
+
+발견: `attachments` 테이블의 `post_id` 컬럼은 `posts.id`(전역 자동증가 PK)를 참조하는 외래키이며 `ON DELETE CASCADE`가 걸려 있다(`0001_initial_schema.sql`). 그런데 첨부 API(`addAttachment`/`listAttachments`/`handleAttachmentItem`, `boardRoutes.js`)는 지금까지 URL의 `:postId`(요청 게시판 안에서만 독립적으로 채번되는 `local_id` — 서로 다른 게시판에 같은 번호가 동시에 존재할 수 있음, `SupabaseBoardRepositoryPostReads.js` 170행 주석 참고)를 그대로 `attachments.post_id`에 저장해 왔다. Supabase에 직접 접속해 실측 확인한 결과: humor 게시판 로컬 2번 글(전역 id=309)에 올린 첨부(id=175)의 실제 `post_id`는 2로 저장돼 있었는데, 전역 id=2는 **plaza 게시판의 전혀 다른 글**이었다 — 즉 이 첨부는 FK상 plaza의 그 글에 CASCADE로 묶여 있어, **plaza의 그 글이 지워지면 humor의 이 첨부까지 영문도 모르고 함께 사라지는** 구조였다. 반대로 humor의 진짜 글(id=309)을 지워도 이 첨부는 전혀 정리되지 않아(FK 대상이 아니므로) 영구 고아 행으로 남았다 — 이번 세션 여러 라운드에서 테스트 게시글을 지웠는데도 첨부 행이 계속 남아있던 이유가 바로 이것이었다. 더 깊이 보니, 20260721_2300에 이미 한 차례 이 local_id/전역id 불일치의 **증상**(자료실 목록의 파일명·용량·다운로드수 요약이 항상 빈 채로 나옴)을 발견했지만, 그때는 근본 원인(저장 경로가 local_id를 쓰는 것 자체가 잘못)이 아니라 조회 경로(`enrichWithAttachmentSummaries`)를 local_id에 맞춰 "일치"시키는 방식으로 봉합했었다 — 실제 첨부가 하나도 없던 시절이라 CASCADE 오염 자체는 드러나지 않았을 뿐이다.
+
+수정: `boardRoutes.js`의 `listAttachments`/`addAttachment`/`handleAttachmentItem` 3곳 모두, 이미 `ensureAttachmentReadable`/`ensureAttachmentWritable`가 내부적으로 `boardRepository.getPost()`로 조회해 두는 게시글 정보(`article.post.id`, 전역 PK)를 그대로 버리고 있던 것을 살려 `attachmentRepository.*` 호출에 이 전역 id를 쓰도록 통일했다(`ensureAttachmentReadable`도 이제 조회 결과를 반환하도록 수정). 20260721_2300이 "봉합"했던 `enrichWithAttachmentSummaries`도 저장 경로가 이제 전역id로 일관되므로 다시 전역id(`item.id`) 기준으로 되돌렸다. 클라이언트는 변경 없음 — 원래부터 다른 모든 글 관련 API와 동일하게 local_id를 URL에 보내는 것이 정상 관례이며, 문제는 서버가 그 값을 잘못된 곳에 그대로 저장한 것뿐이었다.
+
+검증: 로컬 서버(실제 Supabase)로 수정 전/후 대조 — 수정 전엔 humor 로컬#2(전역 309)에 업로드한 첨부의 `post_id`가 `2`(plaza 글)로 저장됨을 Supabase 직접 조회로 확인. 수정 후 동일 시나리오 재실행 → `post_id`가 정확히 `309`로 저장됨을 확인. 목록/다운로드/삭제 전체 흐름을 curl로 재검증(200/200/200, 삭제 후 목록에서 정상 소거). PDS 게시판(`pds_util`)에 실제 파일을 올린 뒤 목록 조회 → 이번엔 파일명/크기/다운로드수가 정상 표시됨을 확인(수정 전엔 20260721_2300이 봉합한 방식으로도 어차피 비어 있었을 상황). 이번 세션 전체에서 누적된 진짜 손상 데이터(잘못된 게시판에 묶인 고아 첨부 6건)를 Supabase에 직접 접속해 정리·확인. `npm run smoke:boards`(메모리 드라이버, 회귀 없음), `smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 구조적 데이터 무결성 버그 수정 완료 — 사용자가 요청한 "깊게 찾기"의 성과. 첨부파일이 하나도 없던 상태에서 계속 드러나지 않고 있던 결함으로, 방금 만든 업로드 기능이 실사용되기 시작하면서 처음으로 실제 피해(교차 게시판 CASCADE 오염)가 관측 가능해졌다.
+
 ## [2026-07-27 13:05] [/loop 채팅 전수조사 2차] 대화방 제목이 개설 시 검증(100자)과 저장(60자)이 서로 달라 61~100자 제목이 조용히 잘려나가던 버그 발견·수정
 
 **LOG_ID: 20260727_1305**

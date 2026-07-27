@@ -135,15 +135,18 @@ class BoardRouter extends BaseRouter {
     }
 
     try {
-      // [LOG_ID: 20260721_2300] local_id 이전 후 첨부 라우트(addAttachment 등)는 클라이언트가
-      // 보내는 postId(=local_id ?? id)를 그대로 attachments.post_id에 저장하는데, 여기서만
-      // item.id(전역 PK)로 조회해 두 값이 일치하지 않는 게시판(id!=local_id, 실서비스 전부 해당)에서
-      // 자료실 목록의 파일명/용량/다운로드수 요약이 항상 빈 채로 나오는 버그였다 — 실제 첨부가 아직
-      // 하나도 없어 지금까지 드러나지 않았을 뿐(Supabase 직접 조회로 id/local_id 발산 확인).
-      const postIds = items.map((item) => item.localId ?? item.id).filter((id) => id != null);
+      // [LOG_ID: 20260727_1330] 20260721_2300 당시엔 첨부 라우트(addAttachment 등)가 local_id를
+      // attachments.post_id에 그대로 저장하고 있어서, 여기 요약 조회를 그 local_id에 맞춰 왔다.
+      // 하지만 attachments.post_id는 실제로는 posts.id(전역 PK)를 참조하는 FK(ON DELETE CASCADE)라,
+      // local_id를 저장하는 쪽이 근본 원인의 버그였다 — 서로 다른 게시판의 local_id가 우연히 같은
+      // 전역 id와 겹치면 첨부가 엉뚱한 글에 FK로 묶여, 그 글이 지워질 때 무관한 첨부까지
+      // CASCADE로 함께 사라지는 문제가 있었다(실측: humor 로컬 2번 글의 첨부가 plaza 전역 id=2번
+      // 글에 묶여 있었음). addAttachment 등 저장 경로를 전역 id 기준으로 고쳤으므로(같은 LOG_ID),
+      // 여기도 되돌려 전역 id(item.id)로 일치시킨다.
+      const postIds = items.map((item) => item.id).filter((id) => id != null);
       const summaries = await attachmentRepository.summariesForPosts(boardId, postIds);
       for (const item of items) {
-        const summary = summaries[Number(item.localId ?? item.id)];
+        const summary = summaries[Number(item.id)];
         if (summary) {
           item.fileName = summary.name;
           item.fileSize = summary.size;
@@ -217,8 +220,10 @@ class BoardRouter extends BaseRouter {
     const postId = Number(params.postId);
     if (isNaN(postId)) this.validationError('Invalid post ID');
     const context = await this.getContext();
-    await this.ensureAttachmentReadable(boardId, postId, context);
-    return this.send(200, await this.deps.attachmentRepository.list(boardId, postId));
+    const article = await this.ensureAttachmentReadable(boardId, postId, context);
+    // [LOG_ID: 20260727_1330] postId(URL의 local_id)를 그대로 attachmentRepository에 넘기면 안 된다 —
+    // article.post.id(전역 posts.id)를 대신 쓴다. 아래 addAttachment 주석 참고.
+    return this.send(200, await this.deps.attachmentRepository.list(boardId, article.post.id));
   }
 
   async addAttachment(params) {
@@ -227,8 +232,16 @@ class BoardRouter extends BaseRouter {
     if (isNaN(postId)) this.validationError('Invalid post ID');
     const body = await this.getBody();
     const context = await this.getContext();
-    await this.ensureAttachmentWritable(boardId, postId, context);
-    return this.send(201, await this.deps.attachmentRepository.add(boardId, postId, body || {}, context));
+    const article = await this.ensureAttachmentWritable(boardId, postId, context);
+    // [LOG_ID: 20260727_1330] attachments.post_id는 posts.id(전역 PK)를 참조하는 FK(ON DELETE
+    // CASCADE)인데, 이 URL의 :postId는 게시판별로 독립 채번되는 local_id라 전역 id와 다르다
+    // (PostReads.js 170행 주석: "서로 다른 하위 게시판에 local_id가 같은 글이 동시에 존재할 수
+    // 있다"). 지금까지 이 local_id 값을 그대로 post_id에 저장해 와서, 우연히 다른 게시판의
+    // 전역 id와 값이 겹치면 그 무관한 글에 첨부파일이 FK로 묶였다 — 실측 확인: humor 게시판
+    // 로컬 2번 글(전역 id=309)에 올린 첨부가 실제로는 plaza 게시판 전역 id=2번 글에 CASCADE로
+    // 묶여, 그 글이 지워지면 이 humor 첨부까지 통째로 사라지고, 반대로 humor 글을 지워도 첨부는
+    // 전혀 정리되지 않는 상태였다. article.post.id(getPost가 이미 조회해 둔 전역 id)를 쓴다.
+    return this.send(201, await this.deps.attachmentRepository.add(boardId, article.post.id, body || {}, context));
   }
 
   async handleAttachmentItem(params) {
@@ -241,10 +254,12 @@ class BoardRouter extends BaseRouter {
     const isDownload = this.pathname.endsWith('/download');
     const context = await this.getContext();
 
-    await this.ensureAttachmentReadable(boardId, postId, context);
+    const article = await this.ensureAttachmentReadable(boardId, postId, context);
+    // [LOG_ID: 20260727_1330] addAttachment와 동일한 이유로 전역 id를 쓴다.
+    const globalPostId = article.post.id;
 
     if (this.method === 'GET' && isDownload) {
-      const { entry, buffer } = await this.deps.attachmentRepository.read(boardId, postId, attachmentId);
+      const { entry, buffer } = await this.deps.attachmentRepository.read(boardId, globalPostId, attachmentId);
       this.res.writeHead(200, {
         'Content-Type': entry.mimeType || 'application/octet-stream',
         'Content-Length': buffer.length,
@@ -256,13 +271,13 @@ class BoardRouter extends BaseRouter {
 
     if (this.method === 'DELETE' && !isDownload) {
       await this.ensureAttachmentWritable(boardId, postId, context);
-      return this.send(200, await this.deps.attachmentRepository.delete(boardId, postId, attachmentId));
+      return this.send(200, await this.deps.attachmentRepository.delete(boardId, globalPostId, attachmentId));
     }
     return false;
   }
 
   async ensureAttachmentReadable(boardId, postId, context = {}) {
-    await this.deps.boardRepository.getPost(boardId, postId, {
+    return this.deps.boardRepository.getPost(boardId, postId, {
       incrementHit: false,
       viewerId: context?.userId || 'guest',
       viewerLevel: context?.level || 1,
