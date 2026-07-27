@@ -104,11 +104,19 @@ export function createChatCommandHandler(deps) {
         }
 
         if (state._chatRoomCreateStage === 'title') {
-          if (!textInput.trim()) {
+          const trimmedTitle = textInput.trim();
+          if (!trimmedTitle) {
             setHint('대화방 제목을 입력하여 주십시오. (취소: /M)');
             return true;
           }
-          state._chatRoomDraft.title = textInput.trim();
+          // [LOG_ID: 20260727_1215] 서버(chatServiceRoutes.js POST /api/chat/rooms)는 제목을
+          // 100자로 제한하는데 여기엔 안내가 없었다 — myinfo 닉네임 사전검증(20260721_2200)과
+          // 같은 패턴으로, 왕복 없이 바로 안내한다.
+          if (trimmedTitle.length > 100) {
+            setHint('대화방 제목은 100자 이하여야 합니다. (취소: /M)');
+            return true;
+          }
+          state._chatRoomDraft.title = trimmedTitle;
           state._chatRoomCreateStage = 'greeting';
           setPrompt('환영 메시지 입력 [기본: 환영합니다] >>');
           return true;
@@ -172,8 +180,9 @@ export function createChatCommandHandler(deps) {
               body: JSON.stringify(state._chatRoomDraft)
             });
             if (!room) {
-              setHint('대화방 개설에 실패했습니다.');
-              await restoreStateFromURL();
+              setHint('대화방 개설에 실패했습니다. 제목부터 다시 시도해 주십시오. (취소: /M)');
+              state._chatRoomCreateStage = 'title';
+              setPrompt('새 대화방 제목을 입력하여 주십시오. (취소: /M) >>');
               return true;
             }
             await showChatLobby();
@@ -181,8 +190,16 @@ export function createChatCommandHandler(deps) {
               await showChatRoom(room.no, false, createdPassword);
             }
           } catch (error) {
-            setHint('대화방 개설 중 오류가 발생했습니다.');
-            await restoreStateFromURL();
+            // [LOG_ID: 20260727_1215] 종전엔 서버가 돌려준 구체적 사유(예: "제목은 100자 이하여야
+            // 합니다")를 버리고 뭉뚱그린 안내만 띄운 뒤 restoreStateFromURL()로 대화실 로비로
+            // 돌려보냈다 — 그 재렌더가 이 hint를 곧바로 로비 기본 힌트로 덮어써 사용자는 실패
+            // 사유를 볼 틈도 없이 그냥 튕겨나갔고, 제목/환영메시지/공개여부 등 여러 단계를 거쳐
+            // 입력한 초안도 다시 이어갈 방법 없이 사실상 사라졌다(실측 재현: 100자 넘는 제목 →
+            // 5단계 입력 후 로비로 조용히 복귀). 구체적 오류를 그대로 보여주고, 제목 단계로 되돌려
+            // 처음부터 다시 입력을 받되 화면 전환(restoreStateFromURL) 없이 같은 화면에서 이어가게 한다.
+            setHint(`대화방 개설 실패: ${error.message || '알 수 없는 오류'} (취소: /M)`);
+            state._chatRoomCreateStage = 'title';
+            setPrompt('새 대화방 제목을 입력하여 주십시오. (취소: /M) >>');
           }
           return true;
         }
