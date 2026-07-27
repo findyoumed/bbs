@@ -11,7 +11,12 @@ class ChatRoomMemberPersistence {
   }
 
   async persistJoin(room, participant) {
-    const userId = maybeUuid(participant?.userId);
+    // [LOG_ID: 20260727_1401] participant.userId는 이 앱의 자체 텍스트 ID라 UUID가 아니다 —
+    // Supabase Auth UUID는 별도 필드(authUserId)에 있다. 여기서 계속 participant.userId를 걸러
+    // 왔기 때문에 이 upsert가 사실상 모든 사용자에 대해 조용히 no-op였다(테이블은 항상 비어
+    // 있었음 — 실측 확인). chat_room_members.user_id FK가 auth.users(id)를 참조하므로 반드시
+    // 진짜 Auth UUID를 써야 한다.
+    const userId = maybeUuid(participant?.authUserId);
     if (!userId || !room?.id || !this.membersTable) {
       return;
     }
@@ -38,12 +43,14 @@ class ChatRoomMemberPersistence {
   }
 
   async persistLeave(room, payload, context, remainingParticipants) {
-    const userId = maybeUuid(context?.userId || payload?.userId);
+    // [LOG_ID: 20260727_1401] persistJoin과 동일한 이유로 authUserId를 써야 한다 — context.userId/
+    // payload.userId는 앱 자체 텍스트 ID다.
+    const userId = maybeUuid(context?.authUserId || payload?.authUserId);
     if (!userId || !room?.id || !this.membersTable) {
       return;
     }
 
-    if ((remainingParticipants || []).some((entry) => maybeUuid(entry.userId) === userId)) {
+    if ((remainingParticipants || []).some((entry) => maybeUuid(entry.authUserId) === userId)) {
       return;
     }
 

@@ -74,7 +74,9 @@ class SupabaseChatRoomRepository extends BaseRepository {
     if (room.password && room.password !== normalizeRoomSecret(payload.password || '')) throw createHttpError(403, '비밀번호 틀림');
     const sessionKey = normalizeSessionKey(payload.sessionKey), participants = this._participantsForRoom(room.room_no);
     const existing = participants.find(p => p.sessionKey === sessionKey), now = new Date().toISOString();
-    const p = { sessionKey, userId: normalizeText(context.userId, 'guest'), nickName: normalizeText(context.nickName, '손님'), joinedAt: existing?.joinedAt || now, lastSeenAt: now };
+    // [LOG_ID: 20260727_1401] authUserId(진짜 Supabase Auth UUID)를 별도로 들고 다녀야 한다 —
+    // userId는 이 앱 자체 텍스트 ID라 chat_room_members.user_id(auth.users FK)에 못 쓴다.
+    const p = { sessionKey, userId: normalizeText(context.userId, 'guest'), authUserId: maybeUuid(context.authUserId) || '', nickName: normalizeText(context.nickName, '손님'), joinedAt: existing?.joinedAt || now, lastSeenAt: now };
     const authCount = await this.memberPersistence.loadActiveAuthMemberCount(room.id);
     const nextSummary = summarizeParticipantCounts(existing ? participants.map(e => e.sessionKey === sessionKey ? p : e) : participants.concat([p]), authCount);
     if (!existing && nextSummary.userCount > normalizeMaxUser(room.max_user, 99)) throw createHttpError(409, '정원 초과');

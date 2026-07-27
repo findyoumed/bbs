@@ -1,3 +1,16 @@
+## [2026-07-27 14:10] [/loop 채팅 전수조사 3차 — DB 스키마/FK/ID 혼동 관점] 대화방 참여자 인증 기록(chat_room_members)이 애초에 UUID가 아닌 앱 자체 ID를 써서 한 번도 저장된 적 없던 죽은 경로 발견·수정
+
+**LOG_ID: 20260727_1410**
+목표: 직전 PDS 3차의 "전역id/로컬id 혼동" 패턴을 참고해, 채팅에서도 같은 유형의 DB 스키마/FK/ID 혼동이 있는지 점검. `chat_room_members` 테이블(`0007_chat_room_repository_alignment.sql`)의 `room_id`/`user_id`가 각각 `chat_rooms.id`/`auth.users.id`를 참조하는 UUID FK임을 먼저 확인 — 첨부파일 버그와 동일한 위험 패턴이라 집중 조사.
+
+발견: `room_id`는 `ChatRoomRepositorySupabase.js`가 이미 올바르게 `room.id`(UUID)를 쓰고 있어 문제 없었다. 하지만 `user_id` 쪽은 `join()`/`leave()`가 `context.userId`(이 앱 자체 텍스트 ID, 예: "sysop")를 참여자 객체에 담아 `ChatRoomMemberPersistence.persistJoin/persistLeave`에 넘겼는데, 그 함수들은 `maybeUuid(participant.userId)`로 UUID 형식인지 걸러낸 뒤 아니면 조용히 `return`(no-op)했다 — 그런데 `context.userId`는 `AuthBridge.js` `_mapUser()`에서 보듯 **항상 앱 자체 텍스트 ID**이고, 진짜 Supabase Auth UUID는 별도 필드 `context.authUserId`에 있다. 즉 이 upsert는 시작부터 모든 사용자에 대해 매번 조용히 실패(no-op)해 왔다 — 실측 확인: Supabase에 직접 접속해 `chat_room_members` 테이블을 조회하니 **row count 0**(오랜 채팅 입장/퇴장 테스트 이력에도 불구하고 단 한 건도 저장된 적 없음). 같은 이유로 `ChatRoomRepositoryShared.js`의 `summarizeParticipantCounts()`도 참여자의 `.userId`를 `maybeUuid()`로 걸러 인증회원 수를 세고 있어, 실제로 로그인한 회원도 전부 "게스트 세션"으로만 집계되어 `authUserCount`가 영원히 0이었다. 다행히 클라이언트가 `authUserCount`/`countMode`를 전혀 표시하지 않아(grep으로 확인) 사용자 체감 영향은 없었지만, 의도된 인증/게스트 구분 기능 자체가 처음부터 완전히 죽어 있던 구조적 결함이었다.
+
+수정: `ChatRoomRepositorySupabase.js`의 `join()`에서 참여자 객체에 `authUserId: maybeUuid(context.authUserId) || ''`를 추가로 담고, `ChatRoomMemberPersistence.js`의 `persistJoin`/`persistLeave`가 `participant.userId` 대신 `participant.authUserId`(persistLeave는 `context.authUserId`)를 읽도록 수정, "다른 세션이 아직 남아있는지" 확인 로직도 `entry.authUserId` 기준으로 맞췄다. `ChatRoomRepositoryShared.js`의 `summarizeParticipantCounts()`도 동일하게 `participant.authUserId` 기준으로 변경.
+
+검증: 실제 Supabase에 직접 접속해 진짜 Auth UUID(`sysop` 계정의 실제 `auth_user_id`, `auth.users`에 존재 확인)로 `chat_room_members`에 upsert를 재현 → FK 위반 없이 정상 저장됨을 확인(수정 전 코드가 이렇게 저장했어야 했던 정상 형태). `loadActiveAuthMemberCount()`를 직접 호출해 정확히 1을 반환함을 확인(수정 전엔 이 테이블이 항상 비어 있어 늘 0). `summarizeParticipantCounts()`도 유닛 테스트로 authUserId 있는/없는 참여자를 섞어 authUserCount=1, guestSessionCount=1로 정확히 분리됨을 확인. 테스트 삽입 행은 정리. `npm run smoke:chat-rooms`, `smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과(Memory 드라이버는 이 경로 자체를 안 써서 무영향).
+
+결과: ✅ 구조적 버그 수정 완료. 실제 Supabase Auth JWT가 필요한 로그인 흐름 자체는 이 세션의 네트워크 정책상 브라우저로 재현할 수 없어(이전 세션들에서도 문서화된 제약), 서비스 롤 키로 직접 DB 삽입/조회하는 방식으로 논리를 검증했다 — 실제 브라우저 로그인 흐름을 통한 종단간 확인은 하지 못했다는 점을 남겨둔다.
+
 ## [2026-07-27 13:55] [/loop 회원정보수정 전수조사 3차 — "오류날 것 같은 부분을 깊게 찾아"] 닉네임/이메일 DB 유니크 제약 부재 + 실제 운영 DB에 스모크테스트발 중복 회원 465명 발견·정리, 유니크 인덱스 마이그레이션 작성 (사용자 승인 후)
 
 **LOG_ID: 20260727_1355**

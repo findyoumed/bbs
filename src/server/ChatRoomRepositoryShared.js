@@ -71,7 +71,14 @@ function summarizeParticipantCounts(participants = [], persistedAuthUserCount = 
 
   for (const participant of participants || []) {
     sessionCount += 1;
-    const userId = maybeUuid(participant?.userId);
+    // [LOG_ID: 20260727_1401] participant.userId는 이 앱의 자체 텍스트 ID(예: "sysop")라 UUID가
+    // 아니다 — 실제 Supabase Auth UUID는 별도 필드(authUserId)에 있다(AuthBridge.js _mapUser).
+    // 여기서 계속 participant.userId를 maybeUuid()로 걸러왔기 때문에 모든 로그인 사용자가
+    // 항상 "게스트 세션"으로만 집계되어 authUserCount가 영원히 0이었다(아래 chat_room_members
+    // 저장 경로도 같은 이유로 항상 no-op — 실측: 테이블 row count 0, 오랜 채팅 테스트 이력에도
+    // 불구하고). 클라이언트가 authUserCount/countMode를 전혀 쓰지 않아 사용자 체감 영향은
+    // 없었지만, 의도한 인증/게스트 구분 자체가 처음부터 죽어 있었다.
+    const userId = maybeUuid(participant?.authUserId);
     if (userId) {
       authUsers.add(userId);
     } else {
