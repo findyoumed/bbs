@@ -96,6 +96,12 @@ class BoardRouter extends BaseRouter {
     const result = await this.deps.boardRepository.listPosts(boardId, {
       ...options,
       category: this.requestUrl.searchParams.get('category') || this.requestUrl.searchParams.get('header') || '',
+      // [LOG_ID: 20260727_2340] 주제어검색(K) 명령이 완전히 무동작이었다 — 클라이언트가 searchParams.k를
+      // 세워도 loadPosts()가 URL에 k를 아예 안 실었고(postService.js에서 별도 수정), 설령 실렸어도
+      // 여기서 요청 쿼리스트링의 k를 한 번도 읽어 boardRepository로 넘긴 적이 없었다(둘 다 고쳐야
+      // 실제로 필터링됨 — 리포지토리 레벨(applySupabaseSearch/BoardRepositorySearch.js)의 k 처리
+      // 로직 자체는 이미 정상 구현돼 있었는데, 그 앞단 두 곳에서 값이 아예 전달되지 않았다).
+      k: this.requestUrl.searchParams.get('k') || '',
       lt: this.requestUrl.searchParams.get('lt') || '',
       li: this.requestUrl.searchParams.get('li') || '',
       lc: this.requestUrl.searchParams.get('lc') || '',

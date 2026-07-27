@@ -45,6 +45,11 @@ export function createPostService(deps) {
     if (searchParams.lt) key += `_lt_${searchParams.lt}`;
     if (searchParams.li) key += `_li_${searchParams.li}`;
     if (searchParams.lc) key += `_lc_${searchParams.lc}`;
+    // [LOG_ID: 20260727_2340] 주제어검색(K)이 여기서 캐시 키에 반영되지 않고(k 누락) 아래 URL
+    // 빌더에도 k가 빠져 있어, 명령이 화면 제목에 "[주제어검색: ...]"라고 표시만 될 뿐 실제 요청은
+    // 항상 무필터 전체 목록과 동일했다(서버 라우트의 k 누락과 함께 고쳐야 실제로 동작함).
+    if (searchParams.k) key += `_k_${searchParams.k}`;
+    if (searchParams.la) key += `_la_${searchParams.la}`;
     if (searchParams.recent) key += `_recent_${searchParams.recent}`;
     return key;
   }
@@ -64,6 +69,8 @@ export function createPostService(deps) {
     if (searchParams.lt) url += `&lt=${encodeURIComponent(searchParams.lt)}`;
     if (searchParams.li) url += `&li=${encodeURIComponent(searchParams.li)}`;
     if (searchParams.lc) url += `&lc=${encodeURIComponent(searchParams.lc)}`;
+    if (searchParams.k) url += `&k=${encodeURIComponent(searchParams.k)}`;
+    if (searchParams.la) url += `&la=${encodeURIComponent(searchParams.la)}`;
     if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
 
     const data = normalizePostListResponse(await apiFetch(url), page);

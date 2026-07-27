@@ -1,3 +1,18 @@
+## [2026-07-27 23:39] [/loop PDS 전수조사 6차] 주제어검색(K)이 화면엔 "검색됨"으로 표시되면서 실제로는 3중으로 완전히 무동작이던 버그 발견·수정
+
+**LOG_ID: 20260727_2339**
+목표: PDS 전용 검색(S) 명령이 파일명(제목)만 찾고 본문에 실린 PDS 키워드는 못 찾는 것 아닌가 하는 의심에서 출발해, `isPds` 게이팅(`state.board.id === 'pds'`)이 `pds_util` 등 하위 물리 게시판에서도 실제로 도달 가능한지 먼저 확인했다.
+
+발견 1(오탐 배제): `pds_util`/`pds_game` 등은 사용자가 메뉴로 절대 직접 들어가지 않는 내부 물리 게시판 태그일 뿐이었다(`BoardVirtualBoards.js`의 `MERGED_BOARD_SOURCES.pds` — 메뉴 트리엔 `pds` 단 하나만 존재). 즉 `isPds` 게이팅은 실제 사용자 경로에서 항상 정상 작동하며 버그가 아니었다.
+
+발견 2(진짜 버그, 훨씬 큼): 그 과정에서 대신 주제어검색(K 명령)을 실제로 재현해보니 **3단계 모두에서 값이 유실**되고 있었다. ① 클라이언트 `postService.js`의 `loadPosts()`가 `lt`/`li`/`lc`/`recent`만 실제 요청 URL에 실었고 `k`는 아예 빠져 있었다 ② 설령 URL에 `k`가 실렸어도 서버 라우트(`boardRoutes.js` `listPosts`)가 요청 쿼리스트링에서 `category`/`lt`/`li`/`lc`/`ln`/`la`/`recent`만 읽고 `k`는 읽지 않아 리포지토리에 아예 전달되지 않았다. 정작 그 값을 받는 필터 로직(`applySupabaseSearch`의 `search?.k` 처리, `BoardRepositorySearch.js`의 Memory 드라이버 쪽)은 이미 정상 구현돼 있었다 — 앞단 두 곳에서 값 자체가 도달하지 못했을 뿐. 그런데 화면(`postListView.js`)은 `searchParams.k`가 있으면 무조건 "[주제어검색: ...]"라는 라벨을 제목에 붙여, 사용자에게는 검색이 적용된 것처럼 보이면서 실제로는 게시판 전체 무필터 목록이 그대로 나왔다(실측 재현: plaza 20건 중 `[가입인사]` 포함 글은 6건인데, K 검색 후에도 20건 그대로 표시). smoke:boards가 K를 직접 검증한 적이 없어 지금까지 발견되지 않았다.
+
+수정: `postService.js`의 `buildListCacheKey`/`loadPosts` URL 빌더에 `k`(및 마찬가지로 누락돼 있던 `la`)를 추가하고, `boardRoutes.js`의 `listPosts` 라우트가 요청 쿼리스트링에서 `k`를 읽어 리포지토리로 넘기도록 추가했다.
+
+검증: 수정 전 curl로 `k=가입인사` 요청 → 20건(무필터와 동일, 버그 재현) 확인. 수정 후 동일 요청 → 6건(정확히 대괄호 매칭)으로 정상 필터링 확인. 실제 브라우저로 `K 가입인사` 명령 전체 흐름(클라이언트 → 서버 → 렌더)도 재검증해 동일하게 6건 정상 필터링됨을 확인. `npm run smoke:boards`, `smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과. (테스트용 `window.__debugState` 디버그 훅은 `git checkout`으로 완전히 되돌려 커밋 미포함.)
+
+결과: ✅ 버그 수정 완료. 이번 세션 전체를 통틀어 가장 완전하게(3단계 전부) 고장나 있던 기능이었다 — 사용자에게 "검색됨" 표시까지 나오면서 실제로는 아무 필터링도 하지 않는, 눈치채기 특히 어려운 유형의 결함.
+
 ## [2026-07-27 23:28] [/loop 댓글/답글 전수조사 6차] LS/LD/KW가 게시판 전체를 pageSize=9999 한 번에 훑어와 대형 게시판에서 조용히 일부 글을 놓칠 수 있던 잠재적 결함 발견·수정
 
 **LOG_ID: 20260727_2328**
