@@ -36,7 +36,7 @@ export function createMenuIndexScreens(deps) {
     buildPageLabel,
     buildTopHeader,
     fitCell,
-    truncateDisplayText
+    fitCellEllipsis
   } = createAnsiBuilderUtils({ displayWidth, isWideChar });
 
   // 이름 끝의 괄호 코드는 떼어낸다 — 코드 칸에서 따로 보여주므로 "서비스안내 (GUIDE) GUIDE"처럼
@@ -66,7 +66,11 @@ export function createMenuIndexScreens(deps) {
       const indent = ' '.repeat(depth === 0 ? 2 : 4);
       const door = `${String(node?.door || '').trim()}.`;
       const width = labelWidth - (depth === 0 ? 0 : 2);
-      const label = fitCell(truncateDisplayText(toLabelText(node), width - 1), width);
+      // [LOG_ID: 20260727_0220] fitCell 단독 사용은 잘렸을 때 표시가 없어 "전체 메뉴 안내"가
+      // "전체 메뉴 안"처럼 다른 단어로 보였다(모바일 실측: index 화면 하위 항목 다수) —
+      // fitCellEllipsis로 교체해 잘린 자리에 "…"를 남긴다. 안쪽을 width-1로 제한한 뒤 바깥을
+      // width로 한 번 더 패딩해, 라벨이 폭을 꽉 채울 때도 코드 칸과 붙지 않게 최소 1칸을 보장한다.
+      const label = fitCell(fitCellEllipsis(toLabelText(node), width - 1), width);
       const code = fitCell(toGoCode(node), codeWidth);
       const nameColor = depth === 0 ? ansiColor(15) : ansiColor(7);
       return `${indent}${ansiColor(11)}${fitCell(door, 3, 'right')}${ANSI_RESET} ${nameColor}${label}${ANSI_RESET}${ansiColor(14)}${code}${ANSI_RESET}`;
