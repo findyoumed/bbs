@@ -1,3 +1,16 @@
+## [2026-07-27 05:50] [사용자 직접 제보] 게시글 본문(/notice/1 등 post-view) 데스크톱 마우스 휠 스크롤 — 24줄 이론상 최대치 사용으로 인한 10px 오버플로 수정
+
+**LOG_ID: 20260727_0550**
+목표: 사용자 제보 — "https://01410.vercel.app/notice/ 이 화면에서 마우스 휠로 본문글이 스크롤이 되고 있는데, 스크롤되면 안되잖아". 실제 배포(Vercel) URL은 헤드리스 브라우저가 프록시를 통한 접속에 실패해(net::ERR_CONNECTION_RESET, HTTPS_PROXY를 명시해도 동일) 로컬 서버(포트 3280)에서 동일 화면(/notice/1)을 재현.
+
+발견: 데스크톱(1280×800)에서 `#terminal-screen`의 `scrollHeight(581)`가 `clientHeight(571)`보다 10px 커서 실제로 마우스 휠 스크롤이 가능했다. 같은 조건(24줄 캔버스, F/B 페이지네이션)의 `/help` 화면은 동일 측정에서 오버플로가 정확히 0이었다 — 비교 결과 원인은 `buildPostViewAnsi()`(ansiBoardBuilders.js)가 페이지당 캔버스를 이론상 최대치인 24줄 그대로 쓰는 반면(패딩 루프가 매번 정확히 24줄까지 채움), `help`(`buildHelpAnsi`)는 이미 `linesPerPage=19`로 낮춰(총예산 23줄) 여유를 두고 있었다는 차이였다. `#terminal-screen`의 실제 CSS 예산(`min-height:33.6em` + PC 전용 `padding-top:8px`, box-sizing:border-box)이 24줄 분량(4줄 상단바+20줄 본문, 각 줄 `min-height:24px`)을 정확히 담기엔 근소하게 부족해 항상 ~10px가 넘쳤다.
+
+수정: `ansiBoardBuilders.js`의 `buildPostViewAnsi()`에서 `totalLines`를 24 → 23으로 낮춤(help가 이미 쓰는 것과 동일한 여유 폭). 이 상수가 페이지당 본문 가용 줄 수(`baseLines`) 계산과 최종 패딩 목표 양쪽에 다 쓰이므로, 본문이 페이지당 1줄 덜 들어가는 대신(긴 글은 페이지가 하나 더 생길 수 있음) 캔버스 전체가 실제 CSS 예산 안에 정확히 들어간다.
+
+검증: 로컬 재현 스크립트로 데스크톱(1280×800) 오버플로 10px → 0px 확인(`/help`와 동일한 549.39px로 일치). 모바일 세로(390×844)도 오버플로 0 확인(부가 효과 — 이 화면은 20260721_1345에 "한 프레임 고정"에서 완전히 빠져나와 자연스러운 문서 스크롤을 쓰도록 CSS가 별도로 풀려 있는데, 이번 수정으로 그 안전장치가 실제로 발동할 일 자체가 거의 없어졌다). 모바일 가로(844×390)에 남아있는 별도의(수정 전부터 있던, 267px→244px로 오히려 소폭 개선된) 오버플로는 이번 제보와 무관한 기존 현상이라 손대지 않음(Phase A "가로모드 오탐" 선례와 동일하게 `#terminal-screen` 내부 안전망 스크롤로만 국한되고 문서 전체 스크롤은 없음을 확인). `npm run smoke:boards`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 버그 수정 완료.
+
 ## [2026-07-27 02:23] [모바일/PC 화면 5분 주기 확인] 전체 메뉴 안내(/index) 모바일 하위 항목 라벨 절삭 — fitCellEllipsis 미적용 버그 발견·수정
 
 **LOG_ID: 20260727_0223**

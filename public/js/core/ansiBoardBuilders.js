@@ -337,7 +337,13 @@ export function createBoardAnsiBuilders(deps) {
 
     // [LOG_ID: 20260724_2020] 페이지당 렌더 캔버스는 항상 이 줄 수로 고정된다(아래 while 패딩
     // 루프가 이 값까지 빈 줄로 채운다) — 페이징 계산도 같은 상수를 기준으로 삼아야 한다.
-    const totalLines = 24;
+    // [LOG_ID: 20260727_0230] 24(이론상 최대)를 그대로 쓰면 #terminal-screen의 실제 CSS 예산
+    // (33.6em + 8px 안전 여백, box-sizing:border-box)과 정확히 안 맞아 데스크톱에서 매번 약
+    // 10px가 넘쳤다(실측: notice/1 전체화면 채움 시 scrollHeight 581 vs clientHeight 571) —
+    // 마우스 휠로 본문이 스크롤되는 원인이었다(사용자 보고: "이 화면에서 마우스 휠로 본문글이
+    // 스크롤이 되고 있는데, 스크롤되면 안되잖아"). help(linesPerPage=19, 총예산 23줄)는 이미
+    // 이론상 최대(24) 대신 여유를 둔 값을 써서 오버플로가 0이었다 — 같은 여유(1줄)를 여기도 둔다.
+    const totalLines = 23;
 
     // 본문 페이징 시뮬레이션 계산
     let headerLineCount = 1; // 구분선(1줄) — 제목/저자(올린이) 줄 수는 아래서 더한다
