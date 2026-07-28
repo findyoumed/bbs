@@ -1,3 +1,18 @@
+## [2026-07-28 23:10] [/loop 회원정보수정 전수조사 6차] 프로필 조회(PF/WHO)가 비로그인 익명 요청에도 회원의 내부 Auth UUID를 그대로 흘려주던 정보 노출 발견·수정
+
+**LOG_ID: 20260728_2310**
+목표: 채팅 `/EX`·`/IN`·`/OUT` 값 전달 체인 추적(새 버그 없음) → 댓글/답글·PDS 검색 명령 전체(LT/LI/LC/LA/K) 재검증 및 병합 게시판 검색 정확성 확인(전부 정상) → 회원정보수정으로 복귀, 프로필 조회(PF/WHO → `GET /api/members/:userId`) 체인을 끝까지 추적.
+
+발견: `memberRoutes.js`의 `_toDirectoryMember()`는 본인/운영자가 아닌 조회자에게 `birthday`/`sex`/`lastLoginDateTime`을 제거해 돌려주는 로직이 이미 있었다(직전 세션 LOG: 20260724_1242, 사유: "화면 어디서도 안 씀"). 그런데 정확히 같은 이유(클라이언트 `buildProfileAnsi`는 `userId`/`nickName`/`level`/`registrationDateTime`만 렌더)로 제거 대상에 넣었어야 할 `authUserId`(Supabase Auth UUID)와 `id`(members 테이블 내부 PK)는 빠져 있었다. 실측 확인: 인증 헤더 하나 없는 순수 익명 `GET /api/members/sysop?allowMissing=1` 요청이 `authUserId:"861ea062-..."`를 포함한 전체 레코드를 그대로 반환했다 — PF/WHO 명령으로 어떤 회원의 아이디만 알면 로그인 없이도 그 사람의 내부 Auth UUID를 조회할 수 있는 상태였다(email은 로그인 시 아이디-이메일 매핑에 필요해 의도적으로 유지되는 필드라 그대로 뒀다 — 다른 사람이 손댄 결정이라 건드리지 않음).
+
+수정: `_toDirectoryMember()`의 구조분해 제거 목록에 `authUserId`, `id`를 추가.
+
+검증: 수정 전/후 curl로 대조 — 익명 요청은 `authUserId`/`id`가 응답에서 완전히 빠짐(다른 3개 필드도 여전히 제거됨, 회귀 없음), 본인/운영자(dev 헤더) 요청은 이전과 동일하게 모든 필드(id/authUserId/birthday/sex/lastLoginDateTime 포함)를 그대로 받음을 확인 — 자기 자신·운영자용 정상 경로에는 전혀 영향 없음. `npm run smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과.
+
+결과: ✅ 정보 노출 수정 완료. 직전 세션이 정확히 같은 이유로 일부 필드만 제거하고 두 필드를 놓친, 발견하기 쉽지 않은 유형의 결함이었다.
+
+---
+
 ## [2026-07-28 17:51] [버그 수정] 쪽지(Memo) 전송 시 존재하지 않는 회원 아이디 유효성 사전 검사 강화
 
 **LOG_ID: 20260728_1751**

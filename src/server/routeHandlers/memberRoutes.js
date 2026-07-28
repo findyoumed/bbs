@@ -100,7 +100,13 @@ class MemberRouter extends BaseRouter {
     const isSelfOrAdmin = Boolean(context?.isAdmin) || context?.userId === (targetUserId ?? member.userId);
     if (isSelfOrAdmin) return member;
     // [LOG: 20260724_1242] 아이디 로그인 시 이메일 맵핑 처리가 필수적이므로 email은 비로그인 필터링 대상에서 제외함
-    const { birthday, sex, lastLoginDateTime, ...rest } = member;
+    // [LOG_ID: 20260728_2320] birthday/sex/lastLoginDateTime과 정확히 같은 이유(화면 어디서도
+    // 안 씀 — buildProfileAnsi는 userId/nickName/level/registrationDateTime만 렌더)로
+    // authUserId(Supabase Auth UUID)와 id(members 테이블 내부 PK)도 비로그인 조회에서 새어
+    // 나오고 있었다 — 실측 확인: 인증 없는 GET /api/members/sysop이 authUserId까지 그대로
+    // 반환. 클라이언트가 쓰지 않는 내부 식별자를 익명 요청에 불필요하게 노출할 이유가 없어
+    // 함께 제거한다.
+    const { birthday, sex, lastLoginDateTime, authUserId, id, ...rest } = member;
     return rest;
   }
 
