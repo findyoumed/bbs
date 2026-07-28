@@ -1,3 +1,18 @@
+## [2026-07-28 23:29] [/loop 댓글/답글·PDS 전수조사 7차] 글보기 API의 virtualBoardId 파라미터가 게시판 접근권한 검사를 우회할 수 있던 취약점 발견·수정
+
+**LOG_ID: 20260728_2329**
+목표: 직전 병합(04ef0bc, LOG_ID 20260728_1728)에서 PDS 가상 게시판 내비게이션 복원을 위해 새로 추가된 `virtualBoardId` 쿼리 파라미터 체인을 DB 스키마/권한 혼동 관점에서 재검증.
+
+발견: `getPost(boardId, postId, options)`가 `targetBoardId = options.virtualBoardId || boardId`로 접근권한 검사 대상 게시판을 결정하면서(`assertBoardAccessible(board, ...)`), 정작 글 자체는 원래의 `boardId`에서 그대로 조회했다(`fetchPostByLocalId(repo, boardId, postId)` / Memory 드라이버의 `findPostRecord(boardId, postId)`). `virtualBoardId`는 클라이언트가 보내는 쿼리스트링 값이라 서버가 검증 없이 그대로 신뢰했고, `boardId`가 실제로 그 `virtualBoardId`의 병합 소스인지 전혀 확인하지 않았다. 즉 `GET /api/boards/<제한된게시판>/posts/<id>?virtualBoardId=<접근레벨이_더_낮은_아무_게시판>` 요청으로 실제 글이 속한 게시판의 accessLevel이 아니라 공격자가 지정한 다른 게시판의 accessLevel로 권한이 통과되는 인가 우회가 가능했다(Supabase·Memory 드라이버 둘 다 동일 결함). 실측: 로컬에서 accessLevel:2 게시판을 하나 만들어 재현 — 직접 접근은 403이 정상 발생했지만 `virtualBoardId=plaza`(accessLevel:1)를 실어 보내면 레벨2 글이 그대로 반환됨을 확인. 실제 운영 DB의 모든 게시판이 현재 accessLevel:1이라 지금 당장 악용 가능한 게시판은 없지만(`boards` 테이블 전수 조회로 확인), 향후 특별회원 전용 게시판이 생기는 순간 이 경로로 전부 뚫리는 잠재 결함이라 즉시 수정.
+
+수정: `SupabaseBoardRepositoryPostReads.js`와 `MemoryBoardRepository.js`에 `resolveTrustedVirtualBoardId(virtualBoardId, boardId)` 헬퍼를 추가 — `virtualBoardId`가 `isVirtualBoardId()`로 확인되는 실제 가상 게시판(현재는 'pds'뿐)이고, `boardId`가 그 가상 게시판의 `getMergedBoardSourceIds()` 목록에 실제로 포함될 때만 신뢰하고, 그 외에는 무조건 무시하고 원래 `boardId`로 되돌아가도록 함.
+
+검증: 로컬 재현 스크립트로 (1) 스푸핑 차단(레벨2 글이 더 이상 새지 않음) (2) 정상 PDS 시나리오(`pds_util` 글을 `virtualBoardId=pds`로 조회) 여전히 정상 동작 (3) 무관한 `virtualBoardId=plaza`를 실어도 조용히 무시되고 원래 게시판 메타데이터가 반환됨을 모두 확인. 실제 운영 서버(Supabase 드라이버)로도 PDS 실제 글(`pds_prog`/localId 3)에 대해 동일하게 재검증. `npm run smoke:boards` 통과.
+
+결과: ✅ 수정 완료. "화면엔 정상 작동처럼 보이지만 서버가 클라이언트 파라미터를 검증 없이 신뢰하는" 이번 세션 최대 버그 클래스의 연장선 — 이번엔 검색값 유실이 아니라 인가 경계 자체가 클라이언트 입력에 좌우되던 사례.
+
+---
+
 ## [2026-07-28 23:10] [/loop 회원정보수정 전수조사 6차] 프로필 조회(PF/WHO)가 비로그인 익명 요청에도 회원의 내부 Auth UUID를 그대로 흘려주던 정보 노출 발견·수정
 
 **LOG_ID: 20260728_2310**

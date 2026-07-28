@@ -3,7 +3,17 @@ const { createHttpError, sanitizePostPatch, cloneBoard, clonePost } = require('.
 const { LEVEL_NAME_MAP, assertBoardAccessible, assertPostMutable } = require('./BoardRepositoryAccess');
 const { sortPostsThreaded } = require('./BoardRepositorySearch');
 const { resolveBoardDefinitions } = require('./BoardDefinitionResolver');
-const { getMergedBoardSourceIds, resolveSourceBoardId } = require('./BoardVirtualBoards');
+const { getMergedBoardSourceIds, resolveSourceBoardId, isVirtualBoardId } = require('./BoardVirtualBoards');
+
+// [LOG_ID: 20260728_2325] virtualBoardId는 클라이언트가 그대로 보내는 쿼리스트링 값이라, 검증 없이
+// 곧장 접근권한 검사 대상 게시판으로 쓰면 실제 글이 속한 boardId 대신 임의의(더 낮은 accessLevel을
+// 가진) 게시판 기준으로 권한이 통과되어버린다 — boardId가 그 virtualBoardId의 실제 병합 소스일
+// 때만 신뢰한다(PDS처럼 진짜 가상 게시판 관계일 때만). Supabase 드라이버와 동일한 정책.
+function resolveTrustedVirtualBoardId(virtualBoardId, boardId) {
+  const candidate = String(virtualBoardId || '').trim();
+  if (!candidate || !isVirtualBoardId(candidate)) return '';
+  return getMergedBoardSourceIds(candidate).includes(String(boardId || '').trim()) ? candidate : '';
+}
 const { seedMemoryBoardRepository } = require('./MemoryBoardRepositorySeed');
 const { MemoryBoardRepositoryCore } = require('./MemoryBoardRepositoryCore');
 
@@ -76,7 +86,7 @@ class MemoryBoardRepository {
 
   // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 글보기 내비게이션 복원을 위해 virtualBoardId와 search를 연계하도록 함
   async getPost(boardId, postId, options = {}) {
-    const targetBoardId = options.virtualBoardId || boardId;
+    const targetBoardId = resolveTrustedVirtualBoardId(options.virtualBoardId, boardId) || boardId;
     const board = await this.getBoard(targetBoardId);
     assertBoardAccessible(board, options.context || { userId: options.viewerId, level: options.viewerLevel }, this.levelAliases);
     const post = this.findPostRecord(boardId, postId);

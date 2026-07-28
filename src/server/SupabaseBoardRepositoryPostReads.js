@@ -14,6 +14,17 @@ const {
   applySupabaseSearch,
   ensureCapabilities
 } = require('./SupabaseBoardRepositoryQueryHelpers');
+const { getMergedBoardSourceIds, isVirtualBoardId } = require('./BoardVirtualBoards');
+
+// [LOG_ID: 20260728_2325] virtualBoardId는 클라이언트가 그대로 보내는 쿼리스트링 값이라, 검증 없이
+// 곧장 접근권한 검사 대상 게시판으로 쓰면 실제 글이 속한 boardId 대신 임의의(더 낮은 accessLevel을
+// 가진) 게시판 기준으로 권한이 통과되어버린다 — boardId가 그 virtualBoardId의 실제 병합 소스일
+// 때만 신뢰한다(PDS처럼 진짜 가상 게시판 관계일 때만).
+function resolveTrustedVirtualBoardId(virtualBoardId, boardId) {
+  const candidate = String(virtualBoardId || '').trim();
+  if (!candidate || !isVirtualBoardId(candidate)) return '';
+  return getMergedBoardSourceIds(candidate).includes(String(boardId || '').trim()) ? candidate : '';
+}
 
 async function countPosts(repo) {
   const { count, error } = await repo.client
@@ -98,7 +109,7 @@ async function listPosts(repo, boardId, options = {}) {
 
 // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 글보기 내비게이션 복원을 위해 virtualBoardId와 search를 연계하도록 함
 async function getPost(repo, boardId, postId, options = {}) {
-  const targetBoardId = options.virtualBoardId || boardId;
+  const targetBoardId = resolveTrustedVirtualBoardId(options.virtualBoardId, boardId) || boardId;
   const board = await getBoard(repo, targetBoardId);
   if (!board) {
     throw createHttpError(404, '게시판을 찾을 수 없습니다.');
