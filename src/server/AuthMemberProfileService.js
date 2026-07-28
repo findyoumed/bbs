@@ -59,8 +59,14 @@ function canReuseMemberByEmail(user, member) {
     return false;
   }
 
-  const authProvider = String(user?.authProvider || '').trim().toLowerCase();
-  if (authProvider && authProvider !== 'email' && user?.emailVerified !== true) {
+  // [LOG_ID: 20260728_2355] authProvider === 'email'(Supabase 자체 이메일/비밀번호 가입)일 때만
+  // emailVerified 검사를 완전히 건너뛰고 있었다 — email_confirmed_at은 provider와 무관하게
+  // 실제 인증 여부를 나타내는 동일한 신호인데, 'email' provider만 예외로 뒀을 근거가 없다.
+  // 공격자가 남의 이메일로 (아직 확인 링크를 누르지 않은) 이메일/비밀번호 계정을 새로 만들면,
+  // 이 예외 때문에 그 세션이 곧바로 같은 이메일을 쓰는 기존 member 행(닉네임/userId 포함)을
+  // 자기 것으로 병합해 가져갈 수 있었다 — OAuth 경로는 이미 emailVerified를 요구하므로 동일한
+  // 기준을 provider 구분 없이 적용한다.
+  if (user?.emailVerified !== true) {
     return false;
   }
 

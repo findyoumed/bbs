@@ -1,3 +1,18 @@
+## [2026-07-28 23:58] [/loop 회원정보수정 전수조사 10차] 이메일 미인증 계정이 다른 회원의 이메일과 일치시키는 것만으로 그 회원 계정을 그대로 가져갈 수 있던 결함 발견·수정
+
+**LOG_ID: 20260728_2358**
+목표: 직전 라운드(운영자 강제 탈퇴 무효화)에서 감사한 `AuthMemberProfileService.enrichUser()` 주변 로직을 계속 파고들어, 세션 신원과 members 행이 연결되는 다른 경로(이메일 기반 재사용)도 안전한지 확인.
+
+발견: `enrichUser()`는 세션의 `userId`로 members 행을 못 찾으면(신규 세션이거나 다른 userId로 가입한 경우) `_findMemberByEmail()`로 같은 이메일을 쓰는 기존 회원 행을 찾아 `canReuseMemberByEmail()` 통과 시 그 행을 그대로 세션에 병합한다(`mergeMemberProfile`이 `member.userId`를 우선해 세션의 userId/닉네임까지 기존 회원 것으로 덮어씀). `canReuseMemberByEmail()`은 OAuth 등 다른 provider에 대해서는 `emailVerified === true`를 요구하면서, `authProvider === 'email'`(Supabase 자체 이메일/비밀번호 가입)일 때만 이 검사를 통째로 건너뛰고 있었다 — `email_confirmed_at` 기반 `emailVerified` 신호는 provider와 무관하게 동일하게 신뢰할 수 있는 값인데, 유독 이 provider만 예외를 둘 근거가 없었다. 즉 공격자가 (확인 링크를 아직 누르지 않은) 이메일/비밀번호 계정을 피해자의 이메일로 새로 만들고 그 세션으로 아무 인증 API나 호출하면, 피해자의 기존 members 행(닉네임·userId 포함)을 그대로 자기 세션에 병합해 사실상 계정을 가로챌 수 있는 구조였다. 직접 유닛 재현: `emailVerified:false`인 세션이 기존 회원 이메일로 `enrichUser()`를 호출하면 실제로 `userId`가 그 기존 회원 것으로 바뀜을 확인.
+
+수정: `canReuseMemberByEmail()`의 provider별 예외를 제거하고, `emailVerified !== true`면 provider 구분 없이 항상 재사용을 거부하도록 통일.
+
+검증: 수정 전/후 두 시나리오(이메일 미인증 공격자 vs 이메일 인증된 정상 사용자)를 직접 재현 — 수정 후 미인증 세션은 자기 자신의 신규 userId를 그대로 유지(가로채기 차단), 인증된 세션은 기존 회원 재연결이 그대로 정상 동작(정당한 케이스 회귀 없음). `node --check`, `npm run smoke:auth-bridge`(32개 체크) 통과.
+
+결과: ✅ 수정 완료. 직전 라운드(강제 탈퇴 무효화)와 마찬가지로 "인증 세션과 members 행이 연결되는 지점"에서 발견된 두 번째 결함 — 이번엔 provider 종류에 따라 검증 기준이 달라야 할 근거가 없는데 한 곳만 예외로 빠져 있던 사례.
+
+---
+
 ## [2026-07-28 23:50] [/loop PDS 전수조사 9차] PDS 가상 게시판 목록 화면의 파일명/크기/전송(다운로드수) 표시가 항상 비어 있던 결함 발견·수정
 
 **LOG_ID: 20260728_2350**
