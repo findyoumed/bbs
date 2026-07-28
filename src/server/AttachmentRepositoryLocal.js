@@ -10,6 +10,7 @@ const {
   normalizeEntry,
   wrapStorageError
 } = require('./AttachmentRepositoryShared');
+const { getMergedBoardSourceIds } = require('./BoardVirtualBoards');
 const logger = require('./logger');
 
 function createEmptyIndex() {
@@ -95,11 +96,15 @@ class AttachmentRepository {
   }
 
   // [LOG_ID: 20260718_1200] Supabase 드라이버와 동일 의미 — 자료실 목록용 글당 대표(첫) 첨부 요약.
+  // [LOG_ID: 20260728_2350] Supabase 드라이버와 동일한 이유로 병합 소스 전체를 대상으로 넓힌다 —
+  // PDS 가상 게시판('pds') boardId로는 물리 하위 게시판(pds_prog 등)에 저장된 첨부와 절대
+  // 일치하지 않아 목록 화면의 파일 요약이 항상 비어 있었다.
   summariesForPosts(boardId, postIds) {
     this._assertStorageAvailable();
+    const boardIds = new Set(getMergedBoardSourceIds(boardId).filter(Boolean));
     const ids = new Set((postIds || []).map((id) => Number(id)));
     const sorted = this.index.attachments
-      .filter((entry) => entry.boardId === boardId && ids.has(Number(entry.postId)))
+      .filter((entry) => boardIds.has(entry.boardId) && ids.has(Number(entry.postId)))
       .map(normalizeEntry)
       .sort((left, right) => left.id - right.id);
 

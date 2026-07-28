@@ -10,6 +10,7 @@ const {
   isMissingAttachmentsTableError,
   normalizeEntry
 } = require('./AttachmentRepositoryShared');
+const { getMergedBoardSourceIds } = require('./BoardVirtualBoards');
 
 class SupabaseAttachmentRepository extends BaseRepository {
   constructor(options = {}) {
@@ -58,10 +59,17 @@ class SupabaseAttachmentRepository extends BaseRepository {
     const ids = (postIds || []).map((id) => Number(id)).filter((id) => Number.isFinite(id));
     if (!ids.length) return {};
 
+    // [LOG_ID: 20260728_2350] PDS 목록 화면은 사용자가 실제로 접근하는 유일한 경로인 가상
+    // 게시판('pds')을 boardId로 넘겨오지만, 첨부는 업로드 당시의 물리 하위 게시판(pds_prog 등)
+    // board_id로 저장돼 있다. 여기서 그 가상 id 그대로 .eq('board_id', boardId)를 걸면 실제
+    // 하위 게시판들과 절대 일치하지 않아, PDS 목록 화면의 파일명/크기/전송 칸이 항상 비어
+    // 있었다(실측 확인: 물리 게시판 직접 조회에선 정상 표시, 가상 'pds' 목록에선 항상 undefined).
+    // 목록 조회(applyBoardFilter)와 동일하게 병합 소스 전체로 필터를 넓힌다.
+    const boardIds = getMergedBoardSourceIds(boardId).filter(Boolean);
     const { data, error } = await this.client
       .from(this.table)
       .select('post_id, original_filename, filename, file_size, download_count, id')
-      .eq('board_id', boardId)
+      .in('board_id', boardIds)
       .in('post_id', ids)
       .order('id', { ascending: true });
 

@@ -1,3 +1,18 @@
+## [2026-07-28 23:50] [/loop PDS 전수조사 9차] PDS 가상 게시판 목록 화면의 파일명/크기/전송(다운로드수) 표시가 항상 비어 있던 결함 발견·수정
+
+**LOG_ID: 20260728_2350**
+목표: PDS 업로드/다운로드를 스키마 정합성 관점에서 재점검 — 사용자가 실제로 접근하는 유일한 경로인 가상(병합) 'pds' 게시판 목록에서 파일 정보 표시가 실제로 동작하는지 실측.
+
+발견: `boardRoutes.js`의 `enrichWithAttachmentSummaries(boardId, result)`가 목록 조회에 쓰인 원래 `boardId`(자료실 화면에서는 항상 가상 게시판 id `'pds'`)를 그대로 `attachmentRepository.summariesForPosts(boardId, postIds)`에 넘기는데, 이 메서드는(Supabase·Local 드라이버 둘 다) `.eq('board_id', boardId)` 단일 일치 필터만 걸었다. 반면 첨부는 업로드 당시의 물리 하위 게시판(`pds_prog`, `pds_util` 등) `board_id`로 저장된다 — 게시글 자체를 가져오는 메인 목록 쿼리(`applyBoardFilter`)는 이미 `getMergedBoardSourceIds()`로 병합 소스 전체(`pds`,`pds_all`,`pds_util`,`pds_game`,`pds_graphic`,`pds_sound`,`pds_prog`)를 `.in('board_id', ...)`으로 걸어 정상 동작하는데, 첨부 요약 조회만 이 확장을 빠뜨려 가상 게시판 id `'pds'`와 실제 첨부의 물리 게시판 id가 절대 일치하지 않았다. 실측: `pds_prog` 물리 게시판을 직접 조회하면 파일명/크기/전송이 정상 표시되지만, 실제 사용자가 접근하는 가상 `'pds'` 목록에서는 같은 글의 해당 값이 전부 `undefined`로 내려옴을 확인 — 이 기능은 사용자가 실제로 마주치는 화면에서는 처음부터 한 번도 동작한 적이 없었다.
+
+수정: `AttachmentRepositorySupabase.js`와 `AttachmentRepositoryLocal.js`의 `summariesForPosts`가 `getMergedBoardSourceIds(boardId)`로 병합 소스 전체를 구해 `.in('board_id', boardIds)`(Supabase) / `Set` 멤버십 검사(Local)로 필터링하도록 수정 — `applyBoardFilter`와 동일한 정책.
+
+검증: 실서버(Supabase 드라이버)로 재현 — 물리 게시판(`pds_prog`) 경로로 테스트 첨부를 업로드한 뒤, 수정 전엔 가상 `'pds'` 목록에서 `fileName`이 `undefined`, 수정 후엔 `testfile.txt`로 정상 표시됨을 확인. 테스트 첨부는 DELETE API로 정리, `attachments` 테이블 재확인으로 잔존 데이터 없음 확인. `node --check` 통과.
+
+결과: ✅ 수정 완료. 지난 라운드(K 검색 완전 무동작)와 같은 계열 — "화면 문구/메뉴 구조상 사용자는 오직 가상 게시판으로만 진입하는데, 그 진입 경로 하나만 빠뜨려 기능이 조용히 항상 비어 보이던" 사례.
+
+---
+
 ## [2026-07-28 23:39] [/loop 회원정보수정 전수조사 8차] 운영자 강제 탈퇴가 사용자의 다음 API 요청 한 번으로 조용히 무효화(회원 자동 부활)되던 결함 발견·수정
 
 **LOG_ID: 20260728_2339**
