@@ -324,14 +324,17 @@ class MemberRouter extends BaseRouter {
       }
     }
 
-    let authDeleted = false;
-    let authDeleteError = '';
-
-    if (isSelf) {
-      const result = await this.tryDeleteAuthAccount(context.authUserId);
-      authDeleted = result.deleted;
-      authDeleteError = result.error;
-    }
+    // [LOG_ID: 20260728_2340] 운영자가 강제 탈퇴시킨 회원의 Supabase Auth 계정은 여기서 지우지
+    // 않고 있었다(isSelf일 때만 삭제) — 그런데 AuthMemberProfileService.enrichUser()는 인증된
+    // 요청인데 members 행이 없으면 "최초 로그인 자동 가입" 로직으로 ensureMember()를 호출해
+    // members 행을 그대로 되살린다. 즉 강제 탈퇴된 사용자가 아직 유효한 로그인 세션(JWT)으로
+    // 아무 API나 한 번만 더 호출하면 탈퇴가 조용히 무효화됐다(실측 확인: deleteMember 직후
+    // enrichUser를 그 사용자 컨텍스트로 호출하면 members 행이 그대로 재생성됨). 대상 회원의
+    // Supabase Auth 계정 자체를 지워 세션을 무효화해야 재로그인 없이는 enrichUser가 호출될
+    // 여지가 없다 — self/admin 구분 없이 항상 대상(deletedMember)의 authUserId로 삭제한다.
+    const result = await this.tryDeleteAuthAccount(deletedMember?.authUserId);
+    const authDeleted = result.deleted;
+    const authDeleteError = result.error;
 
     return this.send(200, { success: true, member: deletedMember, authDeleted, authDeleteError });
   }

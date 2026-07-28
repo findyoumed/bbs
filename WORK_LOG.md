@@ -1,3 +1,18 @@
+## [2026-07-28 23:39] [/loop 회원정보수정 전수조사 8차] 운영자 강제 탈퇴가 사용자의 다음 API 요청 한 번으로 조용히 무효화(회원 자동 부활)되던 결함 발견·수정
+
+**LOG_ID: 20260728_2339**
+목표: 회원가입/탈퇴 경로를 DB 스키마 정합성 관점에서 재점검 — `deleteMember`가 `members` 행만 지우고 끝나는지, 그 삭제가 실제로 "돌이킬 수 없는" 탈퇴인지 확인.
+
+발견: `AuthMemberProfileService.enrichUser(user)`는 인증된(비게스트) 세션인데 `members` 테이블에 해당 `userId` 행이 없으면 "최초 로그인 시 자동 가입" 로직으로 간주해 `memberRepository.ensureMember(buildMemberSeed(user))`를 호출해 행을 새로 만든다 — 이건 OAuth 최초 로그인 지원을 위한 의도된 동작이다. 문제는 `getSessionFromRequest`가 매 인증 요청마다 이 `enrichUser`를 거친다는 것: `memberRoutes.js`의 `deleteMember` 핸들러가 `authDeleted`(Supabase Auth 계정 자체 삭제)를 `isSelf`(본인 탈퇴)일 때만 수행하고 있어서, 운영자가 다른 회원을 강제 탈퇴시키면 `members` 행은 지워지지만 그 회원의 Supabase Auth 계정과 기존 로그인 세션(JWT)은 그대로 살아있었다. 그 상태에서 강제 탈퇴된 사용자가 (아직 유효한 세션으로) 아무 인증 API나 한 번만 더 호출하면 `enrichUser`가 "행이 없는 최초 로그인"으로 오인해 `members` 행을 그대로 되살려, 운영자의 강제 탈퇴가 완전히 무효화됐다. 직접 리포지토리 계층에서 재현: `deleteMember()` 직후 `enrichUser()`를 같은 사용자 컨텍스트로 호출하면 `members` 행이 즉시 재생성됨을 실측 확인.
+
+수정: `memberRoutes.js`의 `deleteMember`에서 `authDeleted`/`tryDeleteAuthAccount` 호출을 `isSelf` 조건 없이 항상 수행하도록 변경하고, 대상은 `context.authUserId`(요청자 자신)가 아니라 `deletedMember.authUserId`(탈퇴 대상)로 고정. Supabase Auth 계정 자체가 삭제되면 `getSessionFromRequest`의 `client.auth.getUser(token)` 실시간 검증이 실패해 게스트로 폴백되므로, 재로그인 없이는 `enrichUser`가 그 사용자 컨텍스트로 다시 호출될 여지가 없다.
+
+검증: 리포지토리 계층 재현 스크립트로 수정 전 부활 현상 확인 → 실제 서버(Supabase 드라이버)에 테스트 회원을 만들고 `DELETE /api/members/:userId`(관리자 헤더)를 호출해 정상 200 응답과 `authDeleted:false`(테스트 회원은 실제 Supabase Auth 계정이 없어 예상된 결과, `authUserId:null`이라 조용히 no-op) 확인 — 기존 정상 흐름 회귀 없음. `node --check`, 관련 테스트 회원 정리 완료.
+
+결과: ✅ 수정 완료. 이번 세션 최대 버그 클래스("서버가 어떤 상태를 신뢰하는 근거가 실제로는 삭제되지 않은 채 남아있는 다른 경로에서 되살아난다")의 새로운 변종 — 이번엔 DB FK나 검색 파라미터가 아니라 "인증 세션의 생명주기가 members 행의 생명주기와 분리되어 있다"는 것이 근본 원인이었다.
+
+---
+
 ## [2026-07-28 23:29] [/loop 댓글/답글·PDS 전수조사 7차] 글보기 API의 virtualBoardId 파라미터가 게시판 접근권한 검사를 우회할 수 있던 취약점 발견·수정
 
 **LOG_ID: 20260728_2329**
