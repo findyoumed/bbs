@@ -461,7 +461,8 @@ export function createChatCommandHandler(deps) {
         }
 
         if (slashCmd.startsWith('EX ')) {
-          const targetId = rawCmd.substring(4).trim();
+          // [LOG_ID: 20260728_1420] rawCmd.substring 대신 정규화된 slashCmd를 사용해 한글 별칭(/차단) 오프셋 자름 방지
+          const targetId = slashCmd.substring(3).trim();
           if (!targetId) {
             setHint('사용법: /EX id');
             return true;
@@ -483,7 +484,8 @@ export function createChatCommandHandler(deps) {
 
         // 방 개설자 전용 - 강퇴 (실제 권한 검증은 서버에서 최종 수행)
         if (slashCmd.startsWith('OUT ')) {
-          const targetId = rawCmd.substring(5).trim();
+          // [LOG_ID: 20260728_1420] rawCmd.substring 대신 정규화된 slashCmd를 사용해 한글 별칭(/내보내기) 오프셋 자름 방지
+          const targetId = slashCmd.substring(4).trim();
           if (!targetId) {
             setHint('사용법: /OUT id');
             return true;
@@ -505,7 +507,7 @@ export function createChatCommandHandler(deps) {
         }
 
         // 방 개설자 전용 - 제목/정원 변경
-        const editMatch = rawCmd.match(/^\/E\s+(TITLE|USER)\s+(.+)$/i);
+        const editMatch = cmd.match(/^\/E\s+(TITLE|USER)\s+(.+)$/i);
         if (editMatch) {
           if (state._chatRoom?.owner !== state.user?.userId) {
             setHint('방 개설자만 설정을 변경할 수 있습니다.');
@@ -538,7 +540,8 @@ export function createChatCommandHandler(deps) {
 
         // 비공개방 초대 - 쪽지로 방번호/비밀번호 안내
         if (slashCmd.startsWith('IN ')) {
-          const targetId = rawCmd.substring(4).trim();
+          // [LOG_ID: 20260728_1420] rawCmd.substring 대신 정규화된 slashCmd를 사용해 한글 별칭(/초대) 오프셋 자름 방지
+          const targetId = slashCmd.substring(3).trim();
           if (!targetId) {
             setHint('사용법: /IN id');
             return true;

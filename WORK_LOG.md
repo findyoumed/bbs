@@ -1,3 +1,22 @@
+## [2026-07-28 14:20] [버그 수정] 대화방 슬래시 명령어(/EX, /OUT, /IN) 한글 별칭 및 가변 오프셋 인자 파손 수정
+
+**LOG_ID: 20260728_1420**
+목표: 대화방 내 슬래시 명령어 `/EX`, `/OUT`, `/IN` 실행 시 한글 별칭 명령(`/내보내기`, `/차단`, `/초대`)을 입력하거나 소문자/가변 공백 입력 시 targetId가 잘못 짤려서 기능이 오동작하던 버그 해결.
+원인 분석:
+1. `commandRouterChat.js`에서 `/EX`, `/OUT`, `/IN` 핸들러가 `rawCmd.substring(4)` / `rawCmd.substring(5)`로 텍스트 위치를 하드코딩 잘라내어, `'/내보내기 user1'` 입력 시 `targetId`가 `'기 user1'`로 엉뚱하게 파괴되었음.
+2. `commandNormalizer.js`의 한글 명령어 매핑 목록에 `/초대` (`/IN`) 매핑이 누락되어 있었음.
+변경 파일:
+- `public/js/core/commandNormalizer.js`
+- `public/js/core/commandRouterChat.js`
+수행 작업:
+1. `commandNormalizer.js` 내 `koAliasMap`에 `'/초대': '/IN'` 매핑 추가.
+2. `commandRouterChat.js` 내 `/EX`, `/OUT`, `/IN` 핸들러의 `targetId` 추출 로직을 하드코딩 오프셋 `rawCmd.substring(N)` 대신 정규화된 `slashCmd.substring(N)` 기반으로 수정하여 명령어 길이에 영향받지 않고 인자가 100% 정확히 추출되도록 보완.
+실행: `node --check public/js/core/commandNormalizer.js`, `node --check public/js/core/commandRouterChat.js`, `npm run smoke:chat-rooms`, `node scripts/smoke-command-parity.js`
+기대: 한글 입력(`/내보내기 id`, `/차단 id`, `/초대 id`) 및 영문 입력(`/OUT id`, `/EX id`, `/IN id`) 모두 정상 구동됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-27 23:39] [/loop PDS 전수조사 6차] 주제어검색(K)이 화면엔 "검색됨"으로 표시되면서 실제로는 3중으로 완전히 무동작이던 버그 발견·수정
 
 **LOG_ID: 20260727_2339**
