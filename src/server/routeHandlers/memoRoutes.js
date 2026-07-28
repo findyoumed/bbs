@@ -88,6 +88,7 @@ class MemoRouter extends BaseRouter {
   // [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — 받는 사람을 쉼표/공백으로 여러 명 적으면
   // 수신자 수만큼 쪽지를 만든다. 쪽지 1건 = 1행이라 스키마 변경 없이 된다.
   // (원전의 "그룹지정"=이름 붙인 수신자 그룹 저장은 별도 테이블이 필요해 구현하지 않았다.)
+  // [LOG_ID: 20260728_1751] 단체편지 및 쪽지 발송 전 수신자가 실제로 가입된 회원인지 전수 사전 유효성 검사 추가
   async createMemo() {
     const { memoRepository, memberRepository } = this.deps;
     const body = await this.getCreateMemoBody();
@@ -99,6 +100,16 @@ class MemoRouter extends BaseRouter {
     }
     if (recipients.length > MEMO_MAX_RECIPIENTS) {
       this.validationError(`단체편지는 한 번에 최대 ${MEMO_MAX_RECIPIENTS}명까지 보낼 수 있습니다.`);
+    }
+
+    // 모든 수신자 회원가입 존재 여부 사전 전수 검사
+    if (memberRepository) {
+      for (const recipientUserId of recipients) {
+        const recipientMember = await memberRepository.getMember(recipientUserId);
+        if (!recipientMember) {
+          this.validationError(`존재하지 않는 회원 아이디입니다: ${recipientUserId}`);
+        }
+      }
     }
 
     // [LOG_ID: 20260722_3000] global.absentMessages(프로세스 메모리 Map — 서버 재시작/서버리스

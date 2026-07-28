@@ -74,13 +74,15 @@ class MemoryBoardRepository {
     return resolveSourceBoardId(boardId, postBoardId);
   }
 
+  // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 글보기 내비게이션 복원을 위해 virtualBoardId와 search를 연계하도록 함
   async getPost(boardId, postId, options = {}) {
-    const board = await this.getBoard(boardId);
+    const targetBoardId = options.virtualBoardId || boardId;
+    const board = await this.getBoard(targetBoardId);
     assertBoardAccessible(board, options.context || { userId: options.viewerId, level: options.viewerLevel }, this.levelAliases);
     const post = this.findPostRecord(boardId, postId);
     if (!post) throw createHttpError(404, '글 없음');
     if (options.incrementHit && post.userId !== (options.viewerId || 'guest')) { post.hit++; post.updatedAt = new Date().toISOString(); }
-    return { board, post: clonePost(post), navigation: this._getNavigation(boardId, post.id) };
+    return { board, post: clonePost(post), navigation: this._getNavigation(targetBoardId, post.id, options.search) };
   }
 
   async updatePost(boardId, postId, input, context = {}) {
@@ -112,8 +114,10 @@ class MemoryBoardRepository {
     const [deleted] = this.posts.splice(idx, 1); return { board, tombstoned: false, post: clonePost(deleted) };
   }
 
-  _getNavigation(bid, pid) {
-    const ids = sortPostsThreaded(this.filterPostsByBoard(bid)).map(p => p.id), idx = ids.indexOf(Number(pid));
+  _getNavigation(bid, pid, search = null) {
+    const posts = this.filterPostsByBoard(bid);
+    const filtered = require('./BoardRepositorySearch').filterPostsBySearch(posts, search);
+    const ids = sortPostsThreaded(filtered).map(p => p.id), idx = ids.indexOf(Number(pid));
     return { latestId: ids[0] ?? null, prevId: idx > 0 ? ids[idx - 1] : null, nextId: (idx >= 0 && idx < ids.length - 1) ? ids[idx + 1] : null };
   }
 }

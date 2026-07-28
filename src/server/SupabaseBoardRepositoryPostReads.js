@@ -96,14 +96,17 @@ async function listPosts(repo, boardId, options = {}) {
   };
 }
 
+// [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 글보기 내비게이션 복원을 위해 virtualBoardId와 search를 연계하도록 함
 async function getPost(repo, boardId, postId, options = {}) {
-  const board = await getBoard(repo, boardId);
+  const targetBoardId = options.virtualBoardId || boardId;
+  const board = await getBoard(repo, targetBoardId);
   if (!board) {
     throw createHttpError(404, '게시판을 찾을 수 없습니다.');
   }
   assertBoardAccessible(board, options.context, repo.levelAliases);
 
   const capabilities = await ensureCapabilities(repo);
+  // 포스트 데이터 조회 시에는 중복 localId 충돌 방지를 위해 원래의 물리 게시판 id를 사용
   let post = await fetchPostByLocalId(repo, boardId, postId);
   if (!post) {
     throw createHttpError(404, '게시글을 찾을 수 없습니다.');
@@ -127,7 +130,7 @@ async function getPost(repo, boardId, postId, options = {}) {
   return {
     board,
     post,
-    navigation: await getNavigation(repo, boardId, post.id)
+    navigation: await getNavigation(repo, targetBoardId, post.id, options.search)
   };
 }
 
@@ -194,7 +197,7 @@ async function fetchPostByLocalId(repo, boardId, localId) {
   return mapPostRow(Array.isArray(data) ? (data[0] || null) : data);
 }
 
-async function getNavigation(repo, boardId, postId) {
+async function getNavigation(repo, boardId, postId, search = null) {
   const capabilities = await ensureCapabilities(repo);
   const pid = Number(postId);
 
@@ -206,7 +209,8 @@ async function getNavigation(repo, boardId, postId) {
 
   const extractNavId = (row) => (row ? Number(row.local_id ?? row.id ?? 0) : null);
 
-  const latestQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+  let latestQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+  latestQuery = applySupabaseSearch(latestQuery, capabilities, search);
   const { data: latestData } = await applyPostOrdering(latestQuery, repo, capabilities).limit(1).maybeSingle();
 
   if (capabilities.threaded) {
@@ -214,6 +218,7 @@ async function getNavigation(repo, boardId, postId) {
     const sortOrder = Number(post.orderby || 0);
 
     let prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+    prevQuery = applySupabaseSearch(prevQuery, capabilities, search);
     prevQuery = prevQuery
       .or(`family_id.gt.${familyId},and(family_id.eq.${familyId},sort_order.lt.${sortOrder})`)
       .order('family_id', { ascending: true })
@@ -222,6 +227,7 @@ async function getNavigation(repo, boardId, postId) {
     const { data: prevData } = await prevQuery.maybeSingle();
 
     let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+    nextQuery = applySupabaseSearch(nextQuery, capabilities, search);
     nextQuery = nextQuery
       .or(`family_id.lt.${familyId},and(family_id.eq.${familyId},sort_order.gt.${sortOrder})`)
       .order('family_id', { ascending: false })
@@ -239,10 +245,12 @@ async function getNavigation(repo, boardId, postId) {
   // [LOG: 20260429_0508] Non-threaded boards render in descending id order,
   // so previous/next ids must follow that visible order instead of numeric order.
   const idCol = capabilities.localId || 'id';
-  const prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+  let prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+  prevQuery = applySupabaseSearch(prevQuery, capabilities, search);
   const { data: prevData } = await prevQuery.gt(idCol, localPid).order(idCol, { ascending: true }).limit(1).maybeSingle();
 
-  const nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+  let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
+  nextQuery = applySupabaseSearch(nextQuery, capabilities, search);
   const { data: nextData } = await nextQuery.lt(idCol, localPid).order(idCol, { ascending: false }).limit(1).maybeSingle();
 
   return {

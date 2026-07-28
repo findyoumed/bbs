@@ -85,13 +85,32 @@ export function createPostService(deps) {
     return data;
   }
 
-  async function loadPost(boardId, postId) {
-    const cacheKey = `${boardId}_${postId}`;
+  // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 글보기 내비게이션 복원을 위해 virtualBoardId와 searchParams를 함께 실어 보내고 캐시하도록 함
+  async function loadPost(boardId, postId, virtualBoardId = '', searchParams = {}) {
+    let cacheKey = virtualBoardId ? `${boardId}_${postId}_v_${virtualBoardId}` : `${boardId}_${postId}`;
+    if (searchParams.lt) cacheKey += `_lt_${searchParams.lt}`;
+    if (searchParams.li) cacheKey += `_li_${searchParams.li}`;
+    if (searchParams.lc) cacheKey += `_lc_${searchParams.lc}`;
+    if (searchParams.k) cacheKey += `_k_${searchParams.k}`;
+    if (searchParams.la) cacheKey += `_la_${searchParams.la}`;
+    if (searchParams.recent) cacheKey += `_recent_${searchParams.recent}`;
+
     if (postCache.has(cacheKey)) {
       return postCache.get(cacheKey);
     }
 
-    const data = normalizePostViewResponse(await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}?view=1`));
+    let url = `/api/boards/${encodeURIComponent(boardId)}/posts/${postId}?view=1`;
+    if (virtualBoardId) {
+      url += `&virtualBoardId=${encodeURIComponent(virtualBoardId)}`;
+    }
+    if (searchParams.lt) url += `&lt=${encodeURIComponent(searchParams.lt)}`;
+    if (searchParams.li) url += `&li=${encodeURIComponent(searchParams.li)}`;
+    if (searchParams.lc) url += `&lc=${encodeURIComponent(searchParams.lc)}`;
+    if (searchParams.k) url += `&k=${encodeURIComponent(searchParams.k)}`;
+    if (searchParams.la) url += `&la=${encodeURIComponent(searchParams.la)}`;
+    if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
+
+    const data = normalizePostViewResponse(await apiFetch(url));
     
     // 결과 캐싱
     postCache.set(cacheKey, data);

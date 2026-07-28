@@ -37,7 +37,12 @@ export function createPostViewView(deps) {
       }
       setLoading('연결하는 중입니다..');
       const boardKey = String(boardId || '').trim();
-      const data = await loadPost(boardKey, postId);
+      // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 글보기 내비게이션 복원을 위해 virtualBoardId와 state.searchParams를 함께 연계
+      const currentParentId = String(state.board?.id || '').trim();
+      const isParentVirtual = currentParentId === 'pds';
+      const virtualBoardId = (isParentVirtual && boardKey !== currentParentId) ? currentParentId : '';
+
+      const data = await loadPost(boardKey, postId, virtualBoardId, state.searchParams || {});
 
       state.post = data.post;
       // [LOG: 20260429_0047] Direct /board/:boardId/:postId entry must keep

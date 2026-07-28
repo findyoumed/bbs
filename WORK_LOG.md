@@ -1,3 +1,66 @@
+## [2026-07-28 17:51] [버그 수정] 쪽지(Memo) 전송 시 존재하지 않는 회원 아이디 유효성 사전 검사 강화
+
+**LOG_ID: 20260728_1751**
+목표: 존재하지 않는 회원 ID(예: `"no_such_user"`)로 쪽지를 발송하더라도, 데이터베이스 저장 단계나 API 검증 레벨에서 걸러내지 않아 201 Created로 정상 전송되던 결함 수정.
+원인 분석: 쪽지 발송 API 요청을 처리하는 `createMemo`에서 수신자 목록의 사용자가 실존하는 가입 회원인지에 대한 사전 유효성 검사 로직이 누락되어 있었음.
+변경 파일:
+- `src/server/routeHandlers/memoRoutes.js`
+수행 작업:
+1. `createMemo` 핸들러 내에서 `memberRepository.getMember(recipientUserId)`를 사전에 조회하여 수신자가 실제로 가입된 회원인지 전수 사전 유효성 검사를 진행.
+2. 가입되지 않은 수신자 ID가 쉼표 구분 목록에 하나라도 섞여 있다면 `validationError` (400 Bad Request)로 발송을 사전에 완전히 취소 및 차단하여 데이터 유실 사각지대 개선.
+실행: `node --check src/server/routeHandlers/memoRoutes.js`, `npm run smoke:boards`, `npm run smoke:full-traversal`
+기대: 존재하지 않는 ID로 쪽지 송신 시 400 Bad Request 에러와 함께 `"존재하지 않는 회원 아이디입니다: OOO"`가 반환되며, 올바른 회원인 경우에는 201로 안전하게 발송됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-28 17:28] [기능 개선] 게시판 검색 상태에서의 글보기 이전/다음글 내비게이션 정확성 개선
+
+**LOG_ID: 20260728_1728**
+목표: 게시판 검색(LT, LC, LA, LI, K)이 켜진 상태에서 글 상세조회 진입 후, 이전/다음글 탐색 시 검색 필터링 조건이 유실되고 전체 글 기준으로 내비게이션이 산출되던 결함 수정.
+원인 분석: 상세글 조회(`getPost`) 시 검색 필터 조건(`searchParams`)이 API 요청 및 서버 리포지토리의 내비게이션(`getNavigation`) 연산에 전혀 전달되지 않아 무필터 쿼리로 연산되고 있었음.
+변경 파일:
+- `src/server/routeHandlers/boardRoutes.js`
+- `src/server/SupabaseBoardRepositoryPostReads.js`
+- `src/server/MemoryBoardRepository.js`
+- `public/js/core/postService.js`
+- `public/js/core/postViewView.js`
+수행 작업:
+1. 글 상세조회 API 요청에 현재 활성화된 검색 조건(`searchParams`)을 쿼리스트링 파라미터(`lt`, `li`, `lc`, `ln`, `la`, `k`, `recent`) 형태로 결합하여 전송하도록 클라이언트/서버 인터페이스 연계.
+2. 서버 리포지토리(`SupabaseBoardRepositoryPostReads.js` 및 `MemoryBoardRepository.js`)의 `getNavigation` 메서드에 검색 파라미터를 추가 전파하고, 내부 내비게이션 쿼리 연산에 `applySupabaseSearch` (Supabase) 및 `filterPostsBySearch` (Memory) 필터를 입혀 검색 조건에 부합하는 글 목록 범위 내에서만 이전/다음 글이 유기적으로 산출되도록 수정.
+실행: `node --check [각 수정된 파일]`, `npm run smoke:boards`, `npm run smoke:full-traversal`
+기대: 검색 필터가 적용된 상태에서 글 내비게이션 조작 시 검색 흐름에 부합하는 이전/다음 글들이 정상 탐색됨.
+결과: ✅ 완료
+
+---
+
+## [2026-07-28 17:08] [기능 개선 및 버그 수정] PDS 가상 게시판 내비게이션 맥락 보존 및 대화방 강퇴 알림 수정
+
+**LOG_ID: 20260728_1708**
+목표: 
+1. PDS 가상 게시판(`pds`)에서 검색/조회 후 글 진입 시 개별 물리 게시판(`pds_util` 등) 맥락으로 갇혀 이전/다음글 탐색이 차단되던 결함 수정.
+2. 대화방 강퇴(`kick`/`/OUT`) 시 시스템 메시지(`'kick' eventType`) 누락 및 잘못 렌더링되던 문제 수정.
+원인 분석:
+1. PDS 가상 게시판의 localId 충돌 방지를 위해 하위 게시판 ID로 상세글을 조회할 때, 서버가 가상 게시판 맥락을 잃어버려 내비게이션을 단일 하위 게시판 범위에서만 연산하고 보드 메타 정보 또한 하위 게시판으로 오인해 교체해버렸음.
+2. `kick` 처리 시 join/leave와 달리 `_pushSystemMessage` 호출이 양대 리포지토리 드라이버 모두 누락되어 강퇴 시스템 메시지가 생성되지 않았고, 클라이언트 `chatAnsiBuilders.js`에서도 `kick` 타입에 대한 한글 동사 매핑이 빠져 있었음.
+변경 파일:
+- `src/server/routeHandlers/boardRoutes.js`
+- `src/server/SupabaseBoardRepositoryPostReads.js`
+- `src/server/MemoryBoardRepository.js`
+- `public/js/core/postService.js`
+- `public/js/core/postViewView.js`
+- `src/server/ChatRoomRepositoryMemory.js`
+- `src/server/ChatRoomRepositorySupabase.js`
+- `public/js/core/chatAnsiBuilders.js`
+수행 작업:
+1. 글 상세 조회 시 쿼리스트링 `virtualBoardId` 파라미터 전달 체인을 구축하여, 서버가 가상 게시판 메타 정보를 반환하고 그에 맞추어 `getNavigation`을 광범위하게 연산하도록 조치.
+2. `kick` 메서드에 `_pushSystemMessage(..., 'kick', ...)` 호출을 추가하여 강퇴 사실을 방 전체에 브로드캐스트하고, 클라이언트 `chatAnsiBuilders.js`에 `kick` 렌더링 처리(`'강퇴'`)를 추가함.
+실행: `node --check [각 수정된 파일]`, `npm run smoke:boards`, `npm run smoke:full-traversal`
+기대: 모든 스모크 테스트가 정상 통과하며 가상 게시판 및 강퇴 관련 동작 안정성 확보.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-28 14:30] [버그 수정] SYSINFO 스모크 테스트 시 관리자 세션 주입 보완
 
 **LOG_ID: 20260728_1430**

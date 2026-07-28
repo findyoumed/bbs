@@ -210,7 +210,8 @@ export function createChatAnsiBuilders(deps) {
       // 남긴다(join()/leave()가 서버에서 이 메시지를 만들어 messagesByRoomNo에 심어둔다).
       if (message.type === 'system') {
         const idLabel = senderId ? `(${message.userId})` : '';
-        const verb = message.eventType === 'leave' ? '퇴장' : '입장';
+        // [LOG_ID: 20260728_1629] kick eventType 추가 — 이전에는 kick이 '입장'으로 잘못 표시됐음
+        const verb = message.eventType === 'leave' ? '퇴장' : message.eventType === 'kick' ? '강퇴' : '입장';
         const line = `■■ ${who}${idLabel} 님이 ${verb}하였습니다. ■■`;
         // [LOG_ID: 20260726_1000] who(닉네임, 최대 20자·표시폭 40칸)+idLabel(아이디 최대 20자)을
         // 합치면 고정 문구까지 최대 약 87칸 — 44칸(모바일) 예산은 물론 80칸(데스크톱)도 넘을 수

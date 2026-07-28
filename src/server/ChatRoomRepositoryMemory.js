@@ -163,6 +163,10 @@ class MemoryChatRoomRepository {
   }
 
   // [LOG_ID: 20260714_2200] 원전 /OUT id(강퇴) 재현 — 방 개설자(ownerUserId)만 실행 가능.
+  // [LOG_ID: 20260728_1629] kick()이 participants에서만 제거하고 시스템 메시지를 전혀 남기지
+  // 않아, 강퇴된 사람과 남은 참여자 모두 강퇴 사실을 알 방법이 없었다(join()/leave()는 둘 다
+  // _pushSystemMessage()를 호출하는데 kick()만 빠져 있었음). 강퇴된 참여자의 닉네임/아이디를
+  // 'kick' eventType 시스템 메시지로 남겨 폴링 중인 다른 참여자들에게 자동으로 전달되게 한다.
   kick(roomNo, targetUserId, context = {}) {
     this._cleanup();
     const room = this._findRoom(roomNo);
@@ -171,11 +175,13 @@ class MemoryChatRoomRepository {
       throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
     }
     const target = normalizeText(targetUserId, '');
-    const before = room.participants.length;
-    room.participants = room.participants.filter((entry) => entry.userId !== target);
-    if (room.participants.length === before) {
+    const kicked = room.participants.find((entry) => entry.userId === target);
+    if (!kicked) {
       throw createHttpError(404, '해당 이용자가 방에 없습니다.');
     }
+    room.participants = room.participants.filter((entry) => entry.userId !== target);
+    // [LOG_ID: 20260728_1629] 강퇴 시스템 메시지 — join/leave와 동일한 패턴.
+    this._pushSystemMessage(room.no, 'kick', kicked.userId, kicked.nickName);
     this._removeIfDisposable(room);
     return publicRoom(room, summarizeParticipantCounts(room.participants));
   }

@@ -127,6 +127,9 @@ class SupabaseChatRoomRepository extends BaseRepository {
   // [LOG_ID: 20260714_2200] 원전 /OUT id(강퇴) 재현 — 방 개설자(owner_user_id)만 실행 가능.
   // 세션 목록에서만 제거(참여자 수/목록에 즉시 반영) — leave()도 메시지 전송을 별도로 막지
   // 않는 동일한 얕은 프레즌스 모델이라, 강퇴도 그 이상을 강제하지 않는다.
+  // [LOG_ID: 20260728_1629] kick()이 participants에서만 제거하고 시스템 메시지를 남기지
+  // 않아 강퇴된 사람과 남은 참여자들 모두 강퇴 사실을 알 방법이 없었다. 'kick' eventType
+  // 시스템 메시지를 추가해 폴링 중인 다른 참여자들에게 자동 전달된다.
   async kick(roomNo, targetUserId, context = {}) {
     await this._ensureDefaultRoom(); await this._cleanup();
     const room = await this.queries.findRoomByNo(roomNo);
@@ -134,10 +137,12 @@ class SupabaseChatRoomRepository extends BaseRepository {
     if (room.owner_user_id !== requesterId) throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
     const target = normalizeText(targetUserId, '');
     const participants = this._participantsForRoom(room.room_no);
-    const before = participants.length;
-    const filtered = participants.filter(p => p.userId !== target);
-    if (filtered.length === before) throw createHttpError(404, '해당 이용자가 방에 없습니다.');
+    const kicked = participants.find((p) => p.userId === target);
+    if (!kicked) throw createHttpError(404, '해당 이용자가 방에 없습니다.');
+    const filtered = participants.filter((p) => p.userId !== target);
     if (filtered.length) this.participantsByRoomNo.set(Number(room.room_no), filtered); else this.participantsByRoomNo.delete(Number(room.room_no));
+    // [LOG_ID: 20260728_1629] 강퇴 시스템 메시지 — join/leave와 동일한 패턴.
+    this._pushSystemMessage(room.room_no, 'kick', kicked.userId, kicked.nickName);
     const authCount = await this.memberPersistence.loadActiveAuthMemberCount(room.id);
     return this._toPublicRoom(room, summarizeParticipantCounts(filtered, authCount));
   }

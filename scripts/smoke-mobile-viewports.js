@@ -41,8 +41,13 @@ async function runMobileSmokeTests() {
     // [LOG_ID: 20260725_2200] 이 환경에 미리 설치된 Chromium 리비전이 playwright 패키지가 기대하는
     // 리비전과 어긋나 기본 launch()가 "Executable doesn't exist"로 항상 실패했다(smoke-full-traversal.js의
     // Playwright 폴백 감지에서도 같은 원인으로 확인된 패턴) — 미리 설치된 바이너리를 직접 가리킨다.
-    const executablePath = '/opt/pw-browsers/chromium';
-    const browser = await chromium.launch({ headless: true, executablePath });
+    const fs = require('fs');
+    const customPath = '/opt/pw-browsers/chromium';
+    const launchOptions = { headless: true };
+    if (fs.existsSync(customPath)) {
+      launchOptions.executablePath = customPath;
+    }
+    const browser = await chromium.launch(launchOptions);
 
     // [LOG_ID: 20260725_2200] 뷰포트 1개(iPhone 390x844)만 검사하면 그보다 좁은 실기기(작은
     // 안드로이드)에서만 나타나는 가로 오버플로우를 놓친다 — 폭이 다른 뷰포트 2개를 함께 돈다.

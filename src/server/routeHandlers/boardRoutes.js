@@ -191,16 +191,29 @@ class BoardRouter extends BaseRouter {
     return this.send(200, await this.deps.boardRepository.recommendPost(boardId, postId, context));
   }
 
+  // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 내비게이션 정확성 보존을 위해 virtualBoardId와 search 파라미터를 추가 연계
   async getPost(params) {
     const boardId = params.boardId;
     const postId = Number(params.postId);
     if (isNaN(postId)) this.validationError('Invalid post ID');
     const viewerContext = await this.getContext();
+    const virtualBoardId = this.requestUrl.searchParams.get('virtualBoardId') || '';
+    const search = {
+      lt: this.requestUrl.searchParams.get('lt') || '',
+      li: this.requestUrl.searchParams.get('li') || '',
+      lc: this.requestUrl.searchParams.get('lc') || '',
+      ln: this.requestUrl.searchParams.get('ln') || '',
+      la: this.requestUrl.searchParams.get('la') || '',
+      k: this.requestUrl.searchParams.get('k') || '',
+      recent: this.requestUrl.searchParams.get('recent') || ''
+    };
     return this.send(200, await this.deps.boardRepository.getPost(boardId, postId, {
       incrementHit: this.requestUrl.searchParams.get('view') === '1',
       viewerId: this.requestUrl.searchParams.get('userId') || viewerContext.userId || 'guest',
       viewerLevel: viewerContext.level || 1,
-      context: viewerContext
+      context: viewerContext,
+      virtualBoardId,
+      search
     }));
   }
 
