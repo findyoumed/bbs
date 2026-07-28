@@ -7067,6 +7067,9 @@ async function verifyPlaywrightCommands(page, errors) {
     if (await openHomeAndWait(page, errors, 'home before SYSINFO')) {
         await page.evaluate(() => {
             try {
+                if (window.__debugState) {
+                    window.__debugState.user = { userId: 'sysop', nickName: '운영자', isGuest: false, isAdmin: true, level: 99 };
+                }
                 localStorage.setItem('bbs_user_id', 'sysop');
                 localStorage.setItem('bbs_session', JSON.stringify({ userId: 'sysop', role: 'sysop', nickname: '운영자' }));
             } catch (e) {}

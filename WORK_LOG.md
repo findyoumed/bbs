@@ -1,3 +1,20 @@
+## [2026-07-28 14:30] [버그 수정] SYSINFO 스모크 테스트 시 관리자 세션 주입 보완
+
+**LOG_ID: 20260728_1430**
+목표: `npm run smoke:full-traversal` 스모크 테스트 내 `SYSINFO` 커맨드 실행 시 `/api/system/info` 403 Forbidden ("운영 권한이 없습니다.") 발생 방지.
+원인 분석: `smoke-full-traversal.js`에서 `localStorage`에만 세션을 기재하고 브라우저 `state.user` 객체(`isAdmin: true`)를 주입하지 않아, `apiFetch` 시 `X-BBS-Admin: 1` 헤더가 부착되지 않고 서버 `ensureAdmin` 미들웨어를 통과하지 못함.
+변경 파일:
+- `public/js/app.js`
+- `scripts/smoke-full-traversal.js`
+수행 작업:
+1. `public/js/app.js`에 `window.__debugState = state;` 전역 참조 등록.
+2. `scripts/smoke-full-traversal.js`의 `SYSINFO` 테스트 `page.evaluate`에서 `window.__debugState.user`에 관리자 객체(`isAdmin: true`, `level: 99`)를 주입하여 `ensureAdmin` 통과 및 `SYSINFO` 화면이 정상 렌더링되도록 조치.
+실행: `node --check public/js/app.js`, `node --check scripts/smoke-full-traversal.js`, `npm run smoke:full-traversal`
+기대: `SYSINFO` 스모크 검증이 403 에러 없이 통과됨.
+결과: ✅ 완료
+
+---
+
 ## [2026-07-28 14:20] [버그 수정] 대화방 슬래시 명령어(/EX, /OUT, /IN) 한글 별칭 및 가변 오프셋 인자 파손 수정
 
 **LOG_ID: 20260728_1420**

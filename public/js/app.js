@@ -24,6 +24,11 @@ let state = {
   _sessionStartTime: Date.now(),
 };
 
+// [LOG: 20260728_1430] 디버그/스모크 테스트용 전역 state 참조 등록
+if (typeof window !== 'undefined') {
+  window.__debugState = state;
+}
+
 const refs = {};
 
 const {
