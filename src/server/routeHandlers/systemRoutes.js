@@ -127,8 +127,19 @@ class SystemRouter extends BaseRouter {
     return this.send(200, info);
   }
 
+  // [LOG_ID: 20260729_0035] 이 엔드포인트는 원전 UID/WHO(접속자 목록)를 재현하려고 로그인 여부와
+  // 무관하게 의도적으로 공개돼 있다(위 라우트 등록부 주석 참고 — SYSINFO와 달리 이건 의도된
+  // 게스트 공개 기능). 그런데 activityRepository.list()가 반환하는 각 항목엔 표시용 필드
+  // 외에 remoteAddr(접속자의 실제 IP)까지 그대로 들어있어, 인증 전혀 없이 아무나 호출해서
+  // 현재 접속 중인 모든 사용자·게스트의 IP 주소를 그대로 긁어갈 수 있었다(실측 확인: 익명
+  // curl 요청 응답에 remoteAddr:"127.0.0.1" 등이 그대로 포함됨). 클라이언트
+  // (systemAnsiBuilders.js buildActiveUsersAnsi)는 userId/nickName/path/level/isAdmin/isGuest/
+  // lastSeenAt만 렌더하고 remoteAddr는 어디서도 쓰지 않는다 — PF/WHO의 내부 UUID 노출을 고친
+  // 것과 동일한 원칙으로, 화면이 쓰지 않는 민감 필드를 공개 응답에서 제거한다.
   async getActiveUsers() {
-    return this.send(200, this.deps.activityRepository.list());
+    const users = this.deps.activityRepository.list();
+    const publicUsers = users.map(({ remoteAddr, ...rest }) => rest);
+    return this.send(200, publicUsers);
   }
 
   async getActivitySummary() {

@@ -1,3 +1,18 @@
+## [2026-07-29 00:35] [/loop 채팅 전수조사] 접속자 목록(WHO/UID) 공개 API가 인증 없이 모든 접속자의 실제 IP 주소를 노출하던 정보 유출 발견·수정
+
+**LOG_ID: 20260729_0035**
+목표: SYSINFO(관리자 전용)와 짝을 이루는 활성 사용자 진단 엔드포인트들(`/api/system/active-users`, `/api/system/activity-summary`)을 감사 — 이 둘은 원전 UID/WHO 명령 재현을 위해 라우트 정의 주석에 "로그인 여부와 무관하게 의도적으로 공개"라고 명시돼 있어, 그 의도된 공개 범위가 실제로 안전한 필드만 포함하는지 확인.
+
+발견: `ActivityRepository.touch()`가 매 요청마다 `remoteAddr`(요청자의 실제 IP, `req.socket.remoteAddress` 기반)를 저장하고, `list()`가 이 필드를 포함한 전체 레코드를 그대로 반환하는데, `systemRoutes.js`의 `getActiveUsers()`가 아무 필터링 없이 `list()` 결과를 그대로 공개 API 응답으로 내려보냈다. 이 엔드포인트는 인증이 전혀 없어(라우트 정의에 미들웨어 없음), 익명 사용자가 그냥 `curl`로 호출하면 현재 접속 중인 모든 사용자·게스트의 실제 IP 주소를 그대로 긁어갈 수 있는 정보 유출이었다. 실측 확인: 인증 헤더 하나 없는 `GET /api/system/active-users` 응답에 `remoteAddr:"127.0.0.1"`이 그대로 포함됨. 클라이언트(`systemAnsiBuilders.js`의 `buildActiveUsersAnsi`)는 `userId`/`nickName`/`path`/`level`/`isAdmin`/`isGuest`/`lastSeenAt`만 렌더하고 `remoteAddr`는 어디서도 쓰지 않아, PF/WHO의 내부 Auth UUID 노출(이전 라운드에서 수정)과 정확히 같은 유형의 "화면이 안 쓰는 민감 필드가 그대로 새는" 결함이었다.
+
+수정: `systemRoutes.js`의 `getActiveUsers()`에서 `list()` 결과를 응답 전에 `remoteAddr`를 제거한 형태로 매핑해 반환. Memory/Supabase 두 `ActivityRepository` 드라이버 모두 이 라우트 레벨 필터로 커버됨(리포지토리 내부 저장 자체는 그대로 두고, 공개 API 경계에서만 제거).
+
+검증: 실서버(Supabase 보드/회원 드라이버 + activity는 Memory)로 재현 — 수정 전 익명 `GET /api/system/active-users` 응답에 `remoteAddr` 포함 확인, 수정 후 동일 요청에서 `remoteAddr`가 완전히 빠지고 나머지 표시용 필드(`userId`/`nickName`/`path`/`level`/`isAdmin`/`isGuest`/`lastSeenAt`)는 그대로 유지되어 접속자 목록(WHO) 기능 자체엔 회귀가 없음을 확인. `node --check` 통과.
+
+결과: ✅ 수정 완료. 지난 라운드들의 "조용한 절삭" 계열과 달리 이번엔 정보 노출(민감 필드 무필터 공개)이며, PF/WHO UUID 노출 수정과 동일한 원칙("화면이 쓰지 않는 내부 필드는 익명 응답에서 제거")의 재발 사례.
+
+---
+
 ## [2026-07-29 00:26] [/loop 댓글/답글(쪽지) 전수조사] 쪽지 제목이 API 검증(200자)과 다르게 60자로 조용히 잘리던 결함 발견·수정
 
 **LOG_ID: 20260729_0026**
