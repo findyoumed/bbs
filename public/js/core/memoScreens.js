@@ -4,6 +4,11 @@ import { renderAnsiScreenWithTopbarSequential, renderRawHtmlScreenWithTopbar } f
 import { MEMO_CARDS, MEMO_CARD_KEYS } from './memoCardAssets.js';
 // [LOG_ID: 20260719_1400] 하이텔 (10)-6 단체편지 그룹·천리안 주소록 — @그룹명 → 멤버 펼침.
 import { expandRecipients } from './memoGroups.js';
+// [LOG_ID: 20260729_0110] handleMemoRawInput은 commandDispatcherExecution.js가 넘겨주는
+// 정규화 전 원본 input을 그대로 받는다(commandRouterMemo.js가 rawCmd/cmd가 아니라 input을
+// 전달) — 즉 전역 normalizeCommand()의 두벌식 자모 보정(koAliasMap: 'ㅔ'→P 등)을 거치지
+// 않는다. contactSysopScreen.js에서 같은 이유로 이미 고친 것과 동일한 헬퍼를 여기도 둔다.
+import { convertKoreanToEnglish } from './commandNormalizer.js';
 
 // [LOG_ID: 20260713_1620] 하이텔 원전(길라잡이 p.105) 편지 종류 8종 — 비밀/답장요망/지연
 // 3개 속성의 조합. 서버 스키마 변경 없이 제목 앞 대괄호 태그로 인코딩한다.
@@ -454,7 +459,12 @@ export function createMemoScreens(deps) {
         const line = String(raw ?? '');
         const trimmed = line.trim();
         const cmd = trimmed.toUpperCase();
-        const isCancel = trimmed === '/q' || cmd === 'P' || cmd === 'M' || cmd === 'B';
+        // [LOG_ID: 20260729_0110] 한/영 전환이 안 된 채 물리 P/M/B/S 키를 치면 두벌식 자판상
+        // 'ㅔ'/'ㅡ'/'ㅠ'/'ㄴ'으로 들어온다 — 그 결과가 알려진 명령과 일치할 때만 그 명령으로
+        // 인정한다(자유 한국어 문장은 음절이 2글자 이상이라 오작동 위험 없음).
+        const koCmd = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(trimmed) ? convertKoreanToEnglish(trimmed).toUpperCase() : '';
+        const isCancel = trimmed === '/q' || cmd === 'P' || cmd === 'M' || cmd === 'B'
+          || koCmd === '/Q' || koCmd === 'P' || koCmd === 'M' || koCmd === 'B';
 
         // [LOG_ID: 20260719_1200] 축하카드(vmail) 카드 선택 단계 — 카드 고르면 받는 사람 입력으로 넘어간다.
         if (flow.stage === 'card_select') {
@@ -592,7 +602,7 @@ export function createMemoScreens(deps) {
             return await cancelMemoWrite();
         }
 
-        if (trimmed === '/s' || cmd === 'SEND') {
+        if (trimmed === '/s' || cmd === 'SEND' || koCmd === '/S' || koCmd === 'SEND') {
             appendMemoWriteLine('내용 >>', line);
             // [LOG_ID: 20260719_1200] 축하카드는 편지 종류(비밀/지연 등) 선택을 건너뛰고 바로 발송한다
             // (카드 자체가 편지 종류다). 일반 쪽지만 편지 종류 선택 단계로 넘어간다.

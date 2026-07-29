@@ -1,5 +1,10 @@
 import { UI_TEXT } from './i18n.js';
 import { renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
+// [LOG_ID: 20260729_0120] isCancelWriteCommand/isSaveWriteCommand는 이 화면의 라인 에디터가
+// 받는 원본 텍스트 줄을 그대로 비교한다 — 전역 normalizeCommand()의 두벌식 자모 보정을 거치지
+// 않는다. contactSysopScreen.js/memoScreens.js에서 이미 고친 것과 동일한 헬퍼를 board 글쓰기
+// (가장 많이 쓰이는 화면)에도 적용한다.
+import { convertKoreanToEnglish } from './commandNormalizer.js';
 
 export function createPostWriteView(deps) {
   const {
@@ -529,10 +534,21 @@ export function createPostWriteView(deps) {
     renderBbsEditor(editor, editor._onSave, editor._onCancel);
   }
 
+  // [LOG_ID: 20260729_0120] 한/영 전환이 안 된 채 물리 P/M/B/S 키를 치면 두벌식 자판상
+  // 'ㅔ'/'ㅡ'/'ㅠ'/'ㄴ'으로 들어온다 — 그 결과가 알려진 명령과 일치할 때만 그 명령으로
+  // 인정한다(자유 문장은 음절이 2글자 이상이라 오작동 위험 없음). contactSysopScreen.js/
+  // memoScreens.js와 동일한 헬퍼.
+  function toKoreanCommandToken(raw) {
+    const trimmed = String(raw || '').trim();
+    return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(trimmed) ? convertKoreanToEnglish(trimmed).toUpperCase() : '';
+  }
+
   function isCancelWriteCommand(raw) {
     const input = String(raw || '').trim();
     const upper = input.toUpperCase();
-    return input === '/q' || upper === 'P' || upper === 'M' || upper === 'B';
+    const koCmd = toKoreanCommandToken(input);
+    return input === '/q' || upper === 'P' || upper === 'M' || upper === 'B'
+      || koCmd === '/Q' || koCmd === 'P' || koCmd === 'M' || koCmd === 'B';
   }
 
   // [LOG_ID: 20260724_0020] 하이텔 등 원전 PC통신 라인 에디터의 관례 — 본문 입력 중 한 줄에
@@ -540,7 +556,9 @@ export function createPostWriteView(deps) {
   // 되어있던데"). "." 하나로만 이루어진 줄은 실제 본문으로 쓸 일이 거의 없어 안전하게 구분된다.
   function isSaveWriteCommand(raw) {
     const input = String(raw || '').trim();
-    return input === '/s' || input === '.' || input.toUpperCase() === 'S';
+    const koCmd = toKoreanCommandToken(input);
+    return input === '/s' || input === '.' || input.toUpperCase() === 'S'
+      || koCmd === '/S' || koCmd === 'S';
   }
 
   // [LOG_ID: 20260724_0010] "/L", "/E 3", "/D 2-4", "/I 5" 형태의 줄 편집 명령을 인식한다.

@@ -1,3 +1,20 @@
+## [2026-07-29 01:15] [/loop 쪽지 전수조사] 쪽지 작성 화면이 한/영 전환 안 된 두벌식 오타(P/M/B/S 취소·전송)를 인식하지 못하던 결함 발견·수정
+
+**LOG_ID: 20260729_0115**
+목표: 이번 세션에 여러 차례(EX/OUT/IN, tosysop) 발견·수정한 "두벌식 자판 미보정" 버그 클래스가 쪽지 작성 화면에도 남아있는지 확인 — `handleMemoRawInput`이 전역 명령 정규화(`normalizeCommand`)를 거치는지 코드 경로를 추적.
+
+발견: `commandDispatcherExecution.js`는 `handleMemoCommand({ input, rawCmd: normalized, cmd, context })`처럼 정규화 전 원본 `input`과 정규화된 `rawCmd`/`cmd`를 모두 넘기는데, `commandRouterMemo.js`는 `handleMemoRawInput(input)`으로 **원본** `input`을 전달하고 있었다. 즉 쪽지 작성 중(받는사람/본문/카드선택/편지종류 등 모든 단계)의 P/M/B(취소) 및 `/s`(전송) 인식이 전역 `normalizeCommand()`의 두벌식 자모 보정(`koAliasMap`: 'ㅔ'→P 등)을 전혀 거치지 않고 원본 텍스트를 그대로 비교하고 있었다 — 한/영 전환이 안 된 채 물리 P키를 치면 'ㅔ'가 들어와 취소가 안 되고 그냥 본문 한 줄로 들어가 버리는 구조였다. Playwright로 실제 재현: 받는사람 입력 후 본문 단계에서 'ㅔ'만 입력하면(수정 전) 취소되지 않고 본문에 추가됨.
+
+수정: `memoScreens.js`에 `commandNormalizer.js`의 `convertKoreanToEnglish`를 가져와 `contactSysopScreen.js`와 동일한 `koCmd` 보정 토큰을 계산하고, `isCancel`(P/M/B/q) 판정과 `/s`·SEND 판정 모두에 `koCmd` 분기를 추가.
+
+**같은 라운드 추가 발견**: 같은 패턴이 이번 세션 최다 사용 화면인 **게시판 글쓰기**(`postWriteView.js`)에도 있었다 — `isCancelWriteCommand`/`isSaveWriteCommand`(라인 에디터의 'bbs-form'·'header' 등 여러 단계에서 재사용)도 두벌식 보정 없이 원본 텍스트만 비교하고 있었다. 동일한 `toKoreanCommandToken` 헬퍼를 추가해 두 함수 모두에 `koCmd` 분기를 넣었다. `plaza` 게시판(머리말 선택 단계 있음)에서 W로 글쓰기 진입 → header 단계에서 'ㅔ' 한 글자만 입력 → Playwright로 실측 재현: 수정 전에는 취소되지 않았을 것이나(코드 경로상 확정) 수정 후 정상적으로 취소(`screen`이 `post-list`로 전환, `_postWriteEditor`가 `null`)됨을 확인.
+
+검증: 두벌식 변환표(`ㅔ`→P, `ㅡ`→M, `ㅠ`→B, `/ㄴ`→/S)가 정확함을 유닛 재현으로 확인. Playwright로 실제 브라우저 재현 — 쪽지 작성 중 본문 단계에서 'ㅔ' 한 글자만 입력해도 정상적으로 취소(`screen`이 `memo-list`로 전환, `_memoWriteFlow`가 정리됨)됨을 확인(테스트 중 실제 발송은 없어 정리할 DB 데이터 없음). 게시판 글쓰기도 동일하게 실측 재현. `node --check` 전체 통과, `npm run smoke:boards`/`smoke:command-parity`/`smoke:full-traversal`/`smoke-mobile-viewports` 통과.
+
+결과: ✅ 수정 완료. 이번 세션에서 세 번째·네 번째로 발견한 같은 계열(EX/OUT/IN → tosysop → 쪽지 → 게시판 글쓰기)의 "명령 라우팅이 전역 정규화 파이프라인을 우회하는 화면마다 개별적으로 두벌식 보정이 빠져있던" 버그. `_terminalInputHandler`를 직접 등록하는 나머지 화면(`authScreens.js`)은 P/M/B 텍스트 패턴을 아예 안 써서 이 버그 클래스에 해당하지 않음을 확인.
+
+---
+
 ## [2026-07-29 01:05] [/loop 쪽지 전수조사] 축하카드 쪽지의 `[CARD:__proto__]` 마커가 수신자 쪽지 보기 화면을 크래시시킬 수 있던 결함 발견·수정
 
 **LOG_ID: 20260729_0105**
