@@ -43,9 +43,16 @@ function canAccessMemo(memo, context = {}) {
   return memo.recipientUserId === context?.userId || memo.senderUserId === context?.userId;
 }
 
+// [LOG_ID: 20260729_0030] memoRoutes.js의 getCreateMemoBody()는 이미 제목을 200자까지
+// 검증·허용하는데(`title.length > 200`이어야 거부), 여기 저장 단계는 60자로 조용히 잘랐다 —
+// 대화방 제목(검증 100자 vs 저장 60자)에서 고친 것과 동일한 "검증이 약속하는 값과 저장
+// 상한이 다른" 패턴. memos.title은 스키마상 TEXT라 길이 제약이 없으므로(0001_initial_schema.sql),
+// 저장 상한을 검증이 이미 약속하는 200자에 맞춘다.
+const MEMO_TITLE_MAX_LENGTH = 200;
+
 function validateMemoInput(input = {}) {
   const recipientUserId = normalizeText(input.recipientUserId || input.recipient || '');
-  const title = normalizeText(input.title || '').slice(0, 60);
+  const title = normalizeText(input.title || '').slice(0, MEMO_TITLE_MAX_LENGTH);
   const content = normalizeMultilineText(input.content ?? '').trimEnd();
 
   if (!recipientUserId) {
