@@ -426,8 +426,19 @@ class MemberRouter extends BaseRouter {
     // 변경은 비밀번호만 바꿔야 하므로 defaults 없이 호출해 기존 프로필 값을 그대로 보존한다.
     const defaults = {};
 
+    // [LOG_ID: 20260729_0005] 관리자가 "본인이 아닌" 다른 회원의 비밀번호를 바꿀 때,
+    // updateAuthPasswordForMember에 context.authUserId(요청자=관리자 자신의 authUserId)를
+    // 그대로 넘기고 있었다. _resolveAuthUser는 authUserId가 주어지면 getUserById로 그 즉시
+    // 반환해버려(userId/lookupEmail은 아예 확인하지 않음), 대상이 아니라 관리자 자신의
+    // Supabase Auth 계정이 조회되고, 그 계정의 비밀번호가 관리자가 "대상 회원용으로" 입력한
+    // 값으로 그대로 덮어써졌다 — 실측 재현: authUserId=관리자uuid, userId=다른 회원 조합으로
+    // resolveAuthUser를 호출하면 관리자 자신의 auth 레코드가 반환됨을 확인. 바로 아래
+    // setEmail()은 이미 대상 회원의 authUserId(existing.authUserId)를 정확히 쓰고 있어 —
+    // 그 패턴과 동일하게 대상 회원의 authUserId/email을 조회해서 넘기도록 고친다.
+    const targetMember = await memberRepository.getMember(targetUserId);
     const authPasswordSync = await this.updateAuthPasswordForMember(authBridge, {
-      context,
+      targetAuthUserId: targetMember?.authUserId,
+      targetEmail: targetMember?.email,
       password: nextPassword,
       targetUserId
     });
@@ -457,22 +468,25 @@ class MemberRouter extends BaseRouter {
   // --- Helpers ---
 
   async updateAuthPasswordForMember(authBridge, options = {}) {
-    const { context, password, targetUserId } = options;
+    // [LOG_ID: 20260729_0005] targetAuthUserId/targetEmail은 항상 "비밀번호를 바꾸려는 대상"의
+    // 값이어야 한다 — 호출자(관리자)의 context를 여기 넘기면 관리자 자신의 Auth 계정이 대신
+    // 조회·변경된다(setPassword의 호출부 주석 참고).
+    const { targetAuthUserId, targetEmail, password, targetUserId } = options;
     if (!authBridge?.client?.auth?.admin?.updateUserById) {
       return { synced: false, reason: 'disabled' };
     }
 
     const authUser = typeof authBridge._resolveAuthUser === 'function'
       ? await authBridge._resolveAuthUser({
-        authUserId: context?.authUserId,
+        authUserId: targetAuthUserId,
         userId: targetUserId,
-        lookupEmail: context?.email,
-        allowTargetEmailLookup: context?.email
+        lookupEmail: targetEmail,
+        allowTargetEmailLookup: targetEmail
       })
       : null;
 
     if (!authUser?.id) {
-      if (context?.authUserId) {
+      if (targetAuthUserId) {
         this.error(502, 'Supabase Auth 계정을 찾지 못해 비밀번호를 변경하지 못했습니다.');
       }
       return { synced: false, reason: 'auth-user-not-found' };

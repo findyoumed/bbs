@@ -1,3 +1,18 @@
+## [2026-07-29 00:05] [/loop 회원정보수정 전수조사 11차] 관리자가 다른 회원의 비밀번호를 바꾸면 실제로는 관리자 자신의 Supabase Auth 비밀번호가 바뀌던 결함 발견·수정
+
+**LOG_ID: 20260729_0005**
+목표: 3라운드 연속 무버그 이후 사용자 확인을 받아 같은 심층 감사 방식으로 계속 진행 — 이번엔 아직 안 본 비밀번호 변경(`setPassword`) 경로를 `setEmail`과 대조하며 점검.
+
+발견: `setPassword` 핸들러가 `updateAuthPasswordForMember(authBridge, { context, password, targetUserId })`를 호출하면서 `authUserId: context?.authUserId`(호출자, 즉 관리자 자신의 authUserId), `lookupEmail: context?.email`(관리자 자신의 이메일)을 넘기고 있었다. `resolveAuthUser()`는 `authUserId`가 주어지면 `userId`/`lookupEmail`은 아예 확인하지 않고 `getUserById(authUserId)`로 즉시 반환하므로, 관리자가 "다른 회원"의 비밀번호를 바꾸는 경우(`targetUserId !== context.userId`)에도 실제로 조회·수정되는 Supabase Auth 계정은 항상 관리자 자신의 것이었다 — 즉 관리자가 대상 회원용으로 입력한 새 비밀번호가 관리자 자신의 로그인 비밀번호로 그대로 덮어써지는 구조였다(대상 회원의 실제 Supabase Auth 비밀번호는 전혀 바뀌지 않은 채, `members` 테이블의 로컬 비밀번호만 바뀌어 두 곳이 어긋남). 바로 옆의 `setEmail`은 이미 대상 회원의 `existing.authUserId`/`existing.email`을 정확히 쓰고 있어 두 함수 사이에 뚜렷한 비대칭이 있었다. `resolveAuthUser()`를 직접 호출해 관리자 UUID+다른 회원 userId 조합으로 재현 — 실제로 관리자 자신의 Auth 레코드가 반환됨을 확인.
+
+수정: `setPassword`에서 `memberRepository.getMember(targetUserId)`로 대상 회원을 조회해 `targetAuthUserId`/`targetEmail`을 얻고, `updateAuthPasswordForMember`가 이 값들을 쓰도록 파라미터를 `context` 대신 `targetAuthUserId`/`targetEmail`로 교체 — `setEmail`과 동일한 패턴으로 통일.
+
+검증: `resolveAuthUser()` 직접 재현으로 수정 전(관리자 UUID 반환)/수정 후(대상 회원 UUID 정확히 반환) 대조 확인. 실서버(Supabase 드라이버)에 실제 Auth 계정 없는 테스트 회원으로 `POST /api/members/:userId/password`(관리자 헤더)를 호출해 정상 200 응답과 `authPasswordSynced:false/auth-user-not-found`(예상된 안전한 no-op) 확인 — 기존 정상 흐름 회귀 없음. `node --check`, 테스트 회원 정리 완료.
+
+결과: ✅ 수정 완료. 이번 라운드 사용자 확인("같은 방식으로 계속")대로 심층 감사를 이어가 찾은 결함 — "호출자(관리자) 자신의 세션 값을 대상 회원의 자리에 잘못 넘기는" 패턴으로, 지난 라운드들의 "인증 세션↔members 행 연결 경계" 계열과 같은 축이지만 이번엔 email 재사용이 아니라 비밀번호 변경 경로에서 발견됐다.
+
+---
+
 ## [2026-07-28 23:58] [/loop 회원정보수정 전수조사 10차] 이메일 미인증 계정이 다른 회원의 이메일과 일치시키는 것만으로 그 회원 계정을 그대로 가져갈 수 있던 결함 발견·수정
 
 **LOG_ID: 20260728_2358**
