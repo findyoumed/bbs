@@ -1,3 +1,18 @@
+## [2026-07-29 01:05] [/loop 쪽지 전수조사] 축하카드 쪽지의 `[CARD:__proto__]` 마커가 수신자 쪽지 보기 화면을 크래시시킬 수 있던 결함 발견·수정
+
+**LOG_ID: 20260729_0105**
+목표: 쪽지(축하카드) 기능을 프로토타입 체인/객체 조회 관점에서 점검 — `getMemoCard(key)`가 서버에서 전혀 검증하지 않는 자유 텍스트(memo.content)의 `[CARD:key]` 마커를 그대로 객체 인덱싱에 쓰고 있어 안전한지 확인.
+
+발견: `memoCardAssets.js`의 `getMemoCard(key)`가 `MEMO_CARDS[key] || null`로 일반 객체 리터럴을 직접 인덱싱했다. `MEMO_CARDS`는 평범한 객체라 프로토타입 체인이 `Object.prototype`으로 이어지므로, `key`가 `'__proto__'`(또는 `constructor`/`toString` 등 `Object.prototype`이 실제로 갖는 이름)면 `MEMO_CARDS['__proto__']`가 `undefined`가 아니라 `Object.prototype` 자체를 반환한다 — 참값이라 `|| null`을 그대로 통과한다. 쪽지 저장 경로(`validateMemoInput`)는 content를 길이만 검사하고 형식은 전혀 검증하지 않으므로, 누구든 다른 회원에게 `content: "[CARD:__proto__]\n..."`인 쪽지를 그냥 API로 보낼 수 있다. 수신자가 그 쪽지를 열면 `buildMemoViewAnsi`의 `card.art.forEach(...)`가 `art`가 없는 `Object.prototype`에서 TypeError로 죽어 쪽지 보기 화면이 깨진다 — 실측 재현: `getMemoCard('__proto__') === Object.prototype`, 실제 서버에 그 쪽지를 만들고 렌더 함수를 직접 호출하면 크래시가 재현됨.
+
+수정: `getMemoCard`가 `MEMO_CARDS[key]`로 바로 인덱싱하는 대신 `Object.prototype.hasOwnProperty.call(MEMO_CARDS, key)`로 실제 정의된 카드 키인지 먼저 확인하도록 변경.
+
+검증: 수정 전/후 대조 재현 스크립트로 `getMemoCard('__proto__')`가 `Object.prototype` → `null`로 바뀜을 확인. 실제 서버(Supabase)에 테스트 회원을 만들고 `[CARD:__proto__]` 쪽지를 실제로 전송한 뒤, 실제 모듈(`memoAnsiBuilders.js`)의 `buildMemoViewAnsi`를 그 쪽지 데이터로 직접 호출해 크래시 없이 정상 렌더됨을 확인, 정상 카드(`[CARD:rose]`)도 회귀 없이 그대로 렌더됨을 확인. 테스트 쪽지/회원은 서비스 롤 키로 정리. `node --check` 통과, `npm run smoke:command-parity`/`smoke:full-traversal`/`smoke-mobile-viewports` 통과.
+
+결과: ✅ 수정 완료. 이번 세션 처음으로 발견한 프로토타입 오염(prototype pollution) 계열 결함 — "서버가 저장은 그대로 두고 검증하지 않은 자유 텍스트를, 클라이언트가 신뢰하고 객체 키로 바로 쓰는" 패턴이었다.
+
+---
+
 ## [2026-07-29 00:53] [사용자 요청] 건의하기(TOSYSOP) 편지쓰기 안내 문구·취소 방식을 일반 글쓰기와 동일하게 정리
 
 **LOG_ID: 20260729_0053**
