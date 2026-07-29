@@ -269,6 +269,16 @@ export function createContactSysopScreen(deps) {
             // (실제 발송) Ctrl+S를 받아들이도록 맞춘다. '.'은 본문 단계에서 한 줄 전체로
             // 입력했을 때(엔터 시) '/s'와 동일하게 처리한다(postWriteView의 "마지막 줄이 '.'"
             // 규칙과 동일한 의미).
+            // [LOG_ID: 20260729_0040] 사용자 재지적 — "다른 글쓰기메뉴랑 똑같이" 만들려면
+            // ESC로도 취소가 돼야 한다(postWriteView.js는 title/keyword/body 모든 필드에서
+            // Escape 키를 취소로 받는다). 여기는 지금까지 P/M/B/q 텍스트 명령으로만 취소가
+            // 가능했고 ESC 키 자체는 아무 반응이 없었다 — 단계 구분 없이 항상 취소로 받는다.
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              await cancelContactSysop();
+              return;
+            }
+
             if (e.ctrlKey && e.key === 's') {
               e.preventDefault();
               if (flow.stage === 'body') {
@@ -315,7 +325,7 @@ export function createContactSysopScreen(deps) {
                 flow.stage = 'body';
                 appendContactSysopLine('작성방법(1:에디터, 2:KERMIT, 3:ZMODEM, 4:SUPERKERMIT, 0:취소) >>', '1');
                 appendContactSysopLine('', '');
-                appendContactSysopLine('', '에디터쓰기 (끝낼때는 완료: /s, SEND, Ctrl+S 또는 마지막 줄에 . 입력, 취소: /q, P, M, B)');
+                appendContactSysopLine('', '에디터쓰기 (끝낼때는 완료: Ctrl+S 또는 마지막 줄에 . 입력, 취소: ESC)');
                 renderContactSysopScreen();
                 return;
               }
@@ -349,7 +359,7 @@ export function createContactSysopScreen(deps) {
                 if (trimmed === '0' || cmdUpper === 'N' || koCmd === 'N') {
                   flow.stage = 'body';
                   flow._draftConfirmCmd = '';
-                  appendContactSysopLine('', '계속 작성하실 수 있습니다. 완료: /s, SEND, Ctrl+S 또는 마지막 줄에 . 입력, 취소: /q, P, M, B');
+                  appendContactSysopLine('', '계속 작성하실 수 있습니다. 완료: Ctrl+S 또는 마지막 줄에 . 입력, 취소: ESC');
                   renderContactSysopScreen();
                   return;
                 }
