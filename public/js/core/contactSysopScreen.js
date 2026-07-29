@@ -261,6 +261,34 @@ export function createContactSysopScreen(deps) {
           };
 
           inlineInput.onkeydown = async (e) => {
+            // [LOG_ID: 20260729_0010] 사용자 지적 — 일반 게시판 글쓰기(postWriteView.js)는
+            // Ctrl+S나 본문 마지막 줄에 '.'만 입력해도 저장되는데, 건의하기 에디터는 오직
+            // '/s' 또는 'SEND'를 타이핑하고 엔터를 쳐야만 다음 단계로 넘어갔다 — 사용자가
+            // 원래 알고 있는 "글 저장" 단축키(^S, .)가 여기서만 안 먹혔다. 본문 작성 단계는
+            // '/s'와 동일하게(다음 단계인 발송확인으로), 발송확인 단계는 '1'/SEND와 동일하게
+            // (실제 발송) Ctrl+S를 받아들이도록 맞춘다. '.'은 본문 단계에서 한 줄 전체로
+            // 입력했을 때(엔터 시) '/s'와 동일하게 처리한다(postWriteView의 "마지막 줄이 '.'"
+            // 규칙과 동일한 의미).
+            if (e.ctrlKey && e.key === 's') {
+              e.preventDefault();
+              if (flow.stage === 'body') {
+                // postWriteView의 Ctrl+S는 텍스트영역에 남아있는 내용을 그대로 저장한다 —
+                // 여기서도 입력창에 아직 커밋 안 된(엔터 안 친) 줄이 있으면 버리지 말고
+                // 먼저 본문 줄로 추가한 뒤 발송확인으로 넘어간다.
+                const pendingLine = inlineInput.value;
+                if (pendingLine.trim()) {
+                  flow.bodyLines.push(pendingLine);
+                  appendContactSysopLine(`*${flow.bodyLines.length}:`, pendingLine);
+                }
+                flow._draftBodyLine = '';
+                inlineInput.value = '';
+                enterConfirmStage(flow);
+              } else if (flow.stage === 'confirm') {
+                await submitContactSysop();
+              }
+              return;
+            }
+
             if (e.key === 'Enter') {
               e.preventDefault();
               const val = inlineInput.value;
@@ -287,14 +315,16 @@ export function createContactSysopScreen(deps) {
                 flow.stage = 'body';
                 appendContactSysopLine('작성방법(1:에디터, 2:KERMIT, 3:ZMODEM, 4:SUPERKERMIT, 0:취소) >>', '1');
                 appendContactSysopLine('', '');
-                appendContactSysopLine('', '에디터쓰기 (끝낼때는 완료: /s 또는 SEND, 취소: /q, P, M, B)');
+                appendContactSysopLine('', '에디터쓰기 (끝낼때는 완료: /s, SEND, Ctrl+S 또는 마지막 줄에 . 입력, 취소: /q, P, M, B)');
                 renderContactSysopScreen();
                 return;
               }
 
               // 2) 본문 작성 단계 (*1:, *2:...)
               if (flow.stage === 'body') {
-                if (trimmed === '/s' || cmdUpper === 'SEND' || koCmd === '/S' || koCmd === 'SEND') {
+                // [LOG_ID: 20260729_0010] '.'을 한 줄 전체로 입력하고 엔터 — postWriteView의
+                // "마지막 줄이 '.'이면 저장" 규칙과 동일하게 '/s'와 같이 취급한다.
+                if (trimmed === '/s' || trimmed === '.' || cmdUpper === 'SEND' || koCmd === '/S' || koCmd === 'SEND') {
                   flow._draftBodyLine = '';
                   enterConfirmStage(flow);
                   return;
@@ -319,7 +349,7 @@ export function createContactSysopScreen(deps) {
                 if (trimmed === '0' || cmdUpper === 'N' || koCmd === 'N') {
                   flow.stage = 'body';
                   flow._draftConfirmCmd = '';
-                  appendContactSysopLine('', '계속 작성하실 수 있습니다. 완료: /s 또는 SEND, 취소: /q, P, M, B');
+                  appendContactSysopLine('', '계속 작성하실 수 있습니다. 완료: /s, SEND, Ctrl+S 또는 마지막 줄에 . 입력, 취소: /q, P, M, B');
                   renderContactSysopScreen();
                   return;
                 }
