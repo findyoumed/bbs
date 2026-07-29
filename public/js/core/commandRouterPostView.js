@@ -125,9 +125,6 @@ export function createPostViewCommandHandler(deps) {
       : `업로드 완료: ${successCount}건`);
   }
 
-  // [LOG_ID: 20260713_0930] LV 등급 별칭 — 서버 BoardRepositoryAccess.LEVEL_NAME_MAP과 동일하게 유지
-  const LEVEL_LABELS = { 1: '일반회원', 2: '특별회원', 99: '운영자' };
-
   // [LOG_ID: 20260724_2100] 종전엔 deps.showConfirm(다이얼로그)이 "정말 삭제하시겠습니까?" 줄을
   // screenEl에 직접 append했는데(terminalDialog.js appendTranscript), 글보기 화면은 언제나
   // 24줄로 패딩된 정적 스냅샷이라 그 뒤에 이어 붙으면 짧은 글일수록 본문과 한참 떨어진 화면
@@ -612,38 +609,6 @@ export function createPostViewCommandHandler(deps) {
 
     if (cmd === 'U') {
       await showAttachmentList(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
-      return true;
-    }
-
-    // [LOG_ID: 20260713_0930] LV [등급] — 글 작성자의 회원 등급 변경 (olddos-bbs 원작 명령 복원).
-    // 운영자 전용, 게시글 보기 상태에서만. 서버도 ensureAdmin으로 이중 방어한다.
-    const lvMatch = cmd.match(/^LV(?:\s+(\d+))?$/);
-    if (lvMatch) {
-      if (!state.user?.isAdmin) {
-        setHint('LV는 운영자만 사용할 수 있는 명령입니다.');
-        return true;
-      }
-      const authorId = String(state.post?.authorUserId || state.post?.userId || '').trim();
-      if (!authorId) {
-        setHint('이 글의 작성자 정보를 확인할 수 없습니다.');
-        return true;
-      }
-      if (!lvMatch[1]) {
-        setHint(`사용법: LV {등급} — ${authorId}님의 등급을 변경합니다. (1:일반회원, 2:특별회원, 99:운영자)`);
-        return true;
-      }
-      const nextLevel = Number(lvMatch[1]);
-      try {
-        const updated = await apiFetch(`/api/members/${encodeURIComponent(authorId)}/level`, {
-          method: 'POST',
-          body: JSON.stringify({ level: nextLevel, nickNameHint: state.post?.nickName || state.post?.author || authorId })
-        });
-        const label = LEVEL_LABELS[updated?.level ?? nextLevel] || `레벨 ${nextLevel}`;
-        deps.showToast?.(`${authorId}님의 등급을 ${label}(으)로 변경했습니다.`, 2500, 'success');
-        setHint(`${authorId} → ${label}`);
-      } catch (error) {
-        setHint(`${UI_TEXT.ERROR}: ${error.message}`);
-      }
       return true;
     }
 

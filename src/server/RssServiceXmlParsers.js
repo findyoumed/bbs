@@ -236,6 +236,11 @@ function readTag(source, tagName) {
   return match ? decodeXmlEntities(String(match[1] || '').trim()) : '';
 }
 
+function readAttr(source, attrName) {
+  const match = source.match(new RegExp(`${escapeRegExp(attrName)}=["']([^"']*)["']`, 'i'));
+  return match ? decodeXmlEntities(String(match[1] || '').trim()) : '';
+}
+
 function readFirstTag(source, tagNames) {
   for (const tagName of tagNames || []) {
     const value = readTag(source, tagName);
@@ -244,11 +249,6 @@ function readFirstTag(source, tagNames) {
     }
   }
   return '';
-}
-
-function readAttr(source, attrName) {
-  const match = source.match(new RegExp(`${escapeRegExp(attrName)}=["']([^"']*)["']`, 'i'));
-  return match ? decodeXmlEntities(String(match[1] || '').trim()) : '';
 }
 
 // [LOG: 20260610_0341] Strip HTML tags safely, preserving book bracket notations.
@@ -329,12 +329,35 @@ function decodeXmlEntities(value) {
   });
 }
 
+// [LOG_ID: 20260729_1450] RSS 뉴스의 작성/발행 시각을 항상 한국 표준시(KST, UTC+9) 기준 년/월/일/시/분/초로 정밀 변환
 function normalizeNewsDate(value) {
   const source = cleanFeedText(value);
   if (!source) {
     return { date: '', dateTime: '' };
   }
 
+  // 1. GMT / UTC / 타임존(+09:00, Z 등) 또는 RFC822 / ISO8601 표준 Date 포맷 처리
+  const hasTimezone = /[Zz]|\+[0-9]{2}:?[0-9]{2}|-[0-9]{2}:?[0-9]{2}|GMT|UTC|EST|PST|KST/i.test(source)
+    || /^[a-zA-Z]{3},\s*\d{1,2}\s*[a-zA-Z]{3}/i.test(source);
+
+  if (hasTimezone) {
+    const parsed = new Date(source);
+    if (!Number.isNaN(parsed.getTime())) {
+      // KST는 UTC+9시간이므로, UTC timestamp에 9시간(32,400,000ms)을 더해 KST 날짜/시각을 구한다.
+      const kstMs = parsed.getTime() + (9 * 60 * 60 * 1000);
+      const kstDate = new Date(kstMs);
+      return buildNewsDateParts(
+        kstDate.getUTCFullYear(),
+        kstDate.getUTCMonth() + 1,
+        kstDate.getUTCDate(),
+        kstDate.getUTCHours(),
+        kstDate.getUTCMinutes(),
+        kstDate.getUTCSeconds()
+      );
+    }
+  }
+
+  // 2. 타임존 미표기 단순 날짜/시각 문자열 (국내 뉴스 사이트의 KST 시각: YYYY-MM-DD HH:mm:ss 등)
   const normalized = source
     .replace(/\./g, '-')
     .replace(/\//g, '-')
@@ -364,15 +387,18 @@ function normalizeNewsDate(value) {
     );
   }
 
-  const parsed = new Date(source);
-  if (!Number.isNaN(parsed.getTime())) {
+  // 3. 폴백: 일반 Date 파싱 후 KST로 변환
+  const fallbackDate = new Date(source);
+  if (!Number.isNaN(fallbackDate.getTime())) {
+    const kstMs = fallbackDate.getTime() + (9 * 60 * 60 * 1000);
+    const kstDate = new Date(kstMs);
     return buildNewsDateParts(
-      parsed.getFullYear(),
-      parsed.getMonth() + 1,
-      parsed.getDate(),
-      parsed.getHours(),
-      parsed.getMinutes(),
-      parsed.getSeconds()
+      kstDate.getUTCFullYear(),
+      kstDate.getUTCMonth() + 1,
+      kstDate.getUTCDate(),
+      kstDate.getUTCHours(),
+      kstDate.getUTCMinutes(),
+      kstDate.getUTCSeconds()
     );
   }
 

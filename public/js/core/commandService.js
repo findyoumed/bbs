@@ -21,9 +21,7 @@ export const CMD_META = {
   // 클릭해도 죽은 버튼이었다(사용자 요청: "이동(GO)도 클릭 가능하고 go 텍스트가 선택>> 오른편에
   // 쓰여지면 좋겠어") — prefill:true면 클릭 시 즉시 실행하는 대신 입력줄에 "GO "만 채워 넣고
   // 커서를 포커스해, 사용자가 이어서 코드를 타이핑할 수 있게 한다.
-  GO: { label: '이동', tip: 'GO [코드]', priority: 90, cat: 'NAV', prefill: true, desc: '특정 메뉴나 게시판 코드로 바로 이동합니다.' },
-  // [LOG_ID: 20260712_2130] 하이텔 원전 의미(화면 재전송)로 변경 — 사용자 결정 (hitel_upgrade_plan P4-1)
-  Z: { label: '재전송', tip: 'Z', priority: 85, cat: 'NAV', desc: '현재 화면을 다시 그립니다. (하이텔: 잡음으로 깨진 화면 재전송)' },
+  // [LOG_ID: 20260729_1747] Z (화면 재전송) 명령어 완전 제거
   // [LOG_ID: 20260723_2230] 70(GO=90보다 낮음)이라 실제로 다음 페이지가 있는 화면에서도 좁은
   // 모바일 힌트바 트림(trimHintEntriesToFit)이 GO/T/P보다 F/B를 먼저 숨겼다 — 정작 F/B가 뜬다는
   // 것 자체가 "지금 이 화면에 진짜 다음/이전 페이지가 있다"는 뜻이라 GO(임의 코드 이동, 흔치 않음)
@@ -63,10 +61,10 @@ export const CMD_META = {
 
   // Search
   LI: { label: 'ID검색', tip: 'LI [아이디]', priority: 80, cat: 'POST', desc: '작성자 아이디로 게시글을 검색합니다.' },
-  LV: { label: '등급변경', tip: 'LV [등급]', login: true, priority: 5, cat: 'POST', desc: '(운영자) 게시글 작성자의 회원 등급을 변경합니다. 게시글 보기 화면에서 사용. (1:일반회원, 2:특별회원, 99:운영자)' },
   LT: { label: '제목검색', tip: 'LT [검색어]', priority: 82, cat: 'POST', desc: '제목과 본문을 포함하여 게시글을 검색합니다.' },
-  FIND: { label: '통합검색', tip: '/, FIND [검색어]', priority: 80, cat: 'POST', desc: '게시판 및 메뉴 통합 검색을 수행합니다.' },
-  '/': { label: '통합검색', tip: '/, FIND [검색어]', priority: 80, cat: 'POST', desc: '게시판 및 메뉴 통합 검색을 수행합니다.' },
+  // [LOG_ID: 20260729_1750] FIND, / 클릭 시 입력창에 "FIND " 텍스트가 바로 prefill되도록 prefill: true 추가
+  FIND: { label: '통합검색', tip: '/, FIND [검색어]', priority: 80, cat: 'POST', prefill: true, cmdPrefill: 'FIND ', desc: '게시판 및 메뉴 통합 검색을 수행합니다.' },
+  '/': { label: '통합검색', tip: '/, FIND [검색어]', priority: 80, cat: 'POST', prefill: true, cmdPrefill: 'FIND ', desc: '게시판 및 메뉴 통합 검색을 수행합니다.' },
   // [LOG_ID: 20260721_1800] /help 명령어 감사 — 실제로는 동작하지만 CMD_META에 빠져 있던
   // 명령어들을 보완. 아래부터 이 로그ID로 추가된 항목들은 전부 실제 라우터 코드(commandRouterBrowse.js
   // 등)에서 이미 동작을 확인한 뒤 추가한 것들이다(사용자 지적: "누락된 내용도 확인해야해").
@@ -89,7 +87,8 @@ export const CMD_META = {
   DOWNLOAD: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DL, TR, GET / 자료실 전용, 예: DN 3,5 또는 DN 1-3)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다. 여러 건을 한 번에 받으려면 번호를 쉼표로 나열하거나(DN 3,5) 범위를 지정합니다(DN 1-3).' },
 
   // Auth & Profile
-  LOGIN: { label: '로그인', tip: 'LOGIN', priority: 90, cat: 'AUTH', desc: 'BBS 계정으로 로그인합니다.' },
+  LOGIN: { label: '로그인', tip: 'LOGIN, LOG', priority: 90, cat: 'AUTH', desc: 'BBS 계정으로 로그인합니다.' },
+  LOG: { label: '로그인', tip: 'LOGIN, LOG', priority: 90, cat: 'AUTH', desc: 'BBS 계정으로 로그인합니다.' },
   PW: { label: '비밀번호', tip: 'PW', priority: 22, cat: 'AUTH', desc: '내 정보 화면에서 비밀번호 변경을 시작합니다. (HI로 먼저 내 정보 화면에 들어가야 합니다)' },
   WHO: { label: '회원정보', tip: 'WHO [아이디]', priority: 25, cat: 'AUTH', desc: '특정 사용자의 정보를 확인하거나 접속자 목록을 봅니다.' },
   // [LOG_ID: 20260714_2100] 원전 UID(총 접속 ID 조회)/MSG(쪽지 수신 알림 ON·OFF) 명령 추가
@@ -100,11 +99,7 @@ export const CMD_META = {
   PF: { label: '프로필', tip: 'PF, PF [아이디]', priority: 25, cat: 'AUTH', desc: 'PF [아이디]는 해당 사용자의 프로필을 봅니다. 아이디 없이 PF만 입력하면 HI/MYINFO와 동일한 내 정보 화면이 열립니다.' },
   HI: { label: '내정보', tip: 'HI, MYINFO', priority: 20, cat: 'AUTH', desc: '나의 회원 정보를 확인하거나 수정합니다.' },
   MYINFO: { label: '내정보', tip: 'HI, MYINFO', priority: 20, cat: 'AUTH', desc: '나의 회원 정보를 확인하거나 수정합니다.' },
-  ENTER: { label: '변경', tip: 'ENTER', priority: 62, cat: 'UI', desc: '현재 입력 화면의 기본 작업을 실행합니다.' },
-  CHANGE: { label: '변경', tip: 'CHANGE', priority: 62, cat: 'UI', desc: '입력한 새 값으로 변경 작업을 진행합니다.' },
-  SEND: { label: '전송', tip: 'SEND', priority: 62, cat: 'UI', desc: '현재 입력한 내용을 전송합니다.' },
-  S: { label: '저장', tip: 'S, SAVE', priority: 62, cat: 'UI', desc: '작성 중인 내용을 저장합니다.' },
-  SAVE: { label: '저장', tip: 'S, SAVE', priority: 62, cat: 'UI', desc: '작성 중인 내용을 저장합니다.' },
+  // [LOG_ID: 20260729_1710] 당연한 입력 보조 명령어(ENTER, CHANGE, SEND, S, SAVE) 도움말 목록에서 삭제
   DELETE: { label: '탈퇴', tip: 'DELETE', priority: 42, cat: 'AUTH', desc: '내 정보 화면에서 회원 탈퇴 절차를 시작합니다.' },
   Q: { label: '종료', tip: 'Q, EXIT', priority: 1, cat: 'NAV', desc: '로그아웃하고 메인 화면으로 이동합니다.' },
   X: { label: '종료', tip: 'Q, EXIT, X', priority: 1, cat: 'NAV', desc: '로그아웃하고 메인 화면으로 이동합니다.' },
@@ -136,12 +131,7 @@ export const CMD_META = {
   // 있었으나 도움말에 없었다.
   TIME: { label: '이용시간', tip: 'TIME', priority: 15, cat: 'SYS', desc: '현재 시각과 이번 접속의 누적 이용 시간을 확인합니다.' },
 
-  // Environment & Preferences (SET LEVEL/HOME/THEME/PROMPT의 기반)
-  SET: { label: '변수설정', tip: 'SET [이름] [값]', priority: 10, cat: 'SYS', desc: '환경 변수를 설정합니다. (예: SET LEVEL 초급, SET HOME 게시판, SET THEME NOWNURI)' },
-  UNSET: { label: '변수삭제', tip: 'UNSET [이름]', priority: 10, cat: 'SYS', desc: '환경 변수를 제거합니다.' },
-  ENV: { label: '환경변수', tip: 'ENV', priority: 10, cat: 'SYS', desc: '현재 설정된 모든 환경 변수를 보여줍니다.' },
-  // [LOG_ID: 20260713_1000] 갈무리(CAP) 기능 메타데이터 추가
-  CAP: { label: '갈무리', tip: 'CAP, 갈무리', priority: 15, cat: 'SYS', desc: '화면 갈무리를 시작하거나 종료합니다.' },
+  // [LOG_ID: 20260729_1708] 사용자 요청으로 SET, UNSET, ENV 명령어 제거
 };
 
 /**

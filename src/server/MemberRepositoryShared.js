@@ -11,11 +11,11 @@ function normalizeLevel(value, fallback = 1) {
 }
 
 function normalizeLookup(value) {
-  return String(value ?? '').trim();
+  return String(value ?? '').trim().toLowerCase();
 }
 
 function sameText(left, right) {
-  return normalizeLookup(left).toLowerCase() === normalizeLookup(right).toLowerCase();
+  return normalizeLookup(left) === normalizeLookup(right);
 }
 
 function normalizeMember(row) {

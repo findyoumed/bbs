@@ -36,27 +36,6 @@ export function createGlobalNavigationCommandHandler(deps) {
   }
 
   return async function handleGlobalNavigationCommand({ cmd, rawCmd, input }) {
-    // [LOG_ID: 20260713_1130] 하이텔식 종료 확인 가로채기
-    if (state._exitConfirm) {
-      const ans = String(input || cmd || '').trim().toUpperCase();
-      state._exitConfirm = false;
-      setDefaultPrompt();
-
-      if (ans === 'Y' || ans === 'YES') {
-        setHint('안녕히 가십시오.');
-        await new Promise(r => setTimeout(r, 600));
-
-        if (!state.user?.isGuest) {
-          await doLogout();
-        }
-        window.location.assign('/');
-        return true;
-      } else {
-        setHint('종료가 취소되었습니다.');
-        setDefaultPrompt();
-        return true;
-      }
-    }
 
     if (cmd === 'LOGIN' || (cmd === 'L' && isLoginShortcutScreen())) {
       if (state.user?.isGuest) {
@@ -74,14 +53,15 @@ export function createGlobalNavigationCommandHandler(deps) {
       }
     }
 
-    if (cmd.startsWith('/') || cmd.startsWith('FIND ')) {
+    // [LOG_ID: 20260729_1750] FIND 단독 입력 시에도 통합 검색 안내 및 동작 수행
+    if (cmd === 'FIND' || cmd.startsWith('/') || cmd.startsWith('FIND ')) {
       // [LOG: 20260703_1720] 대화실에서는 '/' 입력이 채팅 명령(/Q, /QUIT, /ST, /AL 등)이고
       // 일반 텍스트는 메시지이므로, 전역 검색이 가로채지 않고 chat 핸들러(commandRouterChat)로 넘긴다.
       // 대화방 개설 단계(chat-lobby + _chatRoomCreateStage)의 '/M' 취소 입력도 동일하게 보호한다.
       if (state.screen === 'chat-room' || (state.screen === 'chat-lobby' && state._chatRoomCreateStage)) {
         return false;
       }
-      const query = cmd.startsWith('/') ? rawCmd.slice(1).trim() : rawCmd.slice(5).trim();
+      const query = cmd === 'FIND' ? '' : (cmd.startsWith('/') ? rawCmd.slice(1).trim() : rawCmd.slice(5).trim());
       if (!query) {
         setHint('검색어를 입력해 주세요. (예: /안녕 또는 FIND 안녕)');
         setPrompt('검색어 >>');
@@ -255,6 +235,12 @@ export function createGlobalNavigationCommandHandler(deps) {
 
     const whoMatch = cmd.match(/^(WHO|WH|PF)\s+(.+)$/);
     if (whoMatch) {
+      // [LOG: 20260729_1624] PF/WHO [아이디]는 로그인한 사용자만 사용 가능.
+      if (state.user?.isGuest) {
+        setHint('회원 프로필 조회는 로그인 후 이용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
       await showProfile(whoMatch[2].trim());
       return true;
     }
@@ -268,7 +254,18 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'HI' || cmd === 'MYINFO' || cmd === 'PF') {
+    if (cmd === 'PF' || cmd === 'WHO' || cmd === 'WH') {
+      // [LOG: 20260729_1624] 단독 PF/WHO는 로그인한 사용자에게만 허용 — 비로그인 시 로그인 안내.
+      if (state.user?.isGuest) {
+        setHint('회원 프로필 조회는 로그인 후 이용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+      await showProfile(state.user?.userId || '');
+      return true;
+    }
+
+    if (cmd === 'HI' || cmd === 'MYINFO') {
       if (state.user?.isGuest) {
         setHint('정보관리 및 프로필 편집은 로그인 후 사용하실 수 있습니다.');
         setDefaultPrompt();
@@ -400,18 +397,7 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
-    if (cmd === 'Z') {
-      // [LOG_ID: 20260712_2130] Z를 하이텔 원전 의미(길라잡이 p.90 "잡음이 끼어들어 이상한 글자가
-      // 나타날 때 'z'로 깨끗한 화면을 재전송")대로 "현재 화면 재그리기"로 변경(사용자 결정).
-      // 종전의 '이전 화면'(handleHistoryBack) 동작을 대체하며, 현재 URL 기준 화면 재구성 배관
-      // (restoreStateFromURL, fromHistory 경로)을 재사용해 서버 재조회 + 재렌더한다.
-      if (typeof deps.refs?.restoreStateFromURL === 'function') {
-        await deps.refs.restoreStateFromURL();
-        return true;
-      }
-      await handleHistoryBack();
-      return true;
-    }
+    // [LOG_ID: 20260729_1747] Z (화면 재전송) 명령어 제거
 
     // [LOG_ID: 20260713_1140] 하이텔식 이용시간 확인(TIME) 커맨드 구현
     if (cmd === 'TIME') {
@@ -428,20 +414,14 @@ export function createGlobalNavigationCommandHandler(deps) {
     // 구분된다(원전: "X 명령을 사용하여 접속을 끝마칠 경우에는 정말로 접속을 종료할 것인지를
     // 물어오지만 BYE 명령을 사용하여 접속을 종료한다면 접속종료 여부를 묻지 않고 즉시 접속을
     // 종료하게 된다"). Q/EXIT/LOGOUT은 기존처럼 확인 절차를 유지한다.
-    if (cmd === 'BYE') {
+    // [LOG: 20260729_1631] 확인 절차 제거 — BYE/Q/EXIT/X/LOGOUT 모두 즉시 종료.
+    if (cmd === 'BYE' || cmd === 'Q' || cmd === 'EXIT' || cmd === 'X' || cmd === 'LOGOUT') {
       setHint('안녕히 가십시오.');
       await new Promise((r) => setTimeout(r, 400));
       if (!state.user?.isGuest) {
         await doLogout();
       }
       window.location.assign('/');
-      return true;
-    }
-    if (cmd === 'Q' || cmd === 'EXIT' || cmd === 'X' || cmd === 'LOGOUT') {
-      // [LOG_ID: 20260713_1130] 하이텔식 종료 확인 시퀀스로 전환
-      state._exitConfirm = true;
-      setHint('* 끝내시려면 \'Y\' 를 누르고 엔터키를 누르십시오');
-      setPrompt('-> ');
       return true;
     }
 

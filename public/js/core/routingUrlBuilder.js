@@ -201,8 +201,9 @@ export function createRoutingUrlBuilder(deps) {
       case 'history':
         return '/history';
 
+      // [LOG: 20260729_1624] URL에 아이디를 노출하지 않음 — /profile 고정.
       case 'profile':
-        return `/profile/${encodeURIComponent(_profileUserId || '')}`;
+        return '/profile';
 
       // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색. policy 때(20260715_2400)처럼 고유
       // 경로가 없으면 default('/')로 떨어져 TOP과 URL이 같아지고, 그 탓에 handleHistoryBack()의

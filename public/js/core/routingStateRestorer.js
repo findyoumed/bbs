@@ -278,9 +278,11 @@ export function createRoutingStateRestorer(deps) {
       await showMain(true);
     },
 
-    async profile(segments) {
-      const userId = decodeURIComponent(segments[1] || '');
-      if (userId) {
+    // [LOG: 20260729_1624] /profile URL은 아이디를 포함하지 않음. 로그인한 사용자는 자신의
+    // 프로필을, 비로그인이면 메인 화면으로 복원한다.
+    async profile() {
+      const userId = state.user?.userId;
+      if (userId && !state.user?.isGuest) {
         return await showProfile(userId, true);
       }
       await showMain(true);

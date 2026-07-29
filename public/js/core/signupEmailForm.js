@@ -64,7 +64,7 @@ const CONFIRM_FIELD_IDS = {
   '4': 'signup-nickname',
   '5': 'signup-email'
 };
-const SIGNUP_CANCEL_LINE = '입력란에 /x 를 입력하면 가입을 중단합니다.';
+const SIGNUP_CANCEL_LINE = '입력란에 p 를 입력하면 가입을 중단합니다.'; // [LOG: 20260729_1645] /p → p 수정
 const ENGLISH_KEYBOARD_STAGE_IDS = new Set(['signup-userid', 'signup-password', 'signup-password-confirm', 'signup-email']);
 const HANGUL_INITIAL_KEYS = ['r', 'R', 's', 'e', 'E', 'f', 'a', 'q', 'Q', 't', 'T', 'd', 'w', 'W', 'c', 'z', 'x', 'v', 'g'];
 const HANGUL_MEDIAL_KEYS = ['k', 'o', 'i', 'O', 'j', 'p', 'u', 'P', 'h', 'hk', 'ho', 'hl', 'y', 'n', 'nj', 'np', 'nl', 'b', 'm', 'ml', 'l'];
@@ -122,7 +122,8 @@ function convertHangulToKeyboardText(value) {
 function sanitizeEnglishKeyboardInput(fieldId, value) {
   const converted = convertHangulToKeyboardText(value);
   if (fieldId === 'signup-userid') {
-    return converted.replace(/[^A-Za-z0-9_]/g, '');
+    // [LOG: 20260729_1616] 아이디는 소문자 영문/숫자/_만 허용. 대문자는 소문자로 자동 변환, 한글은 키보드 영문으로 변환 후 필터.
+    return converted.replace(/[^A-Za-z0-9_]/g, '').toLowerCase();
   }
   if (fieldId === 'signup-password' || fieldId === 'signup-password-confirm') {
     return converted.replace(/[^\x21-\x7E]/g, '');
@@ -142,7 +143,8 @@ function isAsciiNickname(value) {
 }
 
 function isValidUserId(value) {
-  return /^[A-Za-z0-9_]{5,40}$/.test(value);
+  // [LOG: 20260729_1616] 아이디는 소문자 영문/숫자/_만 허용. 대문자는 입력 시 이미 소문자로 변환됨.
+  return /^[a-z0-9_]{5,40}$/.test(value);
 }
 
 function isStrongPassword(value) {
@@ -686,7 +688,8 @@ export function createSignupEmailHandler(deps) {
           handleAvailabilityError(error, stageFieldId, { userId: trimmedValue });
           return;
         }
-        draft.userId = trimmedValue;
+        // [LOG: 20260729_1616] 아이디는 항상 소문자로 저장.
+        draft.userId = trimmedValue.toLowerCase();
         moveToStage('signup-password', draft);
         return;
       }

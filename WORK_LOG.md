@@ -1,3 +1,114 @@
+## [2026-07-29 17:50] FIND (통합검색) 명령어 단독 입력 및 클릭 보정
+
+**LOG_ID: 20260729_1750**
+목표: `FIND` 단독 입력 시 작동하지 않던 원인 해결 및 힌트바 클릭 시 `FIND ` prefill 지원.
+수행 작업:
+1) `public/js/core/commandRouterGlobalNavigation.js`: `FIND` 단독 입력 시에도 통합 검색 라우터에 진입하여 검색어 안내 힌트 및 프롬프트 표시.
+2) `public/js/core/commandService.js`: `FIND` 및 `/` 명령어 메타데이터에 `prefill: true` 및 `cmdPrefill: 'FIND '` 추가.
+실행: `node --check public/js/core/commandRouterGlobalNavigation.js public/js/core/commandService.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-29 17:47] Z (화면 재전송) 명령어 완전 제거
+
+**LOG_ID: 20260729_1747**
+목표: 사용자 요청에 따라 불필요한 `Z` (화면 재전송/다시그리기) 명령어 완전 제거.
+수행 작업:
+1) `public/js/core/commandService.js`: `Z` 명령어 메타데이터 정의 제거.
+2) `public/js/core/commandRouterGlobalNavigation.js`: `Z` 명령어 라우팅/핸들러 제거.
+3) `public/js/core/commandNormalizer.js`: `commonCommands`에서 `Z` 제거.
+4) `public/js/core/terminalHintMarkup.js`: 힌트바 정렬 및 필터링 조건에서 `Z` 제거.
+5) `public/js/core/commandDispatcherExecution.js`: 예외 처리 목록에서 `Z` 제거.
+실행: `node --check public/js/core/commandService.js public/js/core/commandRouterGlobalNavigation.js public/js/core/commandNormalizer.js public/js/core/terminalHintMarkup.js public/js/core/commandDispatcherExecution.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-29 17:43] 도움말(/help) 화면 빈 공간 클릭 시 상위 복귀 리스너 제거
+
+**LOG_ID: 20260729_1743**
+목표: 도움말 화면(`/help`)에서 빈 공간 클릭 시 이전 화면(`P` 명령)으로 이동해 버리는 현상 제거.
+수행 작업: `public/js/core/appEvents.js`에서 help 화면 본문 클릭 시 `handleCmd('P')`를 호출하던 이벤트 리스너 제거.
+실행: `node --check public/js/core/appEvents.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-29 17:40] LOG 명령어를 LOGIN과 동일한 별칭으로 동작하도록 추가
+
+**LOG_ID: 20260729_1740**
+목표: 사용자 요청에 따라 `LOG` 입력 시 `LOGIN`과 동일하게 로그인 화면으로 이동 및 동작하도록 별칭 추가.
+수행 작업:
+1) `public/js/core/commandNormalizer.js`: `LOG` 입력 시 `LOGIN`으로 정규화하는 별칭 규칙 추가.
+2) `public/js/core/commandService.js`: `LOG` 메타데이터 및 `LOGIN` tip 안내 문구 추가.
+3) `public/js/core/terminalHintMarkup.js`: 하단 힌트 바 및 등급별 필터링에 `LOG` 추가.
+실행: `node --check public/js/core/commandService.js public/js/core/commandNormalizer.js public/js/core/terminalHintMarkup.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-29 17:34] LV (등급변경) 운영자 명령어 완전 제거
+
+**LOG_ID: 20260729_1734**
+목표: 사용자 요청에 따라 불필요한 LV(등급변경) 운영자 전용 명령어 제거.
+수행 작업:
+1) `public/js/core/commandService.js`: `LV` 명령어 메타데이터 정의 제거.
+2) `public/js/core/commandRouterPostView.js`: `LV` 명령어 핸들러 및 `LEVEL_LABELS` 정의 제거.
+실행: `node --check public/js/core/commandService.js public/js/core/commandRouterPostView.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-29 17:10] 당연한 입력 보조 명령어(ENTER, CHANGE, SEND, S, SAVE) 도움말 목록에서 삭제
+
+**LOG_ID: 20260729_1710**
+목표: 사용자 요청에 따라 당연한 입력 보조 키/명령어(`ENTER`, `CHANGE`, `SEND`, `S`, `SAVE`)를 도움말(`/help`) 목록에서 삭제.
+수행 작업: `public/js/core/commandService.js`에서 해당 5개 명령어 정의 제거.
+실행: `node --check public/js/core/commandService.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-29 17:08] SET, UNSET, ENV (VARS) 환경 변수 설정 명령어 완전 제거
+
+**LOG_ID: 20260729_1708**
+목표: 사용자 요청에 따라 불필요한 환경 변수 관리 명령어(`SET`, `UNSET`, `ENV`, `VARS`) 완전 제거.
+수행 작업:
+1) `public/js/core/commandRouterGlobalWorkspace.js`: `SET`, `UNSET`, `ENV`, `VARS` 명령어 핸들러 및 파싱 로직 완전 제거.
+2) `public/js/core/commandService.js`: `SET`, `UNSET`, `ENV` 명령어 메타데이터 완전 제거.
+실행: `node --check public/js/core/commandRouterGlobalWorkspace.js public/js/core/commandService.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-29 17:07] CAP(갈무리) 화면 저장 기능 완전 제거
+
+**LOG_ID: 20260729_1707**
+목표: 사용자 요청에 따라 인쇄/인쇄용 보기(PR) 기능과 중복되는 불필요한 CAP(갈무리) 화면 캡처 기능 제거.
+수행 작업:
+1) `public/js/core/commandRouterGlobalRuntime.js`: CAP 명령어 처리 및 뱃지 렌더링 함수 제거.
+2) `public/js/core/commandService.js`: CAP 명령어 메타데이터 정의 제거.
+3) `public/js/core/commandNormalizer.js`: `갈무리`, `캡` 한글 별칭 매핑 제거.
+4) `public/js/core/terminalSequentialRenderer.js`: 화면 렌더링 시 갈무리 버퍼 수집 로직 제거.
+5) `public/style.css`: `.capture-badge` 관련 CSS 스타일 제거.
+실행: `node --check public/js/core/commandRouterGlobalRuntime.js public/js/core/commandService.js public/js/core/commandNormalizer.js public/js/core/terminalSequentialRenderer.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-29 17:01] SET THEME 명령어에서 nownuri 테마 삭제 (default, blue 테마만 지원)
+
+**LOG_ID: 20260729_1701**
+목표: 사용자의 요청에 따라 SET THEME 명령어에서 nownuri 테마 설정 옵션 삭제 및 관련 도움말 힌트 업데이트.
+수행 작업:
+1) `public/js/core/commandRouterGlobalWorkspace.js`: SET THEME 명령어의 허용 테마 목록에서 `nownuri` 삭제, 알 수 없는 테마 힌트의 허용 값 안내에서 `nownuri` 제거.
+2) `public/js/core/commandService.js`: SET 명령어 설명 예시에서 `SET THEME NOWNURI` -> `SET THEME BLUE`로 수정.
+실행: `node --check public/js/core/commandRouterGlobalWorkspace.js`, `node --check public/js/core/commandService.js`
+결과: ✅ 완료
+
+---
+
 ## [2026-07-29 02:15] [/loop PDS 전수조사 10차] 자료실(PDS) 목록 화면의 즉시다운로드(DN)가 가상 게시판 id로 첨부를 조회해 실제로 첨부가 있는 글도 "첨부파일이 존재하지 않습니다"로 실패하던 결함 발견·수정
 
 **LOG_ID: 20260729_0215**
@@ -14754,3 +14865,390 @@ Result: ✅ 완료 - Visual layout checks on Chrome verified 100% pixel-perfect 
 실행: `node --check`를 통한 수정 서버 코드 구문 에러 검증 및 `npm run smoke:vercel-ready` 검사
 기대: 게시판마다 1번부터 순차적으로 게시물 번호가 시작되며, 목록 조회, 개별 게시글 조회, 답글 작성, 수정, 삭제, 추천 및 이전/다음 이동이 로컬 일련번호 기반으로 오류 없이 오차 없이 통합 작동한다.
 결과: ✅ 완료
+
+---
+
+## [2026-07-29 14:50] 뉴스 불러오기 로딩 표시 추가 및 KST 작성 시각 정밀 보정
+
+**LOG_ID: 20260729_1450**
+목표:
+- `/service/news/1` 뉴스 목록 및 기사 상세 화면 진입 시 데이터 로딩 중 로딩 안내 메시지 표시.
+- 각각 뉴스의 작성/발행 시각이 항상 올바른 한국 표준시(KST, UTC+9)로 유지되도록 날짜 변환 및 표기 보정.
+
+변경 파일:
+- `src/server/RssServiceXmlParsers.js`
+- `public/js/core/ansiBuilderUtils.js`
+- `public/js/core/newsScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `src/server/RssServiceXmlParsers.js`의 `normalizeNewsDate` 함수를 수정하여, RSS 피드의 GMT/UTC/ISO8601/타임존 표기 날짜를 UTC epoch timestamp 기준 `+9시간(KST)`으로 정밀 변환하도록 보정하고, 타임존 표기 없는 국내 뉴스 시각은 한국 시각으로 유지되도록 구현했습니다.
+2. `public/js/core/ansiBuilderUtils.js`의 `formatLongDate` / `formatShortDate` 함수를 수정하여, 서버에서 전달받은 KST 날짜/시각 문자열이 클라이언트 브라우저 로컬 타임존 변환으로 어긋나지 않고 한국 시각 그대로 표기되도록 개선했습니다.
+3. `public/js/core/newsScreens.js`의 `showNewsArticle`, `showNewsList`, `showNewsMenu` 함수에 지연 딜레이 없는 즉각 로딩 안내 메시지(`showNewsLoading`) 및 로딩 완료 후 `setReady(true)` 전환 처리를 추가했습니다.
+
+실행:
+- `node --check src/server/RssServiceXmlParsers.js`
+- `node --check public/js/core/ansiBuilderUtils.js`
+- `node --check public/js/core/newsScreens.js`
+- `npm run smoke:rss-services`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 뉴스 메뉴, 뉴스 목록, 뉴스 기사 클릭 시 화면에 "뉴스를 불러오는 중입니다.." / "뉴스 기사를 불러오는 중입니다.." 로딩 문구가 즉각 표시되어 사용자가 긴 로딩 대기 시간을 인지할 수 있습니다.
+- 모든 뉴스의 작성 및 제공 시각이 한국 표준시(KST)로 정확하고 일관되게 표시됩니다.
+
+결과: ✅ 완료. `node --check`, `smoke:rss-services`, `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 15:00] 일반 화면 메뉴 클릭 시 입력창 * 마스킹 표시 현상 수정
+
+**LOG_ID: 20260729_1500**
+목표:
+- 비밀번호 입력 단계를 지난 후 일반 화면(날씨, 뉴스, 게시판 등)으로 이동했을 때 마스킹 플래그(`state._maskCommandInput`)가 남아있어 메뉴 클릭 시 숫자가 `*`로 마스킹되던 버그를 해결한다.
+
+변경 파일:
+- `public/js/core/terminalHintFooter.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `terminalHintFooter.js`의 `syncScreenContext` 함수에 보안 화면(login/signup/myinfo의 비밀번호 단계)이 아닌 일반 화면으로 전환될 경우 `state._maskCommandInput = false`로 자동 리셋하는 안전망을 추가했습니다.
+2. 일반 화면으로 전환될 때마다 마스킹 상태와 `dataset.masked` 속성이 `false`로 해제되어 메뉴 번호 클릭 시 정상적으로 숫자가 노출되도록 보정했습니다.
+
+실행:
+- `node --check public/js/core/terminalHintFooter.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 날씨 메뉴(`/service/weather`) 등 일반 화면에서 메뉴/지역 번호를 클릭하면 `*` 대신 정상 숫자가 찍히고 화면이 올바르게 이동합니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 15:04] terminalHintFooter.js 모듈 구문 오류 수정
+
+**LOG_ID: 20260729_1504**
+목표:
+- 브라우저 콘솔에서 발생한 `terminalHintFooter.js` 모듈의 `renderHintMarkup` direct import 구문 오류를 수정한다.
+
+변경 파일:
+- `public/js/core/terminalHintFooter.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `terminalHintFooter.js` 파일 1행에서 잘못 가져오던 `import { renderHintMarkup }` 구문을 제거하고, 기존 아키텍처 팩토리 함수 주입(`deps.renderHintMarkup`) 패턴으로 바로잡았습니다.
+
+실행:
+- `node --check public/js/core/terminalHintFooter.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 브라우저 콘솔의 `Uncaught SyntaxError`가 해결되어 스크립트가 정상 작동합니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 15:09] 레거시 푸터 텍스트 파일 경로 노출 버그 수정
+
+**LOG_ID: 20260729_1509**
+목표:
+- 메뉴 구조 XML(`hanulso.mnu`)의 `<footer\>`에 지정된 레거시 텍스트 파일 경로(`txt/cmd_top_footer.txt`)가 힌트바(#cmd-hint)에 가공되지 않은 파일명 문자열 그대로 출력되던 문제를 해결한다.
+
+변경 파일:
+- `public/js/core/terminalHintFooter.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `terminalHintFooter.js`의 `applyCommandFooter` 함수 내에 `footerConfig`로 들어오는 문자열 값 중 `txt/`로 시작하거나 `.txt`로 끝나는 레거시 텍스트 파일 경로 패턴인지를 검사하는 가드 구문을 추가했습니다.
+2. 경로 형태인 파일명일 경우 힌트로 직접 출력하지 않고 `defaultFooterText`가 힌트바에 출력되도록 처리하여 정상적인 명령어 힌트 문구(예: `번호/명령(H, GO, ...`)가 출력되도록 보정했습니다.
+
+실행:
+- `node --check public/js/core/terminalHintFooter.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 메인 메뉴 진입 시 하단 힌트바에 파일명 대신 정상적인 명령어 안내 힌트가 노출됩니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 15:11] 힌트와 프롬프트의 줄바꿈 분리 처리 누락 수정
+
+**LOG_ID: 20260729_1511**
+목표:
+- 푸터 텍스트에 줄바꿈(`\n`)이 포함되어 있을 때 힌트바에 `선택 >>` 프롬프트 문구까지 함께 겹쳐서 출력되던 현상을 해결한다.
+
+변경 파일:
+- `public/js/core/terminalHintFooter.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `terminalHintFooter.js`의 `applyCommandFooter` 함수에서 `effectiveFooterText`에 줄바꿈(`\n`)이 포함되어 있는 경우, 이를 기준으로 첫째 줄은 `setHint`에, 둘째 줄은 `setPrompt`에 분할 대입하도록 보정했습니다.
+2. 힌트와 프롬프트의 영역을 명확히 분리하여 힌트바 안에 프롬프트 텍스트가 중복 출력되는 현상을 영구 제거했습니다.
+
+실행:
+- `node --check public/js/core/terminalHintFooter.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 하단 힌트바에는 명령어 안내 힌트만 깔끔하게 노출되고, 입력 프롬프트(`선택 >>`)와 서로 겹치지 않고 정상 정렬됩니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 15:24] 건의하기 에디터 화면의 완료/취소 안내 핫스팟 클릭 및 호버 지원
+
+**LOG_ID: 20260729_1524**
+목표:
+- 건의하기(`tosysop`) 에디터 글쓰기 화면에서 본문 하단에 표시되는 텍스트 안내(`완료: Ctrl+S`, `취소: ESC`)를 클릭과 호버(툴팁)가 작동하는 명령어 핫스팟 버튼 형태로 개선한다.
+
+변경 파일:
+- `public/js/core/contactSysopScreen.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `appendContactSysopLine` 함수에 `isRawHtml` 파라미터를 추가하여 에디터 도움말 텍스트에 HTML 태그(span) 주입이 가능하게 했습니다.
+2. 에디터 힌트 문구의 `완료: Ctrl+S`와 `취소: ESC` 텍스트를 `.cmd-token.cmd-clickable` 클래스 및 호버 툴팁(`data-tip`)을 가진 토큰 요소로 변경했습니다.
+3. `renderContactSysopScreen` 내부에서 전역 `#terminal-container`에 `data-tosysop-action` 클릭 이벤트를 위임 수신하는 리스너를 바인딩하여, 마우스 클릭 시 각각 완료(저장/발송) 및 취소(이탈) 동작이 실제 단축키처럼 정확하게 작동하도록 보정했습니다.
+
+실행:
+- `node --check public/js/core/contactSysopScreen.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 건의하기 글쓰기 모드에서 본문 하단 도움말의 `완료: Ctrl+S`와 `취소: ESC`에 마우스를 올리면 툴팁이 활성화되고, 클릭 시 저장/취소가 즉시 작동합니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 15:31] 회원 아이디 조회 시 대소문자 매칭 결함 수정
+
+**LOG_ID: 20260729_1531**
+목표:
+- 사용자가 소문자 또는 대소문자 혼용으로 아이디를 검색(예: `pf sysop`)할 때 데이터베이스의 대소문자 설정과 일치하지 않아 회원 프로필 조회에 실패하던 문제를 해결한다.
+
+변경 파일:
+- `src/server/MemberRepositoryShared.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. 식별자 룩업 헬퍼인 `normalizeLookup` 함수에서 공백 제거 뿐만 아니라 소문자 변환(`.toLowerCase()`)을 항상 수행하도록 수정했습니다.
+2. 이를 통해 Supabase(PostgreSQL) 및 메모리 데이터베이스에서 `user_id`를 조회하거나 매칭할 때 입력 대소문자에 관계없이 안전하게 일치시킴으로써 회원 찾기 기능의 신뢰성을 확보했습니다.
+
+실행:
+- `node --check src/server/MemberRepositoryShared.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- `pf sysop` 또는 `pf SYSOP` 등 대소문자 상관없이 sysop(시샵) 계정이 정상적으로 검색되고 프로필 화면에 로드됩니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 16:16] 아이디 소문자 강제 + 한글 차단 처리
+
+**LOG_ID: 20260729_1616**
+목표:
+- 회원가입 및 소셜 가입 시 아이디 입력 필드에서 대문자를 소문자로 자동 변환하고, 한글 입력은 영문 키보드로 변환 후 필터링하여 소문자 영문/숫자/_ 만 저장되도록 보장한다.
+- 프로필 조회 URL(`/profile/SYSOP` 등)도 항상 소문자로 정규화하여 `/profile/sysop`으로 통일한다.
+
+변경 파일:
+- `public/js/core/signupEmailForm.js`
+- `public/js/core/signupOAuthProfile.js`
+- `public/js/core/profileScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `signupEmailForm.js`의 `sanitizeEnglishKeyboardInput`에서 `signup-userid` 케이스에 `.toLowerCase()` 추가, 한글은 기존 `convertHangulToKeyboardText`를 통해 영문으로 먼저 변환됨.
+2. `signupEmailForm.js`의 `isValidUserId` 정규식을 `/^[a-z0-9_]{5,40}$/`(소문자 전용)로 변경.
+3. `signupEmailForm.js`의 `draft.userId` 저장 시 `.toLowerCase()` 추가.
+4. `signupOAuthProfile.js`의 `submitProfile`에서 `userId` 읽기 시 `.toLowerCase()`, 정규식도 소문자 전용 `/^[a-z0-9_]{3,20}$/`으로 변경.
+5. `signupOAuthProfile.js`의 소셜 가입 아이디 입력 필드(`signup-oauth-userid`)에 실시간 `input` 이벤트 리스너를 추가하여 대문자/한글을 즉시 소문자 영문으로 치환.
+6. `profileScreens.js`의 `showProfile`에서 `state._profileUserId`를 저장 시 `.toLowerCase()`로 소문자 정규화.
+
+실행:
+- `node --check public/js/core/signupEmailForm.js`
+- `node --check public/js/core/signupOAuthProfile.js`
+- `node --check public/js/core/profileScreens.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 회원가입 아이디 입력 시 대문자를 입력해도 자동으로 소문자로 변환된다.
+- 한글을 입력하면 QWERTY 키보드 입력으로 변환 후 영숫자/_만 남기므로 한글이 아이디에 포함되지 않는다.
+- 프로필 URL이 `/profile/sysop`으로 항상 소문자로 표기된다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 16:24] PF 명령어 로그인 전용 제한 + 프로필 URL 아이디 노출 제거
+
+**LOG_ID: 20260729_1624**
+목표:
+- `PF` 및 `PF [아이디]`, `WHO [아이디]` 명령어를 로그인한 사용자만 사용할 수 있도록 제한한다.
+- 비로그인 상태에서 PF를 입력하면 "로그인 후 이용하실 수 있습니다." 안내 메시지를 표시한다.
+- 프로필 화면 URL이 `/profile/아이디` 형식으로 아이디를 노출하지 않고 `/profile`로 고정한다.
+
+변경 파일:
+- `public/js/core/commandRouter.js`
+- `public/js/core/commandRouterGlobalNavigation.js`
+- `public/js/core/routingUrlBuilder.js`
+- `public/js/core/routingStateRestorer.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `commandRouter.js`에서 `PF/WHO [아이디]` 및 단독 `PF/WHO` 처리 블록을 제거하여 중복 처리를 없애고, `commandRouterGlobalNavigation.js`에서 일원화.
+2. `commandRouterGlobalNavigation.js`의 `WHO/WH/PF [아이디]` 처리에 로그인 체크를 추가하여 비로그인 시 안내 메시지 출력.
+3. `commandRouterGlobalNavigation.js`에서 단독 `PF/WHO/WH` 처리를 `MYINFO/HI` 블록에서 분리하여 `showProfile(내 아이디)`를 호출하도록 수정. 역시 비로그인 시 안내 메시지 출력.
+4. `routingUrlBuilder.js`의 `profile` case에서 `/profile/아이디` 반환을 `/profile` 고정 반환으로 변경.
+5. `routingStateRestorer.js`의 `/profile` URL 복원 시 URL의 아이디 세그먼트 대신 로그인된 사용자의 아이디로 자신의 프로필을 불러오도록 수정. 비로그인이면 메인으로 이동.
+
+실행:
+- `node --check public/js/core/commandRouter.js`
+- `node --check public/js/core/commandRouterGlobalNavigation.js`
+- `node --check public/js/core/routingUrlBuilder.js`
+- `node --check public/js/core/routingStateRestorer.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- 로그인하지 않은 상태에서 PF를 입력하면 "회원 프로필 조회는 로그인 후 이용하실 수 있습니다." 힌트가 표시됩니다.
+- 로그인 후 PF를 입력하면 자신의 프로필이 표시되며 URL은 `/profile`로만 표시됩니다.
+- PF sysop 같이 아이디를 지정해도 URL은 `/profile`로만 표시됩니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 16:31] 종료 명령어 확인 절차 제거
+
+**LOG_ID: 20260729_1631**
+목표:
+- `EXIT`, `BYE`, `QUIT`, `X`, `LOGOUT` 등 종료 명령어 입력 시 표시되던 "Y를 누르고 엔터키를 누르십시오" 확인 절차를 제거하여 즉시 종료되도록 변경한다.
+
+변경 파일:
+- `public/js/core/commandRouter.js`
+- `public/js/core/commandRouterGlobalNavigation.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `commandRouter.js`의 종료 명령어 처리에서 `confirm()` 브라우저 다이얼로그 제거, 즉시 `doLogout()` + `reload()` 처리.
+2. `commandRouterGlobalNavigation.js`에서 `_exitConfirm` 처리 블록(Y/N 가로채기) 전체 제거.
+3. `commandRouterGlobalNavigation.js`의 BYE/Q/EXIT/X/LOGOUT 처리를 하나의 블록으로 통합하여 "안녕히 가십시오." 힌트 후 즉시 종료.
+
+실행:
+- `node --check public/js/core/commandRouter.js`
+- `node --check public/js/core/commandRouterGlobalNavigation.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- EXIT, BYE, QUIT, X, LOGOUT 입력 시 확인 메시지 없이 "안녕히 가십시오." 힌트가 표시되고 0.4초 후 즉시 종료된다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 17:13] 최근 작업 명령 기록(HIST) 화면 하단 텍스트 잘림 현상 수정
+
+**LOG_ID: 20260729_1713**
+목표:
+- `/history` (HIST) 화면에서 명령어 이력이 많을 때 하단의 "... 외 N개 더 있습니다." 텍스트 윗부분이 하단 구분선에 걸려 잘려 보이던 버그를 수정한다.
+
+변경 파일:
+- `public/js/core/helpScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `helpScreens.js`의 `buildHistoryAnsi` 내에서 `fixedLineCount` 계산 시 `buildTopHeader` 가 반환하는 세 줄(상단바, 레이블줄, 구분선) 및 대괄호 제목줄/빈줄의 총 5줄 오버헤드를 명확하게 지정하도록 계산식 수정.
+2. 24행 고정 캔버스 예산(budget) 내에 안내 문구가 깔끔하게 잘림 없이 표시되도록 조정.
+
+실행:
+- `node --check public/js/core/helpScreens.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- HIST 화면 하단의 "... 외 N개 더 있습니다." 문구가 잘리지 않고 선명하게 노출됩니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 17:26] HIST 화면 18번째 항목 잘림 현상 완벽 수정
+
+**LOG_ID: 20260729_1726**
+목표:
+- 상단바(4줄)를 뺀 본문 20줄 캔버스에서 제목 2줄과 오버플로우 문구 1줄을 계산하여 이력이 최대 17개까지만 노출되도록 예산을 정밀 교정함으로써, 18번째 항목 텍스트의 하단 절반이 잘려 보이는 현상을 완벽 해결한다.
+
+변경 파일:
+- `public/js/core/helpScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `buildHistoryAnsi()` 내 본문 예산을 20줄(`24 - 4`)로 정밀 계산.
+2. 제목 2줄과 오버플로우 안내 1줄을 제외하고 이력 목록 표시 최대 개수를 17개로 설정하여 18번째 줄 텍스트가 잘리는 현상 방지.
+
+실행:
+- `node --check public/js/core/helpScreens.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- `HIST` 화면에서 18번째 텍스트 잘림 없이 깔끔하게 이력이 표시되고 바로 밑에 안내 문구가 온전히 표시됩니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 17:29] HIST 화면 목록 개수 조정으로 하단 텍스트 잘림 완전 해결
+
+**LOG_ID: 20260729_1729**
+목표:
+- `/history` (HIST) 화면에서 이력이 많을 때 하단 구분선에 안내 문구가 걸려서 일부 잘려 보이던 현상을 여유 줄(2줄)을 두고 최대 15개까지만 노출하도록 수정하여 완전히 해결한다.
+
+변경 파일:
+- `public/js/core/helpScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `buildHistoryAnsi()` 내 표출 항목 수를 15개로 설정 (제목 1 + 빈줄 1 + 이력 15 + 안내 1 = 18줄로, 20줄 캔버스 내에서 2줄의 넉넉한 하단 여백 확보).
+
+실행:
+- `node --check public/js/core/helpScreens.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- `HIST` 화면 입력 시 15번 항목까지만 표시되고 바로 아래에 `... 외 N개 더 있습니다.` 문구가 경계선 잘림 없이 선명하게 표시됩니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-07-29 17:31] HIST 화면 넉넉한 하단 여백(4줄) 확보로 잘림 완전 방지
+
+**LOG_ID: 20260729_1731**
+목표:
+- 브라우저 창 크기 및 폰트 렌더링 세로 비율에 따라 하단 텍스트 잘림이 발생하는 현상을 방지하기 위해, `HIST` 화면의 최대 이력 표출 수를 13개로 제한하여 하단에 4줄 이상의 넉넉한 여백을 확보한다.
+
+변경 파일:
+- `public/js/core/helpScreens.js`
+- `WORK_LOG.md`
+
+수행 작업:
+1. `buildHistoryAnsi()` 내 최대 표출 항목 수를 13개로 조절 (제목 1줄 + 빈줄 1줄 + 이력 13줄 + 안내문 1줄 = 16줄, 20줄 캔버스에서 4줄여유).
+
+실행:
+- `node --check public/js/core/helpScreens.js`
+- `npm run smoke:vercel-ready`
+
+기대:
+- `HIST` 화면에서 이력이 13개까지만 출력되며 바로 아래에 `... 외 N개 더 있습니다.` 안내 문구가 하단 경계선과 넓은 간격을 두고 안정적으로 노출됩니다.
+
+결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+
+
+

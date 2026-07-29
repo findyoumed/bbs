@@ -309,16 +309,7 @@ export function bindAppEvents(deps) {
     handleGlobalClick(event, interruptRendering);
   });
 
-  // [LOG: 20260622_1820] 도움말 화면은 본문(명령/링크/풋터 외) 클릭으로도 닫는다(상위로 복귀).
-  // 명령 토큰·상단바·풋터 클릭과 텍스트 선택(복사)은 닫기에서 제외한다.
-  document.addEventListener('click', (event) => {
-    if (state?.screen !== 'help' || typeof handleCmd !== 'function') return;
-    if (event.defaultPrevented) return;
-    if (event.target.closest('#terminal-footer, [data-cmd], [data-cmd-fill], [data-cmd-execute], [data-menu-path], [data-board-id], [data-node-key], [data-external-url], a, button, input, textarea, select')) return;
-    const selection = window.getSelection?.();
-    if (selection && selection.toString().length > 0) return;
-    void handleCmd('P');
-  });
+  // [LOG: 20260729_1743] 도움말 화면(/help) 빈 화면 클릭 시 이전 화면으로 복귀하던 이벤트 리스너 제거
 
   // Global click-to-focus for terminal feel
   const terminalFooter = document.getElementById('terminal-footer');

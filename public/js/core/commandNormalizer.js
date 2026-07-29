@@ -29,8 +29,7 @@ export function normalizeCommand(rawCmd, stateScreen) {
     'ㅌ': 'X', 'ㅛ': 'Y',
     '햎': 'GO', '구꽬': 'RE', '두깋': 'ED', '뉸깋': 'DD', 'ㅌㅊㅣ': 'LT', 'ㅌㅊㅐ': 'LI',
     'ㅣㅅ': 'LT', 'ㅣㅑ': 'LI', 'ㅕㄴㄷㄱ': 'USER', 'ㅎ디ㅔ': 'HELP',
-    'ㅡㄷ': 'ME', 'ㅡ드': 'ME', 'ㅠㅠㄴ': 'BBS', '쳐': 'CHAT',
-    '갈무리': 'CAP', '캡': 'CAP',
+    'ㅡㄷ': 'ME', 'ㅡ드': 'ME', 'ㅠㅠㄴ': 'BBS', '쳐': 'CHAT', // [LOG_ID: 20260729_1707] CAP(갈무리) 별칭 제거
     '/ㅁ': '/Q', '/균ㅆ': '/QUIT', 'ㅐ': 'O',
     // [LOG_ID: 20260729_0130] 대화방 개설·입장 취소(commandRouterChat.js의 '/M' 검사,
     // _chatRoomCreateStage/_chatRoomJoinStage)가 두벌식 오타를 인식하지 못했다 — '/'로
@@ -61,7 +60,8 @@ export function normalizeCommand(rawCmd, stateScreen) {
     }
   }
 
-  // 2. 특수 기호 알리어스
+  // 2. 특수 기호 및 영문 별칭 알리어스
+  if (cmd === 'LOG') cmd = 'LOGIN';
   if (cmd === ']') cmd = 'A';
   if (cmd === '[' || cmd === '[[') cmd = 'N';
 
@@ -82,7 +82,8 @@ export function normalizeCommand(rawCmd, stateScreen) {
   // 5. 부분 일치 보정 (Prefix Match)
   // 단, cmd가 2글자 이상일 때만 (너무 짧으면 오작동 위험)
   // 기존에 정의된 명령어(CMD_META에 있는 것)가 아닐 경우에만 시도
-  const commonCommands = ['H', 'P', 'T', 'M', 'N', 'A', 'F', 'B', 'L', 'W', 'R', 'E', 'D', 'V', 'U', 'S', 'X', 'Z', 'C', 'Q'];
+  // [LOG_ID: 20260729_1747] commonCommands에서 Z 제거
+  const commonCommands = ['H', 'P', 'T', 'M', 'N', 'A', 'F', 'B', 'L', 'W', 'R', 'E', 'D', 'V', 'U', 'S', 'X', 'C', 'Q'];
   if (cmd.length >= 2 && !commonCommands.includes(cmd)) {
     const bestMatch = getBestMatch(cmd);
     if (bestMatch && bestMatch !== cmd) {

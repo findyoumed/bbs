@@ -7,7 +7,8 @@ import { createMemoCommandHandler } from './commandRouterMemo.js';
 import { createMyInfoCommandHandler } from './commandRouterMyInfo.js';
 
 const TYPO_MAP = {
-  'ㅣ': 'P', 'ㅡ': 'M', 'ㅠ': 'B', 'ㅜ': 'N', 'ㅁ': 'A', 'ㄹ': 'F', 'ㅣ': 'L', 'ㅅ': 'T',
+  // [LOG: 20260729_1637] 두벨식 한글 키보드 매핑 수정: 'ㅔ'(키: p)를 P로, 'ㅣ'(키: l)를 L로 자정.
+  'ㅔ': 'P', 'ㅡ': 'M', 'ㅠ': 'B', 'ㅜ': 'N', 'ㅁ': 'A', 'ㄹ': 'F', 'ㅣ': 'L', 'ㅅ': 'T',
   'ㅈ': 'W', 'ㄱ': 'R', 'ㄷ': 'E', 'ㅇ': 'D', 'ㄴ': 'S', 'ㅍ': 'V', 'ㅊ': 'C', 'ㅐ': 'O',
   'ㅗ': 'H', 'ㅂ': 'Q', 'ㅌ': 'X', 'ㅛ': 'Y',
   'ㅎㅐ': 'GO', 'ㄲㄷ': 'RE', 'ㄷㄷ': 'ED', 'ㅇㄷ': 'DD', 'ㅣㅅ': 'LT', 'ㅣㅑ': 'LI'
@@ -24,7 +25,6 @@ export function createCommandHandler(deps) {
     openNicknameChange,
     openPasswordChange,
     showPostList,
-    showProfile,
     toggleTheme,
     state
   } = deps;
@@ -38,15 +38,6 @@ export function createCommandHandler(deps) {
   const handleMyInfoCommand = createMyInfoCommandHandler(deps);
 
   async function handleGlobalCommand(cmd) {
-    const pfMatch = cmd.match(/^(PF|WHO)\s+(.+)$/);
-    if (pfMatch) {
-      await showProfile(pfMatch[2].trim());
-      return true;
-    }
-    if (cmd === 'PF' || cmd === 'WHO') {
-      await showProfile(state.user?.userId || 'guest');
-      return true;
-    }
     if (cmd === 'ME' || cmd === 'MEMO') {
       if (state.user?.isGuest) {
         setHint('쪽지 기능은 로그인 후 이용하실 수 있습니다.');
@@ -65,10 +56,9 @@ export function createCommandHandler(deps) {
       return true;
     }
     if (cmd === 'Q' || cmd === 'EXIT' || cmd === 'BYE' || cmd === 'X' || cmd === 'LOGOUT') {
-      if (confirm('BBS 접속을 종료하시겠습니까? (Y/N) [N]:')) {
-        await doLogout();
-        window.location.reload();
-      }
+      // [LOG: 20260729_1631] 확인 다이얼로그 제거 — 즉시 로그아웃 후 재로드
+      await doLogout();
+      window.location.reload();
       return true;
     }
     return false;

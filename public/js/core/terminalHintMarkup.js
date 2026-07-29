@@ -81,10 +81,10 @@ export function createTerminalHintMarkup(deps) {
     // [LOG_ID: 20260712_0100] 뉴스 기사 화면의 '이전기사/다음기사'도 글 이동 그룹(10)으로 정렬.
     if (normalizedCmd === 'N') return ['이전글', '이전기사'].includes(resolvedLabel) ? 10 : 50;
     if (normalizedCmd === 'A') return ['다음글', '다음기사'].includes(resolvedLabel) ? 10 : 50;
-    if (['P', 'M', 'Z'].includes(normalizedCmd)) return 20;
+    if (['P', 'M'].includes(normalizedCmd)) return 20;
     if (normalizedCmd === 'T') return 30;
     if (normalizedCmd === 'GO') return 40;
-    if (['LOGIN', 'WHO', 'PF', 'HI', 'MYINFO'].includes(normalizedCmd)) return 60;
+    if (['LOGIN', 'LOG', 'WHO', 'PF', 'HI', 'MYINFO'].includes(normalizedCmd)) return 60;
     if (['H', 'HELP', '?'].includes(normalizedCmd)) return 70;
     return 50;
   }
@@ -185,15 +185,15 @@ export function createTerminalHintMarkup(deps) {
     // 2. 초급 등급: 우선순위가 높은(주요 이동/도움말 등 priority <= 20) 핵심 명령어 토큰만 노출
     else if (currentLevel === '초급' || currentLevel === 'LOW') {
       const priority = getCommandPriority(normalizedCmd);
-      const isCoreNav = ['F', 'B', 'L', 'P', 'M', 'H', 'HELP', '?', 'LOGIN'].includes(normalizedCmd);
+      const isCoreNav = ['F', 'B', 'L', 'P', 'M', 'H', 'HELP', '?', 'LOGIN', 'LOG'].includes(normalizedCmd);
       if (priority > 20 && !isCoreNav) {
         return false;
       }
     }
 
-    if (['X', 'Z', 'M'].includes(normalizedCmd)) return false;
+    if (['X', 'M'].includes(normalizedCmd)) return false;
     if (normalizedCmd === 'H' && state.screen === 'help') return false;
-    if (normalizedCmd === 'LOGIN' && !state.user?.isGuest) return false;
+    if (['LOGIN', 'LOG'].includes(normalizedCmd) && !state.user?.isGuest) return false;
 
     const meta = CMD_META[normalizedCmd];
     if (meta?.login && state.user?.isGuest && !usesCustomLabel) return false;

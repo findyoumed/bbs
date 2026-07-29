@@ -286,23 +286,17 @@ export function createAnsiBuilderUtils(deps) {
     ].join('\n');
   }
 
+  // [LOG_ID: 20260729_1450] 날짜/시간 파싱 시 문자열 기반 KST 보정을 최우선으로 적용하여 한국시간 유지
   function formatShortDate(value) {
     const source = String(value || '').trim();
     if (!source) return '  /  ';
 
-    const ymdLike = source.match(/^((?:19|20)?\d{2})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?/);
+    const ymdLike = source.match(/^((?:19|20)?\d{2})[-/.](\d{1,2})[-/.](\d{1,2})/);
     if (ymdLike) {
       const yy = ymdLike[1].length === 4 ? ymdLike[1].slice(2) : ymdLike[1];
       return `${yy.padStart(2, '0')}/${ymdLike[2].padStart(2, '0')}/${ymdLike[3].padStart(2, '0')}`;
     }
 
-    // Try parsing as ISO-like YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}/.test(source)) {
-      const parts = source.split('T')[0].split('-');
-      return `${parts[0].slice(2)}/${parts[1]}/${parts[2]}`;
-    }
-
-    // Try parsing with Date object
     const d = new Date(source);
     if (!isNaN(d.getTime())) {
       const yy = String(d.getFullYear()).slice(2);
@@ -311,7 +305,6 @@ export function createAnsiBuilderUtils(deps) {
       return `${yy}/${mm}/${dd}`;
     }
 
-    // Fallback: return as-is or slice if too long
     return source.length > 8 ? source.slice(0, 8) : source;
   }
 
@@ -319,6 +312,18 @@ export function createAnsiBuilderUtils(deps) {
     const source = String(value || '').trim();
     if (!source) {
       return '';
+    }
+    const match = source.match(/^((?:19|20)?\d{2})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (match) {
+      const yyyy = match[1].length === 2 ? `20${match[1]}` : match[1];
+      const mm = match[2].padStart(2, '0');
+      const dd = match[3].padStart(2, '0');
+      if (match[4] && match[5]) {
+        const hh = match[4].padStart(2, '0');
+        const min = match[5].padStart(2, '0');
+        return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
+      }
+      return `${yyyy}/${mm}/${dd}`;
     }
     const d = new Date(source);
     if (!isNaN(d.getTime())) {
@@ -329,7 +334,6 @@ export function createAnsiBuilderUtils(deps) {
       const min = String(d.getMinutes()).padStart(2, '0');
       return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
     }
-    // Fallback: simple slice/replace if Date fails
     return source.replace('T', ' ').slice(0, 16).replace(/-/g, '/');
   }
 

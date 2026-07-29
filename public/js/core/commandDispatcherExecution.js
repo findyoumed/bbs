@@ -214,7 +214,7 @@ export function createCommandDispatcherExecution(deps) {
         statusManager.update();
       }
 
-      if (!handled && input && !['F', 'B', 'P', 'M', 'T', 'Z'].includes(cmd)) {
+      if (!handled && input && !['F', 'B', 'P', 'M', 'T'].includes(cmd)) {
         // [LOG: 20260507_1510] PC통신 UI에는 unknown-command footer feedback이 없으므로 조용히 무시한다.
         return false;
       }

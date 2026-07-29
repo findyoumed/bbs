@@ -168,6 +168,13 @@ export function createTerminalHintFooter(deps) {
       return;
     }
 
+    // [LOG_ID: 20260729_1500] 비밀번호 모드(login/signup/myinfo 마스킹 단계)가 아닌 일반 화면으로 전환 시
+    // 마스킹 상태(_maskCommandInput)를 명시적으로 해제해 메뉴 클릭 시 번호가 *로 마스킹되는 현상을 방지한다.
+    const isSensitiveScreen = screenName === 'signup' || screenName === 'login' || screenName === 'myinfo';
+    if (!isSensitiveScreen && state._maskCommandInput) {
+      state._maskCommandInput = false;
+    }
+
     // [LOG: 20260507_1757] Keep /myinfo edit prompts in the footer so the active input stays at the bottom.
     restorePromptRow();
 
@@ -268,7 +275,15 @@ export function createTerminalHintFooter(deps) {
 
     if (hintEl) {
       resetHintExpansion();
-      const markup = renderHintMarkup(text);
+
+      // [LOG_ID: 20260729_1511] 힌트 텍스트 내에 줄바꿈(\n)이 포함된 경우, 
+      // 첫째 줄(진짜 힌트)만 추출하여 하단 힌트바에 렌더링하고 둘째 줄(프롬프트 문자열)은 필터링한다.
+      let hintText = text;
+      if (typeof text === 'string' && text.includes('\n')) {
+        hintText = text.split('\n')[0];
+      }
+
+      const markup = renderHintMarkup(hintText);
       hintEl.innerHTML = markup;
       hintEl.classList.toggle('has-cmd-tokens', markup.includes('cmd-token'));
       trimHintEntriesToFit();
@@ -280,7 +295,7 @@ export function createTerminalHintFooter(deps) {
       );
 
       if (
-        text
+        hintText
         && terminalFooter?.dataset.footerState === 'hidden'
         && !footerLoadPending
         && footerContentUpdateDepth === 0

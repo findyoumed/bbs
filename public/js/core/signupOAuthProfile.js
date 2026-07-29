@@ -67,6 +67,18 @@ export function createSignupOAuthProfileHandler(deps) {
       el.addEventListener('focus', () => {
         if (hintLineEl) hintLineEl.textContent = SIGNUP_OAUTH_HINTS[el.id] || '';
       });
+      // [LOG: 20260729_1616] 아이디 입력 필드는 실시간으로 소문자 영문/숫자/_만 허용.
+      if (el.id === 'signup-oauth-userid') {
+        el.addEventListener('input', () => {
+          const before = el.value;
+          const after = before.replace(/[^A-Za-z0-9_]/g, '').toLowerCase();
+          if (after !== before) {
+            const pos = Math.min(el.selectionStart || 0, after.length);
+            el.value = after;
+            try { el.setSelectionRange(pos, pos); } catch (e) { /* ignore */ }
+          }
+        });
+      }
       el.addEventListener('keydown', (e) => {
         if (e.altKey || e.ctrlKey || e.metaKey) return;
         if (e.key === 'Enter' || e.key === 'ArrowDown') {
@@ -92,13 +104,14 @@ export function createSignupOAuthProfileHandler(deps) {
   }
 
   async function submitProfile(handlers, { provider, label }) {
-    const userId = document.getElementById('signup-oauth-userid')?.value.trim() || '';
+    // [LOG: 20260729_1616] 아이디는 소문자로 저장 (대문자 입력 시 자동 변환).
+    const userId = (document.getElementById('signup-oauth-userid')?.value.trim() || '').toLowerCase();
     const nickName = document.getElementById('signup-oauth-nickname')?.value.trim() || '';
     state._oauthSignupError = '';
 
     let err = '', errId = 'signup-oauth-userid';
     if (!userId) err = 'ID를 입력하여 주십시오.';
-    else if (!/^[a-zA-Z0-9_]{3,20}$/.test(userId)) err = 'ID는 영문/숫자/_ 3~20자여야 합니다.';
+    else if (!/^[a-z0-9_]{3,20}$/.test(userId)) err = 'ID는 소문자 영문/숫자/_ 3~20자여야 합니다.';
     else if (!nickName) { errId = 'signup-oauth-nickname'; err = '이용자명을 입력하여 주십시오.'; }
 
     if (err) {

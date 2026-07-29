@@ -273,7 +273,7 @@ class MemberRouter extends BaseRouter {
 
   async getMember(params) {
     const { memberRepository } = this.deps;
-    const targetUserId = params.userId;
+    const targetUserId = String(params.userId || '').trim().toLowerCase();
     const context = await this.getContext();
     const allowMissing = this.requestUrl.searchParams.get('allowMissing') === '1';
 

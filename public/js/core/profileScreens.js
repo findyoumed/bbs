@@ -47,7 +47,8 @@ export function createProfileScreens(deps) {
 
   async function showProfile(userId, fromHistory = false) {
     state.screen = 'profile';
-    state._profileUserId = userId;
+    // [LOG: 20260729_1616] 아이디는 항상 소문자로 정규화하여 URL도 소문자로 생성됨.
+    state._profileUserId = String(userId || '').trim().toLowerCase();
     if (!fromHistory) updateURL();
     setLoading('연결하는 중입니다..');
     try {

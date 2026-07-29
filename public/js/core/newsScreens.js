@@ -427,14 +427,15 @@ export function createNewsScreens(deps) {
     return true;
   }
 
+  // [LOG_ID: 20260729_1450] 뉴스 데이터 로딩 중 로딩 안내 메시지 표시 헬퍼
   function showNewsLoading(message) {
-    const text = String(message || '뉴스 기사로 이동 중입니다..').trim();
+    const text = String(message || '뉴스를 불러오는 중입니다..').trim();
     if (typeof setLoading === 'function') {
       setLoading(text);
     } else {
       if (screenEl) {
         screenEl.classList.add('is-loading');
-        screenEl.innerHTML = `<div class="loading">${esc(text)}</div>`;
+        screenEl.innerHTML = `<div class="loading">${text}</div>`;
       }
       if (cmdInput) {
         cmdInput.disabled = true;
@@ -482,8 +483,6 @@ export function createNewsScreens(deps) {
       const articles = await loadNewsArticles(topicDoor, pageNo);
       const topic = topics.find((item) => String(item.door) === String(topicDoor));
       const topicTitle = String(articles?.topic?.title || articles?.category?.title || topic?.title || topic?.name || '').trim();
-      // [LOG_ID: 20260721_2210] articles.unavailable/message를 버려 피드 실패가 빈 목록으로만
-      // 보이던 문제(날씨와 같은 유형) — 결과에 실어 showNewsList에서 안내 문구로 표시한다.
       const result = {
         topics, topicTitle, items: articles?.items || [],
         unavailable: !!articles?.unavailable, message: articles?.message || ''
@@ -517,9 +516,6 @@ export function createNewsScreens(deps) {
 
     const request = (async () => {
       const detail = await loadNewsArticle(topicDoor, articleNo, requestOptions);
-      // [LOG: 20260622_1500] 서버가 불완전 기사를 404 대신 200+available:false 로 알리므로,
-      // 기존 404 기반 흐름(자동 스킵/목록 복귀)과 동일하게 동작하도록 동일 메시지 에러로 변환한다.
-      // 불완전 기사는 캐시하지 않아 피드 갱신 후 재시도가 가능하도록 한다.
       if (detail && detail.available === false) {
         const incompleteError = new Error(detail.message || `불완전한 뉴스 기사입니다: ${articleNo}`);
         incompleteError.type = 'incomplete';
@@ -549,27 +545,35 @@ export function createNewsScreens(deps) {
     state.screen = 'news-menu';
     if (!fromHistory) { updateURL(); pushHistory(); }
 
-    const data = await loadNewsMenu();
-    const topics = getNewsTopics(data);
-    state.serviceData = { ...data, topics, topicDoor: '' };
+    // [LOG_ID: 20260729_1450] 뉴스 메뉴 로딩 시 로딩 안내 메시지 표시
+    showNewsLoading('뉴스 메뉴를 불러오는 중입니다..');
 
-    const items = topics.map((topic) => ({
-      door: topic.door, name: topic.title || topic.name,
-      id: `news-${topic.door}`, boardId: `news-${topic.door}`
-    }));
-    // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
-    const rendered = await renderAnsiScreenWithTopbarSequential({
-      ansiText: buildBoardSelectAnsi(items, { titlePath: ['뉴스'] }),
-      ansiToHTML,
-      screenEl,
-      renderScreenSequential,
-      afterBodyRender: async () => {
-        await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('newsMenu'));
-      }
-    });
+    try {
+      const data = await loadNewsMenu();
+      setReady(true);
+      const topics = getNewsTopics(data);
+      state.serviceData = { ...data, topics, topicDoor: '' };
 
-    renderBoardSelectHotspots(rendered.screenNode, items);
-    if (shouldAutoFocusCommandInput()) cmdInput.focus();
+      const items = topics.map((topic) => ({
+        door: topic.door, name: topic.title || topic.name,
+        id: `news-${topic.door}`, boardId: `news-${topic.door}`
+      }));
+      const rendered = await renderAnsiScreenWithTopbarSequential({
+        ansiText: buildBoardSelectAnsi(items, { titlePath: ['뉴스'] }),
+        ansiToHTML,
+        screenEl,
+        renderScreenSequential,
+        afterBodyRender: async () => {
+          await applyCommandFooter(getMenuNodeByKey('news')?.footer, getCommandFooterText('newsMenu'));
+        }
+      });
+
+      renderBoardSelectHotspots(rendered.screenNode, items);
+      if (shouldAutoFocusCommandInput()) cmdInput.focus();
+    } catch (error) {
+      setReady(true);
+      throw error;
+    }
   }
 
   async function showNewsList(topicDoor, options = false) {
@@ -582,20 +586,11 @@ export function createNewsScreens(deps) {
     const requestedPageNo = Math.max(1, Number.parseInt(normalizedOptions.pageNo, 10) || 1);
 
     state.screen = 'news-list';
-    let loadingTimer = setTimeout(() => {
-      showNewsLoading('연결하는 중입니다..');
-    }, 80);
+    // [LOG_ID: 20260729_1450] 뉴스 목록 진입 시 지연 없이 즉각 로딩 안내 메시지 표시
+    showNewsLoading('뉴스 목록을 불러오는 중입니다..');
 
     try {
       const { topics, topicTitle, items, unavailable, message } = await loadNewsTopicState(topicDoor, requestedPageNo);
-      clearTimeout(loadingTimer);
-      // [LOG_ID: 20260707_2345] loadingTimer(위)는 "80ms 후 로딩 화면을 보여줄지" 결정하는 바깥 타이머일
-      // 뿐이다. 이미 그 80ms가 지나 showNewsLoading()→setLoading()이 실행됐다면, setLoading 내부에서
-      // 스스로 건 400ms 지연 타이머(본문을 "연결하는 중입니다"로 통째로 덮어쓰는 타이머)는 이 clearTimeout으로
-      // 취소되지 않는다 — setReady(true)가 그 내부 타이머를 취소하는 유일한 방법이다. 이걸 빠뜨리면,
-      // 데이터가 늦게 도착했을 때 새 화면이 다 그려지고 footer까지 새로 갱신된 "후"에 내부 타이머가 뒤늦게
-      // 발동해 방금 그린 본문을 로딩 문구로 덮어써 버려서, "연결하는 중입니다" 문구와 새 화면의 footer 힌트가
-      // 동시에 보이는 것처럼 어긋나 보였다.
       setReady(true);
 
       const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo, { unavailable, message });
@@ -606,7 +601,6 @@ export function createNewsScreens(deps) {
         listPageNo: newsListView.pageNo, listPageSize: newsListView.pageSize
       };
       if (!fromHistory) { updateURL(); pushHistory(); }
-      // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
       const rendered = await renderAnsiScreenWithTopbarSequential({
         ansiText: newsListView.text,
         ansiToHTML,
@@ -620,7 +614,7 @@ export function createNewsScreens(deps) {
 
       if (shouldAutoFocusCommandInput()) cmdInput.focus();
     } catch (error) {
-      clearTimeout(loadingTimer);
+      setReady(true);
       throw error;
     }
   }
@@ -648,19 +642,16 @@ export function createNewsScreens(deps) {
       && Number(state.serviceData?.pageNo || 1) === requestedPageNo
       && (!requestedArticleKey || String(state.serviceData?.articleKey || '').trim() === requestedArticleKey);
 
-    // [LOG_ID: 20260710_1120] articleNo(no)는 피드가 백그라운드에서 재구성될 때마다 위치가 바뀔 수 있어
-    // URL/화면에 노출하는 "표시 번호"로 쓰기엔 불안정하다. 같은 기사(topicDoor+articleNo 동일)를 다시 그리는
-    // 경우(본문 페이지 이동 B/F, 새로고침 L 등)엔 기존 표시 번호를 그대로 이어가고, 진짜 새로운 기사 선택
-    // (목록 클릭, A/N 이동)일 때만 이번 요청 번호를 새 표시 번호로 채택한다.
     const isSameArticleAsBefore = String(state.serviceData?.topicDoor || '') === String(topicDoor)
       && String(state.serviceData?.articleNo || '') === String(articleNo);
     const preservedDisplayNo = isSameArticleAsBefore ? state.serviceData?.displayNo : null;
 
-    // [LOG_ID: 20260709_1450] 화면 전환 실패 시 복원을 위해 이전 screen을 저장
     const prevScreen = state.screen;
     state.screen = 'news-view';
 
-    // Get metadata details from options or sessionStorage
+    // [LOG_ID: 20260729_1450] 뉴스 기사 상세 로드 시작 시 로딩 안내 메시지 표시
+    showNewsLoading('뉴스 기사를 불러오는 중입니다..');
+
     let articleKey = requestedArticleKey;
     let link = String(options?.link || '').trim();
 
@@ -680,7 +671,6 @@ export function createNewsScreens(deps) {
 
     const requestOptions = { articleKey, link };
 
-    // Check if we can reuse the current article state
     const canReuseCurrentArticle = !forceReload
       && String(state.serviceData?.topicDoor || '') === String(topicDoor)
       && String(state.serviceData?.articleNo || '') === String(articleNo)
@@ -701,18 +691,14 @@ export function createNewsScreens(deps) {
       try {
         detail = await loadNewsArticleState(topicDoor, articleNo, requestOptions);
       } catch (error) {
+        setReady(true);
         if (error?.type === 'cancelled') {
           return;
         }
-        // [LOG: 20260619_1900] 탐색 중 불완전 기사 에러는 호출자가 스킵 처리할 수 있도록 re-throw
-        // [LOG_ID: 20260709_1450] throw 전에 state.screen을 이전 화면으로 복원한다.
-        // L571에서 미리 'news-view'로 바꿨지만, 불완전 기사이면 화면 전환이 실제로 일어나지 않으므로
-        // 이전 screen 값(news-list 등)으로 되돌려야 F/B 등 단축키가 올바른 screen 기준으로 작동한다.
         if (options.skipOnIncomplete) {
           state.screen = prevScreen;
           throw error;
         }
-        // [LOG: 20260620_1200] 불완전 기사 등 예상된 로드 실패는 조용히 목록으로 복귀한다(콘솔 노이즈 억제).
         console.debug('뉴스 본문 상세 로드 실패, 목록으로 복귀:', error.message);
         await showNewsList(topicDoor, {
           fromHistory: true,
@@ -724,6 +710,7 @@ export function createNewsScreens(deps) {
 
     const fetchedArticle = canReuseCurrentArticle ? resolvedArticle : detail?.article;
     if (!fetchedArticle) {
+      setReady(true);
       await showNewsList(topicDoor, {
         fromHistory,
         pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
@@ -731,7 +718,6 @@ export function createNewsScreens(deps) {
       return;
     }
 
-    // Determine the list page we should load to pre-load adjacent article contexts
     const pageSize = 15;
     const guessedListPageNo = fetchedArticle.no ? Math.ceil(fetchedArticle.no / pageSize) : 1;
     const targetListPageNo = Math.max(
@@ -742,11 +728,6 @@ export function createNewsScreens(deps) {
     let topics = [];
     let topicTitle = '';
     let items = [];
-    // [LOG_ID: 20260710_1400] A/N 인접 탐색은 "사용자가 보던 목록 스냅샷" 기준이어야 한다.
-    // 여기서 최신 피드를 새로 받아 items를 교체하면, 백그라운드 재구성(새 기사 유입 + 날짜 미상
-    // 기사 재정렬)으로 인접 관계 자체가 바뀌어 N/A가 사용자 목록 기준으로 멀리 떨어진 기사로
-    // 이동하는 문제(예: 20번에서 N → 목록상 196번이던 기사)가 생긴다. 현재 상태의 items에
-    // 대상 기사가 존재하면 그 스냅샷을 그대로 재사용하고, 없을 때만 새로 로드한다.
     const sameTopicItems = String(state.serviceData?.topicDoor || '') === String(topicDoor)
       && Array.isArray(state.serviceData?.items) ? state.serviceData.items : [];
     if (sameTopicItems.length > 0 && findNewsArticle(sameTopicItems, articleNo, requestOptions)) {
@@ -764,12 +745,10 @@ export function createNewsScreens(deps) {
       }
     }
 
-    // Match the article within the newly loaded list context
     const matchedListArticle = findNewsArticle(items, articleNo, requestOptions);
     const articleIndex = items.findIndex((item) => item === matchedListArticle);
 
     if (!canReuseCurrentArticle) {
-      // Merge: server fetched article detail is source of truth, list article is fallback
       resolvedArticle = {
         ...(matchedListArticle || {}),
         ...fetchedArticle,
@@ -787,32 +766,21 @@ export function createNewsScreens(deps) {
       }
     }
 
-    // [LOG_ID: 20260709_1250] 클라이언트측 2차 방어 가드: 캐시 오염 등으로 인해 비정상적으로 잘린 
-    // 기사 본문이 렌더링되려는 경우, 상세 화면 그리기를 강제 차단하고 리스트로 조용히 튕겨낸다.
-    // [LOG_ID: 20260709_1440] pageNo > 1인 경우(F키로 2페이지+ 요청) 잘린 기사 판단을 건너뛴다.
-    // 이미 이전 페이지가 렌더링된 기사는 정상 기사임이 확인된 것이므로 차단하면 안 된다.
     if (requestedPageNo <= 1) {
       const clientTrimmed = String(resolvedArticle.body || resolvedArticle.description || '').trim();
       const isClientTruncated = /[.]{2,}$|[…,\-:/]$/.test(clientTrimmed)
         || /[며고나면지를을은는이가와과의로]/.test(clientTrimmed.slice(-3));
-      // [LOG_ID: 20260710_1330] 속보 스텁 기사("후속기사가 이어집니다" 단문)는 본문이 30자 미만이
-      // 정상이므로 서버와 동일하게 속보 키워드가 있으면 최소 길이 기준을 10자로 완화한다.
       const isBreakingStub = /속보|단독|긴급|breaking/i.test(String(resolvedArticle.title || ''));
-      // [LOG_ID: 20260712_0140] 사진/포토/화보/영상 기사는 "짧은 캡션 + 크레딧 꼬리('… /')"가 정상
-      // 형태라 절단 휴리스틱이 상시 오탐 — 서버(RssNewsService) 완화와 반드시 동일 조건을 유지해야
-      // 한다. 서버만 완화하면 이 2차 방어 가드가 available:true 기사를 다시 차단해 무의미해진다.
       const isPhotoArticle = /\[\s*(?:[A-Za-z가-힣]*\s*)?(사진|포토|화보|영상|photo|video|pic)s?\s*\]/i
         .test(String(resolvedArticle.title || ''));
       const minClientLength = (isBreakingStub || isPhotoArticle) ? 10 : 30;
 
       if ((isClientTruncated && !isPhotoArticle) || clientTrimmed.length < minClientLength) {
         console.debug('클라이언트측 잘린 기사 감지로 차단:', articleNo);
-        // [LOG_ID: 20260709_1255] 단축키 N/A를 통한 순차 탐색 도중 잘린 기사를 만나면
-        // 에러를 던져야 이전/다음 순차 스킵 탐색기가 멈추지 않고 다음 정상 기사를 계속 탐색할 수 있다.
+        setReady(true);
         const incompleteError = new Error(`불완전한 뉴스 기사입니다: ${articleNo}`);
         incompleteError.type = 'incomplete';
         if (options?.skipOnIncomplete) {
-          // [LOG_ID: 20260709_1450] 화면 전환 안 일어났으므로 이전 screen으로 복원
           state.screen = prevScreen;
           throw incompleteError;
         }
@@ -824,8 +792,8 @@ export function createNewsScreens(deps) {
       }
     }
 
+    setReady(true);
 
-    // [LOG_ID: 20260710_1530] fullView(PR 갈무리 모드): 본문 전체를 페이지 분할 없이 한 번에 출력.
     const articleView = buildNewsArticleAnsi(resolvedTopicTitle, resolvedArticle, requestedPageNo, { fullView });
     const currentListPageSize = Math.max(1, Number(state.serviceData?.listPageSize || 15));
     const resolvedListPageNo = Math.max(
@@ -838,14 +806,10 @@ export function createNewsScreens(deps) {
     state.serviceData = {
       topics, topicDoor, topicTitle: resolvedTopicTitle,
       articleNo: String(resolvedArticle?.no || articleNo),
-      // [LOG_ID: 20260710_1210] URL 노출 번호 우선순위: A/N 등 호출자가 명시한 순차 번호 >
-      // 같은 기사 재렌더링 시 보존된 번호 > 이번 요청 번호. 서버 스냅샷의 위치 번호(no)는 쓰지 않는다.
       displayNo: String(options?.displayNo || preservedDisplayNo || articleNo),
       articleKey: getNewsArticleKey(resolvedArticle),
       articleLink: getNewsArticleLink(resolvedArticle),
       article: resolvedArticle, items,
-      // [LOG_ID: 20260710_1530] fullView에서는 페이지 컨텍스트(pageNo/pageCount)를 진입 당시 값으로
-      // 보존해, [엔터] 복귀 시 보던 페이지로 정확히 돌아가게 한다. articleView는 단일 페이지(1/1)를 반환.
       pageCount: fullView ? Math.max(1, Number(state.serviceData?.pageCount || 1)) : articleView.pageCount,
       pageNo: fullView ? requestedPageNo : articleView.pageNo,
       _printView: fullView,
@@ -853,7 +817,6 @@ export function createNewsScreens(deps) {
     };
     if (!fromHistory && !sameView) { updateURL(); pushHistory(); }
 
-    // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({
       ansiText: articleView.text,
       ansiToHTML,

@@ -114,10 +114,14 @@ export function createContactSysopScreen(deps) {
     state._contactSysopFlow = null;
   }
 
-  function appendContactSysopLine(prompt, value) {
+  function appendContactSysopLine(prompt, value, isRawHtml = false) {
     const flow = state._contactSysopFlow;
     if (!flow) return;
-    flow.transcript.push({ prompt: String(prompt || ''), value: String(value ?? '') });
+    flow.transcript.push({ 
+      prompt: String(prompt || ''), 
+      value: String(value ?? ''), 
+      isRawHtml: Boolean(isRawHtml) 
+    });
   }
 
   const MAX_VISIBLE_TRANSCRIPT_LINES = 18;
@@ -235,6 +239,41 @@ export function createContactSysopScreen(deps) {
     // 끝에 멈추는 현상") — 클릭 캐럿 배치는 브라우저 기본 동작이 이미 정확하므로 그 핸들러
     // 자체를 제거했다. 렌더 직후(첫 포커스 시)에만 커서를 끝에 두면 충분하다.
     if (typeof document !== 'undefined') {
+      const container = document.getElementById('terminal-container');
+      if (container && !container._tosysopClickBound) {
+        container._tosysopClickBound = true;
+        container.addEventListener('click', async (event) => {
+          const target = event.target.closest('[data-tosysop-action]');
+          if (!target) return;
+
+          event.preventDefault();
+          event.stopPropagation();
+
+          const action = target.dataset.tosysopAction;
+          const flow = state._contactSysopFlow;
+          if (!flow) return;
+
+          if (action === 'save') {
+            if (flow.stage === 'body') {
+              const activeId = getActiveInlineInputId(flow);
+              const inlineInput = document.getElementById(activeId);
+              const pendingLine = inlineInput ? inlineInput.value : '';
+              if (pendingLine.trim()) {
+                flow.bodyLines.push(pendingLine);
+                appendContactSysopLine(`*${flow.bodyLines.length}:`, pendingLine);
+              }
+              flow._draftBodyLine = '';
+              if (inlineInput) inlineInput.value = '';
+              enterConfirmStage(flow);
+            } else if (flow.stage === 'confirm') {
+              await submitContactSysop();
+            }
+          } else if (action === 'cancel') {
+            await cancelContactSysop();
+          }
+        });
+      }
+
       setTimeout(() => {
         const activeId = getActiveInlineInputId(flow);
         const inlineInput = document.getElementById(activeId);
@@ -325,7 +364,7 @@ export function createContactSysopScreen(deps) {
                 flow.stage = 'body';
                 appendContactSysopLine('작성방법(1:에디터, 2:KERMIT, 3:ZMODEM, 4:SUPERKERMIT, 0:취소) >>', '1');
                 appendContactSysopLine('', '');
-                appendContactSysopLine('', '에디터쓰기 (끝낼때는 완료: Ctrl+S 또는 마지막 줄에 . 입력, 취소: ESC)');
+                appendContactSysopLine('', '에디터쓰기 (끝낼때는 <span class="cmd-token cmd-clickable" data-tosysop-action="save" data-tip="글 저장 및 발송 단계로 이동">완료: Ctrl+S</span> 또는 마지막 줄에 . 입력, <span class="cmd-token cmd-clickable" data-tosysop-action="cancel" data-tip="작성 취소하고 상위 메뉴로 이동">취소: ESC</span>)', true);
                 renderContactSysopScreen();
                 return;
               }
@@ -359,7 +398,7 @@ export function createContactSysopScreen(deps) {
                 if (trimmed === '0' || cmdUpper === 'N' || koCmd === 'N') {
                   flow.stage = 'body';
                   flow._draftConfirmCmd = '';
-                  appendContactSysopLine('', '계속 작성하실 수 있습니다. 완료: Ctrl+S 또는 마지막 줄에 . 입력, 취소: ESC');
+                  appendContactSysopLine('', '계속 작성하실 수 있습니다. <span class="cmd-token cmd-clickable" data-tosysop-action="save" data-tip="글 저장 및 발송 단계로 이동">완료: Ctrl+S</span> 또는 마지막 줄에 . 입력, <span class="cmd-token cmd-clickable" data-tosysop-action="cancel" data-tip="작성 취소하고 상위 메뉴로 이동">취소: ESC</span>', true);
                   renderContactSysopScreen();
                   return;
                 }
