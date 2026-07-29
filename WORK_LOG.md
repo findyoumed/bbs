@@ -1,3 +1,18 @@
+## [2026-07-29 01:30] [/loop 채팅 전수조사] 전역 명령 정규화기(normalizeCommand) 자체가 슬래시(/) 붙은 두벌식 오타를 보정하지 못해 대화방 개설/입장 취소(/M)가 먹통이던 결함 발견·수정
+
+**LOG_ID: 20260729_0130**
+목표: 직전 라운드(LOG_ID 20260729_0115)에서 쪽지·게시판 글쓰기 화면의 두벌식 오타 미보정 버그를 고친 뒤, 같은 계열 결함이 남아있는지 대화실(채팅) 명령 경로도 점검. 이번엔 화면별 raw-input 우회가 아니라 전역 파이프라인(`normalizeCommand`) 자체의 구조적 빈틈을 확인.
+
+발견: `commandRouterChat.js`는 `_chatRoomCreateStage`/`_chatRoomJoinStage`(대화방 개설·비공개방 입장 단계)에서 `cmd === '/M'`으로 취소를 판정하는데, 이 `cmd`는 `commandDispatcherExecution.js`가 이미 `normalizeCommand()`를 거쳐 넘겨준 정규화된 값이라 앞선 두 버그(메모/게시판 글쓰기의 raw-input 우회)와는 다른 성격이었다. `normalizeCommand()` 내부를 추적한 결과, 54번째 줄의 범용 두벌식 폴백 변환(`convertKoreanToEnglish`)이 `!cmd.startsWith('/')` 조건으로 슬래시로 시작하는 입력을 아예 건너뛰고 있었다 — 즉 슬래시+단일 자모 조합은 `koAliasMap`에 정확히 등록된 것만 변환되는데(`'/ㅁ': '/Q'`처럼), '/M'에 해당하는 `'/ㅡ'` 항목이 빠져 있었다. 유닛 재현: `normalizeCommand('/ㅡ', 'chat-lobby')`가 `'/M'`이 아니라 `'/ㅡ'` 그대로 반환됨(반면 슬래시 없는 `normalizeCommand('ㅡ', 'chat-lobby')`는 정상적으로 `'M'` 반환). `grep -rn "cmd === '/[A-Z]'"`로 전수조사한 결과 클라이언트 코드 전체에서 슬래시+단일글자 명령 패턴은 이 `/M`(commandRouterChat.js 2곳) 하나뿐임을 확인 — 즉 한/영 전환이 안 된 채 대화방을 개설하다 취소하려는 사용자는 취소가 안 되고 입력한 자모가 그대로 제목/비밀번호 등 필드에 들어가 버렸다.
+
+수정: `commandNormalizer.js`의 `koAliasMap`에 `'/ㅡ': '/M'` 항목 추가.
+
+검증: `node --check` 통과. 유닛 재현으로 `normalizeCommand('/ㅡ', 'chat-lobby')`가 이제 `'/M'`을 정확히 반환함을 확인. Playwright로 실제 브라우저에서 `state.screen='chat-lobby'`, `state._chatRoomCreateStage='title'`(개설 진행 중) 상태를 만든 뒤 `#cmd-input`에 `/ㅡ`를 입력·Enter로 실제 명령 파이프라인(정규화 → commandRouterChat)을 태워 취소가 정상 동작함을 확인(`_chatRoomCreateStage`가 `null`로 정리되고 화면이 로비 밖으로 복귀). `npm run smoke:boards`/`smoke:command-parity`/`smoke:full-traversal`/`smoke-mobile-viewports` 전체 통과.
+
+결과: ✅ 수정 완료. 이번 세션 다섯 번째로 발견한 "두벌식 자모 미보정" 계열 결함이지만, 앞선 네 건(EX/OUT/IN, tosysop, 쪽지, 게시판 글쓰기)이 전부 화면별 raw-input 핸들러가 전역 정규화를 우회한 것과 달리, 이번은 전역 파이프라인 자체의 빈틈이었다 — `commandRouterChat.js`는 애초부터 올바르게 정규화된 `cmd`를 쓰고 있었다.
+
+---
+
 ## [2026-07-29 01:15] [/loop 쪽지 전수조사] 쪽지 작성 화면이 한/영 전환 안 된 두벌식 오타(P/M/B/S 취소·전송)를 인식하지 못하던 결함 발견·수정
 
 **LOG_ID: 20260729_0115**

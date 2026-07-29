@@ -32,6 +32,12 @@ export function normalizeCommand(rawCmd, stateScreen) {
     'ㅡㄷ': 'ME', 'ㅡ드': 'ME', 'ㅠㅠㄴ': 'BBS', '쳐': 'CHAT',
     '갈무리': 'CAP', '캡': 'CAP',
     '/ㅁ': '/Q', '/균ㅆ': '/QUIT', 'ㅐ': 'O',
+    // [LOG_ID: 20260729_0130] 대화방 개설·입장 취소(commandRouterChat.js의 '/M' 검사,
+    // _chatRoomCreateStage/_chatRoomJoinStage)가 두벌식 오타를 인식하지 못했다 — '/'로
+    // 시작하는 입력은 아래 일반 두벌식 변환 폴백(line 53, !cmd.startsWith('/'))을 건너뛰므로,
+    // 슬래시+단일 자모 조합은 이 맵에 정확히 등록돼야만 변환된다('/ㅁ'→'/Q'처럼). 실측 확인:
+    // normalizeCommand('/ㅡ', 'chat-lobby')가 '/M'이 아니라 '/ㅡ' 그대로 반환됨.
+    '/ㅡ': '/M',
     
     // [LOG_ID: 20260718_1930] 명령어 한국어 매핑표 재현
     // [LOG_ID: 20260716_2325] 이전/이전페이지/다음페이지 매핑 추가
