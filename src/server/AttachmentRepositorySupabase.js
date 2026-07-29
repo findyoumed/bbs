@@ -34,10 +34,14 @@ class SupabaseAttachmentRepository extends BaseRepository {
   }
 
   async _list(boardId, postId) {
+    // [LOG_ID: 20260729_0215] summariesForPosts(20260728_2350)와 동일한 이유로 병합 소스 전체를
+    // 대상으로 넓힌다 — PDS 가상 게시판('pds') boardId로 이 메서드를 부르면 실제 첨부가 저장된
+    // 물리 하위 게시판(pds_all 등)과 절대 일치하지 않아 목록이 항상 비어 보였다. post_id는
+    // 이미 전역 PK라 board_id 필터는 부가 검증일 뿐이므로, 병합 소스로 넓혀도 안전하다.
     const { data, error } = await this.client
       .from(this.table)
       .select('*')
-      .eq('board_id', boardId)
+      .in('board_id', getMergedBoardSourceIds(boardId))
       .eq('post_id', Number(postId))
       .order('id', { ascending: true });
 
@@ -185,13 +189,16 @@ class SupabaseAttachmentRepository extends BaseRepository {
   }
 
   async _getRow(boardId, postId, attachmentId, includeContent) {
+    // [LOG_ID: 20260729_0215] _list와 동일한 이유로 병합 소스 전체를 대상으로 넓힌다 — 이 메서드는
+    // get/read(다운로드)/delete가 모두 공유하므로, 고치지 않으면 PDS 다운로드('DN' 목록 화면
+    // 즉시다운로드)까지 가상 boardId('pds') 탓에 "첨부 파일을 찾을 수 없습니다" 404로 실패한다.
     const columns = includeContent
       ? '*'
       : 'id, board_id, post_id, user_id, nick_name, filename, original_filename, mime_type, file_size, download_count, created_at';
     const { data, error } = await this.client
       .from(this.table)
       .select(columns)
-      .eq('board_id', boardId)
+      .in('board_id', getMergedBoardSourceIds(boardId))
       .eq('post_id', Number(postId))
       .eq('id', Number(attachmentId))
       .maybeSingle();

@@ -1,3 +1,18 @@
+## [2026-07-29 02:15] [/loop PDS 전수조사 10차] 자료실(PDS) 목록 화면의 즉시다운로드(DN)가 가상 게시판 id로 첨부를 조회해 실제로 첨부가 있는 글도 "첨부파일이 존재하지 않습니다"로 실패하던 결함 발견·수정
+
+**LOG_ID: 20260729_0215**
+목표: 앞선 라운드(채팅 `/M` 두벌식 버그 수정) 이후 로테이션에 따라 PDS 업로드/다운로드 영역 점검. "클라이언트가 세팅하는 값이 실제 API 요청에 실리는지 → 서버 라우트가 그 값을 읽는지 → 리포지토리가 필터/처리에 반영하는지" 체인을 첨부파일 조회/다운로드 경로에 대해 끝까지 추적.
+
+발견: PDS는 물리 게시판 7개(pds_all/pds_util/pds_game/pds_graphic/pds_sound/pds_prog + pds 자신)를 가상 게시판 `pds` 하나로 병합해 보여주는데(`BoardVirtualBoards.js`), 첨부(`attachments`) 테이블은 업로드 당시의 **물리** 하위 게시판 id로 저장된다(예: `pds_util`). 게시글 목록/조회 경로는 이미 `getMergedBoardSourceIds()`로 이 가상↔물리 불일치를 넓혀서 처리하고 있었지만(직전 세션 LOG_ID 20260728_2350 `summariesForPosts`, 20260728_23xx 접근권한 우회 수정 등), **첨부파일 자체를 다루는 4개 메서드(`list`/`get`/`read`/`delete`, 양쪽 드라이버)는 그 넓히기가 전혀 적용되지 않고 여전히 `board_id`를 리터럴로 정확히 매칭**하고 있었다. 실사용 경로 중 PDS 목록 화면에서 글을 열지 않고 바로 받는 "DN(즉시다운로드)" 명령(`commandRouterBrowse.js`의 `startPdsDownloadSequence`)은 `state.board.id`(PDS 목록 화면에 있을 때 항상 가상 `'pds'`)를 그대로 써서 `GET /api/boards/pds/posts/:postId/attachments`를 호출한다 — 서버는 `attachmentRepository.list('pds', globalPostId)`를 그대로 실행해 `.eq('board_id', 'pds')`로 필터링하는데, 실제 첨부는 `board_id='pds_util'` 등으로 저장돼 있어 항상 0건이 반환된다. 그 결과 사용자는 "이 게시글에는 첨부파일이 존재하지 않습니다"를 보게 되어, 실제로 파일이 있는 글도 DN으로는 절대 받을 수 없었다(글을 먼저 열어 post-view를 거치면 `state.post.boardId`가 물리 id로 채워져 우회적으로는 동작함 — 즉 "글을 열람한 뒤"의 다운로드는 정상이었고, 목록에서 곧장 받는 지름길만 항상 실패). `get`/`read`(다운로드 본체)/`delete`가 공유하는 `_getRow`(Supabase)·`get`(Local)도 동일하게 `board_id` 리터럴 매칭이라, 혹시라도 가상 id로 다운로드/삭제를 시도하면 전부 404였다. `attachments.post_id`가 이미 게시글 전역 PK(FK)라 유일 식별에 충분한데도 `board_id` 리터럴 매칭이 부가적으로 더 걸려 있던 셈.
+
+수정: `AttachmentRepositorySupabase.js`의 `_list`/`_getRow`(list/get/read/delete가 공유)와 `AttachmentRepositoryLocal.js`의 `list`/`get`(read/delete가 공유)/`delete` 전부, `.eq('board_id', boardId)` 리터럴 매칭을 `getMergedBoardSourceIds(boardId)`로 넓힌 `.in('board_id', ...)`(Supabase)/`Set.has()`(Local) 매칭으로 변경 — `summariesForPosts`에 이미 쓰인 것과 동일한 패턴.
+
+검증: `node --check` 양쪽 드라이버 통과. 실제 Supabase에 `pds_util` 물리 게시판으로 테스트 글(전역 id 363)과 첨부(실제 업로드 흐름과 동일하게 물리 게시판 id로 저장, 확인 결과 `board_id='pds_util'`)를 만든 뒤, 리포지토리 함수를 직접 호출해 대조: `list('pds', postId)`(가상, DN 경로와 동일) — 수정 전 로직대로면 0건일 것을 실측상 이제 1건 반환, `get('pds', postId, attachmentId)`도 정상 성공. 회귀 확인: 물리 id `list('pds_util', postId)`는 여전히 1건(정상), 그리고 형제 물리 게시판 `list('pds_game', postId)`는 여전히 0건(과잉 매칭 없음 — `pds_util`에만 있는 파일이 `pds_game` 조회로 새지 않음을 확인). 테스트 글/첨부는 서비스 롤 키로 정리. `npm run smoke:boards`/`smoke:command-parity`/`smoke:full-traversal`/`node scripts/smoke-mobile-viewports.js` 전부 통과.
+
+결과: ✅ 수정 완료. 이번 세션 여러 차례 나온 "가상 병합 게시판(pds)과 물리 하위 게시판의 id 불일치"(20260727_1330 첨부 FK local_id/global_id 혼동, 20260728_2350 목록 요약 공란, 20260728_23xx 접근권한 우회) 계열의 마지막 남은 구멍 — 게시글/목록 조회 경로는 전부 고쳤지만 첨부 자체의 조회/다운로드/삭제 4개 메서드는 그 넓히기 패턴이 아예 빠져 있던 것.
+
+---
+
 ## [2026-07-29 01:30] [/loop 채팅 전수조사] 전역 명령 정규화기(normalizeCommand) 자체가 슬래시(/) 붙은 두벌식 오타를 보정하지 못해 대화방 개설/입장 취소(/M)가 먹통이던 결함 발견·수정
 
 **LOG_ID: 20260729_0130**

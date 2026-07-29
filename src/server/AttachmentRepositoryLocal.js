@@ -89,8 +89,12 @@ class AttachmentRepository {
 
   list(boardId, postId) {
     this._assertStorageAvailable();
+    // [LOG_ID: 20260729_0215] summariesForPosts(20260728_2350)와 동일한 이유로 병합 소스 전체를
+    // 대상으로 넓힌다 — PDS 가상 게시판('pds') boardId로 이 메서드를 부르면 실제 첨부가 저장된
+    // 물리 하위 게시판(pds_all 등)과 절대 일치하지 않아 목록이 항상 비어 보였다.
+    const boardIds = new Set(getMergedBoardSourceIds(boardId).filter(Boolean));
     return this.index.attachments
-      .filter((entry) => entry.boardId === boardId && entry.postId === Number(postId))
+      .filter((entry) => boardIds.has(entry.boardId) && entry.postId === Number(postId))
       .map(normalizeEntry)
       .sort((left, right) => left.id - right.id);
   }
@@ -153,7 +157,11 @@ class AttachmentRepository {
 
   get(boardId, postId, attachmentId) {
     this._assertStorageAvailable();
-    const entry = this.index.attachments.find((item) => item.boardId === boardId && item.postId === Number(postId) && item.id === Number(attachmentId));
+    // [LOG_ID: 20260729_0215] list와 동일한 이유로 병합 소스 전체를 대상으로 넓힌다 — 이 메서드는
+    // read(다운로드)/delete가 모두 공유하므로, 고치지 않으면 PDS 다운로드('DN' 목록 화면 즉시
+    // 다운로드)까지 가상 boardId('pds') 탓에 "첨부 파일을 찾을 수 없습니다" 404로 실패한다.
+    const boardIds = new Set(getMergedBoardSourceIds(boardId).filter(Boolean));
+    const entry = this.index.attachments.find((item) => boardIds.has(item.boardId) && item.postId === Number(postId) && item.id === Number(attachmentId));
     if (!entry) {
       throw createHttpError(404, '첨부 파일을 찾을 수 없습니다.');
     }
@@ -187,7 +195,9 @@ class AttachmentRepository {
 
   delete(boardId, postId, attachmentId) {
     this._assertStorageAvailable();
-    const index = this.index.attachments.findIndex((item) => item.boardId === boardId && item.postId === Number(postId) && item.id === Number(attachmentId));
+    // [LOG_ID: 20260729_0215] list/get과 동일한 이유로 병합 소스 전체를 대상으로 넓힌다.
+    const boardIds = new Set(getMergedBoardSourceIds(boardId).filter(Boolean));
+    const index = this.index.attachments.findIndex((item) => boardIds.has(item.boardId) && item.postId === Number(postId) && item.id === Number(attachmentId));
     if (index === -1) {
       throw createHttpError(404, '첨부 파일을 찾을 수 없습니다.');
     }
