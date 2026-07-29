@@ -101,12 +101,12 @@ class MemoryConfRepository {
   }
 
   // ── 안건 ──
-  async listAgendas(roomNo) {
+  async listAgendas(roomNo, context = {}) {
     this._findRoom(roomNo);
     return this.agendas
       .filter((a) => a.roomNo === Number(roomNo))
       .sort((a, b) => b.agendaNo - a.agendaNo)
-      .map((a) => this._publicAgenda(a));
+      .map((a) => this._publicAgenda(a, context));
   }
 
   async createAgenda(roomNo, payload = {}, context = {}) {

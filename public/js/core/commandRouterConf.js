@@ -101,6 +101,12 @@ export function createConfCommandHandler(deps) {
       if (cmd === 'P' || cmd === 'M' || cmd === 'B') { await showConfRooms(); return true; }
       const title = String(rawCmd || '').trim();
       if (!title) { setHint('회의실 제목을 입력해 주세요.'); return true; }
+      // [LOG_ID: 20260729_0020] ConfRepositoryMemory/Supabase.js가 title.slice(0, 60)으로
+      // 저장 단계에서 조용히 잘랐다 — 클라이언트에 길이 검증이 전혀 없어 60자 넘게 입력해도
+      // 아무 경고 없이 잘린 채로 저장됐다(실측: 90자 입력 → 60자로 저장, 응답 201 성공).
+      // 게시글 제목/대화방 제목에서 이미 고친 것과 동일한 "조용한 절삭" 패턴이라 여기도
+      // 저장 상한과 동일하게 사전 검증한다.
+      if (title.length > 60) { setHint(`회의실 제목은 60자 이하로 입력해 주세요. (현재 ${title.length}자)`); return true; }
       await submitConfRoom(title);
       return true;
     }
@@ -115,6 +121,9 @@ export function createConfCommandHandler(deps) {
           return true;
         }
         if (!trimmed) { setHint('안건 제목을 입력해 주세요.'); return true; }
+        // [LOG_ID: 20260729_0020] 회의실 제목과 동일한 이유 — ConfRepository*.js가
+        // title.slice(0, 80)으로 조용히 자르는데 클라이언트엔 검증이 없었다.
+        if (trimmed.length > 80) { setHint(`안건 제목은 80자 이하로 입력해 주세요. (현재 ${trimmed.length}자)`); return true; }
         state.confAgendaData.title = trimmed;
         state.confAgendaStep = 1;
         setPrompt('안건 내용 입력 (/s 등록, /c 취소) >> ');
@@ -134,6 +143,12 @@ export function createConfCommandHandler(deps) {
         if (trimmed === '/s') {
           const content = state.confAgendaData.contentLines.join('\n').trim();
           if (!content) { setHint('안건 내용을 한 줄 이상 입력해 주세요.'); return true; }
+          // [LOG_ID: 20260729_0020] 회의실/안건 제목과 동일한 이유 — ConfRepository*.js가
+          // content.slice(0, 4000)으로 조용히 자르는데 클라이언트엔 검증이 없었다.
+          if (content.length > 4000) {
+            setHint(`안건 내용은 4000자 이하로 입력해 주세요. (현재 ${content.length}자, /c로 취소 후 줄여서 다시 작성)`);
+            return true;
+          }
           await submitConfAgenda(state.serviceData?.roomNo, state.confAgendaData.title, content);
           return true;
         }

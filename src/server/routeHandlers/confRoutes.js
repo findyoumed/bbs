@@ -41,7 +41,13 @@ class ConfRouter extends BaseRouter {
     const { confRepository } = this.deps;
     const roomNo = Number(params.roomNo);
     if (isNaN(roomNo)) this.validationError('Invalid room number');
-    return this.send(200, await confRepository.listAgendas(roomNo));
+    // [LOG_ID: 20260729_0020] getAgenda/secondAgenda/createAgenda는 모두 context를 넘겨
+    // _publicAgenda가 "내가 재청했는지"(seconded)를 실제 로그인 사용자 기준으로 계산하는데,
+    // 여기만 context를 아예 안 넘겨 항상 'guest' 기준으로 계산됐다(현재 클라이언트 목록
+    // 화면이 seconded를 표시하지 않아 관측되진 않지만, 형제 메서드들과의 비대칭 자체가
+    // 잠재 결함이라 함께 바로잡는다).
+    const context = await this.getContext();
+    return this.send(200, await confRepository.listAgendas(roomNo, context));
   }
 
   async createAgenda(params) {

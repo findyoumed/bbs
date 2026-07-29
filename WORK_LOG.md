@@ -1,3 +1,30 @@
+## [2026-07-29 00:22] [/loop 토론의 광장(CONF) 전수조사] 회의실/안건 제목·본문 조용한 절삭 및 안건 목록의 재청 여부 context 누락 발견·수정
+
+**LOG_ID: 20260729_0022**
+목표: 이번 세션에서 아직 감사하지 않았던 토론의 광장(CONF, `/forum`) 시스템을 DB 스키마/절삭/context 전달 관점에서 점검.
+
+발견 1(조용한 절삭): `ConfRepositoryMemory/Supabase.js`가 회의실 제목은 `title.slice(0, 60)`, 안건 제목은 `title.slice(0, 80)`, 안건 본문은 `content.slice(0, 4000)`으로 저장 단계에서 조용히 자르는데, 클라이언트(`commandRouterConf.js`)엔 길이 검증이 전혀 없었다 — 이전 라운드들에서 게시글 제목(60자)·대화방 제목(100 vs 60)에서 고친 것과 동일한 "조용한 절삭" 패턴. 실측: 90자 회의실 제목을 API로 직접 보내면 201 성공과 함께 60자로 잘린 값이 그대로 저장됨을 확인.
+
+발견 2(context 누락, 현재는 비활성): `confRoutes.js`의 `listAgendas` 핸들러가 `context`를 아예 조회하지 않고 리포지토리에 넘겨, `_publicAgenda(row)`가 항상 `context={}` 기본값(→ 'guest' 취급)으로 재청 여부(`seconded`)를 계산했다. 형제 메서드(`getAgenda`/`secondAgenda`/`createAgenda`)는 모두 context를 정확히 넘기고 있어 비대칭이었다. 다만 클라이언트의 안건 목록 화면(`buildConfAgendaListAnsi`)은 `seconded` 필드를 애초에 렌더링하지 않아(상세보기 화면만 씀) 현재는 관측 불가능한 잠재 결함이었음을 확인 — 값싸고 안전한 수정이라 형제 메서드와의 일관성을 위해 함께 바로잡음.
+
+변경 파일:
+- `public/js/core/commandRouterConf.js`
+- `src/server/routeHandlers/confRoutes.js`
+- `src/server/ConfRepositorySupabase.js`
+- `src/server/ConfRepositoryMemory.js`
+
+수행 작업:
+1. 회의실 제목 입력(`conf-room-create`)에 60자 초과 시 거부 + 안내 메시지 추가.
+2. 안건 제목 입력(`conf-agenda-new` 1단계)에 80자 초과 시 거부 + 안내 메시지 추가.
+3. 안건 본문(`/s` 발의 시점)에 4000자 초과 시 거부 + 안내 메시지 추가.
+4. `listAgendas(roomNo)` → `listAgendas(roomNo, context)`로 시그니처를 두 드라이버 모두 확장하고, 라우트 핸들러가 `getContext()`를 호출해 넘기도록 수정.
+
+검증: 실서버(Supabase 드라이버)로 90자 회의실 제목 API 직접 호출 → 60자 절삭 재현 확인. `listAgendas` context 수정은 회의실·안건·재청 생성 후 재청한 사용자/안 한 사용자로 각각 목록 조회 → `seconded` 값이 실제 재청 여부와 정확히 일치함을 확인(수정 전엔 항상 'guest' 기준이라 둘 다 false였을 상황). 테스트로 만든 회의실/안건/재청 데이터는 서비스 롤 키로 정리. 클라이언트 검증 로직은 `createConfCommandHandler`를 Node에서 직접 호출하는 경계값 테스트(59/60/61자 등 5개 케이스)로 검증 — 전부 기대대로 통과. `node --check` 전체 통과, `npm run smoke:boards`/`smoke:command-parity`/`smoke:full-traversal`/`smoke-mobile-viewports` 통과.
+
+결과: ✅ 수정 완료.
+
+---
+
 ## [2026-07-29 00:12] [사용자 요청] 건의하기(TOSYSOP) 본문 작성 화면에 게시판 글쓰기와 동일한 Ctrl+S / '.' 저장 단축키 추가
 
 **LOG_ID: 20260729_0012**
