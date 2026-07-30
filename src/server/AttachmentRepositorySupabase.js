@@ -10,7 +10,17 @@ const {
   isMissingAttachmentsTableError,
   normalizeEntry
 } = require('./AttachmentRepositoryShared');
-const { getMergedBoardSourceIds } = require('./BoardVirtualBoards');
+// [LOG_ID: 20260729_0330] 종전엔 getMergedBoardSourceIds를 직접 불러 `.in('board_id', …)`을
+// 손으로 조립했는데, 그 조립이 이 파일 안에서만 세 벌로 갈렸다(_summariesForPosts만
+// .filter(Boolean)이 붙고 _list/_getRow엔 없었으며, 단일 게시판일 때 .eq()로 낮추는 처리도
+// 빠져 있었다). 병합 게시판 필터의 정본은 applyBoardFilter다 — board_id 컬럼만 건드리는
+// 테이블 무관 헬퍼이므로 첨부 테이블에도 그대로 쓸 수 있다.
+const { applyBoardFilter } = require('./SupabaseBoardRepositoryQueryHelpers');
+
+// [LOG_ID: 20260729_0330] 첨부 본문(content_base64)을 제외한 메타 컬럼 — 목록/단건 조회가
+// 공유한다. 종전엔 _list가 select('*')로 본문까지 받아 그대로 버렸다(normalizeEntry는
+// content_base64를 읽지 않는다): 1MB 첨부 3개짜리 글의 목록을 그리려고 ~4MB를 실어오던 셈.
+const ATTACHMENT_META_COLUMNS = 'id, board_id, post_id, user_id, nick_name, filename, original_filename, mime_type, file_size, download_count, created_at';
 
 class SupabaseAttachmentRepository extends BaseRepository {
   constructor(options = {}) {
@@ -34,14 +44,10 @@ class SupabaseAttachmentRepository extends BaseRepository {
   }
 
   async _list(boardId, postId) {
-    // [LOG_ID: 20260729_0215] summariesForPosts(20260728_2350)와 동일한 이유로 병합 소스 전체를
-    // 대상으로 넓힌다 — PDS 가상 게시판('pds') boardId로 이 메서드를 부르면 실제 첨부가 저장된
-    // 물리 하위 게시판(pds_all 등)과 절대 일치하지 않아 목록이 항상 비어 보였다. post_id는
-    // 이미 전역 PK라 board_id 필터는 부가 검증일 뿐이므로, 병합 소스로 넓혀도 안전하다.
-    const { data, error } = await this.client
-      .from(this.table)
-      .select('*')
-      .in('board_id', getMergedBoardSourceIds(boardId))
+    // [LOG_ID: 20260729_0215] post_id는 이미 전역 PK라 board_id 필터는 부가 검증일 뿐이므로,
+    // 병합 소스로 넓혀도 안전하다(넓히는 이유는 BoardVirtualBoards.getMergedBoardSourceIds 참고).
+    const query = applyBoardFilter(this.client.from(this.table).select(ATTACHMENT_META_COLUMNS), boardId);
+    const { data, error } = await query
       .eq('post_id', Number(postId))
       .order('id', { ascending: true });
 
@@ -65,15 +71,13 @@ class SupabaseAttachmentRepository extends BaseRepository {
 
     // [LOG_ID: 20260728_2350] PDS 목록 화면은 사용자가 실제로 접근하는 유일한 경로인 가상
     // 게시판('pds')을 boardId로 넘겨오지만, 첨부는 업로드 당시의 물리 하위 게시판(pds_prog 등)
-    // board_id로 저장돼 있다. 여기서 그 가상 id 그대로 .eq('board_id', boardId)를 걸면 실제
-    // 하위 게시판들과 절대 일치하지 않아, PDS 목록 화면의 파일명/크기/전송 칸이 항상 비어
-    // 있었다(실측 확인: 물리 게시판 직접 조회에선 정상 표시, 가상 'pds' 목록에선 항상 undefined).
-    // 목록 조회(applyBoardFilter)와 동일하게 병합 소스 전체로 필터를 넓힌다.
-    const boardIds = getMergedBoardSourceIds(boardId).filter(Boolean);
-    const { data, error } = await this.client
-      .from(this.table)
-      .select('post_id, original_filename, filename, file_size, download_count, id')
-      .in('board_id', boardIds)
+    // board_id로 저장돼 있다(실측 확인: 물리 게시판 직접 조회에선 정상 표시, 가상 'pds'
+    // 목록에선 항상 undefined). 목록 조회와 동일하게 applyBoardFilter로 넓힌다.
+    const query = applyBoardFilter(
+      this.client.from(this.table).select('post_id, original_filename, filename, file_size, download_count, id'),
+      boardId
+    );
+    const { data, error } = await query
       .in('post_id', ids)
       .order('id', { ascending: true });
 
@@ -151,13 +155,16 @@ class SupabaseAttachmentRepository extends BaseRepository {
       throw createHttpError(500, '첨부 파일 내용이 손상되었습니다.');
     }
 
+    // [LOG_ID: 20260729_0330] 종전엔 이 UPDATE도 .select('*')라, 방금 위에서 이미 받아 buffer로
+    // 디코딩해 둔 content_base64(최대 1MB → base64 ~1.4MB)를 응답으로 한 번 더 실어왔다.
+    // normalizeEntry는 그 컬럼을 읽지 않으므로 순수 낭비였다 — 다운로드 1건당 전송량이 두 배.
     const { data, error } = await this.client
       .from(this.table)
       .update({
         download_count: Number(row.download_count || 0) + 1
       })
       .eq('id', Number(row.id))
-      .select('*')
+      .select(ATTACHMENT_META_COLUMNS)
       .single();
 
     if (error) {
@@ -188,17 +195,13 @@ class SupabaseAttachmentRepository extends BaseRepository {
     return normalizeEntry(row);
   }
 
+  // [LOG_ID: 20260729_0215] get/read(다운로드)/delete가 모두 공유하는 단건 조회 지점 — 여기서
+  // 병합 소스로 넓히지 않으면 PDS 다운로드('DN' 목록 화면 즉시다운로드)까지 가상 boardId('pds')
+  // 탓에 "첨부 파일을 찾을 수 없습니다" 404로 실패한다.
   async _getRow(boardId, postId, attachmentId, includeContent) {
-    // [LOG_ID: 20260729_0215] _list와 동일한 이유로 병합 소스 전체를 대상으로 넓힌다 — 이 메서드는
-    // get/read(다운로드)/delete가 모두 공유하므로, 고치지 않으면 PDS 다운로드('DN' 목록 화면
-    // 즉시다운로드)까지 가상 boardId('pds') 탓에 "첨부 파일을 찾을 수 없습니다" 404로 실패한다.
-    const columns = includeContent
-      ? '*'
-      : 'id, board_id, post_id, user_id, nick_name, filename, original_filename, mime_type, file_size, download_count, created_at';
-    const { data, error } = await this.client
-      .from(this.table)
-      .select(columns)
-      .in('board_id', getMergedBoardSourceIds(boardId))
+    const columns = includeContent ? '*' : ATTACHMENT_META_COLUMNS;
+    const query = applyBoardFilter(this.client.from(this.table).select(columns), boardId);
+    const { data, error } = await query
       .eq('post_id', Number(postId))
       .eq('id', Number(attachmentId))
       .maybeSingle();

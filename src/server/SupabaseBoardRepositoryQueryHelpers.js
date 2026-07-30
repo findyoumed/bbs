@@ -92,7 +92,7 @@ function applyPostOrdering(queryBuilder, repo, capabilities) {
 }
 
 function applyBoardFilter(queryBuilder, boardId) {
-  const boardIds = getMergedBoardSourceIds(boardId).filter(Boolean);
+  const boardIds = getMergedBoardSourceIds(boardId);
   if (boardIds.length > 1) {
     return queryBuilder.in('board_id', boardIds);
   }
