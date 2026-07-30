@@ -2,6 +2,7 @@
 
 const BaseRouter = require('./BaseRouter');
 const logger = require('../logger');
+const { isMergedSourceOf } = require('../BoardVirtualBoards');
 
 class BoardRouter extends BaseRouter {
   get routes() {
@@ -122,11 +123,17 @@ class BoardRouter extends BaseRouter {
   // 게이팅 기준은 attachment_enabled가 아니라 **자료실 여부(menu_path='pds' 또는 board_id
   // 'pds'/'pds_*')**다 — 실측하니 열린광장·유머 등 일반 게시판도 attachment_enabled=true라,
   // 그걸로 가르면 일반 게시판 목록까지 파일 컬럼으로 바뀐다. 파일 컬럼은 자료실 전용이다.
+  // [LOG_ID: 20260730_0530] 종전엔 `id.startsWith('pds_')`로 자료실 소속을 직접 판정했다 — 병합
+  // 관계를 열거해 소유하는 BoardVirtualBoards보다 **넓은** 규칙이라, 표에 등록하지 않은 pds_*
+  // 게시판이 생기면 파일 컬럼은 켜지는데 병합 해석은 안 되는 어긋난 상태가 조용히 만들어졌다.
+  // 소유 모듈에 물어본다(실측 확인: 현재 물리 자료실 게시판 6개 전부 병합표에 등록돼 있어
+  // 판정 결과는 종전과 동일하다). menuPath 검사는 유지 — 병합표는 board_id만 알고, 메뉴 배치로
+  // 자료실에 들어온 게시판도 파일 컬럼 대상이라는 원래 의도를 그대로 둔다.
   isPdsBoard(board) {
     if (!board) return false;
     const id = String(board.boardId || board.id || '').trim();
     const menuPath = String(board.menuPath || '').trim();
-    return menuPath === 'pds' || id === 'pds' || id.startsWith('pds_');
+    return menuPath === 'pds' || isMergedSourceOf('pds', id);
   }
 
   async enrichWithAttachmentSummaries(boardId, result) {
@@ -343,7 +350,9 @@ class BoardRouter extends BaseRouter {
     }
 
     if (this.method === 'DELETE' && !isDownload) {
-      await this.ensureAttachmentWritable(boardId, postId, context);
+      // [LOG_ID: 20260730_0530] 위에서 이미 조회한 article로 판정한다 — 종전엔 동일 인자로
+      // getPost를 한 번 더 부르는 ensureAttachmentWritable을 호출했다.
+      this.assertAttachmentWritable(article, context);
       return this.send(200, await this.deps.attachmentRepository.delete(attachmentBoardId, globalPostId, attachmentId));
     }
     return false;
@@ -359,13 +368,19 @@ class BoardRouter extends BaseRouter {
   }
 
   async ensureAttachmentWritable(boardId, postId, context) {
-    const article = await this.deps.boardRepository.getPost(boardId, postId, {
-      incrementHit: false,
-      viewerId: context?.userId || 'guest',
-      viewerLevel: context?.level || 1,
+    return this.assertAttachmentWritable(
+      await this.ensureAttachmentReadable(boardId, postId, context),
       context
-    });
+    );
+  }
 
+  // [LOG_ID: 20260730_0530] 쓰기 권한 판정을 글 조회에서 떼어냈다 — 종전엔 조회와 판정이 한
+  // 함수에 묶여 있어서, 이미 ensureAttachmentReadable로 같은 글을 조회해 둔 호출부
+  // (handleAttachmentItem의 DELETE)가 판정만 하려고 **완전히 동일한 인자로 getPost를 한 번 더**
+  // 불러야 했다(Supabase 드라이버에선 불필요한 네트워크 왕복 1회). 판정은 이미 손에 든 article로
+  // 충분하다. ensureAttachmentReadable이 통과했다는 것은 getPost 내부의 게시판 접근권한 검사
+  // (assertBoardAccessible)를 이미 지났다는 뜻이므로, 검사 순서·결과도 종전과 동일하다.
+  assertAttachmentWritable(article, context) {
     if (!article.board?.attachmentEnabled) {
       this.validationError('해당 게시판은 첨부 기능이 비활성화되어 있습니다.');
     }

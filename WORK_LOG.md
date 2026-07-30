@@ -1,3 +1,21 @@
+## [2026-07-30 22:10] [/loop 리팩토링] 첨부 DELETE의 중복 getPost 제거 + 게시판 정체성 판정 3중 정의를 소유 모듈로 통합
+
+**LOG_ID: 20260730_0530**
+목표: `/simplify` altitude 리뷰에서 "나중에 볼 것"으로 남겨둔 항목 중 2건 처리 — 요청당 중복 조회 1건, 그리고 같은 사실을 3곳이 각자 답하던 중복 정의.
+
+발견 및 수정:
+- **중복 getPost(요청당 왕복 1회 낭비)**: `ensureAttachmentReadable`와 `ensureAttachmentWritable`이 **완전히 동일한 인자**로 각각 `boardRepository.getPost`를 호출했다. `handleAttachmentItem`의 DELETE 경로는 접근 확인용으로 이미 `ensureAttachmentReadable`을 부른 뒤, 권한 판정만 하려고 `ensureAttachmentWritable`을 불러 **같은 글을 한 번 더 조회**했다(Supabase 드라이버에선 불필요한 네트워크 왕복). 판정 로직을 `assertAttachmentWritable(article, context)`로 떼어내 이미 손에 든 article로 판정하게 하고, `ensureAttachmentWritable`은 `ensureAttachmentReadable` + `assertAttachmentWritable` 조합으로 재정의(기존 호출부 `addAttachment`는 그대로 동작). `ensureAttachmentReadable` 통과는 `getPost` 내부의 게시판 접근권한 검사(`assertBoardAccessible`)를 이미 지났다는 뜻이므로 검사 순서·결과·오류 우선순위 모두 종전과 동일하다.
+- **게시판 정체성 판정 3중 정의**: 같은 사실("이 boardId가 저 가상 게시판의 실제 병합 소스인가")을 세 곳이 각자 답하고 있었다. (1) `boardRoutes.isPdsBoard`가 `id.startsWith('pds_')`로 문자열 접두어 판정 — 병합 관계를 열거해 소유하는 `BoardVirtualBoards`보다 **넓은** 규칙이라, 표에 등록하지 않은 `pds_*` 게시판이 생기면 자료실 파일 컬럼은 켜지는데 병합 해석은 안 되는 어긋난 상태가 조용히 만들어진다. (2)(3) `resolveTrustedVirtualBoardId`(virtualBoardId 접근권한 우회 방지 정책, LOG_ID 20260728_2325)가 `SupabaseBoardRepositoryPostReads.js`와 `MemoryBoardRepository.js`에 **바이트 단위로 복제** — 주석까지 "Supabase 드라이버와 동일한 정책"이라 적혀 있어, 보안 정책을 손으로 동기화하고 있다는 자백이었다(드라이버가 하나 늘거나 정책이 바뀌면 N곳을 맞춰야 하고 하나 빠뜨려도 아무것도 실패하지 않는다).
+  → `BoardVirtualBoards.js`에 `isMergedSourceOf(virtualBoardId, boardId)`와 `resolveTrustedVirtualBoardId`를 두고 세 곳이 이를 쓰게 했다. 두 드라이버의 사본과 미사용이 된 import(`isVirtualBoardId`, `getMergedBoardSourceIds`)를 제거.
+
+검증: `node --check` 4개 파일 통과. **동등성 대조**: 제거한 사본의 원래 구현을 그대로 재현해 13개 케이스(`pds`/`pds_util`/비병합 `plaza`/빈값/`null`/`__proto__`/`constructor`/대문자 `PDS`/앞뒤 공백 등)에서 신·구 반환값이 전부 일치함을 확인, 보안 핵심인 "병합관계 아닌 조합 거부"(`r('pds','plaza')`→`''`, `r('plaza','plaza')`→`''`)도 유지. `isPdsBoard`는 실제 DB 게시판 18개 전부에서 신·구 판정이 동일하고, 유일한 차이는 닫으려던 가설 드리프트 케이스(병합표에 없는 `pds_*`)뿐 — 실제로 그런 게시판이 추가되면 `menu_path='pds'`로 들어와 여전히 잡힌다(현재 물리 자료실 게시판 6개 전부 `menu_path='pds'`임을 실측). `smoke:boards`(첨부 업로드→목록→다운로드→**삭제** 전 구간을 HTTP로 통과 — `assertAttachmentWritable` 분리의 실검증)·`smoke:command-parity`·`smoke-mobile-viewports` 통과. `smoke:full-traversal`은 17건 실패이나 main 기준선과 **정확히 동일**(전부 profile 하네스, 신규 0건).
+
+결과: ✅ 4개 파일, 순증 30줄. 첨부 DELETE의 DB 조회가 2회→1회로 줄고, 가상 게시판 관계를 판정하는 곳이 `BoardVirtualBoards` 한 모듈로 모였다.
+
+**남은 백로그**: `smoke:full-traversal`의 profile 하네스 17건 — `8ec51e8`이 profile URL을 `/profile/:userId` → `/profile` 고정으로 바꾸면서(LOG_ID 20260729_1624) 하네스의 옛 계약 기대치를 갱신하지 않은 것. 딥링크 복원 자체를 폐기한 것인지(해당 검사 블록 제거) URL만 숨기고 복원은 유지하려는 것인지(기대치만 수정)에 따라 수정 방향이 달라져 사용자 확인 대기 중.
+
+---
+
 ## [2026-07-30 21:30] [/loop 리팩토링] 가상↔물리 board_id 해석을 라우트 한 곳으로 올려 첨부 리포지토리에서 병합 게시판 지식 제거 (altitude 수정)
 
 **LOG_ID: 20260730_0430**

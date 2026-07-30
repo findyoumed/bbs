@@ -66,6 +66,29 @@ function isVirtualBoardId(boardId) {
   return Object.prototype.hasOwnProperty.call(MERGED_BOARD_SOURCES, normalizeBoardId(boardId));
 }
 
+// [LOG_ID: 20260730_0530] "boardId가 virtualBoardId의 실제 병합 소스인가" — 이 판정을 소유 모듈로
+// 가져온다. 종전엔 이 표현식이 세 곳에 손으로 복제돼 있었다: 두 드라이버의
+// resolveTrustedVirtualBoardId(아래)와, boardRoutes.isPdsBoard의 `id.startsWith('pds_')`.
+// 특히 그 문자열 접두어 판정은 병합표보다 **넓어서**, 표에 등록하지 않은 pds_* 게시판이
+// 생기면 두 정의가 조용히 어긋난다(자료실 파일 컬럼은 켜지는데 병합 해석은 안 되는 상태).
+function isMergedSourceOf(virtualBoardId, boardId) {
+  const candidate = normalizeBoardId(virtualBoardId);
+  if (!candidate || !isVirtualBoardId(candidate)) return false;
+  return getMergedBoardSourceIds(candidate).includes(normalizeBoardId(boardId));
+}
+
+// [LOG_ID: 20260730_0530] 종전엔 SupabaseBoardRepositoryPostReads.js와 MemoryBoardRepository.js에
+// 바이트 단위로 똑같이 복제돼 있었다(주석까지 "Supabase 드라이버와 동일한 정책"으로 명시 —
+// 보안 정책을 손으로 동기화하고 있다는 자백이었다). 병합 관계를 아는 이 모듈이 소유해야 한다.
+//
+// 원래 취지: 클라이언트가 보내는 virtualBoardId를 그대로 접근권한 검사 대상 게시판으로 쓰면,
+// 실제 글이 속한 boardId 대신 임의의(더 낮은 accessLevel을 가진) 게시판 기준으로 권한이
+// 통과되어버린다 — boardId가 그 virtualBoardId의 실제 병합 소스일 때만 신뢰한다.
+function resolveTrustedVirtualBoardId(virtualBoardId, boardId) {
+  const candidate = normalizeBoardId(virtualBoardId);
+  return isMergedSourceOf(candidate, boardId) ? candidate : '';
+}
+
 function resolveSourceBoardId(boardId, postBoardId = '') {
   const normalizedBoardId = normalizeBoardId(boardId);
   const normalizedPostBoardId = normalizeBoardId(postBoardId);
@@ -83,6 +106,8 @@ function getVirtualBoardDefinitions() {
 module.exports = {
   getMergedBoardSourceIds,
   getVirtualBoardDefinitions,
+  isMergedSourceOf,
   isVirtualBoardId,
-  resolveSourceBoardId
+  resolveSourceBoardId,
+  resolveTrustedVirtualBoardId
 };
