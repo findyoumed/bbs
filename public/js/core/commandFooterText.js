@@ -10,8 +10,8 @@ export const CMD_ORDER = {
   // [LOG_ID: 20260725_1030] 사용자 요청(전수조사) — postView/weatherView에 적용한 짧은 라벨(다음/이전)
   // + T 생략 구조를 정확히 같은 모양(F/B 다음페이지·이전페이지 + P + T + GO)이던 help/policy/
   // menuIndex/newsList 네 카테고리에도 동일 적용한다. T(초기화면) 명령 자체는 계속 동작하며
-  // (commandDispatcherExecution.js의 HISTORY_BACK_SCREENS 공용 처리), 힌트바 노출만 뺀다.
-  help: ['F:다음', 'B:이전', 'P', 'GO'],
+  // [LOG_ID: 20260730_1754] help 힌트바 토큰을 명시적 라벨(F:다음, B:이전, P:상위, T:초기화면, GO:이동)로 고정
+  help: ['F:다음', 'B:이전', 'P:상위', 'T:초기화면', 'GO:이동'],
   history: ['P', 'T', 'GO', 'H'],
   // [LOG_ID: 20260713_2100] GUIDE 화면 이용약관/개인정보처리방침 뷰어 — help와 동일하게 페이징.
   // [LOG_ID: 20260716_2326] '다음페이지', '이전페이지' 라벨 오버라이드
@@ -195,11 +195,9 @@ export function createCommandFooterTextUtils(deps) {
     if (isMobile) {
       if (category === 'help') {
         // [LOG_ID: 20260718_2330] 페이지가 1쪽뿐인 도움말(F/B가 둘 다 필터링되는 경우)에서
-        // T·GO까지 빠져 있어 상위(P) 토큰 하나만 남아 보였다(사용자 지적: "메뉴 힌트바가 많이
-        // 없어졌는데"). 데스크톱 help 세트와 동일하게 맞춘다 — 안 들어가면 동적
-        // 트림(trimHintEntriesToFit)이 알아서 H 툴팁으로 접는다.
-        // [LOG_ID: 20260725_1030] 데스크톱 help 세트에서 T를 뺐으므로(전수조사) 여기도 맞춘다.
-        order = ['F:다음', 'B:이전', 'P', 'GO'];
+        // [LOG_ID: 20260730_1754] 데스크톱 help 세트와 동일하게 맞춘다 — F:다음, B:이전, P:상위, T:초기화면, GO:이동 복원.
+        // 안 들어가면 동적 트림(trimHintEntriesToFit)이 알아서 H 툴팁으로 접는다.
+        order = ['F:다음', 'B:이전', 'P:상위', 'T:초기화면', 'GO:이동'];
       }
       // [LOG_ID: 20260723_1900] policy/newsList/weatherView/menuIndex도 같은 종류의 문제였다
       // (사용자 지적: "힌트바에 기능이 두개만 나오는데. 원래 더 많은데") — 페이지가 1쪽뿐이라

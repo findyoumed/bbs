@@ -20,7 +20,8 @@ export const CMD_META = {
   // [LOG_ID: 20260723_2300] GO는 인자("GO [코드]") 없이는 아무 동작도 하지 않아 힌트바에서
   // 클릭해도 죽은 버튼이었다(사용자 요청: "이동(GO)도 클릭 가능하고 go 텍스트가 선택>> 오른편에
   // 쓰여지면 좋겠어") — prefill:true면 클릭 시 즉시 실행하는 대신 입력줄에 "GO "만 채워 넣고
-  // 커서를 포커스해, 사용자가 이어서 코드를 타이핑할 수 있게 한다.
+  // [LOG_ID: 20260730_1754] GO 명령어 priority를 98로 상향하여 힌트바 트림 시 억울하게 가장 먼저 숨겨지는 현상 방지
+  GO: { label: '이동', tip: 'GO [코드]', priority: 98, cat: 'NAV', prefill: true, desc: '특정 메뉴나 게시판 코드로 바로 이동합니다.' },
   // [LOG_ID: 20260729_1747] Z (화면 재전송) 명령어 완전 제거
   // [LOG_ID: 20260723_2230] 70(GO=90보다 낮음)이라 실제로 다음 페이지가 있는 화면에서도 좁은
   // 모바일 힌트바 트림(trimHintEntriesToFit)이 GO/T/P보다 F/B를 먼저 숨겼다 — 정작 F/B가 뜬다는
@@ -122,6 +123,8 @@ export const CMD_META = {
   GRP: { label: '주소록', tip: 'GRP, GRP+ 이름 아이디1,아이디2, GRP- 이름 (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '단체편지용 주소록 그룹을 관리합니다. GRP는 목록, GRP+는 등록, GRP-는 삭제입니다.' },
   // [LOG_ID: 20260713_1230] 나우누리 CMAIL '배달 확인/취소' 재현 — 보낸쪽지함 발송 취소
   CM: { label: '발송취소', tip: 'CM [번호]', login: true, priority: 32, cat: 'MEMO', desc: '보낸쪽지함에서 상대가 아직 읽지 않은 쪽지의 발송을 취소합니다.' },
+  // [LOG_ID: 20260730_1719] CHAT (대화실) 명령어 메타데이터 추가
+  CHAT: { label: '대화실', tip: 'CHAT, 대화', login: true, priority: 50, cat: 'CHAT', desc: '대화실(채팅) 로비로 바로 이동합니다.' },
   O: { label: '방만들기', tip: 'O', login: true, priority: 42, cat: 'CHAT', desc: '채팅방을 개설합니다.' },
   J: { label: '방입장', tip: 'J [방번호], JOIN [방번호]', login: true, priority: 40, cat: 'CHAT', desc: '대화실 로비에서 방 번호로 채팅방에 입장합니다.' },
   JOIN: { label: '방입장', tip: 'J [방번호], JOIN [방번호]', login: true, priority: 40, cat: 'CHAT', desc: '대화실 로비에서 방 번호로 채팅방에 입장합니다.' },

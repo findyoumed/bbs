@@ -1,3 +1,59 @@
+## [2026-07-30 17:54] GO 커맨드 우선순위 상향(priority 98) 및 /help 힌트바 토큰 라벨 고정
+
+**LOG_ID: 20260730_1754**
+목표: 힌트바 가로 폭 부족 시 `GO` 커맨드(`priority: 90`)가 가장 먼저 숨겨져 `T(초기화면)` 및 `GO(이동)`가 연속 유실되던 원인 해결.
+수행 작업:
+1) `public/js/core/commandService.js`: `GO` 커맨드 우선순위를 `priority: 98`로 상향하여 동적 트림으로 유실되는 현상 방지.
+2) `public/js/core/commandFooterText.js`: 데스크톱 및 모바일 `help` 힌트바 항목을 `['F:다음', 'B:이전', 'P:상위', 'T:초기화면', 'GO:이동']`으로 명시적 고정.
+실행: `node --check public/js/core/commandService.js public/js/core/commandFooterText.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-30 17:48] help 힌트바 모바일 오버라이드 보정 (T, GO:이동 누락 원인)
+
+**LOG_ID: 20260730_1748**
+목표: `/help` 화면 힌트바에서 `초기화면(T)`이 빠지고 `GO`가 `이동(GO)` 대신 라벨 없이 표시되던 근본 원인 해결.
+원인: `commandFooterText.js`의 `getCommandFooterText` 함수 안에 모바일 전용 오버라이드(`isMobile` 분기, 202번째 줄)가 `['F:다음', 'B:이전', 'P', 'GO']`로 하드코딩되어 있어, 14번째 줄 `CMD_ORDER.help`를 수정해도 모바일 뷰포트에서는 무시되었음.
+수행 작업: `public/js/core/commandFooterText.js`의 모바일 help 오버라이드를 데스크톱 `CMD_ORDER.help`와 동일한 `['F:다음', 'B:이전', 'P', 'T', 'GO:이동']`으로 보정.
+실행: `node --check public/js/core/commandFooterText.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-30 17:40] help 힌트바 GO:이동 라벨 명시적 고정
+
+**LOG_ID: 20260730_1740**
+목표: 힌트바에서 `GO` 단독 출력 없이 항상 `이동(GO)`로 확실하게 노출되도록 보장.
+수행 작업: `public/js/core/commandFooterText.js`의 `help` 카테고리에 `GO:이동`으로 명시적 라벨 지정.
+실행: `node --check public/js/core/commandFooterText.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-30 17:38] GO 명령어 메타데이터 복원 (힌트바 라벨 표기 보정)
+
+**LOG_ID: 20260730_1738**
+목표: 힌트바에서 `GO`가 `이동(GO)`로 표시되지 않고 `GO`로만 단독 출력되던 문제 해결.
+수행 작업: `public/js/core/commandService.js`에 이전 작업 중 누락되었던 `GO` 명령어 메타데이터(`label: '이동'`, `prefill: true`) 복원.
+실행: `node --check public/js/core/commandService.js`
+결과: ✅ 완료
+
+---
+
+## [2026-07-30 17:19] FIND 검색 매칭 우선순위 및 /help 화면 하단 힌트바 보정
+
+**LOG_ID: 20260730_1719**
+목표: `FIND 채팅` 입력 시 `O`(방만들기) 검색 오작동 수정 및 `/help` 힌트바 토큰 구성 정상화.
+수행 작업:
+1) `public/js/core/commandService.js`: `CHAT` (대화실) 메타데이터 추가.
+2) `public/js/core/commandRouterGlobalNavigation.js`: `FIND` 검색 시 `채팅`, `대화`, `chat` 검색어를 대화실 로비 이동으로 최우선 처리하고, 커맨드 검색 매칭 시 `label`/`key` 매칭을 `desc` 부분 매칭보다 우선하도록 보정.
+3) `public/js/core/commandFooterText.js`: `CMD_ORDER.help`에 `T`(초기화면) 토큰을 복원하여 `다음(F),상위(P),초기화면(T),이동(GO)` 힌트바 구조 복구.
+실행: `node --check public/js/core/commandService.js public/js/core/commandRouterGlobalNavigation.js public/js/core/commandFooterText.js`
+결과: ✅ 완료
+
+---
+
 ## [2026-07-29 17:50] FIND (통합검색) 명령어 단독 입력 및 클릭 보정
 
 **LOG_ID: 20260729_1750**

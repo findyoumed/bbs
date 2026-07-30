@@ -116,13 +116,32 @@ export function createGlobalNavigationCommandHandler(deps) {
         }
       }
 
+      // [LOG_ID: 20260730_1719] '채팅', '대화', 'chat' 검색 시 대화실 로비로 바로 이동
+      if (['채팅', '대화', 'chat'].includes(lowerQuery)) {
+        setHint('대화실 로비로 이동합니다...');
+        if (typeof deps.refs?.showChatLobby === 'function') {
+          await deps.refs.showChatLobby();
+          return true;
+        }
+      }
+
       const commandService = deps.commandService || { CMD_META };
       const meta = commandService.CMD_META || CMD_META;
-      const cmdKey = Object.keys(meta).find((key) =>
-        key.toLowerCase().includes(lowerQuery)
-        || (meta[key].label || '').toLowerCase().includes(lowerQuery)
-        || (meta[key].desc || '').toLowerCase().includes(lowerQuery)
+      const keys = Object.keys(meta);
+      // [LOG_ID: 20260730_1719] 1순위: key/label 완전/전두 일치, 2순위: desc 등 부분 매칭
+      let cmdKey = keys.find((key) =>
+        key.toLowerCase() === lowerQuery
+        || (meta[key].label || '').toLowerCase() === lowerQuery
+        || key.toLowerCase().startsWith(lowerQuery)
+        || (meta[key].label || '').toLowerCase().startsWith(lowerQuery)
       );
+      if (!cmdKey) {
+        cmdKey = keys.find((key) =>
+          key.toLowerCase().includes(lowerQuery)
+          || (meta[key].label || '').toLowerCase().includes(lowerQuery)
+          || (meta[key].desc || '').toLowerCase().includes(lowerQuery)
+        );
+      }
 
       if (cmdKey) {
         const commandMeta = meta[cmdKey];
