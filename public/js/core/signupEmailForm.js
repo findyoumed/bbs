@@ -1,4 +1,5 @@
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
+import { convertHangulToKeyboardText } from './hangulKeyboard.js';
 
 const STEP_CONFIG = [
   {
@@ -66,18 +67,6 @@ const CONFIRM_FIELD_IDS = {
 };
 const SIGNUP_CANCEL_LINE = '입력란에 p 를 입력하면 가입을 중단합니다.'; // [LOG: 20260729_1645] /p → p 수정
 const ENGLISH_KEYBOARD_STAGE_IDS = new Set(['signup-userid', 'signup-password', 'signup-password-confirm', 'signup-email']);
-const HANGUL_INITIAL_KEYS = ['r', 'R', 's', 'e', 'E', 'f', 'a', 'q', 'Q', 't', 'T', 'd', 'w', 'W', 'c', 'z', 'x', 'v', 'g'];
-const HANGUL_MEDIAL_KEYS = ['k', 'o', 'i', 'O', 'j', 'p', 'u', 'P', 'h', 'hk', 'ho', 'hl', 'y', 'n', 'nj', 'np', 'nl', 'b', 'm', 'ml', 'l'];
-const HANGUL_FINAL_KEYS = ['', 'r', 'R', 'rt', 's', 'sw', 'sg', 'e', 'f', 'fr', 'fa', 'fq', 'ft', 'fx', 'fv', 'fg', 'a', 'q', 'qt', 't', 'T', 'd', 'w', 'c', 'z', 'x', 'v', 'g'];
-const HANGUL_COMPAT_KEYS = {
-  '\u3131': 'r', '\u3132': 'R', '\u3133': 'rt', '\u3134': 's', '\u3135': 'sw', '\u3136': 'sg', '\u3137': 'e', '\u3138': 'E',
-  '\u3139': 'f', '\u313A': 'fr', '\u313B': 'fa', '\u313C': 'fq', '\u313D': 'ft', '\u313E': 'fx', '\u313F': 'fv', '\u3140': 'fg',
-  '\u3141': 'a', '\u3142': 'q', '\u3143': 'Q', '\u3144': 'qt', '\u3145': 't', '\u3146': 'T', '\u3147': 'd', '\u3148': 'w',
-  '\u3149': 'W', '\u314A': 'c', '\u314B': 'z', '\u314C': 'x', '\u314D': 'v', '\u314E': 'g',
-  '\u314F': 'k', '\u3150': 'o', '\u3151': 'i', '\u3152': 'O', '\u3153': 'j', '\u3154': 'p', '\u3155': 'u', '\u3156': 'P',
-  '\u3157': 'h', '\u3158': 'hk', '\u3159': 'ho', '\u315A': 'hl', '\u315B': 'y', '\u315C': 'n', '\u315D': 'nj', '\u315E': 'np',
-  '\u315F': 'nl', '\u3160': 'b', '\u3161': 'm', '\u3162': 'ml', '\u3163': 'l'
-};
 
 function getStepConfig(fieldId) {
   return STEP_CONFIG.find((step) => step.fieldId === fieldId) || STEP_CONFIG[0];
@@ -98,25 +87,6 @@ function formatInputLine(fieldId, value) {
 
 function isEnglishKeyboardStage(fieldId) {
   return ENGLISH_KEYBOARD_STAGE_IDS.has(String(fieldId || '').trim());
-}
-
-function convertHangulToKeyboardText(value) {
-  return Array.from(String(value || '')).map((char) => {
-    if (Object.prototype.hasOwnProperty.call(HANGUL_COMPAT_KEYS, char)) {
-      return HANGUL_COMPAT_KEYS[char];
-    }
-
-    const code = char.charCodeAt(0);
-    if (code < 0xAC00 || code > 0xD7A3) {
-      return char.normalize('NFKC');
-    }
-
-    const syllableIndex = code - 0xAC00;
-    const initialIndex = Math.floor(syllableIndex / 588);
-    const medialIndex = Math.floor((syllableIndex % 588) / 28);
-    const finalIndex = syllableIndex % 28;
-    return `${HANGUL_INITIAL_KEYS[initialIndex] || ''}${HANGUL_MEDIAL_KEYS[medialIndex] || ''}${HANGUL_FINAL_KEYS[finalIndex] || ''}`;
-  }).join('');
 }
 
 function sanitizeEnglishKeyboardInput(fieldId, value) {

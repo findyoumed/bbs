@@ -1,3 +1,18 @@
+## [2026-07-30 23:40] [/loop 리팩토링] 회원가입 아이디/이메일 화면의 두벌식 변환 로직이 hangulKeyboard.js로 통합됐다던 주석과 달리 실제로는 반쪽만 통합돼 signupEmailForm.js에 전체 사본이 남아있던 것 정리
+
+**LOG_ID: 20260730_0820**
+목표: 클라이언트(`public/js/core`, ~136개 모듈)에서 동일 함수명이 2곳 이상에 정의된 경우를 전수조사(`grep -rhoP "^(export )?function \K[a-zA-Z0-9_]+" | sort | uniq -c`)해 이번 세션 내내 나온 "함수 사본이 갈라지는" 계열이 더 있는지 확인.
+
+발견: `convertHangulToKeyboardText`가 `hangulKeyboard.js`와 `signupEmailForm.js` 두 곳에 정의돼 있었다. 더 흥미로운 건 `hangulKeyboard.js` 파일 최상단 주석(LOG_ID 20260716_2200)이 이렇게 적혀 있었다는 점: *"회원가입 ID/이메일 영문 가드(signupEmailForm.js)와 모든 마스킹(비밀번호) 입력의 영문 전용 가드(appEventsCommandInput.js)가 함께 사용한다. 두 곳에 흩어져 있던 맵을 한 곳으로 모은다."* — 즉 이 파일은 애초에 정확히 이 중복을 없애려고 만들어진 것이었는데, 실제로는 `appEventsCommandInput.js`만 `import { toAsciiPasswordInput } from './hangulKeyboard.js'`로 마이그레이션됐고 `signupEmailForm.js`는 통합 대상에서 빠진 채 원본 테이블 4개(`HANGUL_INITIAL_KEYS`/`HANGUL_MEDIAL_KEYS`/`HANGUL_FINAL_KEYS`/`HANGUL_COMPAT_KEYS`, 51개 자모 매핑)와 함수 전체를 그대로 갖고 있었다 — 주석의 "한 곳으로 모았다"는 선언이 실제로는 거짓이었던 반쪽짜리 리팩토링. 이번 세션에서 반복적으로 실제 버그를 낸 두벌식 매핑 계열(`contactSysopScreen.js`/`memoScreens.js`/`postWriteView.js`/`commandNormalizer.js`의 `koAliasMap`)과 같은 데이터라, 한쪽만 버그 수정되고 다른 쪽은 방치되는 정확히 같은 위험을 안고 있었다(다행히 이번엔 아직 실제로 갈라지진 않았다 — 아래 검증 참고).
+
+수정: `signupEmailForm.js`에서 테이블 4개와 함수 정의를 통째로 삭제하고 `import { convertHangulToKeyboardText } from './hangulKeyboard.js';`로 교체.
+
+검증: 두 파일의 테이블 4개를 실제로 `eval`해 값 단위로 deep-equal 대조(정규식 리터럴 4/4 일치, `HANGUL_COMPAT_KEYS` 51개 키 완전 일치 — `signupEmailForm.js` 쪽은 `ㄱ` 유니코드 이스케이프 표기였고 `hangulKeyboard.js` 쪽은 리터럴 한글 문자 표기였는데, 코드포인트 기준으로는 정확히 같음을 확인). Node ESM으로 `signupEmailForm.js`를 직접 import해 순환참조·미해결 참조 없이 로드됨을 확인(export: `createSignupEmailHandler` 하나). **결정적 검증**: 실제 서버를 띄우고 Playwright로 `/log/signup/email`(회원가입 아이디 입력 단계)에 진입해(`state.screen==='signup'`, `state._signupFlow==='email'` 확인) `#cmd-input`에 두벌식 물리키 `test_1`에 대응하는 실제 한글 자모(`ㅅㄷㄴㅅ_1`)를 타이핑 — 실 코드 경로(`ensureEnglishInputGuard`의 `input` 리스너 → `sanitizeEnglishKeyboardInput` → 방금 import한 `convertHangulToKeyboardText`)를 통해 입력값이 정확히 `test_1`로 변환됨을 확인, 콘솔 오류 없음. `smoke:boards`·`smoke:command-parity`·`smoke:full-traversal`·`smoke-mobile-viewports` 4종 회귀.
+
+결과: ✅ 1개 파일, 순감소(테이블+함수 20줄 삭제, import 1줄 추가). `hangulKeyboard.js`의 "한 곳으로 모은다" 주석이 이제 실제로 참이 됐다.
+
+---
+
 ## [2026-07-30 23:25] [/loop 리팩토링] RSS 인코딩 디코더의 마지막 5줄(charset→TextDecoder)이 XML/HTML 두 파일에 복제된 것을 RssBufferDecoding.js로 통합
 
 **LOG_ID: 20260730_0800**
