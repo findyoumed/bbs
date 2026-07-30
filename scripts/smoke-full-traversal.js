@@ -35,7 +35,7 @@ const TEST_ROUTES = [
     '/log/signup/email',
     '/log/signup/agree',
     '/log/signup/profile',
-    '/profile/smoke-route-user'
+    '/profile'
 ];
 const APP_SHELL_MARKER = 'type="module" src="/js/app.js"';
 const FALLBACK_MODULE_CHECKS = [
@@ -285,9 +285,11 @@ const FALLBACK_MODULE_CHECKS = [
         expectedText: 'return await showProfile(userId, true);'
     },
     {
+        // [LOG_ID: 20260730_0630] /profile URL에 아이디를 노출하지 않는다(LOG: 20260729_1624) —
+        // 종전 기대치는 아이디를 담은 옛 형태였다.
         label: 'profile direct-route url builder',
         path: '/js/core/routingUrlBuilder.js',
-        expectedText: "return `/profile/${encodeURIComponent(_profileUserId || '')}`;"
+        expectedText: "return '/profile';"
     },
     {
         label: 'weather route module',
@@ -5191,7 +5193,7 @@ async function verifyProfileRouteCoverage(errors) {
             errors.push('Missing profile lookup did not return { found: false, member: null } for /api/members/:userId?allowMissing=1');
         }
 
-        await expectAppShell('/profile/smoke-route-user');
+        await expectAppShell('/profile');
 
         const moduleCache = new Map();
         const { createProfileScreens } = loadBrowserHarnessModule(path.join(__dirname, '..', 'public/js/core/profileScreens.js'), moduleCache);
@@ -5207,9 +5209,14 @@ async function verifyProfileRouteCoverage(errors) {
             return buildProfileAnsi;
         }
 
+        // [LOG_ID: 20260730_0630] /profile URL은 더 이상 아이디를 포함하지 않는다
+        // (LOG: 20260729_1624, routingStateRestorer.profile) — 로그인한 사용자는 **자신의**
+        // 프로필이 복원되고, 비로그인이면 메인 화면으로 간다. 따라서 복원 대상 아이디는
+        // URL 세그먼트가 아니라 state.user에서 온다.
         const state = {
             screen: 'main',
-            _profileUserId: ''
+            _profileUserId: '',
+            user: { userId: 'demo-user', nickName: 'demo-user', isGuest: false }
         };
         const screenEl = createHarnessScreenEl();
         const updateRequests = [];
@@ -5219,7 +5226,7 @@ async function verifyProfileRouteCoverage(errors) {
 
         globalThis.window = {
             location: {
-                pathname: '/profile/demo-user',
+                pathname: '/profile',
                 search: ''
             },
             history: {
@@ -5352,46 +5359,53 @@ async function verifyProfileRouteCoverage(errors) {
             // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
             // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
             // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
-            errors.push(`Profile direct route did not run the up-front menu-tree hydration for /profile/:userId (got ${loadMenuTreeCalls} calls)`);
+            errors.push(`Profile direct route did not run the up-front menu-tree hydration for /profile (got ${loadMenuTreeCalls} calls)`);
         }
         if (state.screen !== 'profile') {
-            errors.push('Profile direct route did not restore state.screen="profile" for /profile/:userId');
+            errors.push('Profile direct route did not restore state.screen="profile" for /profile');
         }
         if (state._profileUserId !== 'demo-user') {
-            errors.push(`Profile direct route did not preserve the target user id for /profile/:userId (got ${state._profileUserId || 'empty'})`);
+            errors.push(`Profile direct route did not restore the logged-in user's own profile for /profile (got ${state._profileUserId || 'empty'})`);
         }
         if (apiRequests.length !== 1 || apiRequests[0] !== '/api/members/demo-user?allowMissing=1') {
-            errors.push(`Profile direct route did not fetch the expected member payload for /profile/:userId (got ${apiRequests.join(', ') || 'no calls'})`);
+            errors.push(`Profile direct route did not fetch the expected member payload for /profile (got ${apiRequests.join(', ') || 'no calls'})`);
         }
         if (appliedFooters[appliedFooters.length - 1] !== 'PROFILE FOOTER') {
             errors.push(`Profile direct route did not restore the profile footer hint (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateRequests.length !== 0) {
-            errors.push('Profile direct route should not push or replace history while restoring /profile/:userId');
+            errors.push('Profile direct route should not push or replace history while restoring /profile');
         }
-        if (buildURLForState() !== '/profile/demo-user') {
-            errors.push(`Profile URL builder did not stay in sync for /profile/:userId (got ${buildURLForState()})`);
+        // [LOG_ID: 20260730_0630] URL 빌더는 아이디를 노출하지 않는 고정 경로를 만들어야 한다 —
+        // 이게 이 변경의 목적이므로, 아이디가 새어나오면 회귀다.
+        if (buildURLForState() !== '/profile') {
+            errors.push(`Profile URL builder did not stay in sync for /profile (got ${buildURLForState()})`);
         }
-        if (`${globalThis.window.location.pathname}${globalThis.window.location.search}` !== '/profile/demo-user') {
-            errors.push(`Profile direct route changed the browser URL unexpectedly for /profile/:userId (got ${globalThis.window.location.pathname}${globalThis.window.location.search})`);
+        if (`${globalThis.window.location.pathname}${globalThis.window.location.search}` !== '/profile') {
+            errors.push(`Profile direct route changed the browser URL unexpectedly for /profile (got ${globalThis.window.location.pathname}${globalThis.window.location.search})`);
         }
 
         const renderedProfile = String(screenEl.innerHTML || '').trim();
         if (!renderedProfile.includes('사용자 정보 (PROFILE)')) {
-            errors.push('Profile direct route did not render the profile title for /profile/:userId');
+            errors.push('Profile direct route did not render the profile title for /profile');
         }
         // [LOG_ID: 20260725_2030] 라벨 패딩 폭은 fitCell(displayWidth/isWideChar 조합)에 좌우돼
         // 하네스의 가짜 폭 계산기가 실제 브라우저와 정확히 같은 공백 수를 낼 필요는 없다 —
         // "아이디"와 "demo-user"가 같은 줄에 콜론으로 붙어 있는지만 확인한다.
         if (!/아이디\s*:\s*demo-user/.test(renderedProfile)) {
-            errors.push('Profile direct route did not render the target member id for /profile/:userId');
+            errors.push('Profile direct route did not render the member id for /profile');
         }
         if (!renderedProfile.endsWith('</div>')) {
-            errors.push('Profile screen markup did not close the wrapper container for /profile/:userId');
+            errors.push('Profile screen markup did not close the wrapper container for /profile');
         }
 
-        globalThis.window.location.pathname = '/profile/smoke-route-user';
+        // [LOG_ID: 20260730_0630] 회원 행이 사라진 로그인 사용자 — allowMissing 조회가 in-band로
+        // { found:false }를 돌려주고 404 콘솔 잡음 없이 오류 화면을 그려야 한다(LOG: 20260429_0606).
+        // 종전엔 이 경우를 "다른 사용자 아이디로 딥링크" 상황으로 검사했지만, 그 진입 경로는
+        // 20260729_1624에서 폐기됐다.
+        globalThis.window.location.pathname = '/profile';
         globalThis.window.location.search = '';
+        state.user = { userId: 'smoke-route-user', nickName: 'smoke-route-user', isGuest: false };
         screenEl.innerHTML = '';
         appliedFooters.length = 0;
 
@@ -5401,39 +5415,57 @@ async function verifyProfileRouteCoverage(errors) {
             // [LOG_ID: 20260725_2030] 20260723_2340부터 restoreStateFromURL이 딥링크 진입 시
             // loadMenuTree()를 선행 1회 호출하는 것이 의도된 동작이다(캐시라 비용 없음) —
             // "의존하면 안 된다"였던 옛 단언을 "선행 하이드레이션이 실제로 일어난다"로 뒤집는다.
-            errors.push(`Missing profile direct route did not run the up-front menu-tree hydration for /profile/:userId (got ${loadMenuTreeCalls} calls)`);
+            errors.push(`Missing profile direct route did not run the up-front menu-tree hydration for /profile (got ${loadMenuTreeCalls} calls)`);
         }
         if (state.screen !== 'profile') {
-            errors.push('Missing profile direct route did not keep state.screen="profile" for /profile/:userId');
+            errors.push('Missing profile direct route did not keep state.screen="profile" for /profile');
         }
         if (state._profileUserId !== 'smoke-route-user') {
-            errors.push(`Missing profile direct route did not preserve the missing target user id (got ${state._profileUserId || 'empty'})`);
+            errors.push(`Missing profile direct route did not preserve the looked-up user id (got ${state._profileUserId || 'empty'})`);
         }
         if (apiRequests.length !== 2 || apiRequests[1] !== '/api/members/smoke-route-user?allowMissing=1') {
-            errors.push(`Missing profile direct route did not fetch the allowMissing lookup for /profile/:userId (got ${apiRequests.join(', ') || 'no calls'})`);
+            errors.push(`Missing profile direct route did not fetch the allowMissing lookup for /profile (got ${apiRequests.join(', ') || 'no calls'})`);
         }
         if (appliedFooters[appliedFooters.length - 1] !== 'PROFILE FOOTER') {
             errors.push(`Missing profile direct route did not restore the profile footer hint (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateRequests.length !== 0) {
-            errors.push('Missing profile direct route should not push or replace history while restoring /profile/:userId');
+            errors.push('Missing profile direct route should not push or replace history while restoring /profile');
         }
-        if (buildURLForState() !== '/profile/smoke-route-user') {
-            errors.push(`Profile URL builder did not stay in sync for missing /profile/:userId (got ${buildURLForState()})`);
+        if (buildURLForState() !== '/profile') {
+            errors.push(`Profile URL builder did not stay in sync for missing /profile (got ${buildURLForState()})`);
         }
-        if (`${globalThis.window.location.pathname}${globalThis.window.location.search}` !== '/profile/smoke-route-user') {
-            errors.push(`Missing profile direct route changed the browser URL unexpectedly for /profile/:userId (got ${globalThis.window.location.pathname}${globalThis.window.location.search})`);
+        if (`${globalThis.window.location.pathname}${globalThis.window.location.search}` !== '/profile') {
+            errors.push(`Missing profile direct route changed the browser URL unexpectedly for /profile (got ${globalThis.window.location.pathname}${globalThis.window.location.search})`);
         }
 
         const missingProfileMarkup = String(screenEl.innerHTML || '').trim();
         if (!missingProfileMarkup.includes('회원 정보를 찾을 수 없습니다.')) {
-            errors.push('Missing profile direct route did not render the missing-member message for /profile/:userId');
+            errors.push('Missing profile direct route did not render the missing-member message for /profile');
         }
         if (!missingProfileMarkup.includes('대상 ID : smoke-route-user')) {
-            errors.push('Missing profile direct route did not render the missing target member id for /profile/:userId');
+            errors.push('Missing profile direct route did not render the looked-up member id for /profile');
         }
         if (!missingProfileMarkup.endsWith('</div>')) {
-            errors.push('Missing profile screen markup did not close the wrapper container for /profile/:userId');
+            errors.push('Missing profile screen markup did not close the wrapper container for /profile');
+        }
+
+        // [LOG_ID: 20260730_0630] 비로그인 진입은 프로필을 그리지 않고 메인으로 — 아이디를 URL에서
+        // 없앤 변경의 나머지 절반이다(종전 하네스엔 이 경로 검사가 아예 없었다).
+        globalThis.window.location.pathname = '/profile';
+        globalThis.window.location.search = '';
+        state.user = { userId: '', isGuest: true };
+        state.screen = 'main';
+        screenEl.innerHTML = '';
+        const apiCallsBeforeGuest = apiRequests.length;
+
+        await restorer.restoreStateFromURL();
+
+        if (state.screen !== 'main') {
+            errors.push(`Guest /profile direct route did not fall back to the main screen (got screen=${state.screen})`);
+        }
+        if (apiRequests.length !== apiCallsBeforeGuest) {
+            errors.push(`Guest /profile direct route should not look up any member (got ${apiRequests.slice(apiCallsBeforeGuest).join(', ')})`);
         }
     } catch (error) {
         errors.push(`Profile module harness failed: ${error.message}`);
