@@ -1,3 +1,18 @@
+## [2026-07-30 23:15] [/loop 리팩토링] RssCacheStore.js의 Supabase 설정 판정을 RepositoryDriverSelection.js로 통합 (마지막 남은 사본)
+
+**LOG_ID: 20260730_0740**
+목표: 직전 라운드(8곳→`RepositoryDriverSelection.js`)에서 놓친 사본이 더 있는지 `grep -rn "SUPABASE_URL.*&&.*SUPABASE_SERVICE_ROLE_KEY"`로 재확인.
+
+발견: `RssCacheStore.js`의 `createRssCacheStoreFromEnv`에 `const hasSupabase = Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);`가 정확히 같은 판정 불리언으로 남아있었다. 다만 이 함수의 전체 선택 로직(`RSS_CACHE_DRIVER`가 `memory`/`off`/`disabled`면 캐시 자체를 끔, `auto`/`supabase`만 사용, 그 외 값은 끔 — 3분기)은 board/member 등의 2분기(supabase vs memory 둘 중 하나는 항상 반환) 정책과 구조가 달라 별개 관심사다. 그래서 그 3분기 로직 자체는 그대로 두고, 판정 불리언 한 줄만 `hasSupabaseConfig(env)`로 교체 — 지난 라운드 `AttachmentRepository.js`의 `!options.baseDir`, `ChatRoomRepository.js`의 도메인 오버라이드와 같은 원칙(정책이 진짜 다른 부분은 호출부에 남기고, 진짜 같은 부분만 공유).
+
+검증: `node --check` 통과. 원본 표현식을 재현한 함수와 실제 `createRssCacheStoreFromEnv` 호출을 10개 env 조합(설정없음/기본auto/명시memory·off·disabled·auto·supabase·쓰레기값/드라이버만 있고 설정없음/URL만 있음)으로 대조해 반환 타입(캐시 있음/없음) 전부 일치 확인. `smoke:rss-services`(이 팩토리를 직접 쓰는 유일한 스모크 테스트) 포함 5종 회귀.
+
+결과: ✅ 1개 파일, 3줄 변경. `grep -rn "SUPABASE_URL.*&&.*SUPABASE_SERVICE_ROLE_KEY"` 결과가 이제 `RepositoryDriverSelection.js`(정의) 한 곳만 남음 — 이 판정을 계산하는 곳이 전체 코드베이스에 정확히 하나다.
+
+**다음 후보(이번 라운드엔 착수 안 함)**: `src/server/Rss*.js` 계열(12개 파일, 총 4189줄 — 파서/새니타이저/스코어링/추출기로 세분화돼 있어 중복 여지 조사 필요하나 5분 사이클 안에 안전하게 검증하기엔 범위가 크다).
+
+---
+
 ## [2026-07-30 23:00] [/loop 리팩토링] 저장소 드라이버(Supabase vs Memory) 선택 판정식이 7개 파일에 복제돼 있던 것을 RepositoryDriverSelection.js로 통합
 
 **LOG_ID: 20260730_0710**

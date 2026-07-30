@@ -3,6 +3,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
 const logger = require('./logger');
+const { hasSupabaseConfig } = require('./RepositoryDriverSelection');
 
 function isMissingCacheTableError(error, table) {
   const message = String(error?.message || '');
@@ -128,7 +129,10 @@ class SupabaseRssCacheStore extends BaseRepository {
 
 function createRssCacheStoreFromEnv(env = process.env) {
   const driver = String(env.RSS_CACHE_DRIVER || 'auto').trim().toLowerCase();
-  const hasSupabase = Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+  // [LOG_ID: 20260730_0740] RepositoryDriverSelection.js와 동일한 Supabase 설정 판정 —
+  // 여기의 나머지 선택 로직(off/disabled/auto/explicit 3분기)은 board/member 등의
+  // 2분기(supabase vs memory) 정책과 구조가 달라 그대로 남기고, 판정 불리언만 공유한다.
+  const hasSupabase = hasSupabaseConfig(env);
 
   if (driver === 'memory' || driver === 'off' || driver === 'disabled') {
     return null;
