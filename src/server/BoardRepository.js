@@ -5,14 +5,15 @@ const { MemoryBoardRepository } = require('./MemoryBoardRepository');
 const { SupabaseBoardRepository } = require('./SupabaseBoardRepository');
 const { createHttpError } = require('./BoardRepositoryShared');
 const { resolveLegacyPaths } = require('./projectPaths');
+const { hasSupabaseConfig: checkSupabaseConfig, shouldUseSupabaseDriver } = require('./RepositoryDriverSelection');
 
 function createBoardRepositoryFromEnv(env = process.env, options = {}) {
-  const requestedDriver = String(env.BOARD_REPOSITORY_DRIVER || '').trim().toLowerCase();
-  const hasSupabaseConfig = Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+  const requestedDriver = env.BOARD_REPOSITORY_DRIVER;
+  const hasSupabaseConfig = checkSupabaseConfig(env);
   const menuFilePath = resolveLegacyPaths(env).menuFilePath;
 
   try {
-    if ((requestedDriver === 'supabase' || (!requestedDriver && hasSupabaseConfig)) && hasSupabaseConfig) {
+    if (shouldUseSupabaseDriver(requestedDriver, hasSupabaseConfig)) {
       logger.info('Initializing Supabase driver...', { component: 'BoardRepository' });
       return new SupabaseBoardRepository({
         url: env.SUPABASE_URL,

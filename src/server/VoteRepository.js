@@ -3,11 +3,10 @@
 // [LOG: 20260622_2301] VoteRepository 팩토리 파일 구현
 const { MemoryVoteRepository } = require('./VoteRepositoryMemory');
 const { SupabaseVoteRepository } = require('./VoteRepositorySupabase');
+const { hasSupabaseConfig, shouldUseSupabaseDriver } = require('./RepositoryDriverSelection');
 
 function createVoteRepositoryFromEnv(env = {}) {
-  const requestedDriver = String(env.BOARD_REPOSITORY_DRIVER || '').trim().toLowerCase();
-  const hasSupabase = Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
-  if ((requestedDriver === 'supabase' || (!requestedDriver && hasSupabase)) && hasSupabase) {
+  if (shouldUseSupabaseDriver(env.BOARD_REPOSITORY_DRIVER, hasSupabaseConfig(env))) {
     return new SupabaseVoteRepository({
       url: env.SUPABASE_URL,
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,

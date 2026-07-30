@@ -18,6 +18,7 @@ const { createVoteRepositoryFromEnv } = require('./VoteRepository');
 // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 시스템
 const { createConfRepositoryFromEnv } = require('./ConfRepository');
 const { resolveLegacyPaths } = require('./projectPaths');
+const { hasSupabaseConfig, shouldUseSupabaseDriver } = require('./RepositoryDriverSelection');
 
 /**
  * [LOG: 20260426_1455] Evolution: Centralized RepositoryRegistry for standardized repository creation and health monitoring.
@@ -27,15 +28,15 @@ class RepositoryRegistry {
     this.env = env;
     this.rootDir = rootDir;
     this.repositories = new Map();
-    this.hasSupabase = Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
-    this.requestedDriver = String(env.BOARD_REPOSITORY_DRIVER || '').trim().toLowerCase();
+    this.hasSupabase = hasSupabaseConfig(env);
+    this.requestedDriver = env.BOARD_REPOSITORY_DRIVER;
   }
 
   /**
    * Determine if Supabase driver should be used based on config and request.
    */
   shouldUseSupabase() {
-    return (this.requestedDriver === 'supabase' || (!this.requestedDriver && this.hasSupabase)) && this.hasSupabase;
+    return shouldUseSupabaseDriver(this.requestedDriver, this.hasSupabase);
   }
 
   /**

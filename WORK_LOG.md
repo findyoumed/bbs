@@ -1,3 +1,22 @@
+## [2026-07-30 23:00] [/loop 리팩토링] 저장소 드라이버(Supabase vs Memory) 선택 판정식이 7개 파일에 복제돼 있던 것을 RepositoryDriverSelection.js로 통합
+
+**LOG_ID: 20260730_0710**
+목표: 사용자 요청("5분단위로 반복 리팩토링 수행")으로 다음 리팩토링 대상 탐색. 이전 라운드에서 정리한 `resolveTrustedVirtualBoardId`(2벌 복제)·`isPdsBoard`(재정의) 패턴이 다른 곳에도 있는지 grep으로 전수 조사.
+
+발견: `(requestedDriver === 'supabase' || (!requestedDriver && hasSupabase)) && hasSupabase` — Supabase로 붙을지 휘발성 Memory/Local로 떨어질지를 정하는 판정식이 **7개 파일**(`BoardRepository.js`/`MemberRepository.js`/`MemoRepository.js`/`ChatRoomRepository.js`/`VoteRepository.js`/`ConfRepository.js`/`AttachmentRepository.js`)에 문자 그대로 복제돼 있었고, `RepositoryRegistry.js`의 `shouldUseSupabase()`도 별개로 동일 판정식을 갖고 있어 총 8곳이었다. 이번 세션 최다 복제(직전 `resolveTrustedVirtualBoardId`의 2벌보다 큼)이자 blast radius도 가장 컸다 — 앱 전체가 실제 DB로 붙을지 아닌지를 정하는 가장 근본적인 판정이기 때문이다.
+
+추가로 실제 부팅 경로를 추적해 흥미로운 구조를 확인: 프로덕션은 `RepositoryRegistry.initialize()`가 board/member/chatRooms/memo/attachment 5개 도메인에 대해 드라이버 선택을 **인라인으로 다시** 하고 있고(`create*RepositoryFromEnv` 팩토리를 호출하지 않음), vote/conf 2개 도메인만 팩토리를 호출한다(불일치). 반면 `requestHandlerRuntime.js`는 `options.xRepository || createXRepositoryFromEnv(env)` 형태로 이 팩토리들을 폴백으로 갖고 있는데, 실제 부팅 체인(`createAppServices` → `RepositoryRegistry.get(...)` → `createAppRuntime` → `createRequestHandler`)이 모든 저장소를 명시적으로 넘기므로 **그 폴백은 프로덕션에서 절대 실행되지 않는다** — `create*RepositoryFromEnv` 7개는 사실상 스크립트/스모크테스트 전용 진입점이었다. 즉 같은 정책이 프로덕션 경로와 스크립트 경로에 독립적으로 존재해, 정책을 한쪽만 바꾸면 두 경로가 조용히 갈릴 수 있는 상태였다.
+
+`RuntimeRepositoryDiagnostics.js`(SYSINFO 진단용 `predictedDriver` 표시)도 유사한 표현식을 갖고 있지만 이건 실제 선택이 아니라 진단/검증 목적의 별개 관심사라 이번 범위에서 제외했다.
+
+수정: `RepositoryDriverSelection.js` 신설 — `hasSupabaseConfig(env)`, `shouldUseSupabaseDriver(requestedDriver, hasSupabase)` 두 순수 함수를 소유. 어느 env 변수 이름을 볼지(대부분 `BOARD_REPOSITORY_DRIVER` 단독, 채팅방만 `CHAT_ROOM_REPOSITORY_DRIVER` 우선 후 폴백)는 도메인마다 실제로 다른 의도된 오버라이드이므로 호출부에 남겨두고, 판정 알고리즘 자체만 이 모듈로 모았다. 8개 파일이 이를 쓰도록 교체.
+
+검증: `node --check` 9개 파일 통과. **원본 표현식과 대조**: 12개 `requestedDriver` 값(대문자/공백/쓰레기값/`undefined` 등) × 2개 `hasSupabase` 값 = 22개 조합에서 신구 반환값 완전 일치. **실제 팩토리 호출 대조**: 7개 팩토리 + `RepositoryRegistry.shouldUseSupabase()`를 9개 env 조합(설정없음/auto/명시memory/명시supabase/설정없이 supabase 명시/대문자/공백/쓰레기값/URL만 있고 키 없음)으로 실제 인스턴스 생성해 반환 클래스(Supabase vs Memory)가 전부 기대대로 나옴을 확인, 채팅방의 도메인별 오버라이드(전역과 반대로 강제)와 첨부의 `baseDir` 테스트 오버라이드도 별도로 검증. **실서버 부팅 확인**: 실제 Supabase 환경으로 서버를 띄워 부팅 로그에 `Initializing repositories using Supabase driver...`가 찍히고 헬스체크에서 8개 리포지토리 전부 `status: ok, driver: supabase`로 정상 배선됐음을 확인(가장 중요한 이 판정이 실제로 프로덕션 경로에서 깨지지 않았음을 담보). `data/attachments` 실데이터는 읽기 전용 생성자 호출만 있어 오염되지 않았음을 확인. `smoke:boards`·`smoke:command-parity`·`smoke:chat-rooms`(터치한 `createChatRoomRepositoryFromEnv`를 직접 실행)·`smoke:full-traversal`·`smoke-mobile-viewports` 통과.
+
+결과: ✅ 8개 파일 변경 + 신규 1개, 순증 25줄 미만. 저장소 드라이버 선택 정책이 한 모듈로 모여, 정책을 바꿔야 할 때 8곳을 손으로 맞출 필요가 없어졌다.
+
+---
+
 ## [2026-07-30 22:40] [/loop 리팩토링] profile 라우트 하네스를 "URL에 아이디 노출 안 함" 새 계약으로 재작성 — full-traversal 17건 red 해소
 
 **LOG_ID: 20260730_0630**
