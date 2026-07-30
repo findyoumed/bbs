@@ -89,10 +89,11 @@ class AttachmentRepository {
 
   list(boardId, postId) {
     this._assertStorageAvailable();
-    const boardIds = getMergedBoardSourceIds(boardId);
+    // [LOG_ID: 20260730_0430] boardId는 호출부(boardRoutes.attachmentBoardId)가 이미 물리 id로
+    // 해석해 넘겨준다 — 여기서 병합 소스로 넓힐 필요가 없다.
     const wantedPostId = Number(postId);
     return this.index.attachments
-      .filter((entry) => boardIds.includes(entry.boardId) && entry.postId === wantedPostId)
+      .filter((entry) => entry.boardId === boardId && entry.postId === wantedPostId)
       .map(normalizeEntry)
       .sort((left, right) => left.id - right.id);
   }
@@ -100,6 +101,8 @@ class AttachmentRepository {
   // [LOG_ID: 20260718_1200] Supabase 드라이버와 동일 의미 — 자료실 목록용 글당 대표(첫) 첨부 요약.
   // [LOG_ID: 20260728_2350] 가상 'pds' boardId로는 물리 하위 게시판(pds_prog 등)에 저장된 첨부와
   // 일치하지 않아 목록 화면의 파일 요약이 항상 비어 있었다 — 병합 소스 전체를 대상으로 넓힌다.
+  // [LOG_ID: 20260730_0430] 첨부 조회 경로 중 여기만 넓힌다 — 한 페이지에 여러 물리 게시판의 글이
+  // 섞여 들어오는 배치 조회라 단일 물리 id로 좁힐 수 없다(나머지는 호출부가 물리 id를 넘겨준다).
   summariesForPosts(boardId, postIds) {
     this._assertStorageAvailable();
     const boardIds = getMergedBoardSourceIds(boardId);
@@ -158,11 +161,11 @@ class AttachmentRepository {
   // 갖고 있었고(find와 findIndex만 다른 사실상 같은 코드), 그래서 병합 소스 넓히기(20260729_0215)
   // 같은 수정이 필요할 때마다 같은 파일 안에서 여러 번 손대야 했다. 색인 배열의 **실제** 항목을
   // 돌려주므로 read()가 downloadCount를 바로 증가시킬 수 있다 — 호출부에 넘길 때만 normalizeEntry.
+  // [LOG_ID: 20260730_0430] boardId는 이미 물리 id로 해석돼 들어온다 — 정확 비교만 한다.
   _findEntry(boardId, postId, attachmentId) {
-    const boardIds = getMergedBoardSourceIds(boardId);
     const wantedPostId = Number(postId);
     const wantedId = Number(attachmentId);
-    const entry = this.index.attachments.find((item) => boardIds.includes(item.boardId)
+    const entry = this.index.attachments.find((item) => item.boardId === boardId
       && item.postId === wantedPostId
       && item.id === wantedId);
     if (!entry) {

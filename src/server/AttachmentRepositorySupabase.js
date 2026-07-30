@@ -10,11 +10,13 @@ const {
   isMissingAttachmentsTableError,
   normalizeEntry
 } = require('./AttachmentRepositoryShared');
-// [LOG_ID: 20260729_0330] 종전엔 getMergedBoardSourceIds를 직접 불러 `.in('board_id', …)`을
-// 손으로 조립했는데, 그 조립이 이 파일 안에서만 세 벌로 갈렸다(_summariesForPosts만
-// .filter(Boolean)이 붙고 _list/_getRow엔 없었으며, 단일 게시판일 때 .eq()로 낮추는 처리도
-// 빠져 있었다). 병합 게시판 필터의 정본은 applyBoardFilter다 — board_id 컬럼만 건드리는
-// 테이블 무관 헬퍼이므로 첨부 테이블에도 그대로 쓸 수 있다.
+// [LOG_ID: 20260729_0330] 병합 게시판 필터를 손으로 조립(`.in('board_id', …)`)하지 않고 정본인
+// applyBoardFilter를 쓴다 — board_id 컬럼만 건드리는 테이블 무관 헬퍼라 첨부 테이블에도 그대로
+// 쓸 수 있다. 종전엔 이 조립이 파일 안에서 세 벌로 갈려 있었다(.filter(Boolean) 유무, 단일
+// 게시판일 때 .eq()로 낮추는 처리 누락).
+// [LOG_ID: 20260730_0430] 지금은 _summariesForPosts 한 곳만 이 넓히기가 필요하다 — 병합 목록
+// 화면의 여러 물리 게시판에 걸친 배치 조회라 단일 물리 id로 좁힐 수가 없다. 단건/목록 조회는
+// 호출부가 물리 id를 해석해 넘겨주므로 정확 비교를 쓴다(boardRoutes.attachmentBoardId 참고).
 const { applyBoardFilter } = require('./SupabaseBoardRepositoryQueryHelpers');
 
 // [LOG_ID: 20260729_0330] 첨부 본문(content_base64)을 제외한 메타 컬럼 — 목록/단건 조회가
@@ -44,10 +46,13 @@ class SupabaseAttachmentRepository extends BaseRepository {
   }
 
   async _list(boardId, postId) {
-    // [LOG_ID: 20260729_0215] post_id는 이미 전역 PK라 board_id 필터는 부가 검증일 뿐이므로,
-    // 병합 소스로 넓혀도 안전하다(넓히는 이유는 BoardVirtualBoards.getMergedBoardSourceIds 참고).
-    const query = applyBoardFilter(this.client.from(this.table).select(ATTACHMENT_META_COLUMNS), boardId);
-    const { data, error } = await query
+    // [LOG_ID: 20260730_0430] boardId는 호출부(boardRoutes.attachmentBoardId)가 이미 물리 id로
+    // 해석해 넘겨준다 — 여기서 병합 소스로 넓힐 필요가 없다(넓히면 오히려 형제 자료실 게시판의
+    // 첨부까지 받아들이는 더 느슨한 비교가 된다).
+    const { data, error } = await this.client
+      .from(this.table)
+      .select(ATTACHMENT_META_COLUMNS)
+      .eq('board_id', boardId)
       .eq('post_id', Number(postId))
       .order('id', { ascending: true });
 
@@ -72,7 +77,8 @@ class SupabaseAttachmentRepository extends BaseRepository {
     // [LOG_ID: 20260728_2350] PDS 목록 화면은 사용자가 실제로 접근하는 유일한 경로인 가상
     // 게시판('pds')을 boardId로 넘겨오지만, 첨부는 업로드 당시의 물리 하위 게시판(pds_prog 등)
     // board_id로 저장돼 있다(실측 확인: 물리 게시판 직접 조회에선 정상 표시, 가상 'pds'
-    // 목록에선 항상 undefined). 목록 조회와 동일하게 applyBoardFilter로 넓힌다.
+    // 목록에선 항상 undefined). 이 배치 조회는 한 페이지에 여러 물리 게시판의 글이 섞여 들어오므로
+    // 단일 물리 id로 좁힐 수 없다 — 첨부 조회 경로 중 유일하게 applyBoardFilter로 넓히는 지점.
     const query = applyBoardFilter(
       this.client.from(this.table).select('post_id, original_filename, filename, file_size, download_count, id'),
       boardId
@@ -195,13 +201,14 @@ class SupabaseAttachmentRepository extends BaseRepository {
     return normalizeEntry(row);
   }
 
-  // [LOG_ID: 20260729_0215] get/read(다운로드)/delete가 모두 공유하는 단건 조회 지점 — 여기서
-  // 병합 소스로 넓히지 않으면 PDS 다운로드('DN' 목록 화면 즉시다운로드)까지 가상 boardId('pds')
-  // 탓에 "첨부 파일을 찾을 수 없습니다" 404로 실패한다.
+  // get/read(다운로드)/delete가 모두 공유하는 단건 조회 지점.
+  // [LOG_ID: 20260730_0430] _list와 마찬가지로 boardId는 이미 물리 id로 해석돼 들어온다.
   async _getRow(boardId, postId, attachmentId, includeContent) {
     const columns = includeContent ? '*' : ATTACHMENT_META_COLUMNS;
-    const query = applyBoardFilter(this.client.from(this.table).select(columns), boardId);
-    const { data, error } = await query
+    const { data, error } = await this.client
+      .from(this.table)
+      .select(columns)
+      .eq('board_id', boardId)
       .eq('post_id', Number(postId))
       .eq('id', Number(attachmentId))
       .maybeSingle();

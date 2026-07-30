@@ -239,15 +239,31 @@ class BoardRouter extends BaseRouter {
     // 있었다(실측 확인). 여기서 명시적으로 정리한다 — Memory 드라이버(FK/CASCADE 없음)의 완전
     // 삭제 경로도 원래 정리되지 않았으므로 tombstone 여부와 무관하게 항상 시도한다(Supabase
     // 완전 삭제는 이미 비어 있어 그냥 아무 일도 안 함).
-    await this.cleanupAttachmentsForDeletedPost(boardId, result?.post?.id);
+    await this.cleanupAttachmentsForDeletedPost(boardId, result?.post);
     return this.send(200, result);
   }
 
-  async cleanupAttachmentsForDeletedPost(boardId, globalPostId) {
+  // [LOG_ID: 20260730_0430] attachments.board_id에는 **물리** 게시판 id(pds_util 등)가 들어간다 —
+  // 업로드 시점의 글이 실제로 속한 게시판이다. 그런데 URL의 :boardId는 사용자가 병합 화면(자료실)
+  // 에 있을 때 **가상** id 'pds'로 들어오므로, 그 값을 그대로 첨부 리포지토리에 넘기면 저장된
+  // 물리 id와 어긋난다. 종전엔 그 어긋남을 리포지토리 4개 메서드가 각자 getMergedBoardSourceIds로
+  // 넓혀서 흡수했는데(LOG_ID 20260728_2350·20260729_0215), 그건 병합 관계를 아는 책임을 드라이버
+  // 계층으로 떠넘긴 것이었다 — 첨부 메서드를 새로 추가할 때마다 같은 넓히기를 다시 붙여야 했고,
+  // 실제로 두 번 빠뜨려 두 번 깨졌다. 여기 라우트는 접근권한 검사를 위해 이미 글을 조회해 두었고
+  // (ensureAttachmentReadable/Writable → getPost), 그 결과에 실제 물리 boardId가 들어 있다.
+  // 해석은 그 한 번으로 끝내고 아래로는 물리 id만 흘려보낸다 — 드라이버는 정확 비교만 하면 된다.
+  // 특히 add도 이 값을 저장하므로, 종전에 board_id에 'pds'가 섞여 쌓이던 문제도 함께 막힌다.
+  attachmentBoardId(post, requestBoardId) {
+    return String(post?.boardId || '').trim() || String(requestBoardId || '').trim();
+  }
+
+  async cleanupAttachmentsForDeletedPost(requestBoardId, post) {
     const attachmentRepository = this.deps.attachmentRepository;
+    const globalPostId = post?.id;
     if (!attachmentRepository || !globalPostId) {
       return;
     }
+    const boardId = this.attachmentBoardId(post, requestBoardId);
     try {
       const attachments = await attachmentRepository.list(boardId, globalPostId);
       for (const attachment of attachments || []) {
@@ -267,7 +283,11 @@ class BoardRouter extends BaseRouter {
     const article = await this.ensureAttachmentReadable(boardId, postId, context);
     // [LOG_ID: 20260727_1330] postId(URL의 local_id)를 그대로 attachmentRepository에 넘기면 안 된다 —
     // article.post.id(전역 posts.id)를 대신 쓴다. 아래 addAttachment 주석 참고.
-    return this.send(200, await this.deps.attachmentRepository.list(boardId, article.post.id));
+    // [LOG_ID: 20260730_0430] boardId도 같은 이유로 물리 id를 쓴다(attachmentBoardId 주석 참고).
+    return this.send(200, await this.deps.attachmentRepository.list(
+      this.attachmentBoardId(article.post, boardId),
+      article.post.id
+    ));
   }
 
   async addAttachment(params) {
@@ -285,7 +305,14 @@ class BoardRouter extends BaseRouter {
     // 로컬 2번 글(전역 id=309)에 올린 첨부가 실제로는 plaza 게시판 전역 id=2번 글에 CASCADE로
     // 묶여, 그 글이 지워지면 이 humor 첨부까지 통째로 사라지고, 반대로 humor 글을 지워도 첨부는
     // 전혀 정리되지 않는 상태였다. article.post.id(getPost가 이미 조회해 둔 전역 id)를 쓴다.
-    return this.send(201, await this.deps.attachmentRepository.add(boardId, article.post.id, body || {}, context));
+    // [LOG_ID: 20260730_0430] board_id에 저장되는 값도 물리 id여야 한다 — 종전엔 URL의 가상 id
+    // ('pds')가 그대로 저장돼, 같은 컬럼에 물리/가상 철자가 섞여 쌓이고 있었다.
+    return this.send(201, await this.deps.attachmentRepository.add(
+      this.attachmentBoardId(article.post, boardId),
+      article.post.id,
+      body || {},
+      context
+    ));
   }
 
   async handleAttachmentItem(params) {
@@ -301,9 +328,11 @@ class BoardRouter extends BaseRouter {
     const article = await this.ensureAttachmentReadable(boardId, postId, context);
     // [LOG_ID: 20260727_1330] addAttachment와 동일한 이유로 전역 id를 쓴다.
     const globalPostId = article.post.id;
+    // [LOG_ID: 20260730_0430] boardId도 물리 id로 해석해 넘긴다(attachmentBoardId 주석 참고).
+    const attachmentBoardId = this.attachmentBoardId(article.post, boardId);
 
     if (this.method === 'GET' && isDownload) {
-      const { entry, buffer } = await this.deps.attachmentRepository.read(boardId, globalPostId, attachmentId);
+      const { entry, buffer } = await this.deps.attachmentRepository.read(attachmentBoardId, globalPostId, attachmentId);
       this.res.writeHead(200, {
         'Content-Type': entry.mimeType || 'application/octet-stream',
         'Content-Length': buffer.length,
@@ -315,7 +344,7 @@ class BoardRouter extends BaseRouter {
 
     if (this.method === 'DELETE' && !isDownload) {
       await this.ensureAttachmentWritable(boardId, postId, context);
-      return this.send(200, await this.deps.attachmentRepository.delete(boardId, globalPostId, attachmentId));
+      return this.send(200, await this.deps.attachmentRepository.delete(attachmentBoardId, globalPostId, attachmentId));
     }
     return false;
   }

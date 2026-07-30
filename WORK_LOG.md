@@ -1,3 +1,26 @@
+## [2026-07-30 21:30] [/loop 리팩토링] 가상↔물리 board_id 해석을 라우트 한 곳으로 올려 첨부 리포지토리에서 병합 게시판 지식 제거 (altitude 수정)
+
+**LOG_ID: 20260730_0430**
+목표: 직전 `/simplify`(LOG_ID 20260729_0330)에서 "동작 보존 범위를 넘는다"며 보류했던 altitude 지적을 사용자 지시("리팩토링 계속 진행")로 진행 — 첨부 리포지토리 4개 메서드가 각자 병합 게시판을 알아야 하는 구조 자체를 없앤다.
+
+배경(왜 얕은 수정이었나): PDS는 물리 게시판 7개를 가상 게시판 `'pds'`로 병합해 보여주는데, URL의 `:boardId`는 사용자가 병합 화면에 있으면 가상 `'pds'`로 들어오고 `attachments.board_id`엔 물리 id가 저장돼 있다. 종전엔 그 어긋남을 **드라이버 계층 4개 메서드가 각자 `getMergedBoardSourceIds`로 넓혀서** 흡수했다 — 즉 "병합 관계를 안다"는 책임이 리포지토리로 떠넘겨져, 첨부 메서드를 추가할 때마다 같은 넓히기를 다시 붙여야 했고 **실제로 두 번 빠뜨려 두 번 깨졌다**(20260728_2350 목록 요약 공란, 20260729_0215 DN 즉시다운로드 실패). 게다가 넓힌 predicate는 `board_id IN (7개)`라 형제 자료실 게시판의 첨부까지 받아들이는 **더 느슨한** 비교였다 — 7배로 느슨하게 해도 안전한 검사는 애초에 경계가 아니었다는 뜻이다.
+
+발견: 라우트(`boardRoutes.js`)는 접근권한 검사를 위해 이미 글을 조회해 두고 있었고(`ensureAttachmentReadable`/`Writable` → `getPost`), 그 결과 객체에 실제 **물리** `boardId`가 들어 있다(`BoardRepositoryShared.js:120,139`의 `mapPostRow`). 즉 해석에 필요한 값을 호출부가 이미 손에 들고 있으면서 클라이언트의 가상 id를 그대로 아래로 넘기고 있었다. 특히 `add`도 그 가상 id를 그대로 저장해 `board_id` 컬럼에 물리/가상 철자가 섞여 쌓이는 중이었다 — 읽기 쪽 넓히기가 그 깨진 쓰기 불변식을 가려주고 있던 셈. (`attachments` 테이블이 현재 0행이라 마이그레이션 없이 고칠 수 있는 시점이었다.)
+
+수정:
+- `boardRoutes.js`에 `attachmentBoardId(post, requestBoardId)` 도입 — 이미 조회해 둔 글에서 물리 id를 뽑고, 없으면 요청 id로 폴백. 해석을 이 한 번으로 끝낸다.
+- 첨부 리포지토리 호출 5곳이 모두 이 해석된 물리 id를 넘기도록 변경: `listAttachments`, `addAttachment`(저장값도 물리 id로 — 데이터 정합성 수정), `handleAttachmentItem`의 `read`/`delete`, 그리고 `cleanupAttachmentsForDeletedPost`(`globalPostId`만 받던 시그니처를 `post` 객체로 바꿔 id와 boardId를 함께 얻게 함).
+- 양쪽 드라이버의 `list`/`get`/`read`/`delete`를 정확 비교로 환원 — `Supabase._list`/`_getRow`는 `.eq('board_id', boardId)`로, `Local.list`/`_findEntry`는 `===`로. 병합 넓히기는 **`summariesForPosts` 한 곳만** 남았다(병합 목록 화면의 배치 조회라 한 페이지에 여러 물리 게시판 글이 섞여 들어와 단일 물리 id로 좁힐 수 없다 — 유일하게 본질적으로 cross-board인 메서드).
+- 사실과 어긋나게 된 주석 정리: `_summariesForPosts`의 "목록 조회와 동일하게 넓힌다"는 이제 틀렸으므로(목록은 더 이상 넓히지 않는다) "첨부 조회 경로 중 유일하게 넓히는 지점"으로 고쳤다.
+
+검증: `node --check` 3개 파일 통과. **결정적 end-to-end**: 실제 서버(Supabase 드라이버)에 `pds_util` 물리 게시판 글·첨부를 만든 뒤, DN 즉시다운로드가 실제로 부르는 그 요청을 가상 id URL로 실행 — `GET /api/boards/pds/posts/:localId/attachments` 200/1건 반환(응답의 `boardId`가 `pds_util`로 물리 id 확인), `GET .../attachments/:id/download` 200 + 본문 일치, 물리 id URL 대조군도 1건, `download_count` 누적 확인, 테스트 데이터 정리까지 확인. Local 드라이버 단위 검증도 새 계약(가상 id는 정확매칭이라 0건, 물리 id로 조회·다운로드·삭제 정상, `summariesForPosts`는 가상 id로 여전히 넓힘)으로 갱신해 전부 통과. `smoke:boards`(HTTP로 업로드→목록→다운로드→삭제 전 구간)·`smoke:command-parity`·`smoke-mobile-viewports` 통과.
+
+결과: ✅ 3개 파일. 첨부 리포지토리 4개 메서드에서 병합 게시판 지식이 사라졌고(`summariesForPosts` 1곳만 유지), 앞으로 첨부 메서드를 추가해도 같은 버그가 재발할 구조가 아니게 됐다. `add`가 물리 id를 저장하게 되어 `board_id` 철자 혼입도 막혔다.
+
+**참고**: `smoke:full-traversal`은 이 시점 main에서 이미 red다(17건, 전부 profile 라우트 하네스). `8ec51e8`이 profile URL을 `/profile/:userId` → `/profile` 고정으로 바꾸면서(LOG_ID 20260729_1624) 하네스의 옛 계약 기대치를 갱신하지 않은 것으로, 이 리팩토링과 무관하다 — 관련 파일 3개를 건드리지 않았음을 확인했다.
+
+---
+
 ## [2026-07-30 17:54] GO 커맨드 우선순위 상향(priority 98) 및 /help 힌트바 토큰 라벨 고정
 
 **LOG_ID: 20260730_1754**
