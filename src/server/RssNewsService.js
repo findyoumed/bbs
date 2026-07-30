@@ -16,6 +16,7 @@ const CHROME_HEADERS = {
   'Upgrade-Insecure-Requests': '1'
 };
 const RssServiceBase = require('./RssServiceBase');
+const { decodeBufferWithCharset } = require('./RssBufferDecoding');
 const { parseNewsFeedXml, parseNewsMenuXml } = require('./RssServiceXmlParsers');
 const { parseNewsArticleHtml } = require('./RssNewsArticleParser');
 const { isGoogleNewsArticleUrl, normalizePublisherArticleUrl, resolveGoogleNewsSourceUrl } = require('./GoogleNewsUrlResolver');
@@ -67,12 +68,7 @@ function decodeHtmlBuffer(buffer, contentTypeHeader) {
     }
   }
 
-  const decoderName = /^(euc-kr|cp949|windows-949|ks_c_5601-1987)$/.test(charset) ? 'windows-949' : 'utf-8';
-  try {
-    return new TextDecoder(decoderName).decode(new Uint8Array(buffer));
-  } catch (err) {
-    return new TextDecoder('utf-8').decode(new Uint8Array(buffer));
-  }
+  return decodeBufferWithCharset(buffer, charset);
 }
 
 class RssNewsService extends RssServiceBase {

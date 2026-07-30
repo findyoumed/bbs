@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('fs');
+const { decodeBufferWithCharset } = require('./RssBufferDecoding');
 
 // [LOG: 20260616_1110] Decode XML buffer dynamically using HTTP header charset or XML declaration encoding
 function decodeXmlBuffer(buffer, contentTypeHeader) {
@@ -21,12 +22,7 @@ function decodeXmlBuffer(buffer, contentTypeHeader) {
     }
   }
 
-  const decoderName = /^(euc-kr|cp949|windows-949|ks_c_5601-1987)$/.test(charset) ? 'windows-949' : 'utf-8';
-  try {
-    return new TextDecoder(decoderName).decode(new Uint8Array(buffer));
-  } catch (err) {
-    return new TextDecoder('utf-8').decode(new Uint8Array(buffer));
-  }
+  return decodeBufferWithCharset(buffer, charset);
 }
 
 // [LOG: 20260723_2010] Never leak raw fetch/Node error internals (e.g. "The operation was

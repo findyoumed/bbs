@@ -1,3 +1,18 @@
+## [2026-07-30 23:25] [/loop 리팩토링] RSS 인코딩 디코더의 마지막 5줄(charset→TextDecoder)이 XML/HTML 두 파일에 복제된 것을 RssBufferDecoding.js로 통합
+
+**LOG_ID: 20260730_0800**
+목표: 지난 라운드에서 후보로만 남겨뒀던 `src/server/Rss*.js` 계열(12개 파일, 4189줄)을 통짜로 읽지 않고, 지금까지 효과가 있었던 방식대로 반복되는 구체적 표현식을 grep으로 좁혀서 찾음.
+
+발견: `RssServiceBase.js`의 `decodeXmlBuffer`(RSS/XML 피드 응답 디코딩)와 `RssNewsService.js`의 `decodeHtmlBuffer`(기사 본문 HTML 디코딩)는 charset을 알아내는 방식이 서로 다르다(XML은 `<?xml encoding="..."?>` 선언을, HTML은 `<meta charset>`/`http-equiv` 태그를 본다 — 진짜 의도된 차이이므로 그대로 둠). 하지만 charset을 알아낸 **이후** 실제로 버퍼를 문자열로 바꾸는 마지막 5줄(`decoderName` 정규식 판정 → `TextDecoder(decoderName)` → 실패 시 `utf-8` 폴백)이 두 파일에 바이트 그대로 복제돼 있었다. 둘 다 모듈 비공개 헬퍼라 export되지 않아 지금까지 아무도 이 중복을 알아챌 수 없었다.
+
+수정: `RssBufferDecoding.js` 신설 — `decodeBufferWithCharset(buffer, charset)` 하나만 소유. charset 스니핑(정규식으로 헤더/본문에서 인코딩 알아내기)은 XML/HTML 각자 다른 로직이라 그대로 두고, 알아낸 charset을 받아 실제로 디코딩하는 마지막 부분만 공유.
+
+검증: `node --check` 3개 파일 통과. diff가 정확히 그 5줄 치환뿐임을 확인(다른 변경 없음). 원본 로직을 재현한 함수와 신함수를 7개 케이스(UTF-8 왕복, charset 없음, 알 수 없는 charset 폴백, `euc-kr`/`cp949`/`windows-949`/`ks_c_5601-1987` 4개 별칭 — `windows-949`용 실제 EUC-KR 바이트 시퀀스로 디코딩 결과까지)로 대조해 전부 일치 확인. `smoke:rss-services`(직접 관련 스모크 테스트) 포함 5종 회귀.
+
+결과: ✅ 3개 파일 변경 + 신규 1개. `Rss*.js` 계열의 진짜 중복(단순 구조적 유사가 아닌) 하나를 확정적으로 찾아 제거 — 나머지 파일들(파서/새니타이저/스코어링 등)은 이번 조사에서 유사한 명백한 사본을 더 찾지 못했다.
+
+---
+
 ## [2026-07-30 23:15] [/loop 리팩토링] RssCacheStore.js의 Supabase 설정 판정을 RepositoryDriverSelection.js로 통합 (마지막 남은 사본)
 
 **LOG_ID: 20260730_0740**
