@@ -1,3 +1,24 @@
+## [2026-07-29 03:30] [/simplify] 직전 PDS 첨부 수정(20260729_0215)의 리팩토링 — 병합 게시판 필터 중복 제거, 첨부 본문 이중 전송 제거, 가상보드 프리미티브 프로토타입 비대칭 해소
+
+**LOG_ID: 20260729_0330**
+목표: 사용자 요청("refactoring할게 있을지 확인")으로 `/simplify` 수행 — 직전 커밋(78ebf77, LOG_ID 20260729_0215)의 diff를 재사용/단순화/효율/altitude 4개 관점으로 리뷰하고, 동작을 보존하는 품질 수정을 적용.
+
+발견 및 수정:
+- **재사용**: `AttachmentRepositorySupabase.js`가 `getMergedBoardSourceIds`를 직접 불러 `.in('board_id', …)`을 손으로 조립한 3곳(`_list`/`_summariesForPosts`/`_getRow`)이, 이 정책의 정본인 `SupabaseBoardRepositoryQueryHelpers.applyBoardFilter`(게시판 조회 6곳이 이미 사용)를 재구현하고 있었다. 게다가 그 조립이 **한 파일 안에서만 세 벌로 갈려** 있었다 — `_summariesForPosts`만 `.filter(Boolean)`이 붙고 `_list`/`_getRow`엔 없었으며, 단일 게시판일 때 `.eq()`로 낮추는 처리도 셋 다 빠져 있었다(직전 커밋에서 추가된 두 곳이 기존 한 곳과 이미 어긋난 상태로 태어난 셈). 세 곳 모두 `applyBoardFilter` 재사용으로 통일.
+- **중복 제거**: `AttachmentRepositoryLocal.js`의 `get`과 `delete`가 3중 조건 predicate(`boardIds` 매칭 + postId + attachmentId)와 404 문구를 각자 복제해 갖고 있었다(`find`/`findIndex`만 다른 사실상 같은 코드). Supabase 드라이버는 이미 `_getRow` 하나를 `get`/`read`/`delete`가 공유하는 구조인데 Local만 예외였고, 그래서 직전 병합소스 수정 때 Supabase는 2곳·Local은 3곳을 손대야 했다. `_findEntry`를 도입해 세 메서드가 공유하게 하고, 색인의 **실제** 항목을 돌려주게 해 `read`가 같은 배열을 id로 한 번 더 훑던 2회 순회도 1회로 줄였다(`if (indexEntry)` 무음 no-op 가드도 함께 소멸).
+- **단순화**: `getMergedBoardSourceIds`가 빈 boardId에 `['']`를 반환해 호출처마다 `.filter(Boolean)`을 덧붙여야 했고 드라이버별로 붙은 곳과 안 붙은 곳이 갈렸다 — 소스에서 `[]`를 반환하게 고쳐 호출처 6곳의 가드를 제거. ≤7개 배열에 쓰던 `Set` 4개도 `includes`로 환원(`summariesForPosts`의 `postIds` Set은 가변·다수라 유지).
+- **효율**: `_list`가 `select('*')`로 첨부 본문(`content_base64`)까지 받아 그대로 버렸다 — `normalizeEntry`는 그 컬럼을 읽지 않으므로 1MB 첨부 3개짜리 글의 목록을 그리려고 ~4MB를 실어오던 셈. `_read`의 `download_count` UPDATE도 `.select('*')`라, 바로 위에서 이미 받아 buffer로 디코딩해 둔 base64를 응답으로 **두 번째로** 실어왔다(다운로드 1건당 전송량 2배). 메타 컬럼 상수(`ATTACHMENT_META_COLUMNS`)를 도입해 둘 다 정리.
+- **altitude(프리미티브 계층)**: `BoardVirtualBoards.js`의 두 조회표가 평범한 객체 리터럴이라 프로토타입 체인이 `Object.prototype`으로 이어졌다 — `boardId`가 `'__proto__'`/`'constructor'`/`'toString'`이면 `MERGED_BOARD_SOURCES[normalized]`가 `undefined`가 아니라 상속된 값을 참값으로 돌려주고, `sources.slice()`가 TypeError로 죽는다(실측: `getMergedBoardSourceIds('constructor')` → "sources.slice is not a function"). `isVirtualBoardId`만 `hasOwnProperty`로 막고 있어 **세 함수가 같은 표를 서로 다르게 읽던 비대칭**이었고, 직전 커밋이 그 unsafe 프리미티브에 새 의존 5곳을 추가한 상태였다. 두 표를 `Object.create(null)` 기반으로 바꿔 세 함수를 한 방식으로 통일(쪽지 카드에서 고친 프로토타입 오염 LOG_ID 20260729_0105과 동일 계열).
+- **주석**: 호출처 6곳이 "…와 동일한 이유로"로 서로를 가리키는 주석을 각자 들고 있어 한 가지 사실을 알려고 주석 그래프를 순회해야 했다 — rationale을 `getMergedBoardSourceIds` 한 곳으로 통합하고, 각 드라이버엔 그 자리에서만 유효한 짧은 note만 남겼다.
+
+검증: `node --check` 4개 파일 통과. Local 드라이버용 검증 스크립트로 20개 단정 전부 통과 — 가상 id 조회, 물리 id 회귀, 형제 게시판 누출 없음, 무관 게시판 격리(404), `read`의 downloadCount가 색인·디스크(`index.json`)에 반영, 2회차 누적, `delete`가 정확히 그 항목·그 파일만 제거하고 형제 보존, 재삭제 404. Supabase는 실제 DB에 `pds_util` 물리 게시판 글·첨부를 만들어 가상 `pds` 조회 1건 / 물리 `pds_util` 1건 / 형제 `pds_game` 0건 대조 재확인 후 서비스 롤 키로 정리. `applyBoardFilter`는 게시판 조회 6곳이 공유하는 헬퍼라 blast radius가 가장 컸으나 `smoke:boards`/`smoke:command-parity`/`smoke:full-traversal`/`smoke-mobile-viewports` 4종 전부 통과.
+
+결과: ✅ 4개 파일, 순증 25줄(추가 94 / 삭제 69). 동작 보존 리팩토링만 적용.
+
+**의도적으로 넘긴 것(별도 커밋 필요)**: altitude 리뷰의 핵심 주장은 더 깊었다 — 라우트(`boardRoutes.js:267-318`)가 이미 `article.post.boardId`(물리 id)를 손에 들고 있는데 클라이언트의 가상 id를 첨부 리포지토리로 넘기고 있으니, 그걸 넘기고 `board_id` predicate를 **제거**하면 현재·미래의 모든 첨부 메서드가 구조적으로 옳아진다는 것. 근거는 확인했다: `mapPostRow`(`BoardRepositoryShared.js:120,139`)가 실제로 물리 `board_id`를 싣고, `add`는 라우트가 준 raw id를 그대로 저장하므로(`boardRoutes.js:288`) 테이블에 `'pds'` 철자가 쌓이는 중이며, **`attachments` 테이블이 현재 0행이라 마이그레이션 없이 지금이 그 변경의 무비용 시점**이다. 다만 리포지토리 시그니처와 저장 데이터를 바꾸는 아키텍처 변경이라 이번 `/simplify`의 "동작 보존" 범위를 넘겨 보류. 같은 계열로 함께 볼 것: DELETE가 동일 `getPost`를 2회 호출하는 중복(`boardRoutes.js:301,317`), `isPdsBoard()`가 `startsWith('pds_')`로 멤버십을 4번째 방식으로 판정(`boardRoutes.js:125-130`), `resolveTrustedVirtualBoardId`가 두 드라이버에 바이트 단위로 복제(`SupabaseBoardRepositoryPostReads.js:23-27`, `MemoryBoardRepository.js:12-16`).
+
+---
+
 ## [2026-07-29 02:15] [/loop PDS 전수조사 10차] 자료실(PDS) 목록 화면의 즉시다운로드(DN)가 가상 게시판 id로 첨부를 조회해 실제로 첨부가 있는 글도 "첨부파일이 존재하지 않습니다"로 실패하던 결함 발견·수정
 
 **LOG_ID: 20260729_0215**
