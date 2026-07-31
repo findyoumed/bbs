@@ -1,3 +1,18 @@
+## [2026-07-31 14:30] [버그수정] CMAIL(배달확인/취소) 명령어 실행 시 보낸 편지함(sent) 타겟팅 분기 정정
+
+**LOG_ID: 20260731_1430**
+목표: `commandRouterGlobalNavigation.js`에서 나우누리 원전 `CMAIL`(배달확인/취소, 보낸 편지함) 명령어 실행 시 `state._memoBox`가 `'inbox'`로 하드코딩되어 보낸 편지함 대신 받은 편지함이 열리던 결함을 `cmd === 'CMAIL' ? 'sent' : 'inbox'` 분기로 정정.
+
+발견: `ME`/`MEMO`/`CMAIL`/`RMAIL`/`MAIL` 전역 쪽지함 진입 파이프라인에서 `state._memoBox = 'inbox'`로 통일 설정되어 있어, 보낸 편지함 전용 명령어인 `CMAIL`을 입력하더라도 항시 받은 편지함으로 이동하던 문제 발생.
+
+수정: `state._memoBox = cmd === 'CMAIL' ? 'sent' : 'inbox'`로 수정하여 `CMAIL` 실행 시 보낸 편지함(`sent`)으로 정상 이동하도록 정정.
+
+검증: `node --check public/js/core/commandRouterGlobalNavigation.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:25] [리팩토링] voteRoutes.js 인라인 EventBus require 구문 최상단 선언부로 통합 정리
 
 **LOG_ID: 20260731_1425**

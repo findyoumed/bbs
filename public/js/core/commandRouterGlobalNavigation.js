@@ -323,8 +323,8 @@ export function createGlobalNavigationCommandHandler(deps) {
         return true;
       }
       if (typeof showMemoList === 'function') {
-        // 처음 진입할 때 기본적으로 받은편지함(inbox)으로 설정되도록 초기화
-        state._memoBox = 'inbox';
+        // [LOG_ID: 20260731_1430] CMAIL(배달확인/취소)은 보낸편지함(sent), 그 외(ME/MEMO/RMAIL/MAIL)는 받은편지함(inbox)으로 진입한다.
+        state._memoBox = cmd === 'CMAIL' ? 'sent' : 'inbox';
         await showMemoList();
         return true;
       }
