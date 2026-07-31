@@ -1,3 +1,37 @@
+## [2026-08-01 08:08] [버그수정] 회원가입 닉네임 단계 검증 범위 불일치 — 가이드 "영문 40자 가능"이 실제 한도(2~20자)를 잘못 안내하고 최소값 검사가 없던 문제 해소
+
+**LOG_ID: 20260801_0808**
+목표: 7라운드 후속 과제 — `isValidNickname`(클라이언트 4단계 검증)이 서버 실제 한도와 어긋나 있는지 확정 후 수정.
+
+발견:
+- `signupEmailForm.js`의 `isValidNickname`은 ASCII 닉네임을 최대 40자, 한글 닉네임을 최대 20자로 구분했고, 최소값 검사가 없었다(1자도 통과).
+- 가이드 문구: `'(영문 40자, 한글 20자 가능)'`, 오류 메시지: `'닉네임은 영문 40자, 한글 20자까지 가능합니다.'`
+- 그러나 서버 `authRoutes.js`의 `register`·`signupPrecheck`·`oauthRegister` 세 엔드포인트 모두 `nickName: { minLength: 2, maxLength: 20 }` — `BaseRouterValidation.js`가 `value.length`(JS 문자 수)를 단순 비교하므로 ASCII/한글 구분 없음.
+- 같은 파일 `signupFlowSubmit.js`(최종 제출 검증)는 이미 `length < 2 || length > 20`으로 정합.
+- 결과 A(1자 닉네임): `isValidNickname` 통과 → 서버 precheck 400 "이용자명은 2자 이상이어야 합니다." 거부 → 사용자 혼란.
+- 결과 B(ASCII 21~40자): `isValidNickname` 통과 → 서버 precheck 400 "이용자명은 20자 이하여야 합니다." 거부 — "영문 40자 가능" 가이드를 믿은 사용자가 놀람.
+
+수정:
+- `signupEmailForm.js`:
+  - `isAsciiNickname` 함수 제거 (dead code — `isValidNickname`에서만 사용)
+  - `isValidNickname`: ASCII/한글 구분 삭제, `value.length >= 2 && value.length <= 20` 으로 교체
+  - 가이드 문구: `'(영문 40자, 한글 20자 가능)'` → `'(2~20자 가능)'`
+  - 오류 메시지: `'닉네임은 영문 40자, 한글 20자까지 가능합니다.'` → `'닉네임은 2~20자여야 합니다.'`
+- `scripts/smoke-signup-ime.mjs`:
+  - `39a055f` 리팩토링(hangulKeyboard.js 통합) 당시 smoke 테스트가 대응 업데이트를 받지 못해 data: URL 컨텍스트에서 `./hangulKeyboard.js` 상대 임포트를 해석 못하고 `ERR_UNSUPPORTED_RESOLVE_REQUEST`로 실패하던 사전 결함 수정.
+  - `hangulKeyboard.js`도 동일하게 base64 data URL로 변환해 절대 참조로 교체.
+
+검증:
+- `node --check public/js/core/signupEmailForm.js` 통과.
+- 동치 검증 13케이스 전 PASS: 빈값(false·일치)/1자 ASCII(old true 버그→new false·server false)/1자 한글(동일)/2자 ASCII·한글(허용·일치)/10자 ASCII·한글(허용·일치)/20자 ASCII·한글 경계(허용·일치)/21자 ASCII(old true 버그→new false·server false)/21자 한글(거부·일치)/40자 ASCII(old true 버그→new false·server false)/혼합 18자(허용·일치). new==server 전 케이스 일치.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 통과.
+- `smoke:signup-ime` 통과 (사전 결함도 함께 해소).
+
+결과: ✅ 2개 파일(`public/js/core/signupEmailForm.js` 10줄 수정·삭제, `scripts/smoke-signup-ime.mjs` 7줄 수정). 가이드 문구·단계 검증·서버 제약·최종 제출 검증이 모두 2~20자(ASCII/한글 구분 없음)로 일치. "영문 40자 가능" 가이드를 믿고 25자 ASCII 닉네임을 입력한 사용자가 서버 오류로 놀라던 상황 해소.
+
+---
+
 ## [2026-07-31 23:55] [버그수정] 회원가입 userId 단계 검증 범위 불일치 — 가이드 "5~40자"가 실제 한도(3~20자)를 잘못 안내하던 문제 해소
 
 **LOG_ID: 20260731_2355**

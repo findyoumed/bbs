@@ -35,7 +35,7 @@ const STEP_CONFIG = [
     prompt: '>> ',
     masked: false,
     guideLines: [
-      '4. 닉네임을 입력하세요. (영문 40자, 한글 20자 가능)'
+      '4. 닉네임을 입력하세요. (2~20자 가능)'
     ]
   },
   {
@@ -108,10 +108,6 @@ function sanitizeEnglishKeyboardInput(fieldId, value) {
   return String(value || '');
 }
 
-function isAsciiNickname(value) {
-  return /^[\x00-\x7F]+$/.test(value);
-}
-
 function isValidUserId(value) {
   // [LOG: 20260729_1616] 아이디는 소문자 영문/숫자/_만 허용. 대문자는 입력 시 이미 소문자로 변환됨.
   // [LOG: 20260731_2400] {5,40} → {3,20}: 서버 register/precheck/oauthRegister 모두
@@ -125,13 +121,16 @@ function isStrongPassword(value) {
 }
 
 function isValidNickname(value) {
+  // [LOG: 20260731_2400] 서버 세 엔드포인트(register/precheck/oauthRegister) 모두
+  // nickName: { minLength: 2, maxLength: 20 } — ASCII/한글 구분 없는 단순 문자 수.
+  // 종전 구현은 ASCII를 최대 40자, 한글을 최대 20자로 구분했고 최소값 검사가 없었다.
+  // → 1자 닉네임이 클라이언트를 통과해 서버 precheck에서 거부되거나,
+  //   ASCII 21~40자 닉네임이 "영문 40자 가능" 가이드를 믿고 입력한 사용자를 서버 400으로 놀라게 했다.
+  // signupFlowSubmit.js(line 39)는 이미 length < 2 || length > 20 으로 올바르게 구현됨.
   if (!value) {
     return false;
   }
-  if (isAsciiNickname(value)) {
-    return value.length <= 40;
-  }
-  return value.length <= 20;
+  return value.length >= 2 && value.length <= 20;
 }
 
 function isValidEmail(value) {
@@ -698,7 +697,7 @@ export function createSignupEmailHandler(deps) {
       if (stageFieldId === 'signup-nickname') {
         renderSubmittedInput(stageFieldId, trimmedValue);
         if (!isValidNickname(trimmedValue)) {
-          appendSignupEmailTranscript('닉네임은 영문 40자, 한글 20자까지 가능합니다.');
+          appendSignupEmailTranscript('닉네임은 2~20자여야 합니다.');
           renderEmailScreen();
           setStagePrompt(stageFieldId);
           return;

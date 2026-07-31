@@ -18,10 +18,20 @@ import path from 'path';
 
 // public/js/core/*.js 는 ESM이지만 package.json 에 "type":"module" 이 없어 Node 가 CJS 로 본다.
 // 기존 smoke-click-fill-command.mjs 와 동일하게 소스를 읽어 data URL 로 동적 import 한다.
+// [LOG: 20260731_2400] hangulKeyboard.js 가 data: URL 컨텍스트에서 상대 임포트로 해석되지
+// 않아 ERR_UNSUPPORTED_RESOLVE_REQUEST로 실패하던 문제 수정 — 39a055f 리팩토링 때 누락됨.
+// hangulKeyboard.js 도 동일하게 data URL 로 변환해 절대 참조로 교체한다.
+const hangulSource = fs.readFileSync(path.resolve('public/js/core/hangulKeyboard.js'), 'utf8');
+const hangulUrl = `data:text/javascript;base64,${Buffer.from(hangulSource).toString('base64')}`;
+
 const source = fs.readFileSync(path.resolve('public/js/core/signupEmailForm.js'), 'utf8')
   .replace(
     "import { shouldAutoFocusCommandInput } from './uiUtils.js';",
     'function shouldAutoFocusCommandInput() { return false; }'
+  )
+  .replace(
+    "import { convertHangulToKeyboardText } from './hangulKeyboard.js';",
+    `import { convertHangulToKeyboardText } from '${hangulUrl}';`
   );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const { createSignupEmailHandler } = await import(moduleUrl);
