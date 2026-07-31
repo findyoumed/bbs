@@ -1,3 +1,18 @@
+## [2026-07-31 12:00] [/loop 리팩토링] commandRouterPostView.js의 displayWidth 사본을 ansiRenderUtils.js에서 import하도록 정리
+
+**LOG_ID: 20260731_1200**
+목표: 방금 고친 memo-write 버그와 같은 "raw-input 폴백이 false를 그대로 return" 패턴이 형제 화면(대화방/내정보)에도 있는지 먼저 조사(`grep -rn "return await handle.*RawInput"`) — 남은 건 방금 고친 파일 자체의 정상 최종 폴백뿐임을 확인해 추가 결함 없음. 이어서 지난 라운드에 찾아둔 클라이언트 함수명 중복 후보(`displayWidth`, `getLevenshteinDistance`) 중 나머지를 조사.
+
+발견: `commandRouterPostView.js`가 이미 `import { isWideChar } from './ansiRenderUtils.js'`로 정상 배선하면서도, `displayWidth`(그 `isWideChar`를 감싸는 5줄짜리 함수)만 export된 원본(`ansiRenderUtils.js:50`)을 가져다 쓰지 않고 로컬에 통째로 재정의하고 있었다 — 바로 옆줄에서 이미 정본을 import하고 있었다는 점에서 특히 불필요한 중복.
+
+수정: 로컬 `displayWidth` 정의를 삭제하고 import 목록에 추가(`import { displayWidth, isWideChar } from './ansiRenderUtils.js'`). 첫 시도에서 `isWideChar`가 `truncateWithEllipsis` 내부에서 `displayWidth`와 별개로 직접 쓰이고 있는 걸 놓쳐 import를 통째로 교체했다가 구문은 통과하되 `isWideChar` 미해결 참조가 남는 실수를 했고, `grep`으로 재확인 후 두 이름을 모두 import하도록 즉시 정정.
+
+검증: `node --check`(ESM) 통과. Node ESM으로 실제 `ansiRenderUtils.js`의 `displayWidth`를 import해 로컬 재구현(구버전)과 7개 케이스(빈 문자열/영문/한글/혼합/null/undefined/장문 한글)로 대조해 전부 일치 확인. `smoke:boards`·`smoke:command-parity`·`smoke:full-traversal`·`smoke-mobile-viewports` 4종 회귀.
+
+결과: ✅ 1개 파일, 순감소(로컬 함수 8줄 삭제, import 갱신).
+
+---
+
 ## [2026-07-31 11:50] [사용자 리포트] GO WMAIL로 진입한 게스트 차단 편지쓰기 화면에서 힌트가 약속한 T(초기화면 이동)가 실제로 먹통이던 결함 수정
 
 **LOG_ID: 20260731_1150**

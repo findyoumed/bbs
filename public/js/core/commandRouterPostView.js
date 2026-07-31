@@ -1,21 +1,10 @@
 import { UI_TEXT } from './i18n.js';
-import { isWideChar } from './ansiRenderUtils.js';
+import { displayWidth, isWideChar } from './ansiRenderUtils.js';
 
 /**
  * commandRouterPostView.js
  * [LOG: 20260426_2125] Evolution Mode: Integrated i18n and replaced unicode escapes.
  */
-
-// [LOG_ID: 20260726_1230] 파일명(한글 포함, 광폭 문자)을 .length(UTF-16 코드 유닛)로 잘라
-// "22자 이하"로 판단하면 한글이 대부분인 파일명은 표시폭이 그 2배까지 나와 44칸 예산을
-// 넘길 수 있다 — displayWidth 기반으로 정확히 자른다.
-function displayWidth(text) {
-  let width = 0;
-  for (const ch of String(text || '')) {
-    width += isWideChar(ch) ? 2 : 1;
-  }
-  return width;
-}
 
 function truncateWithEllipsis(text, maxWidth) {
   const source = String(text || '');
