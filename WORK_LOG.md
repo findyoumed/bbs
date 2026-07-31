@@ -1,3 +1,16 @@
+## [2026-07-31 15:40] [리팩토링] voteRoutes voteId 파싱 및 양의 정수 검증 _parseVoteId 헬퍼 추출
+
+**LOG_ID: 20260731_1540**
+목표: `voteRoutes.js` 내 `getVote`, `castVote`, `deleteVote` 3개 라우트에서 중복되던 `voteId` 파싱 및 `isNaN` 검증 코드를 `_parseVoteId` 헬퍼 메서드로 모듈화.
+
+수정: `_parseVoteId(params)` 헬퍼 메서드를 신설하여 `Number.isInteger(voteId) && voteId > 0` 검사 및 `validationError` 반환을 일관 적용하고, `castVote`의 `optionIndex` 유효성 검사도 음수/비정수를 방지하도록 보강.
+
+검증: `node --check src/server/routeHandlers/voteRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:35] [버그수정] SysopMailService 외부 메일 API 오류 객체 메시지 안전 포맷팅
 
 **LOG_ID: 20260731_1535**

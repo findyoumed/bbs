@@ -38,10 +38,17 @@ class VoteRouter extends BaseRouter {
     return this.send(200, await voteRepository.listVotes(context));
   }
 
+  _parseVoteId(params) {
+    const voteId = Number(params?.voteId);
+    if (!Number.isInteger(voteId) || voteId <= 0) {
+      this.validationError('유효하지 않은 안건 번호입니다.');
+    }
+    return voteId;
+  }
+
   async getVote(params) {
     const { voteRepository } = this.deps;
-    const voteId = Number(params.voteId);
-    if (isNaN(voteId)) this.error(400, 'Invalid vote ID');
+    const voteId = this._parseVoteId(params);
     const context = await this.getContext();
     return this.send(200, await voteRepository.getVote(voteId, context));
   }
@@ -60,12 +67,13 @@ class VoteRouter extends BaseRouter {
 
   async castVote(params) {
     const { voteRepository } = this.deps;
-    const voteId = Number(params.voteId);
-    if (isNaN(voteId)) this.error(400, 'Invalid vote ID');
+    const voteId = this._parseVoteId(params);
 
     const body = await this.getBody() || {};
     const optionIndex = Number(body.optionIndex);
-    if (isNaN(optionIndex)) this.error(400, 'optionIndex is required');
+    if (!Number.isInteger(optionIndex) || optionIndex < 0) {
+      this.validationError('유효하지 않은 투표 항목 번호입니다.');
+    }
 
     const context = await this.getContext();
     const record = await voteRepository.castVote(voteId, optionIndex, context);
@@ -78,8 +86,7 @@ class VoteRouter extends BaseRouter {
 
   async deleteVote(params) {
     const { voteRepository } = this.deps;
-    const voteId = Number(params.voteId);
-    if (isNaN(voteId)) this.error(400, 'Invalid vote ID');
+    const voteId = this._parseVoteId(params);
     const context = await this.getContext();
     return this.send(200, await voteRepository.deleteVote(voteId, context));
   }
