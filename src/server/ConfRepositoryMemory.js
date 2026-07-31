@@ -9,6 +9,12 @@ function normText(value, fallback = '') {
   return s || fallback;
 }
 
+// [LOG: 20260731_1725] 사용자 ID의 안전한 대소문자 일관성 정형화 헬퍼
+function normUserId(value, fallback = 'guest') {
+  const s = String(value ?? '').trim().toLowerCase();
+  return s || fallback;
+}
+
 class MemoryConfRepository {
   constructor() {
     this.nextRoomNo = 1;
@@ -49,7 +55,7 @@ class MemoryConfRepository {
   }
 
   _publicAgenda(agenda, context = {}) {
-    const myId = normText(context.userId, 'guest');
+    const myId = normUserId(context.userId, 'guest');
     return {
       id: agenda.id,
       roomNo: agenda.roomNo,
@@ -79,7 +85,7 @@ class MemoryConfRepository {
     const room = {
       no: this.nextRoomNo++,
       title: title.slice(0, 60),
-      ownerUserId: normText(context.userId, 'guest'),
+      ownerUserId: normUserId(context.userId, 'guest'),
       ownerName: normText(context.nickName, '손님'),
       isOpen: true,
       createdAt: new Date().toISOString(),
@@ -91,7 +97,7 @@ class MemoryConfRepository {
 
   async closeRoom(roomNo, context = {}) {
     const room = this._findRoom(roomNo);
-    const requesterId = normText(context.userId, 'guest');
+    const requesterId = normUserId(context.userId, 'guest');
     if (room.ownerUserId !== requesterId && !context.isAdmin) {
       throw createHttpError(403, '회의실 개설자만 닫을 수 있습니다.');
     }
@@ -121,7 +127,7 @@ class MemoryConfRepository {
       agendaNo,
       title: title.slice(0, 80),
       content: normText(payload.content).slice(0, 4000),
-      authorId: normText(context.userId, 'guest'),
+      authorId: normUserId(context.userId, 'guest'),
       authorName: normText(context.nickName, '손님'),
       createdAt: new Date().toISOString()
     };
@@ -139,7 +145,7 @@ class MemoryConfRepository {
   async secondAgenda(agendaId, context = {}) {
     const agenda = this.agendas.find((a) => a.id === Number(agendaId));
     if (!agenda) throw createHttpError(404, '안건을 찾을 수 없습니다.');
-    const userId = normText(context.userId, 'guest');
+    const userId = normUserId(context.userId, 'guest');
     if (this.seconds.some((s) => s.agendaId === agenda.id && s.userId === userId)) {
       throw createHttpError(409, '이미 재청한 안건입니다.');
     }

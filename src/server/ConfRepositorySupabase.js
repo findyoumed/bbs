@@ -11,6 +11,12 @@ function normText(value, fallback = '') {
   return s || fallback;
 }
 
+// [LOG: 20260731_1725] 사용자 ID의 안전한 대소문자 일관성 정형화 헬퍼
+function normUserId(value, fallback = 'guest') {
+  const s = String(value ?? '').trim().toLowerCase();
+  return s || fallback;
+}
+
 class SupabaseConfRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'supabase' });
@@ -48,7 +54,7 @@ class SupabaseConfRepository extends BaseRepository {
   }
 
   async _publicAgenda(row, context = {}) {
-    const myId = normText(context.userId, 'guest');
+    const myId = normUserId(context.userId, 'guest');
     const { count, error } = await this.client.from(this.secondsTable)
       .select('id', { count: 'exact', head: true }).eq('agenda_id', row.id);
     if (error) this._fail('재청 수 조회', error);
@@ -97,7 +103,7 @@ class SupabaseConfRepository extends BaseRepository {
       const nextNo = (maxRow ? Number(maxRow.room_no) : 0) + 1;
       const { data, error } = await this.client.from(this.roomsTable).insert({
         room_no: nextNo, title: title.slice(0, 60),
-        owner_user_id: normText(context.userId, 'guest'), owner_name: normText(context.nickName, '손님'),
+        owner_user_id: normUserId(context.userId, 'guest'), owner_name: normText(context.nickName, '손님'),
         is_open: true, created_at: new Date().toISOString()
       }).select('*').single();
       if (!error) return this._publicRoom(data, 0);
@@ -108,7 +114,7 @@ class SupabaseConfRepository extends BaseRepository {
 
   async closeRoom(roomNo, context = {}) {
     const room = await this._findRoomRow(roomNo);
-    const requesterId = normText(context.userId, 'guest');
+    const requesterId = normUserId(context.userId, 'guest');
     if (room.owner_user_id !== requesterId && !context.isAdmin) {
       throw createHttpError(403, '회의실 개설자만 닫을 수 있습니다.');
     }
@@ -138,7 +144,7 @@ class SupabaseConfRepository extends BaseRepository {
     const { data, error } = await this.client.from(this.agendasTable).insert({
       room_no: Number(roomNo), agenda_no: agendaNo, title: title.slice(0, 80),
       content: normText(payload.content).slice(0, 4000),
-      author_id: normText(context.userId, 'guest'), author_name: normText(context.nickName, '손님'),
+      author_id: normUserId(context.userId, 'guest'), author_name: normText(context.nickName, '손님'),
       created_at: new Date().toISOString()
     }).select('*').single();
     if (error) this._fail('안건 발의', error);
@@ -155,7 +161,7 @@ class SupabaseConfRepository extends BaseRepository {
   // ── 재청 ──
   async secondAgenda(agendaId, context = {}) {
     const agenda = await this.getAgenda(agendaId, context);
-    const userId = normText(context.userId, 'guest');
+    const userId = normUserId(context.userId, 'guest');
     const { error } = await this.client.from(this.secondsTable)
       .insert({ agenda_id: Number(agendaId), user_id: userId, created_at: new Date().toISOString() });
     if (error) {

@@ -1,3 +1,17 @@
+## [2026-07-31 17:25] [버그수정] ConfRepositories 내 회의실/안건/재청 처리 시 userId 소문자 정규화 처리
+
+**LOG_ID: 20260731_1725**
+목표: 메모리 및 Supabase 토론의 광장 저장소(`ConfRepositoryMemory.js`, `ConfRepositorySupabase.js`)에서 대소문자 불일치로 인해 개설자 권한 확인이 실패하여 회의실을 닫을 수 없거나 중복 재청(동의) 제한이 우회되는 결함 방지.
+
+수정:
+- `ConfRepositoryMemory.js` 및 `ConfRepositorySupabase.js` 에 `normUserId` 정형화 헬퍼 함수를 추가하고, 회의실 개설/폐쇄, 안건 발의, 재청 동의, 그리고 정보 조회 등의 모든 사용자 식별값 제어 영역에 적용.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 17:20] [리팩토링] AttachmentRepositories 내 첨부 등록 시 업로더 ID 소문자 정규화
 
 **LOG_ID: 20260731_1720**
