@@ -1,3 +1,18 @@
+## [2026-07-31 16:30] [리팩토링] authRoutes 내 가입/인증 시 userId 소문자 정규화 적용
+
+**LOG_ID: 20260731_1630**
+목표: `authRoutes.js` 내 가입 관련 3개 메서드(`register`, `signupPrecheck`, `oauthRegister`) 및 비밀번호 찾기 대상 조회(`findMemberByIdentifier`)에서 `userId` 파싱 및 조회 시 소문자 변환이 누락되어 대소문자 구분을 우회할 수 있는 취약점을 해결하고 데이터베이스 계정 정합성을 강화.
+
+수정:
+- `register()`, `signupPrecheck()`, `oauthRegister()` 내 `rawUserId` 변수 추출 시 `.toLowerCase()` 체이닝 적용.
+- `findMemberByIdentifier()`에서 순수 사용자 ID로 조회할 때 인자값을 소문자로 변환하여 `getMember()`를 호출하도록 보완.
+
+검증: `node --check src/server/routeHandlers/authRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 16:25] [버그수정] contactSysopScreen 비로그인 접근 시 리디렉션 폴백 누락 해결
 
 **LOG_ID: 20260731_1625**

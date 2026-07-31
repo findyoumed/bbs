@@ -160,7 +160,7 @@ class AuthRouter extends BaseRouter {
     const { memberRepository } = this.deps;
     const body = await this.getBody();
     const { userId, nickName, email, password } = body;
-    const rawUserId = String(userId).trim();
+    const rawUserId = String(userId).trim().toLowerCase();
     const rawNickName = String(nickName).trim();
     const rawPassword = String(password).trim();
 
@@ -197,7 +197,7 @@ class AuthRouter extends BaseRouter {
   async signupPrecheck() {
     const { memberRepository } = this.deps;
     const body = await this.getBody();
-    const rawUserId = String(body.userId).trim();
+    const rawUserId = String(body.userId).trim().toLowerCase();
     const rawNickName = String(body.nickName).trim();
     const email = validateEmail(body.email || '');
 
@@ -299,7 +299,7 @@ class AuthRouter extends BaseRouter {
     if (authError || !authData?.user) this.unauthorized('유효하지 않은 인증 토큰입니다.');
 
     const body = await this.getBody();
-    const rawUserId = String(body.userId).trim();
+    const rawUserId = String(body.userId).trim().toLowerCase();
     const rawNickName = String(body.nickName).trim();
     const authUser = authData.user;
     const email = validateEmail(authUser.email || '');
@@ -410,7 +410,7 @@ class AuthRouter extends BaseRouter {
     if (normalized.includes('@') && typeof memberRepository.findByEmail === 'function') {
       return memberRepository.findByEmail(normalized);
     }
-    return memberRepository.getMember(normalized);
+    return memberRepository.getMember(normalized.toLowerCase());
   }
 
   async findAuthUserByEmail(email) {
