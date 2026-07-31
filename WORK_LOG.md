@@ -1,3 +1,18 @@
+## [2026-07-31 14:25] [리팩토링] voteRoutes.js 인라인 EventBus require 구문 최상단 선언부로 통합 정리
+
+**LOG_ID: 20260731_1425**
+목표: `voteRoutes.js` 내 `createVote` 및 `castVote` 메서드 내부에서 인라인으로 2회 중복 로드되던 `require('../EventBus')`를 파일 최상단 모듈 선언부로 통합 정리.
+
+발견: `voteRoutes.js`에서 EventBus 이벤트를 발행할 때 인라인 `require('../EventBus')` 구문이 2개의 핸들러 함수 내부에서 중복 실행되던 구조 발견.
+
+수정: 파일 상단 4행에 `const { eventBus, Events } = require('../EventBus');` 상수를 선언하고 메서드 내부의 인라인 require 2건 제거.
+
+검증: `node --check src/server/routeHandlers/voteRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:20] [버그수정] AttachmentRepositoryLocal 첨부파일 업로드 실패 시 디스크 파일 정리 및 인덱스 롤백 원자성 보장
 
 **LOG_ID: 20260731_1420**

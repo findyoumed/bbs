@@ -1,6 +1,7 @@
 'use strict';
 
 const BaseRouter = require('./BaseRouter');
+const { eventBus, Events } = require('../EventBus');
 
 // [LOG: 20260622_2301] VoteRouter 구현 — 투표 API 핸들러
 class VoteRouter extends BaseRouter {
@@ -52,7 +53,6 @@ class VoteRouter extends BaseRouter {
     const vote = await voteRepository.createVote(body, context);
 
     // [LOG: 20260622_2301] VOTE_CREATED 이벤트 발행
-    const { eventBus, Events } = require('../EventBus');
     eventBus.emit(Events.VOTE_CREATED, { repo: this.deps.boardRepository, vote, context }).catch(() => {});
 
     return this.send(201, vote);
@@ -71,7 +71,6 @@ class VoteRouter extends BaseRouter {
     const record = await voteRepository.castVote(voteId, optionIndex, context);
 
     // [LOG: 20260622_2301] VOTE_CAST 이벤트 발행
-    const { eventBus, Events } = require('../EventBus');
     eventBus.emit(Events.VOTE_CAST, { repo: this.deps.boardRepository, voteRecord: record, context }).catch(() => {});
 
     return this.send(200, record);
