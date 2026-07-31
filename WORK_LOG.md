@@ -1,3 +1,33 @@
+## [2026-08-01 08:18] [버그수정] RssNewsService 정규화 URL 재크롤(canonical fetch) 타임아웃 누락 + primary content 손실
+
+**LOG_ID: 20260801_0818**
+목표: 미답사 RSS 서비스 계열 점검 — 캐시 TTL 및 외부 API 실패 시 폴백 동작 이상 여부 확인.
+
+발견:
+- `RssNewsService._fetchNewsArticleDetail`의 기사 크롤 로직에서 **정규화 URL 재크롤** 경로가 타임아웃 없이 무제한 대기가 가능했다.
+  - 1차(primary) fetch: `signal: AbortSignal.timeout(8000)` 있음.
+  - 2차(canonical) fetch: `AbortSignal` 전혀 없음. 해당 사이트 서버가 응답을 지연하면 Node.js 요청 핸들러가 OS TCP 타임아웃(수 분)까지 점유.
+- 같은 try-catch 구조 탓에 **2차 fetch가 예외를 던지면 이미 성공적으로 취득한 1차 primary content까지 `unavailable`로 교체**되었다.
+- 발동 조건: `normalizePublisherArticleUrl(responseUrl) !== normalizeUrl(responseUrl)` — `m.health.chosun.com` → `health.chosun.com` URL 변환(조선일보 모바일) 등 일부 매체에서만 트리거됨. smoke:rss-services 실측에서도 이 경로(routedGoogleNewsSourceLink = health.chosun.com)가 활성화됨을 확인.
+
+수정:
+- `RssNewsService.js` `_fetchNewsArticleDetail`:
+  - canonical fetch에 `signal: AbortSignal.timeout(8000)` 추가 — 1차 fetch와 동일한 상한.
+  - canonical fetch를 별도 `try { ... } catch (_canonicalError) {}` 로 감싸 primary content 보존.
+  - 주석: `[LOG: 20260801_0817]`
+
+검증:
+- `node --check src/server/RssNewsService.js` 통과.
+- 동치 검증 14케이스 전 PASS: (A) canonical 타임아웃 시 OLD=unavailable, NEW=primary 보존; (B) canonical 성공 시 OLD/NEW 동치(canonical content); (C) 조건 미충족 시 OLD/NEW 동치(primary); (D) primary 실패 시 OLD/NEW 모두 unavailable; (E) canonical not-ok 시 OLD/NEW 모두 primary.
+- `smoke:rss-services` 통과 — Google News canonical 경로(health.chosun.com) 실측 포함.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 통과.
+- `smoke:vercel-ready` 통과.
+
+결과: ✅ 1개 파일(`src/server/RssNewsService.js`, 9줄 교체 + 주석 추가). canonical fetch 타임아웃 미설정으로 인한 무제한 대기 해소. primary content 손실 방지.
+
+---
+
 ## [2026-08-01 08:08] [버그수정] 회원가입 닉네임 단계 검증 범위 불일치 — 가이드 "영문 40자 가능"이 실제 한도(2~20자)를 잘못 안내하고 최소값 검사가 없던 문제 해소
 
 **LOG_ID: 20260801_0808**

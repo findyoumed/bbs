@@ -550,14 +550,23 @@ class RssNewsService extends RssServiceBase {
         && !isGoogleNewsArticleUrl(rawNormalizedResponseUrl)
         && normalizedResponseUrl !== this._normalize(fetchTarget)
         && normalizedResponseUrl !== this._normalize(rawResponseUrl)) {
-        const canonicalResponse = await this.fetchImpl(rawNormalizedResponseUrl, {
-          headers: CHROME_HEADERS,
-          redirect: 'follow'
-        });
-        if (canonicalResponse?.ok) {
-          // [LOG: 20260616_1110] Dynamic charset detection and decoding for canonical redirect fetch
-          const canonicalBuf = await canonicalResponse.arrayBuffer();
-          detail = parseNewsArticleHtml(decodeHtmlBuffer(canonicalBuf, canonicalResponse.headers.get('content-type')));
+        // [LOG: 20260801_0817] 정규화 URL 재크롤에 타임아웃·독립 try-catch 추가.
+        // 기존엔 AbortSignal 없이 무제한 대기가 가능했고(chosun m→PC URL 변환 등), 타임아웃
+        // 또는 네트워크 오류 발생 시 이미 성공적으로 취득한 primary content를 통째로 버리고
+        // unavailable로 교체했다. 8초 타임아웃 + 독립 catch로 primary content를 보존한다.
+        try {
+          const canonicalResponse = await this.fetchImpl(rawNormalizedResponseUrl, {
+            headers: CHROME_HEADERS,
+            redirect: 'follow',
+            signal: AbortSignal.timeout(8000)
+          });
+          if (canonicalResponse?.ok) {
+            // [LOG: 20260616_1110] Dynamic charset detection and decoding for canonical redirect fetch
+            const canonicalBuf = await canonicalResponse.arrayBuffer();
+            detail = parseNewsArticleHtml(decodeHtmlBuffer(canonicalBuf, canonicalResponse.headers.get('content-type')));
+          }
+        } catch (_canonicalError) {
+          // 정규화 URL 재크롤 실패(타임아웃 포함) — 이미 취득한 primary content를 그대로 유지.
         }
       }
     } catch (error) {
