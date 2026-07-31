@@ -545,16 +545,20 @@ export function createPostViewCommandHandler(deps) {
       }
     }
 
-    if (cmd === 'RE' || cmd === 'R') {
-      // [LOG: 20260429_0239] Keep reply auth parity in one place so guest users
-      // get the same login-required hint as direct /board/.../write restores.
-      showPostWrite('reply', state.post);
-      return true;
-    }
-
     // [LOG: 20260429_0328] Detail-view auth-guarded commands must fail closed
     // so guest E/D inputs reuse the same login-required hint path as R/V.
     const isGuestUser = !state.user || state.user.isGuest;
+
+    if (cmd === 'RE' || cmd === 'R') {
+      // [LOG: 20260429_0239] Keep reply auth parity in one place so guest users
+      // get the same login-required hint as direct /board/.../write restores.
+      if (isGuestUser) {
+        setHint(UI_TEXT.LOGIN_REQUIRED);
+        return true;
+      }
+      showPostWrite('reply', state.post);
+      return true;
+    }
 
     if (cmd === 'ED' || cmd === 'E' || cmd === 'EDIT') {
       if (isGuestUser) {

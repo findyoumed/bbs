@@ -1,3 +1,22 @@
+## [2026-07-31 14:15] [버그수정] MemoryBoardRepositoryCore localId 명시적 부여 및 답글 명령 게스트 가드 순서 정돈
+
+**LOG_ID: 20260731_1415**
+목표: 메모리 드라이버(`MemoryBoardRepositoryCore.js`)의 `createPost`/`replyToPost`에서 생성하는 레코드에 `localId` 속성을 명시적으로 할당하여 Supabase 드라이버 (`mapPostRow`) 포맷과의 동등성을 보장하고, 클라이언트 `commandRouterPostView.js`의 답글(`RE`/`R`) 게스트 검사 순서를 상단으로 정돈.
+
+발견:
+1) `MemoryBoardRepositoryCore.js`: 메모리 게시글/답글 레코드 생성 시 `id`만 할당하고 `localId` 속성을 명시적으로 포함하지 않아 Supabase 드라이버(`mapPostRow`)와 데이터 포맷 불일치 발생.
+2) `commandRouterPostView.js`: `isGuestUser` 선언부 및 가드가 답글(`RE`/`R`) 아래에 위치해 코드 순서 불일치.
+
+수정:
+1) `MemoryBoardRepositoryCore.js`: `createPost` 및 `replyToPost` 레코드 생성 시 `localId: nextId` 명시적 부여.
+2) `commandRouterPostView.js`: `isGuestUser` 검사를 `RE`/`R` 명령어 상단으로 이동하고 게스트 시 로그인 필요 힌트 즉시 리턴.
+
+검증: `node --check` 2개 파일 통과. `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 14:10] [버그수정] commandRouterMyInfo.js 이메일/비밀번호 변경 액션 결과 불리언 리턴값 전파 정정
 
 **LOG_ID: 20260731_1410**
