@@ -1,3 +1,16 @@
+## [2026-07-31 16:45] [리팩토링] chatServiceRoutes 강퇴 대상 userId 소문자 정규화 및 공백 제거 적용
+
+**LOG_ID: 20260731_1645**
+목표: 대화방 강퇴(/OUT) API(`handleRoomKick`)에서 `targetUserId`의 대소문자 정형화가 누락되어 대소문자 형태에 따라 강퇴 처리가 적용되지 않는 결함을 수정.
+
+수정: `body.targetUserId` 추출 시 `trim()`과 `.toLowerCase()`를 적용하고, 값이 비어 있을 때 유효성 에러를 발생시키는 검증 가드 배치.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 16:40] [버그수정] systemRoutes 내 대문 접속자 수 통계 비동기 미반영 결함 수정
 
 **LOG_ID: 20260731_1640**

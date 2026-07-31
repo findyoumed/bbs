@@ -83,8 +83,12 @@ class ChatServiceRouter extends BaseRouter {
     const roomNo = Number(params.roomNo);
     if (isNaN(roomNo)) this.validationError('Invalid room number');
     const body = await this.getBody();
+    const targetUserId = String(body?.targetUserId || '').trim().toLowerCase();
+    if (!targetUserId) {
+      this.validationError('강퇴 대상 사용자 아이디가 필요합니다.');
+    }
     const context = await this.getContext();
-    return this.send(200, await this.deps.chatRoomRepository.kick(roomNo, body?.targetUserId, context));
+    return this.send(200, await this.deps.chatRoomRepository.kick(roomNo, targetUserId, context));
   }
 
   async handleRoomSettings(params) {
