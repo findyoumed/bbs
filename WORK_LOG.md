@@ -1,3 +1,18 @@
+## [2026-07-31 14:55] [리팩토링] confRoutes.js 토론의 광장 회의실/안건 작성 검증 스키마 선언 추가
+
+**LOG_ID: 20260731_1455**
+목표: `confRoutes.js`의 `POST /api/conf/rooms`(회의실 생성) 및 `POST /api/conf/rooms/:roomNo/agendas`(안건 작성) 라우트에 `validate.body` 검증 스키마를 선언하여 필수 입력값(`title`, `content`) 및 제목 길이 상한 검증 강화.
+
+발견: 회의실 개설 및 안건 생성 시 라우트 레벨 스키마 검증이 누락되어 있어 빈 제목이나 과도한 길이의 입력이 처리되던 구조적 개선 필요성 발견.
+
+수정: `createRoom`에 `title`(필수, 100자 제한), `createAgenda`에 `title`(필수, 200자 제한) 및 `content`(필수) 스키마 검증 추가.
+
+검증: `node --check src/server/routeHandlers/confRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:50] [리팩토링] contactRoutes.js 시삽 건의 메일 검증 스키마 추가 및 BaseRouterValidation FIELD_LABELS 보강
 
 **LOG_ID: 20260731_1450**

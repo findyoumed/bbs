@@ -7,10 +7,33 @@ class ConfRouter extends BaseRouter {
   get routes() {
     return [
       { method: 'GET', pattern: '/api/conf/rooms', handler: 'listRooms' },
-      { method: 'POST', pattern: '/api/conf/rooms', handler: 'createRoom', middlewares: ['ensureAuthenticated'], needBody: true },
+      {
+        method: 'POST',
+        pattern: '/api/conf/rooms',
+        handler: 'createRoom',
+        middlewares: ['ensureAuthenticated'],
+        needBody: true,
+        validate: {
+          body: {
+            title: { required: true, maxLength: 100 }
+          }
+        }
+      },
       { method: 'POST', pattern: '/api/conf/rooms/:roomNo/close', handler: 'closeRoom', middlewares: ['ensureAuthenticated'], needBody: true },
       { method: 'GET', pattern: '/api/conf/rooms/:roomNo/agendas', handler: 'listAgendas' },
-      { method: 'POST', pattern: '/api/conf/rooms/:roomNo/agendas', handler: 'createAgenda', middlewares: ['ensureAuthenticated'], needBody: true },
+      {
+        method: 'POST',
+        pattern: '/api/conf/rooms/:roomNo/agendas',
+        handler: 'createAgenda',
+        middlewares: ['ensureAuthenticated'],
+        needBody: true,
+        validate: {
+          body: {
+            title: { required: true, maxLength: 200 },
+            content: { required: true }
+          }
+        }
+      },
       { method: 'GET', pattern: '/api/conf/agendas/:agendaId', handler: 'getAgenda', needContext: true },
       { method: 'POST', pattern: '/api/conf/agendas/:agendaId/second', handler: 'secondAgenda', middlewares: ['ensureAuthenticated'], needBody: true }
     ];
