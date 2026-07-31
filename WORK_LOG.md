@@ -1,3 +1,17 @@
+## [2026-07-31 17:10] [버그수정] ChatRoomRepository(Memory/Supabase) closeRoomsOwnedBy 내 userId 소문자 정규화 처리
+
+**LOG_ID: 20260731_1710**
+목표: 회원 탈퇴 시, 개설했던 대화방들을 닫아주는 `closeRoomsOwnedBy` 로직에서 대소문자 불일치로 인하여 해당 사용자가 소유한 대화방의 정리가 누락되는 유령 방 누수 결함 방지.
+
+수정:
+- `ChatRoomRepositoryMemory.js` 및 `ChatRoomRepositorySupabase.js` 의 `closeRoomsOwnedBy()` 내부에서 입력 `userId` 파싱값에 일괄 `trim().toLowerCase()` 적용.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 17:05] [버그수정] MemoRepositorySupabase 내 쪽지 읽음 처리 시 userId 소문자 정규화 처리
 
 **LOG_ID: 20260731_1705**

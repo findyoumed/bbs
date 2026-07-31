@@ -178,7 +178,8 @@ class SupabaseChatRoomRepository extends BaseRepository {
   // 방장 전용 기능이 영구적으로 막힌다. 기존 leave()가 "방장이 나가면 방 종료"하는 정책과
   // 동일하게, 탈퇴 시점에도 같은 정책을 적용한다(기본방#1은 leave()와 동일하게 예외).
   async closeRoomsOwnedBy(userId) {
-    const target = normalizeText(userId, '');
+    // [LOG: 20260731_1710] 대소문자 매칭 일치를 위해 소문자 정규화 처리
+    const target = normalizeText(userId, '').trim().toLowerCase();
     if (!target) return 0;
 
     const { data: rooms, error } = await this.client

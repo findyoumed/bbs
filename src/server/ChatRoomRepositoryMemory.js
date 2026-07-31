@@ -216,7 +216,8 @@ class MemoryChatRoomRepository {
   // 대화방을 정리한다(기본방#1 제외). 자세한 사유는 ChatRoomRepositorySupabase.js 참고.
   closeRoomsOwnedBy(userId) {
     this._cleanup();
-    const target = normalizeText(userId, '');
+    // [LOG: 20260731_1710] 대소문자 매칭 일치를 위해 소문자 정규화 처리
+    const target = normalizeText(userId, '').trim().toLowerCase();
     if (!target) return 0;
 
     const closingNos = this.rooms
