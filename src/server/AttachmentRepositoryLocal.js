@@ -136,7 +136,8 @@ class AttachmentRepository {
       id,
       boardId,
       postId: Number(postId),
-      userId: context.userId || 'guest',
+      // [LOG: 20260731_1720] 대소문자 무결성을 위해 소문자 정형화 처리
+      userId: (context.userId && context.userId !== 'guest') ? context.userId.toLowerCase() : 'guest',
       nickName: context.nickName || '손님',
       originalName,
       storedName,

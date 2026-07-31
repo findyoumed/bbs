@@ -123,7 +123,8 @@ class SupabaseAttachmentRepository extends BaseRepository {
       .insert({
         board_id: boardId,
         post_id: Number(postId),
-        user_id: context.userId || 'guest',
+        // [LOG: 20260731_1720] 대소문자 무결성을 위해 소문자 정형화 처리
+        user_id: (context.userId && context.userId !== 'guest') ? context.userId.toLowerCase() : 'guest',
         nick_name: context.nickName || '손님',
         filename: buildStoredName(originalName),
         original_filename: originalName,

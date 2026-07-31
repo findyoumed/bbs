@@ -1,3 +1,17 @@
+## [2026-07-31 17:20] [리팩토링] AttachmentRepositories 내 첨부 등록 시 업로더 ID 소문자 정규화
+
+**LOG_ID: 20260731_1720**
+목표: 로컬 및 Supabase 첨부 저장소(`AttachmentRepositoryLocal.js`, `AttachmentRepositorySupabase.js`)에 첨부파일 업로드 등록 시, 업로더의 사용자 ID가 세션에서 전달될 때 대소문자 무결성을 맞추고 일관성을 확보할 수 있도록 `guest`가 아닐 시 소문자로 정형화하여 DB 및 로컬 인덱스에 보관하도록 개선.
+
+수정:
+- `AttachmentRepositoryLocal.js` 의 `add()` 및 `AttachmentRepositorySupabase.js` 의 `_add()` 내 `userId` / `user_id` 저장 지점에 `.toLowerCase()` 적용.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 17:15] [버그수정] VoteRepositories 내 투표 생성/참여/삭제 시 userId 소문자 정규화 처리
 
 **LOG_ID: 20260731_1715**
