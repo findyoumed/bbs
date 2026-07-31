@@ -476,7 +476,8 @@ export function createChatCommandHandler(deps) {
             setHint(`[${targetId}]님의 메시지를 수신거부합니다.`);
           }
           const nick = state.user?.nickName || '나';
-          const visibleMessages = (state._chatMessages || []).filter((m) => !state._chatMutedUserIds.has(m.userId));
+          // [LOG_ID: 20260731_1325] /EX 닉네임 차단 지원 — userId와 nickName 모두 수신거부 목록과 대조한다.
+          const visibleMessages = (state._chatMessages || []).filter((m) => !state._chatMutedUserIds.has(m.userId) && !state._chatMutedUserIds.has(m.nickName));
           const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick, state.user?.userId);
           renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });
           return true;

@@ -135,11 +135,12 @@ class SupabaseChatRoomRepository extends BaseRepository {
     const room = await this.queries.findRoomByNo(roomNo);
     const requesterId = normalizeText(context.userId, 'guest');
     if (room.owner_user_id !== requesterId) throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
+    // [LOG_ID: 20260731_1325] /OUT 닉네임 강퇴 지원 — userId뿐만 아니라 nickName으로도 상대를 식별한다.
     const target = normalizeText(targetUserId, '');
     const participants = this._participantsForRoom(room.room_no);
-    const kicked = participants.find((p) => p.userId === target);
+    const kicked = participants.find((p) => p.userId === target || p.nickName === target);
     if (!kicked) throw createHttpError(404, '해당 이용자가 방에 없습니다.');
-    const filtered = participants.filter((p) => p.userId !== target);
+    const filtered = participants.filter((p) => p.userId !== kicked.userId);
     if (filtered.length) this.participantsByRoomNo.set(Number(room.room_no), filtered); else this.participantsByRoomNo.delete(Number(room.room_no));
     // [LOG_ID: 20260728_1629] 강퇴 시스템 메시지 — join/leave와 동일한 패턴.
     this._pushSystemMessage(room.room_no, 'kick', kicked.userId, kicked.nickName);

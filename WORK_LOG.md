@@ -1,3 +1,22 @@
+## [2026-07-31 13:25] [버그수정] 대화방 /OUT(강퇴) 및 /EX(수신거부) 닉네임 대상 미인식 결함 수정
+
+**LOG_ID: 20260731_1325**
+목표: 대화방 내에서 개설자가 상대방 닉네임으로 `/OUT 닉네임` 강퇴를 시도할 때 발생하던 404 이용자 검색 실패 및 `/EX 닉네임` 차단 시 클라이언트 렌더 필터 미적용 결함 수정.
+
+발견:
+1) `ChatRoomRepositorySupabase.js` & `ChatRoomRepositoryMemory.js`: `kick()` 메서드가 `participants.find((p) => p.userId === target)`만 검색하여 닉네임으로 강퇴 시도 시 404를 리턴함.
+2) `commandRouterChat.js`: `/EX 닉네임` 등록 시 `state._chatMutedUserIds`에는 저장되나 렌더 필터링 시 `m.userId`만 대조하여 수신 거부 닉네임의 메시지가 차단되지 않고 노출됨.
+
+수정:
+1) `ChatRoomRepositorySupabase.js` & `ChatRoomRepositoryMemory.js`: `target` 검색 조건을 `p.userId === target || p.nickName === target`으로 확장하고 `kicked.userId` 기준 필터링 적용.
+2) `commandRouterChat.js`: `visibleMessages` 필터링에 `!state._chatMutedUserIds.has(m.nickName)` 조건 추가.
+
+검증: `node --check` 3개 파일 통과. `smoke:boards` (PASS), `smoke:command-parity` (PASS), `smoke:chat-rooms` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 3개 파일 수정.
+
+---
+
 ## [2026-07-31 13:00] [리팩토링] src/server/ 전체에서 미사용 require 4건(4개 파일) 정리 — 정적 스캔 전수 조사
 
 **LOG_ID: 20260731_1300**

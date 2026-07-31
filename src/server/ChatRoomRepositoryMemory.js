@@ -174,12 +174,13 @@ class MemoryChatRoomRepository {
     if (room.ownerUserId !== requesterId) {
       throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
     }
+    // [LOG_ID: 20260731_1325] /OUT 닉네임 강퇴 지원 — userId뿐만 아니라 nickName으로도 상대를 식별한다.
     const target = normalizeText(targetUserId, '');
-    const kicked = room.participants.find((entry) => entry.userId === target);
+    const kicked = room.participants.find((entry) => entry.userId === target || entry.nickName === target);
     if (!kicked) {
       throw createHttpError(404, '해당 이용자가 방에 없습니다.');
     }
-    room.participants = room.participants.filter((entry) => entry.userId !== target);
+    room.participants = room.participants.filter((entry) => entry.userId !== kicked.userId);
     // [LOG_ID: 20260728_1629] 강퇴 시스템 메시지 — join/leave와 동일한 패턴.
     this._pushSystemMessage(room.no, 'kick', kicked.userId, kicked.nickName);
     this._removeIfDisposable(room);
