@@ -232,7 +232,18 @@ export function createSystemAnsiBuilders(deps) {
           const id = fitCell(user.userId || 'guest', 15);
           const nick = fitCell(user.nickName || '손님', 16);
           const path = fitCellEllipsis(user.path || '/', 24);
-          const time = (user.lastSeenAt || '').split('T')[1]?.split('.')[0] || '--:--:--';
+          // [LOG: 20260801_0900] activityRepository.touch()가 저장하는 lastSeenAt은
+          // new Date().toISOString() — 항상 UTC ISO 8601("...T08:30:45.000Z")이다.
+          // 기존 코드는 'T' 기준으로 문자열을 잘라 UTC 원시 시각을 그대로 표시했는데,
+          // 한국 사용자에게는 실제 KST(UTC+9)보다 9시간 이른 값으로 보였다.
+          // new Date()로 파싱하면 브라우저 로컬 시각(한국 사용자 = KST)으로 변환된다.
+          // buildSystemLogAnsi(line 376)의 new Date(l.timestamp).toLocaleTimeString()과
+          // 동일한 원칙 — 단, 출력 형식은 코드베이스 전체의 포맷터(formatLongDate 등)와
+          // 일치하도록 getHours/getMinutes/getSeconds로 명시적 조합한다.
+          const _lastSeenDate = new Date(user.lastSeenAt || '');
+          const time = !isNaN(_lastSeenDate.getTime())
+            ? `${String(_lastSeenDate.getHours()).padStart(2, '0')}:${String(_lastSeenDate.getMinutes()).padStart(2, '0')}:${String(_lastSeenDate.getSeconds()).padStart(2, '0')}`
+            : '--:--:--';
           const color = user.isAdmin ? 13 : (user.isGuest ? 8 : 15);
           parts.push(`${buddyPrefix}${ansiColor(color)}${id} ${nick} ${ansiColor(14)}${path} ${ansiColor(7)}${time}${ANSI_RESET}`);
         }

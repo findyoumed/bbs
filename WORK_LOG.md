@@ -1,3 +1,35 @@
+## [2026-08-01 08:44] [버그수정] WHO 접속자 목록 lastSeenAt UTC raw split — KST 변환 누락 수정
+
+**LOG_ID: 20260801_0844**
+목표: 기존 수정이 놓친 날짜/시간 UTC→KST 변환 누락을 새 각도로 탐색 — 이전 라운드(20260731_2100)에서 formatLongDate/formatShortDate/myInfoRenderer.formatDateTime을 수정했는데, 같은 패턴이 남은 화면이 있는지 전수 점검.
+
+발견:
+- `systemAnsiBuilders.js` `buildActiveUsersAnsi`(WHO 접속자 목록) 데스크톱 뷰(line 235)에서 `lastSeenAt` 시각을 `(user.lastSeenAt || '').split('T')[1]?.split('.')[0]`로 추출해 UTC 원시 시각을 그대로 표시하고 있었다.
+- `activityRepository.touch()`는 `new Date().toISOString()`(UTC ISO 8601, 예: `"2026-08-01T08:30:45.000Z"`)을 저장 — Supabase 드라이버(`ActivityRepositorySupabase.js`)도 동일.
+- 결과: 한국 사용자(KST = UTC+9)의 브라우저에서 실제 KST보다 9시간 이른 시각을 표시함(08:30 vs 실제 17:30).
+- 추가 발견: 밀리초가 없는 ISO 문자열(`"...T08:30:45Z"`)에서는 `.split('.')[0]`이 `'08:30:45Z'`를 반환해 'Z' 문자가 시각 문자열에 그대로 노출되는 2차 버그도 포함.
+- `buildSystemLogAnsi`(line 376)는 이미 `new Date(l.timestamp).toLocaleTimeString()`으로 올바르게 로컬 시각을 쓰고 있어 같은 파일 내에서도 일관성이 어긋났다.
+
+수정:
+- `systemAnsiBuilders.js` `buildActiveUsersAnsi` line 235:
+  - 기존: `(user.lastSeenAt || '').split('T')[1]?.split('.')[0] || '--:--:--'`
+  - 수정: `new Date(user.lastSeenAt || '')`로 파싱 후 `getHours()/getMinutes()/getSeconds()` — 브라우저 로컬 시각(한국 사용자 = KST)으로 정확히 변환.
+  - 잘못된 값/빈 문자열/null/undefined는 `!isNaN(d.getTime())`으로 안전하게 `'--:--:--'`로 폴백.
+  - `formatLongDate`/`myInfoRenderer.formatDateTime`의 처리 방식과 동일한 원칙 적용.
+  - 주석: `[LOG: 20260801_0900]`
+
+검증:
+- `node --check public/js/core/systemAnsiBuilders.js` 통과.
+- 동치 검증 9케이스 전 PASS: (A) UTC ISO Z suffix / (B) Z 없는 ISO / (C) +00:00 offset / (D) 빈 문자열 / (E) null / (F) undefined / (G) 잘못된 문자열 / (H) 자정 UTC / (I) 23:59:59 UTC — 형식 검증(`/^\d{2}:\d{2}:\d{2}$/` 또는 `--:--:--`) 전 케이스 통과.
+- `smoke:renderer-ui` 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 통과.
+- `smoke:vercel-ready` 통과.
+
+결과: ✅ 1개 파일(`public/js/core/systemAnsiBuilders.js`, line 235 교체 + 주석 추가). WHO 접속자 목록이 UTC 원시 시각 대신 브라우저 로컬 시각(한국 사용자 = KST)으로 정확히 표시됨. 밀리초 없는 ISO 문자열의 'Z' 노출 버그도 동시 해소.
+
+---
+
 ## [2026-08-01 08:28] [버그수정] RssWeatherService.getLocalWeather 실패 결과 미캐시 — 외부 API 반복 호출 방지
 
 **LOG_ID: 20260801_0828**
