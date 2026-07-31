@@ -1,3 +1,17 @@
+## [2026-07-31 16:55] [리팩토링] MemberRepositoryMemory 내 Map set 시 normalizedUserId 키 사용 보완
+
+**LOG_ID: 20260731_1655**
+목표: 메모리 회원 저장소(`MemberRepositoryMemory.js`)에서 회원 정보 갱신 및 쓰기 시, Map 키에 `next.userId`를 사용하여 생길 수 있는 대소문자 혼선 및 중복 키 생성 결함 방지.
+
+수정:
+- `ensureMember()`, `setLevel()`, `setPassword()`, `setEmail()`, `setAbsence()`에서 데이터 저장 시 Map 키를 대소문자가 항상 통일된 `normalizedUserId`로 수정하여 일관되게 덮어쓰도록 조치.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 16:50] [리팩토링] 활동기록 저장소(ActivityRepository) touch 시 userId 소문자 정규화
 
 **LOG_ID: 20260731_1650**

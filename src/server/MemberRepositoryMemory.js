@@ -55,14 +55,16 @@ class MemoryMemberRepository extends BaseRepository {
   }
 
   async ensureMember(input = {}) {
-    const next = mergeMemberRecord(input.userId, this.members.get(normalizeLookup(input.userId)) || null, input);
-    this.members.set(next.userId, next);
+    const normalizedUserId = normalizeLookup(input.userId);
+    const next = mergeMemberRecord(normalizedUserId, this.members.get(normalizedUserId) || null, input);
+    this.members.set(normalizedUserId, next);
     return toPublicMember(next);
   }
 
   async setLevel(userId, level, defaults = {}) {
-    const current = this.members.get(normalizeLookup(userId)) || null;
-    const next = mergeMemberRecord(userId, current, {
+    const normalizedUserId = normalizeLookup(userId);
+    const current = this.members.get(normalizedUserId) || null;
+    const next = mergeMemberRecord(normalizedUserId, current, {
       nickName: defaults.nickName,
       email: defaults.email,
       birthday: current?.birthday ?? '',
@@ -74,18 +76,19 @@ class MemoryMemberRepository extends BaseRepository {
       password: current?.password ?? '',
       level
     });
-    this.members.set(next.userId, next);
+    this.members.set(normalizedUserId, next);
     return toPublicMember(next);
   }
 
   async setPassword(userId, password, defaults = {}) {
-    const next = mergeMemberRecord(userId, this.members.get(normalizeLookup(userId)) || null, {
+    const normalizedUserId = normalizeLookup(userId);
+    const next = mergeMemberRecord(normalizedUserId, this.members.get(normalizedUserId) || null, {
       nickName: defaults.nickName,
       email: defaults.email,
       isAdmin: defaults.isAdmin,
       password: hashPassword(password)
     });
-    this.members.set(next.userId, next);
+    this.members.set(normalizedUserId, next);
     return toPublicMember(next);
   }
 
@@ -96,7 +99,7 @@ class MemoryMemberRepository extends BaseRepository {
       throw createHttpError(404, '회원 정보를 찾을 수 없습니다.');
     }
     const next = mergeMemberRecord(normalizedUserId, current, { email });
-    this.members.set(next.userId, next);
+    this.members.set(normalizedUserId, next);
     return toPublicMember(next);
   }
 
@@ -113,7 +116,7 @@ class MemoryMemberRepository extends BaseRepository {
       absentEnd: end || null,
       absentReason: String(reason || '').trim()
     });
-    this.members.set(next.userId, next);
+    this.members.set(normalizedUserId, next);
     return toPublicMember(next);
   }
 
