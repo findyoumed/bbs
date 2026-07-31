@@ -98,6 +98,13 @@ export const CMD_META = {
   // [LOG_ID: 20260719_2200] 나우누리 원전 대화실 /BUDDY(접속 알림) 재현 — UID/WHO 접속자 목록에서 강조 표시
   BUDDY: { label: '버디목록', tip: 'BUDDY [id], BUDDY DEL [id]', priority: 24, cat: 'AUTH', desc: '관심 있는 사용자를 버디로 등록합니다. UID/WHO 접속자 목록에서 ★로 강조됩니다.' },
   PF: { label: '프로필', tip: 'PF, PF [아이디]', priority: 25, cat: 'AUTH', desc: 'PF [아이디]는 해당 사용자의 프로필을 봅니다. 아이디 없이 PF만 입력하면 HI/MYINFO와 동일한 내 정보 화면이 열립니다.' },
+  // [LOG_ID: 20260731_1930] BYID/BYNAME은 CMD_META에 없어 GO/FIND처럼 prefill되지 않고
+  // data-cmd(즉시 실행)로 렌더링됐다 — 클릭하면 인자 없는 "BYID"가 그대로 실행되어
+  // commandRouterService.js의 `/^BYID\s+(.+)$/i` 매치에 실패하고 `findMember('BYID', 'any')`로
+  // 떨어져 "byid"라는 이름의 회원을 찾으려 시도했다(사용자 보고: 클릭해도 입력이 유지 안 됨).
+  // GO/FIND와 동일하게 prefill:true를 줘서 클릭 시 입력줄에 "BYID "/"BYNAME "만 채운다.
+  BYID: { label: '아이디로', tip: 'BYID <아이디>', priority: 25, cat: 'AUTH', prefill: true, desc: '아이디로 회원을 찾습니다. (이용자검색 화면 전용)' },
+  BYNAME: { label: '이름으로', tip: 'BYNAME <이름>', priority: 25, cat: 'AUTH', prefill: true, desc: '이름(닉네임)으로 회원을 찾습니다. (이용자검색 화면 전용)' },
   HI: { label: '내정보', tip: 'HI, MYINFO', priority: 20, cat: 'AUTH', desc: '나의 회원 정보를 확인하거나 수정합니다.' },
   MYINFO: { label: '내정보', tip: 'HI, MYINFO', priority: 20, cat: 'AUTH', desc: '나의 회원 정보를 확인하거나 수정합니다.' },
   // [LOG_ID: 20260729_1710] 당연한 입력 보조 명령어(ENTER, CHANGE, SEND, S, SAVE) 도움말 목록에서 삭제

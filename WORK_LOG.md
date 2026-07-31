@@ -1,3 +1,18 @@
+## [2026-07-31 19:30] [버그수정] 이용자검색(member) 화면의 BYID/BYNAME 클릭이 입력창에 유지되지 않고 즉시(잘못) 실행됨
+
+**LOG_ID: 20260731_1930**
+목표(사용자 보고): `/member`에서 "아이디로(BYID)"/"이름으로(BYNAME)"를 클릭하면 GO처럼 입력창에 유지돼야 하는데 그렇지 않다.
+
+발견: `CMD_META`(commandService.js)에 `BYID`/`BYNAME` 항목이 아예 없었다. `terminalHintMarkup.js`의 `buildCommandToken`은 `CMD_META[cmd]`가 없으면 `meta.fill`/`meta.prefill`이 전부 `undefined`가 되어 기본값인 `data-cmd="BYID"`(즉시 실행)로 렌더링한다 — GO/FIND처럼 `prefill:true`가 있어야 `data-cmd-prefill="BYID "`로 렌더링돼 클릭 시 입력줄만 채운다. 그 결과 클릭하면 인자 없는 "BYID"가 그대로 실행됐고, `commandRouterService.js`의 `member-search` 분기는 `/^BYID\s+(.+)$/i`에 매치 실패 후 `if (raw) return await findMember(raw, 'any')`로 떨어져 **"byid"라는 이름의 회원을 찾으려 시도**했다(사용자가 본 "유지 안 됨" 증상의 실제 정체 — 그냥 무반응이 아니라 잘못된 검색이 조용히 실행됨).
+
+수정: `commandService.js`의 AUTH 섹션(PF 옆)에 `BYID`/`BYNAME`을 `prefill: true`로 추가(GO/FIND와 동일 패턴).
+
+검증: 실서버(`PORT=3912 node server.js`) + Playwright로 `/member` 진입 후 BYID/BYNAME 토큰 클릭 → 입력창에 각각 `"BYID "`/`"BYNAME "` 채워짐, 화면은 `member-search`에 그대로 유지됨(즉시 실행 안 됨) 확인. 이어서 `BYNAME 시샵`(실제 닉네임)으로 엔터 → `profile` 화면 전환까지 골든 패스 정상 확인. `smoke:command-parity`·`smoke:renderer-ui`·`smoke:full-traversal` 3종 회귀 통과.
+
+결과: ✅ 1개 파일(commandService.js), 2줄 추가.
+
+---
+
 ## [2026-07-31 19:00] [버그수정] boardRoutes.js/chatServiceRoutes.js의 isNaN()만 쓰는 ID 검증 — 소수 입력 시 502 + 내부 스택 트레이스 노출
 
 **LOG_ID: 20260731_1900**
