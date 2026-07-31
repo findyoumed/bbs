@@ -1,3 +1,48 @@
+## [2026-08-01 08:28] [버그수정] RssWeatherService.getLocalWeather 실패 결과 미캐시 — 외부 API 반복 호출 방지
+
+**LOG_ID: 20260801_0828**
+목표: (d) 계열 확장 — `RssWeatherService.getLocalWeather`의 에러 격리/폴백 동작 전수 점검.
+
+발견:
+- `getLocalWeather`는 성공 결과만 `_setMemoryCacheEntry(feedCache, key, result, cacheTtlMs)`로 캐시했고,
+  아래 네 가지 실패 경로는 캐시 없이 즉시 반환했다:
+  1. `!geoRes?.ok` → `{ unavailable: true, message: '위치 조회 실패' }` (미캐시)
+  2. `geo.status !== 'success'` → `{ unavailable: true, message: '위치 확인 불가' }` (미캐시)
+  3. `!wxRes?.ok` → `{ unavailable: true, message: '날씨 조회 실패' }` (미캐시)
+  4. `catch (e)` → `{ unavailable: true, message: ... }` (미캐시)
+- ip-api.com 또는 Open-Meteo가 일시 오류/타임아웃을 반환하면, 동일 IP의 다음 요청이
+  즉시 외부 API를 재호출했다. ip-api.com 무료 티어 한도는 분당 45회 — Vercel에선 모든
+  outbound 요청이 Vercel IP 1개로 나가므로, 연속 실패가 rate-limit을 소진 → 더 많은 실패를
+  낳는 음성 피드백 루프 발생 가능.
+- `_fetchCached`(RSS 피드)는 같은 상황에서 `failureCacheTtlMs`(1분)로 실패를 캐시해 재시도를
+  억제하며, `getLocalWeather`만 이 보호가 빠져 있었다.
+
+수정:
+- `RssWeatherService.js` `getLocalWeather`:
+  - 네 개의 조기 `return { unavailable: true, ... }` 를 `result = { unavailable: true, ... }` 로 교체.
+  - 성공 분기도 `result = { ... }` 로 수렴.
+  - try-catch 이후 단 한 곳에서 `ttl = result.unavailable ? failureCacheTtlMs : cacheTtlMs` 계산 뒤
+    `_setMemoryCacheEntry` 호출 + `return result`.
+  - 반환값(성공·실패 모두)은 이전과 완전 동치 — 캐시 유무만 달라짐.
+  - 주석: `[LOG: 20260801_0828]`
+
+검증:
+- `node --check src/server/RssWeatherService.js` 통과.
+- 동치 검증 12케이스 전 PASS:
+  (A) geo API not ok, (B) geo status fail, (C) geo lat/lon missing, (D) wx API not ok,
+  (E) full success, (F) exception in geo text(), (G) fetchImpl throws,
+  (H) local IP 127.0.0.1, (I) local IP ::1, (J) private 192.168.x, (K) private 10.x, (L) private 172.16.x.
+  OLD/NEW 반환값 전 케이스 동일.
+- `smoke:rss-services` 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 통과.
+- `smoke:vercel-ready` 통과.
+
+결과: ✅ 1개 파일(`src/server/RssWeatherService.js`, 20줄 교체). geo/날씨 API 실패 시 1분간
+캐시해 반복 호출 억제 — _fetchCached의 failureCacheTtlMs 처리와 동일 정책으로 맞춤.
+
+---
+
 ## [2026-08-01 08:18] [버그수정] RssNewsService 정규화 URL 재크롤(canonical fetch) 타임아웃 누락 + primary content 손실
 
 **LOG_ID: 20260801_0818**
