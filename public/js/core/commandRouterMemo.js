@@ -504,7 +504,19 @@ export function createMemoCommandHandler(deps) {
             // (대화방/내정보 편집)과 동일하게 클릭 출처는 raw input보다 먼저 명령으로 처리한다.
             const isClickSource = context?.source === 'click';
             if (!isClickSource && typeof handleMemoRawInput === 'function') {
-                return await handleMemoRawInput(input);
+                // [LOG_ID: 20260731_1150] handleMemoRawInput은 화면이 'memo-write'가 아니거나
+                // state._memoWriteFlow가 없으면(예: 게스트 차단으로 ensureMemoAccess가 실패해
+                // createMemoWriteFlow가 아예 호출되지 않은 경우) false를 반환한다 — 그런데 종전엔
+                // 그 false를 그대로 handleMemoCommand의 반환값으로 삼아 여기서 즉시 return해
+                // 버려서, 아래 SEND/T/P/M/B 분기가 전혀 실행되지 않았다(실측 재현: GO WMAIL로
+                // 게스트가 편지쓰기에 진입 → "쪽지 기능은 로그인 후..." 안내 + "T를 입력하면
+                // 초기화면으로 이동합니다" 힌트가 뜨지만 실제로 T를 쳐도 무반응). false일 때만
+                // 아래로 폴스루한다 — _memoWriteFlow가 있을 때는 이 함수가 절대 false를 반환하지
+                // 않으므로(가드 실패 케이스가 유일한 false 경로) 정상 편지쓰기 흐름은 그대로다.
+                const handled = await handleMemoRawInput(input);
+                if (handled !== false) {
+                    return handled;
+                }
             }
             if (cmd === 'SEND') {
                 await handleMemoSubmit();

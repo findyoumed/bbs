@@ -1,3 +1,20 @@
+## [2026-07-31 11:50] [사용자 리포트] GO WMAIL로 진입한 게스트 차단 편지쓰기 화면에서 힌트가 약속한 T(초기화면 이동)가 실제로 먹통이던 결함 수정
+
+**LOG_ID: 20260731_1150**
+목표: 사용자 리포트 — "https://01410.vercel.app/help?page=4 에서 go wmail 했더니. 입력창에 'T를 입력하면 초기화면으로 이동합니다.' 라고 나오고 실제로는 T가 입력이 안되는데." 스크린샷 첨부(MEMO/쪽지함 화면, "쪽지 기능은 로그인 후 이용하실 수 있습니다." 안내 + "T를 입력하면 초기화면으로 이동합니다." 힌트).
+
+발견: `GO WMAIL`(메뉴 내비게이션 별칭 경로, `menuNavigationActions.js:95`)은 `WMAIL` 직접 명령(`commandRouterGlobalNavigation.js:335`)과 달리 게스트 사전 차단 없이 곧장 `showMemoWrite()`를 호출한다. `showMemoWrite()`는 `state.screen = 'memo-write'`를 먼저 세팅한 뒤 `ensureMemoAccess()`로 게스트를 막는데, 이 실패 시 `state._memoWriteFlow`는 끝내 생성되지 않은 채 `renderMemoStatus()`(MEMO/쪽지함 안내 박스 + "T를 입력하면...") 문구만 그린다 — 스크린샷과 정확히 일치.
+
+문제는 `commandRouterMemo.js`의 `state.screen === 'memo-write'` 분기: 클릭 출처가 아닌 모든 타이핑 입력을 무조건 `handleMemoRawInput(input)`로 보내고 그 반환값을 그대로 `return`해 버렸다. `handleMemoRawInput`은 `state._memoWriteFlow`가 없으면(정확히 이 게스트 차단 상황) 최상단 가드에서 `false`를 반환하는데(함수 전체에서 이 가드가 `false`를 반환하는 유일한 지점 — `awk` 전수 확인), 호출부가 그 `false`를 `handleMemoCommand`의 최종 반환값으로 즉시 넘겨버려 바로 아래에 있는 `cmd === 'T'`/`SEND`/`P`/`M`/`B` 분기가 전혀 실행되지 않았다. 즉 편지쓰기 화면 자체는 있지만 실제 작성 흐름(`_memoWriteFlow`)이 없는 상태에서는 T를 포함한 어떤 명령도 먹지 않는 죽은 화면이었다.
+
+수정: `handleMemoRawInput(input)`의 반환값이 `false`일 때만 아래 `cmd` 분기들로 폴스루하도록 변경(`_memoWriteFlow`가 있는 정상 편지쓰기 흐름에서는 이 함수가 절대 `false`를 반환하지 않으므로 기존 동작에 영향 없음).
+
+검증: `node --check`(ESM) 통과. 실제 서버에 Playwright로 사용자 재현 경로 그대로 실행 — 게스트로 `GO WMAIL` → `screen==='memo-write'` + "로그인 후" 안내 확인 → `T` 입력 → `screen`이 `main`으로 정상 이동함을 확인(수정 전이었다면 무반응). 회귀 확인: 로그인 상태에서 동일하게 `GO WMAIL` → 정상적으로 `memo-write` 진입, 받는사람 입력 → 본문 단계로 정상 전환, "T"로 시작하지 않는 일반 텍스트가 여전히 편지 본문 라인으로 정확히 들어감을 확인(내 수정이 정상 흐름을 건드리지 않았음을 실측). `smoke:boards`·`smoke:command-parity`·`smoke:full-traversal`·`smoke-mobile-viewports` 4종 회귀.
+
+결과: ✅ 1개 파일, 10줄 미만 변경.
+
+---
+
 ## [2026-07-30 23:40] [/loop 리팩토링] 회원가입 아이디/이메일 화면의 두벌식 변환 로직이 hangulKeyboard.js로 통합됐다던 주석과 달리 실제로는 반쪽만 통합돼 signupEmailForm.js에 전체 사본이 남아있던 것 정리
 
 **LOG_ID: 20260730_0820**
