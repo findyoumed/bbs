@@ -1,3 +1,20 @@
+## [2026-07-31 12:15] [/loop 리팩토링] appFactory.js의 죽은 import 3개(triggerVisualFeedback/getLevenshteinDistance/CMD_META) 제거 — getLevenshteinDistance 중복은 의도된 것으로 판단해 통합 보류
+
+**LOG_ID: 20260731_1220**
+목표: 지난 라운드에서 후보로 남겨둔 `getLevenshteinDistance` 함수명 중복(`uiUtils.js`/`arcadeGameLogic.js`) 조사.
+
+조사: 두 구현은 바이트 동일이 아니라 다른 방식(빈 문자열 가드 유무, 행렬 방향)으로 짠 동일 알고리즘 — 11개 케이스(빈 문자열/한글/장문 등)로 대조해 결과는 전부 일치함을 확인. 하지만 실제 사용처를 추적하니 통합하면 안 되는 이유가 드러났다: `arcadeGameLogic.js` 최상단 주석이 "DOM/ANSI 의존이 전혀 없는 plain export 모듈이라 단독 단위검증이 가능하다"고 명시하고, 실제로 이 파일엔 `import` 문이 하나도 없다 — 의도적으로 의존성 0인 순수 모듈로 설계된 것. `uiUtils.js`는 `triggerVisualFeedback`처럼 DOM(`el.classList` 등)을 직접 다루므로, 여기서 import하면 오락실 로직 모듈의 "DOM 없이 단독 검증 가능"이라는 아키텍처 속성을 깨뜨린다. **결론: 이 중복은 실수가 아니라 의도된 격리이므로 통합하지 않는다.**
+
+부수 발견: 이 조사 과정에서 `appFactory.js`(앱 부팅을 조립하는 최상위 파일)가 `uiUtils.js`에서 `triggerVisualFeedback, getLevenshteinDistance`를 import하면서 **파일 전체에서 단 한 번도 쓰지 않고 있었다**(실제 소비자는 `terminalFeedback.js`가 `triggerVisualFeedback`을 직접 import, `getLevenshteinDistance`는 현재 어디서도 실사용되지 않는 채로 `uiUtils.js`에 export만 남아 있었음). 바로 옆의 `CMD_META` import도 같은 파일에서 동일하게 미사용(`grep -c`로 파일 전체에서 import 줄 자체만 1회 매칭 확인, CMD_META는 helpScreens.js·terminalHintMarkup.js 등 다른 6개 파일에서 정상적으로 계속 쓰이므로 모듈 로드 자체엔 영향 없음).
+
+수정: `appFactory.js`에서 미사용 import 2줄(`triggerVisualFeedback, getLevenshteinDistance` / `CMD_META`) 삭제.
+
+검증: `node --check`(ESM) 통과. **이 파일이 앱 부팅 전체를 조립하는 가장 중요한 파일이라 브라우저 실측으로 최고 수위 검증**: 실제 서버에 Playwright로 접속해 부팅 후 초기 화면이 `main`, 터미널에 실제 콘텐츠 렌더, `H` 명령으로 도움말 진입(다른 파일의 `CMD_META` 의존 경로가 여전히 정상 동작함을 확인), 오락실(오목) 라우트 정상 응답, 콘솔 오류 0건까지 확인. `smoke:boards`·`smoke:command-parity`·`smoke:full-traversal`·`smoke-mobile-viewports` 4종 회귀.
+
+결과: ✅ 1개 파일, 2줄 삭제. 함수명이 겹친다고 항상 병합 대상은 아니라는 이번 세션의 판단 기준(리포지토리 드라이버 판정 로직은 병합, RSS 캐시 3분기 선택은 부분만 병합, 여기 Levenshtein은 아키텍처적 이유로 병합 보류)에 사례 하나 추가.
+
+---
+
 ## [2026-07-31 12:00] [/loop 리팩토링] commandRouterPostView.js의 displayWidth 사본을 ansiRenderUtils.js에서 import하도록 정리
 
 **LOG_ID: 20260731_1200**

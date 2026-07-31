@@ -54,8 +54,6 @@ import { createGlobalCommandHandler } from './commandRouterGlobal.js';
 import { createThemeService } from './themeService.js';
 import { createSoundService } from './soundService.js';
 import { createSettingsService } from './settingsService.js';
-import { triggerVisualFeedback, getLevenshteinDistance } from './uiUtils.js';
-import { CMD_META } from './commandService.js';
 import { createAppFactoryServices } from './appFactoryServices.js';
 import { createAppFactoryScreens } from './appFactoryScreens.js';
 import { createAppFactoryHandlers } from './appFactoryHandlers.js';
