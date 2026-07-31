@@ -1,3 +1,17 @@
+## [2026-07-31 17:15] [버그수정] VoteRepositories 내 투표 생성/참여/삭제 시 userId 소문자 정규화 처리
+
+**LOG_ID: 20260731_1715**
+목표: 메모리 및 Supabase 투표 저장소(`VoteRepositoryMemory.js`, `VoteRepositorySupabase.js`)에서 사용자 ID 대소문자 매칭 오작동으로 인한 1인 1표 검증 우회 및 삭제 권한 거부 결함 예방.
+
+수정:
+- `VoteRepositoryMemory.js` 및 `VoteRepositorySupabase.js` 의 `listVotes()`, `getVote()`, `createVote()`, `castVote()`, `deleteVote()`에 대해 유입되는 사용자 정보 ID(`context.userId`, `userId`)에 일괄 `.toLowerCase()` 및 공백 제거 적용.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 17:10] [버그수정] ChatRoomRepository(Memory/Supabase) closeRoomsOwnedBy 내 userId 소문자 정규화 처리
 
 **LOG_ID: 20260731_1710**

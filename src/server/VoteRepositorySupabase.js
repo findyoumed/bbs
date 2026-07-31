@@ -73,7 +73,8 @@ class SupabaseVoteRepository extends BaseRepository {
           if (record.option_index >= 0 && record.option_index < counts.length) {
             counts[record.option_index]++;
           }
-          if (context.userId && record.user_id === context.userId) {
+          const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
+          if (normalizedRequesterId && record.user_id === normalizedRequesterId) {
             userVotedOption = record.option_index;
           }
         }
@@ -120,7 +121,8 @@ class SupabaseVoteRepository extends BaseRepository {
         if (record.option_index >= 0 && record.option_index < counts.length) {
           counts[record.option_index]++;
         }
-        if (context.userId && record.user_id === context.userId) {
+        const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
+        if (normalizedRequesterId && record.user_id === normalizedRequesterId) {
           userVotedOption = record.option_index;
         }
       }
@@ -150,7 +152,7 @@ class SupabaseVoteRepository extends BaseRepository {
       const payload = {
         title,
         options,
-        created_by: context.userId || 'guest',
+        created_by: (context.userId && context.userId !== 'guest') ? context.userId.toLowerCase() : 'guest',
         is_active: true
       };
 
@@ -177,7 +179,8 @@ class SupabaseVoteRepository extends BaseRepository {
     return this._track('castVote', async () => {
       const id = Number(voteId);
       const optIdx = Number(optionIndex);
-      const userId = context.userId || 'guest';
+      const rawUserId = context.userId || 'guest';
+      const userId = rawUserId !== 'guest' ? rawUserId.toLowerCase() : rawUserId;
 
       // 투표 활성 여부 검증
       const { data: vote, error: voteError } = await this.client
@@ -232,7 +235,8 @@ class SupabaseVoteRepository extends BaseRepository {
       if (findError) this._throwError('deleteVote:find', findError, { table: this.table });
       if (!vote) throw this._createHttpError(404, '투표를 찾을 수 없습니다.');
 
-      if (!context.isAdmin && vote.created_by !== context.userId) {
+      const requesterId = String(context.userId || '').trim().toLowerCase();
+      if (!context.isAdmin && vote.created_by !== requesterId) {
         throw this._createHttpError(403, '삭제 권한이 없습니다.');
       }
 

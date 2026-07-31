@@ -53,7 +53,8 @@ class MemoryVoteRepository extends BaseRepository {
           if (record.optionIndex >= 0 && record.optionIndex < counts.length) {
             counts[record.optionIndex]++;
           }
-          if (context.userId && record.userId === context.userId) {
+          const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
+          if (normalizedRequesterId && record.userId === normalizedRequesterId) {
             userVotedOption = record.optionIndex;
           }
         }
@@ -91,7 +92,8 @@ class MemoryVoteRepository extends BaseRepository {
         if (record.optionIndex >= 0 && record.optionIndex < counts.length) {
           counts[record.optionIndex]++;
         }
-        if (context.userId && record.userId === context.userId) {
+        const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
+        if (normalizedRequesterId && record.userId === normalizedRequesterId) {
           userVotedOption = record.optionIndex;
         }
       }
@@ -122,7 +124,7 @@ class MemoryVoteRepository extends BaseRepository {
         id: this.nextVoteId++,
         title,
         options,
-        createdBy: context.userId || 'guest',
+        createdBy: (context.userId && context.userId !== 'guest') ? context.userId.toLowerCase() : 'guest',
         createdAt: new Date().toISOString(),
         isActive: true
       };
@@ -136,7 +138,8 @@ class MemoryVoteRepository extends BaseRepository {
     return this._track('castVote', async () => {
       const id = Number(voteId);
       const optIdx = Number(optionIndex);
-      const userId = context.userId || 'guest';
+      const rawUserId = context.userId || 'guest';
+      const userId = rawUserId !== 'guest' ? rawUserId.toLowerCase() : rawUserId;
 
       const vote = this.votes.find(v => v.id === id);
       if (!vote) throw this._createHttpError(404, '투표를 찾을 수 없습니다.');
@@ -167,7 +170,8 @@ class MemoryVoteRepository extends BaseRepository {
 
       const vote = this.votes[voteIdx];
       // 작성자 본인 혹은 운영자만 삭제 가능
-      if (!context.isAdmin && vote.createdBy !== context.userId) {
+      const requesterId = String(context.userId || '').trim().toLowerCase();
+      if (!context.isAdmin && vote.createdBy !== requesterId) {
         throw this._createHttpError(403, '삭제 권한이 없습니다.');
       }
 
