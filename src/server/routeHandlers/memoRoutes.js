@@ -144,10 +144,17 @@ class MemoRouter extends BaseRouter {
     });
   }
 
+  _parseMemoId(params) {
+    const memoId = Number(params?.memoId);
+    if (!Number.isInteger(memoId) || memoId <= 0) {
+      this.validationError('유효하지 않은 쪽지 번호입니다.');
+    }
+    return memoId;
+  }
+
   async getMemo(params) {
     const { memoRepository } = this.deps;
-    const memoId = Number(params.memoId);
-    if (isNaN(memoId)) this.error(400, 'Invalid memo ID');
+    const memoId = this._parseMemoId(params);
     const context = await this.getContext();
     return this.send(200, await memoRepository.getMemo(memoId, context));
   }
@@ -155,8 +162,7 @@ class MemoRouter extends BaseRouter {
   // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — body.archived(기본 true)로 보관/해제.
   async archiveMemo(params) {
     const { memoRepository } = this.deps;
-    const memoId = Number(params.memoId);
-    if (isNaN(memoId)) this.error(400, 'Invalid memo ID');
+    const memoId = this._parseMemoId(params);
     const body = await this.getBody();
     const archived = body && body.archived === false ? false : true;
     const context = await this.getContext();
@@ -165,16 +171,14 @@ class MemoRouter extends BaseRouter {
 
   async markMemoRead(params) {
     const { memoRepository } = this.deps;
-    const memoId = Number(params.memoId);
-    if (isNaN(memoId)) this.error(400, 'Invalid memo ID');
+    const memoId = this._parseMemoId(params);
     const context = await this.getContext();
     return this.send(200, await memoRepository.markRead(memoId, context));
   }
 
   async deleteMemo(params) {
     const { memoRepository } = this.deps;
-    const memoId = Number(params.memoId);
-    if (isNaN(memoId)) this.error(400, 'Invalid memo ID');
+    const memoId = this._parseMemoId(params);
     const context = await this.getContext();
     return this.send(200, await memoRepository.deleteMemo(memoId, context));
   }

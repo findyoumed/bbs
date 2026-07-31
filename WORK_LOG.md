@@ -1,3 +1,16 @@
+## [2026-07-31 15:20] [리팩토링] memoRoutes memoId 파싱 및 양의 정수 검증 _parseMemoId 헬퍼 추출
+
+**LOG_ID: 20260731_1520**
+목표: `memoRoutes.js` 내 `getMemo`, `archiveMemo`, `markMemoRead`, `deleteMemo` 4개 라우트에서 각각 중복되던 `memoId` 파싱 및 `isNaN` 검증 코드를 `_parseMemoId` 헬퍼 메서드로 중앙 모듈화.
+
+수정: `_parseMemoId(params)` 메서드를 신설하여 `Number.isInteger(memoId) && memoId > 0` 형태의 엄격한 양의 정수 유효성 검사 및 `validationError` 기반 표준 오류 메시지 반환을 통합.
+
+검증: `node --check src/server/routeHandlers/memoRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:15] [버그수정] AttachmentRepositoryLocal delete 인덱스 저장 실패 시 원복 트랜잭션 예외 처리
 
 **LOG_ID: 20260731_1515**
