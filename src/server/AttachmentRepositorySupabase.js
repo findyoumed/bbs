@@ -7,7 +7,6 @@ const {
   buildStoredName,
   createHttpError,
   decodeAttachmentPayload,
-  isMissingAttachmentsTableError,
   normalizeEntry
 } = require('./AttachmentRepositoryShared');
 // [LOG_ID: 20260729_0330] 병합 게시판 필터를 손으로 조립(`.in('board_id', …)`)하지 않고 정본인

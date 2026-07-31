@@ -1,6 +1,6 @@
 'use strict';
-const { createHttpError, sanitizeNewPostInput, sanitizePostPatch, clonePost, buildPagination } = require('./BoardRepositoryShared');
-const { assertBoardWritable, assertBoardAccessible, assertAuthenticatedBoardUser, assertPostMutable } = require('./BoardRepositoryAccess');
+const { createHttpError, sanitizeNewPostInput, clonePost, buildPagination } = require('./BoardRepositoryShared');
+const { assertBoardWritable, assertBoardAccessible, assertAuthenticatedBoardUser } = require('./BoardRepositoryAccess');
 const { sortPostsThreaded, normalizeSearchOptions, filterPostsBySearch } = require('./BoardRepositorySearch');
 
 class MemoryBoardRepositoryCore {

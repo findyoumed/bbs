@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
 const {
@@ -16,7 +16,6 @@ const {
   syncMemberAuthProfile,
   throwAdminError
 } = require('./AuthBridgeSync');
-const { createBridgeError, normalizeAuthEmail } = require('./AuthBridgeUtils');
 const { maybeUuid } = require('./httpUtils');
 
 function guestUser() {

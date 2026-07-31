@@ -1,3 +1,22 @@
+## [2026-07-31 13:00] [리팩토링] src/server/ 전체에서 미사용 require 4건(4개 파일) 정리 — 정적 스캔 전수 조사
+
+**LOG_ID: 20260731_1300**
+목표: `public/js/core`에 이어 `src/server/` 전체의 CommonJS `require` / ESM `import` 구조분해 패턴 중 미사용 모듈을 정적 스캔 스크립트로 전수 조사 및 정리.
+
+발견: 스크립트 1차 결과 8건 중 별칭 구조분해(`alias`) 오탐 4건을 제외하고, 실제 미사용 require 4건(4개 파일) 전수 발굴:
+1) `src/server/AttachmentRepositorySupabase.js`: `isMissingAttachmentsTableError` (미사용)
+2) `src/server/AuthBridge.js`: `createBridgeError, normalizeAuthEmail` (미사용 줄)
+3) `src/server/ChatRoomRepositorySupabaseQueries.js`: `roomKeyForNo` (미사용)
+4) `src/server/MemoryBoardRepositoryCore.js`: `sanitizePostPatch`, `assertPostMutable` (미사용)
+
+수정: 4개 파일에서 미사용 destruct 항목 및 불필요 require 라인을 삭제.
+
+검증: `node --check` 4개 대상 파일 문법 통과. 동일 정적 스캔 재실행으로 오탐 외 미사용 잔여 0건 확인. `smoke:boards` (PASS), `smoke:command-parity` (PASS), `smoke-mobile-viewports` (PASS 0 error) 회귀 스모크 검증 완료.
+
+결과: ✅ 4개 파일 수정, 순감소 (-6줄).
+
+---
+
 ## [2026-07-31 12:35] [/loop 리팩토링] public/js/core 전체에서 미사용 import 6건(5개 파일) 정리 — 정적 스캔으로 전수 발견
 
 **LOG_ID: 20260731_1235**

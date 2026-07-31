@@ -1,6 +1,6 @@
 'use strict';
 
-const { roomKeyForNo, createHttpError } = require('./ChatRoomRepositoryShared');
+const { createHttpError } = require('./ChatRoomRepositoryShared');
 
 class ChatRoomRepositorySupabaseQueries {
   constructor(client, table) {
