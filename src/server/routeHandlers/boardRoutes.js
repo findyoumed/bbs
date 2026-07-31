@@ -183,10 +183,24 @@ class BoardRouter extends BaseRouter {
     return this.send(201, await this.deps.boardRepository.createPost(boardId, body, context));
   }
 
+  // [LOG_ID: 20260731_1900] 종전엔 `isNaN(Number(params.postId))`만 검사해 소수(예: "1.5")가
+  // 그대로 리포지토리까지 흘러갔다 — Supabase 드라이버는 이 값을 정수 컬럼(local_id) 비교에
+  // 그대로 실어 보내(fetchPostByLocalId: `.eq('local_id', Number(localId))`), Postgres가
+  // "invalid input syntax for type integer" 오류를 던지고 이게 502 + 원시 스택 트레이스로
+  // 그대로 클라이언트에 노출됐다(실측 확인: GET /api/boards/plaza/posts/1.5 → 502). 다른
+  // 라우터(confRoutes/memoRoutes/voteRoutes)에서 이미 쓰는 BaseRouter.parsePositiveIntParam
+  // (Number.isInteger 검사)으로 통일해 소수/음수/0을 여기서 바로 400으로 거른다.
+  _parsePostId(params) {
+    return this.parsePositiveIntParam(params?.postId, 'Invalid post ID');
+  }
+
+  _parseAttachmentId(params) {
+    return this.parsePositiveIntParam(params?.attachmentId, 'Invalid attachment ID');
+  }
+
   async replyToPost(params) {
     const boardId = params.boardId;
-    const postId = Number(params.postId);
-    if (isNaN(postId)) this.validationError('Invalid post ID');
+    const postId = this._parsePostId(params);
     const body = await this.getBody();
     const context = await this.getContext();
     return this.send(201, await this.deps.boardRepository.replyToPost(boardId, postId, body, context));
@@ -194,8 +208,7 @@ class BoardRouter extends BaseRouter {
 
   async recommendPost(params) {
     const boardId = params.boardId;
-    const postId = Number(params.postId);
-    if (isNaN(postId)) this.validationError('Invalid post ID');
+    const postId = this._parsePostId(params);
     const context = await this.getContext();
     return this.send(200, await this.deps.boardRepository.recommendPost(boardId, postId, context));
   }
@@ -203,8 +216,7 @@ class BoardRouter extends BaseRouter {
   // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 내비게이션 정확성 보존을 위해 virtualBoardId와 search 파라미터를 추가 연계
   async getPost(params) {
     const boardId = params.boardId;
-    const postId = Number(params.postId);
-    if (isNaN(postId)) this.validationError('Invalid post ID');
+    const postId = this._parsePostId(params);
     const viewerContext = await this.getContext();
     const virtualBoardId = this.requestUrl.searchParams.get('virtualBoardId') || '';
     const search = {
@@ -228,8 +240,7 @@ class BoardRouter extends BaseRouter {
 
   async updatePost(params) {
     const boardId = params.boardId;
-    const postId = Number(params.postId);
-    if (isNaN(postId)) this.validationError('Invalid post ID');
+    const postId = this._parsePostId(params);
     const body = await this.getBody();
     const context = await this.getContext();
     return this.send(200, await this.deps.boardRepository.updatePost(boardId, postId, body || {}, context));
@@ -237,8 +248,7 @@ class BoardRouter extends BaseRouter {
 
   async deletePost(params) {
     const boardId = params.boardId;
-    const postId = Number(params.postId);
-    if (isNaN(postId)) this.validationError('Invalid post ID');
+    const postId = this._parsePostId(params);
     const context = await this.getContext();
     const result = await this.deps.boardRepository.deletePost(boardId, postId, context);
     // [LOG_ID: 20260727_1425] 완전 삭제는 attachments.post_id의 ON DELETE CASCADE로 이미 정리되지만
@@ -286,8 +296,7 @@ class BoardRouter extends BaseRouter {
 
   async listAttachments(params) {
     const boardId = params.boardId;
-    const postId = Number(params.postId);
-    if (isNaN(postId)) this.validationError('Invalid post ID');
+    const postId = this._parsePostId(params);
     const context = await this.getContext();
     const article = await this.ensureAttachmentReadable(boardId, postId, context);
     // [LOG_ID: 20260727_1330] postId(URL의 local_id)를 그대로 attachmentRepository에 넘기면 안 된다 —
@@ -301,8 +310,7 @@ class BoardRouter extends BaseRouter {
 
   async addAttachment(params) {
     const boardId = params.boardId;
-    const postId = Number(params.postId);
-    if (isNaN(postId)) this.validationError('Invalid post ID');
+    const postId = this._parsePostId(params);
     const body = await this.getBody();
     const context = await this.getContext();
     const article = await this.ensureAttachmentWritable(boardId, postId, context);
@@ -326,10 +334,8 @@ class BoardRouter extends BaseRouter {
 
   async handleAttachmentItem(params) {
     const boardId = params.boardId;
-    const postId = Number(params.postId);
-    const attachmentId = Number(params.attachmentId);
-    if (isNaN(postId)) this.validationError('Invalid post ID');
-    if (isNaN(attachmentId)) this.validationError('Invalid attachment ID');
+    const postId = this._parsePostId(params);
+    const attachmentId = this._parseAttachmentId(params);
 
     const isDownload = this.pathname.endsWith('/download');
     const context = await this.getContext();

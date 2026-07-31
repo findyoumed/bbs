@@ -63,25 +63,32 @@ class ChatServiceRouter extends BaseRouter {
     return this.send(201, await this.deps.chatRoomRepository.create(body, context));
   }
 
+  // [LOG_ID: 20260731_1900] 종전엔 `isNaN(Number(params.roomNo))`만 검사해 소수(예: "1.5")가
+  // 그대로 리포지토리까지 흘러갔다 — Supabase 드라이버(ChatRoomRepositorySupabaseQueries.
+  // findRoomByNo)가 이 값을 bigint 컬럼 비교에 그대로 실어 보내 Postgres가 "invalid input
+  // syntax for type bigint" 오류를 던지고, 이게 502 + 원시 스택 트레이스로 그대로 클라이언트에
+  // 노출됐다(실측 확인: GET /api/chat/rooms/1.5/messages → 502). confRoutes 등과 동일한
+  // BaseRouter.parsePositiveIntParam으로 통일해 소수/음수/0을 여기서 바로 400으로 거른다.
+  _parseRoomNo(params) {
+    return this.parsePositiveIntParam(params?.roomNo, 'Invalid room number');
+  }
+
   async handleRoomJoin(params) {
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     const body = await this.getBody();
     const context = await this.getContext();
     return this.send(200, await this.deps.chatRoomRepository.join(roomNo, body || {}, context));
   }
 
   async handleRoomLeave(params) {
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     const body = await this.getBody();
     const context = await this.getContext();
     return this.send(200, await this.deps.chatRoomRepository.leave(roomNo, body || {}, context));
   }
 
   async handleRoomKick(params) {
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     const body = await this.getBody();
     const targetUserId = String(body?.targetUserId || '').trim().toLowerCase();
     if (!targetUserId) {
@@ -92,16 +99,14 @@ class ChatServiceRouter extends BaseRouter {
   }
 
   async handleRoomSettings(params) {
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     const body = await this.getBody();
     const context = await this.getContext();
     return this.send(200, await this.deps.chatRoomRepository.updateRoom(roomNo, body || {}, context));
   }
 
   async listChatMessages(params) {
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     return this.send(200, await this.deps.chatRoomRepository.listMessages(roomNo));
   }
 
@@ -129,8 +134,7 @@ class ChatServiceRouter extends BaseRouter {
   }
 
   async sendChatMessage(params) {
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     const body = await this.getChatMessageBody();
     const context = await this.getContext();
     return this.send(201, await this.deps.chatRoomRepository.sendMessage(roomNo, body, context));

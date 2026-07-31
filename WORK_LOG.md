@@ -1,3 +1,22 @@
+## [2026-07-31 19:00] [버그수정] boardRoutes.js/chatServiceRoutes.js의 isNaN()만 쓰는 ID 검증 — 소수 입력 시 502 + 내부 스택 트레이스 노출
+
+**LOG_ID: 20260731_1900**
+목표: 직전 라운드(20260731_1830)에서 대조군으로 남겨뒀던 항목 — `boardRoutes.js`(postId 8곳)/`chatServiceRoutes.js`(roomNo 6곳)가 `_parseRoomNo` 등과 달리 `isNaN(Number(x))`만 검사해 음수·0·소수를 통과시키는데, 이게 실제 오동작을 일으키는지 실서버로 조사.
+
+발견(실측): 로컬 서버(`PORT=3911 node server.js`, 실 Supabase 연결)에 직접 재현.
+- `GET /api/boards/plaza/posts/1.5` → **502** `invalid input syntax for type integer: "1.5"` + 전체 스택 트레이스(파일 경로 포함) 그대로 JSON 응답에 노출. 원인: `isNaN(1.5)`는 `false`라 검증을 통과 → `SupabaseBoardRepositoryPostReads.fetchPostByLocalId`가 `.eq('local_id', Number(localId))`로 정수 컬럼에 `1.5`를 그대로 실어 Postgres가 런타임 오류를 던짐.
+- `GET /api/chat/rooms/1.5/messages` → **502** `invalid input syntax for type bigint: "1.5"` + 스택 트레이스. 원인 동일(`ChatRoomRepositorySupabaseQueries.findRoomByNo`가 bigint 컬럼에 소수를 그대로 비교).
+- 음수(`-1`)·0은 Supabase에서 "조회 결과 없음"으로 자연 처리되어 이미 깔끔한 404였다(그 자체로는 버그 아님).
+- 첨부파일 ID(`:attachmentId`)는 URL에 소수가 오면 라우트 매칭 자체가 안 돼(별개 사유) 이 경로는 재현되지 않음.
+
+수정: `boardRoutes.js`에 `_parsePostId`/`_parseAttachmentId`, `chatServiceRoutes.js`에 `_parseRoomNo`를 추가해 전부 `BaseRouter.parsePositiveIntParam`(20260731_1830에서 추가된 헬퍼)에 위임. `isNaN()` 인라인 검사 14곳(boardRoutes 8 + chatServiceRoutes 6) 전부 제거.
+
+검증: `node --check` 통과. 실서버 재실측 — `1.5`/`-1`/`0` 전부 이제 **400** `Invalid post ID`/`Invalid room number`로 깔끔하게 거부(스택 트레이스 노출 없음, 메시지 본문만). 유효한 기존 글(local_id=17, plaza) 조회 골든 패스 정상(200, 올바른 글 반환). `smoke:boards`·`smoke:chat-rooms`·`smoke:chat-rooms-supabase`(Memory+Supabase 양쪽 드라이버)·`smoke:command-parity`·`smoke:full-traversal` 5종 회귀 전부 통과.
+
+결과: ✅ 2개 파일. 소수 ID 입력 시 500계열 응답 + 내부 정보(파일 경로·DB 오류 원문) 노출 버그 수정, 음수/0도 더 이른 지점에서 명확한 400으로 거부.
+
+---
+
 ## [2026-07-31 18:40] [리팩토링] confRoutes/memoRoutes/voteRoutes의 "양의 정수 파라미터 파싱" 헬퍼 4개가 복제한 로직을 BaseRouter로 통합
 
 **LOG_ID: 20260731_1830**
