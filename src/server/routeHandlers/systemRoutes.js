@@ -202,9 +202,10 @@ class SystemRouter extends BaseRouter {
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    const activeUserCount = this.countActiveUsers(activityRepository);
-    const [memberCount, totalArticles, todayArticles] = await Promise.all([
+    // [LOG: 20260731_1640] countActiveUsers가 비동기 리포지토리 호출을 수반하므로 await/Promise.all 관리 추가
+    const [memberCount, activeUserCount, totalArticles, todayArticles] = await Promise.all([
       this.safeCount(() => (typeof memberRepository?.countMembers === 'function' ? memberRepository.countMembers() : 0), 0),
+      this.countActiveUsers(activityRepository),
       this.countAllPosts(boardRepository),
       this.countPostsSince(boardRepository, startOfDay)
     ]);
@@ -225,13 +226,14 @@ class SystemRouter extends BaseRouter {
     return data;
   }
 
-  countActiveUsers(activityRepository) {
+  async countActiveUsers(activityRepository) {
     try {
       if (typeof activityRepository?.getStats === 'function') {
-        return activityRepository.getStats().totalConnections || 0;
+        const stats = await activityRepository.getStats();
+        return stats?.totalConnections || 0;
       }
       const activeUsers = typeof activityRepository?.list === 'function'
-        ? activityRepository.list()
+        ? await activityRepository.list()
         : [];
       return Array.isArray(activeUsers) ? activeUsers.length : 0;
     } catch (error) {

@@ -1,3 +1,18 @@
+## [2026-07-31 16:40] [버그수정] systemRoutes 내 대문 접속자 수 통계 비동기 미반영 결함 수정
+
+**LOG_ID: 20260731_1640**
+목표: Supabase 등의 비동기 드라이버 사용 시 대문 통계 정보(`/api/system/stats`)에서 접속자 수(`activeUserCount`)가 항상 0명으로 고정 표시되던 비동기 프로미스 누락 버그 해결.
+
+수정:
+- `countActiveUsers()` 메서드를 `async` 함수로 전환하고 내부 리포지토리의 비동기 메소드(`getStats()`, `list()`) 호출에 `await` 처리 적용.
+- `buildAssetDynamicData()` 내에서 `Promise.all` 블록에 `countActiveUsers` 호출을 병렬로 담아 비동기 수치를 안전하게 대기 수신하도록 개선.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 16:35] [리팩토링] memoRoutes createMemo 시 수신자 아이디 소문자 정규화 처리
 
 **LOG_ID: 20260731_1635**
