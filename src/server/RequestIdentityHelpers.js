@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const { normalizeText, stripControlCharacters } = require('./httpUtils');
 
@@ -9,8 +9,10 @@ function normalizeRequestIdentity(value, fallback = '', maxLength = 120) {
   return normalized.slice(0, Math.max(0, Number(maxLength) || 0));
 }
 
+// [LOG: 20260731_1800] 사용자 ID는 반드시 소문자여야 한다 — 이 함수가 context.userId의
+// 최상위 원천이므로 여기서 정형화하면 모든 경로가 한꺼번에 일관성을 가진다.
 function normalizeRequestUserId(value, fallback = 'guest') {
-  return normalizeRequestIdentity(value, fallback, 120);
+  return normalizeRequestIdentity(value, fallback, 120).toLowerCase();
 }
 
 function normalizeRequestNickName(value, fallback = '\uC190\uB2D8') {

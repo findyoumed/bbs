@@ -1,3 +1,20 @@
+## [2026-07-31 18:00] [버그수정] RequestIdentityHelpers.js 내 normalizeRequestUserId에 toLowerCase() 추가 — context.userId 소문자화 최상위 원천 정형화
+
+**LOG_ID: 20260731_1800**
+목표: `context.userId`는 `normalizeRequestUserId()`가 최상위 원천인데, 이 함수가 소문자화를 하지 않아 Supabase Auth 메타데이터에 대소문자가 혼재된 userId가 있을 경우 모든 `context.userId` 비교 단에서 오작동 가능. 최상위 원천에서 정형화하면 하위 모든 경로가 일관성을 가진다.
+
+수정:
+- `RequestIdentityHelpers.js` — `normalizeRequestUserId()` 반환값에 `.toLowerCase()` 추가.
+  이로써 `context.userId`가 생성되는 가장 이른 시점에 소문자화가 보장됨.
+
+영향 범위: `AuthBridge.js`, `AuthBridgeSync.js`, `RequestIdentityHelpers.js`를 통해 생성되는 모든 요청 컨텍스트.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 17:55] [버그수정] ChatRoomRepositories 내 normalizeText userId 소문자화 누락 보완
 
 **LOG_ID: 20260731_1755**
