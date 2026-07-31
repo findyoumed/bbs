@@ -1,3 +1,16 @@
+## [2026-07-31 15:45] [리팩토링] confRoutes roomNo 및 agendaId 검증 _parseRoomNo, _parseAgendaId 헬퍼 모듈화
+
+**LOG_ID: 20260731_1545**
+목표: `confRoutes.js` 내 회의실(`roomNo`) 및 안건(`agendaId`) 관련 5개 라우트에서 중복되던 파싱 및 `isNaN` 검증 코드를 헬퍼 메서드로 중앙 모듈화.
+
+수정: `_parseRoomNo(params)` 및 `_parseAgendaId(params)` 헬퍼 메서드를 신설하여 `Number.isInteger(...) && val > 0` 검사 및 `validationError` 기반 표준 메시지 반환을 통합 적용.
+
+검증: `node --check src/server/routeHandlers/confRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:40] [리팩토링] voteRoutes voteId 파싱 및 양의 정수 검증 _parseVoteId 헬퍼 추출
 
 **LOG_ID: 20260731_1540**

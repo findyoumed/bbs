@@ -52,18 +52,32 @@ class ConfRouter extends BaseRouter {
     return this.send(201, await confRepository.createRoom(body, context));
   }
 
+  _parseRoomNo(params) {
+    const roomNo = Number(params?.roomNo);
+    if (!Number.isInteger(roomNo) || roomNo <= 0) {
+      this.validationError('유효하지 않은 회의실 번호입니다.');
+    }
+    return roomNo;
+  }
+
+  _parseAgendaId(params) {
+    const agendaId = Number(params?.agendaId);
+    if (!Number.isInteger(agendaId) || agendaId <= 0) {
+      this.validationError('유효하지 않은 안건 번호입니다.');
+    }
+    return agendaId;
+  }
+
   async closeRoom(params) {
     const { confRepository } = this.deps;
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     const context = await this.getContext();
     return this.send(200, await confRepository.closeRoom(roomNo, context));
   }
 
   async listAgendas(params) {
     const { confRepository } = this.deps;
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     // [LOG_ID: 20260729_0020] getAgenda/secondAgenda/createAgenda는 모두 context를 넘겨
     // _publicAgenda가 "내가 재청했는지"(seconded)를 실제 로그인 사용자 기준으로 계산하는데,
     // 여기만 context를 아예 안 넘겨 항상 'guest' 기준으로 계산됐다(현재 클라이언트 목록
@@ -75,8 +89,7 @@ class ConfRouter extends BaseRouter {
 
   async createAgenda(params) {
     const { confRepository } = this.deps;
-    const roomNo = Number(params.roomNo);
-    if (isNaN(roomNo)) this.validationError('Invalid room number');
+    const roomNo = this._parseRoomNo(params);
     const body = await this.getBody() || {};
     const context = await this.getContext();
     return this.send(201, await confRepository.createAgenda(roomNo, body, context));
@@ -84,16 +97,14 @@ class ConfRouter extends BaseRouter {
 
   async getAgenda(params) {
     const { confRepository } = this.deps;
-    const agendaId = Number(params.agendaId);
-    if (isNaN(agendaId)) this.validationError('Invalid agenda id');
+    const agendaId = this._parseAgendaId(params);
     const context = await this.getContext();
     return this.send(200, await confRepository.getAgenda(agendaId, context));
   }
 
   async secondAgenda(params) {
     const { confRepository } = this.deps;
-    const agendaId = Number(params.agendaId);
-    if (isNaN(agendaId)) this.validationError('Invalid agenda id');
+    const agendaId = this._parseAgendaId(params);
     const context = await this.getContext();
     return this.send(200, await confRepository.secondAgenda(agendaId, context));
   }
