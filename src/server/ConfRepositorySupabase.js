@@ -4,18 +4,10 @@
 // 테이블: conf_rooms / conf_agendas / conf_seconds (supabase/migrations/0019_conf_system.sql).
 const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
-const { createHttpError } = require('./httpUtils');
-
-function normText(value, fallback = '') {
-  const s = String(value ?? '').trim();
-  return s || fallback;
-}
-
-// [LOG: 20260731_1725] 사용자 ID의 안전한 대소문자 일관성 정형화 헬퍼
-function normUserId(value, fallback = 'guest') {
-  const s = String(value ?? '').trim().toLowerCase();
-  return s || fallback;
-}
+const { createHttpError, normalizeText } = require('./httpUtils');
+// [LOG_ID: 20260731_2200] normalizeText(httpUtils.normalizeText와 완전히 동일한 로직이었다)/normUserId
+// 로컬 복제를 ConfRepositoryShared.js로 통합 — 다른 도메인의 XRepositoryShared.js 관례를 따른다.
+const { normUserId } = require('./ConfRepositoryShared');
 
 class SupabaseConfRepository extends BaseRepository {
   constructor(options = {}) {
@@ -94,7 +86,7 @@ class SupabaseConfRepository extends BaseRepository {
   }
 
   async createRoom(payload = {}, context = {}) {
-    const title = normText(payload.title);
+    const title = normalizeText(payload.title);
     if (!title) throw createHttpError(400, '회의실 제목을 입력해 주세요.');
     // room_no 할당 — 현재 최대 + 1 (UNIQUE 충돌 시 재시도).
     for (let i = 0; i < 5; i++) {
@@ -103,7 +95,7 @@ class SupabaseConfRepository extends BaseRepository {
       const nextNo = (maxRow ? Number(maxRow.room_no) : 0) + 1;
       const { data, error } = await this.client.from(this.roomsTable).insert({
         room_no: nextNo, title: title.slice(0, 60),
-        owner_user_id: normUserId(context.userId, 'guest'), owner_name: normText(context.nickName, '손님'),
+        owner_user_id: normUserId(context.userId, 'guest'), owner_name: normalizeText(context.nickName, '손님'),
         is_open: true, created_at: new Date().toISOString()
       }).select('*').single();
       if (!error) return this._publicRoom(data, 0);
@@ -138,13 +130,13 @@ class SupabaseConfRepository extends BaseRepository {
   async createAgenda(roomNo, payload = {}, context = {}) {
     const room = await this._findRoomRow(roomNo);
     if (room.is_open === false) throw createHttpError(409, '닫힌 회의실에는 안건을 발의할 수 없습니다.');
-    const title = normText(payload.title);
+    const title = normalizeText(payload.title);
     if (!title) throw createHttpError(400, '안건 제목을 입력해 주세요.');
     const agendaNo = (await this._agendaCount(roomNo)) + 1;
     const { data, error } = await this.client.from(this.agendasTable).insert({
       room_no: Number(roomNo), agenda_no: agendaNo, title: title.slice(0, 80),
-      content: normText(payload.content).slice(0, 4000),
-      author_id: normUserId(context.userId, 'guest'), author_name: normText(context.nickName, '손님'),
+      content: normalizeText(payload.content).slice(0, 4000),
+      author_id: normUserId(context.userId, 'guest'), author_name: normalizeText(context.nickName, '손님'),
       created_at: new Date().toISOString()
     }).select('*').single();
     if (error) this._fail('안건 발의', error);

@@ -1,3 +1,19 @@
+## [2026-07-31 22:00] [리팩토링] ConfRepositoryMemory/Supabase의 normText/normUserId 복제를 ConfRepositoryShared.js·httpUtils.normalizeText로 통합
+
+**LOG_ID: 20260731_2200**
+목표: "리팩토링, 클린코드, 오류 수정" 지시에 따라 서버 전역 함수명 중복 재스캔(이름 매칭 스캔은 지역 변수/독립 로직을 오탐하는 경우가 많아 각 후보를 실제로 읽고 검증).
+
+발견: `ConfRepositoryMemory.js`/`ConfRepositorySupabase.js`에 `normText`/`normUserId`가 주석까지 포함해 바이트 단위로 동일하게 복제돼 있었다. 그중 `normText`는 알고 보니 `httpUtils.js`가 이미 내보내는 `normalizeText`(`String(value ?? '').trim() || fallback`)와 완전히 동일한 로직의 재구현이었다 — 두 파일 모두 이미 httpUtils를 require하고 있었는데도 기존 공용 함수를 안 쓰고 각자 새로 만든 경우. `normUserId`(소문자화 변형)는 다른 곳에 없는 고유 로직이라 CLAUDE.md에 문서화된 `XRepositoryShared.js` 관례(Memo/Chat/Attachment/Member/Board 도메인엔 이미 있는데 Conf만 빠져 있었음)를 따라 새 `ConfRepositoryShared.js`로 옮겼다.
+(스캔 결과 다수를 오탐으로 기각: `isLastPage`/`sentenceCount` 등은 실제로는 함수가 아니라 여러 파일에 우연히 같은 이름을 쓴 지역 변수 한 줄짜리 표현식이었고, `escCell`/`putChar`/`flush`(ansiEngine.js vs ansiRenderUtils.js)는 이름만 같을 뿐 로컬 클로저 상태에 묶여 있고 실제 로직도 서로 다른(스톤/광폭문자 처리 유무 등) 별개 구현이었다 — 억지로 합치면 오히려 결합도만 높아져 손대지 않음.)
+
+수정: `ConfRepositoryShared.js` 신설(다른 도메인의 Shared 파일과 동일한 위치·역할). `ConfRepositoryMemory.js`/`ConfRepositorySupabase.js`는 로컬 `normText`/`normUserId` 정의를 제거하고 각각 `httpUtils.normalizeText`/`ConfRepositoryShared.normUserId`를 import, 호출부 6곳씩(`normText(` → `normalizeText(`)을 치환.
+
+검증: 3개 파일 `node --check` 통과. 수정 전/후 로직 10케이스(빈값/null/undefined/공백/대소문자/한글/0/false 등) 동등성 확인. 실서버(Memory+Supabase 양쪽) + 실제 Supabase DB로 회의실 생성(제목 트리밍 확인)→안건 발의→재청→목록 조회(seconded 필드로 normUserId 대소문자 일관성 확인)→닫기 전체 플로우 실행해 정상 동작 확인(테스트 데이터는 곧바로 정리). `smoke:full-traversal`·`smoke:command-parity` 회귀 통과.
+
+결과: ✅ 3개 파일(신규 1, 수정 2), 로컬 복제 함수 2개 제거, 기존 공용 유틸(`normalizeText`) 재사용으로 순감소.
+
+---
+
 ## [2026-07-31 21:30] [버그수정] /account("최근 접속")가 /myinfo와 달리 여전히 가입 시각에 고정 — getMyStats가 병합된 context를 무시하고 member 원본을 재조회
 
 **LOG_ID: 20260731_2130**

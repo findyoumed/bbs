@@ -2,18 +2,10 @@
 
 // [LOG_ID: 20260719_1600] 토론의 광장(CONF) — 인메모리 저장소.
 // 회의실(열기/닫기/목록) + 안건(발의/열람) + 재청(1인 1회). Supabase 드라이버와 동일 의미로 맞춘다.
-const { createHttpError } = require('./httpUtils');
-
-function normText(value, fallback = '') {
-  const s = String(value ?? '').trim();
-  return s || fallback;
-}
-
-// [LOG: 20260731_1725] 사용자 ID의 안전한 대소문자 일관성 정형화 헬퍼
-function normUserId(value, fallback = 'guest') {
-  const s = String(value ?? '').trim().toLowerCase();
-  return s || fallback;
-}
+const { createHttpError, normalizeText } = require('./httpUtils');
+// [LOG_ID: 20260731_2200] normalizeText(httpUtils.normalizeText와 완전히 동일한 로직이었다)/normUserId
+// 로컬 복제를 ConfRepositoryShared.js로 통합 — 다른 도메인의 XRepositoryShared.js 관례를 따른다.
+const { normUserId } = require('./ConfRepositoryShared');
 
 class MemoryConfRepository {
   constructor() {
@@ -80,13 +72,13 @@ class MemoryConfRepository {
   }
 
   async createRoom(payload = {}, context = {}) {
-    const title = normText(payload.title);
+    const title = normalizeText(payload.title);
     if (!title) throw createHttpError(400, '회의실 제목을 입력해 주세요.');
     const room = {
       no: this.nextRoomNo++,
       title: title.slice(0, 60),
       ownerUserId: normUserId(context.userId, 'guest'),
-      ownerName: normText(context.nickName, '손님'),
+      ownerName: normalizeText(context.nickName, '손님'),
       isOpen: true,
       createdAt: new Date().toISOString(),
       closedAt: null
@@ -118,7 +110,7 @@ class MemoryConfRepository {
   async createAgenda(roomNo, payload = {}, context = {}) {
     const room = this._findRoom(roomNo);
     if (!room.isOpen) throw createHttpError(409, '닫힌 회의실에는 안건을 발의할 수 없습니다.');
-    const title = normText(payload.title);
+    const title = normalizeText(payload.title);
     if (!title) throw createHttpError(400, '안건 제목을 입력해 주세요.');
     const agendaNo = this._agendaCount(room.no) + 1;
     const agenda = {
@@ -126,9 +118,9 @@ class MemoryConfRepository {
       roomNo: room.no,
       agendaNo,
       title: title.slice(0, 80),
-      content: normText(payload.content).slice(0, 4000),
+      content: normalizeText(payload.content).slice(0, 4000),
       authorId: normUserId(context.userId, 'guest'),
-      authorName: normText(context.nickName, '손님'),
+      authorName: normalizeText(context.nickName, '손님'),
       createdAt: new Date().toISOString()
     };
     this.agendas.push(agenda);
