@@ -1,3 +1,16 @@
+## [2026-07-31 15:50] [버그수정] boardRoutes listHotPosts 쿼리 파라미터 수치 상한선 안전 검증 보강
+
+**LOG_ID: 20260731_1550**
+목표: `boardRoutes.js`의 `listHotPosts` 라우트에서 `limit` 및 `days` 쿼리 파라미터에 음수나 지나치게 큰 값이 입력될 경우 데이터베이스 부하 또는 잘못된 조회가 발생하던 현상 정정.
+
+수정: `limit` (양의 정수, 최대 100, 기본 10) 및 `days` (양의 정수, 최대 365, 기본 7) 수치 바운드 및 양의 정수 유효성 검사 적용.
+
+검증: `node --check src/server/routeHandlers/boardRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:45] [리팩토링] confRoutes roomNo 및 agendaId 검증 _parseRoomNo, _parseAgendaId 헬퍼 모듈화
 
 **LOG_ID: 20260731_1545**

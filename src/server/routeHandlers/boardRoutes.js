@@ -84,8 +84,10 @@ class BoardRouter extends BaseRouter {
   }
 
   async listHotPosts() {
-    const limit = Number(this.requestUrl.searchParams.get('limit')) || 10;
-    const days = Number(this.requestUrl.searchParams.get('days')) || 7;
+    const rawLimit = Number(this.requestUrl.searchParams.get('limit'));
+    const rawDays = Number(this.requestUrl.searchParams.get('days'));
+    const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 10;
+    const days = Number.isInteger(rawDays) && rawDays > 0 ? Math.min(rawDays, 365) : 7;
     return this.send(200, await this.deps.boardRepository.listHotPosts({ limit, days }));
   }
 
