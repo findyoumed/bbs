@@ -1,3 +1,18 @@
+## [2026-07-31 14:35] [버그수정] commandRouterChat J/JOIN 대화방 번호 직접 입력 시 캐시 미존재 시에도 폴백 입장 보장
+
+**LOG_ID: 20260731_1435**
+목표: `commandRouterChat.js`에서 `J [방번호]` / `JOIN [방번호]` / `/J [방번호]` 명령어 실행 시 `state._chatRooms` 배열 캐시에 해당 방 객체가 없더라도 `{ no: roomNo }` 폴백으로 `enterRoom()`을 통해 직접 입장을 시도할 수 있도록 개선.
+
+발견: 로비 목록이 아직 렌더링 중이거나 캐시되지 않은 상태에서 `J 1` 등 방 번호 직접 입력 시, `state._chatRooms`에서 객체를 찾지 못하면 실제 존재하는 방이어도 "해당 방번호(#N)의 방이 존재하지 않습니다." 힌트를 남기고 입력을 차단하던 결함 발견.
+
+수정: `await enterRoom(room || { no: roomNo });` 패턴으로 정정하여 방 번호가 명시되면 캐시 존재 여부와 무관하게 서버 입장 처리로 폴백되도록 수정.
+
+검증: `node --check public/js/core/commandRouterChat.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:30] [버그수정] CMAIL(배달확인/취소) 명령어 실행 시 보낸 편지함(sent) 타겟팅 분기 정정
 
 **LOG_ID: 20260731_1430**

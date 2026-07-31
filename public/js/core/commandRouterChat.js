@@ -223,15 +223,12 @@ export function createChatCommandHandler(deps) {
       }
 
       // [LOG_ID: 20260713_1000] J [방번호] / JOIN [방번호] / /J [방번호] 명령어 배선 추가
+      // [LOG_ID: 20260731_1435] state._chatRooms 캐시 미존재 시에도 { no: roomNo } 폴백으로 직접 입장을 시도한다.
       const jMatch = cmd.match(/^(?:\/?J|JOIN)\s+(\d+)$/i);
       if (jMatch) {
         const roomNo = parseInt(jMatch[1], 10);
         const room = state._chatRooms?.find((r) => r.no === roomNo);
-        if (room) {
-          await enterRoom(room);
-        } else {
-          setHint(`해당 방번호(#${roomNo})의 방이 존재하지 않습니다.`);
-        }
+        await enterRoom(room || { no: roomNo });
         return true;
       }
 
