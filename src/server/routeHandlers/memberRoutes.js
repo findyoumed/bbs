@@ -271,9 +271,17 @@ class MemberRouter extends BaseRouter {
 
   // --- Member Account Management ---
 
+  _parseTargetUserId(params) {
+    const targetUserId = String(params?.userId || '').trim().toLowerCase();
+    if (!targetUserId) {
+      this.validationError('사용자 아이디가 필요합니다.');
+    }
+    return targetUserId;
+  }
+
   async getMember(params) {
     const { memberRepository } = this.deps;
-    const targetUserId = String(params.userId || '').trim().toLowerCase();
+    const targetUserId = this._parseTargetUserId(params);
     const context = await this.getContext();
     const allowMissing = this.requestUrl.searchParams.get('allowMissing') === '1';
 
@@ -303,7 +311,7 @@ class MemberRouter extends BaseRouter {
 
   async deleteMember(params) {
     const { memberRepository, chatRoomRepository } = this.deps;
-    const targetUserId = params.userId;
+    const targetUserId = this._parseTargetUserId(params);
     const context = await this.getContext();
 
     const isSelf = context.userId === targetUserId;
@@ -340,7 +348,7 @@ class MemberRouter extends BaseRouter {
   }
 
   async verifyPassword(params) {
-    const targetUserId = params.userId;
+    const targetUserId = this._parseTargetUserId(params);
     const context = await this.getContext();
     if (!context?.isAdmin && context?.userId !== targetUserId) this.forbidden('권한이 없습니다.');
     const body = await this.getBody();
@@ -353,7 +361,7 @@ class MemberRouter extends BaseRouter {
 
   async setEmail(params) {
     const { memberRepository, authBridge } = this.deps;
-    const targetUserId = params.userId;
+    const targetUserId = this._parseTargetUserId(params);
     const context = await this.getContext();
     if (!context?.isAdmin && context?.userId !== targetUserId) this.forbidden('권한이 없습니다.');
     const body = await this.getBody();
@@ -409,7 +417,7 @@ class MemberRouter extends BaseRouter {
 
   async setPassword(params) {
     const { authBridge, memberRepository } = this.deps;
-    const targetUserId = params.userId;
+    const targetUserId = this._parseTargetUserId(params);
     const body = await this.getBody();
     const context = await this.getContext();
     if (!context?.isAdmin && context?.userId !== targetUserId) this.forbidden('권한이 없습니다.');
@@ -452,7 +460,7 @@ class MemberRouter extends BaseRouter {
 
   async setLevel(params) {
     const { memberRepository, runtimeConfig } = this.deps;
-    const targetUserId = params.userId;
+    const targetUserId = this._parseTargetUserId(params);
     const body = await this.getBody();
 
     const validLevels = runtimeConfig?.validLevels || [1, 2, 99];

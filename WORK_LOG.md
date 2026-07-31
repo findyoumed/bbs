@@ -1,3 +1,16 @@
+## [2026-07-31 16:00] [리팩토링] memberRoutes targetUserId 파싱 및 정규화 _parseTargetUserId 헬퍼 추출
+
+**LOG_ID: 20260731_1600**
+목표: `memberRoutes.js` 내 회원 정보 조회, 회원 탈퇴, 비밀번호 변경/검증, 이메일 변경, 레벨 설정 등에서 날것으로 사용되던 `params.userId` 변수를 안전하게 정규화 및 가공할 수 있도록 공용 헬퍼 메서드로 모듈화.
+
+수정: `_parseTargetUserId(params)` 헬퍼 메서드를 추가하여 `trim()`, `toLowerCase()`, 빈 문자열 가드 처리를 거친 안전한 `targetUserId`를 6개 주요 엔드포인트 핸들러에 통일 적용.
+
+검증: `node --check src/server/routeHandlers/memberRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:55] [버그수정] ActivityRepositorySupabase touch 시 기존 상태 및 최초 진입 시각 보존
 
 **LOG_ID: 20260731_1555**
