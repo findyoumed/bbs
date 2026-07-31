@@ -24,6 +24,10 @@ class ContactRouter extends BaseRouter {
 
   async sendToSysop() {
     const { mailService } = this.deps;
+    if (!mailService || typeof mailService.sendToSysop !== 'function') {
+      this.error(503, '이메일 발송 서비스가 준비되지 않았습니다.');
+    }
+
     const body = await this.getBody() || {};
     const context = await this.getContext();
 

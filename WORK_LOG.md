@@ -1,3 +1,16 @@
+## [2026-07-31 15:30] [버그수정] contactRoutes mailService 미주입 시 방어 가드 체크 추가
+
+**LOG_ID: 20260731_1530**
+목표: `contactRoutes.js`의 `sendToSysop` 라우트에서 `mailService` 의존성이 없거나 초기화되지 않은 경우 발생하던 `TypeError: Cannot read property 'sendToSysop' of undefined` 크래시 방지.
+
+수정: `sendToSysop` 호출 전 `mailService` 및 `sendToSysop` 메서드의 존재 여부를 체크하여 미준비 시 503 Service Unavailable HTTP 오류를 반환하도록 방어 가드 추가.
+
+검증: `node --check src/server/routeHandlers/contactRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:25] [버그수정] chatAnsiBuilders 대기실 개설방 방장 닉네임 ownerId 속성 폴백 보강
 
 **LOG_ID: 20260731_1525**
