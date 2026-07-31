@@ -40,7 +40,9 @@ class ActivityRepository extends BaseRepository {
    */
   touch(context = {}, meta = {}) {
     return this._trackSync('touch', () => {
-      const userId = normalizeText(context.userId, 'guest');
+      // [LOG: 20260731_1650] userId 대소문자 일관성을 위해 소문자 정규화(guest 제외)
+      const rawUserId = normalizeText(context.userId, 'guest');
+      const userId = rawUserId !== 'guest' ? rawUserId.toLowerCase() : rawUserId;
       const nickName = normalizeText(context.nickName, userId === 'guest' ? '손님' : userId);
       const remoteAddr = normalizeText(
         meta.remoteAddress ||

@@ -1,3 +1,17 @@
+## [2026-07-31 16:50] [리팩토링] 활동기록 저장소(ActivityRepository) touch 시 userId 소문자 정규화
+
+**LOG_ID: 20260731_1650**
+목표: 접속자 추적 정보 기록(`touch`) 시 대소문자가 다르게 유입될 경우 중복 행이 생성되거나 조회 시 엇갈림이 발생하는 문제를 방지하기 위해 계정 ID 대소문자 일관성 강화.
+
+수정:
+- `ActivityRepositorySupabase.js`와 `ActivityRepository.js` 내 `touch()` 메서드에서 `userId` 파싱 후 `guest`가 아닐 때 일괄적으로 `.toLowerCase()` 정형화하도록 리팩토링.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 16:45] [리팩토링] chatServiceRoutes 강퇴 대상 userId 소문자 정규화 및 공백 제거 적용
 
 **LOG_ID: 20260731_1645**
