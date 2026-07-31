@@ -54,7 +54,8 @@ function canAccessMemo(memo, context = {}) {
 const MEMO_TITLE_MAX_LENGTH = 200;
 
 function validateMemoInput(input = {}) {
-  const recipientUserId = normalizeText(input.recipientUserId || input.recipient || '');
+  // [LOG: 20260731_1750] 수신자 ID를 소문자로 정형화하여 DB 저장 시 일관성 보장
+  const recipientUserId = normalizeText(input.recipientUserId || input.recipient || '').toLowerCase();
   const title = normalizeText(input.title || '').slice(0, MEMO_TITLE_MAX_LENGTH);
   const content = normalizeMultilineText(input.content ?? '').trimEnd();
 

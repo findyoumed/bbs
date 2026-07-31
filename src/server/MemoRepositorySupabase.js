@@ -30,7 +30,8 @@ class SupabaseMemoRepository extends BaseRepository {
   }
 
   async listForUser(context = {}) {
-    const userId = normalizeText(context.userId, 'guest');
+    // [LOG: 20260731_1750] normalizeText는 trim만 하므로 toLowerCase() 추가 정형화
+    const userId = normalizeText(context.userId, 'guest').toLowerCase();
     const columns = await this._getColumnMap();
 
     // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — 상자를 inbox/sent/archive 셋으로
@@ -65,7 +66,8 @@ class SupabaseMemoRepository extends BaseRepository {
   // sender_archived를 바꾼다 — 같은 쪽지를 보낸이와 받은이가 서로 간섭 없이 보관한다.
   async setArchived(id, archived, context = {}) {
     const memo = await this.getMemo(id, context);
-    const userId = normalizeText(context.userId, 'guest');
+    // [LOG: 20260731_1750] normalizeText는 trim만 하므로 toLowerCase() 추가 정형화
+    const userId = normalizeText(context.userId, 'guest').toLowerCase();
     const column = memo.recipientUserId === userId ? 'receiver_archived' : 'sender_archived';
 
     if (memo.recipientUserId !== userId && memo.senderUserId !== userId) {
@@ -85,7 +87,8 @@ class SupabaseMemoRepository extends BaseRepository {
   }
 
   async countUnread(context = {}) {
-    const userId = normalizeText(context.userId, 'guest');
+    // [LOG: 20260731_1750] normalizeText는 trim만 하므로 toLowerCase() 추가 정형화
+    const userId = normalizeText(context.userId, 'guest').toLowerCase();
     const columns = await this._getColumnMap();
     const { count, error } = await this.client
       .from(this.table)
@@ -127,7 +130,7 @@ class SupabaseMemoRepository extends BaseRepository {
     const { data, error } = await this.client
       .from(this.table)
       .insert({
-        [columns.sender]: saveToSent ? normalizeText(context.userId, 'guest') : null,
+        [columns.sender]: saveToSent ? normalizeText(context.userId, 'guest').toLowerCase() : null,
         [columns.recipient]: payload.recipientUserId,
         title: payload.title,
         content: payload.content,

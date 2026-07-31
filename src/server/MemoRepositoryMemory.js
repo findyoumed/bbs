@@ -23,7 +23,8 @@ class MemoryMemoRepository {
   // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — Supabase 구현과 동일 의미로 맞춘다
   // (dual-mode라 두 드라이버의 동작이 갈리면 안 된다).
   async listForUser(context = {}) {
-    const userId = normalizeText(context.userId, 'guest');
+    // [LOG: 20260731_1750] normalizeText는 trim만 하므로 toLowerCase() 추가 정형화
+    const userId = normalizeText(context.userId, 'guest').toLowerCase();
 
     if (context.box === 'archive') {
       return this.memos
@@ -43,7 +44,8 @@ class MemoryMemoRepository {
   }
 
   async countUnread(context = {}) {
-    const userId = normalizeText(context.userId, 'guest');
+    // [LOG: 20260731_1750] normalizeText는 trim만 하므로 toLowerCase() 추가 정형화
+    const userId = normalizeText(context.userId, 'guest').toLowerCase();
     return {
       count: this.memos.filter((memo) => memo.recipientUserId === userId
         && memo.isRead !== true
@@ -53,7 +55,8 @@ class MemoryMemoRepository {
 
   async setArchived(id, archived, context = {}) {
     const memo = this._findMemo(id);
-    const userId = normalizeText(context.userId, 'guest');
+    // [LOG: 20260731_1750] normalizeText는 trim만 하므로 toLowerCase() 추가 정형화
+    const userId = normalizeText(context.userId, 'guest').toLowerCase();
     if (memo.recipientUserId !== userId && memo.senderUserId !== userId) {
       throw createHttpError(403, '쪽지를 보관할 권한이 없습니다.');
     }
@@ -78,7 +81,7 @@ class MemoryMemoRepository {
     const saveToSent = input.saveToSent !== false;
     const memo = {
       id: this.nextId++,
-      senderUserId: saveToSent ? normalizeText(context.userId, 'guest') : null,
+      senderUserId: saveToSent ? normalizeText(context.userId, 'guest').toLowerCase() : null,
       recipientUserId: payload.recipientUserId,
       title: payload.title,
       content: payload.content,

@@ -1,3 +1,19 @@
+## [2026-07-31 17:50] [버그수정] MemoRepositories 내 normalizeText가 소문자화 미수행으로 인한 userId 정규화 누락 보완
+
+**LOG_ID: 20260731_1750**
+목표: `normalizeText(context.userId, 'guest')`는 `trim()`만 수행하고 `toLowerCase()`를 수행하지 않아, 대소문자가 혼재된 세션 아이디가 DB 내 소문자 아이디와 일치하지 않아 쪽지함 조회/보관/읽기 기능이 오작동하는 결함 방지.
+
+수정:
+- `MemoRepositoryMemory.js` — `listForUser`, `countUnread`, `setArchived`, `createMemo`의 userId/senderUserId 처리에 `.toLowerCase()` 추가.
+- `MemoRepositorySupabase.js` — `listForUser`, `setArchived`, `countUnread`, `createMemo`의 userId/senderUserId 처리에 `.toLowerCase()` 추가.
+- `MemoRepositoryShared.js` — `validateMemoInput()`의 수신자 ID `recipientUserId`에 `.toLowerCase()` 추가.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 3개 파일 수정.
+
+---
+
 ## [2026-07-31 17:45] [버그수정] boardRoutes 내 첨부파일 관리 권한 비교 시 userId 소문자 정규화 처리
 
 **LOG_ID: 20260731_1745**
