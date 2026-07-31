@@ -1,3 +1,16 @@
+// [LOG: 20260801_0100] 물리 게시판 ID → 부모 가상 게시판 ID 매핑.
+// 서버측 src/server/BoardVirtualBoards.js의 MERGED_BOARD_SOURCES와 동기화 유지 필요.
+// 가상 게시판 자체('pds')는 포함하지 않는다 — invalidateListCache('pds')는 이미 'pds_*'
+// 전체를 지우므로 추가 cascade가 필요 없다.
+const PHYSICAL_TO_VIRTUAL = Object.freeze({
+  pds_all: 'pds',
+  pds_util: 'pds',
+  pds_game: 'pds',
+  pds_graphic: 'pds',
+  pds_sound: 'pds',
+  pds_prog: 'pds'
+});
+
 export function createPostService(deps) {
   const { apiFetch, state } = deps;
 
@@ -27,11 +40,16 @@ export function createPostService(deps) {
     return data?.post ? { board: data.board || null, post: data.post } : { board: null, post: data || null };
   }
 
-  // 관련 게시판의 모든 목록 캐시 삭제
+  // [LOG: 20260801_0100] 관련 게시판의 모든 목록 캐시 삭제.
+  // 물리 게시판(pds_util 등)이 가상 게시판(pds) 소속이면 부모 가상 게시판의 목록 캐시도
+  // 함께 삭제한다. 예: pds_util 글 삭제 후 PDS 가상 목록으로 돌아올 때 stale 캐시가
+  // 서비스되던 문제 해소 — 가상 게시판 키(pds_1 등)도 함께 제거된다.
   function invalidateListCache(boardId) {
     const keyPrefix = `${boardId}_`;
+    const virtualParent = PHYSICAL_TO_VIRTUAL[String(boardId || '')];
+    const virtualPrefix = virtualParent ? `${virtualParent}_` : null;
     for (const key of listCache.keys()) {
-      if (key.startsWith(keyPrefix)) {
+      if (key.startsWith(keyPrefix) || (virtualPrefix && key.startsWith(virtualPrefix))) {
         listCache.delete(key);
       }
     }

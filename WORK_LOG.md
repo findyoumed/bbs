@@ -1,3 +1,30 @@
+## [2026-08-01 01:00] [버그수정] postService.js 목록 캐시 무효화 불완전 — PDS 물리 게시판(pds_util 등) 글 삭제·편집 후 PDS 가상 목록으로 돌아올 때 stale 캐시가 서비스되던 문제 해소
+
+**LOG_ID: 20260801_0100**
+목표: postService.js 캐시 무효화 패턴 전수 조사 — 지난 라운드(20260801_0000)에서 postCache 변형 키 문제를 고쳤으니, listCache의 동일 계열 결함 여부 추가 점검.
+
+발견:
+- `invalidateListCache(boardId)`는 `${boardId}_` 접두사 매칭으로 해당 게시판의 모든 페이지 캐시를 지운다.
+- PDS 가상 게시판(`pds`)은 7개 물리 게시판(`pds_all`, `pds_util`, `pds_game`, `pds_graphic`, `pds_sound`, `pds_prog`, `pds`)을 병합한다(서버측 `BoardVirtualBoards.js` 확인).
+- 사용자가 PDS 가상 목록 → 물리 게시판 `pds_util`의 글을 읽는 순간 `state.board.id`가 `'pds'`에서 `'pds_util'`로 전환된다(postViewView.js line 52-53).
+- 이후 글 삭제 → `deletePost('pds_util', postId)` → `invalidateListCache('pds_util')`: `pds_util_*` 키는 지워지지만 PDS 가상 목록 키(`pds_1`, `pds_2_lt_...` 등)는 그대로 남는다.
+- 사용자가 메뉴로 PDS 가상 목록으로 재진입 → `loadPosts('pds', 1, ...)` → `listCache.has('pds_1')` = true → 삭제된 글이 포함된 stale 데이터가 서비스된다. 삭제된 글을 클릭하면 서버에서 404가 나는 불일치.
+- 이 버그는 "쓰기 후 돌아올 때의 캐시 키 불일치" 패턴의 listCache 버전으로, 20260801_0000에서 postCache에서 찾은 것과 동일 계열.
+
+수정:
+- `postService.js` 최상단에 `PHYSICAL_TO_VIRTUAL` 상수 추가: `pds_all/pds_util/pds_game/pds_graphic/pds_sound/pds_prog` → `'pds'` 매핑. 서버측 `BoardVirtualBoards.js` MERGED_BOARD_SOURCES와 동기화.
+- `invalidateListCache(boardId)` 개선: 물리 게시판 삭제 시 `PHYSICAL_TO_VIRTUAL[boardId]`로 부모 가상 게시판을 찾아, 해당 가상 게시판 키(예: `pds_1`, `pds_2_lt_...`)도 함께 삭제. 기존 물리 게시판 삭제 동작은 그대로 유지.
+- 가상 게시판 자체(`'pds'`)는 매핑에서 제외 — `invalidateListCache('pds')`는 이미 `'pds_'` 접두사로 하위 모든 키를 지워 cascade가 불필요.
+
+검증:
+- `node --check` 통과.
+- 8케이스 동치 검증: pds_util 삭제 시 pds_1 삭제(핵심 수정)/구 코드에서 pds_1 잔류 확인(버그 재현)/pds 가상 게시판 삭제 기존 동작 유지/pds_game 삭제 시 cascade/free 등 무관 게시판 영향 없음/빈 boardId 안전성/pds_all cascade/free 수정 전후 동치 — 35케이스 전부 PASS.
+- `smoke:boards`·`smoke:command-parity`·`smoke:full-traversal`·`smoke:renderer-ui` 4종 회귀 전부 통과.
+
+결과: ✅ 1개 파일(`public/js/core/postService.js`, 14줄 추가/8줄 수정). PDS 물리 게시판에서 글 삭제·편집·생성 후 PDS 가상 목록으로 재진입 시 stale 캐시가 서비스되던 문제 해소. 기존 단순 게시판 및 가상 게시판 직접 삭제 동작 무변화.
+
+---
+
 ## [2026-08-01 00:00] [버그수정] postService.js 글 뷰 캐시 무효화 불완전 — 가상게시판·검색 문맥 변형 키가 edit/delete/recommend 후에도 stale 상태로 남던 문제 해소
 
 **LOG_ID: 20260801_0000**
