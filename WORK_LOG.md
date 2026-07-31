@@ -1,3 +1,18 @@
+## [2026-07-31 14:45] [최적화] memoRoutes.js createMemo 수신자 회원 정보 중복 DB 조회 제거 및 Map 캐싱
+
+**LOG_ID: 20260731_1445**
+목표: `memoRoutes.js`의 `createMemo` 핸들러에서 단체 및 단일 편지 발송 시 사전 수신자 유효성 검사 루프와 발송 후 부재중 체크 루프 간 중복으로 실행되던 `memberRepository.getMember()` 데이터베이스 조회를 `Map` 구조체 캐싱으로 통합하여 중복 DB 쿼리 제거 및 응답 속도 최적화.
+
+발견: 수신자 유효성 검사 루프에서 수신자 프로필을 이미 가져왔으나, 바로 이어지는 쪽지 생성 루프 내부에서 동일한 수신자에 대해 `getMember()`를 2회 중복 호출하던 퍼포먼스 낭비 구조 발견.
+
+수정: `recipientMembersMap`을 생성하여 사전 검증 시 조회된 회원 객체를 저장하고, 발송 루프에서는 `recipientMembersMap.get()`으로 바로 참조하도록 수정.
+
+검증: `node --check src/server/routeHandlers/memoRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:40] [버그수정] MemberRepositoryShared isMemberAbsentNow 날짜 경계 파싱 보강
 
 **LOG_ID: 20260731_1440**

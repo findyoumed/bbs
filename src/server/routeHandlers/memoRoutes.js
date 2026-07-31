@@ -102,13 +102,15 @@ class MemoRouter extends BaseRouter {
       this.validationError(`단체편지는 한 번에 최대 ${MEMO_MAX_RECIPIENTS}명까지 보낼 수 있습니다.`);
     }
 
-    // 모든 수신자 회원가입 존재 여부 사전 전수 검사
+    // [LOG_ID: 20260731_1445] 수신자 회원 정보 사전 검증 및 Map 캐싱 — 발송 루프에서의 중복 DB 조회를 제거한다.
+    const recipientMembersMap = new Map();
     if (memberRepository) {
       for (const recipientUserId of recipients) {
         const recipientMember = await memberRepository.getMember(recipientUserId);
         if (!recipientMember) {
           this.validationError(`존재하지 않는 회원 아이디입니다: ${recipientUserId}`);
         }
+        recipientMembersMap.set(recipientUserId, recipientMember);
       }
     }
 
@@ -119,7 +121,7 @@ class MemoRouter extends BaseRouter {
     for (const recipientUserId of recipients) {
       const created = await memoRepository.createMemo({ ...body, recipientUserId }, context);
       results.push(created);
-      const recipientMember = memberRepository ? await memberRepository.getMember(recipientUserId) : null;
+      const recipientMember = recipientMembersMap.get(recipientUserId) || null;
       if (isMemberAbsentNow(recipientMember)) {
         absentRecipients.push({
           userId: recipientUserId,
