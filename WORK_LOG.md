@@ -1,3 +1,18 @@
+## [2026-07-31 15:00] [버그수정] commandRouterChat 대화방 개설자 owner/ownerId 속성 검증 호환성 통합
+
+**LOG_ID: 20260731_1500**
+목표: `commandRouterChat.js`의 `/OUT` (강퇴) 및 `/E TITLE`/`/E USER` (설정 변경) 명령어 실행 시 개설자 판정 코드가 `state._chatRoom?.owner` 단일 속성만 검사하여 서버/드라이버 구현체에 따라 `ownerId` 속성이 반환되는 경우 방장임에도 거부되던 결함 수정.
+
+발견: 61행 `enterRoom`은 `room.owner || room.ownerId` 양쪽 속성을 모두 체크하고 있었으나, `/OUT` 및 `/E` 명령어 처리부에서는 `state._chatRoom?.owner`만 단독 비교하고 있던 비대칭성 발견.
+
+수정: `const currentOwner = String(state._chatRoom?.owner || state._chatRoom?.ownerId || '').trim();` 패턴으로 일관되게 정정하여 `owner`와 `ownerId` 두 속성을 모두 호환하도록 정정.
+
+검증: `node --check public/js/core/commandRouterChat.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:55] [리팩토링] confRoutes.js 토론의 광장 회의실/안건 작성 검증 스키마 선언 추가
 
 **LOG_ID: 20260731_1455**

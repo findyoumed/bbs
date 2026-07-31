@@ -488,7 +488,9 @@ export function createChatCommandHandler(deps) {
             setHint('사용법: /OUT id');
             return true;
           }
-          if (state._chatRoom?.owner !== state.user?.userId) {
+          const currentOwner = String(state._chatRoom?.owner || state._chatRoom?.ownerId || '').trim();
+          const currentUserId = String(state.user?.userId || '').trim();
+          if (!currentOwner || currentOwner !== currentUserId) {
             setHint('방 개설자만 강퇴할 수 있습니다.');
             return true;
           }
@@ -507,7 +509,9 @@ export function createChatCommandHandler(deps) {
         // 방 개설자 전용 - 제목/정원 변경
         const editMatch = cmd.match(/^\/E\s+(TITLE|USER)\s+(.+)$/i);
         if (editMatch) {
-          if (state._chatRoom?.owner !== state.user?.userId) {
+          const currentOwner = String(state._chatRoom?.owner || state._chatRoom?.ownerId || '').trim();
+          const currentUserId = String(state.user?.userId || '').trim();
+          if (!currentOwner || currentOwner !== currentUserId) {
             setHint('방 개설자만 설정을 변경할 수 있습니다.');
             return true;
           }
