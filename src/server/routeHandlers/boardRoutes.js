@@ -340,10 +340,12 @@ class BoardRouter extends BaseRouter {
 
     if (this.method === 'GET' && isDownload) {
       const { entry, buffer } = await this.deps.attachmentRepository.read(attachmentBoardId, globalPostId, attachmentId);
+      // [LOG_ID: 20260731_1400] RFC 5987 호환 ASCII fallback filename 헤더 추가 (cURL/구형 브라우저 다운로드 호환성)
+      const encodedName = encodeURIComponent(entry.originalName);
       this.res.writeHead(200, {
         'Content-Type': entry.mimeType || 'application/octet-stream',
         'Content-Length': buffer.length,
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(entry.originalName)}`
+        'Content-Disposition': `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`
       });
       this.res.end(buffer);
       return true;

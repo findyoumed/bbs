@@ -1,3 +1,22 @@
+## [2026-07-31 14:00] [리팩토링] RssNewsService 인라인 require 통합 및 첨부파일 Content-Disposition 헤더 표준 호환 보강
+
+**LOG_ID: 20260731_1400**
+목표: `RssNewsService.js` 내 인라인 중복 `require('./RssNewsArticleSanitizer')`를 상단 모듈 선언부로 통합 정리하고, `boardRoutes.js`의 첨부파일 다운로드 HTTP 헤더 호환성을 개선.
+
+발견:
+1) `RssNewsService.js`: 상단 41행에서 `RssNewsArticleSanitizer`를 이미 require하고 있었으나 337행 `getArticle` 내부에서 `const { isScriptCodeDumping } = require(...)`로 인라인 중복 모듈 로딩이 수행됨.
+2) `boardRoutes.js`: 첨부파일 다운로드 헤더가 `filename*=UTF-8''...` 전용으로만 구성되어 구형 브라우저 및 cURL 등 표준 HTTP 파서 다운로드 시 ASCII fallback filename 헤더 누락 현상.
+
+수정:
+1) `RssNewsService.js`: 상단 require 목록에 `isScriptCodeDumping`을 통합 추가하고 인라인 require 구문 제거.
+2) `boardRoutes.js`: `Content-Disposition` 응답 헤더에 RFC 5987 표준 호환 `filename="${encodedName}"` 파라미터 추가.
+
+검증: `node --check` 2개 파일 통과. `smoke:boards` (PASS), `smoke:command-parity` (PASS), `smoke:rss-services` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 13:25] [버그수정] 대화방 /OUT(강퇴) 및 /EX(수신거부) 닉네임 대상 미인식 결함 수정
 
 **LOG_ID: 20260731_1325**

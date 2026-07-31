@@ -34,6 +34,7 @@ const {
 const {
   buildAuthor,
   isLikelyNoisyBody,
+  isScriptCodeDumping,
   normalizeUrl,
   pickArticleBody,
   pickPreferredArticleBody,
@@ -334,7 +335,6 @@ class RssNewsService extends RssServiceBase {
     }
 
     // [LOG_ID: 20260709_1150] 스크립트 코드 유출로 오염된 기사는 단건 조회 시에도 강제 차단
-    const { isScriptCodeDumping } = require('./RssNewsArticleSanitizer');
     if (isScriptCodeDumping(resolvedArticle.body || resolvedArticle.description || '')) {
       return {
         kind: 'news',
