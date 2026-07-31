@@ -8,7 +8,7 @@ const STEP_CONFIG = [
     prompt: '>> ',
     masked: false,
     guideLines: [
-      '1. 회원ID를 입력해주세요. (최소 영문 5자~40자 가능)'
+      '1. 회원ID를 입력해주세요. (영문/숫자/_ 3~20자 가능)'
     ]
   },
   {
@@ -114,7 +114,10 @@ function isAsciiNickname(value) {
 
 function isValidUserId(value) {
   // [LOG: 20260729_1616] 아이디는 소문자 영문/숫자/_만 허용. 대문자는 입력 시 이미 소문자로 변환됨.
-  return /^[a-z0-9_]{5,40}$/.test(value);
+  // [LOG: 20260731_2400] {5,40} → {3,20}: 서버 register/precheck/oauthRegister 모두
+  // /^[a-zA-Z0-9_]{3,20}$/ 를 쓰는데 여기서만 {5,40}이라 21~40자 아이디는 이 검사를
+  // 통과하고, 40자 가이드를 보고 입력한 사용자가 서버 precheck에서 "형식 오류"로 거절당했다.
+  return /^[a-z0-9_]{3,20}$/.test(value);
 }
 
 function isStrongPassword(value) {
@@ -647,7 +650,7 @@ export function createSignupEmailHandler(deps) {
       if (stageFieldId === 'signup-userid') {
         renderSubmittedInput(stageFieldId, trimmedValue);
         if (!isValidUserId(trimmedValue)) {
-          appendSignupEmailTranscript('회원ID는 영문/숫자/_ 조합 5~40자만 가능합니다.');
+          appendSignupEmailTranscript('회원ID는 영문/숫자/_ 3~20자만 가능합니다.');
           renderEmailScreen();
           setStagePrompt(stageFieldId);
           return;
