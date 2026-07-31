@@ -186,7 +186,12 @@ class AuthBridge {
       isGuest: false,
       email,
       authProvider,
-      emailVerified: hasVerifiedAuthEmail(user)
+      emailVerified: hasVerifiedAuthEmail(user),
+      // [LOG_ID: 20260731_2030] Supabase Auth가 로그인마다 자동으로 갱신하는 last_sign_in_at을
+      // 실어 보낸다 — members.lastlogin_datetime 컬럼은 마이그레이션에서 DEFAULT now()로만
+      // 채워지고 그 뒤로 어떤 코드도 갱신하지 않아(가입 시각에 영구 고정) "최근 접속"이 실제
+      // 로그인 이력과 무관하게 가입일에 멈춰 있었다(사용자 보고: myinfo/account 최근 접속 오표시).
+      lastLoginDateTime: String(user?.last_sign_in_at || '').trim()
     };
   }
 

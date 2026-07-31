@@ -17,7 +17,12 @@ function mergeMemberProfile(user, member) {
     level: member.isAdmin ? 99 : member.level,
     isAdmin: Boolean(user.isAdmin || member.isAdmin),
     registrationDateTime: member.registrationDateTime || user.registrationDateTime || '',
-    lastLoginDateTime: member.lastLoginDateTime || user.lastLoginDateTime || ''
+    // [LOG_ID: 20260731_2030] members.lastlogin_datetime은 가입 시각에 DEFAULT now()로 한 번
+    // 채워진 뒤 어떤 코드도 갱신하지 않아 항상 truthy라, 종전 순서(member 우선)는 실제 로그인과
+    // 무관한 가입일에 영구 고정된 값만 보여줬다. Supabase Auth가 로그인마다 자동 갱신하는
+    // user.lastLoginDateTime(last_sign_in_at)이 있으면 그걸 우선한다 — 헤더 기반 수동 컨텍스트
+    // 등 그 신호가 없는 경로는 그대로 member 값으로 폴백한다.
+    lastLoginDateTime: user.lastLoginDateTime || member.lastLoginDateTime || ''
   };
 }
 

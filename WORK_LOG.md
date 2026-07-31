@@ -1,3 +1,18 @@
+## [2026-07-31 20:30] [버그수정] /myinfo, /account의 "최근 접속"이 실제 로그인과 무관하게 가입 시각에 영구 고정
+
+**LOG_ID: 20260731_2030**
+목표(사용자 보고): https://01410.vercel.app/myinfo, /account 에 표시되는 "최근 접속" 시각이 틀리게 나온다(스크린샷: "2026/04/30 08:00").
+
+발견: 실제 프로덕션 DB로 재현 — `postnews2@naver.com`(내부 userId `sysop`) 계정의 `members.lastlogin_datetime`이 정확히 `2026-04-30T08:00:46`으로, 사용자 스크린샷과 일치했다. 원인은 `supabase/migrations/0001_initial_schema.sql`의 `lastlogin_datetime TIMESTAMPTZ DEFAULT now()` — 가입(행 INSERT) 시점에 딱 한 번 채워질 뿐, 이후 로그인 시 이 컬럼을 갱신하는 코드가 서버 전체에 **단 한 곳도 없었다**(정적 스캔으로 확인: `lastLoginDateTime.*new Date`류 쓰기 패턴 0건). 반면 로그인 자체는 클라이언트가 Supabase Auth SDK로 직접 처리하는데(`authClient.js`의 `signInWithPassword`), Supabase Auth는 로그인마다 `last_sign_in_at`을 자동 갱신해주는 필드를 이미 갖고 있었음에도 `AuthBridge._mapUser()`가 이 값을 그냥 버리고 있었다. 그 결과 화면에 보이는 값은 "최근 접속"이 아니라 사실상 "가입일"이었다(실측: 위 계정의 `last_sign_in_at`은 `2026-07-31T08:06:04`로 실제 오늘 로그인 기록이 정상적으로 있었음에도 화면엔 4/30이 뜸).
+
+수정: `AuthBridge._mapUser()`가 `user.last_sign_in_at`을 `lastLoginDateTime`으로 실어 보내도록 추가. `AuthMemberProfileService.mergeMemberProfile()`의 병합 우선순위를 `member.lastLoginDateTime || user.lastLoginDateTime`(가입 시 고정된 DB 값이 항상 truthy라 fresh 값에 절대 도달 못 함)에서 `user.lastLoginDateTime || member.lastLoginDateTime`로 뒤집었다 — Supabase Auth 신호가 있으면 그걸 우선하고, 헤더 기반 수동 컨텍스트처럼 그 신호가 없는 경로는 그대로 DB 값(member)으로 폴백해 회귀 없음. `/myinfo`(session.user 경유)와 `/account`(members/stats 경유) 둘 다 이 동일 파이프라인(AuthBridge → AuthMemberProfileService)을 거치므로 한 번의 수정으로 두 화면 모두 고쳐진다.
+
+검증: `node --check` 2개 파일 통과. `mergeMemberProfile` 4케이스(auth 우선/member 폴백/둘다 없음/다른 필드 무변경) 전부 기대대로. `_mapUser` 2케이스(last_sign_in_at 있음/없음) 확인. **실제 프로덕션 DB 레코드로 전체 파이프라인 재현** — 수정 전 병합 결과 "2026-04-30"(고정) → 수정 후 "2026-07-31T08:06:04Z"(실제 최근 로그인)로 정확히 바뀜을 확인. `smoke:auth-bridge`(32체크)·`smoke:command-parity`·`smoke:full-traversal` 3종 회귀 전부 통과.
+
+결과: ✅ 2개 파일. "최근 접속"이 실제 마지막 로그인 시각을 반영하도록 수정(그 전엔 사실상 모든 계정에서 가입일과 동일한 값만 영구 표시).
+
+---
+
 ## [2026-07-31 20:00] [리팩토링+버그수정] RSS 기사 리드 판정 3함수·escapeRegExp·auth 헬퍼 2함수의 파일 간 복제 통합 (Scoring 쪽 '추최종수정' 오타 드리프트 수정 포함)
 
 **LOG_ID: 20260731_2000**
