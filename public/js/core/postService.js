@@ -37,6 +37,19 @@ export function createPostService(deps) {
     }
   }
 
+  // [LOG: 20260801_0000] 특정 글의 모든 postCache 변형 키 삭제 — 단순 `${boardId}_${postId}` 뿐 아니라
+  // loadPost가 만드는 가상게시판(_v_) 및 검색 파라미터(_lt_/_li_/_lc_ 등) 변형 키까지 포함한다.
+  // 수정·삭제·추천 후 가상게시판(PDS 병합 보드 등)이나 검색 문맥에서 같은 글을 재조회하면
+  // 기존 코드(단일 키 삭제)는 확장된 변형 키를 놔두어 구버전이 그대로 서비스되던 문제를 해소한다.
+  function invalidatePostCache(boardId, postId) {
+    const keyPrefix = `${boardId}_${postId}`;
+    for (const key of postCache.keys()) {
+      if (key === keyPrefix || key.startsWith(keyPrefix + '_')) {
+        postCache.delete(key);
+      }
+    }
+  }
+
   /**
    * [LOG: 20260426_2305] 검색 파라미터를 포함한 고유한 캐시 키 생성
    */
@@ -126,15 +139,16 @@ export function createPostService(deps) {
 
   async function updatePost(boardId, postId, payload) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}`, { method: 'PATCH', body: JSON.stringify(payload) });
-    postCache.delete(`${boardId}_${postId}`);
-    if (state.board?.id) postCache.delete(`${state.board.id}_${postId}`);
+    invalidatePostCache(boardId, postId);
+    // state.board.id가 boardId와 다를 때(가상게시판 등 다른 컨텍스트로 접근한 경우) 추가 무효화
+    if (state.board?.id && state.board.id !== boardId) invalidatePostCache(state.board.id, postId);
     invalidateListCache(boardId);
     return result;
   }
 
   async function deletePost(boardId, postId) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}`, { method: 'DELETE' });
-    postCache.delete(`${boardId}_${postId}`);
+    invalidatePostCache(boardId, postId);
     invalidateListCache(boardId);
     return result;
   }
@@ -147,7 +161,7 @@ export function createPostService(deps) {
 
   async function recommendPost(boardId, postId) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/recommend`, { method: 'POST' });
-    postCache.delete(`${boardId}_${postId}`); // 추천수 업데이트를 위해 캐시 삭제
+    invalidatePostCache(boardId, postId); // 추천수 업데이트를 위해 캐시 삭제 (가상게시판·검색 문맥 포함)
     return result;
   }
 

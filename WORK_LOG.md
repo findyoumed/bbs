@@ -1,3 +1,32 @@
+## [2026-08-01 00:00] [버그수정] postService.js 글 뷰 캐시 무효화 불완전 — 가상게시판·검색 문맥 변형 키가 edit/delete/recommend 후에도 stale 상태로 남던 문제 해소
+
+**LOG_ID: 20260801_0000**
+목표: 클라이언트 측(public/js/core/) 데이터 흐름 점검 — 서버 응답 소비, 캐시 무효화, 상태 갱신 추적.
+
+발견:
+- `postService.js`의 `loadPost`는 `virtualBoardId`와 검색 파라미터(lt/li/lc/k/la/recent)를 포함한 확장 캐시 키(`${boardId}_${postId}_v_${virtualBoardId}`, `${boardId}_${postId}_lt_...` 등)를 사용해 포스트를 캐싱한다.
+- `updatePost`/`deletePost`/`recommendPost`는 `postCache.delete(`${boardId}_${postId}`)` — 단순 기본 키 하나만 삭제했다.
+- 결과: 편집·삭제·추천 이후 사용자가 가상게시판(자료실 PDS 병합 보드 등) 또는 검색 문맥에서 같은 글로 돌아오면 `loadPost`가 확장 키에서 stale 데이터를 서비스한다.
+  - **편집**: 수정 전 제목/내용이 그대로 표시됨.
+  - **삭제**: 삭제된 글이 가상 게시판 문맥 캐시에서 여전히 열림 ("ghost" 글).
+  - **추천**: 추천수가 갱신되지 않고 이전 값이 표시됨.
+- 이 버그는 PDS 자료실(병합 가상 보드 'pds'를 통해 pds_util 등 물리 게시판에 접근)처럼 `virtualBoardId`가 실제로 사용되는 경로에서 재현 가능하다. 정적 스캔이 아니라 `loadPost` → `updatePost` 호출 시퀀스와 캐시 키 형성 로직을 실제로 따라가서 발견.
+
+수정:
+- `invalidatePostCache(boardId, postId)` 헬퍼 추가: `postCache`를 순회해 `${boardId}_${postId}` 정확 일치 또는 `${boardId}_${postId}_` 접두사 시작 키를 전부 제거한다. 접두사 방식이라 `pds_util_3`을 무효화할 때 `pds_util_30` 같은 다른 글은 영향받지 않음.
+- `updatePost`: 기존 `postCache.delete` 두 줄을 `invalidatePostCache(boardId, postId)` + `state.board.id !== boardId`일 때 추가 `invalidatePostCache(state.board.id, postId)`로 교체.
+- `deletePost`: `postCache.delete` 한 줄을 `invalidatePostCache(boardId, postId)`로 교체.
+- `recommendPost`: `postCache.delete` 한 줄을 `invalidatePostCache(boardId, postId)`로 교체.
+
+검증:
+- `node --check` 통과.
+- 8 케이스 동치 확인: 기본 키 제거 / 가상게시판 변형 키 제거 / 검색 파라미터 변형 키 제거 / 다른 글 캐시 무영향 / 빈 캐시 오류 없음 / 숫자·문자열 postId 혼용 / `pds_util_3` vs `pds_util_30` 접두사 충돌 안전성 / `boardId !== state.board.id` 분기 — 전부 PASS.
+- `smoke:command-parity`, `smoke:boards`, `smoke:full-traversal`, `smoke:renderer-ui` 4종 회귀 전부 통과.
+
+결과: ✅ 1개 파일(`public/js/core/postService.js`). 글 편집·삭제·추천 후 가상게시판(PDS 병합 등)·검색 문맥에서 재진입 시 stale 캐시가 서비스되던 무결함 해소. 기존 동작(기본 컨텍스트 캐시 제거)은 그대로 유지.
+
+---
+
 ## [2026-07-31 23:00] [리팩토링] VoteRepositoryMemory/Supabase의 _createHttpError 로컬 메서드 복제 제거 — httpUtils.createHttpError로 통합
 
 **LOG_ID: 20260731_2300**
