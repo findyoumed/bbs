@@ -1,3 +1,16 @@
+## [2026-07-31 16:25] [버그수정] contactSysopScreen 비로그인 접근 시 리디렉션 폴백 누락 해결
+
+**LOG_ID: 20260731_1625**
+목표: 비로그인(guest) 유저가 직접 URL 타이핑 또는 히스토리 이동으로 `/contact-sysop` 경로에 접근 시, 오류 힌트만 띄우고 다른 화면으로 리디렉션하지 않아 화면 흐름이 멈추거나 깨지던 취약 버그 수정.
+
+수정: `showContactSysop()` 내 비로그인 감지 시 `showBoardSelect('guide', '서비스 안내')`를 호출하여 이전 서비스 안내 화면으로 정상 안전 복구(리디렉션)되도록 폴백 추가.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 16:00] [리팩토링] memberRoutes targetUserId 파싱 및 정규화 _parseTargetUserId 헬퍼 추출
 
 **LOG_ID: 20260731_1600**

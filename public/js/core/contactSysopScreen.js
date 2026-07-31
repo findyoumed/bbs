@@ -499,6 +499,8 @@ export function createContactSysopScreen(deps) {
       setHint('건의하기는 로그인 후 이용하실 수 있습니다.');
       setPrompt('>>');
       setReady?.(true);
+      // [LOG: 20260731_1625] 비로그인 유저가 직접 접근하거나 히스토리로 접근했을 때, guide/서비스안내로 튕겨내 안전한 폴백 제공
+      await showBoardSelect('guide', '서비스 안내');
       return;
     }
 
