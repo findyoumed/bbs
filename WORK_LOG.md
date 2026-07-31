@@ -1,3 +1,18 @@
+## [2026-07-31 14:50] [리팩토링] contactRoutes.js 시삽 건의 메일 검증 스키마 추가 및 BaseRouterValidation FIELD_LABELS 보강
+
+**LOG_ID: 20260731_1450**
+목표: `contactRoutes.js` `POST /api/contact-sysop` 라우트에 `subject`(필수, 최대 200자) 및 `content`(필수) 입력 검증 스키마를 추가하고, `BaseRouterValidation.js` `FIELD_LABELS` 맵에 `subject: '제목'`을 추가하여 한국어 안내 보장.
+
+발견: 시삽 건의하기 API에 바디 검증(`validate`)이 정의되어 있지 않아 빈 문자열이나 누락된 필드가 mailService로 전달될 위험이 있었고, BaseRouterValidation에 `subject` 한국어 레이블이 누락되어 있던 점 발견.
+
+수정: `contactRoutes.js` 라우트 정의에 `validate.body` 스키마 추가, `BaseRouterValidation.js` `FIELD_LABELS` 항목에 `subject: '제목'` 레이블 추가.
+
+검증: `node --check src/server/routeHandlers/contactRoutes.js` (PASS), `node --check src/server/routeHandlers/BaseRouterValidation.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 14:45] [최적화] memoRoutes.js createMemo 수신자 회원 정보 중복 DB 조회 제거 및 Map 캐싱
 
 **LOG_ID: 20260731_1445**

@@ -10,6 +10,7 @@ const FIELD_LABELS = {
   passwordConfirm: '비밀번호 확인',
   recipientUserId: '받는 회원 ID',
   title: '제목',
+  subject: '제목',
   content: '내용',
   redirectTo: '이동 경로',
   userIdOrEmail: '아이디 또는 이메일',

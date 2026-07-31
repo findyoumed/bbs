@@ -11,7 +11,13 @@ class ContactRouter extends BaseRouter {
         pattern: '/api/contact-sysop',
         handler: 'sendToSysop',
         middlewares: ['ensureAuthenticated'],
-        needBody: true
+        needBody: true,
+        validate: {
+          body: {
+            subject: { required: true, maxLength: 200 },
+            content: { required: true }
+          }
+        }
       }
     ];
   }
