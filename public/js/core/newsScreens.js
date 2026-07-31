@@ -1,4 +1,4 @@
-import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 import { shouldDisplayNewsArticleImage } from './newsPhotoArticleUtils.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 

@@ -1,4 +1,4 @@
-import { renderAnsiScreenWithTopbar, renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
+import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
 export function createPostViewView(deps) {

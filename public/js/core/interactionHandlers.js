@@ -9,7 +9,7 @@ import {
   isCommandExecutionLocked as isExecutionLocked,
   trackCommandExecution
 } from './commandExecutionState.js';
-import { isMobileDevice, shouldAutoFocusCommandInput } from './uiUtils.js';
+import { shouldAutoFocusCommandInput } from './uiUtils.js';
 import { isCommandPending, trackCommandPending } from './commandPendingUi.js';
 
 export function createInteractionHandlers(deps) {

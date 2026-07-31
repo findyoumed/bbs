@@ -1,7 +1,6 @@
 /**
  * [LOG: 20260410_2345] ANSI 렌더링 엔진 코어
  */
-import { displayWidth, isWideChar } from './ansiRenderUtils.js';
 
 export function createAnsiEngine(deps) {
     const { state } = deps;

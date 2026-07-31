@@ -1,3 +1,18 @@
+## [2026-07-31 12:35] [/loop 리팩토링] public/js/core 전체에서 미사용 import 6건(5개 파일) 정리 — 정적 스캔으로 전수 발견
+
+**LOG_ID: 20260731_1235**
+목표: 앞선 라운드에서 `appFactory.js`의 죽은 import를 손으로 발견한 방식을 일반화 — `public/js/core`(136개 모듈) 전체에서 "import는 됐는데 파일 내에서 그 이름이 import 줄 자체 말고는 한 번도 안 쓰이는" 패턴을 정적 스캔으로 전수조사(각 파일의 named import 목록을 추출해 파일 전체에서 단어 경계 매칭 횟수를 세는 스크립트, `as` 별칭 처리 포함). 재수출(`export { X }`) 여부도 별도로 확인해 오탐을 걸러냄.
+
+발견: 6건, 5개 파일 — `ansiEngine.js`(`displayWidth`, `isWideChar` 둘 다 미사용), `interactionHandlers.js`(`isMobileDevice`), `menuNavigation.js`/`newsScreens.js`/`postViewView.js`(셋 다 같은 패턴: `renderAnsiScreenWithTopbar`를 import하면서 실제로는 `renderAnsiScreenWithTopbarSequential`만 쓰고 있었음 — 아마 순차 렌더링 버전으로 갈아탄 뒤 원래 이름의 import를 지우지 않은 흔적).
+
+수정: 6곳 모두 미사용 이름을 import 목록에서 제거(같은 import 문에서 다른 이름이 실사용 중이면 그것만 남김).
+
+검증: `node --check`(ESM) 5개 파일 통과. 같은 스캔을 재실행해 잔여 후보 0건 확인. **영향받는 화면을 실제로 거치는 브라우저 검증**: 실 서버에 Playwright로 (1) 앱 부팅→main 화면(`menuNavigation.js`/`ansiEngine.js` 경로), (2) `/service/news`(`newsScreens.js`), (3) `/board/plaza/17`(`postViewView.js`, 실제 존재하는 글 15개 중 하나) 진입해 각각 화면 전환과 콘텐츠 렌더를 확인, resize 이벤트로 `interactionHandlers.js`의 모바일 판정 경로도 건드려 콘솔 오류 0건 확인. `smoke:boards`·`smoke:command-parity`·`smoke:rss-services`·`smoke:full-traversal`·`smoke-mobile-viewports` 5종 회귀.
+
+결과: ✅ 5개 파일, 6줄 정리.
+
+---
+
 ## [2026-07-31 12:15] [/loop 리팩토링] appFactory.js의 죽은 import 3개(triggerVisualFeedback/getLevenshteinDistance/CMD_META) 제거 — getLevenshteinDistance 중복은 의도된 것으로 판단해 통합 보류
 
 **LOG_ID: 20260731_1220**
