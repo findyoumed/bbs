@@ -1,3 +1,17 @@
+## [2026-07-31 17:45] [버그수정] boardRoutes 내 첨부파일 관리 권한 비교 시 userId 소문자 정규화 처리
+
+**LOG_ID: 20260731_1745**
+목표: 게시판 라우터 내에서 첨부파일 수정/삭제 권한 판정 시 대소문자 차이로 인해 본인의 파일임에도 관리가 불가능해지는 오작동 결함 차단.
+
+수정:
+- `boardRoutes.js` 의 `assertAttachmentWritable()` 내에서 세션 유저 ID `context.userId`와 게시글 작성자 ID `article.post.userId` 비교 구문을 `.toLowerCase()` 정형화하여 일치시키도록 수정.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 17:40] [버그수정] SupabaseBoardRepositories 내 userId 소문자 매칭 및 조회수 방어 강화
 
 **LOG_ID: 20260731_1740**

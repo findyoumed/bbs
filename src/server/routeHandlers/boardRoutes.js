@@ -393,7 +393,9 @@ class BoardRouter extends BaseRouter {
       return article;
     }
 
-    if (!context?.userId || article.post?.userId !== context.userId) {
+    const requesterId = String(context?.userId || '').trim().toLowerCase();
+    const postAuthorId = String(article.post?.userId || '').trim().toLowerCase();
+    if (!requesterId || postAuthorId !== requesterId) {
       this.forbidden('작성자만 첨부 파일을 관리할 수 있습니다.');
     }
 
