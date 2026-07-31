@@ -1,3 +1,18 @@
+## [2026-07-31 17:40] [버그수정] SupabaseBoardRepositories 내 userId 소문자 매칭 및 조회수 방어 강화
+
+**LOG_ID: 20260731_1740**
+목표: Supabase 드라이버 게시판 모듈에서 조회수 증가 방지 대상 비교 및 본인 게시물 추천 불가 검증 시 대소문자 매칭으로 인한 오작동 결함 방지.
+
+수정:
+- `SupabaseBoardRepositoryPostReads.js` 의 `getPost()` 내에서 뷰어 ID 비교용 `viewerId`를 소문자 정형화하여 조회수 증가 방지 대상 여부를 판별하도록 수정.
+- `SupabaseBoardRepositoryWriteOps.js` 의 `recommendPost()` 내에서 기존 게시물 작성자 ID `post.userId`를 소문자 정형화 후 `userId`와 동등성 비교를 하도록 보완하여, 레거시 글로 인해 본인 추천이 우회되는 상태 방지.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 17:35] [버그수정] authRoutes 내 회원 식별자 검색 시 이메일 소문자 정규화 처리
 
 **LOG_ID: 20260731_1735**

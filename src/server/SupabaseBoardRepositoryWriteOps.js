@@ -214,7 +214,9 @@ async function recommendPost(repo, boardId, postId, context = {}) {
   // [LOG: 20260429_0229] Recommend must fail closed for guests even if the route
   // is reached without middleware, so direct/in-process callers cannot bypass auth.
   const userId = assertAuthenticatedBoardUser(context);
-  if (post.userId === userId) {
+  // [LOG: 20260731_1740] 레거시 글 작성자 아이디 대소문자 차이로 추천이 우회되는 결함 방지
+  const postAuthorId = String(post.userId || '').trim().toLowerCase();
+  if (postAuthorId === userId) {
     throw createHttpError(400, 'You cannot recommend your own post.');
   }
 

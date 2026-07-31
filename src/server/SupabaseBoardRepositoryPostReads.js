@@ -116,7 +116,9 @@ async function getPost(repo, boardId, postId, options = {}) {
     throw createHttpError(404, '게시글을 찾을 수 없습니다.');
   }
 
-  if (options.incrementHit && capabilities.hit && post.userId !== (options.viewerId || 'guest')) {
+  // [LOG: 20260731_1740] 대소문자 매칭 일치를 위한 viewerId 소문자 변환 후 비교
+  const viewerId = String(options.viewerId || '').trim().toLowerCase();
+  if (options.incrementHit && capabilities.hit && post.userId !== (viewerId || 'guest')) {
     const { data, error } = await repo.client
       .from(repo.tables.posts)
       .update({
