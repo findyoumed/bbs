@@ -1,3 +1,18 @@
+## [2026-07-31 15:25] [버그수정] chatAnsiBuilders 대기실 개설방 방장 닉네임 ownerId 속성 폴백 보강
+
+**LOG_ID: 20260731_1525**
+목표: `chatAnsiBuilders.js`의 `buildChatLobbyAnsi` 대기실 개설방 목록 렌더링 중 방장 닉네임/아이디 결정 체인에 `room.ownerId` 속성 체인 추가.
+
+발견: `room.ownerName || room.ownerNick || room.owner` 단독 체인으로 인해, 서버/드라이버 객체에 `ownerId` 속성만 들어오는 경우 방장 표시가 `'guest'`로 오표시되던 현상 발견.
+
+수정: `room.ownerName || room.ownerNick || room.owner || room.ownerId || 'guest'` 체인으로 확장하여 `ownerId` 속성을 사용하는 저장소 드라이버 객체와의 호환성을 정정.
+
+검증: `node --check public/js/core/chatAnsiBuilders.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:20] [리팩토링] memoRoutes memoId 파싱 및 양의 정수 검증 _parseMemoId 헬퍼 추출
 
 **LOG_ID: 20260731_1520**

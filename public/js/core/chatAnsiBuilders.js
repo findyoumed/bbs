@@ -128,7 +128,7 @@ export function createChatAnsiBuilders(deps) {
       // 교체한다(방 하나가 최소 1줄이므로 안내 줄 한 줄은 항상 확보됨).
       const visibleRoomCount = rooms.length > maxRoomsToShow ? maxRoomsToShow - 1 : maxRoomsToShow;
       rooms.slice(0, visibleRoomCount).forEach((room) => {
-        const ownerNick = String(room.ownerName || room.ownerNick || room.owner || 'guest');
+        const ownerNick = String(room.ownerName || room.ownerNick || room.owner || room.ownerId || 'guest');
         const pubStr = room.visibility === '비밀방' ? '비공개' : '공개';
         const occStr = `${room.userCount}/${room.maxUser}`;
         const titleStr = room.title || room.name || '대화방';
