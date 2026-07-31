@@ -1,6 +1,9 @@
 'use strict';
 
 // [LOG_ID: 20260719_1600] 토론의 광장(CONF) API — 회의실/안건/재청.
+// [LOG_ID: 20260731_2210] maxLength 불일치 수정 — 라우트 검증 한도를 저장소 실제 한도에 맞춤.
+//   회의실 제목: 100 → 60 (ConfRepository*.createRoom: title.slice(0, 60))
+//   안건 제목  : 200 → 80 (ConfRepository*.createAgenda: title.slice(0, 80))
 const BaseRouter = require('./BaseRouter');
 
 class ConfRouter extends BaseRouter {
@@ -15,7 +18,7 @@ class ConfRouter extends BaseRouter {
         needBody: true,
         validate: {
           body: {
-            title: { required: true, maxLength: 100 }
+            title: { required: true, maxLength: 60 }
           }
         }
       },
@@ -29,7 +32,7 @@ class ConfRouter extends BaseRouter {
         needBody: true,
         validate: {
           body: {
-            title: { required: true, maxLength: 200 },
+            title: { required: true, maxLength: 80 },
             content: { required: true }
           }
         }

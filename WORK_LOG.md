@@ -1,3 +1,30 @@
+## [2026-07-31 22:10] [버그수정] confRoutes.js 회의실·안건 제목 maxLength 불일치 — 라우트가 수용한 제목을 저장소가 묵묵히 잘라내던 문제 해소
+
+**LOG_ID: 20260731_2210**
+목표: 토론의 광장(CONF) API 라우트 검증 한도와 저장소 저장 한도의 불일치 수정.
+
+발견:
+- `confRoutes.js` 회의실 생성 라우트: `maxLength: 100` (61~100자 입력 허용)
+- `confRoutes.js` 안건 발의 라우트: `maxLength: 200` (81~200자 입력 허용)
+- 그러나 `ConfRepositoryMemory.js`와 `ConfRepositorySupabase.js` 양쪽 모두:
+  - 회의실 제목: `title.slice(0, 60)` — 실제 저장 한도 60자
+  - 안건 제목: `title.slice(0, 80)` — 실제 저장 한도 80자
+- DB 스키마(`0019_conf_system.sql`)는 `TEXT NOT NULL`(무제한) — 코드 레벨 한도가 유일한 제약.
+- 결과: 사용자가 75자 회의실 제목을 입력하면 라우트는 200 OK로 허용하지만 저장소는 60자로 묵묵히 잘라낸다. 클라이언트는 응답으로 60자 제목을 받아 표시하며, 잘린 사실 자체를 알 수 없다.
+- 동일 버그 계열이 채팅방 제목에도 존재했으며 LOG_ID 20260727_1256에서 수정된 선례(채팅방: `slice(0,100)` ↔ `maxLength: 100`이 이미 정합).
+
+수정:
+- `confRoutes.js` 회의실 생성 `validate.body.title.maxLength`: 100 → 60
+- `confRoutes.js` 안건 발의 `validate.body.title.maxLength`: 200 → 80
+
+검증:
+- `node --check src/server/routeHandlers/confRoutes.js` 통과.
+- `smoke:vercel-ready` 통과 (conf 드라이버 supabase OK 포함).
+
+결과: ✅ 1개 파일(`src/server/routeHandlers/confRoutes.js`, 2줄 수정 + 주석 4줄 추가). 라우트 검증 거부 한도가 저장소 실제 한도와 일치하여, 61~100자(회의실) / 81~200자(안건) 제목 입력 시 발생하던 무음 데이터 손실이 해소된다.
+
+---
+
 ## [2026-08-01 01:00] [버그수정] postService.js 목록 캐시 무효화 불완전 — PDS 물리 게시판(pds_util 등) 글 삭제·편집 후 PDS 가상 목록으로 돌아올 때 stale 캐시가 서비스되던 문제 해소
 
 **LOG_ID: 20260801_0100**
