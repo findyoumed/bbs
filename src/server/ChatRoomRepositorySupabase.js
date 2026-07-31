@@ -59,7 +59,7 @@ class SupabaseChatRoomRepository extends BaseRepository {
         // 검증·거부하는데 여기 저장 상한은 60이라, 61~100자 제목은 검증을 통과해놓고 이 저장
         // 단계에서 조용히 60자로 잘렸다(실측: 90자 제목 → 검증 통과 → 저장은 60자, 안내 없음).
         room_no: nextNo, room_key: roomKeyForNo(nextNo), name: title.slice(0, 100), description: greeting.slice(0, 120),
-        owner_user_id: normalizeText(context.userId, 'guest'), owner_name: normalizeText(context.nickName, '손님'),
+        owner_user_id: normalizeText(context.userId, 'guest').toLowerCase(), owner_name: normalizeText(context.nickName, '손님'), // [LOG: 20260731_1755] toLowerCase 추가
         // [LOG_ID: 20260727_1441] 20260727_1401(chat_room_members)과 동일한 혼동 — creator_id는
         // auth.users(id)를 참조하는 UUID 컬럼인데 context.userId(앱 자체 텍스트 ID)를 넘겨왔다.
         // maybeUuid()가 항상 걸러내 이 컬럼은 지금까지 모든 방에서 늘 null이었다(어디서도 읽지
@@ -80,7 +80,7 @@ class SupabaseChatRoomRepository extends BaseRepository {
     const existing = participants.find(p => p.sessionKey === sessionKey), now = new Date().toISOString();
     // [LOG_ID: 20260727_1401] authUserId(진짜 Supabase Auth UUID)를 별도로 들고 다녀야 한다 —
     // userId는 이 앱 자체 텍스트 ID라 chat_room_members.user_id(auth.users FK)에 못 쓴다.
-    const p = { sessionKey, userId: normalizeText(context.userId, 'guest'), authUserId: maybeUuid(context.authUserId) || '', nickName: normalizeText(context.nickName, '손님'), joinedAt: existing?.joinedAt || now, lastSeenAt: now };
+    const p = { sessionKey, userId: normalizeText(context.userId, 'guest').toLowerCase(), authUserId: maybeUuid(context.authUserId) || '', nickName: normalizeText(context.nickName, '손님'), joinedAt: existing?.joinedAt || now, lastSeenAt: now }; // [LOG: 20260731_1755] userId toLowerCase 추가
     const authCount = await this.memberPersistence.loadActiveAuthMemberCount(room.id);
     const nextSummary = summarizeParticipantCounts(existing ? participants.map(e => e.sessionKey === sessionKey ? p : e) : participants.concat([p]), authCount);
     if (!existing && nextSummary.userCount > normalizeMaxUser(room.max_user, 99)) throw createHttpError(409, '정원 초과');
@@ -133,7 +133,7 @@ class SupabaseChatRoomRepository extends BaseRepository {
   async kick(roomNo, targetUserId, context = {}) {
     await this._ensureDefaultRoom(); await this._cleanup();
     const room = await this.queries.findRoomByNo(roomNo);
-    const requesterId = normalizeText(context.userId, 'guest');
+    const requesterId = normalizeText(context.userId, 'guest').toLowerCase(); // [LOG: 20260731_1755] toLowerCase 추가
     if (room.owner_user_id !== requesterId) throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
     // [LOG_ID: 20260731_1325] /OUT 닉네임 강퇴 지원 — userId뿐만 아니라 nickName으로도 상대를 식별한다.
     const target = normalizeText(targetUserId, '');
@@ -152,7 +152,7 @@ class SupabaseChatRoomRepository extends BaseRepository {
   async updateRoom(roomNo, payload = {}, context = {}) {
     await this._ensureDefaultRoom(); await this._cleanup();
     const room = await this.queries.findRoomByNo(roomNo);
-    const requesterId = normalizeText(context.userId, 'guest');
+    const requesterId = normalizeText(context.userId, 'guest').toLowerCase(); // [LOG: 20260731_1755] toLowerCase 추가
     if (room.owner_user_id !== requesterId) throw createHttpError(403, '방 개설자만 설정을 변경할 수 있습니다.');
     const updates = {};
     if (payload.title !== undefined) {

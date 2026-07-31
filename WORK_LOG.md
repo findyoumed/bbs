@@ -1,3 +1,18 @@
+## [2026-07-31 17:55] [버그수정] ChatRoomRepositories 내 normalizeText userId 소문자화 누락 보완
+
+**LOG_ID: 20260731_1755**
+목표: ChatRoom 관련 모듈에서 `normalizeText(context.userId, 'guest')`가 소문자화 미수행으로 인해 방장 저장/참여자 저장/강퇴·방 설정 권한 비교 시 대소문자 불일치 결함 방지.
+
+수정:
+- `ChatRoomRepositoryMemory.js` — `createRoom()` ownerUserId, `join()` participant userId, `kick()` requesterId, `updateRoom()` requesterId에 `.toLowerCase()` 추가.
+- `ChatRoomRepositorySupabase.js` — `createRoom()` owner_user_id, `join()` participant userId, `kick()` requesterId, `updateRoom()` requesterId에 `.toLowerCase()` 추가.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 17:50] [버그수정] MemoRepositories 내 normalizeText가 소문자화 미수행으로 인한 userId 정규화 누락 보완
 
 **LOG_ID: 20260731_1750**

@@ -68,7 +68,7 @@ class MemoryChatRoomRepository {
       roomId: '',
       title: title.slice(0, 100),
       greeting: greeting.slice(0, 120),
-      ownerUserId: normalizeText(context.userId, 'guest'),
+      ownerUserId: normalizeText(context.userId, 'guest').toLowerCase(), // [LOG: 20260731_1755] toLowerCase 추가
       ownerName: normalizeText(context.nickName, '손님'),
       maxUser: normalizeMaxUser(payload.maxUser, 10),
       password,
@@ -95,7 +95,7 @@ class MemoryChatRoomRepository {
     const now = new Date().toISOString();
     const participant = {
       sessionKey,
-      userId: normalizeText(context.userId, 'guest'),
+      userId: normalizeText(context.userId, 'guest').toLowerCase(), // [LOG: 20260731_1755] toLowerCase 추가
       nickName: normalizeText(context.nickName, '손님'),
       joinedAt: existing?.joinedAt || now,
       lastSeenAt: now
@@ -170,7 +170,7 @@ class MemoryChatRoomRepository {
   kick(roomNo, targetUserId, context = {}) {
     this._cleanup();
     const room = this._findRoom(roomNo);
-    const requesterId = normalizeText(context.userId, 'guest');
+    const requesterId = normalizeText(context.userId, 'guest').toLowerCase(); // [LOG: 20260731_1755] toLowerCase 추가
     if (room.ownerUserId !== requesterId) {
       throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
     }
@@ -191,7 +191,7 @@ class MemoryChatRoomRepository {
   updateRoom(roomNo, payload = {}, context = {}) {
     this._cleanup();
     const room = this._findRoom(roomNo);
-    const requesterId = normalizeText(context.userId, 'guest');
+    const requesterId = normalizeText(context.userId, 'guest').toLowerCase(); // [LOG: 20260731_1755] toLowerCase 추가
     if (room.ownerUserId !== requesterId) {
       throw createHttpError(403, '방 개설자만 설정을 변경할 수 있습니다.');
     }
