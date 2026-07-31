@@ -223,6 +223,19 @@ class BaseRouter {
   notFound(message) { throw createNotFoundError(message); }
   conflict(message) { throw createConflictError(message); }
 
+  // [LOG_ID: 20260731_1830] confRoutes/memoRoutes/voteRoutes가 각자 `_parseRoomNo`/
+  // `_parseAgendaId`/`_parseMemoId`/`_parseVoteId`라는 이름으로 "양의 정수 하나 파싱, 아니면
+  // validationError" 로직을 문자 그대로 복제해 갖고 있었다(파라미터 이름과 에러 메시지만
+  // 다름) — 그 로직 자체를 여기 하나로 모은다. 각 라우터의 로컬 `_parseXxx(params)` 메서드는
+  // 이름과 도메인별 에러 메시지를 유지한 채 이 헬퍼에 위임한다(호출부 코드는 변경 없음).
+  parsePositiveIntParam(rawValue, message) {
+    const value = Number(rawValue);
+    if (!Number.isInteger(value) || value <= 0) {
+      this.validationError(message);
+    }
+    return value;
+  }
+
   /**
    * Throws a structured HTTP error.
    */

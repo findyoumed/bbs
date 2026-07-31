@@ -39,11 +39,7 @@ class VoteRouter extends BaseRouter {
   }
 
   _parseVoteId(params) {
-    const voteId = Number(params?.voteId);
-    if (!Number.isInteger(voteId) || voteId <= 0) {
-      this.validationError('유효하지 않은 안건 번호입니다.');
-    }
-    return voteId;
+    return this.parsePositiveIntParam(params?.voteId, '유효하지 않은 안건 번호입니다.');
   }
 
   async getVote(params) {

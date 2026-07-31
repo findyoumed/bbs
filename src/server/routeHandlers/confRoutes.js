@@ -53,19 +53,11 @@ class ConfRouter extends BaseRouter {
   }
 
   _parseRoomNo(params) {
-    const roomNo = Number(params?.roomNo);
-    if (!Number.isInteger(roomNo) || roomNo <= 0) {
-      this.validationError('유효하지 않은 회의실 번호입니다.');
-    }
-    return roomNo;
+    return this.parsePositiveIntParam(params?.roomNo, '유효하지 않은 회의실 번호입니다.');
   }
 
   _parseAgendaId(params) {
-    const agendaId = Number(params?.agendaId);
-    if (!Number.isInteger(agendaId) || agendaId <= 0) {
-      this.validationError('유효하지 않은 안건 번호입니다.');
-    }
-    return agendaId;
+    return this.parsePositiveIntParam(params?.agendaId, '유효하지 않은 안건 번호입니다.');
   }
 
   async closeRoom(params) {

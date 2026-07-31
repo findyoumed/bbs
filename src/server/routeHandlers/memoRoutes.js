@@ -146,11 +146,7 @@ class MemoRouter extends BaseRouter {
   }
 
   _parseMemoId(params) {
-    const memoId = Number(params?.memoId);
-    if (!Number.isInteger(memoId) || memoId <= 0) {
-      this.validationError('유효하지 않은 쪽지 번호입니다.');
-    }
-    return memoId;
+    return this.parsePositiveIntParam(params?.memoId, '유효하지 않은 쪽지 번호입니다.');
   }
 
   async getMemo(params) {

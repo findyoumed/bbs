@@ -1,3 +1,18 @@
+## [2026-07-31 18:40] [리팩토링] confRoutes/memoRoutes/voteRoutes의 "양의 정수 파라미터 파싱" 헬퍼 4개가 복제한 로직을 BaseRouter로 통합
+
+**LOG_ID: 20260731_1830**
+목표: 앞선 라운드(main에 직접 push된 대량 정리 작업)의 흐름을 이어받아, `_parseRoomNo`/`_parseAgendaId`/`_parseMemoId`/`_parseVoteId`처럼 라우터마다 개별 추출된 ID 파싱 헬퍼가 서로 중복인지 확인.
+
+발견: `confRoutes.js`(`_parseRoomNo`, `_parseAgendaId`), `memoRoutes.js`(`_parseMemoId`), `voteRoutes.js`(`_parseVoteId`) — 4개 메서드가 전부 `Number(params?.X)` → `!Number.isInteger(X) || X <= 0`이면 `this.validationError(메시지)` → `return X` 형태로 문자 그대로 동일했다. 파라미터 키 이름과 도메인별 에러 메시지만 다름. 대조군으로 `boardRoutes.js`/`chatServiceRoutes.js`는 `isNaN()`만 쓰는(음수·0 허용) 더 느슨한 검증을 쓰고 있어 **정책이 달라 보이는 지점도 있었지만, 이번 라운드에선 이미 정확히 같은 정책(`Number.isInteger` + 양수)으로 통일된 4개만** 다뤘다 — `boardRoutes.js` 등을 같은 정책으로 강제 통일하는 건 실제 검증 강도를 바꾸는 행위라 버그 조사 없이 손대지 않음(다음 라운드 후보로 남김).
+
+수정: `BaseRouter.js`에 `parsePositiveIntParam(rawValue, message)` 추가(모든 라우터가 상속). 4개 라우터의 로컬 `_parseXxx(params)` 메서드는 이름과 도메인별 에러 메시지를 그대로 유지한 채 이 헬퍼에 위임하도록 축약 — **호출부 코드는 전혀 안 바뀜**(`this._parseMemoId(params)` 그대로).
+
+검증: `node --check` 4개 파일 통과. 원본 로직 재구현 vs 신함수를 17개 케이스(정수/0/음수/소수/문자열 숫자·공백·0패딩/NaN/null/undefined/Infinity 등)로 대조해 반환값·에러 메시지 전부 일치. **실서버 실측**: `/api/votes/:voteId`에 `abc`/`-1` → 400 확인, `/api/memos/:memoId`에 인증 헤더를 실어 `abc`/`-1`/`0`/`1.5` 전부 → 400 확인(인증 미들웨어가 검증보다 먼저라 게스트로는 401만 보여 헤더로 우회), `/api/conf/agendas/:agendaId`에 `abc` → 400 확인. `smoke:boards`·`smoke:command-parity`·`smoke:full-traversal`·`smoke-mobile-viewports` 4종 회귀.
+
+결과: ✅ 4개 파일, 순감소.
+
+---
+
 ## [2026-07-31 18:00] [버그수정] RequestIdentityHelpers.js 내 normalizeRequestUserId에 toLowerCase() 추가 — context.userId 소문자화 최상위 원천 정형화
 
 **LOG_ID: 20260731_1800**
