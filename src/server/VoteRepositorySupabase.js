@@ -2,8 +2,10 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createHttpError } = require('./httpUtils');
 
 // [LOG: 20260622_2301] SupabaseVoteRepository 구현 — Supabase 모드 투표 시스템
+// [LOG: 20260731_2300] _createHttpError 로컬 메서드 제거 — httpUtils.createHttpError로 통합
 class SupabaseVoteRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'supabase' });
@@ -64,6 +66,7 @@ class SupabaseVoteRepository extends BaseRepository {
       }
 
       // 3. 데이터 결합
+      const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
       return votes.map(vote => {
         const voteRecords = recordsMap.get(vote.id) ?? [];
         const counts = new Array(vote.options.length).fill(0);
@@ -73,7 +76,6 @@ class SupabaseVoteRepository extends BaseRepository {
           if (record.option_index >= 0 && record.option_index < counts.length) {
             counts[record.option_index]++;
           }
-          const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
           if (normalizedRequesterId && record.user_id === normalizedRequesterId) {
             userVotedOption = record.option_index;
           }
@@ -105,7 +107,7 @@ class SupabaseVoteRepository extends BaseRepository {
         .maybeSingle();
 
       if (voteError) this._throwError('getVote:vote', voteError, { table: this.table });
-      if (!vote) throw this._createHttpError(404, '투표를 찾을 수 없습니다.');
+      if (!vote) throw createHttpError(404, '투표를 찾을 수 없습니다.');
 
       const { data: records, error: recordsError } = await this.client
         .from(this.recordsTable)
@@ -114,6 +116,7 @@ class SupabaseVoteRepository extends BaseRepository {
 
       if (recordsError) this._throwError('getVote:records', recordsError, { table: this.recordsTable });
 
+      const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
       const counts = new Array(vote.options.length).fill(0);
       let userVotedOption = null;
 
@@ -121,7 +124,6 @@ class SupabaseVoteRepository extends BaseRepository {
         if (record.option_index >= 0 && record.option_index < counts.length) {
           counts[record.option_index]++;
         }
-        const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
         if (normalizedRequesterId && record.user_id === normalizedRequesterId) {
           userVotedOption = record.option_index;
         }
@@ -146,8 +148,8 @@ class SupabaseVoteRepository extends BaseRepository {
       const title = String(input.title || '').trim();
       const options = Array.isArray(input.options) ? input.options.map(o => String(o || '').trim()).filter(Boolean) : [];
 
-      if (!title) throw this._createHttpError(400, '투표 제목이 필요합니다.');
-      if (options.length < 2) throw this._createHttpError(400, '최소 2개 이상의 선택지가 필요합니다.');
+      if (!title) throw createHttpError(400, '투표 제목이 필요합니다.');
+      if (options.length < 2) throw createHttpError(400, '최소 2개 이상의 선택지가 필요합니다.');
 
       const payload = {
         title,
@@ -190,9 +192,9 @@ class SupabaseVoteRepository extends BaseRepository {
         .maybeSingle();
 
       if (voteError) this._throwError('castVote:verify', voteError, { table: this.table });
-      if (!vote) throw this._createHttpError(404, '투표를 찾을 수 없습니다.');
-      if (!vote.is_active) throw this._createHttpError(400, '종료된 투표입니다.');
-      if (optIdx < 0 || optIdx >= vote.options.length) throw this._createHttpError(400, '올바르지 않은 선택지입니다.');
+      if (!vote) throw createHttpError(404, '투표를 찾을 수 없습니다.');
+      if (!vote.is_active) throw createHttpError(400, '종료된 투표입니다.');
+      if (optIdx < 0 || optIdx >= vote.options.length) throw createHttpError(400, '올바르지 않은 선택지입니다.');
 
       const payload = {
         vote_id: id,
@@ -208,7 +210,7 @@ class SupabaseVoteRepository extends BaseRepository {
 
       if (error) {
         if (error.code === '23505') { // UNIQUE constraint violation
-          throw this._createHttpError(409, '이미 투표에 참여하셨습니다.');
+          throw createHttpError(409, '이미 투표에 참여하셨습니다.');
         }
         this._throwError('castVote:insert', error, { table: this.recordsTable });
       }
@@ -233,11 +235,11 @@ class SupabaseVoteRepository extends BaseRepository {
         .maybeSingle();
 
       if (findError) this._throwError('deleteVote:find', findError, { table: this.table });
-      if (!vote) throw this._createHttpError(404, '투표를 찾을 수 없습니다.');
+      if (!vote) throw createHttpError(404, '투표를 찾을 수 없습니다.');
 
       const requesterId = String(context.userId || '').trim().toLowerCase();
       if (!context.isAdmin && vote.created_by !== requesterId) {
-        throw this._createHttpError(403, '삭제 권한이 없습니다.');
+        throw createHttpError(403, '삭제 권한이 없습니다.');
       }
 
       const { data: deleted, error: deleteError } = await this.client
@@ -258,12 +260,6 @@ class SupabaseVoteRepository extends BaseRepository {
         isActive: deleted.is_active
       };
     });
-  }
-
-  _createHttpError(status, message) {
-    const err = new Error(message);
-    err.status = status;
-    return err;
   }
 }
 

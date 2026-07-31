@@ -1,8 +1,10 @@
 'use strict';
 
 const BaseRepository = require('./BaseRepository');
+const { createHttpError } = require('./httpUtils');
 
 // [LOG: 20260622_2301] MemoryVoteRepository 구현 — 메모리 모드 투표 시스템
+// [LOG: 20260731_2300] _createHttpError 로컬 메서드 제거 — httpUtils.createHttpError로 통합
 class MemoryVoteRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'memory' });
@@ -43,6 +45,7 @@ class MemoryVoteRepository extends BaseRepository {
 
   async listVotes(context = {}) {
     return this._track('listVotes', async () => {
+      const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
       const result = [];
       for (const vote of this.votes) {
         const counts = new Array(vote.options.length).fill(0);
@@ -53,7 +56,6 @@ class MemoryVoteRepository extends BaseRepository {
           if (record.optionIndex >= 0 && record.optionIndex < counts.length) {
             counts[record.optionIndex]++;
           }
-          const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
           if (normalizedRequesterId && record.userId === normalizedRequesterId) {
             userVotedOption = record.optionIndex;
           }
@@ -81,9 +83,10 @@ class MemoryVoteRepository extends BaseRepository {
       const id = Number(voteId);
       const vote = this.votes.find(v => v.id === id);
       if (!vote) {
-        throw this._createHttpError(404, '투표를 찾을 수 없습니다.');
+        throw createHttpError(404, '투표를 찾을 수 없습니다.');
       }
 
+      const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
       const counts = new Array(vote.options.length).fill(0);
       let userVotedOption = null;
 
@@ -92,7 +95,6 @@ class MemoryVoteRepository extends BaseRepository {
         if (record.optionIndex >= 0 && record.optionIndex < counts.length) {
           counts[record.optionIndex]++;
         }
-        const normalizedRequesterId = String(context.userId || '').trim().toLowerCase();
         if (normalizedRequesterId && record.userId === normalizedRequesterId) {
           userVotedOption = record.optionIndex;
         }
@@ -117,8 +119,8 @@ class MemoryVoteRepository extends BaseRepository {
       const title = String(input.title || '').trim();
       const options = Array.isArray(input.options) ? input.options.map(o => String(o || '').trim()).filter(Boolean) : [];
 
-      if (!title) throw this._createHttpError(400, '투표 제목이 필요합니다.');
-      if (options.length < 2) throw this._createHttpError(400, '최소 2개 이상의 선택지가 필요합니다.');
+      if (!title) throw createHttpError(400, '투표 제목이 필요합니다.');
+      if (options.length < 2) throw createHttpError(400, '최소 2개 이상의 선택지가 필요합니다.');
 
       const vote = {
         id: this.nextVoteId++,
@@ -142,13 +144,13 @@ class MemoryVoteRepository extends BaseRepository {
       const userId = rawUserId !== 'guest' ? rawUserId.toLowerCase() : rawUserId;
 
       const vote = this.votes.find(v => v.id === id);
-      if (!vote) throw this._createHttpError(404, '투표를 찾을 수 없습니다.');
-      if (!vote.isActive) throw this._createHttpError(400, '종료된 투표입니다.');
-      if (optIdx < 0 || optIdx >= vote.options.length) throw this._createHttpError(400, '올바르지 않은 선택지입니다.');
+      if (!vote) throw createHttpError(404, '투표를 찾을 수 없습니다.');
+      if (!vote.isActive) throw createHttpError(400, '종료된 투표입니다.');
+      if (optIdx < 0 || optIdx >= vote.options.length) throw createHttpError(400, '올바르지 않은 선택지입니다.');
 
       // 1인 1표 중복 체크
       const alreadyVoted = this.records.some(r => r.voteId === id && r.userId === userId);
-      if (alreadyVoted) throw this._createHttpError(409, '이미 투표에 참여하셨습니다.');
+      if (alreadyVoted) throw createHttpError(409, '이미 투표에 참여하셨습니다.');
 
       const record = {
         voteId: id,
@@ -166,13 +168,13 @@ class MemoryVoteRepository extends BaseRepository {
     return this._track('deleteVote', async () => {
       const id = Number(voteId);
       const voteIdx = this.votes.findIndex(v => v.id === id);
-      if (voteIdx === -1) throw this._createHttpError(404, '투표를 찾을 수 없습니다.');
+      if (voteIdx === -1) throw createHttpError(404, '투표를 찾을 수 없습니다.');
 
       const vote = this.votes[voteIdx];
       // 작성자 본인 혹은 운영자만 삭제 가능
       const requesterId = String(context.userId || '').trim().toLowerCase();
       if (!context.isAdmin && vote.createdBy !== requesterId) {
-        throw this._createHttpError(403, '삭제 권한이 없습니다.');
+        throw createHttpError(403, '삭제 권한이 없습니다.');
       }
 
       this.votes.splice(voteIdx, 1);
@@ -181,12 +183,6 @@ class MemoryVoteRepository extends BaseRepository {
 
       return vote;
     });
-  }
-
-  _createHttpError(status, message) {
-    const err = new Error(message);
-    err.status = status;
-    return err;
   }
 }
 

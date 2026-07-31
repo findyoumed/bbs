@@ -1,3 +1,27 @@
+## [2026-07-31 23:00] [리팩토링] VoteRepositoryMemory/Supabase의 _createHttpError 로컬 메서드 복제 제거 — httpUtils.createHttpError로 통합
+
+**LOG_ID: 20260731_2300**
+목표: 아직 건드리지 않은 Vote 도메인 리포지토리 파일들을 실제로 열어 데이터 흐름과 코드 패턴 점검.
+
+발견:
+1. **`_createHttpError` 바이트 단위 동일 복제**: `VoteRepositoryMemory.js`(186~190줄)와 `VoteRepositorySupabase.js`(263~267줄)가 각자 `_createHttpError(status, message)` 인스턴스 메서드를 정의하고 있었다. 두 정의는 `const err = new Error(message); err.status = status; return err;`으로 완전히 동일하다. 그런데 `httpUtils.js`가 이미 완전히 동일한 `createHttpError(status, message)` 함수를 export하고 있고, 코드베이스의 다른 모든 리포지토리(`ConfRepositoryMemory`, `MemoRepositoryMemory`, `ChatRoomRepositoryMemory` 등)는 이것을 사용한다. Vote 리포지토리만 초기 구현 당시 관례를 따르지 않고 로컬 메서드를 새로 만든 것이다.
+2. **루프 내 불변 표현식 재연산**: `listVotes`/`getVote` 양쪽에서 `normalizedRequesterId = String(context.userId || '').trim().toLowerCase()`를 레코드 반복문 안에서 매번 재연산하고 있었다. 이 값은 `context.userId`에만 의존하며 루프 내내 변하지 않는다.
+
+수정:
+- `VoteRepositoryMemory.js`: `const { createHttpError } = require('./httpUtils')` 추가, `_createHttpError` 메서드 정의(5줄) 제거, 9개 `this._createHttpError(` 호출을 `createHttpError(`로 변환, `listVotes`/`getVote` 루프 진입 전에 `normalizedRequesterId` 한 번만 계산하도록 이동.
+- `VoteRepositorySupabase.js`: 동일한 수정 패턴 적용. `listVotes`에서 `votes.map()` 외부(루프 진입 전)로, `getVote`에서 `for` 루프 전으로 `normalizedRequesterId` 이동.
+
+검증:
+- `node --check` 두 파일 통과.
+- `createHttpError` 동치 확인: `[400,403,404,409]` × 메시지 조합 — 기존 `_createHttpError`와 새 `createHttpError` 결과(`message`, `status`) 전부 일치.
+- `normalizedRequesterId` 루프 외부 이동 동치 확인: 루프 내 재연산 vs 외부 1회 계산 — 같은 맥락(`context.userId = 'TestUser'`)에서 결과 동일.
+- `MemoryVoteRepository` 통합 테스트: `listVotes`(집계·userVotedOption), `getVote(404)`, `createVote(400)`, `castVote(409중복)`, `deleteVote(403권한없음)`, `deleteVote(정상)` — 6케이스 전부 통과.
+- `smoke:command-parity`, `smoke:full-traversal`, `smoke:boards` 3종 회귀 전부 통과.
+
+결과: ✅ 2개 파일. 로컬 복제 메서드 2개(10줄) 제거, 기존 공용 유틸 재사용, 기존 패턴 통일. 동작 변화 없음.
+
+---
+
 ## [2026-07-31 22:30] [버그수정+효율] getMyStats(/account)의 posts 전체 테이블 스캔 — 1000행 상한 잠복 결함 + 전문 전송 낭비 제거, 쪽지 4조회 병렬화
 
 **LOG_ID: 20260731_2230**
