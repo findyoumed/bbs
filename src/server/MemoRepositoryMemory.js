@@ -97,7 +97,9 @@ class MemoryMemoRepository {
     if (!canAccessMemo(memo, context)) {
       throw createHttpError(403, '메모를 수정할 권한이 없습니다.');
     }
-    if (memo.recipientUserId === context.userId && !memo.isRead) {
+    // [LOG: 20260731_1700] 대소문자 매칭 일치를 위해 소문자 정규화 처리
+    const userId = String(context.userId || '').trim().toLowerCase();
+    if (memo.recipientUserId === userId && !memo.isRead) {
       memo.isRead = true;
       memo.readAt = new Date().toISOString();
     }

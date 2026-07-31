@@ -1,3 +1,18 @@
+## [2026-07-31 17:00] [버그수정] MemoRepository 내 쪽지 권한 및 상태 비교 시 userId 소문자 정규화 처리
+
+**LOG_ID: 20260731_1700**
+목표: 세션 토큰에서 유입되는 사용자 정보의 대소문자 차이로 인해, 쪽지 상세 조회 권한 체크(`canAccessMemo`), 보관 상태 판별(`isArchivedFor`), 읽음 처리(`markRead`) 시에 매칭 실패(403 Forbidden 등)가 발생하는 취약 결함 해결.
+
+수정:
+- `MemoRepositoryShared.js` 내 `canAccessMemo()`, `isArchivedFor()`에서 비교 대상 `userId` 문자열에 일괄 소문자 및 공백 제거(`trim().toLowerCase()`) 적용.
+- `MemoRepositoryMemory.js` 내 `markRead()`에서 수신자 매칭 확인 시 대소문자 차이를 극복하도록 `userId` 소문자 정형화 처리 추가.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 2개 파일 수정.
+
+---
+
 ## [2026-07-31 16:55] [리팩토링] MemberRepositoryMemory 내 Map set 시 normalizedUserId 키 사용 보완
 
 **LOG_ID: 20260731_1655**

@@ -28,8 +28,9 @@ function normalizeMemo(row) {
 // (자기 자신에게 보낸 쪽지는 받은 쪽 기준을 우선한다.)
 function isArchivedFor(memo, userId) {
   if (!memo) return false;
-  if (memo.recipientUserId === userId) return Boolean(memo.recipientArchived);
-  if (memo.senderUserId === userId) return Boolean(memo.senderArchived);
+  const normalizedUserId = String(userId || '').trim().toLowerCase();
+  if (memo.recipientUserId === normalizedUserId) return Boolean(memo.recipientArchived);
+  if (memo.senderUserId === normalizedUserId) return Boolean(memo.senderArchived);
   return false;
 }
 
@@ -40,7 +41,9 @@ function canAccessMemo(memo, context = {}) {
   if (context?.isAdmin) {
     return true;
   }
-  return memo.recipientUserId === context?.userId || memo.senderUserId === context?.userId;
+  // [LOG: 20260731_1700] 대소문자 매칭 일치를 위해 소문자 정규화 처리
+  const userId = String(context?.userId || '').trim().toLowerCase();
+  return memo.recipientUserId === userId || memo.senderUserId === userId;
 }
 
 // [LOG_ID: 20260729_0030] memoRoutes.js의 getCreateMemoBody()는 이미 제목을 200자까지
