@@ -1,3 +1,30 @@
+## [2026-07-31 23:30] [버그수정] 추천수(recommend) read-then-write 경쟁 조건 — 동시 추천 시 카운트 유실 해소
+
+**LOG_ID: 20260731_2330**
+목표: 미답사 영역(동시성·race condition) 점검 — 조회수·추천수·다운로드 수 증가 로직의 read-then-write 패턴 식별 및 수정.
+
+발견:
+- `SupabaseBoardRepositoryMutation.js`의 `updateRecommendationCount(repo, boardId, postId, capabilities, currentPost, now)` 함수가 `currentPost.recommend + 1` (stale 읽기)로 `posts.recommend` 컬럼을 갱신한다.
+- 경쟁 조건 시나리오: 사용자 A, B가 같은 글(recommend=10)을 동시에 추천하면 — 둘 다 insert에 성공(user_id가 달라 unique constraint 충돌 없음) → 둘 다 stale 값 10+1=11을 기록 → 결과 11(실제 12가 되어야 함). 추천 1건 유실.
+- 같은 read-then-write 패턴이 조회수(`SupabaseBoardRepositoryPostReads.js`, `post.hit + 1`)와 다운로드 수(`AttachmentRepositorySupabase.js`, `row.download_count + 1`)에도 존재하나, 두 항목은 별도 집계 테이블이 없어 DB 마이그레이션(RPC) 없이는 완전 수정이 어렵다 — 이번 라운드 수정 대상 외.
+- 추천수는 `post_recommendations` 테이블(삽입 직후 count 읽기)을 활용해 마이그레이션 없이 수정 가능하다: 마지막 UPDATE가 항상 원본 테이블 실측값을 기록하므로 self-correcting.
+
+수정:
+- `SupabaseBoardRepositoryMutation.js`: `updateRecommendationCount` 함수에서 `currentPost` 파라미터를 제거하고, insert 완료 후 `post_recommendations` 테이블의 `COUNT(*)` 를 읽어 그 값으로 `posts.recommend`를 갱신한다.
+- `SupabaseBoardRepositoryWriteOps.js`: 호출부에서 `post` 인수 제거.
+
+검증:
+- `node --check` 두 파일 모두 통과.
+- 동치 검증 15케이스 전 PASS: 정상 단건 추천/경쟁 조건(A·B 동시)/첫 추천(0→1)/COUNT null 방어/대량 추천(999→1000). 수정 전 경쟁 케이스에서 유실이 재현됐고, 수정 후 시나리오 모두 정확한 최종값 확인.
+- `smoke:boards` 통과 (recommendedCount=10 정상 확인).
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 통과.
+- `smoke:vercel-ready` 통과.
+
+결과: ✅ 2개 파일(`src/server/SupabaseBoardRepositoryMutation.js` 16줄 교체·`src/server/SupabaseBoardRepositoryWriteOps.js` 1줄 수정). 두 사용자가 동시에 추천 시 카운트가 유실되던 경쟁 조건 해소. 단건 추천·이미 추천한 경우·본인 글 추천 금지 등 기존 동작 무변화.
+
+---
+
 ## [2026-07-31 22:40] [버그수정] boardRoutes.js 글 제목 maxLength 불일치 — 라우트가 수용한 제목을 저장소가 묵묵히 잘라내던 문제 해소
 
 **LOG_ID: 20260731_2240**

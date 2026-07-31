@@ -230,7 +230,7 @@ async function recommendPost(repo, boardId, postId, context = {}) {
 
   return {
     board,
-    post: await mutation.updateRecommendationCount(repo, post.boardId, post.id, capabilities, post, now)
+    post: await mutation.updateRecommendationCount(repo, post.boardId, post.id, capabilities, now)
   };
 }
 

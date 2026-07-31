@@ -147,13 +147,28 @@ async function insertRecommendation(repo, postId, userId, now) {
   }
 }
 
-async function updateRecommendationCount(repo, boardId, postId, capabilities, currentPost, now) {
+// [LOG: 20260731_2330] 추천수 read-then-write 경쟁 조건 해소.
+// 종전엔 미리 읽어 둔 currentPost.recommend + 1 을 쓰는 read-then-write 패턴이었다.
+// 동시에 두 사용자 A·B가 추천하면 둘 다 같은 recommend=N 을 읽은 뒤
+// 각자 N+1을 기록해 한 건이 유실됐다(결과 N+1, 실제 N+2여야 함).
+// 수정: insert 이후 post_recommendations 실제 테이블에서 count를 읽어 값을 설정한다.
+// 마지막으로 UPDATE를 완료한 요청이 항상 원본 테이블 실측값을 기록하므로 자기 수정(self-correcting)된다.
+async function updateRecommendationCount(repo, boardId, postId, capabilities, now) {
+  const { count, error: countError } = await repo.client
+    .from(repo.tables.recommendations)
+    .select('id', { count: 'exact', head: true })
+    .eq('post_id', Number(postId));
+
+  if (countError) {
+    throw createHttpError(502, `추천 수 집계 실패: ${countError.message}`);
+  }
+
   return updateMappedPost(
     repo,
     boardId,
     postId,
     {
-      [capabilities.recommend]: currentPost.recommend + 1,
+      [capabilities.recommend]: Number(count || 0),
       updated_at: now
     },
     '추천 값 갱신 실패'
