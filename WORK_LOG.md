@@ -1,3 +1,18 @@
+## [2026-07-31 14:10] [버그수정] commandRouterMyInfo.js 이메일/비밀번호 변경 액션 결과 불리언 리턴값 전파 정정
+
+**LOG_ID: 20260731_1410**
+목표: `commandRouterMyInfo.js`에서 `submitEmailChange` 및 `submitPasswordChange` 실행 결과를 무조건 `true`로 리턴하던 불일치를 `return await ...` 패턴으로 정정하여 `submitNicknameChange`/`submitDeleteAccount`와의 불리언 전파 일관성을 맞춤.
+
+발견: `submitNicknameChange`와 `submitDeleteAccount`는 `return await ...`로 액션 결과(실패시 `false`)를 리턴하여 디스패처에 전달했으나, `submitEmailChange`와 `submitPasswordChange`는 `await ...` 후 항상 무조건 `return true;`를 수행하여 내부 결과 리턴값을 무시하던 결함 발견.
+
+수정: `commandRouterMyInfo.js`에서 두 핸들러 호출을 `return await submitEmailChange(value);` 및 `return await submitPasswordChange(value);`로 변경.
+
+검증: `node --check public/js/core/commandRouterMyInfo.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:00] [리팩토링] RssNewsService 인라인 require 통합 및 첨부파일 Content-Disposition 헤더 표준 호환 보강
 
 **LOG_ID: 20260731_1400**

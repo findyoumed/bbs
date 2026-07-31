@@ -95,14 +95,14 @@ export function createMyInfoCommandHandler(deps) {
             return await submitNicknameChange(value);
         }
 
+        // [LOG_ID: 20260731_1410] submitEmailChange / submitPasswordChange 리턴값을 그대로 전파하여
+        // submitNicknameChange/submitDeleteAccount와의 일관성을 맞춘다.
         if (mode === 'email') {
-            await submitEmailChange(value);
-            return true;
+            return await submitEmailChange(value);
         }
 
         if (mode === 'password') {
-            await submitPasswordChange(value);
-            return true;
+            return await submitPasswordChange(value);
         }
 
         if (mode === 'delete') {
