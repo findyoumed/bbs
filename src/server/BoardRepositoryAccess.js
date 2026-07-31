@@ -53,7 +53,8 @@ function assertAuthenticatedBoardUser(context) {
     throw createHttpError(401, '로그인이 필요한 서비스입니다.');
   }
 
-  return userId;
+  // [LOG: 20260731_1730] 대소문자 매칭 일치를 위해 일관된 소문자 ID 반환
+  return userId.toLowerCase();
 }
 
 function assertPostMutable(post, context) {
@@ -65,7 +66,9 @@ function assertPostMutable(post, context) {
     return;
   }
 
-  if (!context?.userId || post.userId !== context.userId) {
+  const requesterId = String(context?.userId || '').trim().toLowerCase();
+  const authorId = String(post.userId || '').trim().toLowerCase();
+  if (!requesterId || authorId !== requesterId) {
     throw createHttpError(403, '작성자만 수정 또는 삭제할 수 있습니다.');
   }
 }

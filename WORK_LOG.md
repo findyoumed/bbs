@@ -1,3 +1,19 @@
+## [2026-07-31 17:30] [버그수정] BoardRepositories 및 권한 검증 모듈 내 userId 소문자 정규화 처리
+
+**LOG_ID: 20260731_1730**
+목표: 핵심 게시판 서비스에서 게시글 작성자 검증, 글/답글 개설 시 작성자 등록, 조회수 증가 방지 대상 판독 시의 대소문자 매칭 결함 방지.
+
+수정:
+- `BoardRepositoryAccess.js` 의 `assertAuthenticatedBoardUser()`가 항상 소문자화된 `userId`를 반환하도록 수정하고, `assertPostMutable()`에서 작성자 권한을 소문자 매칭으로 검사하도록 개선.
+- `BoardRepositoryShared.js` 의 `sanitizeNewPostInput()` 내에서 생성/답글 작성 시 유입되는 `userId`에 소문자 정형화 처리 추가.
+- `MemoryBoardRepository.js` 의 `getPost()` 내에서 뷰어 ID 비교용 `viewerId`를 소문자 정형화하여 조회수 중복 증가 차단 대상 여부를 판별하도록 수정.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 3개 파일 수정.
+
+---
+
 ## [2026-07-31 17:25] [버그수정] ConfRepositories 내 회의실/안건/재청 처리 시 userId 소문자 정규화 처리
 
 **LOG_ID: 20260731_1725**

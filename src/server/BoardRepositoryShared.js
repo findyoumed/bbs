@@ -79,7 +79,11 @@ function sanitizeNewPostInput(input, context = null) {
   const inputNickName = normalizeInlineText(input?.nickName ?? '', MAX_NICKNAME_LENGTH);
   
   const hasTrustedIdentity = Boolean(contextUserId || contextNickName);
-  const userId = hasTrustedIdentity ? (contextUserId || 'guest') : (inputUserId || 'guest');
+  // [LOG: 20260731_1730] BSS 일관된 소문자 ID 정책에 따라 guest가 아닐 시 소문자 변환
+  let userId = hasTrustedIdentity ? (contextUserId || 'guest') : (inputUserId || 'guest');
+  if (userId !== 'guest') {
+    userId = userId.toLowerCase();
+  }
   const nickName = hasTrustedIdentity ? (contextNickName || contextUserId || 'guest') : (inputNickName || '\uC190\uB2D8');
   const category = normalizeInlineText(input?.category ?? input?.header ?? '', MAX_CATEGORY_LENGTH);
 

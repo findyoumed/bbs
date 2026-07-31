@@ -88,7 +88,9 @@ class MemoryBoardRepository {
     assertBoardAccessible(board, options.context || { userId: options.viewerId, level: options.viewerLevel }, this.levelAliases);
     const post = this.findPostRecord(boardId, postId);
     if (!post) throw createHttpError(404, '글 없음');
-    if (options.incrementHit && post.userId !== (options.viewerId || 'guest')) { post.hit++; post.updatedAt = new Date().toISOString(); }
+    // [LOG: 20260731_1730] 대소문자 매칭 일치를 위한 viewerId 소문자 변환 후 비교
+    const viewerId = String(options.viewerId || '').trim().toLowerCase();
+    if (options.incrementHit && post.userId !== (viewerId || 'guest')) { post.hit++; post.updatedAt = new Date().toISOString(); }
     return { board, post: clonePost(post), navigation: this._getNavigation(targetBoardId, post.id, options.search) };
   }
 
