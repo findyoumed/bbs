@@ -44,6 +44,20 @@ class ActivityRepositorySupabase extends BaseRepository {
       );
       
       const now = new Date().toISOString();
+
+      // [LOG: 20260731_1555] 기존 레코드를 조회하여 first_seen_at 및 path/action/description 보존
+      const { data: existing } = await this.client
+        .from(this.table)
+        .select('path, action, description, first_seen_at')
+        .eq('user_id', userId)
+        .eq('remote_addr', remoteAddr)
+        .maybeSingle();
+
+      const existingPath = existing?.path || '/';
+      const existingAction = existing?.action || '';
+      const existingDescription = existing?.description || '';
+      const firstSeenAt = existing?.first_seen_at || now;
+
       const entry = {
         user_id: userId,
         nickname: nickName,
@@ -51,9 +65,9 @@ class ActivityRepositorySupabase extends BaseRepository {
         level: Number(context.level || 1) || 1,
         is_admin: Boolean(context.isAdmin),
         is_guest: Boolean(context.isGuest),
-        path: normalizeText(meta.path, '/'),
-        action: normalizeText(meta.action || '', ''),
-        description: normalizeText(meta.description || '', ''),
+        path: normalizeText(meta.path, existingPath),
+        action: normalizeText(meta.action || '', existingAction),
+        description: normalizeText(meta.description || '', existingDescription),
         last_seen_at: now
       };
 
@@ -61,7 +75,7 @@ class ActivityRepositorySupabase extends BaseRepository {
       const { data, error } = await this.client
         .from(this.table)
         .upsert(
-          { ...entry, first_seen_at: now }, 
+          { ...entry, first_seen_at: firstSeenAt }, 
           { onConflict: 'user_id, remote_addr', ignoreDuplicates: false }
         )
         .select()

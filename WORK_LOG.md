@@ -1,3 +1,16 @@
+## [2026-07-31 15:55] [버그수정] ActivityRepositorySupabase touch 시 기존 상태 및 최초 진입 시각 보존
+
+**LOG_ID: 20260731_1555**
+목표: `ActivityRepositorySupabase.js`의 `touch()` 메서드 실행 시, 기존 활동 내역(`path`, `action`, `description`)과 최초 진입 시각(`first_seen_at`)이 매 틱마다 기본값 및 현재 시간으로 유실/덮어쓰기되던 동작 불일치 결함 정정.
+
+수정: `upsert` 실행 전에 기존 레코드를 단일 `select` 조회하여 누락된 메타 데이터 값을 병합하고 `first_seen_at` 타임스탬프를 보존하도록 개선. 메모리 드라이버와의 1:1 파리티 확보.
+
+검증: `node --check src/server/ActivityRepositorySupabase.js` (PASS), `smoke:boards` (PASS), `smoke:vercel-ready` (PASS) 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:50] [버그수정] boardRoutes listHotPosts 쿼리 파라미터 수치 상한선 안전 검증 보강
 
 **LOG_ID: 20260731_1550**
