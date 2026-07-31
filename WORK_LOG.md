@@ -1,3 +1,20 @@
+## [2026-07-31 14:20] [버그수정] AttachmentRepositoryLocal 첨부파일 업로드 실패 시 디스크 파일 정리 및 인덱스 롤백 원자성 보장
+
+**LOG_ID: 20260731_1420**
+목표: 로컬 첨부 저장소(`AttachmentRepositoryLocal.js`)에서 `add()` 실행 중 파일 쓰기(`fs.writeFileSync`) 또는 인덱스 저장(`_saveIndex`)에 실패했을 때, 디스크 잔여 파일 제거 및 `nextId`/`attachments` 배열 롤백을 수행하여 트랜잭션 원자성을 보장.
+
+발견: 종전 `add()`는 `fs.writeFileSync` 또는 `_saveIndex()` 실패 시 `nextId`가 이미 사전 증가된 채 실패하거나, 파일 작성에 실패해도 부분 생성된 디스크 파일이 정리되지 않고 인덱스가 오염되는 예외 처리 미흡 결함 발견.
+
+수정:
+1) 파일 쓰기 실패 시 `removeFileBestEffort`로 대상 경로 디스크 파일 정리.
+2) `_saveIndex()` 실패 시 인덱스 배열 pop 및 `nextId` 감산 롤백 후 에러 재전파.
+
+검증: `node --check src/server/AttachmentRepositoryLocal.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:15] [버그수정] MemoryBoardRepositoryCore localId 명시적 부여 및 답글 명령 게스트 가드 순서 정돈
 
 **LOG_ID: 20260731_1415**

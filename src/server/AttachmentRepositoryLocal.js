@@ -126,10 +126,11 @@ class AttachmentRepository {
     return byPost;
   }
 
+  // [LOG_ID: 20260731_1420] 업로드 원자성 롤백 보장 — 파일 쓰기/인덱스 저장 실패 시 잔여 디스크 파일과 nextId/인덱스 오염을 원복한다.
   add(boardId, postId, payload, context = {}) {
     this._assertStorageAvailable();
     const { originalName, mimeType, buffer } = decodeAttachmentPayload(payload, this.maxBytes);
-    const id = this.index.nextId++;
+    const id = this.index.nextId;
     const storedName = `${id}-${buildStoredName(originalName)}`;
     const entry = normalizeEntry({
       id,
@@ -145,14 +146,24 @@ class AttachmentRepository {
       createdAt: new Date().toISOString()
     });
 
+    const targetFilePath = path.join(this.filesDir, storedName);
     try {
-      fs.writeFileSync(path.join(this.filesDir, storedName), buffer);
+      fs.writeFileSync(targetFilePath, buffer);
     } catch (error) {
+      removeFileBestEffort(targetFilePath);
       throw wrapStorageError('첨부 파일 저장', error, this.filesDir);
     }
 
+    this.index.nextId++;
     this.index.attachments.push(entry);
-    this._saveIndex();
+    try {
+      this._saveIndex();
+    } catch (error) {
+      this.index.attachments.pop();
+      this.index.nextId--;
+      removeFileBestEffort(targetFilePath);
+      throw error;
+    }
     return normalizeEntry(entry);
   }
 
