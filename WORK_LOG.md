@@ -1,3 +1,18 @@
+## [2026-07-31 15:05] [버그수정] systemRoutes.js 통계 집계 중 memberCount 로더 미실행 결함 정정
+
+**LOG_ID: 20260731_1505**
+목표: `systemRoutes.js`의 `buildAssetDynamicData` 통계 집계 중 `memberRepository?.countMembers?.()`가 비동기 메서드를 실행하지 않고 함수 객체 자체를 리턴하여 `Number()` 변환 시 `NaN`이 되어 회원 수가 항상 `0`으로 처리되던 결함 수정.
+
+발견: `this.safeCount(() => memberRepository?.countMembers?.(), 0)` 구문에서 옵셔널 체이닝 괄호 누락으로 인해 `countMembers` 함수 참조만 리턴되고 실행되지 않는 로직 누락 발견.
+
+수정: `this.safeCount(() => (typeof memberRepository?.countMembers === 'function' ? memberRepository.countMembers() : 0), 0)` 형태로 수정하여 `countMembers()` 메서드가 정상적으로 호출 실행되도록 정정.
+
+검증: `node --check src/server/routeHandlers/systemRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:00] [버그수정] commandRouterChat 대화방 개설자 owner/ownerId 속성 검증 호환성 통합
 
 **LOG_ID: 20260731_1500**

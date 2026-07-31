@@ -204,7 +204,7 @@ class SystemRouter extends BaseRouter {
     startOfDay.setHours(0, 0, 0, 0);
     const activeUserCount = this.countActiveUsers(activityRepository);
     const [memberCount, totalArticles, todayArticles] = await Promise.all([
-      this.safeCount(() => memberRepository?.countMembers?.(), 0),
+      this.safeCount(() => (typeof memberRepository?.countMembers === 'function' ? memberRepository.countMembers() : 0), 0),
       this.countAllPosts(boardRepository),
       this.countPostsSince(boardRepository, startOfDay)
     ]);
