@@ -174,33 +174,47 @@ class MemberRouter extends BaseRouter {
       this.notFound('회원 정보를 찾을 수 없습니다.');
     }
 
-    let posts = [];
+    // [LOG_ID: 20260731_2230] 종전엔 Supabase 경로가 posts 테이블 **전체**를 `select('*')`
+    // (content 전문 포함, 필터·범위 없음)로 받아와 JS에서 내 글만 걸러 집계했다 — 두 가지
+    // 잠복 결함: ① PostgREST 기본 응답 상한(1000행)을 넘는 순간 초과분이 조용히 잘려 통계가
+    // 틀려진다(오류 없이 undercount), ② 집계에 쓰는 건 hits/recommend 두 숫자뿐인데 전 게시글
+    // 본문까지 매 요청 네트워크로 전송한다. 필터(작성자·미삭제)와 컬럼 선택을 DB로 내려
+    // 내 글 행만 받는다. is_deleted 조건은 종전 JS 필터(`=== true`만 제외 — NULL은 포함)와
+    // 정확히 같은 의미로 맞췄고, user_id/author_id 폴백 체인은 실측(전 행에서 user_id 존재,
+    // author_id와 전부 일치)으로 불필요함을 확인해 user_id 단일 기준으로 정리했다.
+    let mine = [];
     if (memberRepository.getMeta().driver === 'supabase') {
       const postsTable = (boardRepository.tables && boardRepository.tables.posts) || 'posts';
-      const { data, error } = await boardRepository.client.from(postsTable).select('*');
+      const { data, error } = await boardRepository.client
+        .from(postsTable)
+        .select('hits, recommend')
+        .eq('user_id', userId)
+        .or('is_deleted.is.null,is_deleted.eq.false');
       if (error) {
         this.error(502, `이용 현황 집계 실패: ${error.message}`);
       }
-      posts = data || [];
+      mine = data || [];
     } else {
-      posts = boardRepository.posts || [];
+      mine = (boardRepository.posts || []).filter((post) => {
+        if (post.is_deleted === true || post.isDeleted === true) return false;
+        const author = post.user_id || post.userId || post.author_id || post.authorId || '';
+        return String(author) === userId;
+      });
     }
-
-    const mine = posts.filter((post) => {
-      if (post.is_deleted === true || post.isDeleted === true) return false;
-      const author = post.user_id || post.userId || post.author_id || post.authorId || '';
-      return String(author) === userId;
-    });
 
     const postCount = mine.length;
     const hitsSum = mine.reduce((sum, post) => sum + Number(post.hits ?? post.hit ?? 0), 0);
     const recommendSum = mine.reduce((sum, post) => sum + Number(post.recommend ?? post.likes ?? 0), 0);
 
     // 쪽지 수는 레포지토리 API로만 센다(드라이버별 컬럼명 차이를 레포가 이미 흡수한다).
-    const inbox = await memoRepository.listForUser({ ...context, box: 'inbox' });
-    const sent = await memoRepository.listForUser({ ...context, box: 'sent' });
-    const archive = await memoRepository.listForUser({ ...context, box: 'archive' });
-    const unread = await memoRepository.countUnread(context);
+    // [LOG_ID: 20260731_2230] 서로 독립인 4개 조회를 순차 await로 기다리던 것을 병렬화 —
+    // Supabase 드라이버 기준 왕복 4회가 1회 시간으로 줄어든다(결과·순서 의미 변화 없음).
+    const [inbox, sent, archive, unread] = await Promise.all([
+      memoRepository.listForUser({ ...context, box: 'inbox' }),
+      memoRepository.listForUser({ ...context, box: 'sent' }),
+      memoRepository.listForUser({ ...context, box: 'archive' }),
+      memoRepository.countUnread(context)
+    ]);
 
     return this.send(200, {
       userId: member.userId,

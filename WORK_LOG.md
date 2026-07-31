@@ -1,3 +1,23 @@
+## [2026-07-31 22:30] [버그수정+효율] getMyStats(/account)의 posts 전체 테이블 스캔 — 1000행 상한 잠복 결함 + 전문 전송 낭비 제거, 쪽지 4조회 병렬화
+
+**LOG_ID: 20260731_2230**
+목표(사용자 지시 "깊이 있게 오류 수정"): 표면 스캔이 아닌 데이터 흐름 추적. 직전 라운드에서 지나치며 봤던 의심 지점 — `memberRoutes.getMyStats()`가 posts 테이블 **전체**를 `select('*')`(필터·범위 없음)로 받아 JS에서 내 글만 걸러 집계하던 코드 — 를 실데이터로 파고듦.
+
+발견(실측):
+1. **1000행 잠복 결함**: PostgREST(Supabase REST)는 기본 응답 상한이 1000행이다 — 현재 posts는 58행이라 아직 발현 전이지만, 게시글이 1000을 넘는 순간 초과분이 **오류 없이 조용히 잘려** /account의 올린 글/받은 조회/받은 추천 통계가 틀려진다(silent undercount). 상한 확인 실측 포함.
+2. **전송 낭비**: 집계에 실제로 쓰는 건 hits/recommend 두 숫자뿐인데 전 게시글의 `content` 전문까지 매 요청 네트워크로 받아왔다.
+3. JS 필터의 `user_id || author_id` 폴백 체인은 실데이터 전수 확인 결과 불필요(전 행에 user_id 존재, author_id와 전부 일치). 대소문자 혼재도 없음(모두 소문자).
+4. 같은 핸들러의 쪽지 집계 4개 조회(inbox/sent/archive/countUnread)가 서로 독립인데 순차 await — Supabase 왕복 4회가 직렬로 누적.
+5. (함께 점검, 문제 없음 판정) `listBoardCounts`/`listHotPosts`는 head-count·limit이 이미 적용돼 있고, `local_id` 채번은 서버 코드가 아닌 DB측 처리(코드에는 읽기만 존재)라 경쟁 조건 없음.
+
+수정: ① Supabase 경로를 `select('hits, recommend').eq('user_id', userId).or('is_deleted.is.null,is_deleted.eq.false')`로 교체 — 필터·컬럼 선택을 DB로 내려 내 글 행만 받는다. is_deleted 조건은 종전 JS 필터(`=== true`만 제외, NULL 포함)와 정확히 같은 의미. Memory 경로는 종전 필터 유지. ② 쪽지 4조회를 `Promise.all`로 병렬화(결과 의미 무변화).
+
+검증: `node --check` 통과. 수정 전 JS 필터 vs 새 서버측 필터를 실제 DB에서 나란히 실행해 완전 동치 확인(43행·hits 118 일치). 실서버 + 신규 발급 실토큰으로 `/api/members/stats` 호출 — postCount 43/hitsSum 118/recommendSum 0/쪽지 카운트/lastLoginDateTime 전부 종전과 동일. `smoke:boards`(Memory 경로)·`smoke:auth-bridge`·`smoke:command-parity`·`smoke:full-traversal` 4종 회귀 전부 통과.
+
+결과: ✅ 1개 파일. 게시글 1000건 도달 시 터졌을 통계 오류를 선제 제거, /account 응답의 DB 전송량·왕복 횟수 대폭 감소.
+
+---
+
 ## [2026-07-31 22:00] [리팩토링] ConfRepositoryMemory/Supabase의 normText/normUserId 복제를 ConfRepositoryShared.js·httpUtils.normalizeText로 통합
 
 **LOG_ID: 20260731_2200**
