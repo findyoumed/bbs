@@ -287,12 +287,27 @@ export function createAnsiBuilderUtils(deps) {
   }
 
   // [LOG_ID: 20260729_1450] 날짜/시간 파싱 시 문자열 기반 KST 보정을 최우선으로 적용하여 한국시간 유지
+  // [LOG_ID: 20260731_2100] 위 의도(문자열 그대로 읽어 타임존 왜곡을 피함)는 시각 정보가 없는
+  // 순수 날짜 문자열("2026-07-13")에는 맞다 — 그런 값은 애초에 변환할 시각이 없다. 하지만 이
+  // 정규식은 시각까지 포함된 문자열도 똑같이 "그대로" 잘라 보여줬는데, DB/Supabase Auth가 주는
+  // 값(registrationDateTime, lastLoginDateTime, post.createdAt 등)은 전부 UTC로 저장된
+  // ISO 8601("...T08:00:46+00:00", "...T08:06:04Z")이다 — 그 원시 UTC 숫자를 그대로 찍으면
+  // 시각이 실제 한국시간(KST, UTC+9)보다 9시간 느리게 보인다(사용자 실측: /account "최근 접속"이
+  // 04/30 08:00으로 뜸 — DB의 실제 last_sign_in_at은 그 값의 +9시간인 04/30 17:00[KST]).
+  // 시각 + 명시적 타임존 표기(Z 또는 ±hh:mm)가 함께 있는 값만 Date로 정식 변환(new Date가 UTC로
+  // 해석해 브라우저 로컬시간, 즉 한국 사용자 기준 KST로 정확히 환산)하고, 순수 날짜나 타임존
+  // 표기가 없는 "이미 로컬"인 문자열은 종전처럼 그대로 읽는다(회귀 없음).
+  function hasExplicitTimezoneMarker(source) {
+    return /[Zz]$|[+-]\d{2}:?\d{2}$/.test(source);
+  }
+
   function formatShortDate(value) {
     const source = String(value || '').trim();
     if (!source) return '  /  ';
 
-    const ymdLike = source.match(/^((?:19|20)?\d{2})[-/.](\d{1,2})[-/.](\d{1,2})/);
-    if (ymdLike) {
+    const ymdLike = source.match(/^((?:19|20)?\d{2})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T]\d{1,2}:\d{2})?/);
+    const hasTime = Boolean(ymdLike && ymdLike[0].match(/[ T]\d{1,2}:\d{2}/));
+    if (ymdLike && !(hasTime && hasExplicitTimezoneMarker(source))) {
       const yy = ymdLike[1].length === 4 ? ymdLike[1].slice(2) : ymdLike[1];
       return `${yy.padStart(2, '0')}/${ymdLike[2].padStart(2, '0')}/${ymdLike[3].padStart(2, '0')}`;
     }
@@ -314,11 +329,12 @@ export function createAnsiBuilderUtils(deps) {
       return '';
     }
     const match = source.match(/^((?:19|20)?\d{2})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-    if (match) {
+    const hasTime = Boolean(match && match[4] && match[5]);
+    if (match && !(hasTime && hasExplicitTimezoneMarker(source))) {
       const yyyy = match[1].length === 2 ? `20${match[1]}` : match[1];
       const mm = match[2].padStart(2, '0');
       const dd = match[3].padStart(2, '0');
-      if (match[4] && match[5]) {
+      if (hasTime) {
         const hh = match[4].padStart(2, '0');
         const min = match[5].padStart(2, '0');
         return `${yyyy}/${mm}/${dd} ${hh}:${min}`;

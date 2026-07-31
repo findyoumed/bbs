@@ -69,10 +69,23 @@ export function createMyInfoRenderer(deps) {
         return `<div class="${className}">${esc(text)}</div>`;
     }
 
+    // [LOG_ID: 20260731_2100] ansiBuilderUtils.js의 formatLongDate/formatShortDate와 동일한 결함이
+    // 있었다 — DB/Supabase Auth가 주는 값은 전부 UTC ISO 8601("...T08:00:46+00:00")인데, 이 함수는
+    // 문자열을 그대로 잘라 찍어 실제 한국시간(KST, UTC+9)보다 9시간 느린 시각을 보여줬다(사용자
+    // 보고: /myinfo·/account "최근 접속"이 실제보다 9시간 이른 값으로 표시됨). 명시적 타임존
+    // 표기(Z 또는 ±hh:mm)가 있는 값만 Date로 정식 변환한다(브라우저 로컬시간 = 한국 사용자 기준
+    // KST로 정확히 환산됨) — 타임존 표기가 없는 값은 이미 로컬이므로 종전과 동일하게 그대로 읽는다.
     function formatDateTime(value) {
         const text = String(value || '').trim();
         if (!text) {
             return '정보 없음';
+        }
+        if (/[Zz]$|[+-]\d{2}:?\d{2}$/.test(text)) {
+            const d = new Date(text);
+            if (!isNaN(d.getTime())) {
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            }
         }
         return text.replace('T', ' ').substring(0, 19);
     }
