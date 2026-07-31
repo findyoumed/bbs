@@ -94,7 +94,8 @@ class MemoRouter extends BaseRouter {
     const body = await this.getCreateMemoBody();
     const context = await this.getContext();
 
-    const recipients = parseRecipients(body.recipientUserId);
+    const rawRecipients = parseRecipients(body.recipientUserId);
+    const recipients = rawRecipients.map(r => String(r || '').trim().toLowerCase()).filter(Boolean);
     if (!recipients.length) {
       this.validationError('body parameter "recipientUserId" is required.');
     }

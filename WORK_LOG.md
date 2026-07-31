@@ -1,3 +1,16 @@
+## [2026-07-31 16:35] [리팩토링] memoRoutes createMemo 시 수신자 아이디 소문자 정규화 처리
+
+**LOG_ID: 20260731_1635**
+목표: 단체/일반 쪽지 작성(`createMemo`) 시 파싱된 수신자 아이디 배열의 원소들에 소문자 정형화 처리가 누락되어, 대문자가 섞인 상태로 유효성 검사를 시도하거나 DB 행이 잘못 저장되는 결함 방지.
+
+수정: `parseRecipients(body.recipientUserId)`로 쪼갠 각 수신자 ID에 `.toLowerCase()` 및 `trim()` 적용하여 일관되게 소문자 아이디 목록으로 다루도록 정비.
+
+검증: `node --check src/server/routeHandlers/memoRoutes.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 16:30] [리팩토링] authRoutes 내 가입/인증 시 userId 소문자 정규화 적용
 
 **LOG_ID: 20260731_1630**
