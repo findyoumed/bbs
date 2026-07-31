@@ -18,9 +18,13 @@ class BoardRouter extends BaseRouter {
         handler: 'createPost', 
         needContext: true,
         middlewares: ['ensureAuthenticated'],
+        // [LOG_ID: 20260731_2240] 라우트 검증 한도(200)가 BoardRepositoryShared.MAX_TITLE_LENGTH(60)보다
+        // 커서, 61~200자 제목 입력 시 라우트는 200 OK로 수용하지만 sanitizeNewPostInput이 60자로
+        // 묵묵히 잘라 저장하던 문제 수정. confRoutes.js의 동일 패턴(LOG_ID 20260731_2210)과 같은 계열.
+        // mapPostRow도 MAX_TITLE_LENGTH=60으로 읽으므로, DB에 60자 초과가 들어갈 경로가 없다.
         validate: {
           body: {
-            title: { required: true, maxLength: 200 },
+            title: { required: true, maxLength: 60 },
             content: { required: true }
           }
         }

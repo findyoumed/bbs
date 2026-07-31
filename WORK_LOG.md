@@ -1,3 +1,31 @@
+## [2026-07-31 22:40] [버그수정] boardRoutes.js 글 제목 maxLength 불일치 — 라우트가 수용한 제목을 저장소가 묵묵히 잘라내던 문제 해소
+
+**LOG_ID: 20260731_2240**
+목표: confRoutes.js 불일치 수정(20260731_2210) 후 다른 라우트에도 동일 패턴이 있는지 전수 대조.
+
+발견:
+- `boardRoutes.js` 글 작성(POST /api/boards/:boardId/posts) 라우트: `validate.body.title.maxLength: 200`
+- `BoardRepositoryShared.js`: `MAX_TITLE_LENGTH = 60` → `sanitizeNewPostInput`과 `sanitizePostPatch`, `mapPostRow` 모두 `slice(0, 60)` 적용
+- DB 스키마(`0011_posts_runtime_alignment.sql`): `title TEXT NOT NULL` (무제한) — 코드 레벨 한도가 유일한 제약
+- 결과: 사용자가 61~200자 제목을 입력하면 라우트는 201로 성공 응답하지만 저장소가 60자로 묵묵히 자른다. 클라이언트는 60자 제목을 받아 표시하며 잘린 사실을 알 수 없다.
+- 동일 버그 계열: confRoutes.js(20260731_2210), memoRoutes.js(20260729_0030 — 이미 수정됨), chatServiceRoutes.js(20260727_1256 — 이미 수정됨)
+- PATCH(수정) 라우트는 validate.body 없음 — `sanitizePostPatch`에서 동일한 MAX_TITLE_LENGTH=60 적용하므로 별도 수정 불필요.
+
+수정:
+- `boardRoutes.js` 글 작성 라우트 `validate.body.title.maxLength`: 200 → 60 (실제 저장 한도와 일치)
+
+검증:
+- `node --check src/server/routeHandlers/boardRoutes.js` 통과.
+- 동치 검증(7케이스): 1·30·59·60자 제목: 수정 전/후 모두 허용(동일); 61·100·200자 제목: 수정 전 허용(데이터 손실) → 수정 후 400 거부(올바른 동작); 0자(빈 제목): 전/후 모두 required 오류.
+- `smoke:boards` 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 통과.
+- `smoke:vercel-ready` 통과.
+
+결과: ✅ 1개 파일(`src/server/routeHandlers/boardRoutes.js`, 1줄 수정 + 주석 4줄 추가). 61~200자 제목 입력 시 라우트가 데이터 손실 없이 명확한 400으로 거부한다. 60자 이하 정상 제목 동작 무변화.
+
+---
+
 ## [2026-07-31 22:10] [버그수정] confRoutes.js 회의실·안건 제목 maxLength 불일치 — 라우트가 수용한 제목을 저장소가 묵묵히 잘라내던 문제 해소
 
 **LOG_ID: 20260731_2210**
