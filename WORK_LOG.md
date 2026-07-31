@@ -1,3 +1,17 @@
+## [2026-07-31 17:05] [버그수정] MemoRepositorySupabase 내 쪽지 읽음 처리 시 userId 소문자 정규화 처리
+
+**LOG_ID: 20260731_1705**
+목표: Supabase 쪽지 저장소(`MemoRepositorySupabase.js`)에서 읽음 처리(`markRead`) 시, 유입되는 세션의 대소문자 표기에 따라 수신자 매칭에 실패하여 읽음 갱신이 무시되는 결함 해결.
+
+수정:
+- `MemoRepositorySupabase.js` 내 `markRead()` 함수 내부에서 `context.userId`에 대해 공백 제거 및 소문자 변환(`.trim().toLowerCase()`) 적용 후 비교 수행.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 17:00] [버그수정] MemoRepository 내 쪽지 권한 및 상태 비교 시 userId 소문자 정규화 처리
 
 **LOG_ID: 20260731_1700**

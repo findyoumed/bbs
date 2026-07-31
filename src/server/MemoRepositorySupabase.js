@@ -143,7 +143,9 @@ class SupabaseMemoRepository extends BaseRepository {
 
   async markRead(id, context = {}) {
     const memo = await this.getMemo(id, context);
-    if (memo.recipientUserId !== context.userId || memo.isRead) {
+    // [LOG: 20260731_1705] 대소문자 매칭 일치를 위해 소문자 정규화 처리
+    const userId = String(context.userId || '').trim().toLowerCase();
+    if (memo.recipientUserId !== userId || memo.isRead) {
       return memo;
     }
     const { data, error } = await this.client
