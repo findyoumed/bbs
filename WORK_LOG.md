@@ -1,3 +1,16 @@
+## [2026-07-31 15:35] [버그수정] SysopMailService 외부 메일 API 오류 객체 메시지 안전 포맷팅
+
+**LOG_ID: 20260731_1535**
+목표: `SysopMailService.js`의 `sendToSysop` 메서드에서 Resend API가 구조화된 error 객체를 반환할 때 `[object Object]` 문자열이 되어 원인이 은폐되던 버그 정정.
+
+수정: `error` 포맷팅 시 `typeof error === 'string' ? error : (error?.message || JSON.stringify(error))` 구문으로 포맷팅하여 직관적이고 안전한 에러 메시지 추출 보장.
+
+검증: `node --check src/server/SysopMailService.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:30] [버그수정] contactRoutes mailService 미주입 시 방어 가드 체크 추가
 
 **LOG_ID: 20260731_1530**

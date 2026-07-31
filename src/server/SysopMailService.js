@@ -34,7 +34,10 @@ class SysopMailService {
     });
 
     if (error) {
-      throw createHttpError(502, `이메일 발송 실패: ${error.message || error}`);
+      const errorMessage = typeof error === 'string'
+        ? error
+        : (error?.message || JSON.stringify(error));
+      throw createHttpError(502, `이메일 발송 실패: ${errorMessage}`);
     }
 
     return { id: data?.id || null };
