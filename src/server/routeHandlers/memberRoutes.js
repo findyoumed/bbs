@@ -208,7 +208,13 @@ class MemberRouter extends BaseRouter {
       level: member.level,
       isAdmin: Boolean(member.isAdmin),
       registrationDateTime: member.registrationDateTime || '',
-      lastLoginDateTime: member.lastLoginDateTime || '',
+      // [LOG_ID: 20260731_2130] member.lastLoginDateTime(memberRepository.getMember로 다시 읽은
+      // DB 원본)은 가입 시 DEFAULT now()로 고정된 뒤 갱신되지 않는 값이다 — 이미 위에서 구한
+      // context가 AuthBridge/AuthMemberProfileService를 거쳐 Supabase Auth의 fresh
+      // last_sign_in_at을 반영한 값이므로(20260731_2030에서 /api/auth/session에는 이미 적용됨),
+      // 여기서도 context를 우선한다. 실측: 같은 계정에서 /api/auth/session은 "최근 접속"이
+      // 오늘 로그인으로 나오는데 이 엔드포인트(/account 화면)만 04/30에 얼어붙어 있었다.
+      lastLoginDateTime: context.lastLoginDateTime || member.lastLoginDateTime || '',
       postCount,
       hitsSum,
       recommendSum,

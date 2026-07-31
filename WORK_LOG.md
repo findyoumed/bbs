@@ -1,3 +1,22 @@
+## [2026-07-31 21:30] [버그수정] /account("최근 접속")가 /myinfo와 달리 여전히 가입 시각에 고정 — getMyStats가 병합된 context를 무시하고 member 원본을 재조회
+
+**LOG_ID: 20260731_2130**
+목표(사용자 재확인): 배포 후에도 https://01410.vercel.app/account 의 "최근 접속"이 여전히 "가입일"과 똑같이 2026/04/30 17:00으로 뜬다는 재보고. 강력 새로고침으로도 재현됨.
+
+발견: 프로덕션(https://01410.vercel.app)에 실제 로그인 토큰(magiclink)으로 두 엔드포인트를 직접 호출해 대조.
+- `/api/auth/session`(/myinfo가 사용): `lastLoginDateTime: "2026-07-31T08:40:57Z"` — **정상**(20260731_2030에서 고친 AuthBridge 병합 경로).
+- `/api/members/stats`(/account가 사용): `lastLoginDateTime: "2026-04-30T08:00:46+00:00"` — **여전히 얼어붙음**.
+
+원인: `memberRoutes.js`의 `getMyStats()`는 `context = await this.getContext()`로 이미 AuthBridge/AuthMemberProfileService를 거친(20260731_2030에서 last_sign_in_at 우선으로 고쳐진) 병합 객체를 손에 쥐고 있으면서도, 응답의 `lastLoginDateTime`은 그 context를 전혀 쓰지 않고 `memberRepository.getMember(userId)`로 **DB 원본 행을 다시 조회**해 그 raw `member.lastLoginDateTime`(가입 시 DEFAULT now()로 고정)을 그대로 내려주고 있었다. 즉 20260731_2030 라운드가 실제로 고친 건 `/myinfo` 경로 하나였고, `/account`는 애초에 그 공용 병합 로직을 타지 않는 별도 경로라 그 수정의 효력이 미치지 않았다(정적 스캔이 아니라 프로덕션 API 직접 호출 대조로만 드러난 결함).
+
+수정: `getMyStats()` 응답의 `lastLoginDateTime`을 `context.lastLoginDateTime || member.lastLoginDateTime || ''`로 변경 — context(있으면 fresh) 우선, 없으면(수동/헤더 기반 컨텍스트 등 auth 신호가 없는 경로) 종전과 동일하게 DB 값으로 폴백.
+
+검증: `node --check` 통과. 로컬 서버에 프로덕션과 동일한 실제 access token으로 `/api/members/stats` 호출 — 수정 전 04/30 고정값 → 수정 후 `/api/auth/session`과 동일한 `2026-07-31T08:40:57Z`로 일치 확인. 헤더 기반 manual-context 폴백 경로(로그인 신호 없음)는 여전히 member DB 값 반환 확인(회귀 없음). `smoke:auth-bridge`(32체크)·`smoke:command-parity`·`smoke:full-traversal` 3종 회귀 전부 통과.
+
+결과: ✅ 1개 파일. `/account` "최근 접속"이 이제 `/myinfo`와 동일하게 실제 최근 로그인(KST)을 정확히 반영한다 — 20260731_2030/20260731_2100과 합쳐져야 완결되는 3단계 수정의 마지막 조각.
+
+---
+
 ## [2026-07-31 21:00] [버그수정] formatLongDate/formatShortDate가 UTC 시각을 한국시간으로 변환하지 않고 그대로 표시
 
 **LOG_ID: 20260731_2100**
