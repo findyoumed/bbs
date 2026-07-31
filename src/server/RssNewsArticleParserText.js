@@ -108,9 +108,57 @@ function escapeRegExp(value) {
   return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// [LOG_ID: 20260731_2000] 아래 세 함수(기사 리드부의 메타/스킵/기자명 단독 줄 판정)는
+// RssNewsArticleParserScoring.js와 RssNewsArticleSanitizer.js가 각자 모듈 프라이빗으로
+// 복제해 갖고 있었고, 실제로 이미 어긋나 있었다 — Scoring 쪽 메타라인 정규식만
+// '최종수정'이 '추최종수정'(비단어, 오타)으로 틀려 "최종수정: 2026.07.31 ..." 형태의
+// 날짜 메타라인을 Scoring 경로에서만 놓치고 있었다. 두 파일 모두 이미 이 모듈을
+// require하므로 여기(둘의 공통 하위 leaf 모듈)로 모으고, 정규식은 올바른 '최종수정'
+// (Sanitizer 쪽)으로 통일한다.
+function isArticleLeadMetadataLine(line) {
+  const text = String(line || '').trim();
+  return /^(?:기사\s*)?(?:입력|수정|최종수정|등록|송고|승인)\s*[:：]?\s*\d{4}[.-]\d{1,2}[.-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?/i.test(text)
+    || /^\d{4}[.-]\d{1,2}[.-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?$/.test(text);
+}
+
+function isArticleLeadSkippableLine(line) {
+  const text = String(line || '').trim();
+  if (!text) {
+    return true;
+  }
+
+  const patterns = [
+    /^지면\s+[A-Z]?\d+$/i,
+    /^기사\s*스크랩$/i,
+    /^댓글(?:\s*\d+)?$/i,
+    /^기사\s*공유$/i,
+    /^글자크기(?:\s*조절)?$/i,
+    /^기자\s*구독하기$/i,
+    /^구독하기$/i,
+    /^한경\s*PREMIUM\s*9?$/i,
+    /^AI를\s*넘어서는\s*성공투자,?$/i,
+    /^한경\s*프리미엄\s*9?$/i,
+    /^(?:정치|사회|경제|국제|지역|스포츠|연예|오피니언|테크|BIO\s*Insight)$/i
+  ];
+
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+function isShortStandaloneAuthorLine(line, nextLine) {
+  const text = String(line || '').trim();
+  const next = String(nextLine || '').trim();
+  if (!text || text.length > 12 || /\s/.test(text)) {
+    return false;
+  }
+  return /^[가-힣]{2,6}$/.test(text) && /^기자\s*구독하기$/i.test(next);
+}
+
 module.exports = {
   decodeHtmlEntities,
   escapeRegExp,
+  isArticleLeadMetadataLine,
+  isArticleLeadSkippableLine,
+  isShortStandaloneAuthorLine,
   looksLikeWidgetNoise,
   normalizeHtmlBlock,
   normalizePlainText

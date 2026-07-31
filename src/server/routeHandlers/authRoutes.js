@@ -11,10 +11,8 @@ const {
   validateReservedEmail
 } = require('../ReservedNicknamePolicy');
 const logger = require('../logger');
-
-function isTruthyAuthFlag(value) {
-  return value === true || String(value || '').toLowerCase() === 'true';
-}
+// [LOG_ID: 20260731_2000] isTruthyAuthFlag/hasVerifiedAuthEmail 로컬 복제 제거 — AuthBridge가 원본.
+const { hasVerifiedAuthEmail } = require('../AuthBridge');
 
 function isOAuthAuthUser(user) {
   const provider = String(user?.app_metadata?.provider || '').trim().toLowerCase();
@@ -24,31 +22,6 @@ function isOAuthAuthUser(user) {
     identities.some((identity) => {
       const identityProvider = String(identity?.provider || '').trim().toLowerCase();
       return identityProvider && identityProvider !== 'email';
-    })
-  );
-}
-
-function hasVerifiedAuthEmail(user) {
-  const identities = Array.isArray(user?.identities) ? user.identities : [];
-  const metadata = user?.user_metadata && typeof user.user_metadata === 'object'
-    ? user.user_metadata
-    : {};
-
-  return Boolean(
-    user?.email_confirmed_at ||
-    user?.confirmed_at ||
-    isTruthyAuthFlag(metadata.email_verified) ||
-    isTruthyAuthFlag(metadata.emailVerified) ||
-    identities.some((identity) => {
-      const identityData = identity?.identity_data && typeof identity.identity_data === 'object'
-        ? identity.identity_data
-        : {};
-      return (
-        isTruthyAuthFlag(identityData.email_verified) ||
-        isTruthyAuthFlag(identityData.emailVerified) ||
-        isTruthyAuthFlag(identityData.verified_email) ||
-        isTruthyAuthFlag(identityData.verifiedEmail)
-      );
     })
   );
 }

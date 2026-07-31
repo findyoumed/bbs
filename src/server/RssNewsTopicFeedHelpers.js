@@ -2,6 +2,8 @@
 
 const { isGoogleNewsArticleUrl, normalizePublisherArticleUrl } = require('./GoogleNewsUrlResolver');
 const { isScriptCodeDumping } = require('./RssNewsArticleSanitizer');
+// [LOG_ID: 20260731_2000] escapeRegExp 로컬 복제 제거 — RssNewsArticleParserText가 원본.
+const { escapeRegExp } = require('./RssNewsArticleParserText');
 
 const MISSING_DATE_ENRICH_CONCURRENCY = 3;
 const NEWS_TOPIC_ORDER = [
@@ -187,10 +189,6 @@ function normalizeNewsDedupeText(value) {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
-}
-
-function escapeRegExp(value) {
-  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function normalizeNewsDedupeTitle(service, item) {

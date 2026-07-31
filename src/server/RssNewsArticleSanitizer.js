@@ -1,6 +1,11 @@
 'use strict';
 
-const { decodeHtmlEntities } = require('./RssNewsArticleParserText');
+const {
+  decodeHtmlEntities,
+  isArticleLeadMetadataLine,
+  isArticleLeadSkippableLine,
+  isShortStandaloneAuthorLine
+} = require('./RssNewsArticleParserText');
 
 function normalize(value) {
   return String(value || '')
@@ -232,43 +237,9 @@ function trimKnownArticleLeadNoise(value) {
   return bodyLines.join('\n').trim();
 }
 
-function isArticleLeadMetadataLine(line) {
-  const text = String(line || '').trim();
-  return /^(?:\uAE30\uC0AC\s*)?(?:\uC785\uB825|\uC218\uC815|\uCD5C\uC885\uC218\uC815|\uB4F1\uB85D|\uC1A1\uACE0|\uC2B9\uC778)\s*[:：]?\s*\d{4}[.-]\d{1,2}[.-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?/i.test(text)
-    || /^\d{4}[.-]\d{1,2}[.-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?$/.test(text);
-}
-
-function isArticleLeadSkippableLine(line) {
-  const text = String(line || '').trim();
-  if (!text) {
-    return true;
-  }
-
-  const patterns = [
-    /^\uC9C0\uBA74\s+[A-Z]?\d+$/i,
-    /^\uAE30\uC0AC\s*\uC2A4\uD06C\uB7A9$/i,
-    /^\uB313\uAE00(?:\s*\d+)?$/i,
-    /^\uAE30\uC0AC\s*\uACF5\uC720$/i,
-    /^\uAE00\uC790\uD06C\uAE30(?:\s*\uC870\uC808)?$/i,
-    /^\uAE30\uC790\s*\uAD6C\uB3C5\uD558\uAE30$/i,
-    /^\uAD6C\uB3C5\uD558\uAE30$/i,
-    /^\uD55C\uACBD\s*PREMIUM\s*9?$/i,
-    /^AI\uB97C\s*\uB118\uC5B4\uC11C\uB294\s*\uC131\uACF5\uD22C\uC790,?$/i,
-    /^\uD55C\uACBD\s*\uD504\uB9AC\uBBF8\uC5C4\s*9?$/i,
-    /^(?:\uC815\uCE58|\uC0AC\uD68C|\uACBD\uC81C|\uAD6D\uC81C|\uC9C0\uC5ED|\uC2A4\uD3EC\uCE20|\uC5F0\uC608|\uC624\uD53C\uB2C8\uC5B8|\uD14C\uD06C|BIO\s*Insight)$/i
-  ];
-
-  return patterns.some((pattern) => pattern.test(text));
-}
-
-function isShortStandaloneAuthorLine(line, nextLine) {
-  const text = String(line || '').trim();
-  const next = String(nextLine || '').trim();
-  if (!text || text.length > 12 || /\s/.test(text)) {
-    return false;
-  }
-  return /^[\uAC00-\uD7A3]{2,6}$/.test(text) && /^\uAE30\uC790\s*\uAD6C\uB3C5\uD558\uAE30$/i.test(next);
-}
+// [LOG_ID: 20260731_2000] isArticleLeadMetadataLine/isArticleLeadSkippableLine/
+// isShortStandaloneAuthorLine은 RssNewsArticleParserScoring.js와 복제 상태였다가 어긋나
+// 있던 것을 RssNewsArticleParserText.js로 통합했다(이 파일 쪽 정규식이 올바른 원본).
 
 function stripKnownArticleBoilerplateLines(value) {
   const lines = String(value || '').split('\n');

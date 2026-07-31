@@ -1,3 +1,22 @@
+## [2026-07-31 20:00] [리팩토링+버그수정] RSS 기사 리드 판정 3함수·escapeRegExp·auth 헬퍼 2함수의 파일 간 복제 통합 (Scoring 쪽 '추최종수정' 오타 드리프트 수정 포함)
+
+**LOG_ID: 20260731_2000**
+목표: 서버 전체를 "여러 파일에 같은 이름으로 정의된 함수" 기준으로 정적 스캔해 파일 간 복제를 찾아 통합.
+
+발견:
+1. `isArticleLeadMetadataLine`/`isArticleLeadSkippableLine`/`isShortStandaloneAuthorLine` — RssNewsArticleParserScoring.js와 RssNewsArticleSanitizer.js에 통째로 복제. **이미 어긋나 있었다**: Scoring 쪽 메타라인 정규식만 `최종수정`이 `추최종수정`(비단어, 오타)으로 틀려, "최종수정: 2026.07.31 14:00" 형태의 날짜 메타라인을 Scoring 경로에서만 탐지 못 함(초기 커밋부터 존재하던 드리프트 — 복제가 만든 전형적 버그).
+2. `escapeRegExp` — RssNewsArticleParserText.js(export 중)·RssNewsTopicFeedHelpers.js·RssServiceXmlParsers.js 3곳에 동일 정의(뒤 2곳은 로컬 복제).
+3. `isTruthyAuthFlag`/`hasVerifiedAuthEmail` — AuthBridge.js와 authRoutes.js에 바이트 단위 동일 복제(authRoutes의 `isOAuthAuthUser`는 AuthBridge `resolveAuthProvider`와 다른 고유 함수라 유지).
+4. (오탐 확인 후 보류) Conf normText/normUserId 쌍, normalizeSearchMode 쌍, escapeHtml(서버/클라이언트 경계라 공유 불가) 등은 다음 라운드 후보로 남김.
+
+수정: ① trio를 두 파일이 이미 공통 require하는 leaf 모듈 RssNewsArticleParserText.js로 이동(정규식은 올바른 Sanitizer 쪽 `최종수정`으로 통일, `\uXXXX` 이스케이프는 코드베이스 관례에 맞춰 리터럴 한글로 전환), Scoring/Sanitizer는 import로 전환. ② TopicFeedHelpers/XmlParsers의 escapeRegExp 로컬 복제 제거, ParserText에서 import(ParserText는 require 0개인 leaf라 순환 없음). ③ AuthBridge가 두 헬퍼를 `module.exports.isTruthyAuthFlag`/`.hasVerifiedAuthEmail`로 함께 내보내고 authRoutes는 hasVerifiedAuthEmail을 import(클래스 기본 export는 그대로 — 기존 require 전부 비파괴).
+
+검증: `node --check` 6개 파일 통과. 원본(Sanitizer 정본) 로직 재구현 vs 신함수 동등성 테스트 — 메타 17·스킵 21·기자명 10케이스 전부 일치, Scoring 쪽 차이는 의도된 오타 수정분 3건뿐(`최종수정` 이제 탐지, `추최종수정` 더는 미탐지). AuthBridge 헬퍼 export 로드·판정 스팟체크, authRoutes/RSS 5개 모듈 require 체인 로드 확인. `smoke:rss-services`·`smoke:auth-bridge`(32체크)·`smoke:command-parity`·`smoke:full-traversal` 4종 회귀 전부 통과.
+
+결과: ✅ 6개 파일, 로컬 복제 6개 함수 제거(순감소), 복제 드리프트 버그 1건 수정.
+
+---
+
 ## [2026-07-31 19:30] [버그수정] 이용자검색(member) 화면의 BYID/BYNAME 클릭이 입력창에 유지되지 않고 즉시(잘못) 실행됨
 
 **LOG_ID: 20260731_1930**

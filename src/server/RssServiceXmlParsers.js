@@ -1,5 +1,8 @@
 'use strict';
 
+// [LOG_ID: 20260731_2000] escapeRegExp 로컬 복제 제거 — RssNewsArticleParserText가 원본.
+const { escapeRegExp } = require('./RssNewsArticleParserText');
+
 function parseWeatherMenuXml(xml) {
   const items = [];
   const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
@@ -428,10 +431,6 @@ function buildNewsDateParts(year, month, day, hour = '', minute = '', second = '
     date: dateText,
     dateTime: `${dateText}T${String(Number(hh)).padStart(2, '0')}:${String(Number(min)).padStart(2, '0')}:${String(Number(ss)).padStart(2, '0')}`
   };
-}
-
-function escapeRegExp(value) {
-  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function normalizeWeatherDay(value) {

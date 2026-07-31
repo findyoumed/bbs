@@ -216,3 +216,8 @@ class AuthBridge {
 }
 
 module.exports = AuthBridge;
+// [LOG_ID: 20260731_2000] isTruthyAuthFlag/hasVerifiedAuthEmail은 authRoutes.js가 문자
+// 그대로 복제해 갖고 있었다 — Supabase Auth user 객체 판독 로직의 원본은 이 파일이므로
+// 여기서 함께 내보내고 authRoutes는 이를 가져다 쓴다.
+module.exports.isTruthyAuthFlag = isTruthyAuthFlag;
+module.exports.hasVerifiedAuthEmail = hasVerifiedAuthEmail;
