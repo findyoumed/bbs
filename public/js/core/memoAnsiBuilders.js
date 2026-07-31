@@ -23,6 +23,7 @@ export function createMemoAnsiBuilders(deps) {
     displayWidth,
     fitCell,
     formatLongDate,
+    formatShortDate,
     wrapAnsiText
   } = createAnsiBuilderUtils(deps);
 
@@ -85,9 +86,14 @@ export function createMemoAnsiBuilders(deps) {
       const markerText = marker ? `[${marker}]` : '';
       const availableTitleWidth = titleWidth - (markerText ? displayWidth(markerText) + 1 : 0);
       const user = fitCell(userField, idWidth);
+      // [LOG: 20260801_0900] UTC raw substring → formatShortDate로 KST 변환 적용
+      // 기존: substring(0,10)/substring(5,10) 은 UTC ISO 날짜 문자를 그대로 잘라
+      // KST(UTC+9) 기준 15:00~24:00 사이에 생성된 쪽지 날짜가 하루 이른 값으로 표시됐다.
+      // formatShortDate는 hasExplicitTimezoneMarker(Z)를 감지해 new Date()를 통해
+      // 브라우저 로컬 시각(KST)으로 변환하므로 날짜 경계 오류가 없다.
       const dateRaw = isMobile
-        ? String(memo.createdAt || '').substring(5, 10) // MM-DD
-        : String(memo.createdAt || '').substring(0, 10);
+        ? formatShortDate(memo.createdAt).slice(3) // MM/DD (로컬 시각)
+        : formatShortDate(memo.createdAt);           // YY/MM/DD (로컬 시각)
       const date = fitCell(dateRaw, dateWidth);
       const title = fitCell(cleanTitle, availableTitleWidth);
       const color = memo.isRead ? 8 : 15;

@@ -1,3 +1,46 @@
+## [2026-08-01 08:52] [버그수정] 쪽지함 목록 createdAt UTC raw substring — KST 변환 누락 수정
+
+**LOG_ID: 20260801_0852**
+목표: 11라운드(20260801_0844)에서 WHO 접속자 lastSeenAt raw split 버그를 수정한 뒤, 같은 패턴(UTC ISO 문자열을 `.split('T')`/`.substring()`/`.slice()`로 직접 자르는 코드)이 다른 화면에도 있는지 전수 점검.
+
+발견:
+- `memoAnsiBuilders.js` `buildMemoListAnsi`의 `memoLine` 함수 내 날짜 표시 (line 88-90):
+  ```js
+  const dateRaw = isMobile
+    ? String(memo.createdAt || '').substring(5, 10) // MM-DD
+    : String(memo.createdAt || '').substring(0, 10);
+  ```
+  `memo.createdAt`은 서버가 `new Date().toISOString()`(UTC ISO 8601)으로 저장 — Supabase도 동일.
+  `substring(0, 10)`은 UTC 날짜 문자를 그대로 추출하므로, KST(UTC+9) 기준으로 15:00~24:00 UTC
+  (= KST 00:00~09:00 다음 날)에 작성된 쪽지 날짜가 1일 이른 값으로 표시됨.
+  연말 경계도 영향: UTC 2026-12-31T15:30Z → old="2026-12-31", KST 실제="2027-01-01".
+- 같은 파일 line 169(쪽지 상세보기)는 이미 `formatLongDate(memo.createdAt)`로 올바르게 처리.
+- 나머지 전체(`ansiBoardBuilders.js`, `postListView.js`, `confAnsiBuilders.js`, `newsAnsiBuilders.js`,
+  `systemAnsiBuilders.js` 등)는 `formatShortDate`/`formatLongDate`/`new Date()` 사용 — 이상 없음.
+- `memoAnsiBuilders.js` line 88-90이 이번 라운드에서 발견된 마지막 동종 패턴.
+
+수정:
+- `memoAnsiBuilders.js` 두 곳:
+  1. line 25-26: `formatShortDate`를 destructure 대상에 추가(기존엔 `formatLongDate`만 있었음).
+  2. line 88-90: 기존 `substring()` 로직 → `formatShortDate(memo.createdAt)` 경유 변환.
+     - 데스크톱: `formatShortDate(memo.createdAt)` → `YY/MM/DD` (로컬 시각, 기존 `YYYY-MM-DD`와 포맷 변경)
+     - 모바일: `formatShortDate(memo.createdAt).slice(3)` → `MM/DD` (기존 `MM-DD`와 포맷 변경)
+     - `formatShortDate`는 `hasExplicitTimezoneMarker('Z')` 감지 → `new Date()` 경로 → 브라우저 로컬 시각 반환.
+     - `ansiBoardBuilders.js` 게시글 목록이 이미 같은 방식(`formatShortDate(...).slice(3)`)으로 날짜 표시 → 일관성 확보.
+  - 주석: `[LOG: 20260801_0900]`
+
+검증:
+- `node --check public/js/core/memoAnsiBuilders.js` 통과.
+- KST 시뮬레이션 검증(UTC+9를 수동 계산): 5케이스 — (A) UTC Jul31 16:30→KST Aug1, (B) 양측 동일, (C) 경계 미달, (D) UTC Jul31 15:00→KST Aug1 경계, (E) UTC Dec31→KST Jan1 연말 — OLD 3케이스 오류, NEW 전 케이스 정합.
+- `smoke:renderer-ui` 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 통과.
+- `smoke:vercel-ready` 통과.
+
+결과: ✅ 1개 파일(`public/js/core/memoAnsiBuilders.js`, 2곳 수정). 쪽지함 목록 날짜 표시가 UTC raw substring 대신 브라우저 로컬 시각(KST)으로 정확히 변환됨. 이 라운드에서 발견한 마지막 동종 패턴 — 전수 점검 완료.
+
+---
+
 ## [2026-08-01 08:44] [버그수정] WHO 접속자 목록 lastSeenAt UTC raw split — KST 변환 누락 수정
 
 **LOG_ID: 20260801_0844**
