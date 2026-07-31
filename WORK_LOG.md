@@ -1,3 +1,17 @@
+## [2026-07-31 17:35] [버그수정] authRoutes 내 회원 식별자 검색 시 이메일 소문자 정규화 처리
+
+**LOG_ID: 20260731_1735**
+목표: 회원가입, 비밀번호 찾기 시 아이디나 이메일 주소를 입력받아 회원을 조회하는 `findMemberByIdentifier` 함수에서, 이메일 주소의 대소문자가 일치하지 않는 경우 이메일 매칭이 실패하는 현상 예방.
+
+수정:
+- `authRoutes.js` 의 `findMemberByIdentifier()` 내에서 `memberRepository.findByEmail`을 호출할 때 이메일 인수를 `.toLowerCase()`로 정형화하여 호출하도록 보완.
+
+검증: `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 17:30] [버그수정] BoardRepositories 및 권한 검증 모듈 내 userId 소문자 정규화 처리
 
 **LOG_ID: 20260731_1730**

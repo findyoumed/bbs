@@ -408,7 +408,8 @@ class AuthRouter extends BaseRouter {
     const normalized = String(identifier || '').trim();
     if (!normalized) return null;
     if (normalized.includes('@') && typeof memberRepository.findByEmail === 'function') {
-      return memberRepository.findByEmail(normalized);
+      // [LOG: 20260731_1735] 대소문자 매칭 일치를 위한 소문자 정형화
+      return memberRepository.findByEmail(normalized.toLowerCase());
     }
     return memberRepository.getMember(normalized.toLowerCase());
   }
