@@ -1,3 +1,18 @@
+## [2026-07-31 15:15] [버그수정] AttachmentRepositoryLocal delete 인덱스 저장 실패 시 원복 트랜잭션 예외 처리
+
+**LOG_ID: 20260731_1515**
+목표: `AttachmentRepositoryLocal.js`의 `delete` 메서드에서 인덱스 파일 저장(`_saveIndex()`) 중 에러가 발생할 때 `this.index.attachments` 배열에서 제거된 첨부 엔트리를 트랜잭션 원복하여 인덱스 오염을 막음.
+
+발견: 삭제 실행 시 `splice`로 메모리 배열에서 엔트리를 먼저 지운 후 `_saveIndex()`를 호출하는데, 디스크 쓰기 오류 시 배열 원복 처리가 없어 메모리 상태와 저장소 상태가 불일치해지는 결함 발견.
+
+수정: `_saveIndex()` 실패 시 예외를 포착하여 제거했던 `entry`를 원래 위치로 다시 `splice(index, 0, entry)` 복구하고 에러를 상위로 전파하도록 정정.
+
+검증: `node --check src/server/AttachmentRepositoryLocal.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:10] [버그수정] MemoRepositoryShared parseRecipients 수신자 아이디 소문자 정규화
 
 **LOG_ID: 20260731_1510**

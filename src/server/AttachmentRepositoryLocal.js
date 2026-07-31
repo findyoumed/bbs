@@ -216,8 +216,18 @@ class AttachmentRepository {
   delete(boardId, postId, attachmentId) {
     this._assertStorageAvailable();
     const entry = this._findEntry(boardId, postId, attachmentId);
-    this.index.attachments.splice(this.index.attachments.indexOf(entry), 1);
-    this._saveIndex();
+    const index = this.index.attachments.indexOf(entry);
+    if (index !== -1) {
+      this.index.attachments.splice(index, 1);
+    }
+    try {
+      this._saveIndex();
+    } catch (error) {
+      if (index !== -1) {
+        this.index.attachments.splice(index, 0, entry);
+      }
+      throw error;
+    }
     removeFileBestEffort(path.join(this.filesDir, entry.storedName));
     return normalizeEntry(entry);
   }
