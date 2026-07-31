@@ -1,3 +1,18 @@
+## [2026-07-31 14:40] [버그수정] MemberRepositoryShared isMemberAbsentNow 날짜 경계 파싱 보강
+
+**LOG_ID: 20260731_1440**
+목표: `MemberRepositoryShared.js`에서 부재통지 활성 여부(`isMemberAbsentNow`) 판정 시 `YYYY-MM-DD` 형식의 종료일자(`absentEnd`)가 0시로 파싱되어 당일 낮 시간에 조기 만료 처리되던 결함을 `parseAbsentDateBoundary` 헬퍼 함수를 통한 `T23:59:59.999` 경계 확장 파싱으로 보강.
+
+발견: `absentEnd`가 시간 정보 없이 일자(`2026-07-31`)로 등록된 경우 `Date.parse()`가 `2026-07-31T00:00:00.000Z`로 해석되어, 7월 31일 당일 낮시간대 검색 시 부재중 상태가 해제되는 엣지 케이스 발견.
+
+수정: `parseAbsentDateBoundary(dateStr, isEnd)` 함수를 구현하여 `YYYY-MM-DD` 일자 파싱 시 종료일은 `T23:59:59.999`까지 확장하여 포함되도록 수정.
+
+검증: `node --check src/server/MemberRepositoryShared.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 14:35] [버그수정] commandRouterChat J/JOIN 대화방 번호 직접 입력 시 캐시 미존재 시에도 폴백 입장 보장
 
 **LOG_ID: 20260731_1435**

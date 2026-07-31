@@ -112,21 +112,34 @@ function toSupabaseMemberPayload(member) {
   return payload;
 }
 
+function parseAbsentDateBoundary(dateStr, isEnd = false) {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const trimmed = dateStr.trim();
+  if (!trimmed) return null;
+  // [LOG_ID: 20260731_1440] YYYY-MM-DD 단독 일자 형식인 경우 종료일은 당일 23:59:59.999까지를 포함한다.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const timeSuffix = isEnd ? 'T23:59:59.999' : 'T00:00:00.000';
+    const parsed = Date.parse(`${trimmed}${timeSuffix}`);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  const parsed = Date.parse(trimmed);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
 // [LOG_ID: 20260722_3000] 부재통지(ABSENT/NOMAN) 활성 여부 판정 — 하이텔 책(그림 7.12)/
 // 천리안 책(NOMAN, p.165) 둘 다 "부재 시작일"~"부재 종료일" 사이만 안내한다는 점이 동일했다.
-// 시작일이 없으면 사유가 등록된 순간부터, 종료일이 없으면 수동 해제 전까지 무기한 활성으로 본다
-// (원전은 두 날짜를 필수로 받지만, 우리 쪽은 최소한 사유만으로도 켤 수 있게 더 관대하게 둔다).
+// 시작일이 없으면 사유가 등록된 순간부터, 종료일이 없으면 수동 해제 전까지 무기한 활성으로 본다.
 function isMemberAbsentNow(member, now = new Date()) {
   if (!member || !String(member.absentReason || '').trim()) {
     return false;
   }
   const nowMs = now.getTime();
-  const startMs = member.absentStart ? Date.parse(member.absentStart) : null;
-  const endMs = member.absentEnd ? Date.parse(member.absentEnd) : null;
-  if (startMs !== null && !Number.isNaN(startMs) && nowMs < startMs) {
+  const startMs = parseAbsentDateBoundary(member.absentStart, false);
+  const endMs = parseAbsentDateBoundary(member.absentEnd, true);
+  if (startMs !== null && nowMs < startMs) {
     return false;
   }
-  if (endMs !== null && !Number.isNaN(endMs) && nowMs > endMs) {
+  if (endMs !== null && nowMs > endMs) {
     return false;
   }
   return true;
