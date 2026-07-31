@@ -1,3 +1,18 @@
+## [2026-07-31 15:10] [버그수정] MemoRepositoryShared parseRecipients 수신자 아이디 소문자 정규화
+
+**LOG_ID: 20260731_1510**
+목표: `MemoRepositoryShared.js`의 `parseRecipients`에서 수신자 ID 파싱 시 원본 대소문자가 유지되던 현상을 정정하여 소문자로 정규화(`.toLowerCase()`)함으로써, `Hong` 등 대소문자 혼용 발송 시 수신함 조회 및 읽지 않은 쪽지 집계에서 매칭이 실패하던 버그 수정.
+
+발견: `parseRecipients`가 `seen.has()` 중복 검사에서만 `toLowerCase()`를 거치고 실제 반환 배열에는 원본 대소문자가 남는 문제가 있어, 쪽지 저장 시 `recipientUserId`가 대문자로 저장되어 수신자(`hong`)의 세션 ID와의 동등 비교(`===`)에서 쪽지가 누락되는 현상 발견.
+
+수정: `.map((entry) => entry.trim().toLowerCase())` 구문으로 변경하여 파싱 단계에서 소문자 정규화 보장.
+
+검증: `node --check src/server/MemoRepositoryShared.js` (PASS), `smoke:boards` (PASS), `smoke:command-parity` (PASS) 회귀 스모크 검증 완료.
+
+결과: ✅ 1개 파일 수정.
+
+---
+
 ## [2026-07-31 15:05] [버그수정] systemRoutes.js 통계 집계 중 memberCount 로더 미실행 결함 정정
 
 **LOG_ID: 20260731_1505**

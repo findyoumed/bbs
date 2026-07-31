@@ -75,16 +75,16 @@ function isMissingMemosTableError(error, tableName = 'memos') {
 // [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — "hong,kim lee" 처럼 쉼표/세미콜론/공백으로
 // 나열한 수신자를 목록으로 만든다. 중복(대소문자 무시)은 한 번만 남긴다 — 같은 사람에게
 // 같은 쪽지가 두 통 가지 않도록.
+// [LOG_ID: 20260731_1510] 수신자 아이디 소문자 정규화 — Hong 등 대소문자 혼용 입력 시에도 소문자로 통일하여 수신함 조회 누락을 방지한다.
 function parseRecipients(raw) {
   const seen = new Set();
   return String(raw || '')
     .split(/[,;\s]+/)
-    .map((entry) => entry.trim())
+    .map((entry) => entry.trim().toLowerCase())
     .filter((entry) => {
       if (!entry) return false;
-      const key = entry.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
+      if (seen.has(entry)) return false;
+      seen.add(entry);
       return true;
     });
 }
