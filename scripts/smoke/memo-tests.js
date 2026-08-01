@@ -437,10 +437,15 @@ async function verifyMemoWriteCoverage(errors) {
         if (state._memoTarget !== '') {
             errors.push(`Memo write direct route did not reset the memo target for /memo/write (got ${state._memoTarget})`);
         }
-        if (!String(screenEl.innerHTML || '').includes('받는 사람 아이디를 입력하세요')) {
-            errors.push('Memo write direct route did not render the compose prompt for /memo/write');
+        // [LOG_ID: 20260801_1600] 20260801_1020에서 쪽지 쓰기 화면이 대화형 CLI 히스토리에서
+        // 정통 폼 에디터(renderMemoBbsEditor)로 바뀌었다 — target이 빈 문자열이면 flow.stage가
+        // 'target'이 되어 isInteractiveStage(card_select/letter_type/delay_minutes/send_cmd)에
+        // 안 걸리고 곧장 폼 에디터가 렌더링되므로, 옛 CLI 문구("받는 사람 아이디를 입력하세요",
+        // "쪽지 보내기") 대신 새 폼의 실제 마크업(입력창 placeholder, 상단바 제목)을 확인한다.
+        if (!String(screenEl.innerHTML || '').includes('받는 사람 아이디')) {
+            errors.push('Memo write direct route did not render the compose target field for /memo/write');
         }
-        if (!String(screenEl.innerHTML || '').includes('쪽지 보내기')) {
+        if (!String(screenEl.innerHTML || '').includes('편지 쓰기')) {
             errors.push('Memo write direct route did not render the compose title for /memo/write');
         }
         if (buildURLForState() !== '/memo/write') {

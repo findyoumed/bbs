@@ -7,6 +7,7 @@ const path = require('path');
 const {
     config,
     fetchJsonResponse,
+    extractApiMessage,
     hasNonEmptyText,
     loadBrowserHarnessModule,
     createHarnessScreenEl,

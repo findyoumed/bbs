@@ -264,7 +264,6 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
-    const isWriteConflictScreen = ['post-list', 'memo-list', 'post-write', 'memo-write', 'login', 'password-reset', 'signup'].includes(state.screen);
     // [LOG_ID: 20260714_2100] 원전(NOW_MENU.DAT) 명령어표의 UID(총 접속자 ID 조회)/
     // USER ALL(전체 메뉴별 이용자 현황)을 추가 — 우리 접속자 목록 화면이 이미 사용자별
     // 위치(위치 컬럼)까지 보여주므로 기존 화면 그대로 재사용한다(신규 화면 불필요).

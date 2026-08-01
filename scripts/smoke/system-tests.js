@@ -758,30 +758,46 @@ async function verifyActiveUsersCommandCoverage(errors) {
             showConfirm: async () => true
         });
 
-        const handled = await handleGlobalNavigationCommand({ cmd: 'W', rawCmd: 'W' });
+        // [LOG_ID: 20260801_1600] 20260801_1005에서 W를 글쓰기 전용으로 일원화하며
+        // commandRouterGlobalNavigation.js의 접속자 목록 분기에서 완전히 빠졌다(화면과
+        // 무관하게 항상 미처리) — 옛 기대(W가 접속자 목록을 띄움)를 지우고, W가 어떤 화면에서도
+        // 이 핸들러에 의해 소비되지 않는지, 그리고 WHO/WH/USER/UID가 여전히 정상 동작하는지로
+        // 대체한다.
+        const wOnMain = await handleGlobalNavigationCommand({ cmd: 'W', rawCmd: 'W' });
+        if (wOnMain) {
+            errors.push('W was incorrectly consumed by global navigation instead of being left for the write command path');
+        }
+        if (fetchCalls.length !== 0) {
+            errors.push('W triggered an active-users fetch even though it is reserved for writing');
+        }
+        if (state.screen !== 'main') {
+            errors.push('W changed state.screen even though it should stay available for writing');
+        }
+
+        const handled = await handleGlobalNavigationCommand({ cmd: 'WHO', rawCmd: 'WHO' });
         if (!handled) {
-            errors.push('W global command was not handled by commandRouterGlobalNavigation.js');
+            errors.push('WHO global command was not handled by commandRouterGlobalNavigation.js');
         }
         if (fetchCalls[0] !== '/api/system/active-users') {
-            errors.push(`W global command did not fetch /api/system/active-users (got ${fetchCalls[0] || 'none'})`);
+            errors.push(`WHO global command did not fetch /api/system/active-users (got ${fetchCalls[0] || 'none'})`);
         }
         if (state.screen !== 'active-users') {
-            errors.push('W global command did not activate state.screen="active-users"');
+            errors.push('WHO global command did not activate state.screen="active-users"');
         }
         if (appliedFooters[appliedFooters.length - 1] !== 'ACTIVE FOOTER') {
             errors.push(`Active-users screen did not apply the supported footer hint (got ${appliedFooters[appliedFooters.length - 1] || 'empty'})`);
         }
         if (updateUrlCalls !== 1) {
-            errors.push(`Active-users screen did not request exactly one URL sync on W entry (got ${updateUrlCalls})`);
+            errors.push(`Active-users screen did not request exactly one URL sync on WHO entry (got ${updateUrlCalls})`);
         }
         if (focusCalls !== 1) {
             errors.push(`Active-users screen did not focus the command input on desktop entry (got ${focusCalls})`);
         }
         if (!screenEl.innerHTML.includes('접속자 목록') || !screenEl.innerHTML.includes('WHO IS ONLINE')) {
-            errors.push('W global command did not render the active-users title');
+            errors.push('WHO global command did not render the active-users title');
         }
         if (!screenEl.innerHTML.includes('alpha-user') || !screenEl.innerHTML.includes('/chat/1')) {
-            errors.push('W global command did not render the expected active-users payload');
+            errors.push('WHO global command did not render the expected active-users payload');
         }
 
         state.screen = 'post-list';

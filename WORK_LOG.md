@@ -1,3 +1,21 @@
+## [2026-08-01 13:40] [테스트수정] 병렬 세션의 최근 변경(W/WHO 라우팅, 쪽지쓰기 폼 에디터 개편, 파일 분할)과 어긋난 스모크 테스트 5건 수정
+
+**LOG_ID: 20260801_1340**
+목표: 다른 세션이 오늘 병렬로 작업한 커밋들(9035dc6/8daef7c/40df3c1)을 fast-forward 병합한 뒤 `npm run smoke:full-traversal`을 재실행했더니 18개 오류 발생 — 원인을 규명하고 수정.
+
+발견: 18개 중 2개는 파일 분할 과정의 실제 버그, 16개는 같은 병렬 세션이 의도적으로 바꾼 새 동작을 테스트가 못 따라간 stale assertion이었다.
+1. **`extractApiMessage is not defined`(진짜 버그)**: `scripts/smoke/board-tests.js`·`scripts/smoke/profile-tests.js`가 `extractApiMessage`를 호출하지만 `common-utils.js`에서 destructure-import하지 않았다(같은 함수를 쓰는 `memo-tests.js`/`system-tests.js`는 제대로 import했음 — 파일 분할 시 두 파일만 누락).
+2. **W/WHO 접속자 목록 라우팅 stale test**: `commandRouterGlobalNavigation.js`가 [LOG_ID 20260801_1005]에서 `W`를 접속자 목록 분기에서 빼고 글쓰기 전용으로 일원화했는데, `scripts/smoke/system-tests.js`의 `verifyActiveUsersCommandCoverage`는 여전히 `W`가 접속자 목록을 띄운다고 기대했고, `scripts/smoke/common-utils.js`의 `FALLBACK_MODULE_CHECKS`도 이미 삭제된 소스 문자열(`cmd === 'W' && !isWriteConflictScreen`)을 계속 찾고 있었다. 소스 쪽에도 이제 안 쓰는 `isWriteConflictScreen` 지역 변수가 죽은 채 남아 있었다.
+3. **쪽지쓰기 화면 stale test**: [LOG_ID 20260801_1020]에서 쪽지 쓰기 화면이 대화형 CLI에서 폼 에디터(`renderMemoBbsEditor`)로 바뀌었는데, `scripts/smoke/memo-tests.js`는 여전히 옛 CLI 문구("받는 사람 아이디를 입력하세요", "쪽지 보내기")를 찾고 있었다 — 실제 새 화면은 입력창 placeholder("받는 사람 아이디 (여러 명은 쉼표로)")와 상단바 제목("편지 쓰기")을 쓴다.
+
+수정: ① `board-tests.js`/`profile-tests.js`에 `extractApiMessage` import 추가. ② `system-tests.js`의 W 관련 첫 블록을 "W는 미처리(handled=false, fetch 없음, 화면 불변)"로 바꾸고, 접속자 목록 트리거 검증은 `WHO`로 옮김(이후 카운터는 수치상 그대로 유지됨을 확인). `common-utils.js`의 마커 문자열을 현재 소스와 일치시킴. 소스의 죽은 `isWriteConflictScreen` 변수 제거. ③ `memo-tests.js`의 두 assertion을 새 폼 마크업 기준으로 교체.
+
+검증: 6개 파일 `node --check` 통과. `npm run smoke:full-traversal` 재실행 — **0 에러로 통과**. `smoke:command-parity`·`smoke:boards`·`smoke:chat-rooms`·`smoke:auth-bridge` 4종 회귀 통과. 실서버 + Playwright로 `W` 입력 시 화면 불변, `WHO` 입력 시 "WHO IS ONLINE" 화면 진입을 직접 재현 확인. 쪽지쓰기 폼 검증은 스모크 하네스가 `state.user.isGuest:false`로 모듈 레벨에서 직접 인증 상태를 만들어 실제 렌더 함수를 호출하는 방식임을 소스로 확인(브라우저 수동 재현은 세션 토큰 주입 한계로 생략).
+
+결과: ✅ 6개 파일. `smoke:full-traversal`이 다시 신뢰 가능한 회귀 신호로 복구됨(이후 라운드들이 계속 이 스크립트에 의존한다).
+
+---
+
 ## [2026-08-01 13:06] [E2E리팩토링] scripts/smoke-full-traversal.js 구문 에러 해결 및 파일 분할
 
 **LOG_ID: 20260801_1306**

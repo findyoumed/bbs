@@ -308,7 +308,10 @@ const FALLBACK_MODULE_CHECKS = [
     {
         label: 'active-users global command module',
         path: '/js/core/commandRouterGlobalNavigation.js',
-        expectedText: "cmd === 'USER' || cmd === 'USER ALL' || cmd === 'UID' || cmd === 'WHO' || cmd === 'WH' || (cmd === 'W' && !isWriteConflictScreen)"
+        // [LOG_ID: 20260801_1600] 20260801_1005에서 W가 접속자 목록 분기에서 빠지고
+        // USER/USER ALL/UID/WHO/WH만 남도록 소스가 바뀌었는데, 이 마커 문자열이 갱신되지
+        // 않아 옛 문구(W 포함)를 계속 찾다 실패하고 있었다 — 실제 현재 소스와 일치시킨다.
+        expectedText: "cmd === 'USER' || cmd === 'USER ALL' || cmd === 'UID' || cmd === 'WHO' || cmd === 'WH'"
     },
     {
         label: 'system-diagnostics screen module',
