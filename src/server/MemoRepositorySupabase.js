@@ -179,9 +179,15 @@ class SupabaseMemoRepository extends BaseRepository {
     return memo;
   }
 
+  // [LOG: 20260802_0130] _resolveColumnMap()이 일시적 Supabase 오류로 reject되면
+  // rejected Promise(truthy)가 this.columnMapPromise에 영구 저장되어 서버 재시작 전까지
+  // 모든 메모 작업이 영구적으로 실패하는 버그 수정 — .catch()에서 null로 초기화해 재시도 허용.
   async _getColumnMap() {
     if (!this.columnMapPromise) {
-      this.columnMapPromise = this._resolveColumnMap();
+      this.columnMapPromise = this._resolveColumnMap().catch((err) => {
+        this.columnMapPromise = null; // 일시적 오류 시 재시도 허용
+        throw err;
+      });
     }
     return this.columnMapPromise;
   }

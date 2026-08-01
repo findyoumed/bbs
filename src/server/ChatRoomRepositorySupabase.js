@@ -258,12 +258,20 @@ class SupabaseChatRoomRepository extends BaseRepository {
     }
   }
 
+  // [LOG: 20260802_0130] 기본 채팅방 초기화 Promise가 일시적 Supabase 오류로 reject되면
+  // rejected Promise(truthy)가 this.defaultRoomPromise에 영구 저장되어 서버 재시작 전까지
+  // 모든 채팅 작업(list/get/join/leave/kick 등)이 영구 실패하는 버그 수정.
   async _ensureDefaultRoom() {
     if (!this.defaultRoom) return;
-    if (!this.defaultRoomPromise) this.defaultRoomPromise = (async () => {
-      const { data } = await this.client.from(this.table).select('id').eq('room_no', 1).maybeSingle();
-      return data || await this.queries.createDefaultRoom();
-    })();
+    if (!this.defaultRoomPromise) {
+      this.defaultRoomPromise = (async () => {
+        const { data } = await this.client.from(this.table).select('id').eq('room_no', 1).maybeSingle();
+        return data || await this.queries.createDefaultRoom();
+      })().catch((err) => {
+        this.defaultRoomPromise = null; // 일시적 오류 시 재시도 허용
+        throw err;
+      });
+    }
     await this.defaultRoomPromise;
   }
 

@@ -1,3 +1,49 @@
+## [2026-08-02 01:30] [버그수정] rejected Promise 영구 캐싱 — MemoRepositorySupabase / ChatRoomRepositorySupabase
+
+**LOG_ID: 20260802_0130**
+목표: 27라운드 — 라우트 핸들러 외 영역(미들웨어, 부트 시퀀스, 저장소 내부 캐싱) 전수 조사.
+
+조사 대상 및 결과:
+- `createAppServices.js` — `registry.checkAllHealth().then().catch()` 정상 처리 ✓
+- `createAppRuntime.js` / `server.js` / `api_handler.js` — 부트 시퀀스 전체 정상 ✓
+- `requestGuards.js` / `createRequestHandler.js` — 미들웨어 전체 정상 ✓
+- `listeners/auditLogListener.js` — `registerAuditLogListener()`가 어디서도 호출되지 않음 (dead code). 크래시 유발 버그 아님 ✓
+- `public/js/core/commandRouterChat.js` — `apiFetch()` 2개 `.then().catch()` 패턴 사용, 의도적 fire-and-forget ✓
+- `SupabaseBoardRepositorySchema.js` — `ensureCapabilities()`는 Promise가 아닌 resolved value를 캐싱하는 올바른 구현 ✓
+
+발견:
+1. `MemoRepositorySupabase._getColumnMap()` (lines 182-186):
+   - `this.columnMapPromise = this._resolveColumnMap()` 형태로 Promise를 직접 캐싱.
+   - `_resolveColumnMap()`이 일시적 Supabase 오류로 reject되면 rejected Promise(truthy)가 `this.columnMapPromise`에 저장됨.
+   - 이후 `!this.columnMapPromise === false`이므로 재시도 없이 영구적으로 동일한 rejected Promise 반환.
+   - 영향: 서버 재시작 전까지 모든 메모 읽기/쓰기/삭제 작업이 영구 실패.
+
+2. `ChatRoomRepositorySupabase._ensureDefaultRoom()` (lines 261-268):
+   - `this.defaultRoomPromise = (async () => { ... })()` 형태로 Promise를 직접 캐싱.
+   - IIFE가 일시적 Supabase 오류로 reject되면 동일 패턴으로 영구 캐싱.
+   - 영향: `list`, `get`, `join`, `leave`, `kick` 등 모든 채팅 작업이 `_ensureDefaultRoom()`을 선행 호출하므로, 서버 재시작 전까지 전체 채팅 기능이 영구 실패.
+
+비교: `SupabaseBoardRepositorySchema.ensureCapabilities()`는 `if (repo.capabilities)` → resolved value 검사, `repo.capabilities = buildCapabilities(keys)` → resolved value 저장으로 올바른 패턴 사용.
+
+수정:
+- 두 메서드 모두 `.catch((err) => { this.xPromise = null; throw err; })` 추가.
+- reject 시 캐시를 null로 초기화 → 다음 호출에서 재시도 가능.
+- 성공 시에는 resolved Promise가 캐싱되어 기존 "한 번만 초기화" 의도 유지.
+
+변경 파일:
+- `src/server/MemoRepositorySupabase.js` (4줄 추가 + 주석)
+- `src/server/ChatRoomRepositorySupabase.js` (4줄 추가 + 주석)
+
+검증:
+- `node --check` 양 파일 통과 ✓
+- `npm run smoke:chat-rooms` 통과 ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+- `npm run smoke:command-parity` 통과 ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 01:00] [버그수정] activityRepository.touch() — fire-and-forget 호출의 UnhandledPromiseRejection 버그 수정
 
 **LOG_ID: 20260802_0100**
