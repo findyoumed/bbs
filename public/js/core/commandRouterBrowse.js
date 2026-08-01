@@ -540,13 +540,20 @@ export function createBrowseCommandHandler(deps) {
           setPrompt('선택 >>');
           return true;
         }
+        // [LOG: 20260801_2232] JS Date는 2/30·4/31 등 월의 실제 일수를 초과하는 입력을
+        // 다음 달로 자동 정정한다(2026년 2/29 → 3/1, 4/31 → 5/1 등). 정정 후 월/일이
+        // 입력값과 다르면 존재하지 않는 날짜이므로 오류로 처리한다(윤년 2/29 포함).
+        const currentYear = new Date().getFullYear();
+        const targetDate = new Date(currentYear, targetMonth - 1, targetDay, 23, 59, 59);
+        if (targetDate.getMonth() !== targetMonth - 1 || targetDate.getDate() !== targetDay) {
+          setHint(`${targetMonth}월에는 ${targetDay}일이 없습니다. (예: LD 07/13)`);
+          setPrompt('선택 >>');
+          return true;
+        }
 
         setHint('날짜 위치를 스캔 중입니다..');
         fetchAllBoardPosts(state.board.id)
           .then((posts) => {
-            const currentYear = new Date().getFullYear();
-            const targetDate = new Date(currentYear, targetMonth - 1, targetDay, 23, 59, 59);
-
             const idx = posts.findIndex((p) => {
               const postDate = new Date(p.createdAt);
               return postDate <= targetDate;

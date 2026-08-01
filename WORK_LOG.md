@@ -1,3 +1,42 @@
+## [2026-08-01 22:32] [버그수정] LD 날짜 점프 명령 — 존재하지 않는 날짜 입력 시 오류 미처리
+
+**LOG_ID: 20260801_2232**
+목표: 22라운드 — 새로운 각도 탐색. `LD [월/일]` 명령의 날짜 검증 엣지 케이스 조사.
+
+발견:
+- `commandRouterBrowse.js`의 LD 명령 검증은 `targetDay > 31`만 확인한다. 그러나 JavaScript의
+  `new Date()` 생성자는 존재하지 않는 날짜를 자동으로 다음 달로 정정한다.
+  예: `new Date(2026, 1, 30)` → 2026-03-02 (2026년은 윤년 아님, 2월=28일).
+- 통과하는 잘못된 입력과 실제 결과:
+  - `LD 02/30` → 3/2 검색 (오류 메시지 대신 잘못된 날짜로 이동)
+  - `LD 02/29` → 3/1 검색 (2026년은 윤년 아님)
+  - `LD 04/31` → 5/1 검색
+  - `LD 06/31` → 7/1 검색
+  - `LD 09/31` → 10/1 검색
+  - `LD 11/31` → 12/1 검색
+- 사용자는 존재하지 않는 날짜를 입력했으나 오류 대신 엉뚱한 달의 글 목록 페이지로 이동.
+- 동일한 역검증 패턴이 `amusementScreens.js`의 `validDate` 함수에서 이미 사용 중임을 확인.
+- Node.js 6개 케이스 직접 재현 확인.
+
+수정:
+- `commandRouterBrowse.js` LD 블록: 기존 `targetDay > 31` 검증 직후에 `currentYear`와
+  `targetDate` 계산을 클로저 스코프로 끌어올리고, `targetDate.getMonth() !== targetMonth - 1 ||
+  targetDate.getDate() !== targetDay` 가드 추가 → 자동 정정이 발생했으면 "N월에는 M일이 없습니다"
+  오류로 처리. `.then()` 내부의 중복 `const currentYear`·`const targetDate` 선언도 제거
+  (클로저 변수 재사용).
+- 변경: 1개 파일 `commandRouterBrowse.js` (+8줄).
+
+검증:
+- `node --check commandRouterBrowse.js` 통과.
+- Node.js 시뮬레이션: 6개 오류 케이스 모두 올바른 오류 메시지 반환, 4개 유효 날짜 정상 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 0 에러 통과.
+
+결과: ✅ 1개 파일 수정. LD 명령 존재하지 않는 날짜(2/30·2/29 비윤년·4/31·6/31·9/31·11/31)
+입력 시 정확한 오류 메시지 표시.
+
+---
+
 ## [2026-08-01 22:20] [버그수정] showChatRoom ESC 취소 시 유령 참여자 미정리 문제 수정
 
 **LOG_ID: 20260801_2220**
