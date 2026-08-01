@@ -1,3 +1,41 @@
+## [2026-08-02 11:00] [버그수정] sendMessage — 존재하지 않는 채팅방에 메시지 전송 시 201 반환 버그 수정
+
+**LOG_ID: 20260802_1100**
+목표: 30라운드 — "자매 메서드 간 검사 불일치" 패턴을 Chat/Vote/Memo/Board/Conf/Member 도메인에서 전수 조사 후 실제 재현 가능한 버그 선정.
+
+조사 범위:
+- **Vote (Memory/Supabase)**: `createVote`/`castVote`/`deleteVote` — `castVote`만 `isActive` 검사, `deleteVote`는 불필요하므로 정상. 대칭 이상 없음.
+- **Memo (Memory/Supabase)**: `createMemo`/`markRead`/`deleteMemo`/`setArchived` — `canAccessMemo` 공유 함수로 일관 적용. 이상 없음.
+- **Board WriteOps (Supabase)**: `createPost`/`replyToPost`는 `assertBoardWritable`, `updatePost`/`deletePost`는 `assertBoardAccessible` — 의도적 설계(기존 글 관리와 신규 작성 권한 분리). 이상 없음.
+- **Conf (Memory/Supabase)**: 29라운드에서 `secondAgenda` 수정 완료. 추가 이상 없음.
+- **Member (Memory/Supabase)**: `setEmail`/`setAbsence` — Memory는 404, Supabase는 PGRST116(502) 불일치. 단 인증된 본인 호출 경로라 실제 도달 불가. 영향 없음.
+- **Chat (Memory/Supabase)**: `join`/`leave`/`kick`/`updateRoom`/`listMessages`는 모두 `findRoomByNo`/`_findRoom`으로 방 존재 확인, **`sendMessage`만 누락** ← **실제 버그 발견**
+
+발견:
+- `SupabaseChatRoomRepository.sendMessage()`: `join`, `leave`, `kick`, `updateRoom`, `listMessages` 등 형제 메서드 전원이 `this.queries.findRoomByNo(roomNo)`로 방 존재를 확인하는데, `sendMessage`만 이 검사가 없었다.
+- 결과: 존재하지 않는 방 번호(예: 9999)로 `POST /api/chat/rooms/9999/messages`를 보내면 201이 반환되고, 메시지는 휘발성 인메모리 맵에만 쌓여 `listMessages`(findRoomByNo 404)로 영원히 꺼낼 수 없는 상태가 됨.
+- Memory 드라이버는 `sendMessage`에서 `_findRoom(roomNo)`를 호출해 방이 없으면 404를 던짐 — Supabase 드라이버와 불일치.
+- 재현: `SupabaseChatRoomRepository.sendMessage(9999, {content:'test'}, {})` → 정상 응답(버그). 수정 후 → 404 "대화방을 찾을 수 없음".
+
+수정:
+- `src/server/ChatRoomRepositorySupabase.js` — `sendMessage()` 상단에 `await this.queries.findRoomByNo(num)` 추가.
+
+변경 파일:
+- `src/server/ChatRoomRepositorySupabase.js` (5줄 추가 주석 + 1줄 추가 코드)
+
+검증:
+- 재현 스크립트: 존재하지 않는 방 9999에 sendMessage → 수정 전 정상 응답(버그), 수정 후 404 ✓
+- 실제 방 1(로비)에 sendMessage → 정상 동작 유지, listMessages로 메시지 확인 ✓
+- Memory 드라이버 동작 확인: sendMessage(9999) → 404 (기준 동작과 동일) ✓
+- `node --check src/server/ChatRoomRepositorySupabase.js` 통과 ✓
+- `npm run smoke:chat-rooms` 통과 ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+- `npm run smoke:command-parity` 통과 ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 09:00] [버그수정] secondAgenda — 닫힌 회의실 안건 재청 가능 버그 수정
 
 **LOG_ID: 20260802_0900**

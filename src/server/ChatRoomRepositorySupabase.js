@@ -204,8 +204,15 @@ class SupabaseChatRoomRepository extends BaseRepository {
     return roomNos.length;
   }
 
+  // [LOG: 20260802_1100] join/leave/kick/updateRoom/listMessages는 모두 this.queries.findRoomByNo로
+  // 대화방 존재 여부를 먼저 확인하는데 sendMessage만 이 검사가 누락돼 있었다 —
+  // 존재하지 않는 방 번호로 POST /api/chat/rooms/:roomNo/messages를 보내면 201이 반환되고
+  // 메시지는 휘발성 인메모리 맵에만 쌓여 listMessages(findRoomByNo 호출)로 영원히 꺼낼 수 없는
+  // 버그. Memory 드라이버가 _findRoom()으로 동일하게 검사하는 것과도 불일치.
   async sendMessage(roomNo, payload = {}, context = {}) {
     const num = Number(roomNo);
+    // 형제 메서드(join/leave/kick/updateRoom/listMessages)와 동일하게 방 존재 여부 확인.
+    await this.queries.findRoomByNo(num);
     const msg = {
       id: Date.now() + Math.random(),
       userId: normalizeText(context.userId, 'guest'),
