@@ -132,15 +132,23 @@ class SupabaseConfRepository extends BaseRepository {
     if (room.is_open === false) throw createHttpError(409, '닫힌 회의실에는 안건을 발의할 수 없습니다.');
     const title = normalizeText(payload.title);
     if (!title) throw createHttpError(400, '안건 제목을 입력해 주세요.');
-    const agendaNo = (await this._agendaCount(roomNo)) + 1;
-    const { data, error } = await this.client.from(this.agendasTable).insert({
-      room_no: Number(roomNo), agenda_no: agendaNo, title: title.slice(0, 80),
-      content: normalizeText(payload.content).slice(0, 4000),
-      author_id: normUserId(context.userId, 'guest'), author_name: normalizeText(context.nickName, '손님'),
-      created_at: new Date().toISOString()
-    }).select('*').single();
-    if (error) this._fail('안건 발의', error);
-    return this._publicAgenda(data, context);
+    // [LOG: 20260801_2330] createRoom과 동일한 retry 루프 추가 — 두 사용자가 동시에 안건을
+    // 발의하면 둘 다 같은 _agendaCount를 읽고 동일한 agenda_no를 계산한 뒤 삽입 시도한다.
+    // conf_agendas(room_no, agenda_no) UNIQUE 인덱스(0019_conf_system.sql)가 한 건을 막지만,
+    // 기존 코드는 UNIQUE 위반을 구분하지 않고 바로 this._fail('안건 발의', error)로 502를
+    // 던졌다 — createRoom은 동일 패턴을 retry 루프로 처리하는데 여기만 빠져 있었다.
+    for (let i = 0; i < 5; i++) {
+      const agendaNo = (await this._agendaCount(roomNo)) + 1;
+      const { data, error } = await this.client.from(this.agendasTable).insert({
+        room_no: Number(roomNo), agenda_no: agendaNo, title: title.slice(0, 80),
+        content: normalizeText(payload.content).slice(0, 4000),
+        author_id: normUserId(context.userId, 'guest'), author_name: normalizeText(context.nickName, '손님'),
+        created_at: new Date().toISOString()
+      }).select('*').single();
+      if (!error) return this._publicAgenda(data, context);
+      if (!/duplicate|unique/i.test(error.message)) this._fail('안건 발의', error);
+    }
+    throw createHttpError(502, '안건 번호 할당 실패');
   }
 
   async getAgenda(agendaId, context = {}) {

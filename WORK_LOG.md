@@ -1,3 +1,38 @@
+## [2026-08-01 23:30] [버그수정] ConfRepositorySupabase.createAgenda — 동시 안건 발의 시 UNIQUE 위반을 502로 노출하는 버그 수정
+
+**LOG_ID: 20260801_2330**
+목표: 24라운드 — 투표/채팅/페이지네이션/검색/프로필/파일업로드/conf/메모 등 미탐사 영역 전수 조사 후 실제 재현 가능한 버그 선정.
+
+발견:
+- `ConfRepositorySupabase.createAgenda()`가 안건 번호(`agenda_no`)를 `_agendaCount(roomNo) + 1`로 계산한 뒤 삽입하는 read-then-compute-then-write 패턴을 사용한다.
+- 두 사용자가 동시에 같은 회의실에 안건을 발의하면 둘 다 동일한 `_agendaCount`를 읽어 같은 `agenda_no`를 계산한 뒤 삽입 시도한다.
+- `conf_agendas(room_no, agenda_no)` UNIQUE 인덱스(`0019_conf_system.sql`, `idx_conf_agendas_room_agenda`)가 중복 삽입을 막지만, 기존 코드는 UNIQUE 위반 여부를 구분하지 않고 `this._fail('안건 발의', error)`로 바로 **502** 오류를 던졌다.
+- 결과: 동시 안건 발의 시 나중에 삽입 시도한 사용자가 항상 502 오류를 받는다.
+- 비교: 동일 파일의 `createRoom()`은 같은 패턴을 이미 5회 retry 루프로 처리하고 있다 — `createAgenda`만 이 안전망이 빠져 있었다.
+- 시뮬레이션 재현: 공유 Mock Supabase 클라이언트로 A/B 동시 발의 → A 성공, B 502 오류 재현 확인.
+
+수정:
+- `ConfRepositorySupabase.createAgenda()`: 단순 삽입 → 5회 retry 루프로 교체.
+  - 루프 내부에서 `_agendaCount`를 매 시도마다 새로 읽어 최신 `agenda_no`를 계산.
+  - 삽입 성공 → 즉시 return.
+  - `duplicate|unique` 위반 → 재시도(다음 루프 반복).
+  - 그 외 오류 → `this._fail`로 즉시 502.
+  - 5회 모두 실패 → `createHttpError(502, '안건 번호 할당 실패')` (createRoom과 동일).
+- 변경: 1개 파일 `src/server/ConfRepositorySupabase.js` (+9줄 / 기존 4줄 교체).
+
+검증:
+- 시뮬레이션 3케이스 전 PASS: 정상 발의/UNIQUE 위반 retry 성공/UNIQUE 아닌 오류 즉시 502.
+- `node --check ConfRepositorySupabase.js` 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 0 에러 통과.
+- `smoke:vercel-ready` 통과 (conf: ok, supabase).
+- `smoke:boards` 통과.
+- `smoke:auth-bridge` 32 checks 통과.
+
+결과: ✅ 1개 파일 수정. 동시 안건 발의 시 UNIQUE 위반을 502로 노출하던 버그를 createRoom과 동일한 retry 루프로 해소.
+
+---
+
 ## [2026-08-01 22:48] [버그수정] setLevel API — nickNameHint 미제공 시 닉네임이 userId로 덮어씌워지는 버그 수정
 
 **LOG_ID: 20260801_2248**
