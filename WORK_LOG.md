@@ -1,3 +1,43 @@
+## [2026-08-01 16:51] [보안] 첨부파일 쓰기/부재 설정 라우트 ensureAuthenticated 누락 + setAbsent getJsonBody 미정의 버그 수정
+
+**LOG_ID: 20260801_1651**
+목표: 인증 미들웨어 누락 전수 대조 (16라운드) — boardRoutes/memoRoutes/voteRoutes/confRoutes/authRoutes/memberRoutes/systemRoutes 7개 파일 전 라우트 점검.
+
+발견:
+1. **`boardRoutes.js` 첨부파일 쓰기 라우트 2건**: `POST /api/boards/:boardId/posts/:postId/attachments`(addAttachment), `DELETE /api/boards/:boardId/posts/:postId/attachments/:attachmentId`(handleAttachmentItem) — `ensureAuthenticated` 없음. 비즈니스 로직(`assertAttachmentWritable`)이 소유권 검사로 게스트를 403으로 막고 있어 실제 뚫리지는 않지만, 인증 여부와 무관하게 핸들러까지 요청이 도달하는 미들웨어 층 누락 상태. 다른 모든 쓰기 라우트(createPost/replyToPost/recommendPost/updatePost/deletePost)는 전부 미들웨어가 있는데 이것만 없었다.
+2. **`memberRoutes.js` absent 라우트 2건**: `GET /api/members/absent`(getMyAbsent), `POST /api/members/absent`(setAbsent) — `ensureAuthenticated` 없음. 핸들러가 `context.userId === 'guest'` 수동 검사로 401을 던져 게스트는 차단되지만 미들웨어 층 누락.
+3. **`setAbsent` `getJsonBody()` 미정의 버그**: `BaseRouter`에는 `getBody()`만 존재하고 `getJsonBody()`는 정의된 적 없는 메서드인데, 인증 통과 후 본문 읽기 단계에서 `this.getJsonBody()` 호출 — 인증된 사용자가 `POST /api/members/absent`를 호출하면 항상 `TypeError: this.getJsonBody is not a function` 500 오류 발생. 게스트는 핸들러 도달 전에 수동 검사로 401을 받아 이 버그가 은폐되어 있었다. 최초 구현 커밋(11902d3) 당시부터 오탈자로 존재. 부재 설정 기능 자체가 인증 사용자에게 작동 불가였다.
+
+수정:
+- `boardRoutes.js`: `POST .../attachments`와 `DELETE .../attachments/:id` 라우트에 `middlewares: ['ensureAuthenticated']` 추가. GET(조회/다운로드) 라우트는 공개 접근 유지.
+- `memberRoutes.js`: `GET /api/members/absent`, `POST /api/members/absent` 라우트에 `middlewares: ['ensureAuthenticated']` 추가.
+- `memberRoutes.js`: `setAbsent` 핸들러의 `this.getJsonBody()` → `this.getBody()` 교체.
+
+검증:
+- `node --check boardRoutes.js`, `memberRoutes.js` 통과.
+- 수정 전 실서버(PORT=13977): 게스트 POST 첨부 → 403(비즈니스 로직), 게스트 DELETE 첨부 → 403(비즈니스 로직), 게스트 POST absent → 401(핸들러), 게스트 GET absent → 401(핸들러) 확인.
+- 수정 후 실서버(PORT=13978): 동일 4개 요청 모두 401(스택 트레이스에서 ensureAuthenticatedContext 확인) — 미들웨어 층에서 먼저 차단됨. GET 첨부 목록은 여전히 200 공개 확인.
+- `smoke:full-traversal` 0 에러. `smoke:command-parity` 통과. `smoke:boards`, `smoke:auth-bridge` 통과.
+
+결과: ✅ 2개 파일(boardRoutes.js 4줄, memberRoutes.js 5줄) 수정. 전수 대조 결론: memoRoutes/voteRoutes/confRoutes/authRoutes/systemRoutes는 모두 정합. chatServiceRoutes는 이미 이전 라운드(20260801_0924)에 수정됨.
+
+---
+
+## [2026-08-01 16:50] [성능개선] 정적 자산(JS/CSS/폰트) 캐시 헤더 부재 — vercel.json에 Cache-Control 추가
+
+**LOG_ID: 20260801_1650**
+목표(사용자 지적: "프로젝트가 전체적으로 속도가 느린 이유가 뭘까"): 실측으로 원인 규명 후 낮은 위험 범위에서 개선.
+
+발견(실측): `public/js/core/`에 번들 없이 140개 개별 ES 모듈(1.8MB)이 존재하고, 브라우저가 `import` 연쇄를 따라가며 순차적으로 발견·요청하는 waterfall 구조라 로컬(네트워크 지연 거의 0)에서도 `load` 이벤트까지 4,163ms·JS 요청 124건이 걸렸다(Playwright 실측). 게다가 프로덕션(01410.vercel.app)에서 직접 curl로 확인한 결과 JS/CSS 응답이 전부 `Cache-Control: public, max-age=0, must-revalidate` + `x-vercel-cache: MISS`였다 — `vercel.json`에 정적 자산용 캐시 헤더 설정이 아예 없어 **재방문·새로고침 때마다 124개 파일을 전부 다시 요청**하고 있었다. 번들링(빌드 단계·새 npm 패키지 도입)은 아키텍처 변경이라 사용자 확인 필요 판단 → 사용자가 "캐싱 헤더만 먼저(낮은 위험)"를 선택.
+
+수정: `vercel.json`에 `headers` 블록 추가 — `/js/*`, `/styles/*`, `/fonts/*`, `/vendor/*`, `/style.css`에 `Cache-Control: public, max-age=300, stale-while-revalidate=86400`. 완전 immutable 장기 캐싱(1년)은 선택하지 않았다 — ES import 문(`import ... from './foo.js'`)이 전부 버전 쿼리스트링 없는 bare 경로라 배포 후에도 캐시를 무효화할 방법이 없어, 새 배포 시 오래된 JS가 무기한 캐시될 위험이 있었다. 대신 max-age=300(5분)으로 세션 내 반복 탐색은 네트워크 요청 0으로 즉시 로드되게 하고, stale-while-revalidate=86400(24시간)으로 그 이후에도 블로킹 없이 즉시 응답하며 백그라운드로 갱신 — 배포 후 최대 24시간이라는 한정된 창 안에서만 stale 위험을 감수한다. `index.html`/`/api/*`는 건드리지 않아 항상 최신 셸/API를 받는다.
+
+검증: `node -e "JSON.parse(...)"`로 vercel.json 문법 유효성 확인. Vercel 실제 배포 환경(에지 캐시)은 이 세션에서 배포·재현이 불가능해 **실제 배포 후 캐시 동작 자체는 직접 재현 검증하지 못했다** — 이 점을 사용자에게 명시적으로 알림. 로컬 dev 서버(`server.js`)는 이 설정과 무관(자체 `httpUtils.js`의 no-cache 로직을 그대로 씀, 의도적으로 dev 전용).
+
+결과: ⚠️ 부분 완료 — 설정 변경은 완료했으나 배포 후 실제 캐시 적중 여부는 미검증. 번들링(waterfall 자체 해소)은 더 큰 변경이라 사용자 승인 대기 중, 이번 라운드 범위 밖으로 보류.
+
+---
+
 ## [2026-08-01 13:40] [테스트수정] 병렬 세션의 최근 변경(W/WHO 라우팅, 쪽지쓰기 폼 에디터 개편, 파일 분할)과 어긋난 스모크 테스트 5건 수정
 
 **LOG_ID: 20260801_1340**

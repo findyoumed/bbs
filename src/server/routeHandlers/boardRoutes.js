@@ -67,10 +67,14 @@ class BoardRouter extends BaseRouter {
         middlewares: ['ensureAuthenticated']
       },
       { method: 'GET', pattern: '/api/boards/:boardId/posts/:postId/attachments', handler: 'listAttachments', needContext: true },
-      { method: 'POST', pattern: '/api/boards/:boardId/posts/:postId/attachments', handler: 'addAttachment', needContext: true, needBody: true },
+      // [LOG_ID: 20260801_1730] 첨부파일 쓰기 라우트(POST/DELETE)에 ensureAuthenticated 추가 —
+      // assertAttachmentWritable이 소유권 검사로 비로그인을 이미 막고 있었으나, 미들웨어 층의
+      // 방어가 없어 인증 여부와 무관하게 비즈니스 로직까지 요청이 도달하는 구조였다. 다른 모든
+      // 쓰기 라우트(createPost/replyToPost/recommendPost/updatePost/deletePost)와 통일한다.
+      { method: 'POST', pattern: '/api/boards/:boardId/posts/:postId/attachments', handler: 'addAttachment', needContext: true, needBody: true, middlewares: ['ensureAuthenticated'] },
       { method: 'GET', pattern: '/api/boards/:boardId/posts/:postId/attachments/:attachmentId', handler: 'handleAttachmentItem', needContext: true, needBody: true },
       { method: 'GET', pattern: '/api/boards/:boardId/posts/:postId/attachments/:attachmentId/download', handler: 'handleAttachmentItem', needContext: true, needBody: true },
-      { method: 'DELETE', pattern: '/api/boards/:boardId/posts/:postId/attachments/:attachmentId', handler: 'handleAttachmentItem', needContext: true, needBody: true }
+      { method: 'DELETE', pattern: '/api/boards/:boardId/posts/:postId/attachments/:attachmentId', handler: 'handleAttachmentItem', needContext: true, needBody: true, middlewares: ['ensureAuthenticated'] }
     ];
   }
 

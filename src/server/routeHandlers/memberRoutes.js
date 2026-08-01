@@ -15,8 +15,11 @@ const logger = require('../logger');
 class MemberRouter extends BaseRouter {
   get routes() {
     return [
-      { method: 'GET', pattern: '/api/members/absent', handler: 'getMyAbsent', needContext: true },
-      { method: 'POST', pattern: '/api/members/absent', handler: 'setAbsent', needContext: true },
+      // [LOG_ID: 20260801_1730] absent 라우트에 ensureAuthenticated 추가 — getMyAbsent/setAbsent가
+      // 핸들러 내부에서 context.userId === 'guest' 수동 검사로 401을 던지고 있었으나, 미들웨어 층이
+      // 없어 인증 여부와 무관하게 핸들러까지 요청이 도달했다. 다른 모든 개인 정보 라우트와 통일한다.
+      { method: 'GET', pattern: '/api/members/absent', handler: 'getMyAbsent', needContext: true, middlewares: ['ensureAuthenticated'] },
+      { method: 'POST', pattern: '/api/members/absent', handler: 'setAbsent', needContext: true, middlewares: ['ensureAuthenticated'] },
       { method: 'GET', pattern: '/api/members', handler: 'listMembers', middlewares: ['ensureAdmin'] },
       { method: 'GET', pattern: '/api/members/search', handler: 'search', needContext: true },
       // [LOG_ID: 20260716_2200] 하이텔 (1)-25 접속통계(account) 계열 — 내 이용 현황.
@@ -628,7 +631,10 @@ class MemberRouter extends BaseRouter {
       return this.error(401, '로그인이 필요한 서비스입니다.');
     }
 
-    const payload = await this.getJsonBody() || {};
+    // [LOG_ID: 20260801_1730] getJsonBody()는 BaseRouter에 정의된 적 없는 메서드 — 인증된 사용자가
+    // POST /api/members/absent 호출 시 항상 "this.getJsonBody is not a function" 500 오류 발생.
+    // 동일 기능의 getBody()로 교체한다.
+    const payload = await this.getBody() || {};
     const reason = String(payload.reason ?? payload.absentMsg ?? '').trim();
     const start = reason ? String(payload.start || '').trim() || null : null;
     const end = reason ? String(payload.end || '').trim() || null : null;
