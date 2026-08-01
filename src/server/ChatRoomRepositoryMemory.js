@@ -180,6 +180,12 @@ class MemoryChatRoomRepository {
     if (!kicked) {
       throw createHttpError(404, '해당 이용자가 방에 없습니다.');
     }
+    // [LOG: 20260801_1200] 방 개설자(owner)가 자신을 강퇴(self-kick)하면 leave()의 방 종료 로직을
+    // 우회해 room.ownerUserId가 살아있는 채로 owner만 participants에서 빠지는 불일치 상태가 된다.
+    // '/OUT'은 다른 이용자를 내보내는 명령으로, 자기 자신을 대상으로 할 수 없다.
+    if (String(kicked.userId || '').toLowerCase() === requesterId) {
+      throw createHttpError(400, '자신을 강퇴할 수 없습니다. 나가려면 퇴장 명령을 사용해 주세요.');
+    }
     room.participants = room.participants.filter((entry) => entry.userId !== kicked.userId);
     // [LOG_ID: 20260728_1629] 강퇴 시스템 메시지 — join/leave와 동일한 패턴.
     this._pushSystemMessage(room.no, 'kick', kicked.userId, kicked.nickName);

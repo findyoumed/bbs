@@ -1,3 +1,44 @@
+## [2026-08-02 12:00] [버그수정] kick — 방 개설자 자기 자신 강퇴(self-kick) 허용 버그 수정
+
+**LOG_ID: 20260802_1200**
+목표: 31라운드 — "자매 메서드 간 검사 불일치" 패턴을 Board ReadOps/Attachment/Member/Chat kick 도메인에서 전수 조사 후 실제 재현 가능한 버그 선정.
+
+조사 범위:
+- **Board ReadOps (SupabaseBoardRepositoryPostReads.js)**: `getPost`/`listPosts` 모두 `getBoard` + `assertBoardAccessible` 일관 적용. `listHotPosts`/`countPosts`/`listBoardCounts`는 크로스-보드 쿼리라 게시판별 검사 불필요. 이상 없음.
+- **Attachment (Supabase/Local)**: `get`/`read`/`delete`는 `_getRow`/`_findEntry` 공유 함수로 404 처리. `add`는 게시글 존재 확인 없지만 호출부(boardRoutes)가 게시글 존재를 이미 검증 후 호출. 이상 없음.
+- **Member (MemberRepositorySupabase)**: `setEmail`/`setAbsence`가 Supabase PGRST116 → 502(Memory는 404) 불일치 — 라운드30에서 이미 확인, 인증된 본인 호출 경로라 실제 도달 불가. 영향 없음.
+- **Chat `kick()` vs `leave()`**: `leave()`는 owner가 퇴장할 때 방을 DB에서 삭제하는 명시적 로직이 있는데, `kick()`은 owner가 자신을 강퇴(self-kick)하면 leave()의 방 종료 로직을 우회 ← **실제 버그 발견**
+
+발견:
+- Memory/Supabase 양쪽 `kick()` 모두 방 개설자(owner)가 자신을 강퇴 대상(`targetUserId = 자신`)으로 지정하는 것을 허용한다.
+- 결과(Memory): owner가 in-memory participants에서만 빠지고 `room.ownerUserId`는 유지 → 다른 참여자 없으면 `_removeIfDisposable`이 방을 삭제하지만, 다른 참여자가 있으면 owner 없이 `ownerUserId`만 살아있는 불일치 상태.
+- 결과(Supabase): owner가 in-memory participants에서만 빠지고 DB의 `owner_user_id`가 살아있는 채로 방이 DB에 남음 — `leave()`는 owner 퇴장 시 DB에서 방을 삭제하지만 `kick()`에는 동일 정리 로직이 없음.
+- 재현: Memory 드라이버로 방 개설 → 참가 → `kick(roomNo, ownerId, ownerContext)` → 200 성공 반환(버그). 수정 후 → 400 "자신을 강퇴할 수 없습니다."
+
+수정:
+- `ChatRoomRepositoryMemory.kick()`: kicked 참여자를 찾은 직후, `kicked.userId === requesterId`이면 400 오류 추가.
+- `ChatRoomRepositorySupabase.kick()`: 동일한 검사 추가.
+
+변경 파일:
+- `src/server/ChatRoomRepositoryMemory.js` (5줄 주석 + 3줄 코드 추가)
+- `src/server/ChatRoomRepositorySupabase.js` (5줄 주석 + 3줄 코드 추가)
+
+검증:
+- Memory 드라이버 직접 호출 4가지 케이스 모두 통과:
+  1. Self-kick → 400 ✓
+  2. 정상 kick(user2) → 200 성공 ✓
+  3. 비-owner kick 시도 → 403 ✓
+  4. 없는 사용자 kick → 404 ✓
+- `node --check ChatRoomRepositoryMemory.js` 통과 ✓
+- `node --check ChatRoomRepositorySupabase.js` 통과 ✓
+- `npm run smoke:chat-rooms` 통과 ✓
+- `npm run smoke:command-parity` 통과 ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 11:00] [버그수정] sendMessage — 존재하지 않는 채팅방에 메시지 전송 시 201 반환 버그 수정
 
 **LOG_ID: 20260802_1100**
