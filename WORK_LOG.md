@@ -1,3 +1,43 @@
+## [2026-08-02 16:00] [버그수정] SupabaseMemberRepository._findByField 대소문자 불일치 — 닉네임 검색·중복체크 전면 실패 버그 수정
+
+**LOG_ID: 20260802_1600**
+목표: 34라운드 — 옵션 B(입력 정규화 불일치) 조사. SupabaseMemberRepository._findByField가 mixed-case 닉네임을 전혀 찾지 못하는 버그 발견 및 수정.
+
+조사 범위:
+- **닉네임 중복 체크 대소문자 불일치**: Memory 드라이버는 `sameText()` (normalizeLookup 기반 대소문자 무관 비교)로 닉네임 중복을 올바르게 검출하지만, Supabase 드라이버의 `_findByField`는 `normalizeLookup(value)`로 소문자 변환 후 `.eq(column, lowercased)` (PostgreSQL 기본 case-sensitive `=` 연산자)를 사용 — mixed-case 닉네임이 DB에 저장됐을 때 전혀 찾지 못함.
+- **이메일 필드**: `validateEmail()`이 항상 소문자로 변환해 저장하므로 `.eq('email', lowercased)` 정상 동작. 이슈 없음.
+- **userId 필드**: `normalizeLookup(userId)`가 저장 시에도 소문자 변환하므로 `.eq('user_id', lowercased)` 정상 동작. 이슈 없음.
+
+발견 버그 — `SupabaseMemberRepository._findByField` 대소문자 불일치:
+- `mergeMemberRecord`의 닉네임 저장: `String(input.nickName ?? ...).trim()` (소문자 변환 **없음**). 예: "BugTestNick" → DB에 "BugTestNick" 저장.
+- `_findByField`의 검색: `normalizedValue = normalizeLookup("BugTestNick") = "bugtestnick"` → `.eq('nick_name', 'bugtestnick')` → PostgreSQL case-sensitive `=` → "BugTestNick" ≠ "bugtestnick" → **NOT FOUND**.
+- 영향 1(중복체크 실패): User A가 "Alice"로 가입 시, User B가 "alice"로 가입 시도하면 `findByNickName("alice")` → NOT FOUND → 409 차단 없이 가입 성공 → 사실상 동일 닉네임 중복 허용.
+- 영향 2(검색 실패): `/api/members/search?nickName=Alice` → `findByNickName("Alice")` → NOT FOUND → 404 반환 (사용자는 존재하는데 찾지 못함).
+- 재현: `ensureMember({ nickName: "BugTestNick7816" })` → `findByNickName("BugTestNick7816")` → null (버그). 수정 후 → 정상 반환.
+
+수정:
+- `SupabaseMemberRepository._findByField`: `.eq(column, normalizedValue)` → 2단계 접근으로 교체.
+  - 1단계: `.ilike(column, normalizedValue).limit(10)` (DB 단 case-insensitive LIKE로 후보 가져옴)
+  - 2단계: `rows.find(row => normalizeLookup(row[column]) === normalizedValue)` (JS 단 정확한 대소문자 무관 비교 — LIKE 와일드카드 오탐 방어)
+  - email 컬럼: 소문자 저장이므로 `ilike("alice") == eq("alice")` → 동작 변화 없음.
+  - nick_name 컬럼: mixed-case 저장 → ilike("alice")가 "Alice" 행 포함 가져옴 → JS 단에서 `normalizeLookup("Alice") === "alice"` 확인 → 정확 반환.
+
+변경 파일:
+- `src/server/MemberRepositorySupabase.js` (_findByField: 28줄 주석 + 코드 교체)
+
+검증:
+- Memory: findByNickName 6케이스 모두 통과 ✓ (정확 매칭, 소문자 중복 검출, null 반환, underscore 닉네임 정확 일치, 오탐 없음)
+- Supabase: findByNickName 6케이스 모두 통과 ✓ (동일 케이스, 테스트 데이터 정리 완료)
+- `node --check src/server/MemberRepositorySupabase.js` 통과 ✓
+- `npm run smoke:auth-bridge` — ok:true, 32 checks ✓
+- `npm run smoke:command-parity` — ok:true ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+- `npm run smoke:vercel-ready` — ok:true ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 08:40] [버그수정] tombstone 게시글에 updatePost/recommendPost 허용 — 2종 tombstone 후속 액션 버그 수정
 
 **LOG_ID: 20260802_0840**

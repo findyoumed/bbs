@@ -322,22 +322,39 @@ class SupabaseMemberRepository extends BaseRepository {
     };
   }
 
+  // [LOG: 20260802_1600] findByNickName이 mixed-case 닉네임을 찾지 못하는 버그 수정.
+  // 버그 원인: normalizeLookup(value)가 값을 소문자로 변환하지만, DB nick_name 컬럼에는
+  // 원래 대소문자(예: "Alice")가 그대로 저장된다. 따라서 .eq('nick_name', 'alice')는
+  // PostgreSQL 기본 case-sensitive '=' 연산자로 "Alice"와 불일치 → NOT FOUND.
+  // 반면 email 컬럼은 validateEmail()이 항상 소문자로 저장하므로 기존 .eq()가 정상이었음.
+  //
+  // 수정 전략: DB 단에서는 .ilike() (case-insensitive LIKE)로 후보를 가져온 뒤,
+  // JS 단에서 normalizeLookup 기반 정확한 대소문자 무관 비교로 최종 확인한다.
+  // 이렇게 하면 nick_name 안의 LIKE 와일드카드('_', '%') 로 인한 오탐도 방어된다.
+  // (Memory 드라이버의 sameText() 동작과 동등한 결과를 Supabase에서 보장함.)
   async _findByField(column, value) {
     const normalizedValue = normalizeLookup(value);
     if (!normalizedValue) {
       return null;
     }
+    // 1단계: DB에서 case-insensitive LIKE 로 후보 행을 가져온다.
+    //        email은 항상 소문자 저장이므로 .ilike()가 .eq()와 동일하게 동작한다.
+    //        nick_name은 대소문자 혼용 가능이므로 .ilike()가 필요하다.
     const { data, error } = await this.client
       .from(this.table)
       .select('*')
-      .eq(column, normalizedValue)
-      .limit(1)
-      .maybeSingle();
+      .ilike(column, normalizedValue)
+      .limit(10);
 
     if (error) {
       this._throwError('회원 조회', error, { table: this.table });
     }
-    return normalizeMember(data);
+
+    // 2단계: JS 단에서 정확한 대소문자 무관 비교로 최종 확인한다.
+    //        LIKE 와일드카드('_' → 임의 1자, '%' → 임의 다수)로 인한 오탐을 방어한다.
+    const rows = Array.isArray(data) ? data : (data ? [data] : []);
+    const match = rows.find((row) => normalizeLookup(String(row[column] ?? '')) === normalizedValue);
+    return normalizeMember(match || null);
   }
 }
 
