@@ -491,8 +491,11 @@ class MemberRouter extends BaseRouter {
     if (!validLevels.includes(nextLevel)) {
       this.validationError(`허용된 회원 레벨만 입력해 주세요. (${validLevels.join(', ')})`);
     }
+    // [LOG: 20260801_2300] nickNameHint가 제공되지 않으면 undefined를 넘겨 레포지토리가
+    // existing?.nickName으로 자연히 폴백하도록 한다 — 종전 `|| targetUserId` 폴백은
+    // nickNameHint 미제공 시 대상 회원의 닉네임을 userId로 덮어썼다(버그).
     return this.send(200, await memberRepository.setLevel(targetUserId, body?.level, {
-      nickName: body?.nickNameHint || targetUserId
+      nickName: body?.nickNameHint || undefined
     }));
   }
 

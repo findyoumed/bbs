@@ -1,3 +1,39 @@
+## [2026-08-01 22:48] [버그수정] setLevel API — nickNameHint 미제공 시 닉네임이 userId로 덮어씌워지는 버그 수정
+
+**LOG_ID: 20260801_2248**
+목표: 23라운드 — 새로운 각도 탐색. JS Date 자동 정정(기타 경로), XSS, 관리자 권한 상승/하락, 동시 가입 경쟁 조건, PDS 첨부 무제한 등 전수 조사 후 실제 재현 가능한 버그 선정.
+
+발견:
+- `memberRoutes.js setLevel` 메서드가 `memberRepository.setLevel(targetUserId, body?.level, { nickName: body?.nickNameHint || targetUserId })`를 호출한다.
+- `nickNameHint`가 요청 바디에 없으면 `body?.nickNameHint`는 `undefined` → `undefined || targetUserId` = `targetUserId`(예: `"alice"`).
+- 레포지토리(`MemberRepositorySupabase.setLevel`)는 `defaults.nickName ?? existing?.nickName`에서 `"alice"`가 null/undefined가 아니라 truthy string이므로 `??`가 기존값을 사용하지 않고 `"alice"`를 사용.
+- 결과: 관리자가 레벨 변경 시 `nickNameHint`를 제공하지 않으면(일반적 케이스) 대상 회원의 닉네임이 userId("alice")로 덮어씌워진다. Memory·Supabase 레포 양쪽 모두 동일.
+- 단, 현재 이 엔드포인트를 호출하는 클라이언트 UI가 없어 실제 발생하지는 않았으나 — `ensureAdmin` 보호 하에 원시 API 호출이나 향후 관리자 화면에서 즉시 재현되는 잠재 버그.
+- 재현 시뮬레이션: `MemberRepositoryShared.mergeMemberRecord` 로직을 노드 스크립트로 직접 추출해 Before/After 검증 완료:
+  - Before(수정 전): 닉네임 "홍길동" → `setLevel` 호출 후 "alice" (덮어씌워짐) ✗
+  - After(수정 후): 닉네임 "홍길동" → `setLevel` 호출 후 "홍길동" (보존) ✓
+- 기타 조사 결과(버그 없음 확인):
+  - JS Date 자동 정정: `parseAbsentDate`·`validDate`·`formatUrlDate`·바이오리듬 달력 — 전부 역검증 보유.
+  - XSS: ANSI 렌더 경로(`escCell`)·힌트 푸터(`esc()`) 전부 HTML 이스케이프 보유.
+  - 관리자 권한 상승: `isAdminHint` 취약점은 이미 수정됨([LOG_ID 20260721_0330]). `setLevel`은 `isAdmin` 플래그를 보존.
+  - 동시 가입: `user_id`는 DB UNIQUE 제약 보유; `nick_name`·`email` 유니크 인덱스는 migration 0021로 작성됐으나 네트워크 정책상 미적용(기존 문서화 상태).
+
+수정:
+- `memberRoutes.js` `setLevel`: `body?.nickNameHint || targetUserId` → `body?.nickNameHint || undefined`.
+- `undefined`를 넘기면 레포지토리의 `??` 체인이 `existing?.nickName`으로 올바르게 폴백한다.
+- 변경: 1개 파일, 1줄 + 3줄 주석 추가.
+
+검증:
+- 시뮬레이션 스크립트로 Before/After 재현 확인(Memory·Supabase 레포 양쪽).
+- `node --check memberRoutes.js` 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 0 에러 통과.
+- `smoke:auth-bridge` 32 checks 통과.
+
+결과: ✅ 1개 파일 수정. `setLevel` 호출 시 nickNameHint 미제공 시 기존 닉네임 보존.
+
+---
+
 ## [2026-08-01 22:32] [버그수정] LD 날짜 점프 명령 — 존재하지 않는 날짜 입력 시 오류 미처리
 
 **LOG_ID: 20260801_2232**
