@@ -1,3 +1,37 @@
+## [2026-08-01 13:06] [E2E리팩토링] scripts/smoke-full-traversal.js 구문 에러 해결 및 파일 분할
+
+**LOG_ID: 20260801_1306**
+목표:
+- 7,300줄이 넘는 비정상적으로 거대한 E2E 스모크 테스트 파일(`scripts/smoke-full-traversal.js`)을 여러 개의 소형 단위 테스트 파일(`scripts/smoke/` 서브폴더)로 분할한다.
+- 특수문자 주석(`—`) 등으로 인한 구문 에러를 일반 하이픈(`-`)으로 교정하여 구문 에러를 완전히 해결한다.
+- 모듈화로 쪼개진 서브 테스트 코드들이 독립적인 의존성 로드를 안전하게 수행할 수 있도록 공통 유틸 및 require 바인딩(module.createRequire) 설정을 구축한다.
+
+수행 작업:
+1. **공통 유틸 구축 (`scripts/smoke/common-utils.js`)**:
+   - 테스트용 상수, 서버 시작/종료 함수, 브라우저 스텁 등 공통 로직을 분리해냈습니다.
+   - 브라우저 모듈 로더인 `loadBrowserHarnessModule` 내부의 `new Function`에 `module`과 `exports` 객체 및 `module.createRequire` 기반의 로컬 `require`를 주입하여, 브라우저 모듈 뿐만 아니라 Supabase 서버 사이드 모듈도 상대경로 충돌 없이 정상적으로 동작하도록 로더 구조를 보강했습니다.
+2. **테스트 도메인별 모듈 분할**:
+   - `scripts/smoke/board-tests.js` (게시판 관련)
+   - `scripts/smoke/chat-tests.js` (대화방 관련)
+   - `scripts/smoke/pds-tests.js` (자료실 PDS 관련)
+   - `scripts/smoke/auth-tests.js` (로그인/인증 관련)
+   - `scripts/smoke/profile-tests.js` (프로필/내정보 관련)
+   - `scripts/smoke/system-tests.js` (전역 명령 및 시스템 관련)
+   - `scripts/smoke/weather-tests.js` (날씨 관련)
+   - `scripts/smoke/memo-tests.js` (메모/쪽지 관련)
+   - `scripts/smoke/misc-tests.js` (뉴스, 도움말, 히스토리, 브라우저 모듈 관련)
+3. **메인 허브 스크립트 수정 (`scripts/smoke-full-traversal.js`)**:
+   - 7,300줄에 달하던 거대한 본문 함수들을 전부 제거하고, 약 180줄 분량의 깨끗한 통합 러너 코드로 축소했습니다.
+   - 분할된 하위 테스트 스위트들을 차례대로 임포트하여 순차적으로 수행하도록 구조화했습니다.
+4. **테스트 가상 하네스 정합성 교정**:
+   - `board-tests.js` 내의 `verifyBoardNavigationSemantics`의 목(mock) 데이터 구조와 검증문이 원본 git의 5/4/3 rows 형식과 일치하도록 교정하고 `getSupabaseBoardNavigation`를 정상적으로 호출하도록 보강했습니다.
+
+실행 및 검증:
+- `node --check`를 통해 분리된 모든 테스트 스크립트 파일의 문법적 무결성을 확인했습니다.
+- `npm run smoke:full-traversal` E2E 통합 테스트를 재가동하여 `✅ Full traversal passed without console errors.` 성공 판정을 받았습니다.
+
+결과: ✅ 완료
+
 ## [2026-08-01 11:25] [UI개선] 쪽지/편지 쓰기 화면(memo-write)의 내용(textarea) 영역 높이 세로 확장 및 레이아웃 수정
 
 **LOG_ID: 20260801_1125**
