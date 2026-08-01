@@ -110,15 +110,18 @@ async function main() {
     const base = `http://127.0.0.1:${server.address().port}`;
 
     const initialRooms = await request(base, '/api/chat/rooms');
+    // [LOG: 20260801_0950] POST /api/chat/rooms에 ensureAuthenticated 추가 후 게스트 요청은 401.
+    // 로컬 loopback에서 NODE_ENV!=production이면 x-bbs-user-id 헤더로 인증 사용자를 시뮬레이션.
+    // x-bbs-nick-name 헤더는 ISO-8859-1 제약으로 한글 불가 — nickName은 body에 실어 보낸다.
     const createdRoom = await request(base, '/api/chat/rooms', {
       method: 'POST',
+      headers: { 'x-bbs-user-id': 'smoketestowner' },
       body: {
         title: '비밀 방',
         greeting: '환영합니다.',
         visibility: 'private',
         password: '1234',
         maxUser: 2,
-        userId: 'guest\r\nowner',
         nickName: '손님\r\n관리자'
       }
     });
@@ -151,9 +154,10 @@ async function main() {
     } catch (error) {
       invalidSessionStatus = error.status || 0;
     }
+    // [LOG: 20260801_0950] 방장(smoketestowner)이 참여해야 "방장이 나가면 방 종료" 검증이 성공한다.
     const joinedRoomA = await request(base, `/api/chat/rooms/${createdRoom.no}/join`, {
       method: 'POST',
-      body: { sessionKey: 'session-1', password: '1234', userId: 'guest', nickName: '손님' }
+      body: { sessionKey: 'session-1', password: '1234', userId: 'smoketestowner', nickName: '테스트방장' }
     });
     const joinedRoomB = await request(base, `/api/chat/rooms/${createdRoom.no}/join`, {
       method: 'POST',
@@ -176,7 +180,7 @@ async function main() {
     }
 
     // [LOG_ID: 20260718_1800] olddos 원본 규칙 "방장이 나가면 방 자동 종료" 반영. session-1이
-    // 개설자(userId 'guest' === owner)의 첫 입장이라 방장 세션이다. 참여자(session-2) 퇴장을
+    // 개설자(userId 'smoketestowner' === owner)의 첫 입장이라 방장 세션이다. 참여자(session-2) 퇴장을
     // 먼저 확인(방 유지)하고, 방장(session-1) 퇴장을 마지막에 둬 방 자동 종료를 검증한다.
     await request(base, `/api/chat/rooms/${createdRoom.no}/leave`, {
       method: 'POST',

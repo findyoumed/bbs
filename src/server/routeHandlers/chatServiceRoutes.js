@@ -6,11 +6,16 @@ class ChatServiceRouter extends BaseRouter {
   get routes() {
     return [
       { method: 'GET', pattern: '/api/chat/rooms', handler: 'listChatRooms' },
-      { 
-        method: 'POST', 
-        pattern: '/api/chat/rooms', 
-        handler: 'createChatRoom', 
+      {
+        method: 'POST',
+        pattern: '/api/chat/rooms',
+        handler: 'createChatRoom',
         needContext: true,
+        // [LOG: 20260801_0950] 인증 없이 POST /api/chat/rooms를 호출하면 owner_user_id='guest'인
+        // 방이 Supabase에 영구 저장된다. owner='guest'인 방은 어떤 게스트든 requesterId='guest'로
+        // 소유자 검사를 통과해 kick/updateRoom을 무제한 실행할 수 있다(실측 확인).
+        // 클라이언트 CMD_META가 login:true로 채팅 진입 자체를 차단하지만 직접 API 호출이 가능하다.
+        middlewares: ['ensureAuthenticated'],
         validate: {
           body: {
             title: { required: true, maxLength: 100 }
@@ -20,7 +25,9 @@ class ChatServiceRouter extends BaseRouter {
       { method: 'POST', pattern: '/api/chat/rooms/:roomNo/join', handler: 'handleRoomJoin', needContext: true, needBody: true },
       { method: 'POST', pattern: '/api/chat/rooms/:roomNo/leave', handler: 'handleRoomLeave', needContext: true, needBody: true },
       // [LOG_ID: 20260714_2200] 원전 /OUT(강퇴)·/E TITLE·/E USER(방 설정 변경) 재현
-      { method: 'POST', pattern: '/api/chat/rooms/:roomNo/kick', handler: 'handleRoomKick', needContext: true, needBody: true },
+      // [LOG: 20260801_0950] kick과 settings도 ensureAuthenticated 추가: owner='guest'인 방(특히
+      // 기본 로비 room#1, owner_user_id='guest')에서 어떤 게스트든 소유자 검사를 우회할 수 있었다.
+      { method: 'POST', pattern: '/api/chat/rooms/:roomNo/kick', handler: 'handleRoomKick', needContext: true, needBody: true, middlewares: ['ensureAuthenticated'] },
       // [LOG_ID: 20260727_1256] 개설(POST /api/chat/rooms)엔 title maxLength:100 검증이 있는데
       // 설정변경(/E TITLE)엔 없어, 저장소가 조용히 60자로 자르던(방금 고침) 것 외에도 100자를
       // 넘긴 값이 명확한 거부 없이 그냥 100자로 잘려 저장될 수 있었다. 개설과 동일한 검증을 둔다.
@@ -29,6 +36,7 @@ class ChatServiceRouter extends BaseRouter {
         pattern: '/api/chat/rooms/:roomNo/settings',
         handler: 'handleRoomSettings',
         needContext: true,
+        middlewares: ['ensureAuthenticated'],
         validate: {
           body: {
             title: { maxLength: 100 }

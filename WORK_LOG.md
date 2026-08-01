@@ -1,3 +1,53 @@
+## [2026-08-01 09:24] [보안수정] chatServiceRoutes POST /api/chat/rooms·kick·settings 인증 미들웨어 누락 수정
+
+**LOG_ID: 20260801_0924**
+목표: 13라운드(20260801_0910)가 남긴 후속 과제 — POST /api/chat/rooms에 ensureAuthenticated가 없다는 관찰을 직접 재현·검증하고 필요 시 수정.
+
+발견 (실측 재현):
+1. **게스트 방 개설**: `POST /api/chat/rooms`(인증 헤더 없음) → HTTP 201 성공. 응답에 `"owner":"guest"`.
+   Supabase `chat_rooms` 테이블에 `owner_user_id='guest'`인 행이 영구 저장됨(실측 확인).
+2. **게스트 강퇴**: `POST /api/chat/rooms/6/kick {"targetUserId":"someuser"}` → HTTP 200 성공.
+   이유: kick()의 소유자 검사 `room.owner_user_id !== requesterId`가 `'guest' !== 'guest'` = false → 검사 우회.
+3. **게스트 설정변경**: `POST /api/chat/rooms/6/settings {"title":"해킹된방제목"}` → HTTP 200 성공. 방 제목이 실제로 바뀜.
+4. **추가 발견**: 기본 로비(room_no=1 "광장 (PLAZA)")의 `owner_user_id='guest'` — 어떤 게스트든 로비의 강퇴·설정변경을 무제한 실행 가능. 이것이 kick/settings에도 ensureAuthenticated가 필요한 핵심 이유.
+
+원인:
+- 방 개설 라우트에 `middlewares: ['ensureAuthenticated']` 누락.
+- 리포지토리 레벨 소유자 검사(`room.ownerUserId !== requesterId`)가 "충분한 보호"라는 가정이 틀림:
+  `context.userId`의 게스트 기본값이 'guest'이고 로비/guest-생성 방의 `ownerUserId`도 'guest'라
+  어떤 게스트든 소유자 검사를 무조건 통과한다.
+
+수정:
+- `src/server/routeHandlers/chatServiceRoutes.js`:
+  - `POST /api/chat/rooms` → `middlewares: ['ensureAuthenticated']` 추가 (방 개설)
+  - `POST /api/chat/rooms/:roomNo/kick` → `middlewares: ['ensureAuthenticated']` 추가 (강퇴)
+  - `POST /api/chat/rooms/:roomNo/settings` → `middlewares: ['ensureAuthenticated']` 추가 (설정변경)
+- `scripts/smoke-chat-rooms.js`:
+  - 방 개설 요청에 `x-bbs-user-id: smoketestowner` 헤더 추가 (로컬 loopback identity override 활용)
+  - session-1 join userId를 'smoketestowner'로 변경 (방장 퇴장 → 방 자동종료 시나리오 유지)
+
+테스트 데이터 정리:
+- 실측 생성한 Supabase room_no=6 ("게스트테스트방" → "해킹된방제목") 삭제 완료.
+
+검증:
+- `node --check src/server/routeHandlers/chatServiceRoutes.js` 통과.
+- `node --check scripts/smoke-chat-rooms.js` 통과.
+- 수정 후 실측:
+  - 게스트 POST /api/chat/rooms → HTTP 401 ("로그인이 필요한 서비스입니다.")
+  - 게스트 POST /api/chat/rooms/1/kick → HTTP 401
+  - 게스트 POST /api/chat/rooms/1/settings → HTTP 401
+  - GET /api/chat/rooms → HTTP 200 (영향 없음)
+- `npm run smoke:chat-rooms` 통과.
+- `npm run smoke:command-parity` 통과.
+- `npm run smoke:full-traversal` 통과.
+
+변경 파일:
+- `src/server/routeHandlers/chatServiceRoutes.js` (3개 라우트에 미들웨어 추가)
+- `scripts/smoke-chat-rooms.js` (인증 헤더·owner userId 반영)
+결과: ✅ 완료
+
+---
+
 ## [2026-08-01 09:10] [버그수정] parsePagination 소수 입력 — 비정수 offset이 Supabase range()로 전달되는 결함 수정
 
 **LOG_ID: 20260801_0910**
