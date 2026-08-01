@@ -1,3 +1,61 @@
+## [2026-08-02 01:00] [버그수정] activityRepository.touch() — fire-and-forget 호출의 UnhandledPromiseRejection 버그 수정
+
+**LOG_ID: 20260802_0100**
+목표: 26라운드 — 전체 라우트 핸들러(routeHandlers/*.js) 및 관련 모듈에서 "Supabase 저장소 메서드가 async인데 await/catch 없이 호출" 패턴 전수 조사.
+
+전수 조사 결과:
+- boardRoutes.js:82 `getMeta()` — 모든 구현에서 동기 메서드. 버그 없음 ✓
+- boardRoutes.js:380 `getPost()` — async 함수 내부 `return somePromise`이므로 callers가 await 시 정상 동작. 버그 없음 ✓
+- chatServiceRoutes.js — 전체 await 존재. 버그 없음 ✓
+- memberRoutes.js — 전체 await 존재. 버그 없음 ✓
+- confRoutes.js — 전체 await 존재. 버그 없음 ✓
+- voteRoutes.js — 전체 await 존재. 버그 없음 ✓
+- memoRoutes.js — 전체 await 존재. 버그 없음 ✓
+- authRoutes.js / contactRoutes.js — 전체 await 존재. 버그 없음 ✓
+- systemRoutes.js — 라운드25에서 수정된 list()/getRecentSummary() ✓, 그러나 getSession()의 touch() 미처리 ❌
+- requestContext.js:53 — buildTrackedContext() 내 touch() 미처리 ❌
+
+발견:
+- `requestContext.js:53` `buildTrackedContext()`: `activityRepository.touch()` 호출 시 await·.catch() 없음.
+  - memory 드라이버(`ActivityRepository.touch`)는 동기 반환 — 문제 없음.
+  - Supabase 드라이버(`ActivityRepositorySupabase.touch`)는 `async` — 실패 시 rejected Promise 반환.
+  - 해당 Promise에 rejection handler가 없어 `UnhandledPromiseRejection` 발생.
+  - `buildTrackedContext`는 모든 API 요청(인증이 필요한 경우)에서 호출됨 — 영향 범위가 넓다.
+- `systemRoutes.js:106` `getSession()`: 동일 패턴. 모든 `/api/auth/session` 요청이 대상.
+- 결과: Supabase `user_activities` 테이블에 장애 발생 시:
+  - `ErrorTracker`가 이를 "Fatal unhandledRejection"으로 기록 (오탐).
+  - Node.js 22에서 전역 핸들러(`ErrorTracker.js:292`)가 없으면 프로세스 종료 위험.
+  - 실측 재현: mock async touch() 실패 시 UnhandledPromiseRejection 감지 확인.
+- 근본 원인: `touch()`는 의도적으로 fire-and-forget이나, Supabase 드라이버만 async라서 오류 격리가 필요했음. memory 드라이버 동작(동기)만 보고 패턴이 안전하다고 착각한 구조적 실수.
+
+수정:
+- `src/server/requestContext.js`:
+  - `activityRepository.touch(...)` → `Promise.resolve(activityRepository.touch(...)).catch(() => {})`
+  - `Promise.resolve()` 감싸기: Supabase(async, rejected Promise)와 memory(sync, plain value) 모두 안전하게 처리.
+  - 주석 추가: 버그 원인 및 `Promise.resolve()` 패턴 필요성 설명.
+- `src/server/routeHandlers/systemRoutes.js`:
+  - 동일 패턴 수정. 주석에 requestContext.js와 동일한 수정임을 명시.
+
+변경 파일:
+- `src/server/requestContext.js` (touch() 호출 1개 수정 + 주석 블록 추가)
+- `src/server/routeHandlers/systemRoutes.js` (touch() 호출 1개 수정 + 주석 2줄 추가)
+
+검증:
+- 버그 재현: mock async touch() 실패 → UnhandledRejection 감지 확인(수정 전).
+- 수정 후: mock async touch() 실패해도 UnhandledRejection 없음 확인.
+- 메모리 드라이버 호환: 동기 touch() 값도 Promise.resolve() 후 정상 동작 확인.
+- `node --check requestContext.js` 통과.
+- `node --check systemRoutes.js` 통과.
+- `smoke:full-traversal` 0 에러 통과.
+- `smoke:boards` 통과.
+- `smoke:auth-bridge` 32 checks 통과.
+- `smoke:chat-rooms` 통과.
+- `smoke:vercel-ready` exit code 0 통과.
+
+결과: ✅ 2개 파일 수정. Supabase 모드에서 user_activities 장애 시 모든 API 요청이 ErrorTracker에 "Fatal unhandledRejection"을 발생시키던 버그 해소.
+
+---
+
 ## [2026-08-02 00:00] [버그수정] systemRoutes — ActivityRepositorySupabase 호출 시 await 누락으로 active-users 500 / activity-summary 빈 객체 반환 버그 수정
 
 **LOG_ID: 20260802_0000**

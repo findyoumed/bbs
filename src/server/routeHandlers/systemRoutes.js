@@ -103,9 +103,14 @@ class SystemRouter extends BaseRouter {
       enabled: false,
       user: { userId: 'guest', nickName: '손님', level: 1, isAdmin: false, isGuest: true, email: '' }
     };
-    activityRepository.touch(session.user, {
+    // [LOG: 20260802_0100] touch()는 fire-and-forget이나, Supabase 드라이버에서 async로
+    // 실패 시 UnhandledPromiseRejection 발생 — Promise.resolve().catch()로 명시 처리.
+    // (requestContext.js의 buildTrackedContext와 동일한 수정 패턴)
+    Promise.resolve(activityRepository.touch(session.user, {
       path: this.pathname,
       remoteAddress: this.req.socket?.remoteAddress || ''
+    })).catch(() => {
+      // fire-and-forget: 활동 추적 실패는 세션 응답에 영향을 주지 않는다.
     });
     return this.send(200, session);
   }
