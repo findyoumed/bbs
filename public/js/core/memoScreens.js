@@ -306,35 +306,267 @@ export function createMemoScreens(deps) {
             return;
         }
 
-        const transcriptHtml = flow.transcript
-            .map((line) => {
-                const prompt = String(line?.prompt || '');
-                const value = String(line?.value ?? '');
-                return `<div class="ansi-line"><span class="ansi-cyan">${esc(prompt)}</span>${value ? ` <span class="ansi-white">${esc(value)}</span>` : ''}</div>`;
-            })
-            .join('');
+        // [LOG_ID: 20260801_1020] 대화형 단계(선택/입력)일 때는 기존의 CLI 히스토리 화면을 그린다.
+        const isInteractiveStage = ['card_select', 'letter_type', 'delay_minutes', 'send_cmd'].includes(flow.stage);
+        if (isInteractiveStage) {
+            const transcriptHtml = flow.transcript
+                .map((line) => {
+                    const prompt = String(line?.prompt || '');
+                    const value = String(line?.value ?? '');
+                    return `<div class="ansi-line"><span class="ansi-cyan">${esc(prompt)}</span>${value ? ` <span class="ansi-white">${esc(value)}</span>` : ''}</div>`;
+                })
+                .join('');
 
+            const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+            renderRawHtmlScreenWithTopbar({
+                leftLabel: 'MEMO',
+                centerLabel: flow.cardMode ? '축하카드 선택' : '편지 쓰기',
+                bodyHtml: transcriptHtml,
+                screenEl,
+                isMobile
+            });
+
+            if (flow.stage === 'card_select') {
+                setHint(`보낼 축하카드 번호를 고르세요. (1-${MEMO_CARD_KEYS.length}, 취소: /q)`);
+                setPrompt(`카드 번호 (1-${MEMO_CARD_KEYS.length}) >>`);
+            } else if (flow.stage === 'letter_type') {
+                setHint('보낼 편지의 종류 번호를 고르세요. (1-8, 취소: /q)');
+                setPrompt('편지 종류 (1-8) >>');
+            } else if (flow.stage === 'delay_minutes') {
+                setHint('지연 시간을 분 단위로 입력하세요. (1-1440, 취소: /q)');
+                setPrompt('지연 시간(분) >>');
+            } else if (flow.stage === 'send_cmd') {
+                setHint('발송 명령을 내리세요. (1:발송, 2:저장, 3:발송+저장, 0:취소)');
+                setPrompt('발송 명령 (1-3, 0) >>');
+            }
+            setReady?.(true);
+            focusCommandInput();
+            return;
+        }
+
+        // [LOG_ID: 20260801_1020] 일반 작성/편집 중일 때는 정통 단말기 폼 에디터로 렌더링
+        renderMemoBbsEditor(flow, handleMemoSubmit, cancelMemoWrite);
+    }
+
+    // [LOG_ID: 20260801_1020] PC통신 단말기 스타일 메일 폼 에디터 구현
+    function renderMemoBbsEditor(flow, onSave, onCancel) {
+        flow.stage = 'bbs-form';
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-        // [LOG_ID: 20260708_1030] 다른 화면과 동일한 정통 상단바로 렌더링한다.
-        // (기존엔 "▣ 쪽지 보내기 ▣"라는 자체 제목 줄만 있고 로고 박스·실시간 시계가 없었다.)
+        const targetId = 'memo-ed-target';
+        const bodyId   = 'memo-ed-body';
+        const sep = '─'.repeat(isMobile ? 40 : 76);
+
+        const inputStyle = `
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: #ffffff !important;
+          font-family: inherit !important;
+          font-size: inherit !important;
+          line-height: inherit !important;
+          font-weight: inherit !important;
+          letter-spacing: inherit !important;
+          outline: none;
+          padding: 0;
+          margin: 0;
+          min-width: 0;
+        `;
+
+        const textareaStyle = `
+          width: 100%;
+          height: 100%;
+          min-height: 0;
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: #ffffff !important;
+          font-family: inherit !important;
+          font-size: inherit !important;
+          line-height: inherit !important;
+          font-weight: inherit !important;
+          letter-spacing: inherit !important;
+          outline: none;
+          padding: 0;
+          margin: 0;
+          resize: none;
+        `;
+
+        const bodyHtml = `
+<div style="display:flex;flex-direction:column;height:100%;overflow-y:auto;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
+  <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
+    <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">받는 사람 :&nbsp;</span>
+    <input id="${targetId}" type="text" autocomplete="off" spellcheck="false" placeholder="받는 사람 아이디 (여러 명은 쉼표로)" style="${inputStyle}"/>
+  </div>
+  <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
+  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
+    <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내    용 :</div>
+    <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
+  </div>
+  <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;flex-shrink:0;">
+    전송: Ctrl+S 또는 마지막 줄에 . 후 Enter  취소: Escape 또는 /q  이동: Tab/화살표
+  </div>
+</div>`;
+
         renderRawHtmlScreenWithTopbar({
             leftLabel: 'MEMO',
-            centerLabel: '쪽지 보내기',
-            bodyHtml: transcriptHtml,
+            centerLabel: flow.cardMode ? '축하카드 작성' : '편지 쓰기',
+            bodyHtml,
             screenEl,
             isMobile
         });
 
-        // [LOG_ID: 20260719_1200] 축하카드 선택 단계 프롬프트 추가.
-        if (flow.stage === 'card_select') {
-            setHint(`보낼 축하카드 번호를 고르세요. (1-${MEMO_CARD_KEYS.length}, 취소: /q)`);
-            setPrompt(`카드 번호 (1-${MEMO_CARD_KEYS.length}) >>`);
-        } else {
-            setHint('전송(/s 또는 SEND), 취소(/q, P, M, B)');
-            setPrompt(flow.stage === 'target' ? '받는 사람 >>' : '내용 >>');
+        const targetEl = document.getElementById(targetId);
+        const bodyEl   = document.getElementById(bodyId);
+        if (!targetEl || !bodyEl) return;
+
+        targetEl.value = String(flow.target || state._memoTarget || '').trim();
+        bodyEl.value   = Array.isArray(flow.bodyLines) ? flow.bodyLines.join('\n') : '';
+
+        const promptRow = document.getElementById('terminal-prompt-row');
+        if (promptRow) promptRow.style.display = '';
+        if (cmdInput) cmdInput.style.display = '';
+
+        flow._textareaActive = true;
+        setHint('전송: Ctrl+S 또는 마지막 줄에 .  취소: Escape  이동: Tab/화살표');
+        setPrompt('내용 >>');
+
+        function cleanup() {
+            flow._textareaActive = false;
+            flow._saving = false;
+            targetEl.disabled = false;
+            bodyEl.disabled = false;
+            if (promptRow) promptRow.style.display = '';
+            if (cmdInput) cmdInput.style.display = '';
+
+            targetEl.removeEventListener('keydown', onTargetKey);
+            bodyEl.removeEventListener('keydown', onBodyKey);
+            if (cmdInput) {
+                cmdInput.removeEventListener('keydown', onCmdKey);
+            }
         }
-        setReady?.(true);
-        focusCommandInput();
+
+        function doSave() {
+            if (flow._saving) return;
+            const targetVal = targetEl.value.trim();
+            const bodyVal   = bodyEl.value.trim();
+
+            if (!targetVal) {
+                setHint('받는 사람 아이디를 입력해주세요.');
+                targetEl.focus();
+                return;
+            }
+            if (!bodyVal) {
+                setHint('내용을 입력해주세요.');
+                bodyEl.focus();
+                return;
+            }
+
+            flow._saving = true;
+            const expanded = expandRecipients(targetVal);
+            flow.target = expanded;
+            state._memoTarget = expanded;
+
+            const lines = bodyEl.value.split('\n');
+            if (lines.length > 0 && lines[lines.length - 1].trim() === '.') lines.pop();
+            flow.bodyLines = lines;
+
+            targetEl.disabled = true;
+            bodyEl.disabled = true;
+
+            const releaseFields = () => {
+                flow._saving = false;
+                targetEl.disabled = false;
+                bodyEl.disabled = false;
+            };
+
+            if (flow.cardMode) {
+                Promise.resolve(onSave())
+                    .then((succeeded) => {
+                        if (succeeded === false) {
+                            releaseFields();
+                            return;
+                        }
+                        cleanup();
+                    })
+                    .catch(() => releaseFields());
+            } else {
+                cleanup();
+                flow.stage = 'letter_type';
+                appendMemoWriteLine('[받는 사람]', flow.target);
+                appendMemoWriteLine('[내용]', flow.bodyLines.join('\n'));
+                appendMemoWriteLine('[편지 종류 선택]', '');
+                for (let i = 1; i <= 8; i += 1) {
+                    appendMemoWriteLine(`  ${i}.`, LETTER_TYPES[i].label);
+                }
+                setPrompt('편지 종류 (1-8) >>');
+                renderMemoWriteScreen();
+            }
+        }
+
+        function isOnFirstLine(ta) {
+            return ta.value.substring(0, ta.selectionStart).indexOf('\n') === -1;
+        }
+
+        function onTargetKey(e) {
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
+            if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
+            if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+                e.preventDefault();
+                bodyEl.focus();
+                bodyEl.setSelectionRange(0, 0);
+            }
+        }
+
+        function onBodyKey(e) {
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
+            if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
+            if (e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                if (cmdInput) {
+                    cmdInput.focus();
+                    cmdInput.select();
+                }
+                return;
+            }
+            if ((e.key === 'ArrowUp' && isOnFirstLine(bodyEl)) || (e.key === 'Tab' && e.shiftKey)) {
+                e.preventDefault();
+                targetEl.focus();
+                targetEl.setSelectionRange(targetEl.value.length, targetEl.value.length);
+                return;
+            }
+            if (e.key === 'Enter') {
+                const pos = bodyEl.selectionStart;
+                const before = bodyEl.value.substring(0, pos);
+                const currentLine = before.split('\n').pop().trim();
+                if (currentLine === '.') { e.preventDefault(); doSave(); return; }
+            }
+        }
+
+        function onCmdKey(e) {
+            if ((e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowUp') {
+                e.preventDefault();
+                bodyEl.focus();
+                bodyEl.setSelectionRange(bodyEl.value.length, bodyEl.value.length);
+                return;
+            }
+        }
+
+        targetEl.addEventListener('keydown', onTargetKey);
+        bodyEl.addEventListener('keydown', onBodyKey);
+        if (cmdInput) {
+            cmdInput.addEventListener('keydown', onCmdKey);
+        }
+
+        flow._textareaCleanup = cleanup;
+        flow._doSave = doSave;
+        flow._doCancel = () => { cleanup(); onCancel(); };
+
+        setTimeout(() => {
+            if (targetEl) {
+                targetEl.focus();
+                targetEl.setSelectionRange(targetEl.value.length, targetEl.value.length);
+            }
+        }, 10);
     }
 
     async function showMemoWrite(targetUserId = '', cardMode = false) {
@@ -454,6 +686,11 @@ export function createMemoScreens(deps) {
         const flow = state._memoWriteFlow;
         if (flow.sending) {
             return true;
+        }
+
+        // [LOG_ID: 20260801_1230] 대화형 CLI 입력 처리 시 다음 단계에서 입력창이 비워져 있도록 클리어 처리
+        if (cmdInput) {
+            cmdInput.value = '';
         }
 
         const line = String(raw ?? '');

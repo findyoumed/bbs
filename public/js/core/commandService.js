@@ -75,7 +75,9 @@ export const CMD_META = {
   NW: { label: '새글보기', tip: 'NEW, NW', priority: 76, cat: 'POST', desc: '최근 3일 이내에 작성된 게시글만 골라 봅니다.' },
   LS: { label: '번호이동', tip: 'LS [번호]', priority: 20, cat: 'POST', desc: '글 번호로 목록에서 해당 글이 있는 페이지를 찾아 이동합니다.' },
   LD: { label: '날짜이동', tip: 'LD [월/일]', priority: 20, cat: 'POST', desc: '작성 날짜(월/일)로 목록에서 해당 글이 있는 페이지를 찾아 이동합니다. (예: LD 07/13)' },
-  K: { label: '주제어', tip: 'K, K [번호]', priority: 18, cat: 'POST', desc: '게시판 목록: 주제어(말머리) 필터를 해제합니다. 쪽지함: K [번호]로 편지를 보관함에 넣거나 꺼냅니다.' },
+  // [LOG_ID: 20260801_1010] 쪽지함 보관 명령을 K에서 KEEP으로 정립하고 설명 분리
+  K: { label: '주제어', tip: 'K', priority: 18, cat: 'POST', desc: '게시판 목록: 주제어(말머리) 필터를 해제합니다.' },
+  KEEP: { label: '편지보관', tip: 'KEEP [번호]', priority: 18, cat: 'POST', desc: '쪽지함: [번호]로 편지를 보관함에 넣거나 꺼냅니다.' },
   KW: { label: '주제어목록', tip: 'KW', priority: 18, cat: 'POST', desc: '게시판에서 사용된 주제어(말머리) 목록을 모아 봅니다.' },
   // [LOG_ID: 20260721_1800] UL/PUT, DL/TR/GET도 실제로 동일하게 동작하는 별칭이지만(commandRouterBrowse.js),
   // CMD_META 항목을 전부 만들면 /help의 명령 칸(고정 폭)에 별칭이 다 안 들어가 잘려 보인다 —

@@ -127,14 +127,18 @@ class SupabaseMemoRepository extends BaseRepository {
     const payload = validateMemoInput(input);
     const saveToSent = input.saveToSent !== false;
     const columns = await this._getColumnMap();
+    // [LOG_ID: 20260801_1106] saveToSent가 false(보낸편지함에 비저장)인 경우에도 sender_user_id는
+    // not-null 컬럼 제약조건 및 수신자의 보낸이 조회를 위해 작성자 ID로 채워져야 한다.
+    // 대신 sender_archived 플래그를 true로 주어 보낸편지함 목록에서만 노출을 제외시킨다.
     const { data, error } = await this.client
       .from(this.table)
       .insert({
-        [columns.sender]: saveToSent ? normalizeText(context.userId, 'guest').toLowerCase() : null,
+        [columns.sender]: normalizeText(context.userId, 'guest').toLowerCase(),
         [columns.recipient]: payload.recipientUserId,
         title: payload.title,
         content: payload.content,
-        is_read: false
+        is_read: false,
+        sender_archived: !saveToSent
       })
       .select('*')
       .single();

@@ -278,8 +278,9 @@ export function createTerminalHintFooter(deps) {
 
       // [LOG_ID: 20260729_1511] 힌트 텍스트 내에 줄바꿈(\n)이 포함된 경우, 
       // 첫째 줄(진짜 힌트)만 추출하여 하단 힌트바에 렌더링하고 둘째 줄(프롬프트 문자열)은 필터링한다.
+      // [LOG_ID: 20260801_0955] PERF 명령어의 다중 라인 성능 보고서는 필터링에서 예외 처리하여 전체 출력 보장
       let hintText = text;
-      if (typeof text === 'string' && text.includes('\n')) {
+      if (typeof text === 'string' && text.includes('\n') && !text.startsWith('[시스템 성능 보고서]')) {
         hintText = text.split('\n')[0];
       }
 

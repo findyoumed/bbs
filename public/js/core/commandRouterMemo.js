@@ -336,13 +336,14 @@ export function createMemoCommandHandler(deps) {
                 await showMemoList();
                 return true;
             }
-            const archiveMatch = cmd.match(/^K(?:\s+(\d+))?$/);
+            // [LOG_ID: 20260801_1010] 쪽지 보관 명령어 단축키를 K에서 KEEP으로 변경
+            const archiveMatch = cmd.match(/^KEEP(?:\s+(\d+))?$/);
             if (archiveMatch) {
                 const isArchiveBox = state._memoBox === 'archive';
                 if (!archiveMatch[1]) {
                     setHint?.(isArchiveBox
-                        ? '사용법: K {번호} — 보관을 해제해 원래 쪽지함으로 되돌립니다.'
-                        : '사용법: K {번호} — 쪽지를 편지보관함으로 옮깁니다.');
+                        ? '사용법: KEEP {번호} — 보관을 해제해 원래 쪽지함으로 되돌립니다.'
+                        : '사용법: KEEP {번호} — 쪽지를 편지보관함으로 옮깁니다.');
                     return true;
                 }
                 const kIdx = parseInt(archiveMatch[1], 10);
@@ -449,7 +450,8 @@ export function createMemoCommandHandler(deps) {
                 return true;
             }
             // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함 — 읽는 중에 K로 보관/해제 토글.
-            if (cmd === 'K') {
+            // [LOG_ID: 20260801_1010] 단축키 K를 KEEP으로 변경
+            if (cmd === 'KEEP') {
                 const memo = state._memos?.find((m) => String(m?.id) === String(state._currentMemoId));
                 if (!memo) {
                     setHint?.('보관할 쪽지를 찾지 못했습니다.');

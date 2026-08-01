@@ -465,16 +465,22 @@ export function createChatCommandHandler(deps) {
             return true;
           }
           if (!state._chatMutedUserIds) state._chatMutedUserIds = new Set();
-          if (state._chatMutedUserIds.has(targetId)) {
-            state._chatMutedUserIds.delete(targetId);
+          // [LOG_ID: 20260801_0950] /EX 수신거부 목록의 대소문자 구분 없는 비교를 위해 targetId를 소문자로 변환하여 저장
+          const targetKey = targetId.toLowerCase();
+          if (state._chatMutedUserIds.has(targetKey)) {
+            state._chatMutedUserIds.delete(targetKey);
             setHint(`[${targetId}]님의 메시지 수신거부를 해제했습니다.`);
           } else {
-            state._chatMutedUserIds.add(targetId);
+            state._chatMutedUserIds.add(targetKey);
             setHint(`[${targetId}]님의 메시지를 수신거부합니다.`);
           }
           const nick = state.user?.nickName || '나';
-          // [LOG_ID: 20260731_1325] /EX 닉네임 차단 지원 — userId와 nickName 모두 수신거부 목록과 대조한다.
-          const visibleMessages = (state._chatMessages || []).filter((m) => !state._chatMutedUserIds.has(m.userId) && !state._chatMutedUserIds.has(m.nickName));
+          // [LOG_ID: 20260801_0950] 수신거부 대조 시에도 userId와 nickName을 모두 소문자로 변환하여 비교한다.
+          const visibleMessages = (state._chatMessages || []).filter((m) => {
+            const mUser = String(m.userId || '').toLowerCase();
+            const mNick = String(m.nickName || '').toLowerCase();
+            return !state._chatMutedUserIds.has(mUser) && !state._chatMutedUserIds.has(mNick);
+          });
           const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick, state.user?.userId);
           renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });
           return true;
@@ -633,9 +639,14 @@ export function createChatCommandHandler(deps) {
               content: emoteText,
               createdAt: new Date().toISOString()
             });
+            // [LOG_ID: 20260801_0950] 표현명령어 전송 후 렌더링 시에도 대소문자 구분 없는 userId/nickName 모두 수신거부 대조 적용
             const muted = state._chatMutedUserIds;
             const visibleMessages = muted && muted.size
-              ? (state._chatMessages || []).filter((m) => !muted.has(m.userId))
+              ? (state._chatMessages || []).filter((m) => {
+                  const mUser = String(m.userId || '').toLowerCase();
+                  const mNick = String(m.nickName || '').toLowerCase();
+                  return !muted.has(mUser) && !muted.has(mNick);
+                })
               : (state._chatMessages || []);
             const ansiResult = buildChatRoomAnsi(state._chatRoom, visibleMessages, nick, state.user?.userId);
             renderAnsiScreenWithTopbar({ ansiText: ansiResult?.text || ansiResult, ansiToHTML, screenEl });
@@ -686,9 +697,14 @@ export function createChatCommandHandler(deps) {
 
         const nick = state.user?.nickName || '나';
         // [LOG_ID: 20260714_2200] /EX(수신거부) 뮤트 목록은 낙관적 갱신 렌더에도 적용한다.
+        // [LOG_ID: 20260801_0950] 일반 메시지 전송 후 낙관적 갱신 시에도 대소문자 구분 없는 userId/nickName 모두 수신거부 대조 적용
         const muted = state._chatMutedUserIds;
         const visibleMessages = muted && muted.size
-          ? (state._chatMessages || []).filter((m) => !muted.has(m.userId))
+          ? (state._chatMessages || []).filter((m) => {
+              const mUser = String(m.userId || '').toLowerCase();
+              const mNick = String(m.nickName || '').toLowerCase();
+              return !muted.has(mUser) && !muted.has(mNick);
+            })
           : (state._chatMessages || []);
         // [LOG_ID: 20260722_3600] myId를 넘겨야 "[TO:...]" 귓속말 필터가 내가 보낸 메시지를
         // 정확히 통과시킨다 — 누락 시 귓속말 모드에서 보낸 메시지가 낙관적 갱신에서 사라진다.

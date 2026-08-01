@@ -278,6 +278,58 @@ export function bindAppEvents(deps) {
     hotspot.classList.add('is-tap-selected');
   }
 
+  // [LOG_ID: 20260801_1222] 프로젝트 전역 터미널 포커스 가드 (Focus Guard)
+  // 예외 없이 모든 화면에서 정해진 입력 필드 이외의 영역을 클릭할 때 포커스 날아감 방지 및 자동 복구.
+  if (typeof shouldAutoFocusCommandInput === 'function' && shouldAutoFocusCommandInput()) {
+    let lastFocusedElement = null;
+
+    document.addEventListener('focusin', (event) => {
+      const target = event.target;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+      if (isInput && !target.disabled) {
+        lastFocusedElement = target;
+      }
+    }, true);
+
+    const isOutsideActiveInput = (event) => {
+      const closestFocusable = event.target.closest('input, textarea, select, a, button, [tabindex]');
+      return !closestFocusable || closestFocusable.disabled;
+    };
+
+    document.addEventListener('mousedown', (event) => {
+      if (isOutsideActiveInput(event)) {
+        event.preventDefault();
+      }
+    }, true);
+
+    document.addEventListener('click', (event) => {
+      if (!isOutsideActiveInput(event)) return;
+
+      const selection = window.getSelection();
+      if (selection && selection.toString().length > 0) return;
+
+      event.stopPropagation();
+
+      let targetToFocus = lastFocusedElement;
+      if (!targetToFocus || !document.body.contains(targetToFocus) || targetToFocus.disabled) {
+        const inlineInput = document.querySelector('#terminal-screen input:not([disabled]), #terminal-screen textarea:not([disabled]), #terminal-screen select:not([disabled])');
+        if (inlineInput) {
+          targetToFocus = inlineInput;
+        } else {
+          targetToFocus = cmdInput;
+        }
+      }
+
+      if (targetToFocus && document.activeElement !== targetToFocus) {
+        targetToFocus.focus();
+        if (targetToFocus.setSelectionRange && (targetToFocus.tagName === 'INPUT' || targetToFocus.tagName === 'TEXTAREA')) {
+          const len = targetToFocus.value.length;
+          targetToFocus.setSelectionRange(len, len);
+        }
+      }
+    }, true);
+  }
+
   document.addEventListener('click', (event) => {
     const action = getCommandClickAction(event.target);
     if (!action) {

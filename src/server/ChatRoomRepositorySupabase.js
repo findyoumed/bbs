@@ -135,10 +135,10 @@ class SupabaseChatRoomRepository extends BaseRepository {
     const room = await this.queries.findRoomByNo(roomNo);
     const requesterId = normalizeText(context.userId, 'guest').toLowerCase(); // [LOG: 20260731_1755] toLowerCase 추가
     if (room.owner_user_id !== requesterId) throw createHttpError(403, '방 개설자만 강퇴할 수 있습니다.');
-    // [LOG_ID: 20260731_1325] /OUT 닉네임 강퇴 지원 — userId뿐만 아니라 nickName으로도 상대를 식별한다.
-    const target = normalizeText(targetUserId, '');
+    // [LOG_ID: 20260801_0950] /OUT 강퇴 시 대소문자 구분 없는 비교를 지원하기 위해 참여자의 ID와 닉네임을 소문자로 변환하여 비교한다.
+    const target = normalizeText(targetUserId, '').toLowerCase();
     const participants = this._participantsForRoom(room.room_no);
-    const kicked = participants.find((p) => p.userId === target || p.nickName === target);
+    const kicked = participants.find((p) => String(p.userId || '').toLowerCase() === target || String(p.nickName || '').toLowerCase() === target);
     if (!kicked) throw createHttpError(404, '해당 이용자가 방에 없습니다.');
     const filtered = participants.filter((p) => p.userId !== kicked.userId);
     if (filtered.length) this.participantsByRoomNo.set(Number(room.room_no), filtered); else this.participantsByRoomNo.delete(Number(room.room_no));

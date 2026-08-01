@@ -1,3 +1,154 @@
+## [2026-08-01 11:25] [UI개선] 쪽지/편지 쓰기 화면(memo-write)의 내용(textarea) 영역 높이 세로 확장 및 레이아웃 수정
+
+**LOG_ID: 20260801_1125**
+목표:
+- `/memo/write` 폼 에디터의 본문 입력(`내 용 :`) textarea 높이가 기형적으로 축소(한 두 줄 수준)되어 표시되던 레이아웃 버그를 해결하여, 일반 게시판(`tosysop`)과 동일하게 화면 전체를 시원하게 채우도록 개선한다.
+
+수행 작업:
+1. **CSS Flex 레이아웃 규칙 확장**:
+   - `public/style.css` 의 3383라인 부근 `body[data-screen="post-write"]` 에 지정되어 있던 전용 세로 Flex 공간 확장 규칙(`.ansi-screen`, `.ansi-screen-body` 높이 100%, flex: 1 지정)을 `body[data-screen="memo-write"]` 에도 동일하게 적용하도록 확장 수정.
+   - 이를 통해 부모 컨테이너가 축소되지 않고 가득 채워져, 그 자식 요소인 본문 `textarea` 가 의도한 대로 `flex: 1` 높이 전체를 상속받아 세로 공간을 유연하게 활용할 수 있게 함.
+
+실행 및 검증:
+- 브라우저 서브에이전트 검증: `/memo/write` 화면으로 이동하여 실제 본문 입력 영역의 높이를 확인한 결과, 라벨과 하단 구분선 사이의 간격이 약 `551px` 로 정상 확장되어 넓은 화면을 채우고 있음을 확인하고 스크린샷(`memo_write_layout_1785551159114.png`) 검증 완료.
+
+결과: ✅ 완료
+
+## [2026-08-01 11:06] [버그수정] saveToSent가 false(보낸편지함에 저장안함)일 때의 502 Bad Gateway(sender_user_id not-null 제약위반) 해결
+
+**LOG_ID: 20260801_1106**
+목표:
+- 쪽지(편지)를 발송할 때 "보낸편지함에 저장하지 않음(saveToSent = false)" 옵션을 설정하면, 데이터베이스 insert 시 `sender_user_id` 가 null로 전달되어 not-null constraint 위반 502 에러가 떨어지던 치명적인 백엔드 버그를 해결한다.
+
+수행 작업:
+1. **Supabase 레포지토리 수정**:
+   - `src/server/MemoRepositorySupabase.js` 의 `createMemo` 에서 `saveToSent` 여부와 상관없이 `sender_user_id` 에는 항상 보내는 사람의 ID(`context.userId`)를 완벽히 채워 넣어 not-null 제약조건을 통과시킴.
+   - 대신 `saveToSent` 가 `false` 일 경우 `sender_archived` 컬럼의 값을 `true` 로 인서트하여, 보낸 사람의 보낸편지함 목록 조회 시에는 노출되지 않도록 처리하되 수신자는 정상적으로 발신자를 식별할 수 있도록 함.
+2. **Memory 레포지토리 동기화**:
+   - `src/server/MemoRepositoryMemory.js` 의 `createMemo` 도 동일하게 `senderUserId` 에 항상 `context.userId` 를 채워 넣고, `senderArchived: !saveToSent` 로 초기화되도록 동기화 수정하여 동작의 일치성을 확보함.
+
+실행 및 검증:
+- `node --check` 를 통해 `MemoRepositorySupabase.js`, `MemoRepositoryMemory.js` 의 문법 구문 체크 정상 통과.
+- `npm run smoke:full-traversal` 자동화 통합 테스트 0 에러 정상 완료.
+
+결과: ✅ 완료
+
+## [2026-08-01 10:35] [기능개선] 쪽지함 풋터 메뉴 간소화 (WMAIL 제거, W:쓰기 단일화) 및 GO WMAIL 메뉴 이동 로직 개선
+
+**LOG_ID: 20260801_1035**
+목표:
+- 쪽지함 하단 메뉴바(풋터)에서 다른 단축키들과의 일치 및 간결성을 위해 중복 노출되던 WMAIL:올리기 토큰을 삭제하고 W:쓰기 위주로 단일화한다.
+- `GO WMAIL` (또는 `WMAIL`) 전역 명령어 입력 시, 단순히 글쓰기 화면만 로딩하던 방식에서, 쪽지함 수신함 목록(/memo)으로 완전히 메뉴 이동을 한 후에 글쓰기 폼 에디터가 연달아 뜨도록 개선한다.
+
+수행 작업:
+1. **쪽지함/편지읽기 풋터 갱신**:
+   - `public/js/core/commandFooterText.js` 의 56라인(`memoList`), 220라인(`order`)에서 `WMAIL:올리기` 토큰 제거.
+   - 64라인(`memoView`)의 편지 읽기 화면 내 `WMAIL:전달`을 실제 단축 명령어와 일치하게 `FW:전달` 로 수정하고, `K:보관` 또한 `KEEP:보관`으로 함께 변경함.
+   - 215라인과 217라인의 `K:보관해제` 및 `K:보관` 풋터 토큰을 각각 `KEEP:보관해제` 및 `KEEP:보관` 으로 교정.
+2. **GO WMAIL 메뉴 라우팅 이동 로직 개선**:
+   - `public/js/core/commandRouterGlobalNavigation.js` 의 337라인 `WMAIL` 명령어 분기 내에 `state._memoBox = 'inbox'; await showMemoList();` 실행 코드를 덧붙여 쪽지함 메뉴로 확실히 이동한 후 `showMemoWrite()`가 실행되도록 수정.
+   - `public/js/core/menuNavigationActions.js` 의 95라인 `WMAIL` 경로 이동 매칭 내에도 `state._memoBox = 'inbox'; await refs.showMemoList();` 코드를 삽입하여 메뉴 라우팅이 동기화되도록 수정.
+
+실행 및 검증:
+- `node --check` 를 통해 `commandFooterText.js`, `commandRouterGlobalNavigation.js`, `menuNavigationActions.js` 의 구문 오류 없음 확인.
+- 브라우저 서브에이전트 검증: `/memo` 접속 시 하단 메뉴에 `WMAIL:올리기`가 숨고 `W:쓰기`만 존재함을 확인. `GO WMAIL` 입력 시 정상적으로 목록을 거쳐 글쓰기 화면으로 진입하고, `Escape` 입력 시 안전하게 다시 `/memo` 목록 화면으로 리턴하는 것을 스크린샷으로 검증 완료.
+- `npm run smoke:full-traversal` 자동화 테스트 전수 패스.
+
+결과: ✅ 완료
+
+## [2026-08-01 10:20] [기능개선] 편지(쪽지) 쓰기 화면을 정통 PC통신 폼 에디터로 개선
+
+**LOG_ID: 20260801_1020**
+목표:
+- `/memo/write` (wmail) 화면을 기존의 스크롤되는 대화식 한 줄 입력(줄 누적) 방식에서, 일반 게시판(`tosysop`) 글쓰기 화면처럼 "받는 사람" 과 "내용" 입력 필드가 고정 배치된 정통 PC통신 단말기 스타일 폼 에디터 형식으로 개편한다.
+
+수행 작업:
+1. **쪽지 쓰기 화면 폼 에디터 도입**:
+   - `public/js/core/memoScreens.js` 에 `renderMemoBbsEditor(flow, onSave, onCancel)` 함수를 신규 구현.
+   - 받는 사람 (`<input id="memo-ed-target">`) 및 본문 (`<textarea id="memo-ed-body">`) 두 개 필드와 구분선(`─`)을 갖는 BBS 폼 레이아웃 HTML 생성 및 상단바와 함께 렌더링.
+   - 키보드 이벤트 리스너(`onTargetKey`, `onBodyKey`, `onCmdKey`)를 부착하여 `Tab` 키 및 `ArrowUp/Down` 화살표 키로 필드 간 자유로운 상하 이동 및 포커싱 지원.
+   - 본문 에디터 내에서 `Ctrl+S` 또는 마지막 줄에 `.` (엔터)를 누르면 `doSave()`가 실행되어 발송 로직 진행되도록 구현.
+2. **화면 렌더링 분기 수정**:
+   - `renderMemoWriteScreen()` 에서 작성 중인 단계(`flow.stage`)가 대화형 선택 단계(`card_select`, `letter_type`, `delay_minutes`, `send_cmd`)인 경우에만 기존 CLI 히스토리 형식으로 그리도록 분류.
+   - 실제 메일 작성/편집 상태일 때만 `renderMemoBbsEditor(...)` 가 작동하도록 구성하여 전송 옵션 분기 시 무한 루프 오류 제거.
+
+실행 및 검증:
+- `node --check public/js/core/memoScreens.js` 실행 결과 문법 이상 없음 확인.
+- 브라우저 서브에이전트 조작 검증: `http://localhost:3000/memo/write` 에 자동 접속하여 '받는 사람(sysop)', '내용'을 탭 키로 자유롭게 이동하며 성공적으로 타이핑 및 `Ctrl+S` 저장을 수행, 이후 1~8 편지종류 대화창으로 끊김 없이 정확하게 전환됨을 스크린샷으로 검증 완료.
+- `npm run smoke:full-traversal` 회귀 테스트 전수 통과 (0 에러).
+
+결과: ✅ 완료
+
+## [2026-08-01 10:10] [기능개선] 쪽지함 편지 보관 명령어 단축키 K에서 KEEP으로 변경 및 설명 분리
+
+**LOG_ID: 20260801_1010**
+목표:
+- 쪽지(편지)함에서 특정 번호의 편지를 보관함에 넣거나 꺼내는 명령어를 K가 아닌 KEEP으로 전면 교체하여 사용성을 명확히 한다.
+- 이에 맞추어 터미널 명령어 메타데이터 및 도움말을 갱신한다.
+
+수행 작업:
+1. **쪽지함 커맨드 라우터 수정**:
+   - `public/js/core/commandRouterMemo.js` 의 339라인 목록 뷰 보관 매칭 정규식 `^K(?:\s+(\d+))?$` 를 `^KEEP(?:\s+(\d+))?$` 로 교체.
+   - 344-345라인 사용법 힌트 텍스트 내의 `K {번호}` 를 `KEEP {번호}` 로 수정.
+   - 452라인 본문 읽기 뷰 보관 매칭 `cmd === 'K'` 를 `cmd === 'KEEP'` 으로 수정.
+2. **도움말 메타데이터 갱신**:
+   - `public/js/core/commandService.js` 의 78라인 `K` 항목에서 쪽지함 설명을 분리하여 게시판 주제어 해제 전용으로 남기고, `KEEP` 항목을 새롭게 등록하여 쪽지함 보관함 이동 기능을 단독으로 설명하게 함.
+
+실행 및 검증:
+- `node --check` 를 통해 `commandRouterMemo.js` 및 `commandService.js` 문법에 이상 없음 확인.
+- `npm run smoke:full-traversal` 및 `node scripts/smoke-mobile-viewports.js` 실행 결과 모두 0 에러로 정상 통과.
+
+결과: ✅ 완료
+
+## [2026-08-01 10:05] [버그수정] 전역 `W` (글쓰기) 명령어의 접속자 목록 혼선 제거 및 단독 `WHO` 명령어 접속자 목록 연동 정상화
+
+**LOG_ID: 20260801_1005**
+목표:
+1. 글쓰기(Write) 단축 명령어인 `W`가 전역 초기화면 등에서 접속자 목록을 띄우던 혼선 버그 수정.
+2. 단독 `WHO`/`WH` 입력 시 '내 프로필 조회'로 오작동하던 276라인의 중복 정의를 제거하고, 정석대로 '접속자 목록 조회'로 연동 정상화.
+3. 이를 검증하는 Playwright 전수조사 스모크 테스트 스크립트 갱신.
+
+수행 작업:
+1. **글로벌 명령어 라우터 수정**:
+   - `public/js/core/commandRouterGlobalNavigation.js` 의 271라인 `showActiveUsers()` 조건문에서 `cmd === 'W'` 매칭 및 `isWriteConflictScreen` 가드를 제거. `W`는 글쓰기 화면으로만 가도록 일원화.
+   - `commandRouterGlobalNavigation.js` 의 276라인 프로필 분기에서 중복 정의된 `cmd === 'WHO'` 및 `cmd === 'WH'` 를 지우고 `cmd === 'PF'` 만 남겨, 단독 `WHO`/`WH` 입력 시 접속자 목록(`showActiveUsers`)으로 가도록 271라인과 완전 분리.
+2. **테스트 스크립트 갱신**:
+   - `scripts/smoke-full-traversal.js` 의 7122-7134라인에서 접속자 목록(WHO IS ONLINE)을 검증할 때 보내던 명령어 `W`를 `WHO`로 갱신하여 사양 정립.
+
+실행 및 검증:
+- `node --check` 를 통해 `commandRouterGlobalNavigation.js` 및 `smoke-full-traversal.js` 문법에 이상 없음 확인.
+- `npm run smoke:full-traversal` 및 `node scripts/smoke-mobile-viewports.js` 실행 결과 모두 0 에러로 정상 통과.
+
+결과: ✅ 완료
+
+## [2026-08-01 09:50] [버그수정] 대화실 `/OUT`·`/EX` 대소문자 정규화 적용 및 PDS 가상게시판 답글 들여쓰기 렌더링 수정
+
+**LOG_ID: 20260801_0950**
+목표: 
+1. 대화방 강퇴 `/OUT` 명령어 실행 시 영어 대소문자 미일치로 인한 강퇴 불가 버그 수정.
+2. 대화방 수신 거부 `/EX` 명령어 등록 및 필터링 시 대소문자 미일치 및 닉네임 필터링 누락 버그 수정.
+3. 자료실(PDS) 목록 렌더링 시 답글의 들여쓰기(`└ `) 미노출 버그 수정.
+4. 전수조사 스모크 테스트 과정에서 발견된 전역 명령어 `PERF` 의 힌트 잘림(줄바꿈 필터링 오작동) 버그 수정.
+
+수행 작업:
+1. **대화방 강퇴 대소문자 정규화**: 
+   - `src/server/ChatRoomRepositorySupabase.js` 및 `src/server/ChatRoomRepositoryMemory.js` 의 `kick` 메서드에서 대상 아이디(`userId`) 및 닉네임(`nickName`) 비교 시 양쪽 모두 `.toLowerCase()` 를 수행하도록 개선.
+2. **대화방 수신 거부 `/EX` 대소문자 및 닉네임 필터링**:
+   - `public/js/core/commandRouterChat.js` 에서 `/EX` 로 차단 타깃을 등록할 때 소문자 처리하여 `state._chatMutedUserIds` 에 담음.
+   - 메시지 필터링(수신 시, 활성화 대화방 메시지 렌더링 시, 이전 로그 복원 시) 시 상대의 `userId` 와 `nickName` 을 소문자화하여 차단 목록과 대조하도록 수정.
+3. **자료실(PDS) 답글 들여쓰기**:
+   - `public/js/core/ansiBoardBuilders.js` 의 `pdsLine` 함수에서 `post.step`에 따라 `buildThreadPrefix(post.step)`을 계산하고, 이를 post.title (또는 모바일 fallback fileLabel)에 접두사로 추가하도록 변경.
+4. **글로벌 `PERF` 명령어 힌트 복원**:
+   - `public/js/core/terminalHintFooter.js` 내 `setHint` 에서 개행 문자(`\n`)가 포함될 때 첫 줄만 필터링하는 조건에 `!text.startsWith('[시스템 성능 보고서]')` 를 추가하여, 다중 라인 형태의 성능 보고서 텍스트 전체가 힌트 엘리먼트에 안전하게 렌더링되도록 수정.
+
+실행 및 검증:
+- `node --check` 를 통해 수정한 4개 소스 파일 문법 오류 없음 확인.
+- `npm run smoke:boards` 및 `npm run smoke:chat-rooms` 성공.
+- `node scripts/smoke-command-parity.js` 성공.
+- `npm run smoke:full-traversal` 및 `node scripts/smoke-mobile-viewports.js` 실행 결과 모두 0 에러로 정상 통과.
+
+결과: ✅ 완료
+
 ## [2026-08-01 09:24] [보안수정] chatServiceRoutes POST /api/chat/rooms·kick·settings 인증 미들웨어 누락 수정
 
 **LOG_ID: 20260801_0924**
@@ -16822,6 +16973,44 @@ Result: ✅ 완료 - Visual layout checks on Chrome verified 100% pixel-perfect 
 - `HIST` 화면에서 이력이 13개까지만 출력되며 바로 아래에 `... 외 N개 더 있습니다.` 안내 문구가 하단 경계선과 넓은 간격을 두고 안정적으로 노출됩니다.
 
 결과: ✅ 완료. `node --check` 및 `smoke:vercel-ready` 전체 통과.
+
+---
+
+## [2026-08-01 12:43] smoke-full-traversal.js 구문 에러 수정 및 파일 분할
+
+**LOG_ID: 20260801_1243**
+목표:
+- `smoke-full-traversal.js` 파일에서 발생하는 IDE 파싱 구문 에러를 해결하기 위해 한글 주석 내 특수 문자 `—`를 교정하고, 거대한 단일 테스트 파일을 소형 단위 테스트 모듈들로 쪼갠다.
+
+변경 파일:
+- `scripts/smoke-full-traversal.js`
+- `scripts/smoke/common-utils.js` (신설)
+- `scripts/smoke/board-tests.js` (신설)
+- `scripts/smoke/chat-tests.js` (신설)
+- `scripts/smoke/pds-tests.js` (신설)
+- `scripts/smoke/auth-tests.js` (신설)
+- `scripts/smoke/profile-tests.js` (신설)
+- `scripts/smoke/system-tests.js` (신설)
+- `scripts/smoke/misc-tests.js` (신설)
+- `WORK_LOG.md`
+
+수행 작업:
+1. `smoke-full-traversal.js` 파일 7153라인 주석의 `—` 특수문자를 `-`로 수정하여 IDE 파서 에러 원인 제거.
+2. E2E 테스트 공통 유틸 함수 및 브라우저 하네스 모킹 함수들을 `scripts/smoke/common-utils.js`로 분리.
+3. 게시판, 대화방, 자료실, 인증, 프로필, 시스템 전역 명령어, 기타 서비스 관련 테스트 블록을 각각 개별 파일로 분리.
+4. `smoke-full-traversal.js` 메인 스크립트가 각 모듈을 임포트하여 실행하도록 구조 개편.
+
+실행:
+- `node --check scripts/smoke-full-traversal.js`
+- `node --check scripts/smoke/*.js`
+- `npm run smoke:full-traversal`
+
+기대:
+- IDE에서 `smoke-full-traversal.js` 파일의 구문 에러 표시가 사라진다.
+- 전체 탐색 E2E 스모크 테스트(`smoke:full-traversal`)가 기존과 완전히 동일하게 정상 작동한다.
+
+결과: (작업 중)
+
 
 
 

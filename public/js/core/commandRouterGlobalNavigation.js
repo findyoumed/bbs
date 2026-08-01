@@ -268,12 +268,14 @@ export function createGlobalNavigationCommandHandler(deps) {
     // [LOG_ID: 20260714_2100] 원전(NOW_MENU.DAT) 명령어표의 UID(총 접속자 ID 조회)/
     // USER ALL(전체 메뉴별 이용자 현황)을 추가 — 우리 접속자 목록 화면이 이미 사용자별
     // 위치(위치 컬럼)까지 보여주므로 기존 화면 그대로 재사용한다(신규 화면 불필요).
-    if (cmd === 'USER' || cmd === 'USER ALL' || cmd === 'UID' || cmd === 'WHO' || cmd === 'WH' || (cmd === 'W' && !isWriteConflictScreen)) {
+    // [LOG_ID: 20260801_1005] W는 글쓰기(Write) 명령어이므로 접속자 목록 분기에서 제외하고, WHO/WH는 접속자 목록 조회가 맞으므로 유지한다.
+    if (cmd === 'USER' || cmd === 'USER ALL' || cmd === 'UID' || cmd === 'WHO' || cmd === 'WH') {
       await showActiveUsers();
       return true;
     }
 
-    if (cmd === 'PF' || cmd === 'WHO' || cmd === 'WH') {
+    // [LOG_ID: 20260801_1005] 단독 PF는 내 프로필 조회로 동작하게 하고, 단독 WHO/WH는 위의 접속자 목록 조회 분기에서 처리되므로 제외한다.
+    if (cmd === 'PF') {
       // [LOG: 20260729_1624] 단독 PF/WHO는 로그인한 사용자에게만 허용 — 비로그인 시 로그인 안내.
       if (state.user?.isGuest) {
         setHint('회원 프로필 조회는 로그인 후 이용하실 수 있습니다.');
@@ -332,13 +334,16 @@ export function createGlobalNavigationCommandHandler(deps) {
     }
 
     // [LOG_ID: 20260713_1160] 나우누리 편지쓰기(WMAIL) 명령어 배선 추가
+    // [LOG_ID: 20260801_1035] WMAIL을 단순 화면 띄우기가 아닌 쪽지함 메뉴 이동 후 글쓰기가 실행되도록 개선
     if (cmd === 'WMAIL') {
       if (state.user?.isGuest) {
         setHint('쪽지 기능은 로그인 후 사용하실 수 있습니다.');
         setDefaultPrompt();
         return true;
       }
-      if (typeof showMemoWrite === 'function') {
+      if (typeof showMemoList === 'function' && typeof showMemoWrite === 'function') {
+        state._memoBox = 'inbox';
+        await showMemoList();
         await showMemoWrite();
         return true;
       }

@@ -93,7 +93,9 @@ export function createMenuNavigationActions(deps) {
       }
     }
     if (normalized === 'WMAIL') {
-      if (typeof refs.showMemoWrite === 'function') {
+      if (typeof refs.showMemoList === 'function' && typeof refs.showMemoWrite === 'function') {
+        state._memoBox = 'inbox';
+        await refs.showMemoList();
         await refs.showMemoWrite();
         return true;
       }

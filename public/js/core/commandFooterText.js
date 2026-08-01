@@ -53,7 +53,8 @@ export const CMD_ORDER = {
   chatLobby: ['P', 'T', 'GO', 'O:방만들기', 'H'],
   // [LOG_ID: 20260722_3700] DD:삭제 — 나우누리 책(p.114) "DD 3-9"(범위)/"DD 1,3,4..."(나열)
   // 다중 삭제 재현.
-  memoList: ['P', 'T', 'GO', 'W:쓰기', 'WMAIL:올리기', 'DD:삭제', 'H'],
+  // [LOG_ID: 20260801_1035] WMAIL:올리기 메뉴바 노출 제거
+  memoList: ['P', 'T', 'GO', 'W:쓰기', 'DD:삭제', 'H'],
   // [LOG_ID: 20260716_1800] K:보관 — 하이텔 (10)-5 편지보관함(mbox).
   // [LOG_ID: 20260722_3500] N/A — 하이텔 책(p.109) "이동 명령어 'A'(나중에 도착한 편지)/'N'(전에 도착한 편지)".
   // terminalHintMarkup.js가 정확히 '이전글'/'다음글' 라벨만 post-view 전용으로 숨기므로(이번 세션에서
@@ -61,7 +62,8 @@ export const CMD_ORDER = {
   // [LOG_ID: 20260726_0010] 본문 페이징 추가(buildMemoViewAnsi) — F가 이미 "쪽지 전달"이라
   // 다른 페이징 화면처럼 F:다음을 못 쓴다(엔터로만 다음쪽 이동). B:이전쪽은 페이지가 남아있을
   // 때만 자동으로 뜬다(terminalHintMarkup.js의 '이전쪽' 라벨 매칭, help/policy와 동일 메커니즘).
-  memoView: ['L:목록', 'B:이전쪽', 'N:다음편지', 'A:이전편지', 'P', 'T', 'GO', 'RE:답장', 'WMAIL:전달', 'K:보관', 'DD:삭제', 'H'],
+  // [LOG_ID: 20260801_1035] WMAIL:전달을 FW:전달로 수정, K:보관을 KEEP:보관으로 변경
+  memoView: ['L:목록', 'B:이전쪽', 'N:다음편지', 'A:이전편지', 'P', 'T', 'GO', 'RE:답장', 'FW:전달', 'KEEP:보관', 'DD:삭제', 'H'],
   memoWrite: ['P:취소', 'SEND:전송', 'H'],
   // [LOG_ID: 20260719_2300] ME:쪽지쓰기 — 나우로 웹프리 ID수첩("아이디 클릭 → 바로 쪽지 보내기") 재현.
   profile: ['P', 'T', 'GO', 'ME:쪽지쓰기', 'H'],
@@ -212,12 +214,13 @@ export function createCommandFooterTextUtils(deps) {
     // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) 추가 — 상자가 셋이 됐다.
     if (category === 'memoList' && state) {
       if (state._memoBox === 'archive') {
-        order = ['P', 'T', 'GO', 'I:받은쪽지', 'S:보낸쪽지', 'K:보관해제', 'H'];
+        order = ['P', 'T', 'GO', 'I:받은쪽지', 'S:보낸쪽지', 'KEEP:보관해제', 'H'];
       } else if (state._memoBox === 'sent') {
-        order = ['P', 'T', 'GO', 'I:받은쪽지', 'MB:보관함', 'CM:발송취소', 'K:보관', 'H'];
+        order = ['P', 'T', 'GO', 'I:받은쪽지', 'MB:보관함', 'CM:발송취소', 'KEEP:보관', 'H'];
       } else {
         // [LOG_ID: 20260720_1740] WMAIL:올리기(나우누리), WC:축하카드(vmail), GRP:그룹(주소록) 3사 기능 힌트 전역 통합
-        order = ['P', 'T', 'GO', 'W:쓰기', 'WMAIL:올리기', 'WC:축하카드', 'GRP:그룹', 'S:보낸쪽지', 'MB:보관함', 'K:보관', 'H'];
+        // [LOG_ID: 20260801_1035] WMAIL:올리기 토큰 숨김 및 K:보관을 KEEP:보관으로 변경
+        order = ['P', 'T', 'GO', 'W:쓰기', 'WC:축하카드', 'GRP:그룹', 'S:보낸쪽지', 'MB:보관함', 'KEEP:보관', 'H'];
       }
     }
 

@@ -79,16 +79,18 @@ class MemoryMemoRepository {
   async createMemo(input = {}, context = {}) {
     const payload = validateMemoInput(input);
     const saveToSent = input.saveToSent !== false;
+    // [LOG_ID: 20260801_1106] Supabase 구현과 일관성을 맞추어 senderUserId를 항상 채워주고
+    // 대신 senderArchived를 !saveToSent 로 설정한다.
     const memo = {
       id: this.nextId++,
-      senderUserId: saveToSent ? normalizeText(context.userId, 'guest').toLowerCase() : null,
+      senderUserId: normalizeText(context.userId, 'guest').toLowerCase(),
       recipientUserId: payload.recipientUserId,
       title: payload.title,
       content: payload.content,
       isRead: false,
       createdAt: new Date().toISOString(),
       readAt: null,
-      senderArchived: false,
+      senderArchived: !saveToSent,
       recipientArchived: false
     };
     this.memos.push(memo);

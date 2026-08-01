@@ -3380,7 +3380,9 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
 }
 
 /* [LOG_ID: 20260725_1333] 글 작성 및 수정(post-write) 화면 한정 세로 Flex 공간 확장 (메인 등 타 화면 전역 영향 방지) */
-body[data-screen="post-write"] .ansi-screen {
+/* [LOG_ID: 20260801_1125] 쪽지/편지 작성(memo-write) 화면도 세로 Flex 공간 확장 동일 적용 */
+body[data-screen="post-write"] .ansi-screen,
+body[data-screen="memo-write"] .ansi-screen {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -3388,7 +3390,8 @@ body[data-screen="post-write"] .ansi-screen {
     height: 100%;
 }
 
-body[data-screen="post-write"] .ansi-screen-body {
+body[data-screen="post-write"] .ansi-screen-body,
+body[data-screen="memo-write"] .ansi-screen-body {
     flex: 1;
     min-height: 0;
     display: flex;
