@@ -39,6 +39,10 @@ class MemoryBoardRepositoryCore {
     assertAuthenticatedBoardUser(context);
     const parent = this.repo.findPostRecord(boardId, parentId);
     if (!parent) throw createHttpError(404, '원문 없음');
+    // [LOG: 20260802_1400] deletePost가 원글(step=0)을 tombstone([삭제된 글입니다])으로 남길 때
+    // replyToPost는 이 자리표시자 행이 DB에 존재하므로 !parent 검사를 통과해 답글을 허용했다.
+    // 논리적으로 삭제된 원글에는 답글을 달 수 없어야 한다(Supabase 드라이버와 동일 규칙).
+    if (parent.title === '[삭제된 글입니다]') throw createHttpError(404, '삭제된 게시글에는 답글을 달 수 없습니다.');
     const data = sanitizeNewPostInput(input, context);
     const sourceBoardId = this.repo.resolveMutationBoardId(boardId, parent?.boardId);
     this.repo.posts.forEach(p => { if (p.boardId === sourceBoardId && p.family === parent.family && p.orderby > parent.orderby) p.orderby++; });

@@ -142,6 +142,13 @@ class MemoryConfRepository {
     const room = this._findRoom(agenda.roomNo);
     if (!room.isOpen) throw createHttpError(409, '닫힌 회의실의 안건에는 재청할 수 없습니다.');
     const userId = normUserId(context.userId, 'guest');
+    // [LOG: 20260802_1400] 발의자(authorId)가 자신의 안건에 재청(self-second)하는 것을 허용하면
+    // 1인이 발의+재청을 동시에 해 절차상 의결정족수를 인위적으로 부풀릴 수 있다.
+    // 재청은 발의자 외의 제3자가 "이 안건을 논의할 가치가 있다"고 동의하는 의회 절차.
+    // createAgenda와 동일한 패턴으로 발의자 본인은 재청 불가.
+    if (userId === agenda.authorId) {
+      throw createHttpError(400, '자신이 발의한 안건에는 재청할 수 없습니다.');
+    }
     if (this.seconds.some((s) => s.agendaId === agenda.id && s.userId === userId)) {
       throw createHttpError(409, '이미 재청한 안건입니다.');
     }

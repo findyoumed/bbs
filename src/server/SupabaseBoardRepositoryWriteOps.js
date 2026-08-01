@@ -74,6 +74,12 @@ async function replyToPost(repo, boardId, parentPostId, input, context = {}) {
   if (!parent) {
     throw createHttpError(404, 'Parent post was not found.');
   }
+  // [LOG: 20260802_1400] deletePost가 답글이 달린 원글(step=0)을 완전 삭제 대신 tombstone으로
+  // 남길 때(title='[삭제된 글입니다]'), fetchPostByLocalId는 해당 행이 DB에 있으므로 !parent
+  // 검사를 통과하여 삭제된 원글에도 답글을 달 수 있었다. Memory 드라이버와 동일한 방지 규칙.
+  if (parent.title === '[삭제된 글입니다]') {
+    throw createHttpError(404, '삭제된 게시글에는 답글을 달 수 없습니다.');
+  }
 
   const data = sanitizeNewPostInput(input, context);
   const now = new Date().toISOString();

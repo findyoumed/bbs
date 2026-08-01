@@ -1,3 +1,53 @@
+## [2026-08-02 14:00] [버그수정] self-second / tombstone reply — 2종 "self-X" 계열 버그 수정
+
+**LOG_ID: 20260802_1400**
+목표: 32라운드 — "자매 메서드 간 검사 불일치 / self-X 계열" 패턴을 Conf(secondAgenda), Board(replyToPost 삭제된 원글) 도메인에서 조사 후 실제 재현 가능한 버그 2건 수정.
+
+조사 범위:
+- **Board `recommendPost`**: 이미 `postAuthorId === userId` 검사 완비. 이상 없음.
+- **VoteRepository `castVote`**: 투표 중복 방지(UNIQUE)만 있고 "자기 투표 방지"는 없으나, 투표는 투표장(poll) 생성자와 참여자가 분리된 도메인이라 self-vote 자체가 별도 의미를 가지지 않음(투표 결과의 통계 왜곡은 없음). 이상 없음.
+- **Conf `secondAgenda` self-second**: createAgenda(발의)와 secondAgenda(재청)에서 동일 userId로 가능 — **실제 버그 발견**.
+- **Board `replyToPost` + tombstoned parent**: deletePost가 원글을 '[삭제된 글입니다]' tombstone으로 남기면, replyToPost는 행이 DB에 존재하므로 !parent 검사를 통과해 답글 허용 — **실제 버그 발견**.
+- **Memo 자기 발신**: createMemo에 sender=recipient 제한 없음. 자기 자신에게 메모를 보내면 받은편지함/보낸편지함에 동시에 노출되는 특이 동작 존재. 단, 정보 노출이나 무결성 위반은 없어 설계 한계로 분류(수정 대상 제외).
+- **Chat `updateRoom`**: 이미 `room.owner_user_id !== requesterId` 검사 완비. 이상 없음.
+
+발견 버그 1 — `secondAgenda` self-second:
+- Memory/Supabase 양쪽 `secondAgenda` 모두 발의자(authorId/author)가 자신의 안건에 재청(second)하는 것을 허용했다.
+- 재청(동의)은 발의자 외의 제3자가 "이 안건을 논의할 가치가 있다"고 확인하는 의회 절차. 발의자가 스스로 재청하면 실제 지지자가 없어도 안건이 정족수를 충족하는 것처럼 위장 가능.
+- 재현(Memory): createAgenda(userId='alice') → secondAgenda(userId='alice') → 200 성공, secondCount=1 (버그). 수정 후 → 400 "자신이 발의한 안건에는 재청할 수 없습니다."
+- 재현(Supabase): 동일한 userId로 테스트 → 200 성공 (버그). 수정 후 → 400 차단. 테스트 데이터 정리 완료.
+
+발견 버그 2 — `replyToPost` tombstoned parent:
+- deletePost가 원글(step=0)에 답글이 달린 경우 완전 삭제 대신 title='[삭제된 글입니다]', content=''로 tombstone 처리해 스레드 구조를 보존한다.
+- replyToPost는 parent 존재를 `!parent` null 검사로만 확인해, tombstone 행이 존재하는 경우 404를 건너뛰고 삭제된 원글에 답글 허용.
+- 재현(Memory): createPost → replyToPost(answer) → deletePost(root, tombstones) → replyToPost(root) → 200 성공 (버그). 수정 후 → 404 "삭제된 게시글에는 답글을 달 수 없습니다."
+
+수정:
+- `ConfRepositoryMemory.secondAgenda`: `userId === agenda.authorId` 이면 400 오류 추가.
+- `ConfRepositorySupabase.secondAgenda`: `userId === agenda.author` 이면 400 오류 추가.
+- `MemoryBoardRepositoryCore.replyToPost`: `parent.title === '[삭제된 글입니다]'` 이면 404 오류 추가.
+- `SupabaseBoardRepositoryWriteOps.replyToPost`: 동일한 tombstone 검사 추가.
+
+변경 파일:
+- `src/server/ConfRepositoryMemory.js` (5줄 주석 + 3줄 코드 추가)
+- `src/server/ConfRepositorySupabase.js` (5줄 주석 + 3줄 코드 추가)
+- `src/server/MemoryBoardRepositoryCore.js` (4줄 주석 + 1줄 코드 추가)
+- `src/server/SupabaseBoardRepositoryWriteOps.js` (5줄 주석 + 3줄 코드 추가)
+
+검증:
+- Memory: self-second 4케이스(self 400, 정상second, 중복 409, 닫힌방 409) 모두 통과 ✓
+- Memory: replyToPost tombstone 검사(404 차단, 기존 답글 유지) 통과 ✓
+- Supabase: self-second 2케이스(self 400, 타인 정상second) 통과, 테스트 데이터 정리 ✓
+- `node --check` 4개 파일 모두 통과 ✓
+- `npm run smoke:boards` 통과 ✓
+- `npm run smoke:command-parity` 통과 ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+- `npm run smoke:vercel-ready` — ok:true ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 12:00] [버그수정] kick — 방 개설자 자기 자신 강퇴(self-kick) 허용 버그 수정
 
 **LOG_ID: 20260802_1200**

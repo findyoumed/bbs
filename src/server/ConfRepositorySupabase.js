@@ -166,6 +166,12 @@ class SupabaseConfRepository extends BaseRepository {
     const room = await this._findRoomRow(agenda.roomNo);
     if (room.is_open === false) throw createHttpError(409, '닫힌 회의실의 안건에는 재청할 수 없습니다.');
     const userId = normUserId(context.userId, 'guest');
+    // [LOG: 20260802_1400] Memory 드라이버와 동일한 self-second 방지 — Supabase 드라이버는
+    // UNIQUE 제약(agenda_id, user_id)으로 중복 재청을 막지만 발의자 본인의 재청은 별개 문제라
+    // 제약 이전에 먼저 명시적으로 차단한다. agenda.author == _publicAgenda의 author 필드.
+    if (userId === agenda.author) {
+      throw createHttpError(400, '자신이 발의한 안건에는 재청할 수 없습니다.');
+    }
     const { error } = await this.client.from(this.secondsTable)
       .insert({ agenda_id: Number(agendaId), user_id: userId, created_at: new Date().toISOString() });
     if (error) {
