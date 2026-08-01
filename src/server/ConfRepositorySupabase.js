@@ -161,6 +161,10 @@ class SupabaseConfRepository extends BaseRepository {
   // ── 재청 ──
   async secondAgenda(agendaId, context = {}) {
     const agenda = await this.getAgenda(agendaId, context);
+    // [LOG: 20260801_1000] createAgenda는 닫힌 방에 발의를 막지만 secondAgenda는 동일 검사가
+    // 없어, 닫힌 방의 안건에 재청이 가능했다 — createAgenda와 동일한 규칙 적용.
+    const room = await this._findRoomRow(agenda.roomNo);
+    if (room.is_open === false) throw createHttpError(409, '닫힌 회의실의 안건에는 재청할 수 없습니다.');
     const userId = normUserId(context.userId, 'guest');
     const { error } = await this.client.from(this.secondsTable)
       .insert({ agenda_id: Number(agendaId), user_id: userId, created_at: new Date().toISOString() });

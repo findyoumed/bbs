@@ -137,6 +137,10 @@ class MemoryConfRepository {
   async secondAgenda(agendaId, context = {}) {
     const agenda = this.agendas.find((a) => a.id === Number(agendaId));
     if (!agenda) throw createHttpError(404, '안건을 찾을 수 없습니다.');
+    // [LOG: 20260801_1000] createAgenda는 닫힌 방에 발의를 막지만 secondAgenda는 동일 검사가
+    // 없어, 닫힌 방의 안건에 재청이 가능했다 — createAgenda와 동일한 규칙 적용.
+    const room = this._findRoom(agenda.roomNo);
+    if (!room.isOpen) throw createHttpError(409, '닫힌 회의실의 안건에는 재청할 수 없습니다.');
     const userId = normUserId(context.userId, 'guest');
     if (this.seconds.some((s) => s.agendaId === agenda.id && s.userId === userId)) {
       throw createHttpError(409, '이미 재청한 안건입니다.');

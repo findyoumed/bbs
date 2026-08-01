@@ -1,3 +1,48 @@
+## [2026-08-02 09:00] [버그수정] secondAgenda — 닫힌 회의실 안건 재청 가능 버그 수정
+
+**LOG_ID: 20260802_0900**
+목표: 29라운드 — 미탐사 영역(PDS 첨부파일, 랭킹/포인트, 알림/읽음 처리, 게시글 조회수, 관리자 기능, 파일 업로드 검증, 세션 만료, 정렬 안정성) 전수 조사 후 실제 재현 가능한 버그 선정.
+
+조사 범위:
+- 게시글 hit 카운트 (`SupabaseBoardRepositoryPostReads.js`): read-then-write 패턴이나, DB 원자적 증가 불가(PostgREST 제약) → 수정 불가(스키마 변경 필요). 추천수(recommend)는 이미 별도 테이블 COUNT 방식으로 수정 완료(20260731_2330).
+- 첨부파일 다운로드 카운트 (`AttachmentRepositorySupabase._read`): 동일 read-then-write 패턴, DB 제약으로 수정 불가.
+- 메모 읽음 처리 (`MemoRepositorySupabase.markRead`): `memo.recipientUserId !== userId` 검사로 발신자가 타인 메모를 읽음 처리 불가 — 올바름.
+- 투표 (`VoteRepositorySupabase`): `ensureAuthenticated` 미들웨어 있음, UNIQUE 제약으로 중복 방지 — 올바름.
+- 멤버 레벨 (`setLevel`): `normalizeLevel(1~99)` + `validLevels` 검증 — 올바름.
+- 정렬 안정성: 비-threaded 게시판 `order('id', DESC)` = primary key → 안정. threaded는 `(family_id, sort_order)` 조합 — `shiftReplyOrdering` 동시성 시 중복 가능하나 데이터 손실 없음.
+- 관리자 listMembers LIKE 이스케이프: admin 전용 엔드포인트, 영향 제한적.
+- conf `secondAgenda` 닫힌 방 검사 누락 ← **실제 버그 발견**
+
+발견:
+- `ConfRepositoryMemory.secondAgenda` / `ConfRepositorySupabase.secondAgenda` 양쪽 모두
+  닫힌 회의실 여부를 확인하지 않아, 회의실이 닫힌(`is_open=false`) 후에도
+  `/api/conf/agendas/:agendaId/second` POST 성공(409 반환 없음).
+- 비교: `createAgenda`는 `if (!room.isOpen)` / `if (room.is_open === false)` 로 닫힌 방을 올바르게 거부.
+- 재현: Memory 드라이버로 방 개설 → 안건 발의 → 방 닫기 → `secondAgenda` 호출 시 성공.
+  수정 전: 닫힌 방 안건에 재청 성공(버그). 수정 후: 409 "닫힌 회의실의 안건에는 재청할 수 없습니다."
+
+수정:
+- `ConfRepositoryMemory.secondAgenda`: agenda 조회 후 `this._findRoom(agenda.roomNo)` 호출,
+  `if (!room.isOpen)` 검사 추가.
+- `ConfRepositorySupabase.secondAgenda`: agenda 조회(`getAgenda`) 후 `this._findRoomRow(agenda.roomNo)` 호출,
+  `if (room.is_open === false)` 검사 추가.
+
+변경 파일:
+- `src/server/ConfRepositoryMemory.js` (4줄 추가 + 주석)
+- `src/server/ConfRepositorySupabase.js` (4줄 추가 + 주석)
+
+검증:
+- 재현 스크립트: 방개설 → 안건발의 → 방닫기 → secondAgenda 호출 → 409 정상 반환 확인 ✓
+- 열린 방 secondAgenda 정상 동작 유지 확인 ✓
+- `node --check ConfRepositoryMemory.js` 통과 ✓
+- `node --check ConfRepositorySupabase.js` 통과 ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+- `npm run smoke:command-parity` 통과 ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 02:00] [조사] rejected Promise 영구 캐싱 패턴 전수 조사 — 추가 문제 없음
 
 **LOG_ID: 20260802_0200**
