@@ -131,6 +131,8 @@ export function createMenuNavigation(deps) {
 
     // [LOG: 20260611_1400] Clear loading timer before rendering to prevent overwriting content
     setReady(true);
+    // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+    if (state.screen !== 'main') return;
 
     if (!menuTree) {
       screenEl.innerHTML = '<div class="bbs-error">메뉴를 불러오지 못했습니다.</div>';
@@ -215,9 +217,11 @@ export function createMenuNavigation(deps) {
     setLoading('연결하는 중입니다..');
 
     await Promise.all([loadBoards(), loadMenuTree(), loadBoardCounts()]);
-    
+
     // [LOG: 20260611_1405] Clear loading timer before rendering
     setReady(true);
+    // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+    if (state.screen !== (menuPath === 'top' ? 'main' : 'board-select')) return;
 
     const menuNode = menuPath === 'top'
       ? state.menuTree

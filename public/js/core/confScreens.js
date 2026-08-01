@@ -57,6 +57,8 @@ export function createConfScreens(deps) {
     if (!fromHistory) { updateURL(); pushHistory(); }
     try {
       const rooms = await apiFetch('/api/conf/rooms?closed=1');
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'conf-rooms') return;
       // [LOG_ID: 20260722_2600] 사용자 지적("다른 메뉴들은 선택 >> 같은데") — 회의실 목록은
       // GAME 메뉴·board-select 등 다른 번호 선택 목록과 같은 구조인데 커스텀 프롬프트를 써서
       // 달라 보였다. 인자를 생략해 기본 프롬프트("선택 >>")를 쓰도록 통일한다.
@@ -83,6 +85,8 @@ export function createConfScreens(deps) {
     if (!fromHistory) { updateURL(); pushHistory(); }
     try {
       const [room, agendas] = await Promise.all([fetchRoomMeta(no), apiFetch(`/api/conf/rooms/${no}/agendas`)]);
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'conf-agendas') return;
       state.serviceData.roomTitle = room.title;
       state.serviceData.roomOpen = room.isOpen !== false;
       // 목록에 표시된 안건 순번(no) → 실제 id 매핑 (라우터가 번호 입력을 id로 변환)
@@ -110,6 +114,8 @@ export function createConfScreens(deps) {
     if (!fromHistory) { updateURL(); pushHistory(); }
     try {
       const agenda = await apiFetch(`/api/conf/agendas/${id}`);
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'conf-agenda') return;
       state.serviceData.roomNo = agenda.roomNo;
       state.serviceData.agenda = agenda;
       const built = buildConfAgendaViewAnsi(agenda, requestedPageNo);

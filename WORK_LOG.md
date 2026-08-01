@@ -1,3 +1,42 @@
+## [2026-08-01 17:46] [버그수정] async 화면 경쟁 조건 가드 전수 확장 — 8개 파일 13곳
+
+**LOG_ID: 20260801_2000**
+목표: 20라운드 — 19라운드가 발견·수정한 "ESC 취소 후 stale async fetch가 이전 화면을 덮어씌우는" 패턴을 나머지 모든 async show* 함수로 전수 확장.
+
+발견:
+- 19라운드가 수정한 4개 파일(postListView, postViewView, newsScreens, weatherScreens) 외에 동일한 패턴이 8개 파일 13곳에 추가로 존재했다.
+- 공통 패턴: `state.screen = 'X'` 동기 설정 → `await apiFetch(...)` (100~500ms 소요) → 화면 전환 없이 바로 render 호출.
+- `cancelCommandExecution()`이 ESC 시 `state.screen = _commandScreenBeforeInFlight`로 복원하므로, fetch 완료 후 코드가 계속 실행되면 복원된 이전 화면 위에 stale 결과가 덮어씌워짐.
+- Node.js 시뮬레이션 + 실제 서버(port 19201 + Supabase DB)로 패턴 확인:
+  - `showVoteList`: ESC 50ms 뒤 화면 복원 → fetch 100ms 뒤 완료 → render 실행 = 경쟁 조건 재현.
+  - 수정 후: 가드가 render를 차단, 렌더 0회 확인.
+- 대상 함수 목록:
+  - `confScreens.js`: showConfRooms, showConfAgendas, showConfAgenda
+  - `voteScreens.js`: showVoteList, showVoteDetail
+  - `chatScreens.js`: showChatLobby (is-loading 클래스 정리 포함)
+  - `memoScreens.js`: showMemoList, showMemoView (읽음 처리 2차 await에도 가드 추가)
+  - `systemScreens.js`: showActiveUsers, showActivitySummary, showSystemDiagnostics, showMyStats
+  - `profileScreens.js`: showProfile
+  - `postScreens.js`: showAttachmentList
+  - `menuNavigation.js`: showMain, showBoardSelect
+
+수정:
+- 각 함수의 `await apiFetch(...)` 직후에 `if (state.screen !== 'X') return;` 가드 1줄 추가.
+- `showChatLobby`: 직접 추가한 `is-loading` 클래스를 가드에서 제거하는 로직 포함.
+- `memoScreens.showMemoView`: fetch 1차(쪽지 조회) + fetch 2차(읽음 처리) 각각에 가드 추가.
+- `menuNavigation.showMain/showBoardSelect`: `setReady(true)` 뒤에 가드 배치(로딩 표시 정상 해제 후 렌더만 차단).
+- 수정 파일 8개, 가드 추가 13곳(+3줄 주석 포함 총 +26줄).
+
+검증:
+- `node --check` 8개 파일 전부 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 0 에러 통과.
+- `smoke:boards`, `smoke:renderer-ui`, `smoke:auth-bridge`, `smoke:chat-rooms` 통과.
+
+결과: ✅ 8개 파일 수정. async 화면 경쟁 조건 가드 전수 적용 완료.
+
+---
+
 ## [2026-08-01 17:34] [버그수정] ESC 취소 후 stale 비동기 fetch가 화면을 덮어씌우는 경쟁 조건 수정
 
 **LOG_ID: 20260801_1930**

@@ -41,7 +41,10 @@ export function createPostScreens(deps) {
       void updateURL(true);
     }
     setLoading('연결하는 중입니다..');
-    const list = await loadAttachments(resolvedBoardId, resolvedPostId); state._attachments = list || [];
+    const list = await loadAttachments(resolvedBoardId, resolvedPostId);
+    // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+    if (state.screen !== 'attachment-list') return;
+    state._attachments = list || [];
     // [LOG_ID: 20260708_1030] renderAnsiScreenWithTopbar로 정통 상단바를 렌더링하고,
     // applyCommandFooter를 거쳐 setReady(true)까지 위임한다. 기존엔 setLoading()만 걸고
     // setReady를 부르지 않아 내부 400ms 로딩 타이머가 취소되지 않고 뒤늦게 발동해

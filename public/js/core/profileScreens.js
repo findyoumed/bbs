@@ -55,6 +55,8 @@ export function createProfileScreens(deps) {
       // [LOG: 20260429_0606] Missing profile routes should render an inline
       // fail-closed screen instead of surfacing a 404 fetch error.
       const response = await apiFetch(`/api/members/${encodeURIComponent(userId)}?allowMissing=1`);
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'profile') return;
       const member = extractProfileMember(response);
       if (!member) {
         await renderMissingProfile(userId);

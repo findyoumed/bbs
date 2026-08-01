@@ -136,6 +136,8 @@ export function createMemoScreens(deps) {
         try {
             const box = state._memoBox || 'inbox';
             const memos = await apiFetch(`/api/memos?box=${box}`);
+            // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+            if (state.screen !== 'memo-list') return;
             // [LOG_ID: 20260713_1620] 받은쪽지함에서만 지연편지의 지연 시간이 지나지 않은 항목을 숨긴다.
             state._memos = box === 'inbox' ? (memos || []).filter((m) => !isDelayedMemoPending(m)) : (memos || []);
 
@@ -169,6 +171,8 @@ export function createMemoScreens(deps) {
 
         try {
             const memo = await apiFetch(`/api/memos/${memoId}`);
+            // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드 (1차)
+            if (state.screen !== 'memo-view') return;
             const hydratedMemo = { ...(memo || {}) };
 
             // [LOG: 20260429_0042] Direct /memo/:memoId restores need the fetched memo context
@@ -176,6 +180,8 @@ export function createMemoScreens(deps) {
             // [LOG_ID: 20260713_1000] 내가 보낸 쪽지가 아닐 때만(남에게 받은 편지일 때만) 수신확인(읽음 처리) 처리
             if (hydratedMemo.senderUserId !== state.user?.userId && !hydratedMemo.isRead) {
                 const markedMemo = await apiFetch(`/api/memos/${memoId}/read`, { method: 'POST' });
+                // [LOG: 20260801_2000] 읽음 처리 중 화면 전환 경쟁 조건 가드 (2차)
+                if (state.screen !== 'memo-view') return;
                 Object.assign(hydratedMemo, markedMemo || {}, { isRead: true });
             }
 

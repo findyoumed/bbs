@@ -68,6 +68,8 @@ export function createSystemScreens(deps) {
     const applyFooter = () => applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     try {
       const users = await apiFetch('/api/system/active-users');
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'active-users') return;
       await renderSystemAnsiScreen(buildActiveUsersAnsi(users || []), applyFooter);
     } catch (e) {
       renderSystemError('접속자 정보를 가져오지 못했습니다.');
@@ -85,6 +87,8 @@ export function createSystemScreens(deps) {
     const applyFooter = () => applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     try {
       const data = await apiFetch('/api/system/activity-summary');
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'activity-summary') return;
       const { buildActivitySummaryAnsi } = deps;
       await renderSystemAnsiScreen(buildActivitySummaryAnsi(data), applyFooter);
     } catch (e) {
@@ -103,6 +107,8 @@ export function createSystemScreens(deps) {
     const applyFooter = () => applyCommandFooter('', getSupportedFooterText(state) || getCommandFooterText('systemInfo'));
     try {
       const info = await apiFetch('/api/system/info');
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'system-diagnostics') return;
       await renderSystemAnsiScreen(buildSystemDiagnosticsAnsi(info), applyFooter);
     } catch (e) {
       renderSystemError('시스템 정보를 가져오지 못했습니다.');
@@ -121,6 +127,8 @@ export function createSystemScreens(deps) {
     const applyFooter = () => applyCommandFooter('', getCommandFooterText('systemInfo'));
     try {
       const stats = await apiFetch('/api/members/stats');
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'my-stats') return;
       const { buildMyStatsAnsi } = deps;
       await renderSystemAnsiScreen(buildMyStatsAnsi(stats), applyFooter);
     } catch (e) {

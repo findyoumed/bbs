@@ -58,6 +58,8 @@ export function createVoteScreens(deps) {
 
     try {
       const votes = await apiFetch('/api/votes');
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'vote-list') return;
       const ansi = buildVoteListAnsi(votes || []);
       // [LOG_ID: 20260722_2600] 사용자 지적("다른 메뉴들은 선택 >> 같은데") — 설문 목록도
       // 번호로 항목을 고르는 목록 화면이라 기본 프롬프트("선택 >>")를 쓰도록 통일한다.
@@ -78,6 +80,8 @@ export function createVoteScreens(deps) {
 
     try {
       const vote = await apiFetch(`/api/votes/${id}`);
+      // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+      if (state.screen !== 'vote-detail') return;
       const built = buildVoteDetailAnsi(vote, requestedPageNo);
       state.serviceData.pageNo = built.pageNo;
       state.serviceData.pageCount = built.pageCount;

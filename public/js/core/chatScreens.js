@@ -65,6 +65,13 @@ export function createChatScreens(deps) {
       apiFetch('/api/chat/rooms')
     ]);
 
+    // [LOG: 20260801_2000] ESC 취소 후 stale fetch가 이전 화면을 덮어씌우는 경쟁 조건 가드
+    // is-loading 클래스는 여기서 직접 추가했으므로 조기 반환 시 직접 제거해야 한다.
+    if (state.screen !== 'chat-lobby') {
+      if (screenEl?.parentElement) screenEl.parentElement.classList.remove('is-loading');
+      return;
+    }
+
     const users = Array.isArray(usersData) ? usersData : (usersData?.users || []);
     const rooms = Array.isArray(roomsData) ? roomsData : (roomsData?.rooms || []);
     state._chatRooms = rooms;
