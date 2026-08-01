@@ -1,3 +1,39 @@
+## [2026-08-02 02:00] [조사] rejected Promise 영구 캐싱 패턴 전수 조사 — 추가 문제 없음
+
+**LOG_ID: 20260802_0200**
+목표: 28라운드 — 저장소 전체(모든 *RepositorySupabase.js, *RepositoryShared.js 및 비저장소 서버 파일)에서 lazy-init Promise 캐싱 패턴 전수 조사. 클라이언트 측 apiFetch await 누락 패턴도 병행 조사.
+
+조사 범위 및 결과:
+
+**Supabase 저장소 파일 (11개)**
+- `MemoRepositorySupabase.js` — 이미 수정됨 (20260802_0130), `.catch` 가드 정상 ✓
+- `ChatRoomRepositorySupabase.js` — 이미 수정됨 (20260802_0130), `.catch` 가드 정상 ✓
+- `SupabaseBoardRepositorySchema.js` — `ensureCapabilities()` resolved value 캐싱, Promise 아님 ✓
+- `VoteRepositorySupabase.js` — lazy-init Promise 패턴 없음 ✓
+- `ConfRepositorySupabase.js` — lazy-init Promise 패턴 없음 ✓
+- `MemberRepositorySupabase.js` — lazy-init Promise 패턴 없음 ✓
+- `AttachmentRepositorySupabase.js` — lazy-init Promise 패턴 없음 ✓
+- `ActivityRepositorySupabase.js` — lazy-init Promise 패턴 없음 ✓
+- `SupabaseBoardRepository.js` + ReadOps + WriteOps + Mutation — lazy-init 없음 ✓
+- `ChatRoomRepositorySupabaseQueries.js` — lazy-init 없음 ✓
+
+**비저장소 서버 파일**
+- `RssNewsTopicFeedHelpers.js` — `topicFeedWarmPromise`: `.finally()`로 항상 null 초기화, inflight 중복방지 가드(결과 캐싱 아님), `warmTopicFeeds()`는 `Promise.allSettled` + 개별 try/catch로 절대 reject하지 않음 → 안전 ✓
+- `MenuResolver.js` — `this.tree = this._loadTree()` 동기 함수(fs.readFileSync), Promise 아님 ✓
+- `AttachmentRepositoryLocal.js` — `this.index = this._loadIndex()` 동기 함수(fs.readFileSync), Promise 아님 ✓
+- `AuthMemberProfileService.js` — `this.memberSyncWarned` boolean 플래그, Promise 아님 ✓
+
+**클라이언트 측 apiFetch 조사**
+- `commandRouterChat.js:341` (귓속말 전송) / `commandRouterChat.js:630` (이모트) — 의도적 fire-and-forget, `.then().catch()` 정상 처리 ✓
+- `menuNavigation.js:129` — `Promise.all([ ..., apiFetch(...).catch(() => null), ... ])` 내부 ✓
+- `chatScreens.js:64-65` — `Promise.all([ apiFetch(...), apiFetch(...) ])` 내부 ✓
+
+발견: 새로운 버그 없음.
+
+결과: 조사 완료, 추가 버그 없음 — 커밋 건너뜀.
+
+---
+
 ## [2026-08-02 01:30] [버그수정] rejected Promise 영구 캐싱 — MemoRepositorySupabase / ChatRoomRepositorySupabase
 
 **LOG_ID: 20260802_0130**
