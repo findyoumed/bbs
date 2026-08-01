@@ -1,3 +1,27 @@
+## [2026-08-01 17:10] [버그수정] 쪽지쓰기 폼 에디터(bbs-form) 활성 중 cmdInput 입력이 textarea 내용을 덮어씌우던 문제 수정
+
+**LOG_ID: 20260801_1710**
+목표: 17라운드 — 쪽지쓰기 폼 에디터(`memoScreens.js`)의 실사용 흐름 검증 및 버그 발굴.
+
+발견:
+- `handleMemoRawInput`은 `state._terminalInputHandler`로 등록되어 화면 전환 전까지 cmdInput Enter에 응답한다. `renderMemoBbsEditor`가 폼을 그릴 때 `flow.stage = 'bbs-form'`으로 전환하지만, `handleMemoRawInput`의 분기는 `bbs-form`을 대응하는 케이스 없이 최하단 fallback(`flow.bodyLines.push(line)` + `renderMemoWriteScreen()`)까지 흘러내렸다.
+- **재현 경로**: 폼 에디터가 열린 상태에서 bodyEl의 Tab 키 → cmdInput 포커스 → 임의 텍스트 입력 후 Enter → `handleMemoRawInput` 호출 → `flow.bodyLines.push(입력텍스트)` 후 `renderMemoWriteScreen()` → `renderMemoBbsEditor`가 `bodyEl.value = flow.bodyLines.join('\n')`으로 textarea를 복원 — 사용자가 textarea에 직접 입력한 미저장 내용이 stale한 `flow.bodyLines`로 **무음 덮어씌워짐**. 빈 Enter(cmdInput 포커스 후 아무것도 입력하지 않고 Enter)도 동일하게 빈 줄이 추가됐다.
+- 폼 에디터의 Tab 사이클: targetEl → bodyEl → cmdInput(via Tab in bodyEl). `onCmdKey` 핸들러가 Tab+Shift·ArrowUp만 처리하고 Enter를 막지 않아서, cmdInput에서 Enter 시 전역 dispatcher가 `handleMemoRawInput`을 호출하는 경로가 열려 있었다.
+
+수정:
+- `memoScreens.js`의 `handleMemoRawInput`에 `flow.stage === 'bbs-form'` 가드 추가(`target` 단계 핸들러 바로 다음). `/q` 취소 명령은 `flow._doCancel()`(또는 폼 이전 단계 등록 실패 시 `cancelMemoWrite()`)로 연결하고, 그 외 cmdInput 입력은 `return true`로 소비만 하고 `bodyLines`·렌더링 무변경.
+- `scripts/smoke/memo-tests.js`에 `verifyMemoWriteFormGuard()` 회귀 테스트 추가 — `showMemoWrite('')` 후 `flow.stage === 'bbs-form'` 확인, `handleMemoRawInput('accidental text')` 호출 후 `flow.bodyLines` 불변·`state.screen` 불변을 검증.
+- `scripts/smoke-full-traversal.js`에 호출 추가.
+
+검증:
+- `node --check memoScreens.js`, `memo-tests.js`, `smoke-full-traversal.js` 전부 통과.
+- `smoke:full-traversal` — `bbs-form stage guard` 테스트 포함 **0 에러 통과**.
+- `smoke:command-parity` 통과.
+
+결과: ✅ 3개 파일(memoScreens.js +15줄, memo-tests.js +90줄, smoke-full-traversal.js +1줄).
+
+---
+
 ## [2026-08-01 16:51] [보안] 첨부파일 쓰기/부재 설정 라우트 ensureAuthenticated 누락 + setAbsent getJsonBody 미정의 버그 수정
 
 **LOG_ID: 20260801_1651**

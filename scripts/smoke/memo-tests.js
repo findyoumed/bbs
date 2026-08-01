@@ -470,7 +470,119 @@ async function verifyMemoWriteCoverage(errors) {
     }
 }
 
+// [LOG_ID: 20260801_1710] bbs-form stage guard 회귀 테스트 —
+// handleMemoRawInput이 bbs-form 단계에서 cmdInput 입력을 받았을 때 flow.bodyLines를 수정하지
+// 않음을 확인한다. 수정 전: bodyLines.push(line) + renderMemoWriteScreen() 호출로 textarea
+// 내용이 덮어씌워졌다. 수정 후: return true로 소비만 하고 상태를 변경하지 않는다.
+async function verifyMemoWriteFormGuard(errors) {
+    console.log('🔒 Checking bbs-form stage guard in handleMemoRawInput...');
+
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    try {
+        const moduleCache = new Map();
+        const { createMemoScreens } = loadBrowserHarnessModule(path.join(__dirname, '../..', 'public/js/core/memoScreens.js'), moduleCache);
+
+        const state = {
+            screen: 'main',
+            user: { userId: 'form-guard-tester', nickName: 'form-guard-tester', isGuest: false },
+            _currentMemoId: null,
+            _memoTarget: ''
+        };
+        const screenEl = createHarnessScreenEl();
+
+        globalThis.window = { innerWidth: 1280 };
+        // document.getElementById returns null for form element IDs (memo-ed-target / memo-ed-body)
+        // so renderMemoBbsEditor returns early after setting flow.stage = 'bbs-form',
+        // leaving flow._doCancel undefined — exactly the production condition we are guarding.
+        globalThis.document = {
+            getElementById() { return null; },
+            querySelectorAll() { return []; }
+        };
+
+        const memoScreens = createMemoScreens({
+            ansiToHTML: ansiToHTMLHarnessStub,
+            apiFetch: async () => { throw new Error('apiFetch should not be called in this test'); },
+            applyCommandFooter: async () => {},
+            buildMemoListAnsi: () => '',
+            buildMemoViewAnsi: () => '',
+            cmdInput: { focus() {} },
+            esc: escapeHtml,
+            getSupportedFooterText: () => '',
+            getMenuNodeByKey: () => null,
+            screenEl,
+            setHint: () => {},
+            setPrompt: () => {},
+            setLoading: () => {},
+            setReady: () => {},
+            state,
+            updateURL: () => {}
+        });
+
+        await memoScreens.showMemoWrite('');
+
+        if (state.screen !== 'memo-write') {
+            errors.push(`[bbs-form guard] showMemoWrite did not set state.screen to memo-write (got ${state.screen})`);
+            return;
+        }
+        if (!state._memoWriteFlow) {
+            errors.push('[bbs-form guard] showMemoWrite did not create state._memoWriteFlow');
+            return;
+        }
+        if (state._memoWriteFlow.stage !== 'bbs-form') {
+            errors.push(`[bbs-form guard] Expected flow.stage=bbs-form after showMemoWrite, got ${state._memoWriteFlow.stage}`);
+            return;
+        }
+
+        const bodyLinesBefore = state._memoWriteFlow.bodyLines.length;
+
+        // Simulate user typing in cmdInput while bbs-form editor is visible and pressing Enter.
+        // Before the fix this would have appended to flow.bodyLines and re-rendered the form,
+        // overwriting any textarea content typed directly by the user.
+        await memoScreens.handleMemoRawInput('accidental cmdInput text');
+
+        if (state._memoWriteFlow.bodyLines.length !== bodyLinesBefore) {
+            errors.push(`[bbs-form guard] handleMemoRawInput modified flow.bodyLines (${bodyLinesBefore} -> ${state._memoWriteFlow.bodyLines.length}). Textarea content would have been overwritten.`);
+            return;
+        }
+        if (state.screen !== 'memo-write') {
+            errors.push(`[bbs-form guard] handleMemoRawInput changed state.screen (expected memo-write, got ${state.screen})`);
+            return;
+        }
+
+        // Also verify that an empty Enter (just pressing Enter without text) does not modify bodyLines.
+        await memoScreens.handleMemoRawInput('');
+        if (state._memoWriteFlow.bodyLines.length !== bodyLinesBefore) {
+            errors.push(`[bbs-form guard] handleMemoRawInput('') modified flow.bodyLines in bbs-form stage`);
+        }
+    } catch (error) {
+        errors.push(`[bbs-form guard] unexpected error: ${error.message}`);
+    } finally {
+        if (typeof originalWindow === 'undefined') {
+            delete globalThis.window;
+        } else {
+            globalThis.window = originalWindow;
+        }
+        if (typeof originalDocument === 'undefined') {
+            delete globalThis.document;
+        } else {
+            globalThis.document = originalDocument;
+        }
+    }
+}
+
 module.exports = {
     verifyHttpMemoCoverage,
-    verifyMemoWriteCoverage
+    verifyMemoWriteCoverage,
+    verifyMemoWriteFormGuard
 };

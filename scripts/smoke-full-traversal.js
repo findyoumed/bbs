@@ -95,6 +95,7 @@ async function runHttpTraversal(errors) {
     await systemTests.verifyPerformanceCommandCoverage(errors);
     await systemTests.verifyActiveUsersCommandCoverage(errors);
     await memoTests.verifyMemoWriteCoverage(errors);
+    await memoTests.verifyMemoWriteFormGuard(errors);
     await miscTests.verifyHelpCoverage(errors);
     await miscTests.verifyHistoryCoverage(errors);
     await weatherTests.verifyWeatherCoverage(errors);

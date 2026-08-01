@@ -833,6 +833,23 @@ export function createMemoScreens(deps) {
             return true;
         }
 
+        // [LOG_ID: 20260801_1710] BBS 폼 에디터가 활성화 중(stage === 'bbs-form')일 때는
+        // cmdInput 입력을 폼 자체의 keydown 이벤트 리스너가 처리한다. 여기서
+        // flow.bodyLines를 수정하거나 renderMemoWriteScreen()을 호출하면 사용자가 textarea에
+        // 직접 입력한 내용이 stale한 flow.bodyLines.join('\n')으로 덮어씌워지는 데이터 손실이
+        // 발생한다(재현 경로: 폼에서 Tab → cmdInput 포커스 → 임의 텍스트 입력 후 Enter).
+        // /q 명령은 폼 취소로 연결하고, 그 외 cmdInput 입력은 소비만 하고 무시한다.
+        if (flow.stage === 'bbs-form') {
+            if (trimmed === '/q' || koCmd === '/Q') {
+                if (typeof flow._doCancel === 'function') {
+                    flow._doCancel();
+                } else {
+                    await cancelMemoWrite();
+                }
+            }
+            return true;
+        }
+
         if (isCancel) {
             appendMemoWriteLine('내용 >>', line);
             renderMemoWriteScreen();
