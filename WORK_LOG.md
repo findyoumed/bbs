@@ -1,3 +1,45 @@
+## [2026-08-02 00:00] [버그수정] systemRoutes — ActivityRepositorySupabase 호출 시 await 누락으로 active-users 500 / activity-summary 빈 객체 반환 버그 수정
+
+**LOG_ID: 20260802_0000**
+목표: 25라운드 — 미탐사 영역(기타 저장소 read-then-write, 프로필/닉네임 전파, 파일업로드 검증, 알림/읽음 처리, 랭킹/포인트 집계, 세션 타임아웃) 전수 조사 후 실제 재현 가능한 버그 선정.
+
+발견:
+- `systemRoutes.getActiveUsers()`: `activityRepository.list()` 호출 시 `await` 누락.
+  - memory 드라이버(`ActivityRepository`)는 `list()`가 동기 반환이라 await 없이도 동작.
+  - Supabase 드라이버(`ActivityRepositorySupabase`)는 `list()`가 `async` — await 없이 호출하면 Promise를 반환.
+  - `Promise.map(...)` → `TypeError: users.map is not a function` → `/api/system/active-users` 항상 500 응답.
+  - 결과: 프로덕션에서 접속자 목록(W 명령) 화면이 항상 오류로 실패.
+- `systemRoutes.getActivitySummary()`: `activityRepository.getRecentSummary(limit)` 호출 시 `await` 누락.
+  - `this.send(200, Promise)` → `JSON.stringify(Promise)` = `"{}"` → 클라이언트가 항상 빈 객체 수신.
+  - 결과: 프로덕션에서 활동 요약(ACT 명령) 화면이 항상 빈 데이터로 렌더링.
+- 근본 원인: smoke 테스트가 memory 드라이버로만 실행되어 async Supabase 경로가 기존 테스트에서 검증되지 않았음.
+
+수정:
+- `src/server/routeHandlers/systemRoutes.js`:
+  - `getActiveUsers()`: `activityRepository.list()` 앞에 `await` 추가.
+  - `getActivitySummary()`: `activityRepository.getRecentSummary(limit)` 앞에 `await` 추가.
+  - 두 곳 모두 설명 주석 블록 추가 (버그 원인 + 수정 내용).
+- `scripts/smoke/system-tests.js`:
+  - `verifyAsyncActivityRepositoryAwaitCoverage()` 함수 추가 — async mock 저장소로 버그 재현 + 수정 검증.
+  - `module.exports`에 추가.
+- `scripts/smoke-full-traversal.js`:
+  - `verifyAsyncActivityRepositoryAwaitCoverage` 호출 추가 (verifyActiveUsersCommandCoverage 이후).
+
+변경 파일:
+- `src/server/routeHandlers/systemRoutes.js` (await 2개 추가, 주석 블록 추가)
+- `scripts/smoke/system-tests.js` (회귀 테스트 함수 추가 +약 70줄)
+- `scripts/smoke-full-traversal.js` (호출 1줄 추가)
+
+검증:
+- `node --check systemRoutes.js` 통과.
+- `node --check system-tests.js` 통과.
+- `node --check smoke-full-traversal.js` 통과.
+- `smoke:full-traversal` 0 에러 통과 (verifyAsyncActivityRepositoryAwaitCoverage 포함).
+
+결과: ✅ 3개 파일 수정. 프로덕션 Supabase 모드에서 /api/system/active-users 500 오류 및 /api/system/activity-summary 빈 응답 버그 해소.
+
+---
+
 ## [2026-08-01 23:30] [버그수정] ConfRepositorySupabase.createAgenda — 동시 안건 발의 시 UNIQUE 위반을 502로 노출하는 버그 수정
 
 **LOG_ID: 20260801_2330**

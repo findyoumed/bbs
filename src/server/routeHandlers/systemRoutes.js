@@ -136,8 +136,16 @@ class SystemRouter extends BaseRouter {
   // (systemAnsiBuilders.js buildActiveUsersAnsi)는 userId/nickName/path/level/isAdmin/isGuest/
   // lastSeenAt만 렌더하고 remoteAddr는 어디서도 쓰지 않는다 — PF/WHO의 내부 UUID 노출을 고친
   // 것과 동일한 원칙으로, 화면이 쓰지 않는 민감 필드를 공개 응답에서 제거한다.
+  // [LOG: 20260802_0000] getActiveUsers/getActivitySummary — await 누락 수정.
+  // memory 드라이버(ActivityRepository)는 list()/getRecentSummary()가 동기 반환이라
+  // await가 없어도 동작했지만, Supabase 드라이버(ActivityRepositorySupabase)는 두 메서드가
+  // async이므로 await 없이 호출하면 Promise가 그대로 반환된다.
+  //   - getActiveUsers: users = Promise → users.map(...)이 TypeError("users.map is not
+  //     a function")를 던져 /api/system/active-users가 항상 500으로 응답(접속자 목록 화면 불가).
+  //   - getActivitySummary: JSON.stringify(Promise) = "{}" → 클라이언트가 항상 빈 객체 수신.
+  // 두 곳 모두 await를 추가해 Supabase/memory 드라이버 양쪽에서 정상 동작하도록 한다.
   async getActiveUsers() {
-    const users = this.deps.activityRepository.list();
+    const users = await this.deps.activityRepository.list();
     const publicUsers = users.map(({ remoteAddr, ...rest }) => rest);
     return this.send(200, publicUsers);
   }
@@ -148,7 +156,7 @@ class SystemRouter extends BaseRouter {
     const rawLimit = this.requestUrl?.searchParams?.get('limit');
     const parsedLimit = Number.parseInt(rawLimit || '5', 10);
     const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 5;
-    return this.send(200, this.deps.activityRepository.getRecentSummary(limit));
+    return this.send(200, await this.deps.activityRepository.getRecentSummary(limit));
   }
 
   async getMenu() {

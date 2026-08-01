@@ -95,6 +95,8 @@ async function runHttpTraversal(errors) {
     await systemTests.verifyActivitySummaryCommandCoverage(errors);
     await systemTests.verifyPerformanceCommandCoverage(errors);
     await systemTests.verifyActiveUsersCommandCoverage(errors);
+    // [LOG: 20260802_0000] Supabase 드라이버 await 누락 버그 회귀 테스트
+    await systemTests.verifyAsyncActivityRepositoryAwaitCoverage(errors);
     await memoTests.verifyMemoWriteCoverage(errors);
     await memoTests.verifyMemoWriteFormGuard(errors);
     await miscTests.verifyHelpCoverage(errors);
