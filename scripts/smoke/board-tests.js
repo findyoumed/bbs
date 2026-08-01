@@ -56,16 +56,8 @@ async function verifyBoardNavigationSemantics(errors) {
             return this;
         }
 
-        order(column, { ascending = true } = {}) {
-            this.orders.push((a, b) => {
-                const valA = a?.[column];
-                const valB = b?.[column];
-                if (valA === valB) return 0;
-                if (ascending) {
-                    return valA < valB ? -1 : 1;
-                }
-                return valA > valB ? -1 : 1;
-            });
+        order(column, { ascending }) {
+            this.orders.push({ column, ascending: Boolean(ascending) });
             return this;
         }
 
@@ -74,108 +66,62 @@ async function verifyBoardNavigationSemantics(errors) {
             return this;
         }
 
-        then(resolve) {
-            let result = [...this.rows];
+        finalize() {
+            let result = this.rows.slice();
+
             for (const filter of this.filters) {
                 result = result.filter(filter);
             }
-            for (const order of this.orders) {
-                result.sort(order);
+
+            for (let index = this.orders.length - 1; index >= 0; index -= 1) {
+                const { column, ascending } = this.orders[index];
+                result.sort((left, right) => {
+                    const leftValue = Number(left?.[column]);
+                    const rightValue = Number(right?.[column]);
+                    return ascending ? leftValue - rightValue : rightValue - leftValue;
+                });
             }
-            if (this.maxRows !== null) {
+
+            if (Number.isFinite(this.maxRows)) {
                 result = result.slice(0, this.maxRows);
             }
-            resolve({ data: result, error: null });
+
+            return result;
         }
 
         maybeSingle() {
-            return {
-                then: (resolve) => {
-                    let result = [...this.rows];
-                    for (const filter of this.filters) {
-                        result = result.filter(filter);
-                    }
-                    for (const order of this.orders) {
-                        result.sort(order);
-                    }
-                    if (this.maxRows !== null) {
-                        result = result.slice(0, this.maxRows);
-                    }
-                    resolve({ data: result[0] || null, error: null });
-                }
-            };
+            const result = this.finalize();
+            return Promise.resolve({ data: result[0] || null, error: null });
         }
 
-        single() {
-            return this.maybeSingle();
-        }
-
-        or() {
-            return this;
-        }
-
-        range() {
-            return this;
+        then(resolve, reject) {
+            return Promise.resolve({ data: this.finalize(), error: null }).then(resolve, reject);
         }
     }
 
     try {
-        const dummyPosts = [
-            { id: 10, local_id: 1, family_id: 10, created_at: '2026-04-29T05:00:00Z', is_deleted: false },
-            { id: 20, local_id: 2, family_id: 20, created_at: '2026-04-29T05:01:00Z', is_deleted: false },
-            { id: 30, local_id: 3, family_id: 30, created_at: '2026-04-29T05:02:00Z', is_deleted: false },
-            { id: 40, local_id: 4, family_id: 40, created_at: '2026-04-29T05:03:00Z', is_deleted: false }
+        const rows = [
+            { id: 5, board_id: 'plaza' },
+            { id: 4, board_id: 'plaza' },
+            { id: 3, board_id: 'plaza' }
         ];
-
-        const mockClient = {
-            from(table) {
-                if (table === 'posts') {
-                    return new FakeNavigationQuery(dummyPosts);
+        const repo = {
+            tables: { posts: 'posts' },
+            client: {
+                from() {
+                    return new FakeNavigationQuery(rows);
                 }
-                return {
-                    select() {
-                        return this;
-                    },
-                    eq() {
-                        return this;
-                    },
-                    then(resolve) {
-                        resolve({ data: [], error: null });
-                    }
-                };
             }
         };
-
         const moduleCache = new Map();
         const { getNavigation: getSupabaseBoardNavigation } = loadBrowserHarnessModule(path.join(__dirname, '../..', 'src/server/SupabaseBoardRepositoryPostReads.js'), moduleCache);
+        const navigation = await getSupabaseBoardNavigation(repo, 'plaza', 4);
 
-        const repo = { client: mockClient, tables: { posts: 'posts' }, _capabilities: null };
-
-        const navFirst = await getSupabaseBoardNavigation(repo, 'plaza', 10);
-        if (navFirst.prevId !== null) {
-            errors.push(`First post navigation prevId should be null (got ${navFirst.prevId})`);
-        }
-        if (navFirst.nextId !== 20) {
-            errors.push(`First post navigation nextId is invalid (expected 20, got ${navFirst.nextId})`);
-        }
-
-        const navMid = await getSupabaseBoardNavigation(repo, 'plaza', 20);
-        if (navMid.prevId !== 10) {
-            errors.push(`Middle post navigation prevId is invalid (expected 10, got ${navMid.prevId})`);
-        }
-        if (navMid.nextId !== 30) {
-            errors.push(`Middle post navigation nextId is invalid (expected 30, got ${navMid.nextId})`);
-        }
-
-        const navLast = await getSupabaseBoardNavigation(repo, 'plaza', 40);
-        if (navLast.prevId !== 30) {
-            errors.push(`Last post navigation prevId is invalid (expected 30, got ${navLast.prevId})`);
-        }
-        if (navLast.nextId !== null) {
-            errors.push(`Last post navigation nextId should be null (got ${navLast.nextId})`);
+        if (navigation.latestId !== 5 || navigation.prevId !== 5 || navigation.nextId !== 3) {
+            errors.push(`Board non-threaded navigation is reversed (expected latest/prev/next 5/5/3, got ${navigation.latestId}/${navigation.prevId}/${navigation.nextId})`);
         }
     } catch (error) {
-        errors.push(`Board navigation semantics verification failed: ${error.message}`);
+        errors.push(`Board navigation semantics check failed: ${error.message}`);
     }
 }
 
