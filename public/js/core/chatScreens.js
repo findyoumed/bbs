@@ -116,10 +116,39 @@ export function createChatScreens(deps) {
     // 서버는 password가 틀리면 403을 낸다 — 호출부(commandRouterChat)가 잡아 재입력을 유도한다.
     const joinBody = { sessionKey: state._chatSessionKey };
     if (password) joinBody.password = password;
-    const joinedRoom = await apiFetch(`/api/chat/rooms/${encodeURIComponent(roomId)}/join`, {
-      method: 'POST',
-      body: JSON.stringify(joinBody)
-    });
+    // [LOG: 20260801_2220] join API 완료/중단 후 화면 경쟁 조건 가드 — ESC로 취소된 경우 서버에
+    // leave를 전송해 유령 참여자(TTL 최대 6시간)를 즉시 정리한다.
+    // Case A: join 중 ESC → apiFetch가 cancelled 오류로 throw, state.screen 이미 이전 화면으로 복원됨.
+    // Case B: join 완료 후 ESC → apiFetch 정상 반환, state.screen 이미 이전 화면으로 복원됨.
+    let joinedRoom;
+    let joinAborted = false;
+    try {
+      joinedRoom = await apiFetch(`/api/chat/rooms/${encodeURIComponent(roomId)}/join`, {
+        method: 'POST',
+        body: JSON.stringify(joinBody)
+      });
+    } catch (joinError) {
+      if (state.screen !== 'chat-room') {
+        // ESC가 join 중 발생 — 아래의 통합 가드에서 정리한다.
+        joinAborted = true;
+      } else {
+        // 실제 오류(비밀번호 오류, 정원 초과 등) — 호출자에게 전파한다.
+        throw joinError;
+      }
+    }
+    if (joinAborted || state.screen !== 'chat-room') {
+      // 서버가 이미 join을 처리했을 수 있으므로 leave로 즉시 정리한다.
+      try {
+        await apiFetch(`/api/chat/rooms/${encodeURIComponent(roomId)}/leave`, {
+          method: 'POST',
+          body: JSON.stringify({ sessionKey: state._chatSessionKey })
+        });
+      } catch (e) {
+        // leave 실패는 non-critical — 서버가 join을 처리하지 않았을 수도 있음.
+      }
+      state._chatRoomId = null;
+      return;
+    }
 
     const room = (state._chatRooms || []).find((entry) => String(entry.id) === String(roomId) || String(entry.no) === String(roomId))
       || { id: roomId, no: roomId, title: '대화실' };

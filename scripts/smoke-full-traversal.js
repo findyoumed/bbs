@@ -79,6 +79,7 @@ async function runHttpTraversal(errors) {
     // Execute split HTTP/Harness test suites
     await chatTests.verifyHttpChatCoverage(errors);
     await chatTests.verifyChatHistorySnapshotCoverage(errors);
+    await chatTests.verifyChatRoomEscCleanupCoverage(errors);
     await boardTests.verifyHttpBoardCoverage(errors);
     await memoTests.verifyHttpMemoCoverage(errors);
     await authTests.verifyAuthEntryRouteCoverage(errors);

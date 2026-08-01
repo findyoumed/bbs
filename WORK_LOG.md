@@ -1,3 +1,38 @@
+## [2026-08-01 22:20] [버그수정] showChatRoom ESC 취소 시 유령 참여자 미정리 문제 수정
+
+**LOG_ID: 20260801_2220**
+목표: 21라운드 — `showChatRoom`이 join API 완료 후 ESC 취소 시 서버에 leave를 호출하지 않아
+유령 참여자(최대 6시간 TTL)가 남는 버그 수정.
+
+발견:
+- `showChatRoom`은 함수 진입 즉시 `state.screen = 'chat-room'`을 설정하고 `await apiFetch(.../join)` 호출.
+- ESC가 눌리면 `cancelCommandExecution()`이 `state.screen = prev`로 복원하지만, in-flight join 요청은 계속 진행됨.
+- **Case A (join 중 ESC)**: `apiFetch`가 cancelled 오류를 throw. `showChatRoom`은 catch 없이 오류를 그대로 던졌고, leave는 전혀 호출되지 않음. 서버는 이미 join을 처리한 상태일 수 있음.
+- **Case B (join 완료 후 ESC)**: `apiFetch`가 정상 반환 → `state._chatRoom` 설정 → `refreshRoom()` 내부 가드(`state.screen !== 'chat-room'`)가 렌더링을 차단 → poll timer 시작(첫 tick에서 자가 해제) → **leave 호출 없음**. 서버 참여자는 TTL 6시간까지 잔류.
+- `apiFetch.js` 163번 줄: `state._commandAbortController?.signal`을 fetch에 전달하므로 ESC 시 abort가 실제로 전파됨. 그러나 서버가 TCP 요청을 이미 처리한 경우 abort는 클라이언트 측 응답 수신만 취소하며 서버 참여자 등록은 번복되지 않음.
+- `ChatRoomRepositoryMemory.js`의 `participantTtlMs = 1000 * 60 * 60 * 6` (6시간) — leave 없으면 ghost가 목록에 6시간 노출.
+- 이미 다른 라운드들이 해온 `state.screen !== 'X'` 가드 패턴(19·20라운드)과 달리, 여기는 화면만 막는 게 아니라 **서버 부작용을 되돌려야** 하는 케이스라 leave 호출이 별도로 필요.
+
+수정:
+- `chatScreens.js` `showChatRoom()`: `const joinedRoom = await apiFetch(join)` → try-catch + 통합 가드로 교체.
+  - catch 블록: `state.screen !== 'chat-room'`이면 `joinAborted = true` (아래 가드에서 정리), 아니면 실제 오류 re-throw.
+  - 통합 가드 `if (joinAborted || state.screen !== 'chat-room')`: `apiFetch(.../leave)` 호출(실패는 non-critical) → `state._chatRoomId = null` → return.
+  - Case A(throw 경로)·Case B(정상 반환 경로) 모두 동일한 guard로 처리.
+- `scripts/smoke/chat-tests.js`: `verifyChatRoomEscCleanupCoverage()` 추가.
+  - Case A: join mock이 `state.screen` 복원 후 cancelled 오류 throw → leave 1회 호출 확인, `_chatRoomId === null` 확인, poll timer 미생성 확인.
+  - Case B: join mock이 `state.screen` 복원 후 정상 반환 → 동일 3가지 확인.
+- `scripts/smoke-full-traversal.js`: `verifyChatRoomEscCleanupCoverage` 호출 추가.
+
+검증:
+- `node --check` 3개 파일(chatScreens.js, chat-tests.js, smoke-full-traversal.js) 전부 통과.
+- `smoke:chat-rooms` 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 0 에러 통과 (새 ESC cleanup 회귀 테스트 포함).
+
+결과: ✅ 3개 파일(chatScreens.js +29줄, chat-tests.js +120줄, smoke-full-traversal.js +1줄). ESC 취소 시 유령 참여자 즉시 정리 완료.
+
+---
+
 ## [2026-08-01 17:46] [버그수정] async 화면 경쟁 조건 가드 전수 확장 — 8개 파일 13곳
 
 **LOG_ID: 20260801_2000**

@@ -317,6 +317,171 @@ async function verifyChatHistorySnapshotCoverage(errors) {
     }
 }
 
+// [LOG: 20260801_2220] ESC 취소 후 join 유령 참여자 정리 — Case A(join 중 throw)와
+// Case B(join 완료 후 state.screen 복원) 양쪽 모두 leave가 호출되는지 검증한다.
+async function verifyChatRoomEscCleanupCoverage(errors) {
+    console.log('💬 Checking chat room ESC ghost-participant cleanup via module harness...');
+
+    const originalWindow = globalThis.window;
+    const originalSetInterval = globalThis.setInterval;
+    const originalClearInterval = globalThis.clearInterval;
+
+    try {
+        const moduleCache = new Map();
+        const { createChatScreens } = loadBrowserHarnessModule(
+            path.join(__dirname, '../..', 'public/js/core/chatScreens.js'),
+            moduleCache
+        );
+
+        globalThis.window = { matchMedia() { return { matches: false }; } };
+
+        const pollTimersCaptured = [];
+        globalThis.setInterval = (_handler, delay) => {
+            pollTimersCaptured.push(delay);
+            return pollTimersCaptured.length;
+        };
+        globalThis.clearInterval = () => {};
+
+        const makeScreenEl = () => ({
+            innerHTML: '',
+            parentElement: { classList: { add() {}, remove() {} } },
+            querySelector() { return null; }
+        });
+
+        // Case A: join 중 ESC — apiFetch가 cancelled 오류를 throw하고
+        //         state.screen이 이전 화면으로 복원된 상황.
+        {
+            const leaveCallsA = [];
+            const stateA = {
+                screen: 'chat-lobby',
+                history: [],
+                _chatRooms: [{ no: 1, id: '1', title: '테스트방' }],
+                user: { userId: 'test', nickName: '테스터' }
+            };
+
+            const chatScreensA = createChatScreens({
+                ansiToHTML: ansiToHTMLHarnessStub,
+                apiFetch: async (url) => {
+                    if (String(url).includes('/join')) {
+                        stateA.screen = 'chat-lobby'; // ESC 시뮬레이션: 화면 복원 후 throw
+                        const err = new Error('요청이 취소되었습니다.');
+                        err.type = 'cancelled';
+                        throw err;
+                    }
+                    if (String(url).includes('/leave')) {
+                        leaveCallsA.push(url);
+                        return {};
+                    }
+                    throw new Error(`Case A: unexpected apiFetch path: ${url}`);
+                },
+                applyCommandFooter: async () => {},
+                buildChatLobbyAnsi: () => ({ text: 'LOBBY' }),
+                buildChatRoomAnsi: () => ({ text: 'ROOM' }),
+                cmdInput: { focus() {} },
+                getCommandFooterText: () => '',
+                getMenuNodeByKey: () => null,
+                renderScreenSequential: async () => {},
+                screenEl: makeScreenEl(),
+                setHint: () => {},
+                setPrompt: () => {},
+                state: stateA,
+                updateURL: () => {}
+            });
+
+            const pollCountBefore = pollTimersCaptured.length;
+            try {
+                await chatScreensA.showChatRoom('1');
+            } catch (e) {
+                errors.push(`Case A (ESC during join): showChatRoom threw unexpectedly: ${e.message}`);
+                return;
+            }
+            if (leaveCallsA.length !== 1) {
+                errors.push(`Case A (ESC during join): expected 1 leave call, got ${leaveCallsA.length}`);
+            }
+            if (stateA._chatRoomId !== null) {
+                errors.push(`Case A (ESC during join): expected _chatRoomId to be null, got ${stateA._chatRoomId}`);
+            }
+            if (pollTimersCaptured.length !== pollCountBefore) {
+                errors.push(`Case A (ESC during join): expected no poll timer, got ${pollTimersCaptured.length - pollCountBefore}`);
+            }
+        }
+
+        // Case B: join 완료 후 ESC — apiFetch가 정상 반환했지만
+        //         state.screen이 이미 이전 화면으로 복원된 상황.
+        {
+            const leaveCallsB = [];
+            const stateB = {
+                screen: 'chat-lobby',
+                history: [],
+                _chatRooms: [{ no: 1, id: '1', title: '테스트방' }],
+                user: { userId: 'test', nickName: '테스터' }
+            };
+
+            const chatScreensB = createChatScreens({
+                ansiToHTML: ansiToHTMLHarnessStub,
+                apiFetch: async (url) => {
+                    if (String(url).includes('/join')) {
+                        stateB.screen = 'chat-lobby'; // ESC 시뮬레이션: 응답 반환 직전에 화면 복원
+                        return { no: 1, title: '테스트방', userCount: 1 };
+                    }
+                    if (String(url).includes('/leave')) {
+                        leaveCallsB.push(url);
+                        return {};
+                    }
+                    throw new Error(`Case B: unexpected apiFetch path: ${url}`);
+                },
+                applyCommandFooter: async () => {},
+                buildChatLobbyAnsi: () => ({ text: 'LOBBY' }),
+                buildChatRoomAnsi: () => ({ text: 'ROOM' }),
+                cmdInput: { focus() {} },
+                getCommandFooterText: () => '',
+                getMenuNodeByKey: () => null,
+                renderScreenSequential: async () => {},
+                screenEl: makeScreenEl(),
+                setHint: () => {},
+                setPrompt: () => {},
+                state: stateB,
+                updateURL: () => {}
+            });
+
+            const pollCountBefore = pollTimersCaptured.length;
+            try {
+                await chatScreensB.showChatRoom('1');
+            } catch (e) {
+                errors.push(`Case B (ESC after join): showChatRoom threw unexpectedly: ${e.message}`);
+                return;
+            }
+            if (leaveCallsB.length !== 1) {
+                errors.push(`Case B (ESC after join): expected 1 leave call, got ${leaveCallsB.length}`);
+            }
+            if (stateB._chatRoomId !== null) {
+                errors.push(`Case B (ESC after join): expected _chatRoomId to be null, got ${stateB._chatRoomId}`);
+            }
+            if (pollTimersCaptured.length !== pollCountBefore) {
+                errors.push(`Case B (ESC after join): expected no poll timer, got ${pollTimersCaptured.length - pollCountBefore}`);
+            }
+        }
+    } catch (error) {
+        errors.push(`Chat room ESC cleanup module harness failed: ${error.message}`);
+    } finally {
+        if (typeof originalWindow === 'undefined') {
+            delete globalThis.window;
+        } else {
+            globalThis.window = originalWindow;
+        }
+        if (typeof originalSetInterval === 'undefined') {
+            delete globalThis.setInterval;
+        } else {
+            globalThis.setInterval = originalSetInterval;
+        }
+        if (typeof originalClearInterval === 'undefined') {
+            delete globalThis.clearInterval;
+        } else {
+            globalThis.clearInterval = originalClearInterval;
+        }
+    }
+}
+
 // [LOG: 20260428_2339] When Playwright is available, /chat must prove room entry,
 // message send, and reload hydration instead of stopping at lobby shell coverage.
 async function verifyPlaywrightChatFlow(page, errors) {
@@ -368,5 +533,6 @@ async function verifyPlaywrightChatFlow(page, errors) {
 module.exports = {
     verifyHttpChatCoverage,
     verifyChatHistorySnapshotCoverage,
+    verifyChatRoomEscCleanupCoverage,
     verifyPlaywrightChatFlow
 };
