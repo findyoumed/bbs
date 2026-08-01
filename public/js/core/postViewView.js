@@ -43,6 +43,9 @@ export function createPostViewView(deps) {
       const virtualBoardId = (isParentVirtual && boardKey !== currentParentId) ? currentParentId : '';
 
       const data = await loadPost(boardKey, postId, virtualBoardId, state.searchParams || {});
+      // [LOG_ID: 20260801_1930] ESC 취소 후 이전 화면이 복원된 상태에서 stale fetch가 완료돼
+      // 렌더링을 덮어씌우는 경쟁 조건 방지 — screen 값이 바뀌었으면 조용히 중단한다.
+      if (state.screen !== 'post-view') return;
 
       state.post = data.post;
       // [LOG: 20260429_0047] Direct /board/:boardId/:postId entry must keep
@@ -57,6 +60,8 @@ export function createPostViewView(deps) {
 
         if (needsMenuContextHydration && typeof loadMenuTree === 'function') {
           await loadMenuTree();
+          // [LOG_ID: 20260801_1930] loadMenuTree 중에도 화면이 바뀔 수 있다.
+          if (state.screen !== 'post-view') return;
         }
 
         state.boardMenuPath = resolvedMenuPath;

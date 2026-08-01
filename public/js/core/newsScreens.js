@@ -550,6 +550,9 @@ export function createNewsScreens(deps) {
 
     try {
       const data = await loadNewsMenu();
+      // [LOG_ID: 20260801_1930] ESC 취소 후 이전 화면이 복원된 상태에서 stale fetch가 완료돼
+      // 렌더링을 덮어씌우는 경쟁 조건 방지 — screen 값이 바뀌었으면 조용히 중단한다.
+      if (state.screen !== 'news-menu') return;
       setReady(true);
       const topics = getNewsTopics(data);
       state.serviceData = { ...data, topics, topicDoor: '' };
@@ -591,6 +594,9 @@ export function createNewsScreens(deps) {
 
     try {
       const { topics, topicTitle, items, unavailable, message } = await loadNewsTopicState(topicDoor, requestedPageNo);
+      // [LOG_ID: 20260801_1930] ESC 취소 후 이전 화면이 복원된 상태에서 stale fetch가 완료돼
+      // 렌더링을 덮어씌우는 경쟁 조건 방지 — screen 값이 바뀌었으면 조용히 중단한다.
+      if (state.screen !== 'news-list') return;
       setReady(true);
 
       const newsListView = buildNewsListAnsi(topicTitle, items, requestedPageNo, { unavailable, message });

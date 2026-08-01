@@ -148,6 +148,9 @@ export function createWeatherScreens(deps) {
     if (!fromHistory) { updateURL(); pushHistory(); }
 
     const data = await loadWeatherRegions();
+    // [LOG_ID: 20260801_1930] ESC 취소 후 이전 화면이 복원된 상태에서 stale fetch가 완료돼
+    // 렌더링을 덮어씌우는 경쟁 조건 방지 — screen 값이 바뀌었으면 조용히 중단한다.
+    if (state.screen !== 'weather-menu') return;
     state.serviceData = data;
     const items = [
       { door: '0', name: '내 위치 날씨', kind: 'local', id: 'weather-local', boardId: 'weather-local' },
@@ -186,6 +189,9 @@ export function createWeatherScreens(deps) {
           unavailable: true,
           message: error?.message || '내 위치 날씨를 불러오지 못했습니다.'
         }));
+        // [LOG_ID: 20260801_1930] ESC 취소 후 이전 화면이 복원된 상태에서 stale fetch가 완료돼
+        // 렌더링을 덮어씌우는 경쟁 조건 방지 — screen 값이 바뀌었으면 조용히 중단한다.
+        if (state.screen !== 'weather-view') return;
         const regions = state.serviceData?.items || [];
         const menuItems = state.serviceData?.menuItems || [];
         state.serviceData = {
@@ -228,6 +234,9 @@ export function createWeatherScreens(deps) {
     if (!isSameRegion) {
       if (typeof setLoading === 'function') setLoading('연결하는 중입니다..');
       const feed = await loadWeatherFeed(regionDoor);
+      // [LOG_ID: 20260801_1930] ESC 취소 후 이전 화면이 복원된 상태에서 stale fetch가 완료돼
+      // 렌더링을 덮어씌우는 경쟁 조건 방지 — screen 값이 바뀌었으면 조용히 중단한다.
+      if (state.screen !== 'weather-view') return;
       const regions = state.serviceData?.items || [];
       const region = regions.find((item) => String(item.door) === String(regionDoor));
       const regionName = feed?.region?.title || region?.title || region?.province || '';

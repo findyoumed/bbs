@@ -95,6 +95,9 @@ export function createPostListView(deps) {
     if (!fromHistory) updateURL();
     setLoading('연결하는 중입니다..');
     const data = await loadPosts(boardKey, page, searchParams);
+    // [LOG_ID: 20260801_1930] ESC 취소 후 이전 화면이 복원된 상태에서 stale fetch가 완료돼
+    // 렌더링을 덮어씌우는 경쟁 조건 방지 — screen 값이 바뀌었으면 조용히 중단한다.
+    if (state.screen !== 'post-list') return;
 
     if (data.board) {
       const resolvedKey = String(getBoardKey(data.board) || boardKey).trim();
@@ -104,6 +107,8 @@ export function createPostListView(deps) {
         // [LOG: 20260421_1645] 직접 /board/... 진입 시 보드 메타 기준으로 상위 메뉴 문맥을 복원한다.
         if (typeof loadMenuTree === 'function') {
           await loadMenuTree();
+          // [LOG_ID: 20260801_1930] loadMenuTree 중에도 화면이 바뀔 수 있다.
+          if (state.screen !== 'post-list') return;
         }
         state.boardMenuPath = resolvedMenuPath;
         state.boardMenuTitle = hasExplicitMenuTitle ? options.menuTitle : getBoardSelectTitle(resolvedMenuPath);

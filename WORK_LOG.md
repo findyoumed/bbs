@@ -1,3 +1,32 @@
+## [2026-08-01 17:34] [버그수정] ESC 취소 후 stale 비동기 fetch가 화면을 덮어씌우는 경쟁 조건 수정
+
+**LOG_ID: 20260801_1930**
+목표: 19라운드 — 새로운 각도 탐색. "클라이언트 상태와 비동기 경쟁 조건" 방향 조사.
+
+발견:
+- `commandExecutionState.js`의 `cancelCommandExecution()`은 ESC 취소 시 `state.screen = prev`로 화면 복원 + `cmdInput.disabled = false`로 입력을 즉시 재활성화한다. 그러나 ESC 이전에 이미 시작된 `loadPosts`/`loadPost`/`loadNewsMenu`/`loadNewsTopicState`/`loadWeatherRegions`/`loadWeatherFeed` 등의 비동기 fetch는 계속 진행된다.
+- Fetch가 완료되면 해당 screen 함수(`showPostList`, `showPostView`, `showNewsMenu`, `showNewsList`, `showWeatherMenu`, `showWeatherView`)는 스크린 상태 검사 없이 바로 `renderAnsiScreenWithTopbarSequential`을 호출 → ESC로 복원된 이전 화면 위에 덮어씌움.
+- 재현 시나리오: 게시판 목록 진입(Enter) → 로딩 중 ESC → 이전 메뉴로 복원 → 그 후 loadPosts 완료 → 게시판 목록이 메뉴 화면을 덮어씌움. 일반 이용에서 100~500ms 이내에 ESC를 누르면 발생하는 실사용자 UX 버그.
+- 기존 `_commandCancelActive` / `_commandInFlightToken` 메커니즘은 새 커맨드 진입 시 초기화되어 ESC-only 케이스를 방어하지 못함. `state.screen !== expected` 비교가 더 견고한 가드.
+
+수정:
+- `postListView.js` `showPostList()`: `await loadPosts(...)` 직후 + `await loadMenuTree()` 직후 `if (state.screen !== 'post-list') return;` 가드 추가.
+- `postViewView.js` `showPostView()`: `await loadPost(...)` 직후 + `await loadMenuTree()` 직후 `if (state.screen !== 'post-view') return;` 가드 추가.
+- `newsScreens.js` `showNewsMenu()`: `await loadNewsMenu()` 직후 `if (state.screen !== 'news-menu') return;` 추가.
+- `newsScreens.js` `showNewsList()`: `await loadNewsTopicState(...)` 직후 `if (state.screen !== 'news-list') return;` 추가.
+- `weatherScreens.js` `showWeatherMenu()`: `await loadWeatherRegions()` 직후 `if (state.screen !== 'weather-menu') return;` 추가.
+- `weatherScreens.js` `showWeatherView()`: 로컬 날씨 `await loadLocalWeather()` 직후 + 지역 날씨 `await loadWeatherFeed()` 직후 `if (state.screen !== 'weather-view') return;` 추가.
+
+검증:
+- `node --check` 4개 파일 전부 통과.
+- `smoke:command-parity` 통과.
+- `smoke:full-traversal` 0 에러 통과.
+- `smoke:boards`, `smoke:renderer-ui` 통과.
+
+결과: ✅ 4개 파일(postListView.js +4줄, postViewView.js +4줄, newsScreens.js +6줄, weatherScreens.js +9줄).
+
+---
+
 ## [2026-08-01 17:10] [버그수정] 쪽지쓰기 폼 에디터(bbs-form) 활성 중 cmdInput 입력이 textarea 내용을 덮어씌우던 문제 수정
 
 **LOG_ID: 20260801_1710**
