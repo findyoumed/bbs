@@ -1,3 +1,51 @@
+## [2026-08-02 08:40] [버그수정] tombstone 게시글에 updatePost/recommendPost 허용 — 2종 tombstone 후속 액션 버그 수정
+
+**LOG_ID: 20260802_0840**
+목표: 33라운드 — tombstone 패턴(삭제된 리소스에 대한 후속 액션이 차단되는지)을 Board 도메인의 `updatePost`, `recommendPost`로 확장 조사 후 실제 재현 가능한 버그 2건 수정.
+
+조사 범위:
+- **Board `updatePost` on tombstoned post**: deletePost가 원글(step=0)을 tombstone('[삭제된 글입니다]')으로 남길 때, updatePost는 tombstone 여부를 확인하지 않아 원작성자가 `{ title: "복원", content: "복원 내용" }` 을 전달하면 tombstone 제목·내용이 실제 내용으로 덮여 논리 삭제가 취소됨 — **실제 버그 발견(최중요)**.
+- **Board `recommendPost` on tombstoned post**: tombstone 글이 목록에 '[삭제된 글입니다]'로 표시된 채 getPost가 정상 반환하므로, 다른 회원이 해당 localId로 recommendPost를 호출하면 recommend 카운트가 증가함 — **실제 버그 발견**.
+- **AttachmentRepository `add` on tombstoned post**: boardRoutes.deletePost → cleanupAttachmentsForDeletedPost가 기존 첨부는 정리하지만, assertAttachmentWritable에 tombstone 검사가 없어 원작성자가 새 첨부를 추가할 수 있음. 단, deletePost가 이미 기존 첨부를 전부 삭제하고 tombstone 게시글의 userId가 남아있어야 하므로 영향이 제한적임. addAttachment의 별도 tombstone 검사는 미수정(범위 최소화).
+- **Vote `castVote`**: 이미 `!vote.isActive` 검사 완비. 이상 없음.
+- **Memo**: 삭제 개념이 없고(DB에서 물리 삭제) 삭제 후 getMemo가 404 반환 → 후속 액션 차단됨. 이상 없음.
+
+발견 버그 1 — `updatePost` on tombstoned post:
+- `sanitizePostPatch(input, post)`: `input.title`이 제공되면 tombstone 제목을 덮고, `input.content`가 제공되면 tombstone 빈 내용도 덮음.
+- `assertPostMutable`: null 체크와 author 검사만 있어 tombstone 글도 원작성자는 통과.
+- 재현(Memory): createPost → replyToPost(user2) → deletePost(root, tombstones) → updatePost(root, '복원', '복원 내용') → 200 성공, title='복원됨' (버그). 수정 후 → 404 "삭제된 게시글은 수정할 수 없습니다."
+- 재현(Supabase): 동일 시퀀스 → 200 성공 (버그). 수정 후 → 404 차단. 테스트 데이터 정리 완료.
+
+발견 버그 2 — `recommendPost` on tombstoned post:
+- `fetchPostByLocalId` / `findPostRecord`: tombstone 행이 DB/메모리에 존재하므로 정상 반환.
+- tombstone 검사 없이 recommend 카운트 증가.
+- 재현(Memory): createPost → replyToPost(user2) → deletePost(tombstone) → recommendPost(user2) → 200 성공, recommend=1 (버그). 수정 후 → 404 차단.
+- 재현(Supabase): 동일 → 200 성공 (버그). 수정 후 → 404 차단. 테스트 데이터 정리 완료.
+
+수정:
+- `MemoryBoardRepository.updatePost`: `findPostRecord` 반환 후 `post.title === '[삭제된 글입니다]'`이면 404 오류 추가.
+- `SupabaseBoardRepositoryWriteOps.updatePost`: `fetchPostByLocalId` 반환 후 동일 tombstone 검사 추가.
+- `MemoryBoardRepositoryCore.recommendPost`: `findPostRecord` 반환 후 동일 tombstone 검사 추가.
+- `SupabaseBoardRepositoryWriteOps.recommendPost`: `fetchPostByLocalId` 반환 후 동일 tombstone 검사 추가.
+
+변경 파일:
+- `src/server/MemoryBoardRepository.js` (4줄 주석 + 1줄 코드 추가)
+- `src/server/SupabaseBoardRepositoryWriteOps.js` (updatePost: 5줄 주석 + 3줄 코드, recommendPost: 5줄 주석 + 3줄 코드 추가)
+- `src/server/MemoryBoardRepositoryCore.js` (4줄 주석 + 1줄 코드 추가)
+
+검증:
+- Memory: updatePost tombstone 5케이스(일반user→404, admin→404, 정상글→200, recommend tombstone→404, 정상 recommend→200) 모두 통과 ✓
+- Supabase: updatePost tombstone→404, recommendPost tombstone→404, 정상 updatePost→200 통과, 테스트 데이터 정리 완료 ✓
+- `node --check` 3개 파일 모두 통과 ✓
+- `npm run smoke:boards` 통과 ✓
+- `npm run smoke:command-parity` 통과 ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+- `npm run smoke:vercel-ready` — ok:true ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 14:00] [버그수정] self-second / tombstone reply — 2종 "self-X" 계열 버그 수정
 
 **LOG_ID: 20260802_1400**

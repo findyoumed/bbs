@@ -59,6 +59,10 @@ class MemoryBoardRepositoryCore {
     assertBoardAccessible(board, context, this.repo.levelAliases);
     const post = this.repo.findPostRecord(boardId, postId);
     if (!post) throw createHttpError(404, '글 없음');
+    // [LOG: 20260802_0840] tombstone된 게시글(답글 보존을 위해 '[삭제된 글입니다]'로 자리표시자 처리된
+    // 원글)에 추천(recommend)이 가능했다. 논리 삭제된 게시글에는 추천할 수 없어야 한다.
+    // Supabase 드라이버와 동일 규칙.
+    if (post.title === '[삭제된 글입니다]') throw createHttpError(404, '삭제된 게시글에는 추천할 수 없습니다.');
     // [LOG: 20260429_0229] Memory driver must match Supabase recommend auth behavior.
     const userId = assertAuthenticatedBoardUser(context);
     if (post.userId === userId) throw createHttpError(400, '본인 글 추천 불가');

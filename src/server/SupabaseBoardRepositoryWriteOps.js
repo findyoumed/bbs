@@ -120,6 +120,13 @@ async function updatePost(repo, boardId, postId, input, context = {}) {
 
   const post = await readOps.fetchPostByLocalId(repo, boardId, postId);
   assertPostMutable(post, context);
+  // [LOG: 20260802_0840] tombstone된 게시글(답글 보존을 위해 '[삭제된 글입니다]'로 자리표시자 처리된
+  // 원글)을 updatePost로 수정하면 tombstone 제목·내용이 제공된 값으로 덮여 논리 삭제가 사실상
+  // 취소되는 버그. deletePost가 tombstone으로 남긴 글은 더 이상 수정 대상이 아니어야 한다.
+  // Memory 드라이버와 동일 규칙.
+  if (post.title === '[삭제된 글입니다]') {
+    throw createHttpError(404, '삭제된 게시글은 수정할 수 없습니다.');
+  }
 
   const patch = sanitizePostPatch(input, post);
   return {
@@ -215,6 +222,12 @@ async function recommendPost(repo, boardId, postId, context = {}) {
   const post = await readOps.fetchPostByLocalId(repo, boardId, postId);
   if (!post) {
     throw createHttpError(404, 'Post was not found.');
+  }
+  // [LOG: 20260802_0840] tombstone된 게시글(답글 보존을 위해 '[삭제된 글입니다]'로 자리표시자 처리된
+  // 원글)에 추천(recommend)이 가능했다. 논리 삭제된 게시글에는 추천할 수 없어야 한다.
+  // Memory 드라이버와 동일 규칙.
+  if (post.title === '[삭제된 글입니다]') {
+    throw createHttpError(404, '삭제된 게시글에는 추천할 수 없습니다.');
   }
 
   // [LOG: 20260429_0229] Recommend must fail closed for guests even if the route
