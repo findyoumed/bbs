@@ -1,3 +1,52 @@
+## [2026-08-01 09:10] [버그수정] parsePagination 소수 입력 — 비정수 offset이 Supabase range()로 전달되는 결함 수정
+
+**LOG_ID: 20260801_0910**
+목표: 13라운드 — 완전히 새로운 버그 범주 탐색. 투표/conf 필드 불일치, 페이지네이션 경계, 서버-클라이언트 필드 대조, 입력 살균, 동시 가입 중복 등 5가지 각도를 전수 조사.
+
+조사 내용:
+- 투표(voteAnsiBuilders.js ↔ VoteRepository*.js) / conf(confAnsiBuilders.js ↔ ConfRepository*.js) 필드 대조: 일치, 이상 없음.
+- 첨부파일 권한(assertAttachmentWritable): addAttachment/handleAttachmentItem에 ensureAuthenticated 없으나,
+  createPost가 인증 필수이므로 게스트 게시글 자체가 없어 현실적 우회 경로 없음.
+- 쪽지 제목 한도(MemoRepositoryShared MEMO_TITLE_MAX_LENGTH vs 라우트 validate): 200자 일치.
+- 회원 엔드포인트 권한(setEmail/setPassword/verifyPassword): context.userId !== targetUserId 비교로 정상 보호.
+- XSS 방어: ansiEngine.js escCell()이 HTML escape — 취약점 없음.
+- 회원 닉네임/이메일 유니크 제약: 0021 마이그레이션이 미적용 상태임은 이미 기록됨(DB 마이그레이션 금지 규칙).
+- 채팅방 개설(createChatRoom): ensureAuthenticated 없어 게스트 API 직접 호출 시 guest 소유 방 생성 가능.
+  CMD_META에 O/J/JOIN/CHAT이 login:true로 표시돼 클라이언트 UI 상 게스트에게 숨어 있지만 서버 보호 누락.
+  → 채팅 write 전체(join/kick/updateRoom)가 리포지토리 레벨에서 owner 검증하고 있어 실질 피해는 제한적.
+  → 수정 범위가 여러 라우트에 걸쳐 있고 BBS 설계 의도가 불분명해 이번 라운드 수정 대상에서 제외.
+- systemAnsiBuilders.js buildActivitySummaryAnsi ↔ getRecentSummary: 필드(summary/recentActions/timestamp) 일치.
+- 시스템 진단(buildSystemDiagnosticsAnsi) ↔ getSystemInfo: hostname/uptimeSeconds/totalMemoryBytes/cpus 등 일치.
+
+발견 (이번 라운드 수정 대상):
+- `src/server/queryUtils.js` `parsePagination`:
+  ```js
+  const page = Math.max(1, Number(searchParams.get('page')) || defaults.page || 1);
+  const pageSize = Math.max(1, Math.min(100, Number(searchParams.get('pageSize')) || defaults.pageSize || 20));
+  ```
+  `Math.floor()` 없음 → `?page=1.5`가 들어오면 `page = 1.5`, `offset = (1.5-1)*pageSize`가 소수.
+  예: pageSize=15이면 `offset = 7.5`, `end = 21.5` → `Supabase.range(7.5, 21.5)` 호출.
+  PostgREST는 Range 헤더에 정수만 허용 — 오류 또는 502 반환.
+  경로 파라미터는 `parsePositiveIntParam`이 `Number.isInteger` 검사로 400 차단(20260731_1900 패턴)하는데,
+  쿼리 파라미터 pagination에는 동등한 정수 강제가 없었다.
+  영향 범위: `boardRoutes.js`(pageSize:15), `memberRoutes.js` — 두 곳 모두 `getQueryOptions` 경유.
+
+새 버그 범주: **쿼리 파라미터 타입 안전성 미보장** — 경로 파라미터는 parsePositiveIntParam으로 보호되나
+페이지네이션 쿼리 파라미터는 소수 입력을 정수로 강제하지 않아 하위 레이어(Supabase range)에서 오류 유발.
+
+수정:
+- `src/server/queryUtils.js` `parsePagination` 두 줄:
+  `page = Math.max(...)` → `Math.floor(Math.max(...))`
+  `pageSize = Math.max(...Math.min(...))` → `Math.floor(Math.max(...Math.min(...)))`
+  → offset = `(page-1)*pageSize`가 항상 정수 보장.
+
+검증: `node --check` 통과, `smoke:command-parity` 통과, `smoke:full-traversal` 통과(HTTP fallback).
+
+변경 파일: `src/server/queryUtils.js` (2줄 수정 + 주석 7줄 추가)
+결과: ✅ 완료
+
+---
+
 ## [2026-08-01 08:52] [버그수정] 쪽지함 목록 createdAt UTC raw substring — KST 변환 누락 수정
 
 **LOG_ID: 20260801_0852**

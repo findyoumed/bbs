@@ -9,8 +9,14 @@
  * URL 검색 매개변수에서 페이지네이션 정보를 추출합니다.
  */
 function parsePagination(searchParams, defaults = {}) {
-  const page = Math.max(1, Number(searchParams.get('page')) || defaults.page || 1);
-  const pageSize = Math.max(1, Math.min(100, Number(searchParams.get('pageSize')) || defaults.pageSize || 20));
+  // [LOG_ID: 20260801_0900] ?page=1.5 같은 소수 입력이 (page-1)*pageSize = 7.5 같은
+  // 비정수 offset을 만들어 Supabase range(7.5, 21.5) 호출로 흘러갔다 — PostgREST는
+  // Range 헤더에 정수만 허용하므로 오류를 던지고 502로 노출됐다. 경로 파라미터는
+  // parsePositiveIntParam이 Number.isInteger로 400으로 막는데(20260731_1900 참고),
+  // 쿼리 파라미터에는 동등한 가드가 없었다. Math.floor로 page와 pageSize를 정수로
+  // 강제해 offset과 limit이 항상 정수임을 보장한다.
+  const page = Math.floor(Math.max(1, Number(searchParams.get('page')) || defaults.page || 1));
+  const pageSize = Math.floor(Math.max(1, Math.min(100, Number(searchParams.get('pageSize')) || defaults.pageSize || 20)));
   
   return {
     page,
