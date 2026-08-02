@@ -1,3 +1,35 @@
+## [2026-08-02 17:00] [버그수정] AuthBridge.adminUserIds 대소문자 불일치 — BBS_ADMIN_USER_IDS 환경변수 mixed-case 값 무시 버그 수정
+
+**LOG_ID: 20260802_1700**
+목표: 35라운드 — 대소문자 정규화 불일치 패턴 조사. `AuthBridge` 생성자에서 `adminUserIds`가 소문자 변환 없이 Set에 저장되어 mixed-case 환경변수값이 항상 무시되는 버그 발견 및 수정.
+
+발견 버그 — `AuthBridge.adminUserIds` 대소문자 불일치:
+- `_isAdmin(userId, email)`이 받는 `userId`는 `normalizeRequestUserId()`를 거쳐 항상 소문자로 변환됨.
+- 그런데 생성자에서 `this.adminUserIds = new Set(parseCsv(options.adminUserIds))` — 소문자 변환 **없음**.
+- `parseCsv`는 trim만 하므로, `BBS_ADMIN_USER_IDS=SysOp`이면 `adminUserIds = Set(['SysOp'])`.
+- `_isAdmin('sysop', ...)` 호출 시: `adminUserIds.has('sysop')` → false → **관리자 권한 부여 실패**.
+- 대조적으로 `adminEmails`는 이미 `.map((item) => item.toLowerCase())`로 소문자 변환되어 일관성 없는 상태.
+- 현재 `.env`에 `BBS_ADMIN_USER_IDS`가 설정되지 않아 dormant 상태이지만, 설정 즉시 재현되는 버그.
+- 재현 조건: `BBS_ADMIN_USER_IDS=SysOp` 설정 → `BBS_ADMIN_USER_IDS`가 대소문자 혼합이면 관리자 인증 전면 실패.
+
+수정:
+- `AuthBridge.js` 생성자 line 92: `parseCsv(options.adminUserIds)` → `parseCsv(options.adminUserIds).map((item) => item.toLowerCase())`.
+- `adminEmails`와 동일한 소문자 정규화를 `adminUserIds`에도 적용.
+- `_isAdmin()`의 동작: `adminUserIds.has(String(userId || '').trim())` — userId는 이미 소문자, adminUserIds도 소문자 → 정상 매칭.
+
+변경 파일:
+- `src/server/AuthBridge.js` (생성자 adminUserIds 소문자 정규화, 4줄 주석 추가)
+
+검증:
+- `node --check src/server/AuthBridge.js` 통과 ✓
+- `npm run smoke:auth-bridge` — ok:true, 32 checks ✓
+- `npm run smoke:command-parity` — ok:true ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 16:00] [버그수정] SupabaseMemberRepository._findByField 대소문자 불일치 — 닉네임 검색·중복체크 전면 실패 버그 수정
 
 **LOG_ID: 20260802_1600**

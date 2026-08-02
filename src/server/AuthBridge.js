@@ -89,7 +89,11 @@ class AuthBridge {
   constructor(options = {}) {
     this.url = String(options.url || '').trim();
     this.publishableKey = String(options.publishableKey || '').trim();
-    this.adminUserIds = new Set(parseCsv(options.adminUserIds));
+    // [LOG: 20260802_1700] adminUserIds must be lowercased at construction time:
+    // _isAdmin() receives userId from normalizeRequestUserId() which always lowercases,
+    // so a mixed-case value like BBS_ADMIN_USER_IDS=SysOp would never match 'sysop'.
+    // adminEmails was already lowercased here — apply the same normalization to adminUserIds.
+    this.adminUserIds = new Set(parseCsv(options.adminUserIds).map((item) => item.toLowerCase()));
     this.adminEmails = new Set(parseCsv(options.adminEmails).map((item) => item.toLowerCase()));
     this.memberRepository = options.memberRepository || null;
     this.memberProfileService = options.memberProfileService || new AuthMemberProfileService({
