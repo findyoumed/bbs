@@ -1,3 +1,36 @@
+## [2026-08-02 19:00] [버그수정] normalizeMemo senderUserId·recipientUserId 소문자 정규화 누락
+
+**LOG_ID: 20260802_1900**
+목표: 37라운드 — 클라이언트 commandRouter* 파일 전수 조사(대소문자 정규화 누락 패턴) 완료 후 새 영역 전환. 서버 `normalizeMemo` 함수에서 `senderUserId`·`recipientUserId` 출력 정규화 누락 버그 발견 및 수정.
+
+발견 버그 — `MemoRepositoryShared.js::normalizeMemo` 출력 필드 미정형화:
+- `normalizeMemo(row)`가 DB에서 읽은 `sender_user_id`·`recipient_user_id`를 단순 `String()` 변환만 하고 `.toLowerCase()` 없이 반환.
+- 반면 모든 비교 함수(`canAccessMemo`, `isArchivedFor`, `SupabaseMemoRepository.setArchived/markRead`)는 context.userId를 소문자로 정형화해 비교.
+- 레거시 memos 테이블에 'Alice'처럼 대소문자 혼용 userId가 저장된 경우: `normalizeMemo`가 `senderUserId: 'Alice'`를 반환 → `canAccessMemo`에서 `'Alice' === 'alice'` → false → 본인임에도 접근 거부·읽음 처리·보관함 이동 전부 불가.
+- 동일 패턴이 `isArchivedFor`(보관 여부 오판), `setArchived`(wrong column 갱신), `markRead`(미처리)에도 존재.
+- 신규 쪽지는 `createMemo` 경로에서 sender·recipient 모두 소문자 저장되므로 신규 데이터는 안전하나, 레거시 데이터에서 재현 가능한 실질 버그.
+
+수정: `normalizeMemo`의 출력 정형화 단계에서 `.toLowerCase()` 추가:
+```
+senderUserId:   String(...).toLowerCase()
+recipientUserId: String(...).toLowerCase()
+```
+이로써 비교 함수들이 양쪽을 따로 toLowerCase()할 필요 없이 normalizeMemo 호출만으로 일관성 보장.
+
+조사 중 확인한 안전 항목 (신규 버그 없음):
+- `commandRouter*.js` 전 파일: 대소문자 비교 전 낮춤 처리 또는 서버 정규화 경로 의존 — 이상 없음.
+- `SupabaseBoardRepositoryWriteOps.js`: tombstone 답글 방어, 자기 추천 방지, 추천수 레이스 해소 — 이상 없음.
+- `VoteRepositorySupabase.js`: castVote 중복 투표 409, deleteVote 권한 검증 — 이상 없음.
+- `MemoRepositorySupabase.js`: `_getColumnMap` rejected-promise 재시도 버그(round 35 수정) — 이미 수정됨.
+- `MemberRepositorySupabase.js`: `_findByField` ilike + JS 후검증(round 36 수정) — 이미 수정됨.
+- 조회수(hit) read-then-write 경쟁 조건: DB 마이그레이션 없이 해결 불가, 공지된 비-치명적 한계로 유지.
+
+변경 파일: `src/server/MemoRepositoryShared.js` (2줄 수정)
+수행 작업: 1) normalizeMemo 두 필드에 .toLowerCase() 추가 2) smoke:vercel-ready 통과 3) WORK_LOG 기록
+결과: 완료
+
+---
+
 ## [2026-08-02 18:00] [버그수정] /WHO·/FI 명령 userId 대소문자 불일치 + AuthBridge._isAdmin 조회 비대칭 수정
 
 **LOG_ID: 20260802_1800**

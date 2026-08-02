@@ -2,14 +2,20 @@
 
 const { createHttpError, normalizeMultilineText, normalizeText, isMissingTableError } = require('./httpUtils');
 
+// [LOG: 20260802_1900] senderUserId·recipientUserId를 소문자로 정형화하지 않으면
+// canAccessMemo·isArchivedFor·setArchived·markRead 등 모든 비교 함수가
+// context.userId(항상 소문자)와의 등치 비교에서 레거시 대소문자 혼용 행에 대해 틀린 결과를 낸다.
+// 즉, 레거시 memos 테이블에 'Alice'로 저장된 수신자는 'alice'로 로그인한 본인조차
+// 접근 거부·읽음 처리 불가 상태가 된다. 출력 정형화(normalizeMemo)에서 소문자로 정규화하면
+// 비교 함수마다 양쪽을 따로 toLowerCase()할 필요 없이 일관성이 보장된다.
 function normalizeMemo(row) {
   if (!row) {
     return null;
   }
   return {
     id: Number(row.id ?? row.no ?? 0),
-    senderUserId: String(row.sender_user_id ?? row.sender_id ?? row.senderUserId ?? 'guest'),
-    recipientUserId: String(row.recipient_user_id ?? row.receiver_id ?? row.recipientUserId ?? 'guest'),
+    senderUserId: String(row.sender_user_id ?? row.sender_id ?? row.senderUserId ?? 'guest').toLowerCase(),
+    recipientUserId: String(row.recipient_user_id ?? row.receiver_id ?? row.recipientUserId ?? 'guest').toLowerCase(),
     title: String(row.title ?? ''),
     content: String(row.content ?? ''),
     isRead: Boolean(row.is_read ?? row.isRead ?? false),
