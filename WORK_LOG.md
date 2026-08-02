@@ -1,3 +1,48 @@
+## [2026-08-03 15:00] [버그수정] updateProfile 경쟁 조건 — 관리자 레벨 변경이 사용자 프로필 업데이트로 무음 덮어쓰임
+
+**LOG_ID: 20260803_1500**
+목표: 43라운드 — optimistic lock 부재·페이지네이션-삭제 상호작용 조사. `updateProfile`의 full upsert가 admin `setLevel`을 경쟁적으로 덮어쓰는 버그 발견 및 수정.
+
+발견 버그 — `updateProfile` 경쟁 조건으로 관리자 레벨 변경 손실:
+
+- 재현 경로:
+  1. 사용자가 프로필 편집 화면을 열면 `getMember` 호출 → existing.level = 1 읽음.
+  2. 사용자가 화면에 머무는 동안 관리자가 `POST /api/members/:userId/level`로 level=99 설정 완료.
+  3. 사용자가 닉네임을 변경해 저장 → `updateProfile`이 stale existing.level=1 포함한 full upsert(ensureMember) 실행.
+  4. DB: level = 1 (관리자의 변경이 조용히 사라짐).
+- 실측 재현: MemoryMemberRepository로 직접 검증 (setLevel(99) 후 ensureMember with level=1 → level=1로 복원됨).
+- 근본 원인: `updateProfile()`이 level/isAdmin/registrationDateTime/lastLoginDateTime 같은 관리자 필드를 stale existing에서 읽어 `ensureMember`(full upsert)로 썼다. 경쟁 창(window)이 getMember 읽기 ~ ensureMember 쓰기 사이이며, authBridge 동기화가 포함되면 초 단위로 벌어짐.
+
+수정 — `updateUserProfile(userId, patch)` 메서드 추가 + `updateProfile`이 이를 사용:
+
+1. `MemberRepositoryMemory.updateUserProfile(userId, patch)`:
+   - 현재 레코드에서 level/isAdmin/password/registrationDateTime/lastLoginDateTime는 spread로 그대로 보존.
+   - nick_name/email/birthday/sex/is_open만 patch에서 읽어 갱신.
+2. `MemberRepositorySupabase.updateUserProfile(userId, patch)`:
+   - 단일 SQL `UPDATE ... SET nick_name=..., email=..., birthday=..., sex=..., is_open=... WHERE user_id=...`.
+   - level/is_admin 등 관리자 필드 컬럼은 SET 목록에 없어 DB 트랜잭션 수준에서 원자적으로 보호됨.
+   - PGRST116 → 404 처리 추가.
+3. `memberRoutes.updateProfile()`:
+   - `nextProfile`에서 level/isAdmin/registrationDateTime/lastLoginDateTime 필드 제거.
+   - `ensureMember(nextProfile)` 대신 `memberRepository.updateUserProfile(context.userId, nextProfile)` 사용.
+   - authBridge 실패 시 롤백도 `updateUserProfile`로 수행(관리자 필드 불침범).
+   - `typeof updateUserProfile === 'function'` 가드로 미래 드라이버 호환성 유지.
+
+변경 파일:
+- `src/server/MemberRepositoryMemory.js` (`updateUserProfile` 25줄 추가)
+- `src/server/MemberRepositorySupabase.js` (`updateUserProfile` 30줄 추가)
+- `src/server/routeHandlers/memberRoutes.js` (`updateProfile` 내 nextProfile 재구성 + 호출부 수정 ~20줄)
+
+검증:
+- node --check 3파일 모두 통과.
+- Memory 드라이버 재현 스크립트: setLevel(99) → updateUserProfile → level=99 보존, nickName 갱신 확인.
+- Supabase 라이브 테스트(`bbs_racetest_43`): setLevel(5) → updateUserProfile → level=5 보존, nickName 갱신 확인 → 테스트 계정 정리 완료.
+- smoke:auth-bridge 32 checks 통과.
+- smoke:boards 통과.
+- smoke:full-traversal 0 errors 통과.
+- smoke:vercel-ready 통과.
+결과: ✅ 완료
+
 ## [2026-08-03 14:30] [버그수정] PGRST116(0 rows) → 502 오매핑 8건 수정 — Memo/Vote/Conf/Chat/Attachment/Member 레포지토리
 
 **LOG_ID: 20260803_1430**

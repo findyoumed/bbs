@@ -103,6 +103,30 @@ class MemoryMemberRepository extends BaseRepository {
     return toPublicMember(next);
   }
 
+  // [LOG_ID: 20260802_1500] updateProfile 경쟁 조건 수정 — 사용자가 관리하는 프로필 필드
+  // (nickName/email/birthday/sex/isOpen)만 갱신하고, 관리자가 관리하는 필드(level/isAdmin/
+  // password/registrationDateTime/lastLoginDateTime)는 절대 건드리지 않는 타깃 UPDATE.
+  // ensureMember를 쓰면 stale한 existing.level이 관리자 레벨 변경을 덮어쓰는 경쟁 조건이
+  // 발생한다(updateProfile이 existing을 읽은 뒤 관리자가 setLevel을 완료했을 때).
+  async updateUserProfile(userId, patch = {}) {
+    const normalizedUserId = normalizeLookup(userId);
+    const current = this.members.get(normalizedUserId) || null;
+    if (!current) {
+      throw createHttpError(404, '회원 정보를 찾을 수 없습니다.');
+    }
+    // level/isAdmin/password/registrationDateTime/lastLoginDateTime 은 건드리지 않는다.
+    const next = {
+      ...current,
+      nickName: String(patch.nickName ?? current.nickName ?? '').trim() || normalizedUserId,
+      email: String(patch.email ?? current.email ?? '').trim(),
+      birthday: String(patch.birthday ?? current.birthday ?? '').trim(),
+      sex: String(patch.sex ?? current.sex ?? 'M').trim() || 'M',
+      isOpen: Boolean(patch.isOpen ?? current.isOpen ?? true)
+    };
+    this.members.set(normalizedUserId, next);
+    return toPublicMember(next);
+  }
+
   // [LOG_ID: 20260722_3000] 부재통지(ABSENT/NOMAN) — global.absentMessages(프로세스 메모리
   // Map, 서버 재시작/서버리스 인스턴스 교체마다 소실)를 대체하는 영속 저장.
   async setAbsence(userId, { start = null, end = null, reason = '' } = {}) {

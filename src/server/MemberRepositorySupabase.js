@@ -230,6 +230,40 @@ class SupabaseMemberRepository extends BaseRepository {
     return toPublicMember(normalizeMember(data));
   }
 
+  // [LOG_ID: 20260802_1500] updateProfile 경쟁 조건 수정 — 사용자가 관리하는 프로필 필드
+  // (nick_name/email/birthday/sex/is_open)만 SQL UPDATE하고, 관리자가 관리하는 필드(level/
+  // is_admin/password/registration_datetime/lastlogin_datetime)는 절대 건드리지 않는다.
+  // ensureMember(full upsert)를 쓰면 stale한 existing.level이 관리자 레벨 변경을 덮어쓰는
+  // 경쟁 조건이 발생한다(updateProfile이 existing을 읽은 뒤 관리자가 setLevel을 완료했을 때).
+  async updateUserProfile(userId, patch = {}) {
+    const normalizedUserId = normalizeLookup(userId);
+    if (!normalizedUserId) {
+      throw createHttpError(400, '회원 ID가 필요합니다.');
+    }
+
+    const { data, error } = await this.client
+      .from(this.table)
+      .update({
+        nick_name: String(patch.nickName ?? '').trim(),
+        email: String(patch.email ?? '').trim(),
+        birthday: String(patch.birthday ?? '').trim(),
+        sex: String(patch.sex ?? 'M').trim() || 'M',
+        is_open: Boolean(patch.isOpen ?? true)
+      })
+      .eq('user_id', normalizedUserId)
+      .select('*')
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw createHttpError(404, '회원 정보를 찾을 수 없습니다. 이미 탈퇴하셨을 수 있습니다.');
+      }
+      this._throwError('회원 프로필 수정', error, { table: this.table });
+    }
+
+    return toPublicMember(normalizeMember(data));
+  }
+
   // [LOG_ID: 20260722_3000] 부재통지(ABSENT/NOMAN) — global.absentMessages(프로세스 메모리
   // Map, 서버 재시작/서버리스 인스턴스 교체마다 소실)를 대체하는 영속 저장(members 테이블
   // absent_start/absent_end/absent_reason 컬럼, 0020_member_absence.sql).

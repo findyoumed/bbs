@@ -248,17 +248,18 @@ class MemberRouter extends BaseRouter {
     const context = await this.getContext();
 
     const existing = await memberRepository.getMember(context.userId);
+    // [LOG_ID: 20260802_1500] level/isAdmin/registrationDateTime/lastLoginDateTime은
+    // 관리자가 관리하는 필드이므로 nextProfile에 포함하지 않는다. 이 값들을 stale한
+    // existing에서 읽어 ensureMember(full upsert)로 쓰면, 사용자가 프로필 편집 화면을
+    // 열어둔 사이 관리자가 setLevel을 완료해도 저장 시점에 stale level로 덮어써지는
+    // 경쟁 조건이 발생했다(실측 재현 확인). 이제 updateUserProfile(targeted UPDATE)을
+    // 사용해 사용자 관리 필드만 갱신하므로 관리자 필드는 영향받지 않는다.
     const nextProfile = {
-      userId: context.userId,
       nickName: body?.nickName ?? existing?.nickName ?? context.nickName ?? '',
       email: body?.email ? validateEmail(body.email) : (existing?.email ?? context.email ?? ''),
       birthday: String(body?.birthday ?? existing?.birthday ?? '').trim(),
       sex: String(body?.sex ?? existing?.sex ?? 'M').trim() || 'M',
-      level: existing?.level ?? context.level ?? 1,
-      isAdmin: existing?.isAdmin ?? context.isAdmin,
-      isOpen: existing?.isOpen ?? true,
-      registrationDateTime: existing?.registrationDateTime ?? '',
-      lastLoginDateTime: existing?.lastLoginDateTime ?? ''
+      isOpen: existing?.isOpen ?? true
     };
 
     // [LOG: 20260802_2000] 공백 전용 닉네임 무음 대체 버그 방지 — route 스키마의 minLength: 2
@@ -292,7 +293,11 @@ class MemberRouter extends BaseRouter {
       if (duplicateEmail && duplicateEmail.userId !== context.userId) this.conflict('이미 등록된 이메일 주소입니다.');
     }
 
-    const savedProfile = await memberRepository.ensureMember(nextProfile);
+    // [LOG_ID: 20260802_1500] updateUserProfile(targeted UPDATE)을 우선 사용하고, 해당 메서드가
+    // 없는 드라이버(미래 확장)에는 기존 ensureMember로 폴백한다.
+    const savedProfile = typeof memberRepository.updateUserProfile === 'function'
+      ? await memberRepository.updateUserProfile(context.userId, nextProfile)
+      : await memberRepository.ensureMember({ ...existing, userId: context.userId, ...nextProfile });
     if (authBridge?.syncMemberAuthProfile) {
       try {
         await authBridge.syncMemberAuthProfile(savedProfile, {
@@ -301,8 +306,20 @@ class MemberRouter extends BaseRouter {
           allowMissingAuthUser: true
         });
       } catch (error) {
-        // Rollback local profile if sync fails
-        if (existing) await memberRepository.ensureMember(existing);
+        // [LOG_ID: 20260802_1500] 롤백도 updateUserProfile(targeted UPDATE)로 수행해 관리자 필드를 건드리지 않는다.
+        if (existing) {
+          if (typeof memberRepository.updateUserProfile === 'function') {
+            await memberRepository.updateUserProfile(context.userId, {
+              nickName: existing.nickName,
+              email: existing.email,
+              birthday: existing.birthday,
+              sex: existing.sex,
+              isOpen: existing.isOpen
+            });
+          } else {
+            await memberRepository.ensureMember(existing);
+          }
+        }
         throw error;
       }
     }
