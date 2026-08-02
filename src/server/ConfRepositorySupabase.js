@@ -113,7 +113,12 @@ class SupabaseConfRepository extends BaseRepository {
     const { data, error } = await this.client.from(this.roomsTable)
       .update({ is_open: false, closed_at: new Date().toISOString() })
       .eq('room_no', Number(roomNo)).select('*').single();
-    if (error) this._fail('회의실 닫기', error);
+    if (error) {
+      // [LOG: 20260803_1430] PGRST116(0 rows matched): _findRoomRow()와 update() 사이에
+      // 회의실이 삭제된 경쟁 조건 — 502 오매핑을 404로 수정.
+      if (error.code === 'PGRST116') throw createHttpError(404, '회의실을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+      this._fail('회의실 닫기', error);
+    }
     return this._publicRoom(data, await this._agendaCount(roomNo));
   }
 

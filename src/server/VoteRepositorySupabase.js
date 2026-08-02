@@ -249,7 +249,14 @@ class SupabaseVoteRepository extends BaseRepository {
         .select()
         .single();
 
-      if (deleteError) this._throwError('deleteVote:delete', deleteError, { table: this.table });
+      if (deleteError) {
+        // [LOG: 20260803_1430] PGRST116(0 rows matched): find()와 delete() 사이에 투표가
+        // 삭제된 경쟁 조건 — 502 오매핑을 404로 수정.
+        if (deleteError.code === 'PGRST116') {
+          throw createHttpError(404, '투표를 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+        }
+        this._throwError('deleteVote:delete', deleteError, { table: this.table });
+      }
 
       return {
         id: Number(deleted.id),

@@ -176,7 +176,12 @@ class SupabaseChatRoomRepository extends BaseRepository {
     }
     if (Object.keys(updates).length === 0) return this._toPublicRoom(room);
     const { data, error } = await this.client.from(this.table).update(updates).eq('room_no', Number(roomNo)).select(this.queries._selectColumns()).single();
-    if (error) throw createHttpError(502, `수정 실패: ${error.message}`);
+    if (error) {
+      // [LOG: 20260803_1430] PGRST116(0 rows matched): findRoomByNo()와 update() 사이에
+      // 대화방이 삭제된 경쟁 조건 — 502 오매핑을 404로 수정.
+      if (error.code === 'PGRST116') throw createHttpError(404, '대화방을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+      throw createHttpError(502, `수정 실패: ${error.message}`);
+    }
     return this._toPublicRoom(data);
   }
 

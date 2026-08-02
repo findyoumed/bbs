@@ -81,6 +81,11 @@ class SupabaseMemoRepository extends BaseRepository {
       .select('*')
       .single();
     if (error) {
+      // [LOG: 20260803_1430] PGRST116(0 rows matched): getMemo()와 update() 사이에 쪽지가
+      // 삭제된 경쟁 조건 — 502 오매핑을 404로 수정.
+      if (error.code === 'PGRST116') {
+        throw createHttpError(404, '쪽지를 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+      }
       this._throwError('쪽지 보관 처리', error, { table: this.table });
     }
     return normalizeMemo(data);
@@ -162,6 +167,12 @@ class SupabaseMemoRepository extends BaseRepository {
       .select('*')
       .single();
     if (error) {
+      // [LOG: 20260803_1430] PGRST116(0 rows matched): getMemo()와 update() 사이에 쪽지가
+      // 삭제된 경쟁 조건. 사용자는 getMemo()에서 이미 쪽지를 읽었으므로 graceful degrade —
+      // 갱신 실패를 조용히 흡수하고 이미 읽어 둔 memo를 그대로 반환한다.
+      if (error.code === 'PGRST116') {
+        return memo;
+      }
       this._throwError('메모 읽음 처리', error, { table: this.table });
     }
     return normalizeMemo(data);

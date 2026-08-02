@@ -219,6 +219,11 @@ class SupabaseMemberRepository extends BaseRepository {
       .single();
 
     if (error) {
+      // [LOG: 20260803_1430] PGRST116(0 rows matched): 인증 완료와 update() 사이에 회원이
+      // 탈퇴한 경쟁 조건 — 502 오매핑을 404로 수정.
+      if (error.code === 'PGRST116') {
+        throw createHttpError(404, '회원 정보를 찾을 수 없습니다. 이미 탈퇴하셨을 수 있습니다.');
+      }
       this._throwError('회원 이메일 변경', error, { table: this.table });
     }
 
@@ -246,6 +251,11 @@ class SupabaseMemberRepository extends BaseRepository {
       .single();
 
     if (error) {
+      // [LOG: 20260803_1430] PGRST116(0 rows matched): 인증 완료와 update() 사이에 회원이
+      // 탈퇴한 경쟁 조건 — 502 오매핑을 404로 수정.
+      if (error.code === 'PGRST116') {
+        throw createHttpError(404, '회원 정보를 찾을 수 없습니다. 이미 탈퇴하셨을 수 있습니다.');
+      }
       this._throwError('부재통지 설정', error, { table: this.table });
     }
 

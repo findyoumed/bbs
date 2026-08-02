@@ -174,6 +174,13 @@ class SupabaseAttachmentRepository extends BaseRepository {
       .single();
 
     if (error) {
+      // [LOG: 20260803_1430] PGRST116(0 rows matched): _getRow()와 update() 사이에 첨부파일이
+      // 삭제된 경쟁 조건. 사용자는 이미 buffer를 읽어 두었으므로 다운로드 수 갱신 실패를
+      // 조용히 흡수하고 기존에 읽어 둔 row로 반환한다(graceful degrade — 게시글 조회수 갱신과
+      // 동일한 패턴, SupabaseBoardRepositoryPostReads.js LOG: 20260803_1200 참고).
+      if (error.code === 'PGRST116') {
+        return { entry: normalizeEntry(row), buffer };
+      }
       this._throwError('첨부 다운로드 수 갱신', error, { table: this.table });
     }
 

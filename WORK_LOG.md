@@ -1,3 +1,32 @@
+## [2026-08-03 14:30] [버그수정] PGRST116(0 rows) → 502 오매핑 8건 수정 — Memo/Vote/Conf/Chat/Attachment/Member 레포지토리
+
+**LOG_ID: 20260803_1430**
+목표: 42라운드 — 라운드 41에서 발굴한 "PostgREST PGRST116 오매핑" 패턴을 나머지 Supabase 레포지토리 전체로 확장 조사·수정.
+
+조사 범위: 6개 파일(MemberRepositorySupabase.js, MemoRepositorySupabase.js, VoteRepositorySupabase.js, ConfRepositorySupabase.js, ChatRoomRepositorySupabase.js, AttachmentRepositorySupabase.js) + ActivityRepositorySupabase.js 전수 grep.
+
+발견 버그 — PGRST116 → 502 오매핑 8곳:
+
+1. `MemoRepositorySupabase::setArchived` — getMemo() 사전 검사 후 update().single(). 경쟁 조건으로 쪽지가 삭제되면 PGRST116 → 502. 404로 수정.
+2. `MemoRepositorySupabase::markRead` — getMemo() 사전 검사 후 update().single(). 경쟁 조건으로 쪽지가 삭제되면 PGRST116 → 502. getMemo()에서 이미 읽었으므로 graceful degrade(memo 그대로 반환)로 수정.
+3. `VoteRepositorySupabase::deleteVote` — maybeSingle() 사전 조회 후 delete().select().single(). 경쟁 조건으로 투표가 삭제되면 PGRST116 → 502. 404로 수정.
+4. `ConfRepositorySupabase::closeRoom` — _findRoomRow() 사전 검사 후 update().single(). 경쟁 조건으로 회의실이 삭제되면 PGRST116 → _fail() → 502. 404로 수정.
+5. `ChatRoomRepositorySupabase::updateRoom` — findRoomByNo() 사전 검사 후 update().select().single(). 경쟁 조건으로 대화방이 삭제되면 PGRST116 → 502. 404로 수정.
+6. `AttachmentRepositorySupabase::_read` — _getRow() 사전 조회 후 download_count 갱신 update().single(). 경쟁 조건으로 첨부파일이 삭제되면 PGRST116 → 502. buffer는 이미 읽혀 있으므로 graceful degrade(기존 row로 반환)로 수정 — 게시글 조회수 갱신(SupabaseBoardRepositoryPostReads, LOG 20260803_1200)과 동일한 패턴.
+7. `MemberRepositorySupabase::setEmail` — 사전 존재 검사 없이 update().select().single(). 인증 완료 후 회원 탈퇴 경쟁 조건 시 PGRST116 → 502. 404로 수정.
+8. `MemberRepositorySupabase::setAbsence` — 사전 존재 검사 없이 update().select().single(). 동일 패턴. 404로 수정.
+
+변경 파일:
+- `src/server/MemoRepositorySupabase.js` (setArchived 4줄, markRead 5줄 추가)
+- `src/server/VoteRepositorySupabase.js` (deleteVote 5줄 추가)
+- `src/server/ConfRepositorySupabase.js` (closeRoom 4줄 추가)
+- `src/server/ChatRoomRepositorySupabase.js` (updateRoom 4줄 추가)
+- `src/server/AttachmentRepositorySupabase.js` (_read 6줄 추가)
+- `src/server/MemberRepositorySupabase.js` (setEmail 4줄, setAbsence 4줄 추가)
+
+검증: node --check 6개 파일 전체 통과. smoke:boards / smoke:auth-bridge / smoke:chat-rooms / smoke:rss-services / smoke:renderer-ui / smoke:vercel-ready 모두 통과.
+결과: 완료
+
 ## [2026-08-03 12:00] [버그수정] PGRST116(0 rows) → 502 오매핑 수정 — updateMappedPost, initializeThreadRoot, getPost 조회수 갱신
 
 **LOG_ID: 20260803_1200**
