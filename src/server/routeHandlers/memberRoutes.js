@@ -261,6 +261,18 @@ class MemberRouter extends BaseRouter {
       lastLoginDateTime: existing?.lastLoginDateTime ?? ''
     };
 
+    // [LOG: 20260802_2000] 공백 전용 닉네임 무음 대체 버그 방지 — route 스키마의 minLength: 2
+    // 는 raw 길이를 체크하므로 '  '(공백 2개)가 통과한다. validateReservedNickname은 NFKC로
+    // 공백을 제거해 ''로 만들어 통과시키고, findByNickName은 normalizeLookup('')이 null을
+    // 반환해 중복도 통과시킨다. 결국 mergeMemberRecord에서 String('  ').trim() === ''이 되어
+    // fallback '' || userId 경로로 사용자 아이디가 닉네임으로 무음 저장된다. 여기서 trim 후
+    // 공란 검사를 먼저 해서 400을 돌려준다.
+    const trimmedNickName = String(nextProfile.nickName ?? '').trim();
+    if (!trimmedNickName) {
+      this.validationError('이용자명을 입력해 주세요.');
+    }
+    nextProfile.nickName = trimmedNickName;
+
     const reservedNickName = validateReservedNickname(nextProfile.nickName, context.userId);
     if (!reservedNickName.allowed) {
       this.conflict(getReservedNicknameMessage(reservedNickName.keyword));

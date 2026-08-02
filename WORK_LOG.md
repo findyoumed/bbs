@@ -1,3 +1,41 @@
+## [2026-08-02 20:00] [버그수정] updateProfile 공백 전용 닉네임 무음 대체 버그
+
+**LOG_ID: 20260802_2000**
+목표: 38라운드 — 대소문자/정규화 불일치 패턴 소진 후 완전히 새 영역(입력 정규화 — 공백 처리) 전환. `updateProfile`에서 공백 전용 닉네임이 모든 검증을 무음 통과한 뒤 userId로 대체 저장되는 버그 발견 및 수정.
+
+발견 버그 — `memberRoutes.js::updateProfile()` 공백 전용 닉네임 무음 대체:
+- 재현 경로: POST `/api/members/profile` body에 `nickName: '  '`(공백 2개) 전송.
+- 1단계 route 스키마 `{ minLength: 2, maxLength: 20 }`: `BaseRouterValidation.js`의 minLength 체크가 raw 길이(`.length`, trim 없음)를 검사 → `'  '.length === 2 >= 2` → 통과.
+- 2단계 `validateReservedNickname('  ')`: 내부에서 NFKC 정규화 + 공백 제거 → `''` → 예약어 아님 → 통과.
+- 3단계 `memberRepository.findByNickName('  ')`: `normalizeLookup('  ')` = `''` → 조기 null 반환 → 중복 없음 판정 → 통과.
+- 4단계 `memberRepository.ensureMember({nickName: '  '})` → `mergeMemberRecord()`:
+  `String('  ').trim() || normalizedUserId` = `'' || 'alice'` = `'alice'` → **사용자 아이디가 닉네임으로 무음 저장**.
+- 결과: 클라이언트는 200 OK와 함께 `nickName: userId` 응답을 받지만 오류 메시지가 전혀 없어 사용자는 무슨 일이 일어났는지 알 수 없다.
+- 공백 1개(`' '`)도 동일 경로 — minLength: 2를 통과 못 하지만, 빈 문자열(`''`)은 `?? existing` 체인에서 body에 명시 전달된 경우 공백과 동일하게 merge에서 userId로 대체된다.
+
+수정 — `updateProfile()`에서 `nextProfile` 조립 직후, 예약어 검사 전에 trim + 공란 검증 추가:
+```javascript
+const trimmedNickName = String(nextProfile.nickName ?? '').trim();
+if (!trimmedNickName) {
+  this.validationError('이용자명을 입력해 주세요.');
+}
+nextProfile.nickName = trimmedNickName;
+```
+이로써 이후 `validateReservedNickname`·`findByNickName`도 이미 트림된 값으로 수행된다.
+
+조사 영역 요약 (38라운드):
+- 동시 편집 충돌/낙관적 잠금: DB 트랜잭션 필요 → 아키텍처 변경 없이 해결 불가, 비치명적 한계로 유지.
+- 페이지네이션+삭제 상호작용: offset 기반 특성상 갭 발생 가능하나, 커서 기반 전환 없이는 근본 해결 불가.
+- 랭킹/포인트 집계: 별도 포인트 시스템 없음, 레벨 클램핑 정상, 버그 없음.
+- 파일 업로드 MIME 검증: 클라이언트 제공 MIME만 사용, 낮은 위험, Content-Disposition: attachment로 렌더 방지.
+- 관리자 기능 엣지케이스: closeRoom/setLevel/deleteMember 권한 검증 정상, 버그 없음.
+- 시간대/로케일: parseAbsentDateBoundary가 날짜 전용 문자열을 로컬 시간으로 파싱 — production은 UTC라 정상.
+- 입력 정규화(공백/Full-width): **updateProfile 공백 전용 닉네임 버그 발견 및 수정** (이 항목).
+
+변경 파일: `src/server/routeHandlers/memberRoutes.js` (11줄 추가)
+수행 작업: 1) 버그 재현 경로 확인 2) updateProfile에 trim+공란 검증 추가 3) node --check 통과 4) smoke:vercel-ready / smoke:command-parity / smoke:full-traversal / smoke:auth-bridge 전부 통과 5) WORK_LOG 기록
+결과: 완료
+
 ## [2026-08-02 19:00] [버그수정] normalizeMemo senderUserId·recipientUserId 소문자 정규화 누락
 
 **LOG_ID: 20260802_1900**
