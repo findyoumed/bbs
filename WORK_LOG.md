@@ -1,3 +1,27 @@
+## [2026-08-02 23:10] [버그수정] register() 이메일 중복 검사 누락 — generic 409 메시지
+
+**LOG_ID: 20260802_2310**
+목표: 40라운드 — 이메일 검증/정규화 엣지 케이스 조사. register()에서 email 중복 검사가 누락돼 DB unique 제약이 발동할 때 generic "회원 저장 중 중복된 데이터가 발견되었습니다." 메시지가 반환되는 버그 발견 및 수정.
+
+발견 버그 — `register()`의 이메일 중복 사전 검사 누락:
+- 재현 경로: `POST /api/members/register` body에 이미 다른 회원이 사용 중인 `email` 전송.
+- `register()`는 userId → `getMember` 중복 검사, nickName → `findByNickName` 중복 검사를 각각 수행해 specific 409 메시지를 반환한다.
+- 그러나 email 중복 검사는 없다 — `ensureMember` 호출 시 DB의 `idx_members_email_unique` 제약(migration 0021)이 발동하면 `_throwError`가 generic "회원 저장 중 중복된 데이터가 발견되었습니다."(code 23505)로 변환한다.
+- 클라이언트는 이 메시지로 어떤 필드(email vs nick_name)가 중복인지 알 수 없고, 정상 프로덕션 플로우를 우회해 `/api/members/register` API를 직접 호출하는 경우에 발생한다.
+- 실측으로 확인: `bbtestdup01`(email `duptest@bbs-test.invalid`)을 먼저 생성한 뒤, 다른 userId/nickName으로 같은 email로 재가입 시도 → 409 + "회원 저장 중 중복된 데이터가 발견되었습니다." 반환.
+- `updateProfile()`·`setEmail()` 두 경로는 `findByEmail` 사전 검사를 이미 가지고 있어 specific "이미 등록된 이메일 주소입니다." 메시지를 반환한다. `register()`만 누락.
+
+수정:
+- `assertEmailAllowed(email)` 직후에 `validateEmail(email)` 호출 결과를 `normalizedEmail`에 저장한다 (기존 코드는 `ensureMember` 인수에서 `validateEmail(email)`을 두 번 호출했다).
+- `findByNickName` 중복 검사 직후에 `findByEmail(normalizedEmail)` 사전 검사 추가 — 중복 발견 시 `this.conflict('이미 사용 중인 이메일 주소입니다.')` 반환.
+- `ensureMember` 호출 시 `email: normalizedEmail` 사용 (이미 정규화된 값 재활용).
+
+변경 파일:
+- `src/server/routeHandlers/authRoutes.js` (12줄 추가/수정)
+
+수행 작업: 1) 이메일 검증/정규화 전수 경로 조사 2) register() 누락 발견 및 실측 재현 3) 수정 적용 4) 테스트 데이터 생성→재현→정리 5) node --check 통과 6) smoke:auth-bridge / smoke:vercel-ready / smoke:full-traversal 통과
+결과: 완료
+
 ## [2026-08-02 21:00] [버그수정] register/oauthRegister/updateProfile 공백 패딩 1자 닉네임 우회 버그
 
 **LOG_ID: 20260802_2100**

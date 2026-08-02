@@ -150,6 +150,10 @@ class AuthRouter extends BaseRouter {
       this.assertEmailAllowed(email);
     }
 
+    // [LOG: 20260802_2300] email 형식 검증을 여기서 먼저 수행해 normalizedEmail을 얻는다.
+    // 이후 중복 검사·ensureMember 양쪽에서 동일 값을 사용해 validateEmail을 두 번 호출하지 않는다.
+    const normalizedEmail = email ? validateEmail(email) : '';
+
     const existing = await memberRepository.getMember(rawUserId);
     if (existing) this.conflict('이미 사용 중인 아이디입니다.');
 
@@ -158,10 +162,21 @@ class AuthRouter extends BaseRouter {
       if (duplicateNick) this.conflict('이미 사용 중인 닉네임입니다.');
     }
 
+    // [LOG: 20260802_2300] register()에서 이메일 중복 검사가 누락돼 있었다 — nickName은
+    // findByNickName으로 ensureMember 이전에 검사해 specific 409를 반환하지만, email은
+    // DB unique 제약(idx_members_email_unique)이 발동할 때까지 검사하지 않아 generic
+    // "회원 저장 중 중복된 데이터가 발견되었습니다." 오류를 반환했다. 클라이언트는 이
+    // 메시지로 어떤 필드가 중복인지 알 수 없다. updateProfile()/setEmail()과 동일한
+    // 패턴으로 사전 검사를 추가한다.
+    if (normalizedEmail && typeof memberRepository.findByEmail === 'function') {
+      const duplicateEmail = await memberRepository.findByEmail(normalizedEmail);
+      if (duplicateEmail) this.conflict('이미 사용 중인 이메일 주소입니다.');
+    }
+
     const member = await memberRepository.ensureMember({
       userId: rawUserId,
       nickName: rawNickName,
-      email: email ? validateEmail(email) : '',
+      email: normalizedEmail,
       level: 1,
       isAdmin: false,
       isOpen: true,
