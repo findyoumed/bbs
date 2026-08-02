@@ -2,6 +2,45 @@
 
 const { createBridgeError, normalizeAuthEmail } = require('./AuthBridgeUtils');
 
+function normalizeRecoveryRedirect(value, env = process.env) {
+  const redirectTo = String(value || '').trim();
+  if (!redirectTo) {
+    throw createBridgeError(400, '비밀번호 재설정 이동 주소가 필요합니다.');
+  }
+
+  if (redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
+    return redirectTo;
+  }
+
+  const allowedOrigin = String(
+    env.BBS_PUBLIC_ORIGIN || env.BBS_PUBLIC_URL || env.PUBLIC_URL || ''
+  ).trim();
+  if (!allowedOrigin) {
+    throw createBridgeError(400, '비밀번호 재설정 이동 주소가 허용된 주소가 아닙니다.');
+  }
+
+  let allowedUrl;
+  let requestedUrl;
+  try {
+    allowedUrl = new URL(allowedOrigin);
+    requestedUrl = new URL(redirectTo);
+  } catch (_error) {
+    throw createBridgeError(400, '비밀번호 재설정 이동 주소가 올바르지 않습니다.');
+  }
+
+  if (!['http:', 'https:'].includes(allowedUrl.protocol) || !['http:', 'https:'].includes(requestedUrl.protocol)) {
+    throw createBridgeError(400, '비밀번호 재설정 이동 주소가 올바르지 않습니다.');
+  }
+  if (allowedUrl.username || allowedUrl.password || requestedUrl.username || requestedUrl.password) {
+    throw createBridgeError(400, '비밀번호 재설정 이동 주소가 올바르지 않습니다.');
+  }
+  if (allowedUrl.origin !== requestedUrl.origin) {
+    throw createBridgeError(400, '비밀번호 재설정 이동 주소가 허용된 주소가 아닙니다.');
+  }
+
+  return requestedUrl.toString();
+}
+
 async function requestPasswordRecovery(bridge, email, options = {}) {
   if (!bridge.recoveryClient) {
     throw createBridgeError(503, '비밀번호 찾기 기능이 설정되지 않았습니다.');
@@ -12,7 +51,7 @@ async function requestPasswordRecovery(bridge, email, options = {}) {
     throw createBridgeError(400, '비밀번호 재설정용 이메일 주소가 필요합니다.');
   }
 
-  const redirectTo = String(options.redirectTo || '').trim();
+  const redirectTo = normalizeRecoveryRedirect(options.redirectTo, bridge.env || process.env);
   const { error } = await bridge.recoveryClient.auth.resetPasswordForEmail(normalizedEmail, {
     redirectTo
   });
@@ -20,7 +59,7 @@ async function requestPasswordRecovery(bridge, email, options = {}) {
     throwRecoveryError(error);
   }
 
-  return { success: true, email: normalizedEmail };
+  return { success: true, email: normalizedEmail, redirectTo };
 }
 
 function throwRecoveryError(error) {
@@ -41,6 +80,7 @@ function throwRecoveryError(error) {
 }
 
 module.exports = {
+  normalizeRecoveryRedirect,
   requestPasswordRecovery,
   throwRecoveryError
 };
