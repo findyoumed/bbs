@@ -211,8 +211,14 @@ class AuthBridge {
     return extractAuthMemberUserId(user);
   }
 
+  // [LOG: 20260802_1800] adminUserIds.has() 조회 시 toLowerCase() 추가 — 방어적 대칭성 확보.
+  // 생성자에서 adminUserIds는 이미 소문자로 저장(round 35 수정)되고, _isAdmin()에 도달하는
+  // userId도 normalizeRequestUserId()를 거쳐 항상 소문자이므로 현재는 실질적 버그가 없다.
+  // 그러나 adminEmails.has()는 lookup 시에도 명시적으로 toLowerCase()를 적용하는 반면
+  // adminUserIds.has()는 적용하지 않아 두 형제 필드의 처리가 비대칭이었다.
+  // 새로운 호출 경로가 추가될 경우를 대비해 lookup 쪽도 소문자 정규화를 명시적으로 통일한다.
   _isAdmin(userId, email) {
-    return this.adminUserIds.has(String(userId || '').trim()) || this.adminEmails.has(String(email || '').trim().toLowerCase());
+    return this.adminUserIds.has(String(userId || '').trim().toLowerCase()) || this.adminEmails.has(String(email || '').trim().toLowerCase());
   }
 
   _throwAdminError(action, error) {

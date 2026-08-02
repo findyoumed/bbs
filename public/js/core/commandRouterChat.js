@@ -426,7 +426,14 @@ export function createChatCommandHandler(deps) {
           }
           try {
             const users = await apiFetch('/api/system/active-users');
-            const found = (Array.isArray(users) ? users : []).find((u) => u.userId === targetId);
+            // [LOG: 20260802_1800] /WHO·/FI·/WH·/PF id 검색 시 사용자가 대소문자 혼용 입력을 해도
+            // 찾을 수 있도록 targetId를 소문자로 정규화한 뒤 비교한다.
+            // 서버는 active-users에 항상 소문자 userId를 반환(ActivityRepository.touch → toLowerCase)하므로
+            // 클라이언트 비교값도 소문자로 맞춰야 일치한다.
+            // 형제 명령 /EX id(라인 ~469)는 이미 targetKey = targetId.toLowerCase()로 처리하고 있으나,
+            // /WHO 계열만 정규화가 빠져 '/WHO Alice'처럼 입력하면 'alice'를 찾지 못하는 버그가 있었다.
+            const normalizedTargetId = targetId.toLowerCase();
+            const found = (Array.isArray(users) ? users : []).find((u) => u.userId === normalizedTargetId);
             setHint(found
               ? `[${targetId}] 위치: ${found.path || '알 수 없음'} (${found.nickName || ''})`
               : `[${targetId}]님의 접속 정보를 찾을 수 없습니다.`);

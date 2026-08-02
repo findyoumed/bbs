@@ -1,3 +1,41 @@
+## [2026-08-02 18:00] [버그수정] /WHO·/FI 명령 userId 대소문자 불일치 + AuthBridge._isAdmin 조회 비대칭 수정
+
+**LOG_ID: 20260802_1800**
+목표: 36라운드 — "형제 필드/변수 간 정규화 처리 불일치" 패턴 계속 조사. 채팅 `/WHO`/`/FI`/`/WH`/`/PF id` 명령어에서 사용자 입력 ID를 소문자 정규화 없이 서버 반환 userId(항상 소문자)와 비교하는 버그 발견 및 수정. 추가로 `AuthBridge._isAdmin()` 조회의 방어적 비대칭 수정.
+
+발견 버그 1 — `commandRouterChat.js` `/WHO`·`/FI`·`/WH`·`/PF id` 대소문자 불일치:
+- 서버의 `/api/system/active-users`는 `ActivityRepository.touch()` → `rawUserId.toLowerCase()`를 거쳐 항상 소문자 userId를 반환.
+- 클라이언트에서 `targetId = whoMatch[2].trim()` (사용자 입력, 소문자 정규화 없음).
+- 비교: `u.userId === targetId` → `/WHO Alice` 입력 시 `'alice' === 'Alice'` → false → "접속 정보를 찾을 수 없습니다" (사용자가 온라인인데 못 찾음).
+- 형제 명령 `/EX id`(차단)는 이미 `const targetKey = targetId.toLowerCase()`로 정규화 처리하나, `/WHO` 계열만 누락된 전형적 "형제 필드 간 정규화 불일치" 패턴.
+- 재현 조건: 채팅방에서 `/WHO Alice` (대문자 포함) 입력 → alice가 온라인이어도 항상 "찾을 수 없습니다" 반환.
+
+발견 패턴 2 — `AuthBridge._isAdmin()` 조회 비대칭:
+- 생성자에서 `adminUserIds`와 `adminEmails` 모두 소문자로 저장(round 35 수정).
+- `adminEmails.has(String(email || '').trim().toLowerCase())` — lookup 시 명시적 toLowerCase().
+- `adminUserIds.has(String(userId || '').trim())` — lookup 시 toLowerCase() **없음** (비대칭).
+- 현재는 `_isAdmin()`에 도달하는 userId가 항상 소문자(`normalizeRequestUserId()` 경유)라 실질적 버그 없음. 그러나 새 호출 경로 추가 시 잠재 버그 위험 + 형제 필드 비대칭 자체가 결함.
+
+수정:
+- `public/js/core/commandRouterChat.js`: `normalizedTargetId = targetId.toLowerCase()` 추가, `u.userId === normalizedTargetId`로 비교 (7줄 주석 + 1줄 코드).
+- `src/server/AuthBridge.js`: `_isAdmin()` 메서드 — `adminUserIds.has(String(userId || '').trim())` → `String(userId || '').trim().toLowerCase()`로 수정 (6줄 주석 추가).
+
+변경 파일:
+- `public/js/core/commandRouterChat.js` (normalizedTargetId 도입, 8줄 추가)
+- `src/server/AuthBridge.js` (_isAdmin 조회 소문자 정규화 대칭화, 7줄 변경)
+
+검증:
+- `node --check public/js/core/commandRouterChat.js` 통과 ✓
+- `node --check src/server/AuthBridge.js` 통과 ✓
+- `npm run smoke:auth-bridge` — ok:true, 32 checks ✓
+- `npm run smoke:chat-rooms` — ok:true ✓
+- `npm run smoke:command-parity` — ok:true ✓
+- `npm run smoke:full-traversal` — "Full traversal passed in HTTP fallback mode" ✓
+
+결과: ✅ 완료
+
+---
+
 ## [2026-08-02 17:00] [버그수정] AuthBridge.adminUserIds 대소문자 불일치 — BBS_ADMIN_USER_IDS 환경변수 mixed-case 값 무시 버그 수정
 
 **LOG_ID: 20260802_1700**
