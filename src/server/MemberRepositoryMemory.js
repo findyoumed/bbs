@@ -61,33 +61,37 @@ class MemoryMemberRepository extends BaseRepository {
     return toPublicMember(next);
   }
 
+  // [LOG: 20260802_1600] setLevel 경쟁 조건 수정 — Supabase 드라이버와 API 동등성 맞춤.
+  // defaults 힌트(nickName/email/isAdmin)를 통해 profile 필드를 덮어쓰던 전체 merge를
+  // level 단일 필드만 갱신하는 targeted update로 교체한다.
+  // 메모리 드라이버는 단일 스레드이므로 실제 경쟁 조건은 없지만, Supabase 드라이버와
+  // 동일한 사후 조건(level만 변경, 나머지 보존, 미존재 시 404)을 보장한다.
   async setLevel(userId, level, defaults = {}) {
     const normalizedUserId = normalizeLookup(userId);
     const current = this.members.get(normalizedUserId) || null;
-    const next = mergeMemberRecord(normalizedUserId, current, {
-      nickName: defaults.nickName,
-      email: defaults.email,
-      birthday: current?.birthday ?? '',
-      sex: current?.sex ?? 'M',
-      isOpen: current?.isOpen ?? true,
-      isAdmin: defaults.isAdmin ?? current?.isAdmin ?? false,
-      registrationDateTime: current?.registrationDateTime ?? '',
-      lastLoginDateTime: current?.lastLoginDateTime ?? '',
-      password: current?.password ?? '',
-      level
-    });
+    if (!current) {
+      throw createHttpError(404, '회원 정보를 찾을 수 없습니다.');
+    }
+    const next = mergeMemberRecord(normalizedUserId, current, { level });
     this.members.set(normalizedUserId, next);
     return toPublicMember(next);
   }
 
+  // [LOG: 20260802_1600] setPassword 경쟁 조건 수정 — Supabase 드라이버와 API 동등성 맞춤.
+  // defaults 힌트(nickName/email/isAdmin)를 통해 profile/level 필드를 덮어쓰던 전체 merge를
+  // password 단일 필드만 갱신하는 targeted update로 교체한다.
+  // defaults 파라미터는 하위 호환을 위해 시그니처에 유지하되 더 이상 사용하지 않는다.
   async setPassword(userId, password, defaults = {}) {
     const normalizedUserId = normalizeLookup(userId);
-    const next = mergeMemberRecord(normalizedUserId, this.members.get(normalizedUserId) || null, {
-      nickName: defaults.nickName,
-      email: defaults.email,
-      isAdmin: defaults.isAdmin,
-      password: hashPassword(password)
-    });
+    const normalizedPassword = String(password || '').trim();
+    if (normalizedPassword.length < 6) {
+      throw createHttpError(400, '비밀번호는 6자 이상이어야 합니다.');
+    }
+    const current = this.members.get(normalizedUserId) || null;
+    if (!current) {
+      throw createHttpError(404, '회원 정보를 찾을 수 없습니다.');
+    }
+    const next = mergeMemberRecord(normalizedUserId, current, { password: hashPassword(normalizedPassword) });
     this.members.set(normalizedUserId, next);
     return toPublicMember(next);
   }

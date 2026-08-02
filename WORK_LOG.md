@@ -1,3 +1,58 @@
+## [2026-08-03 16:00] [버그수정] setLevel/setPassword stale full-upsert 경쟁 조건 — profile 필드 덮어쓰기 수정
+
+**LOG_ID: 20260803_1600**
+목표: 44라운드 — "stale full-upsert로 다른 프로세스의 변경을 덮어쓰는" 패턴을 round 43에서 수정한 updateProfile 외 도메인으로 확장 조사. setLevel/setPassword의 동일 버그 발견 및 수정.
+
+발견 버그 — `setLevel`과 `setPassword` stale full-upsert 경쟁 조건:
+
+- `setLevel(userId, level)` 동작:
+  1. `getMember(userId)` → existing 읽음 (nickName/email/birthday 등 모든 프로필 필드 포함)
+  2. `ensureMember({ ..., nickName: existing.nickName, email: existing.email, ... level })` full-upsert
+  3. 경쟁 창: getMember ~ ensureMember 사이에 사용자가 `updateProfile`(targeted UPDATE)로 nickName을 바꾸면, setLevel이 stale한 old nickName으로 덮어씀
+
+- `setPassword(userId, password)` 동작:
+  1. `getMember(userId)` → existing 읽음
+  2. `mergeMemberRecord(... existing.nickName, existing.email, ..., defaults.isAdmin ? 99 : existing.level)` full merge
+  3. `.upsert(toSupabaseMemberPayload(merged))` → 동일 경쟁 조건
+  4. 추가: `defaults.isAdmin` 힌트로 level 값을 간접 변경하는 부작용 (관리자 필드 침범)
+
+- 실제 재현 시나리오:
+  - 사용자가 nickName "OldNick"→"NewNick"으로 updateProfile(targeted UPDATE)
+  - 관리자가 동시에 setLevel(userId, 99) 호출 → getMember에서 stale "OldNick" 읽음
+  - setLevel의 ensureMember 완료 → nickName="OldNick"으로 덮어써짐 (사용자 변경 유실)
+
+수정 — `setLevel`과 `setPassword` 모두 targeted UPDATE로 교체:
+
+1. `MemberRepositorySupabase.setLevel`:
+   - `getMember + ensureMember(full-upsert)` 패턴 → `UPDATE SET level=? WHERE user_id=?` 단일 SQL
+   - 회원 미존재 시 PGRST116 → 404 (기존: ensureMember로 생성)
+
+2. `MemberRepositorySupabase.setPassword`:
+   - `getMember + mergeMemberRecord + upsert(full)` 패턴 → `UPDATE SET password=? WHERE user_id=?` 단일 SQL
+   - defaults 파라미터 시그니처 유지(하위 호환), 실제로는 무시
+   - 회원 미존재 시 PGRST116 → 404
+
+3. `MemberRepositoryMemory.setLevel`:
+   - 메모리 드라이버는 단일 스레드이므로 실제 경쟁은 없으나, Supabase 드라이버와 API 동등성 맞춤
+   - 미존재 시 404, `mergeMemberRecord(current, { level })`로 level 단일 필드만 갱신
+
+4. `MemberRepositoryMemory.setPassword`:
+   - 동일 패턴, 비밀번호 6자 이상 검증 추가(Supabase와 통일)
+   - `mergeMemberRecord(current, { password: hashPassword(pw) })`로 password 단일 필드만 갱신
+
+변경 파일:
+- `src/server/MemberRepositorySupabase.js` (setLevel 18줄, setPassword 24줄 교체)
+- `src/server/MemberRepositoryMemory.js` (setLevel 8줄, setPassword 10줄 교체)
+
+검증:
+- `node --check` 2파일 통과.
+- Memory 드라이버 재현 스크립트: 11 passed — setLevel/setPassword가 nickName/level 보존, 미존재 시 404, 6자 미만 400, register flow 정상.
+- Supabase 라이브 테스트(`bbs_racetest_44`): 12 passed — setLevel(99) 후 nickName="UpdatedByUser" 보존, setPassword 후 level=99 보존, verifyPassword 성공, 미존재 시 404 → 테스트 계정 정리 완료.
+- smoke:auth-bridge 32 checks 통과.
+- smoke:full-traversal 0 errors 통과.
+- smoke:vercel-ready 통과.
+결과: ✅ 완료
+
 ## [2026-08-03 15:00] [버그수정] updateProfile 경쟁 조건 — 관리자 레벨 변경이 사용자 프로필 업데이트로 무음 덮어쓰임
 
 **LOG_ID: 20260803_1500**

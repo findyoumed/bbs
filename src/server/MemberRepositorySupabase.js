@@ -154,23 +154,41 @@ class SupabaseMemberRepository extends BaseRepository {
     });
   }
 
+  // [LOG: 20260802_1600] setLevel 경쟁 조건 수정 — stale full-upsert → 단일 컬럼 targeted UPDATE.
+  // 종전: getMember()로 existing 전체(nickName/email/birthday/sex/isOpen 포함)를 읽은 뒤
+  // ensureMember(full upsert)로 다시 썼다. 관리자가 setLevel을 호출하는 동안 사용자가
+  // updateProfile(targeted UPDATE)로 nickName 등을 바꾸면, setLevel의 ensureMember가 stale한
+  // 값을 덮어써 사용자의 프로필 변경이 조용히 유실됐다.
+  // 수정: level 컬럼만 UPDATE하므로 profile 필드(nickName/email/birthday/sex/isOpen)는 DB에서
+  // 항상 그대로 보존된다. 회원이 존재하지 않으면 404를 반환한다(과거에는 ensureMember로 생성).
   async setLevel(userId, level, defaults = {}) {
     const normalizedUserId = normalizeLookup(userId);
-    const existing = await this.getMember(normalizedUserId);
-    return this.ensureMember({
-      userId: normalizedUserId,
-      nickName: defaults.nickName ?? existing?.nickName ?? normalizedUserId,
-      email: defaults.email ?? existing?.email ?? '',
-      birthday: existing?.birthday ?? '',
-      sex: existing?.sex ?? 'M',
-      isOpen: existing?.isOpen ?? true,
-      isAdmin: defaults.isAdmin ?? existing?.isAdmin ?? false,
-      registrationDateTime: existing?.registrationDateTime ?? '',
-      lastLoginDateTime: existing?.lastLoginDateTime ?? '',
-      level: normalizeLevel(level, existing?.level || 1)
-    });
+    const normalizedLevel = normalizeLevel(level, 1);
+
+    const { data, error } = await this.client
+      .from(this.table)
+      .update({ level: normalizedLevel })
+      .eq('user_id', normalizedUserId)
+      .select('*')
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw createHttpError(404, '회원 정보를 찾을 수 없습니다.');
+      }
+      this._throwError('회원 레벨 변경', error, { table: this.table });
+    }
+
+    return toPublicMember(normalizeMember(data));
   }
 
+  // [LOG: 20260802_1600] setPassword 경쟁 조건 수정 — stale full-upsert → 단일 컬럼 targeted UPDATE.
+  // 종전: getMember()로 existing 전체를 읽어 mergeMemberRecord + 전체 upsert로 저장했다.
+  // 사용자가 setPassword를 요청하는 동안 동시에 updateProfile(targeted UPDATE)로 nickName 등을
+  // 변경하면, setPassword의 full-upsert가 stale 값으로 덮어써 프로필 변경이 조용히 유실됐다.
+  // 또한 defaults.isAdmin 힌트로 level 값까지 간접 변경하는 부작용도 있었다(관리자 필드 침범).
+  // 수정: password 컬럼만 UPDATE하므로 level/is_admin/nickName 등 다른 모든 필드는 보존된다.
+  // defaults 파라미터는 하위 호환을 위해 시그니처에 유지하되 더 이상 사용하지 않는다.
   async setPassword(userId, password, defaults = {}) {
     const normalizedUserId = normalizeLookup(userId);
     const normalizedPassword = String(password || '').trim();
@@ -178,27 +196,17 @@ class SupabaseMemberRepository extends BaseRepository {
       throw createHttpError(400, '비밀번호는 6자 이상이어야 합니다.');
     }
 
-    const existing = await this.getMember(normalizedUserId);
-    const member = mergeMemberRecord(normalizedUserId, existing, {
-      nickName: defaults.nickName ?? existing?.nickName ?? normalizedUserId,
-      email: defaults.email ?? existing?.email ?? '',
-      birthday: existing?.birthday ?? '',
-      sex: existing?.sex ?? 'M',
-      isOpen: existing?.isOpen ?? true,
-      isAdmin: defaults.isAdmin ?? existing?.isAdmin ?? false,
-      registrationDateTime: existing?.registrationDateTime ?? '',
-      lastLoginDateTime: existing?.lastLoginDateTime ?? '',
-      password: hashPassword(normalizedPassword),
-      level: (defaults.isAdmin ?? existing?.isAdmin ?? false) ? 99 : normalizeLevel(existing?.level, 1)
-    });
-
     const { data, error } = await this.client
       .from(this.table)
-      .upsert(toSupabaseMemberPayload(member), { onConflict: 'user_id' })
+      .update({ password: hashPassword(normalizedPassword) })
+      .eq('user_id', normalizedUserId)
       .select('*')
       .single();
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        throw createHttpError(404, '회원 정보를 찾을 수 없습니다.');
+      }
       this._throwError('회원 비밀번호 변경', error, { table: this.table });
     }
 
