@@ -129,8 +129,17 @@ async function getPost(repo, boardId, postId, options = {}) {
       .select('*')
       .single();
 
-    if (error) throw createHttpError(502, `조회수 갱신 실패: ${error.message}`);
-    post = mapPostRow(data);
+    // [LOG: 20260803_1200] PGRST116(0 rows matched): 게시글 조회와 조회수 증가 사이에
+    // 다른 요청이 해당 글을 삭제한 경우다. 사용자는 이미 본문을 받았으므로 조회수 갱신
+    // 실패를 조용히 흡수하고 기존에 읽어 둔 post를 그대로 반환한다(graceful degrade).
+    // PGRST116 이외의 오류는 여전히 502로 전파한다.
+    if (error) {
+      if (error.code !== 'PGRST116') {
+        throw createHttpError(502, `조회수 갱신 실패: ${error.message}`);
+      }
+    } else {
+      post = mapPostRow(data);
+    }
   }
 
   return {

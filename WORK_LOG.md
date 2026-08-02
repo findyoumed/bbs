@@ -1,3 +1,35 @@
+## [2026-08-03 12:00] [버그수정] PGRST116(0 rows) → 502 오매핑 수정 — updateMappedPost, initializeThreadRoot, getPost 조회수 갱신
+
+**LOG_ID: 20260803_1200**
+목표: 41라운드 — 경쟁 조건 버그 탐색. `updateMappedPost`·`initializeThreadRoot`·`getPost` 조회수 갱신에서 PostgREST PGRST116(update matched 0 rows) 오류가 502로 잘못 매핑되는 버그 발견 및 수정.
+
+발견 버그 — PGRST116 → 502 오매핑 3곳:
+
+1. `updateMappedPost` (SupabaseBoardRepositoryMutation.js):
+   - 재현 경로: 두 세션에서 동시에 같은 게시글 수정(또는 추천), 한 세션이 게시글을 삭제한 직후에 다른 세션의 업데이트 완료.
+   - Supabase `.update().eq(...).select('*').single()` — update 결과가 0행이면 PostgREST가 PGRST116 에러를 반환한다.
+   - 종전 코드: `throw createHttpError(502, ...)` → 클라이언트가 "서버 오류"로 해석.
+   - 올바른 동작: 게시글이 이미 삭제된 것이므로 404 반환.
+   - `updateMappedPost`를 공유하는 경로: updatePost, deletePost(tombstone), recommendPost, updateRecommendationCount — 모두 수정.
+
+2. `initializeThreadRoot` (SupabaseBoardRepositoryMutation.js):
+   - 재현 경로: 신규 게시글 insert 직후 family_id 초기화 update 사이에 해당 행이 삭제되는 극단적 경쟁 조건.
+   - 동일하게 PGRST116 → 502 오매핑. 404로 수정.
+
+3. 조회수 갱신 (SupabaseBoardRepositoryPostReads.js `getPost`):
+   - 재현 경로: `fetchPostByLocalId`로 본문 조회 후 조회수 증가 update 사이에 게시글 삭제.
+   - 종전 코드: PGRST116 → 502 던짐 → 사용자가 본문을 이미 받은 상태에서 오류 응답 도착.
+   - 올바른 동작: 본문은 이미 로드됐으므로 조회수 갱신 실패를 조용히 흡수하고(graceful degrade) 기존에 읽어 둔 post를 그대로 반환. PGRST116 이외 오류는 기존대로 502 전파.
+
+검증: 단위 테스트 스크립트로 PGRST116 → 404 매핑 확인. smoke:boards / smoke:auth-bridge / smoke:renderer-ui / smoke:vercel-ready 모두 통과.
+
+변경 파일:
+- `src/server/SupabaseBoardRepositoryMutation.js` (updateMappedPost 6줄, initializeThreadRoot 3줄 추가)
+- `src/server/SupabaseBoardRepositoryPostReads.js` (조회수 갱신 에러 처리 7줄 수정)
+
+수행 작업: 1) .single() 사용 패턴 전수 조사 2) PGRST116 오매핑 3곳 특정 3) 수정 적용 4) node --check 통과 5) 단위 검증 스크립트로 실측 확인 6) 전체 smoke 통과
+결과: 완료
+
 ## [2026-08-02 23:10] [버그수정] register() 이메일 중복 검사 누락 — generic 409 메시지
 
 **LOG_ID: 20260802_2310**

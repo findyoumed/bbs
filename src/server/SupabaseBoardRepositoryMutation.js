@@ -41,6 +41,11 @@ async function initializeThreadRoot(repo, boardId, postId, now) {
     .single();
 
   if (error) {
+    // [LOG: 20260803_1200] PGRST116(0 rows matched)은 방금 INSERT한 행이 즉시 삭제된
+    // 극단적 경쟁 조건이므로 502가 아닌 404로 매핑한다.
+    if (error.code === 'PGRST116') {
+      throw createHttpError(404, '게시글을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+    }
     throw createHttpError(502, `게시글 정렬 초기화 실패: ${error.message}`);
   }
 
@@ -75,6 +80,12 @@ async function shiftReplyOrdering(repo, boardId, parent) {
   }
 }
 
+// [LOG: 20260803_1200] PGRST116(0 rows matched) → 502 오매핑 수정.
+// updatePost/deletePost(tombstone)/recommendPost 모두 이 함수를 거친다.
+// 게시글이 수정·추천 요청 처리 도중 다른 요청에 의해 삭제되면 PostgREST는
+// .single() + 0행 결과를 PGRST116으로 반환하는데, 종전 코드는 이를 502로 던졌다.
+// 클라이언트가 "서버 오류"로 해석하는 대신 404를 받아 "삭제된 게시글"로 처리할 수 있도록
+// PGRST116을 404로 정확히 매핑한다.
 async function updateMappedPost(repo, boardId, postId, patch, failureMessage) {
   const { data, error } = await repo.client
     .from(repo.tables.posts)
@@ -85,6 +96,9 @@ async function updateMappedPost(repo, boardId, postId, patch, failureMessage) {
     .single();
 
   if (error) {
+    if (error.code === 'PGRST116') {
+      throw createHttpError(404, '게시글을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+    }
     throw createHttpError(502, `${failureMessage}: ${error.message}`);
   }
 
