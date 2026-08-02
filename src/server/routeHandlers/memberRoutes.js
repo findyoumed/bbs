@@ -267,9 +267,14 @@ class MemberRouter extends BaseRouter {
     // 반환해 중복도 통과시킨다. 결국 mergeMemberRecord에서 String('  ').trim() === ''이 되어
     // fallback '' || userId 경로로 사용자 아이디가 닉네임으로 무음 저장된다. 여기서 trim 후
     // 공란 검사를 먼저 해서 400을 돌려준다.
+    // [LOG: 20260802_2100] 추가: ' a '(공백+a+공백)처럼 공백 패딩으로 raw 길이가 minLength: 2를
+    // 넘어도 trim 후 1자가 되는 경우를 추가 검사한다.
     const trimmedNickName = String(nextProfile.nickName ?? '').trim();
     if (!trimmedNickName) {
       this.validationError('이용자명을 입력해 주세요.');
+    }
+    if (trimmedNickName.length < 2) {
+      this.validationError('이용자명은 2자 이상이어야 합니다.');
     }
     nextProfile.nickName = trimmedNickName;
 

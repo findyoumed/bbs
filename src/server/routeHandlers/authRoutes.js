@@ -137,6 +137,13 @@ class AuthRouter extends BaseRouter {
     const rawNickName = String(nickName).trim();
     const rawPassword = String(password).trim();
 
+    // [LOG: 20260802_2100] route 스키마의 minLength: 2는 raw 길이를 체크하므로
+    // ' a '(공백+a+공백, raw 길이 3)가 통과하고 trim 후 'a'(1자)가 저장된다.
+    // trim 후에도 최소 길이 조건을 별도 검사한다.
+    if (rawNickName.length < 2) {
+      this.validationError('이용자명은 2자 이상이어야 합니다.');
+    }
+
     this.assertUserIdAllowed(rawUserId);
     this.assertNicknameAllowed(rawNickName, rawUserId);
     if (email) {
@@ -211,6 +218,15 @@ class AuthRouter extends BaseRouter {
         message: getReservedUserIdMessage(reservedUserId.keyword)
       });
     }
+    // [LOG: 20260802_2100] trim 후 1자 닉네임은 register()와 oauthRegister()가 거부하므로
+    // 사전 확인(precheck)도 동일하게 too-short 충돌을 반환해 UI 불일치를 방지한다.
+    if (rawNickName && rawNickName.length < 2) {
+      conflicts.push({
+        field: 'nickName',
+        reason: 'too-short',
+        message: '이용자명은 2자 이상이어야 합니다.'
+      });
+    }
     if (!reservedNickName.allowed) {
       conflicts.push({
         field: 'nickName',
@@ -278,6 +294,11 @@ class AuthRouter extends BaseRouter {
     const email = validateEmail(authUser.email || '');
     const authUserId = String(authUser.id || '').trim();
     const isVerifiedOAuthEmail = Boolean(email && isOAuthAuthUser(authUser) && hasVerifiedAuthEmail(authUser));
+
+    // [LOG: 20260802_2100] register()와 동일 패턴 — trim 후 최소 길이 재검사.
+    if (rawNickName.length < 2) {
+      this.validationError('이용자명은 2자 이상이어야 합니다.');
+    }
 
     this.assertUserIdAllowed(rawUserId);
     this.assertNicknameAllowed(rawNickName, rawUserId);

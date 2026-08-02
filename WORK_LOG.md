@@ -1,3 +1,40 @@
+## [2026-08-02 21:00] [버그수정] register/oauthRegister/updateProfile 공백 패딩 1자 닉네임 우회 버그
+
+**LOG_ID: 20260802_2100**
+목표: 39라운드 — "다단계 검증 우회" 패턴을 register/oauthRegister/updateProfile의 nickName 필드에서 조사. route 스키마 `minLength: 2`가 raw 길이(trim 전)를 검사하므로 `' a '`(공백+a+공백, raw 3자)가 통과하고 핸들러에서 trim 후 `'a'`(1자)가 저장되는 버그 발견 및 수정.
+
+발견 버그 — `register()`/`oauthRegister()`/`updateProfile()`의 공백 패딩 nickName 최소 길이 우회:
+- 재현 경로: `POST /api/members/register` body에 `nickName: ' a '`(raw 길이 3) 전송.
+- 1단계 route 스키마 `{ required: true, minLength: 2, maxLength: 20 }`: `BaseRouterValidation.js`의 minLength 체크가 raw 길이(`.length`, trim 없음)를 검사 → `' a '.length === 3 >= 2` → 통과.
+- 2단계 핸들러: `const rawNickName = String(nickName).trim()` → `'a'`(1자).
+- 3단계 `assertNicknameAllowed('a', rawUserId)`: 예약어 검사만 함, 길이 검사 없음 → 통과.
+- 4단계 `memberRepository.ensureMember({nickName: 'a', ...})` → `mergeMemberRecord()`: `String('a').trim() || normalizedUserId` = `'a'` → **1자 닉네임이 무음 저장**.
+- 결과: 클라이언트는 201 Created와 함께 정상 응답을 받지만, 실제 DB에는 `minLength: 2` 제약을 위반하는 1자 닉네임이 저장된다. 실측으로 확인 — `nickName: ' a '`로 가입 후 `GET /api/members/testwhitespace01` 응답의 `nickName` 필드가 `'a'`(1자)임을 확인.
+- `updateProfile()`에서도 동일 패턴 존재 — round 38 수정은 공백 전용(빈 문자열) 케이스만 막았고, 공백 패딩+1자 케이스는 여전히 통과.
+- `signupPrecheck()`도 동일하게 1자 nick을 `available: true`로 반환 → register가 거부하는 nick을 precheck가 허용 판정하는 UI 불일치.
+
+수정:
+- `register()`: `rawNickName = String(nickName).trim()` 직후 `rawNickName.length < 2` 검사 추가.
+- `oauthRegister()`: 동일 — `rawNickName = String(body.nickName).trim()` 직후 `rawNickName.length < 2` 검사 추가.
+- `updateProfile()`: 기존 trim+공란 검사 블록 바로 다음에 `trimmedNickName.length < 2` 검사 추가.
+- `signupPrecheck()`: conflicts 배열 조립부에 `rawNickName && rawNickName.length < 2` → `too-short` conflict 항목 추가.
+
+조사 영역 요약 (39라운드):
+- 게시글 제목/본문(createPost/updatePost): `sanitizeNewPostInput`·`sanitizePostPatch`가 `normalizeInlineText`(trim포함)를 거쳐 `!title` 검사 → 안전.
+- 회의실 제목/안건 제목(conf): route `required` 검사가 `value.trim() === ''`를 쓰고, 레포도 `normalizeText`(trim)+`!title` 검사 → 안전.
+- 채팅방 이름(createChatRoom/updateRoom): 레포에서 `normalizeRoomText`(trim)+`!title` 검사 → 안전.
+- 메모 제목/본문: `!title.trim()`·`!content.trim()` 검사, 레포에서도 `validateMemoInput`의 `normalizeText`(trim)+`!title` 재검사 → 안전.
+- 투표 제목/선택지: `String(input.title || '').trim()`+`!title`, 선택지 `.filter(Boolean)` → 안전.
+- 검색어 공백: `normalizeSearchOptions`에서 trim 후 빈 값 → 필터 없음(의도된 동작) → 안전.
+- **nickName 최소 길이 우회**: `register`·`oauthRegister`·`updateProfile` 세 경로 모두 동일 패턴 — **수정 완료**.
+
+변경 파일:
+- `src/server/routeHandlers/authRoutes.js` (28줄 추가/수정: register 8줄, oauthRegister 5줄, signupPrecheck 7줄)
+- `src/server/routeHandlers/memberRoutes.js` (4줄 추가: updateProfile)
+
+수행 작업: 1) 6개 도메인 전수 조사 2) register/oauthRegister/updateProfile/signupPrecheck 버그 확인 3) 실제 서버+Supabase로 재현 확인(testwhitespace01 → nickName 'a' 저장) 4) 수정 적용 5) 수정 후 재현 테스트 — ' a ' 거부, '  ab' 통과, precheck too-short 반환 모두 확인 6) 테스트 데이터 정리 7) node --check 통과 8) smoke:vercel-ready / smoke:full-traversal / smoke:auth-bridge 통과
+결과: 완료
+
 ## [2026-08-02 20:00] [버그수정] updateProfile 공백 전용 닉네임 무음 대체 버그
 
 **LOG_ID: 20260802_2000**
