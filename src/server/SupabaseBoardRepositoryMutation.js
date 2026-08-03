@@ -41,8 +41,6 @@ async function initializeThreadRoot(repo, boardId, postId, now) {
     .single();
 
   if (error) {
-    // [LOG: 20260803_1200] PGRST116(0 rows matched)은 방금 INSERT한 행이 즉시 삭제된
-    // 극단적 경쟁 조건이므로 502가 아닌 404로 매핑한다.
     if (error.code === 'PGRST116') {
       throw createHttpError(404, '게시글을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
     }
@@ -65,27 +63,26 @@ async function shiftReplyOrdering(repo, boardId, parent) {
     throw createHttpError(502, `답글 정렬 조회 실패: ${shiftError.message}`);
   }
 
-  for (const row of shiftRows || []) {
+  // Each row has a distinct id, so the updates can safely run concurrently.
+  // This removes the previous sequential N-round-trip latency while preserving
+  // the existing per-row increment semantics. A single SQL/RPC update can be
+  // introduced later without changing this caller's contract.
+  const now = new Date().toISOString();
+  await Promise.all((shiftRows || []).map(async (row) => {
     const { error } = await repo.client
       .from(repo.tables.posts)
       .update({
         sort_order: Number(row.sort_order ?? 0) + 1,
-        updated_at: new Date().toISOString()
+        updated_at: now
       })
       .eq('id', row.id);
 
     if (error) {
       throw createHttpError(502, `답글 정렬 갱신 실패: ${error.message}`);
     }
-  }
+  }));
 }
 
-// [LOG: 20260803_1200] PGRST116(0 rows matched) → 502 오매핑 수정.
-// updatePost/deletePost(tombstone)/recommendPost 모두 이 함수를 거친다.
-// 게시글이 수정·추천 요청 처리 도중 다른 요청에 의해 삭제되면 PostgREST는
-// .single() + 0행 결과를 PGRST116으로 반환하는데, 종전 코드는 이를 502로 던졌다.
-// 클라이언트가 "서버 오류"로 해석하는 대신 404를 받아 "삭제된 게시글"로 처리할 수 있도록
-// PGRST116을 404로 정확히 매핑한다.
 async function updateMappedPost(repo, boardId, postId, patch, failureMessage) {
   const { data, error } = await repo.client
     .from(repo.tables.posts)
@@ -135,7 +132,6 @@ async function findRecommendation(repo, postId, userId) {
   return data;
 }
 
-// [LOG: 20260429_0123] Concurrent duplicate recommends should still surface as 409.
 function isDuplicateRecommendationError(error) {
   const message = String(error?.message || '').toLowerCase();
   return error?.code === '23505' || message.includes('duplicate key');
@@ -161,12 +157,6 @@ async function insertRecommendation(repo, postId, userId, now) {
   }
 }
 
-// [LOG: 20260731_2330] 추천수 read-then-write 경쟁 조건 해소.
-// 종전엔 미리 읽어 둔 currentPost.recommend + 1 을 쓰는 read-then-write 패턴이었다.
-// 동시에 두 사용자 A·B가 추천하면 둘 다 같은 recommend=N 을 읽은 뒤
-// 각자 N+1을 기록해 한 건이 유실됐다(결과 N+1, 실제 N+2여야 함).
-// 수정: insert 이후 post_recommendations 실제 테이블에서 count를 읽어 값을 설정한다.
-// 마지막으로 UPDATE를 완료한 요청이 항상 원본 테이블 실측값을 기록하므로 자기 수정(self-correcting)된다.
 async function updateRecommendationCount(repo, boardId, postId, capabilities, now) {
   const { count, error: countError } = await repo.client
     .from(repo.tables.recommendations)
@@ -207,7 +197,6 @@ function buildPostPayload(repo, boardId, board, data, now, capabilities, extra =
   if (capabilities.hit) payload[capabilities.hit] = 0;
 
   if (capabilities.threaded && !extra.family_id && !extra.sort_order) {
-    // extra가 없으면 기본값 (초기화 전)
     payload.family_id = 0;
     payload.sort_order = 0;
     payload.depth = 0;
