@@ -81,6 +81,11 @@ function mergeBoardList(repo, boards) {
 }
 
 async function listBoards(repo) {
+  const cached = repo._boardListCache;
+  if (cached && (Date.now() - cached.at) < BOARD_CACHE_TTL_MS) {
+    return cached.data.map(cloneBoard);
+  }
+
   const { data, error } = await repo.client
     .from(repo.tables.boards)
     .select('*')
@@ -90,7 +95,9 @@ async function listBoards(repo) {
 
   if (error) {
     if (shouldUseBoardFallback(error)) {
-      return repo.boards.map(cloneBoard);
+      const fallback = repo.boards.map(cloneBoard);
+      repo._boardListCache = { at: Date.now(), data: fallback };
+      return fallback.map(cloneBoard);
     }
     throw createHttpError(502, `게시판 목록 조회 실패: ${error.message}`);
   }
@@ -103,6 +110,7 @@ async function listBoards(repo) {
       cache.set(board.boardId, { at: now, board: cloneBoard(board) });
     }
   }
+  repo._boardListCache = { at: now, data: result.map(cloneBoard) };
   return result;
 }
 
