@@ -28,8 +28,13 @@ function createRateLimiter({ windowMs = 60000, maxRequests = 60, trustProxy = fa
       ip = req.socket?.remoteAddress || 'unknown';
     }
 
+    // [LOG: 20260803_1700] buckets.clear() → 최고령 항목 단건 제거.
+    // clear()는 10,000개 고유 IP로 버킷을 채우면 모든 rate limit 상태를 한 번에 날려
+    // 어떤 IP도 즉시 우회할 수 있는 DoS 벡터가 된다. Map은 삽입 순서를 보존하므로
+    // .keys().next().value가 가장 먼저 들어온(= 가장 오래된) IP다.
     if (buckets.size >= maxBuckets) {
-      buckets.clear();
+      const oldestIp = buckets.keys().next().value;
+      if (oldestIp !== undefined) buckets.delete(oldestIp);
     }
 
     const now = Date.now();

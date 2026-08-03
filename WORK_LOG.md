@@ -1,3 +1,51 @@
+## [2026-08-03 17:00] [버그수정] getMyStats 하드코딩 컬럼 선택 + rateLimiter buckets.clear() DoS 벡터
+
+**LOG_ID: 20260803_1700**
+목표: 45라운드 — 이전 라운드에서 소진된 MemberRepository 도메인 외 새 영역 조사. 두 버그 발견 및 수정.
+
+### 버그 1: `getMyStats` hard-coded `.select('hits, recommend')`
+
+발견 위치: `src/server/routeHandlers/memberRoutes.js` `getMyStats()` (Supabase 경로, line ~193)
+
+재현 조건:
+- posts 테이블의 조회수 컬럼이 `hit`(not `hits`)이거나 추천수 컬럼이 `likes`(not `recommend`)인 배포
+- `/api/members/stats` 호출 → Supabase PostgREST 400 → 서버가 502 반환
+- 코드 자체의 방어 코드(JS 단 `post.hits ?? post.hit`, `post.recommend ?? post.likes`)는 DB 쿼리 성공 후에만 실행됨
+
+모순: 같은 함수의 주석("배포별로 컬럼명이 가변 — hits/hit, recommend/likes")과 구현(고정 문자열 `'hits, recommend'`)이 불일치.
+
+수정:
+- `memberRoutes.js` 상단에 `ensureCapabilities = require('../SupabaseBoardRepositorySchema')` 추가
+- `getMyStats`에서 `await ensureCapabilities(boardRepository)`로 실제 컬럼명 확인
+- `caps.hit` / `caps.recommend` / `caps.userId`를 사용해 select 컬럼과 eq 필터 동적 조립
+- `hitCol`/`recCol` 중 null인 항목은 선택 목록에서 제외, 둘 다 null이면 'id'만 선택(글 수 집계용)
+
+변경 파일: `src/server/routeHandlers/memberRoutes.js` (14줄 추가/수정)
+
+### 버그 2: `rateLimiter.js` `buckets.clear()` — 전체 rate limit 상태 초기화
+
+발견 위치: `src/server/rateLimiter.js` `checkRateLimit()` (line ~31)
+
+재현 조건:
+- 공격자가 10,000개 고유 IP로 요청을 보내 `buckets.size >= maxBuckets` 조건 달성
+- 다음 요청에서 `buckets.clear()` 실행 → 모든 IP의 rate limit 이력이 리셋
+- 이후 어떤 IP에서든 제한 없이 요청 가능 (다시 10,000개 채울 때까지)
+- Vercel 환경에서 `x-forwarded-for` 헤더는 클라이언트가 위조 가능 → `trustProxy=true`일 때 더 쉽게 악용
+
+수정:
+- `buckets.clear()` 대신 Map 삽입 순서 보존 특성을 이용해 `buckets.keys().next().value`(가장 오래된 IP)만 단건 삭제
+- 새 IP 슬롯 1개만 확보하므로 기존 rate limit 상태 전체 보존
+
+변경 파일: `src/server/rateLimiter.js` (5줄 수정)
+
+결과: ✅ 완료
+- `node --check` 두 파일 모두 통과
+- `npm run smoke:vercel-ready` 통과 (`ok: true`)
+- `npm run smoke:auth-bridge` 통과 (32 checks)
+- `npm run smoke:boards` 통과
+
+---
+
 ## [2026-08-03 16:00] [버그수정] setLevel/setPassword stale full-upsert 경쟁 조건 — profile 필드 덮어쓰기 수정
 
 **LOG_ID: 20260803_1600**

@@ -8,6 +8,9 @@ const {
 } = require('../ReservedNicknamePolicy');
 const { withAuthAdminRetry } = require('../AuthBridgeUtils');
 const logger = require('../logger');
+// [LOG: 20260803_1700] getMyStats — Supabase 드라이버 경로에서 실제 컬럼명을 조회하기 위해
+// 로드한다. 메모리 드라이버 경로(else 분기)에서는 호출되지 않는다.
+const { ensureCapabilities } = require('../SupabaseBoardRepositorySchema');
 
 /**
  * [LOG: 20260426_1910] Simplified MemberRouter by offloading Auth and Memo responsibilities (Evolution Mode: Structural Optimization)
@@ -162,7 +165,8 @@ class MemberRouter extends BaseRouter {
   // 글/조회/추천·쪽지)로 "이용 현황"을 낸다 — 없는 수치를 지어내지 않는다.
   //
   // posts 테이블은 배포별로 컬럼명이 가변(user_id/author_id, hits/hit, recommend/likes,
-  // is_deleted 유무)이라 rankingRoutes와 동일하게 select('*') 후 JS에서 처리한다.
+  // is_deleted 유무)이다. Supabase 경로에서는 ensureCapabilities로 실제 컬럼명을 확인한 뒤
+  // 동적으로 조립한다(메모리 경로는 JS 단에서 폴백 체인으로 처리).
   async getMyStats() {
     const { memberRepository, boardRepository, memoRepository } = this.deps;
     const context = await this.getContext();
@@ -185,13 +189,25 @@ class MemberRouter extends BaseRouter {
     // 내 글 행만 받는다. is_deleted 조건은 종전 JS 필터(`=== true`만 제외 — NULL은 포함)와
     // 정확히 같은 의미로 맞췄고, user_id/author_id 폴백 체인은 실측(전 행에서 user_id 존재,
     // author_id와 전부 일치)으로 불필요함을 확인해 user_id 단일 기준으로 정리했다.
+    //
+    // [LOG: 20260803_1700] select 컬럼 hard-coding 버그 수정: 종전엔 `.select('hits, recommend')`로
+    // 컬럼명을 고정했으나, 배포마다 hits/hit · recommend/likes로 이름이 달라 존재하지 않는 컬럼을
+    // 지정하면 PostgREST가 400 에러를 반환하고 getMyStats 전체가 502로 실패한다. 이제
+    // ensureCapabilities(boardRepository)로 실제 컬럼명을 확인해 선택 목록을 동적으로 조립한다.
+    // user_id/author_id 필터도 동일하게 capabilities.userId로 결정한다.
     let mine = [];
     if (memberRepository.getMeta().driver === 'supabase') {
       const postsTable = (boardRepository.tables && boardRepository.tables.posts) || 'posts';
+      const caps = await ensureCapabilities(boardRepository);
+      const hitCol = caps.hit;         // 'hits' | 'hit' | null
+      const recCol = caps.recommend;   // 'recommend' | 'likes' | null
+      const userIdCol = caps.userId || 'user_id';  // 'user_id' | 'author_id'
+      // 실제 존재하는 컬럼만 선택 목록에 넣는다. 둘 다 없으면 id만 받아 행 수로 글 수를 셈.
+      const selectCols = [hitCol, recCol].filter(Boolean).join(', ') || 'id';
       const { data, error } = await boardRepository.client
         .from(postsTable)
-        .select('hits, recommend')
-        .eq('user_id', userId)
+        .select(selectCols)
+        .eq(userIdCol, userId)
         .or('is_deleted.is.null,is_deleted.eq.false');
       if (error) {
         this.error(502, `이용 현황 집계 실패: ${error.message}`);
