@@ -46,6 +46,7 @@ export function createMenuNavigation(deps) {
   let cachedMenuAliasLookup = null;
   const menuAliasTargetCache = new Map();
   const localMenuTargetCache = new WeakMap();
+  const localBoardTargetCache = new WeakMap();
 
   function getBoardSelectTitle(menuPath = 'top') {
     if (menuPath === 'top' && state.menuTree) {
@@ -68,7 +69,19 @@ export function createMenuNavigation(deps) {
       return findBoardByCode(normalized);
     }
 
-    return (boards || []).find((board) => {
+    if (!Array.isArray(boards)) return null;
+    let cached = localBoardTargetCache.get(boards);
+    if (!cached || cached.size !== boards.length) {
+      cached = { size: boards.length, values: new Map() };
+      localBoardTargetCache.set(boards, cached);
+    }
+    if (cached.values.has(normalized)) {
+      return cached.values.get(normalized);
+    }
+
+    // [LOG_ID: 20260805_0852] Cache menu-local board hits and misses so a
+    // repeated GO code does not normalize every board field again.
+    const targetBoard = boards.find((board) => {
       const keys = [
         getBoardDoor(board),
         getBoardKey(board),
@@ -77,6 +90,11 @@ export function createMenuNavigation(deps) {
       ].map(normalizeSearchKey);
       return keys.includes(normalized);
     }) || null;
+    if (cached.values.size >= 64) {
+      cached.values.delete(cached.values.keys().next().value);
+    }
+    cached.values.set(normalized, targetBoard);
+    return targetBoard;
   }
 
   function resolveMenuNodeTarget(target, nodes) {
