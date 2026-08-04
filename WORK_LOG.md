@@ -1,3 +1,16 @@
+## [2026-08-04 13:59] push_github.bat 실행 시 경고(multiple values) 제거 및 git config 정리
+
+**LOG_ID: 20260804_1359**
+목표: `push_github.bat` 실행 시 발생하던 `warning: branch.main.remote has multiple values` 및 `warning: branch.main.merge has multiple values` 경고 메시지를 해결한다.
+변경 파일: `.git/config`, `push_github.bat`, `WORK_LOG.md`
+수행 작업:
+1) `.git/config` 파일 내 중복 생성된 `[branch "main"]` 설정 섹션 및 다중 `merge` 항목 정리
+2) `push_github.bat` 실행 시 매번 `-u` 옵션을 줘서 중복 트래킹 설정이 쌓이던 구조를 `git push origin main`으로 수정
+3) `git config --get-all`로 경고 제거 확인
+실행: `git config --get-all branch.main.remote`, `git config --get-all branch.main.merge`
+기대: 단일 설정값만 반환되어 경고 문구 미발생
+결과: ✅ 완료
+
 ## [2026-08-04 12:56] Merge 충돌 표시 기호 제거 및 코드 통합
 
 **LOG_ID: 20260804_1256**
