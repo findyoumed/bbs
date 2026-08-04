@@ -119,10 +119,8 @@ export function createPostService(deps) {
     if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
 
     const data = normalizePostListResponse(await apiFetch(url), page);
-    
-    // 결과 캐싱
     listCache.set(cacheKey, data);
-    
+
     state.posts = applySortOrder(data.items);
     state.totalCount = data.totalCount;
     state.totalPages = data.totalPages;
@@ -156,23 +154,19 @@ export function createPostService(deps) {
     if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
 
     const data = normalizePostViewResponse(await apiFetch(url));
-    
-    // 결과 캐싱
     postCache.set(cacheKey, data);
-    
     return data;
   }
 
   async function createPost(boardId, payload) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts`, { method: 'POST', body: JSON.stringify(payload) });
-    invalidateListCache(boardId); // 새 글 작성 시 목록 캐시 무효화
+    invalidateListCache(boardId);
     return result;
   }
 
   async function updatePost(boardId, postId, payload) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}`, { method: 'PATCH', body: JSON.stringify(payload) });
     invalidatePostCache(boardId, postId);
-    // state.board.id가 boardId와 다를 때(가상게시판 등 다른 컨텍스트로 접근한 경우) 추가 무효화
     if (state.board?.id && state.board.id !== boardId) invalidatePostCache(state.board.id, postId);
     invalidateListCache(boardId);
     return result;
@@ -193,10 +187,11 @@ export function createPostService(deps) {
 
   async function recommendPost(boardId, postId) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/recommend`, { method: 'POST' });
-    invalidatePostCache(boardId, postId); // 추천수 업데이트를 위해 캐시 삭제 (가상게시판·검색 문맥 포함)
+    invalidatePostCache(boardId, postId);
     return result;
   }
 
+<<<<<<< HEAD
   async function loadAttachments(...args) {
     return (await getAttachmentService()).loadAttachments(...args);
   }
@@ -207,6 +202,40 @@ export function createPostService(deps) {
 
   async function downloadAttachment(...args) {
     return (await getAttachmentService()).downloadAttachment(...args);
+=======
+  let postAttachmentServicePromise = null;
+
+  // [LOG_ID: 20260804_1114] 첫 첨부 기능 사용 시점에만 새 모듈을 불러와 초기 진입 비용을 낮춘다.
+  async function getPostAttachmentService() {
+    if (!postAttachmentServicePromise) {
+      postAttachmentServicePromise = import('./postAttachmentService.js')
+        .then(({ createPostAttachmentService }) => createPostAttachmentService({ apiFetch, state }))
+        .catch((error) => {
+          postAttachmentServicePromise = null;
+          throw error;
+        });
+    }
+    return postAttachmentServicePromise;
+  }
+
+  async function loadAttachments(boardId, postId) {
+    const service = await getPostAttachmentService();
+    return service.loadAttachments(boardId, postId);
+  }
+
+  async function uploadAttachment(boardId, postId, payload) {
+    const service = await getPostAttachmentService();
+    return service.uploadAttachment(boardId, postId, payload);
+  }
+
+  function pickAttachmentDownloadName(fileName, contentDisposition) {
+    return String(fileName || '').trim() || String(contentDisposition || '').trim() || 'attachment.bin';
+  }
+
+  async function downloadAttachment(boardId, postId, attachmentId, fileName = '') {
+    const service = await getPostAttachmentService();
+    return service.downloadAttachment(boardId, postId, attachmentId, fileName);
+>>>>>>> a02d9e17aede33842895ca7e5f781b3897205d30
   }
 
   /**

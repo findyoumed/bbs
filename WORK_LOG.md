@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## [2026-08-04 02:40] 성능 리팩토링 완료 및 첨부 서비스 지연 분리
 
 **LOG_ID: 20260804_1114**
@@ -7,6 +8,17 @@
 실행: `node --check public/js/core/postService.js`, `node --check public/js/core/postAttachmentService.js`, `npm run qa:final`, `npm run loop:verify`, `npm run smoke:full-traversal`, `node scripts/performance-startup.js --assert`, `git diff --check`
 기대: 공개 API와 초기 성능 기준을 유지하고 `npm run loop:verify` 9개 게이트를 모두 통과한다.
 결과: ✅ 문법 검사, `qa:final`, `loop:verify` 9/9, `git diff --check` 통과. ⚠️ 현재 컨테이너에 Playwright Chromium 실행 파일이 없어 성능 하네스 재실행은 환경 제한으로 중단되었으며, 전체 순회는 HTTP fallback을 완료한 뒤 기존 환경 데이터 관련 2건을 보고했다.
+=======
+## [2026-08-04 03:12] Lazy-load post attachment service
+
+**LOG_ID: 20260804_1114**
+목표: 첨부파일 관련 로직을 새 모듈로 분리하고, 첫 사용 시점에만 동적으로 불러오도록 하여 초기 진입 비용을 낮춘다.
+변경 파일: public/js/core/postService.js, public/js/core/postAttachmentService.js
+수행 작업: 1) 첨부파일 로직을 새 모듈로 분리 2) postService의 첨부 API를 lazy facade로 대체 3) 모듈 초기화 실패 시 Promise 재시도 가능하게 처리 4) 워크로그 및 walkthrough 기록 갱신
+실행: `node --check public/js/core/postService.js`, `node --check public/js/core/postAttachmentService.js`, `npm run qa:final`, `npm run loop:verify`, `git diff --check`, `wc -l public/js/core/postService.js`
+기대: 문법 통과, QA/loop 검증 통과, postService 250줄 이하
+결과: ✅ 완료
+>>>>>>> a02d9e17aede33842895ca7e5f781b3897205d30
 
 ## [2026-08-04 10:47] Git 원격 브랜치(보안/성능) main 브랜치 통합 및 검증 완료
 
