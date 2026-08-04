@@ -49,8 +49,9 @@
 
 ### 3.2 파일 구조
 
-- `public/js/main.js`: 브라우저 단일 엔트리
+- `public/js/app.js`: 브라우저 단일 엔트리 (ES modules) → `initApp()` in `core/appFactory.js`
 - `public/js/core/*.js`: 팩토리 함수 패턴 기반의 모듈화된 브라우저 로직 (상태/입력/연동)
+- `public/js/core/lazyModuleFactory.js`: 지연 로딩 패턴으로 선택적 기능을 초기 의존성 외로 빼기
 - `src/server/*`: Node.js 서버 로직 (API 핸들러, 서비스, 레포지토리)
 - `src/core/`: 서버/도구 공유 유틸 (`AssetManager.js`, `TemplateEngine.js`)
 - `legacy/`: 레거시 BBS 데이터 (`.mnu`, `.txt`)
@@ -96,8 +97,9 @@
 
 ### 4.2 주요 검증 명령
 
-- `npm run dev`: 로컬 서버 실행 (3000포트)
+- `npm run dev`: 로컬 서버 실행 (기본 3002포트, PORT 환경변수로 변경 가능)
 - `npm run smoke:vercel-ready`: 배포 전 전체 검증
+- `npm run loop:verify`: 완료 게이트 — 모든 검증(9개 smoke 스크립트 + qa:final) 순차 실행
 - `npm test`: 유닛 테스트 실행
 - `node --check [파일명]`: JS 문법 체크 (수정 후 필수)
 

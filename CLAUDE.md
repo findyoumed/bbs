@@ -26,6 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) and its subagents wh
 ```bash
 npm run dev                    # Start local server (default http://localhost:3002, override with PORT)
 npm run smoke:vercel-ready     # Full pre-deployment verification (also the `build` script)
+npm run loop:verify            # Complete gate: all 9 smoke scripts + qa:final (sequential)
 npm test                       # Run all unit tests
 npm run qa:final               # Final QA report
 node --check <file.js>         # JS syntax check — run after every edit
@@ -67,11 +68,12 @@ verified against the working tree.)
 
 ### Browser (`public/js/`)
 - Entry: `app.js` (ES modules) → `initApp()` in `core/appFactory.js` builds the app.
-  (AGENTS.md §3.2 still says `main.js` — that is stale; the real entry is `app.js`.)
+- Lazy-loading: `lazyModuleFactory.js` provides `createLazyObjectFactory` and `createLazyHandlerFactory` for deferring module load until first use. Example: `postAttachmentService.js` is loaded only when attachment features are accessed.
 - State: a plain `state` object in `app.js`, keyed by `state.screen` (routing driver). No class store.
-- ~136 modules in `core/`, split by feature via naming convention:
+- ~140+ modules in `core/`, split by feature via naming convention:
   - `command*` — input pipeline: `commandDispatcher*` → `commandRouter*` (one router per domain: Chat, Memo, Vote, Vfs, Ranking, PostView…).
   - `*Screens.js` / `*AnsiBuilders.js` — render a screen vs. build its ANSI text.
+  - `*AttachmentService.js` — detached attachment behaviors (lazy-loaded on first use).
   - `ansiEngine.js`, `terminalUiCore.js`, `terminal*` — 80x24 grid renderer + interactive overlay.
   - `signup*` — multi-step signup flow.
 
