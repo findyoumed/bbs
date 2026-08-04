@@ -17,8 +17,16 @@ Apply only the three still-missing optimizations from the requested performance 
 
 1. Build a capability-aware summary projection for paged post lists. Include only identifiers, ordering fields, author/title metadata, counters, timestamps, and optional category; never include `content`.
 2. Project only the detected hit column during hit increment and merge the returned counter into the already-loaded post object.
-3. Split list fetching from visible-state application. Schedule at most one next-page cache fill during idle/microtask time, deduplicate in-flight requests, and keep prefetch from mutating `state.posts`.
+3. Split list fetching from visible-state application. Schedule at most one next-page cache fill during idle/microtask time, deduplicate in-flight prefetch requests, and keep prefetch from mutating `state.posts`.
 4. Verify syntax and the requested Vercel/board smoke tests.
+
+## Verification Evidence
+
+- `node --check` passed for `appFactory.js`, `lazyModuleFactory.js`, `postService.js`, and `SupabaseBoardRepositoryPostReads.js`.
+- Projection assertion passed: the paged-list select string contains no `content` column.
+- Prefetch assertion passed: page 1 schedules one page 2 request, and page 2 is then served from cache without a third API call.
+- `npm run smoke:vercel-ready` passed.
+- `npm run smoke:boards` passed.
 
 ## Exit Criteria
 

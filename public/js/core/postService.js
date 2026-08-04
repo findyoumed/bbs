@@ -31,6 +31,10 @@ export function createPostService(deps) {
   // [LOG: 20260426_2300] 캐시 저장소 (목록 캐시는 boardId_page_search 형식, 본문 캐시는 boardId_postId 형식)
   const listCache = new Map();
   const postCache = new Map();
+  // [LOG_ID: 20260804_1359] Keep one background request per next-page key and
+  // invalidate stale prefetch results together with the visible list cache.
+  const listPrefetchPromises = new Map();
+  let listCacheGeneration = 0;
 
   // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "목록 출력방식"(SET SORT) 재현.
   // 서버는 최신순(내림차순)으로 페이지 단위를 내려주므로, OLD 설정 시 현재 페이지 안에서만
@@ -62,9 +66,15 @@ export function createPostService(deps) {
     const keyPrefix = `${boardId}_`;
     const virtualParent = PHYSICAL_TO_VIRTUAL[String(boardId || '')];
     const virtualPrefix = virtualParent ? `${virtualParent}_` : null;
+    listCacheGeneration += 1;
     for (const key of listCache.keys()) {
       if (key.startsWith(keyPrefix) || (virtualPrefix && key.startsWith(virtualPrefix))) {
         listCache.delete(key);
+      }
+    }
+    for (const key of listPrefetchPromises.keys()) {
+      if (key.startsWith(keyPrefix) || (virtualPrefix && key.startsWith(virtualPrefix))) {
+        listPrefetchPromises.delete(key);
       }
     }
   }
@@ -99,17 +109,7 @@ export function createPostService(deps) {
     return key;
   }
 
-  async function loadPosts(boardId, page = 1, searchParams = {}) {
-    const cacheKey = buildListCacheKey(boardId, page, searchParams);
-    if (listCache.has(cacheKey)) {
-      const cached = listCache.get(cacheKey);
-      state.posts = applySortOrder(cached.items);
-      state.totalCount = cached.totalCount;
-      state.totalPages = cached.totalPages;
-      state.page = cached.page;
-      return cached;
-    }
-
+  function buildPostsUrl(boardId, page, searchParams) {
     let url = `/api/boards/${encodeURIComponent(boardId)}?page=${page}&pageSize=15`;
     if (searchParams.lt) url += `&lt=${encodeURIComponent(searchParams.lt)}`;
     if (searchParams.li) url += `&li=${encodeURIComponent(searchParams.li)}`;
@@ -117,14 +117,62 @@ export function createPostService(deps) {
     if (searchParams.k) url += `&k=${encodeURIComponent(searchParams.k)}`;
     if (searchParams.la) url += `&la=${encodeURIComponent(searchParams.la)}`;
     if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
+    return url;
+  }
 
-    const data = normalizePostListResponse(await apiFetch(url), page);
-    listCache.set(cacheKey, data);
+  async function fetchPostsPage(boardId, page, searchParams, generation = listCacheGeneration) {
+    const cacheKey = buildListCacheKey(boardId, page, searchParams);
+    const cached = listCache.get(cacheKey);
+    if (cached) return cached;
 
+    const data = normalizePostListResponse(
+      await apiFetch(buildPostsUrl(boardId, page, searchParams)),
+      page
+    );
+    if (generation === listCacheGeneration) {
+      listCache.set(cacheKey, data);
+    }
+    return data;
+  }
+
+  function applyPostListState(data) {
     state.posts = applySortOrder(data.items);
     state.totalCount = data.totalCount;
     state.totalPages = data.totalPages;
     state.page = data.page;
+  }
+
+  function scheduleNextPagePrefetch(boardId, data, searchParams) {
+    const currentPage = Number(data.page || 1);
+    const totalPages = Number(data.totalPages || 1);
+    if (currentPage >= totalPages) return;
+
+    const nextPage = currentPage + 1;
+    const cacheKey = buildListCacheKey(boardId, nextPage, searchParams);
+    if (listCache.has(cacheKey) || listPrefetchPromises.has(cacheKey)) return;
+
+    const generation = listCacheGeneration;
+    const run = () => fetchPostsPage(boardId, nextPage, searchParams, generation)
+      .catch(() => null)
+      .finally(() => listPrefetchPromises.delete(cacheKey));
+    const prefetchPromise = new Promise((resolve) => {
+      const start = () => run().then(resolve, resolve);
+      if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(start, { timeout: 1000 });
+      } else if (typeof queueMicrotask === 'function') {
+        queueMicrotask(start);
+      } else {
+        Promise.resolve().then(start);
+      }
+    });
+    listPrefetchPromises.set(cacheKey, prefetchPromise);
+  }
+
+  async function loadPosts(boardId, page = 1, searchParams = {}) {
+    const data = await fetchPostsPage(boardId, page, searchParams);
+
+    applyPostListState(data);
+    scheduleNextPagePrefetch(boardId, data, searchParams);
     return data;
   }
 
@@ -207,8 +255,10 @@ export function createPostService(deps) {
    * [LOG: 20260426_2310] 캐시 강제 무효화 메서드 노출
    */
   function clearCache() {
+    listCacheGeneration += 1;
     listCache.clear();
     postCache.clear();
+    listPrefetchPromises.clear();
   }
 
   return {
