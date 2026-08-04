@@ -2,6 +2,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const { pipeline } = require('stream');
+const {
+  constants: zlibConstants,
+  createBrotliCompress,
+  createGzip
+} = require('zlib');
 const BbsResponse = require('./BbsResponse');
 
 const JSON_BODY_PROMISE = Symbol('jsonBodyPromise');
@@ -200,17 +206,29 @@ async function streamFile(res, filePath, options = {}) {
     ETag: etag,
     'Last-Modified': stats.mtime.toUTCString()
   };
+  const compression = selectStaticCompression(options.req, ext, stats.size);
   const headers = {
     ...validatorHeaders,
-    'Content-Length': stats.size,
     'Content-Type': mimeType
   };
+
+  if (compression) {
+    headers['Content-Encoding'] = compression.encoding;
+    headers.Vary = 'Accept-Encoding';
+    validatorHeaders.Vary = 'Accept-Encoding';
+  } else {
+    headers['Content-Length'] = stats.size;
+  }
 
   if (['.html', '.js', '.css'].includes(ext)) {
     // [LOG_ID: 20260804_1114] Keep UI assets fresh while allowing no-cache
     // revalidation to return a bodyless 304 instead of downloading each file again.
     headers['Cache-Control'] = 'no-cache';
     validatorHeaders['Cache-Control'] = 'no-cache';
+  }
+  if (['.woff', '.woff2', '.ttf'].includes(ext)) {
+    headers['Cache-Control'] = 'public, max-age=86400, stale-while-revalidate=604800';
+    validatorHeaders['Cache-Control'] = headers['Cache-Control'];
   }
 
   if (isFileNotModified(options.req, etag, stats.mtime)) {
@@ -225,12 +243,45 @@ async function streamFile(res, filePath, options = {}) {
     return;
   }
 
+  const stream = fs.createReadStream(filePath);
+  if (!compression) {
+    return new Promise((resolve, reject) => {
+      stream.on('error', reject);
+      stream.on('end', resolve);
+      stream.pipe(res);
+    });
+  }
+
   return new Promise((resolve, reject) => {
-    const stream = fs.createReadStream(filePath);
-    stream.on('error', reject);
-    stream.on('end', resolve);
-    stream.pipe(res);
+    pipeline(stream, compression.transform, res, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
   });
+}
+
+function selectStaticCompression(req, ext, size) {
+  // Avoid paying a compressor setup cost for tiny module requests; the large
+  // vendor/stylesheets still receive Brotli/gzip and dominate transfer size.
+  if (!req?.headers || Number(size || 0) < 16384 || !['.html', '.js', '.css', '.svg', '.json', '.txt'].includes(ext)) {
+    return null;
+  }
+
+  const accepted = String(req.headers['accept-encoding'] || '').toLowerCase();
+  if (accepted.includes('br')) {
+    return {
+      encoding: 'br',
+      transform: createBrotliCompress({
+        params: {
+          [zlibConstants.BROTLI_PARAM_QUALITY]: 4
+        }
+      })
+    };
+  }
+  if (accepted.includes('gzip')) {
+    return { encoding: 'gzip', transform: createGzip({ level: 6 }) };
+  }
+  return null;
 }
 
 function pickExistingFile(...candidates) {

@@ -32,7 +32,7 @@ if (typeof window !== 'undefined') {
 const refs = {};
 
 const {
-  initTooltips, initAuth, restoreStateFromURL, restoreTheme, updateURL, showMain, showPasswordReset, renderInitError, guestUser, forceExit
+  initTooltips, initAuth, preloadBootstrap, restoreStateFromURL, restoreTheme, updateURL, showMain, showPasswordReset, renderInitError, guestUser, forceExit
 } = initApp({ state, refs, SIGNUP_TOS_TEXT, SIGNUP_PRIVACY_TEXT });
 
 // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "자동접속 차단시간"(SET IDLE [분]) 재현.
@@ -104,7 +104,9 @@ async function waitForPrimaryFonts(timeoutMs = 2500) {
 
 async function init() {
   restoreTheme(); // [LOG: 20260424_1755] 저장된 테마 즉시 복원
-  await waitForPrimaryFonts();
+  // [LOG_ID: 20260804_1405] Bound the font gate to 1s. Preloaded fonts remain
+  // visually stable on fast connections, while slow sessions avoid 2.5s waits.
+  await waitForPrimaryFonts(1000);
   initTooltips();
   state.user = guestUser();
 
@@ -125,6 +127,9 @@ async function init() {
   };
 
   try {
+    // [LOG_ID: 20260804_1405] Bootstrap data is public and independent from
+    // auth setup, so start both network paths together.
+    void preloadBootstrap().catch(() => {});
     // [LOG: 20260416_2233] 병목 제거: 인증 초기화를 먼저 수행하여 중복 렌더링 방지
     try {
       await initAuth();

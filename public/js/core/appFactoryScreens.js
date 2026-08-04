@@ -110,7 +110,7 @@ export function createAppFactoryScreens(deps) {
     startOAuthLogin: authService.startOAuthLogin,
     refs
   });
-  const { handleHistoryBack, showMain, showBoardSelect, getBoardSelectTitle, jumpToContent } = menuNav;
+  const { handleHistoryBack, preloadBootstrap, showMain, showBoardSelect, getBoardSelectTitle, jumpToContent } = menuNav;
 
   const serviceScreens = createServiceScreens({
     ...screenDeps,
@@ -243,6 +243,7 @@ export function createAppFactoryScreens(deps) {
     contactSysopScreens,
     getBoardSelectTitle,
     handleHistoryBack,
+    preloadBootstrap,
     helpScreens,
     jumpToContent,
     memberSearchScreens,

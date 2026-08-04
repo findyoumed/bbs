@@ -1,5 +1,16 @@
 ## [2026-08-04 13:59] push_github.bat 실행 시 경고(multiple values) 제거 및 git config 정리
 
+## [2026-08-04 14:05] Startup latency optimizations
+
+**LOG_ID: 20260804_1405**
+Goal: Reduce authentication/bootstrap waterfalls, font blocking, stats work, cold-start probes, and static transfer cost.
+Changed files: `public/js/app.js`, `public/js/core/menuNavigation.js`, `public/js/core/appFactoryScreens.js`, `public/js/core/appFactoryRuntime.js`, `src/server/routeHandlers/systemRoutes.js`, `src/server/createAppServices.js`, `src/server/httpUtils.js`, `public/style.css`, `public/styles/retro-terminal.css`, `vercel.json`, `.agents/artifacts/performance-round3-20260804/`
+Work: 1) Bound font waiting to 300ms 2) Started shared bootstrap preload alongside auth 3) Added 120-second stats cache with stale-while-revalidate 4) Made startup health probes opt-in 5) Added Brotli/gzip negotiation and longer static SWR cache headers.
+Verification: `node --check`, `npm run smoke:vercel-ready`, `npm run smoke:boards`, `node scripts/performance-startup.js --assert`, compression/preload assertions.
+Result: ✅ Complete — syntax, smoke, full traversal, performance, compression, preload, and cache-header assertions passed.
+
+---
+
 **LOG_ID: 20260804_1359**
 목표: `push_github.bat` 실행 시 발생하던 `warning: branch.main.remote has multiple values` 및 `warning: branch.main.merge has multiple values` 경고 메시지를 해결한다.
 변경 파일: `.git/config`, `push_github.bat`, `WORK_LOG.md`

@@ -5,6 +5,7 @@
          url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
     font-style: normal;
+    /* [LOG_ID: 20260804_1405] Preserve terminal glyph metrics; JS bounds the wait. */
     font-display: block;
 }
 @font-face {

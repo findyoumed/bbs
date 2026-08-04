@@ -244,6 +244,37 @@ class SystemRouter extends BaseRouter {
       return cache.data;
     }
 
+    // [LOG_ID: 20260804_1405] Public startup stats are non-critical. Serve the
+    // last snapshot immediately while one request refreshes it in the background.
+    if (cache?.data && cache.refreshPromise) {
+      return cache.data;
+    }
+    if (cache?.data) {
+      cache.refreshPromise = this.refreshAssetDynamicData(
+        boardRepository,
+        memberRepository,
+        activityRepository,
+        runtimeConfig,
+        cache,
+        now
+      ).catch(() => null).finally(() => {
+        cache.refreshPromise = null;
+      });
+      return cache.data;
+    }
+
+    return this.refreshAssetDynamicData(
+      boardRepository,
+      memberRepository,
+      activityRepository,
+      runtimeConfig,
+      cache,
+      now
+    );
+  }
+
+  async refreshAssetDynamicData(boardRepository, memberRepository, activityRepository, runtimeConfig, cache, now = Date.now()) {
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     // [LOG: 20260731_1640] countActiveUsers가 비동기 리포지토리 호출을 수반하므로 await/Promise.all 관리 추가
@@ -264,7 +295,7 @@ class SystemRouter extends BaseRouter {
 
     if (cache) {
       cache.data = data;
-      cache.expiresAt = now + 30000;
+      cache.expiresAt = now + 120000;
     }
 
     return data;

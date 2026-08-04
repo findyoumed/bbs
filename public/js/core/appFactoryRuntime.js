@@ -44,6 +44,7 @@ export function initializeAppFactoryRuntime(deps) {
     ...screens.contactSysopScreens,
     showSignup: screens.signupModule.showSignup,
     showMain: screens.showMain,
+    preloadBootstrap: screens.preloadBootstrap,
     showBoardSelect: screens.showBoardSelect,
     showMyInfo: screens.myInfoScreens.showMyInfo,
     handleLoginIdSubmit: async (userId) => {
@@ -318,6 +319,7 @@ export function initializeAppFactoryRuntime(deps) {
     renderInitError: services.terminalUiCore.renderInitError,
     restoreStateFromURL: refs.restoreStateFromURL,
     restoreTheme: services.restoreTheme,
+    preloadBootstrap: screens.preloadBootstrap,
     showMain: screens.showMain,
     showPasswordReset: screens.authScreens.showPasswordReset,
     updateURL: refs.updateURL,

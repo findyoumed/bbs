@@ -84,12 +84,16 @@ function createAppServices(rootDir, env = process.env) {
   
   const rssCacheStore = createRssCacheStoreFromEnv(env);
 
-  // Async health check (non-blocking for startup but logged)
-  registry.checkAllHealth().then(health => {
-    logger.info('Repository health check results:', { component: 'AppServices', health });
-  }).catch(err => {
-    logger.warn('Failed to perform repository health checks:', { component: 'AppServices', error: err.message });
-  });
+  // [LOG_ID: 20260804_1405] Health probes can fan out to Supabase during a
+  // serverless cold start. Keep them opt-in; explicit diagnostics still run
+  // through the system info endpoint when requested.
+  if (String(env.BBS_STARTUP_HEALTHCHECK || '').trim().toLowerCase() === 'true') {
+    registry.checkAllHealth().then(health => {
+      logger.info('Repository health check results:', { component: 'AppServices', health });
+    }).catch(err => {
+      logger.warn('Failed to perform repository health checks:', { component: 'AppServices', error: err.message });
+    });
+  }
 
   return {
     assetManager: new AssetManager(legacyPaths.legacyTxtPath),

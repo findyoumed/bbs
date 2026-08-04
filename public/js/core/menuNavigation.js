@@ -89,6 +89,19 @@ export function createMenuNavigation(deps) {
     return resolveMenuNodeTarget(target, Object.values(state.menuLookup || {}));
   }
 
+  // [LOG_ID: 20260804_1405] Share one in-flight public bootstrap request
+  // between the eager startup preload and the eventual screen renderer.
+  function preloadBootstrap() {
+    if (state._bootstrapPromise) {
+      return state._bootstrapPromise;
+    }
+    state._bootstrapPromise = apiFetch('/api/bootstrap').catch((error) => {
+      state._bootstrapPromise = null;
+      throw error;
+    });
+    return state._bootstrapPromise;
+  }
+
   async function showMain(fromHistory = false) {
     // [LOG_ID: 20260713_1010] SET HOME 환경 변수가 설정되어 있을 경우 초기 진입 시 해당 게시판/메뉴로 즉시 이동
     const homeTarget = String(state.envVars?.HOME || '').trim();
@@ -125,7 +138,7 @@ export function createMenuNavigation(deps) {
 
     // [LOG_ID: 20260804_1114] 게시판, 메뉴, 통계를 한 번의 서버 병렬 조회로 받아
     // 초기 화면의 HTTP/serverless 왕복을 줄인다. 개별 로더는 딥링크 경로에서 계속 사용한다.
-    const bootstrap = await apiFetch('/api/bootstrap');
+    const bootstrap = await preloadBootstrap();
     hydrateBoards(bootstrap?.boards);
     const menuTree = hydrateMenuTree(bootstrap?.menu);
     const stats = bootstrap?.stats || {};
@@ -311,6 +324,7 @@ export function createMenuNavigation(deps) {
     executeMenuNodeAction,
     getBoardSelectTitle,
     handleHistoryBack,
+    preloadBootstrap,
     resolveAnyMenuNodeTarget,
     resolveBoardTarget,
     resolveMenuNodeTarget,
