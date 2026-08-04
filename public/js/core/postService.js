@@ -105,10 +105,8 @@ export function createPostService(deps) {
     if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
 
     const data = normalizePostListResponse(await apiFetch(url), page);
-    
-    // 결과 캐싱
     listCache.set(cacheKey, data);
-    
+
     state.posts = applySortOrder(data.items);
     state.totalCount = data.totalCount;
     state.totalPages = data.totalPages;
@@ -142,23 +140,19 @@ export function createPostService(deps) {
     if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
 
     const data = normalizePostViewResponse(await apiFetch(url));
-    
-    // 결과 캐싱
     postCache.set(cacheKey, data);
-    
     return data;
   }
 
   async function createPost(boardId, payload) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts`, { method: 'POST', body: JSON.stringify(payload) });
-    invalidateListCache(boardId); // 새 글 작성 시 목록 캐시 무효화
+    invalidateListCache(boardId);
     return result;
   }
 
   async function updatePost(boardId, postId, payload) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}`, { method: 'PATCH', body: JSON.stringify(payload) });
     invalidatePostCache(boardId, postId);
-    // state.board.id가 boardId와 다를 때(가상게시판 등 다른 컨텍스트로 접근한 경우) 추가 무효화
     if (state.board?.id && state.board.id !== boardId) invalidatePostCache(state.board.id, postId);
     invalidateListCache(boardId);
     return result;
@@ -179,80 +173,42 @@ export function createPostService(deps) {
 
   async function recommendPost(boardId, postId) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/recommend`, { method: 'POST' });
-    invalidatePostCache(boardId, postId); // 추천수 업데이트를 위해 캐시 삭제 (가상게시판·검색 문맥 포함)
+    invalidatePostCache(boardId, postId);
     return result;
   }
 
-  async function loadAttachments(boardId, postId) {
-    const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/attachments`);
-    return Array.isArray(result) ? result : [];
+  let postAttachmentServicePromise = null;
+
+  // [LOG_ID: 20260804_1114] 첫 첨부 기능 사용 시점에만 새 모듈을 불러와 초기 진입 비용을 낮춘다.
+  async function getPostAttachmentService() {
+    if (!postAttachmentServicePromise) {
+      postAttachmentServicePromise = import('./postAttachmentService.js')
+        .then(({ createPostAttachmentService }) => createPostAttachmentService({ apiFetch, state }))
+        .catch((error) => {
+          postAttachmentServicePromise = null;
+          throw error;
+        });
+    }
+    return postAttachmentServicePromise;
   }
 
-  // [LOG_ID: 20260727_1225] 서버(POST /attachments)는 이미 구현돼 있었지만 이를 호출하는
-  // 클라이언트 코드가 전혀 없어(PDS 게시판의 "UP(올리기)" 명령조차 글만 쓰고 파일은 절대
-  // 붙이지 못했다) 첨부파일 업로드 자체가 통째로 불가능했다 — 다운로드/목록 조회만 되던
-  // 반쪽짜리 기능이었다(사용자 요청 "PDS 업로드/다운로드 전수조사"로 발견).
+  async function loadAttachments(boardId, postId) {
+    const service = await getPostAttachmentService();
+    return service.loadAttachments(boardId, postId);
+  }
+
   async function uploadAttachment(boardId, postId, payload) {
-    return apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/attachments`, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
+    const service = await getPostAttachmentService();
+    return service.uploadAttachment(boardId, postId, payload);
   }
 
   function pickAttachmentDownloadName(fileName, contentDisposition) {
-    const preferredName = String(fileName || '').trim();
-    if (preferredName) {
-      return preferredName;
-    }
-
-    const headerValue = String(contentDisposition || '');
-    const encodedMatch = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
-    if (encodedMatch?.[1]) {
-      try {
-        return decodeURIComponent(encodedMatch[1]);
-      } catch (error) {
-        console.error('첨부 파일명 decode 실패:', error.message);
-      }
-    }
-
-    const quotedMatch = headerValue.match(/filename=\"?([^\";]+)\"?/i);
-    if (quotedMatch?.[1]) {
-      return quotedMatch[1].trim();
-    }
-
-    return 'attachment.bin';
+    return String(fileName || '').trim() || String(contentDisposition || '').trim() || 'attachment.bin';
   }
 
   async function downloadAttachment(boardId, postId, attachmentId, fileName = '') {
-    const response = await fetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/attachments/${attachmentId}/download`, {
-      method: 'GET',
-      headers: state.token ? { Authorization: `Bearer ${state.token}` } : {}
-    });
-
-    if (!response.ok) {
-      const rawText = await response.text();
-      let message = `첨부 파일 다운로드 실패 (${response.status})`;
-      if (rawText) {
-        try {
-          const payload = JSON.parse(rawText);
-          message = String(payload?.message || payload?.error?.message || message);
-        } catch (error) {
-          message = rawText.trim() || message;
-        }
-      }
-      throw new Error(message);
-    }
-
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = pickAttachmentDownloadName(fileName, response.headers.get('content-disposition'));
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-    return true;
+    const service = await getPostAttachmentService();
+    return service.downloadAttachment(boardId, postId, attachmentId, fileName);
   }
 
   /**
