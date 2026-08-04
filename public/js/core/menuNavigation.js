@@ -12,6 +12,7 @@ export function createMenuNavigation(deps) {
     buildMenuHotspotsFromRows,
     cmdInput,
     compareDoor,
+    findBoardByCode,
     getBoardCode,
     getBoardDisplayName,
     getBoardDoor,
@@ -42,6 +43,10 @@ export function createMenuNavigation(deps) {
     updateURL
   } = deps;
 
+  let cachedMenuAliasLookup = null;
+  const menuAliasTargetCache = new Map();
+  const localMenuTargetCache = new WeakMap();
+
   function getBoardSelectTitle(menuPath = 'top') {
     if (menuPath === 'top' && state.menuTree) {
       return getMenuNodeTitle(state.menuTree);
@@ -57,6 +62,11 @@ export function createMenuNavigation(deps) {
   function resolveBoardTarget(target, boards = state.boards) {
     const normalized = normalizeSearchKey(target);
     if (!normalized) return null;
+    // [LOG_ID: 20260805_0451] The complete board list already has a cached
+    // code/door/name index. Keep scanning only for menu-local subsets.
+    if (boards === state.boards && typeof findBoardByCode === 'function') {
+      return findBoardByCode(normalized);
+    }
 
     return (boards || []).find((board) => {
       const keys = [
@@ -85,8 +95,59 @@ export function createMenuNavigation(deps) {
     }) || null;
   }
 
+  function resolveLocalMenuNodeTarget(target, menuNode) {
+    if (!menuNode || typeof menuNode !== 'object') return null;
+    const normalized = normalizeSearchKey(target);
+    if (!normalized) return null;
+
+    const source = Array.isArray(menuNode.children) ? menuNode.children : [];
+    let cached = localMenuTargetCache.get(menuNode);
+    if (!cached || cached.source !== source || cached.size !== source.length) {
+      cached = { source, size: source.length, values: new Map() };
+      localMenuTargetCache.set(menuNode, cached);
+    }
+    if (cached.values.has(normalized)) {
+      return cached.values.get(normalized);
+    }
+
+    // [LOG_ID: 20260805_0754] Keep local-menu priority without rebuilding and
+    // rescanning the same child list for repeated board GO commands.
+    const targetNode = resolveMenuNodeTarget(target, getMenuChildren(menuNode));
+    if (cached.values.size >= 64) {
+      cached.values.delete(cached.values.keys().next().value);
+    }
+    cached.values.set(normalized, targetNode);
+    return targetNode;
+  }
+
   function resolveAnyMenuNodeTarget(target) {
-    return resolveMenuNodeTarget(target, Object.values(state.menuLookup || {}));
+    // [LOG_ID: 20260805_0352] GO codes are already indexed while the menu is
+    // hydrated. Resolve exact codes in O(1) and keep the scan for aliases.
+    const normalized = normalizeSearchKey(target);
+    const lookup = state.menuLookup || {};
+    const lowerKey = normalized.toLowerCase();
+    const directNode = Object.hasOwn(lookup, normalized)
+      ? lookup[normalized]
+      : (Object.hasOwn(lookup, lowerKey) ? lookup[lowerKey] : null);
+    if (directNode) return directNode;
+
+    // [LOG_ID: 20260805_0652] Repeated GO targets that are board codes still
+    // miss the menu index first. Cache alias hits and misses for the active
+    // menu lookup, and bound the cache so arbitrary command input cannot grow it.
+    if (cachedMenuAliasLookup !== lookup) {
+      cachedMenuAliasLookup = lookup;
+      menuAliasTargetCache.clear();
+    }
+    if (menuAliasTargetCache.has(normalized)) {
+      return menuAliasTargetCache.get(normalized);
+    }
+
+    const aliasNode = resolveMenuNodeTarget(target, Object.values(lookup));
+    if (menuAliasTargetCache.size >= 64) {
+      menuAliasTargetCache.delete(menuAliasTargetCache.keys().next().value);
+    }
+    menuAliasTargetCache.set(normalized, aliasNode);
+    return aliasNode;
   }
 
   // [LOG_ID: 20260804_1405] Share one in-flight public bootstrap request
@@ -288,6 +349,7 @@ export function createMenuNavigation(deps) {
     normalizeSearchKey,
     refs,
     resolveAnyMenuNodeTarget,
+    resolveLocalMenuNodeTarget,
     resolveBoardTarget,
     resolveMenuNodeTarget,
     setHint: deps.setHint,
@@ -326,6 +388,7 @@ export function createMenuNavigation(deps) {
     handleHistoryBack,
     preloadBootstrap,
     resolveAnyMenuNodeTarget,
+    resolveLocalMenuNodeTarget,
     resolveBoardTarget,
     resolveMenuNodeTarget,
     showBoardSelect,

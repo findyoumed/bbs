@@ -31,9 +31,6 @@ export function createPostService(deps) {
   // [LOG: 20260426_2300] 캐시 저장소 (목록 캐시는 boardId_page_search 형식, 본문 캐시는 boardId_postId 형식)
   const listCache = new Map();
   const postCache = new Map();
-  // [LOG_ID: 20260804_1359] Keep one background request per next-page key and
-  // invalidate stale prefetch results together with the visible list cache.
-  const listPrefetchPromises = new Map();
   let listCacheGeneration = 0;
 
   // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "목록 출력방식"(SET SORT) 재현.
@@ -70,11 +67,6 @@ export function createPostService(deps) {
     for (const key of listCache.keys()) {
       if (key.startsWith(keyPrefix) || (virtualPrefix && key.startsWith(virtualPrefix))) {
         listCache.delete(key);
-      }
-    }
-    for (const key of listPrefetchPromises.keys()) {
-      if (key.startsWith(keyPrefix) || (virtualPrefix && key.startsWith(virtualPrefix))) {
-        listPrefetchPromises.delete(key);
       }
     }
   }
@@ -143,29 +135,14 @@ export function createPostService(deps) {
   }
 
   function scheduleNextPagePrefetch(boardId, data, searchParams) {
-    const currentPage = Number(data.page || 1);
-    const totalPages = Number(data.totalPages || 1);
-    if (currentPage >= totalPages) return;
-
-    const nextPage = currentPage + 1;
-    const cacheKey = buildListCacheKey(boardId, nextPage, searchParams);
-    if (listCache.has(cacheKey) || listPrefetchPromises.has(cacheKey)) return;
-
-    const generation = listCacheGeneration;
-    const run = () => fetchPostsPage(boardId, nextPage, searchParams, generation)
-      .catch(() => null)
-      .finally(() => listPrefetchPromises.delete(cacheKey));
-    const prefetchPromise = new Promise((resolve) => {
-      const start = () => run().then(resolve, resolve);
-      if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(start, { timeout: 1000 });
-      } else if (typeof queueMicrotask === 'function') {
-        queueMicrotask(start);
-      } else {
-        Promise.resolve().then(start);
-      }
-    });
-    listPrefetchPromises.set(cacheKey, prefetchPromise);
+    // [LOG_ID: 20260805_0152] The optional idle prefetch implementation stays
+    // outside the startup graph and loads only after the first board list.
+    void import('./postListPrefetchService.js')
+      .then(({ scheduleNextPagePrefetch: schedule }) => schedule({
+        boardId, data, searchParams, listCache, buildListCacheKey,
+        fetchPostsPage, generation: listCacheGeneration
+      }))
+      .catch(() => {});
   }
 
   async function loadPosts(boardId, page = 1, searchParams = {}) {
@@ -239,17 +216,9 @@ export function createPostService(deps) {
     return result;
   }
 
-  async function loadAttachments(...args) {
-    return (await getAttachmentService()).loadAttachments(...args);
-  }
-
-  async function uploadAttachment(...args) {
-    return (await getAttachmentService()).uploadAttachment(...args);
-  }
-
-  async function downloadAttachment(...args) {
-    return (await getAttachmentService()).downloadAttachment(...args);
-  }
+  async function loadAttachments(...args) { return (await getAttachmentService()).loadAttachments(...args); }
+  async function uploadAttachment(...args) { return (await getAttachmentService()).uploadAttachment(...args); }
+  async function downloadAttachment(...args) { return (await getAttachmentService()).downloadAttachment(...args); }
 
   /**
    * [LOG: 20260426_2310] 캐시 강제 무효화 메서드 노출
@@ -258,7 +227,6 @@ export function createPostService(deps) {
     listCacheGeneration += 1;
     listCache.clear();
     postCache.clear();
-    listPrefetchPromises.clear();
   }
 
   return {

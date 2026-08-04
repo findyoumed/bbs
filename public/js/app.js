@@ -104,9 +104,9 @@ async function waitForPrimaryFonts(timeoutMs = 2500) {
 
 async function init() {
   restoreTheme(); // [LOG: 20260424_1755] 저장된 테마 즉시 복원
-  // [LOG_ID: 20260804_1405] Bound the font gate to 1s. Preloaded fonts remain
-  // visually stable on fast connections, while slow sessions avoid 2.5s waits.
-  await waitForPrimaryFonts(1000);
+  // [LOG_ID: 20260805_0054] Both primary WOFF2 fonts are preloaded, so keep a
+  // short fallback gate without delaying first render for a full second.
+  await waitForPrimaryFonts(300);
   initTooltips();
   state.user = guestUser();
 

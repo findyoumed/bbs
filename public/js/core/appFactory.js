@@ -12,7 +12,6 @@ import { createEntryCommandHandler } from './commandRouterEntry.js';
 import { ansiToHTML, displayWidth, isWideChar } from './ansiRenderUtils.js';
 import { renderMenuHotspots, buildMenuHotspotsFromRows } from './menuHotspotUtils.js';
 import { createMenuNavigation } from './menuNavigation.js';
-import { createAuthScreens } from './authScreens.js';
 import { createApiFetch, ApiError } from './apiFetch.js';
 import { createMenuService } from './menuService.js';
 import { createBoardService } from './boardService.js';
@@ -46,6 +45,13 @@ import { createLazyHandlerFactory, createLazyObjectFactory } from './lazyModuleF
 const createServiceScreens = createLazyObjectFactory(
   () => import('./serviceScreens.js').then((module) => module.createServiceScreens),
   ['showNewsArticle', 'showNewsList', 'showNewsMenu', 'showWeatherMenu', 'showWeatherView']
+);
+// [LOG_ID: 20260804_2353] Authentication screens are only needed after the
+// public main screen or an auth deep link is entered. Keep their implementation
+// out of the initial module graph while preserving the existing screen API.
+const createAuthScreens = createLazyObjectFactory(
+  () => import('./authScreens.js').then((module) => module.createAuthScreens),
+  ['showLogin', 'showPasswordReset']
 );
 const createPostScreens = createLazyObjectFactory(
   () => import('./postScreens.js').then((module) => module.createPostScreens),

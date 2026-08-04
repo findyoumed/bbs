@@ -1,3 +1,120 @@
+## [2026-08-05 07:54] GO 로컬 메뉴 실패 탐색 캐시
+
+**LOG_ID: 20260805_0754**
+목표: `GO SL` 실행 때 현재 메뉴 자식 목록을 매번 복사·순회하는 비용을 제거한다.
+변경 파일: `public/js/core/menuNavigation.js`, `public/js/core/menuNavigationActions.js`, `WORK_LOG.md`
+수행 작업:
+1) 메뉴 노드별 로컬 별칭 탐색 결과(실패 포함)를 WeakMap으로 캐시
+2) 자식 배열 교체·길이 변경 시 캐시를 폐기하고, 명령 입력 캐시는 64개로 제한
+3) 기존 로컬 메뉴 우선순위와 전역 메뉴·게시판 폴백 동작 유지
+실행: `node --check`, 11개 메뉴·20,000회 `SL` 로컬 실패 조회 벤치마크, 로컬 별칭·캐시 무효화·상한 단언, `npm run build`, 관련 smoke, `npm run loop:verify`, `git diff --check`
+기대: 반복 `/gosl`에서 동일 메뉴 자식 배열 생성과 선형 별칭 탐색 제거
+결과: ✅ 11개 메뉴·20,000회 `SL` 로컬 실패 조회 중앙값이 42.627ms에서 1.064ms로 감소(97.5%), 조회당 약 2,131ns에서 53ns로 단축. 로컬 별칭 적중·실패, 자식 배열 길이 변경 시 무효화·64개 상한을 확인했고 문법 검사, 빌드, 관련 smoke, `git diff --check`, 완료 게이트 9/9 통과.
+
+## [2026-08-05 07:48] AI 에이전트 푸시 금지 정책 제거
+
+**LOG_ID: 20260805_0748**
+목표: 사용자 요청에 따라 AI 에이전트의 `git push` 절대 금지 조항을 제거해 검증된 변경을 원격에 반영할 수 있도록 한다.
+변경 파일: `AGENTS.md`, `WORK_LOG.md`
+수행 작업:
+1) 절대 규칙 표에서 `git push 금지` 항목 제거 및 규칙 수를 5대로 정정
+2) 권한 정책의 push 승인 예외와 Git 규칙의 push 금지 문구 제거
+3) 기존 커밋과 코드 변경은 수정하지 않음
+실행: `rg` 정책 문구 확인, `git diff --check`
+기대: `AGENTS.md`에 AI 에이전트의 push를 금지하는 문구가 남지 않음
+결과: ✅ 완료 — `AGENTS.md`에서 AI 에이전트의 `git push` 금지 문구 3곳을 제거했고, 규칙 표를 5대로 정정했으며 `git diff --check` 통과.
+
+## [2026-08-05 06:52] GO 메뉴 별칭 실패 탐색 캐시
+
+**LOG_ID: 20260805_0652**
+목표: `GO SL` 같은 게시판 코드가 메뉴 인덱스에 없을 때마다 전체 메뉴 별칭을 다시 탐색하는 비용을 제거한다.
+변경 파일: `public/js/core/menuNavigation.js`
+수행 작업:
+1) 현재 메뉴 인덱스별로 별칭 탐색의 성공·실패 결과를 캐시
+2) 로그인·메뉴 hydration으로 인덱스 참조가 바뀌면 캐시를 즉시 초기화
+3) 임의 명령 입력이 메모리를 계속 늘리지 않도록 캐시를 64개로 제한
+실행: `node --check`, 49개 메뉴·20,000회 `SL` 실패 조회 벤치마크, 별칭 적중·실패·인덱스 교체·캐시 상한 단언, `npm run build`, `npm run smoke:menu-wiring`, `npm run smoke:command-parity`, `npm run loop:verify`, `git diff --check`
+기대: 반복 게시판 GO에서 전체 메뉴 값 배열 생성, 49개 메뉴 순회와 키 정규화 제거
+결과: ✅ 49개 메뉴·20,000회 `SL` 실패 조회 중앙값이 191.160ms에서 2.578ms로 감소(98.7%), 조회당 약 9,558ns에서 129ns로 단축. 별칭 적중·실패, 메뉴 인덱스 교체 시 무효화, 64개 캐시 상한을 확인했고 문법 검사, 빌드, 관련 smoke, `git diff --check`, 완료 게이트 9/9 통과.
+
+## [2026-08-05 05:53] 메뉴 자식 정렬 결과 캐시
+
+**LOG_ID: 20260805_0553**
+목표: `GO SL` 로컬 메뉴 탐색과 메뉴 렌더링에서 같은 자식 목록을 반복 필터·정렬하는 비용을 제거한다.
+변경 파일: `public/js/core/menuService.js`
+수행 작업:
+1) hydration 후 불변인 메뉴 노드별 정렬 결과를 WeakMap에 캐시
+2) `children` 배열 참조가 바뀌면 자동 재계산
+3) 호출자에는 복사본을 반환해 기존 비변이 API 동작 유지
+실행: `node --check`, 11개 메뉴·100,000회 `getMenuChildren` 벤치마크, 정렬·복사·캐시 갱신 단언, `npm run build`, `npm run smoke:menu-wiring`, `npm run smoke:command-parity`, `npm run smoke:renderer-ui`, `npm run loop:verify`, `git diff --check`
+기대: 반복 호출에서 필터·정렬 제거, 출력 순서와 호출자 격리 유지
+결과: ✅ 11개 메뉴·100,000회 `getMenuChildren` 중앙값이 34.747ms에서 2.116ms로 감소(93.9%), 호출당 약 347ns에서 21ns로 단축. 정렬 순서, 반환 복사본 격리, `children` 교체 시 캐시 갱신 확인. 문법 검사, 빌드, 관련 smoke, `git diff --check`, 완료 게이트 9/9 통과.
+
+## [2026-08-05 04:51] GO 게시판 코드 인덱스 재사용
+
+**LOG_ID: 20260805_0451**
+목표: `GO SL` 같은 정확한 게시판 이동에서 전체 게시판 선형 탐색과 반복 문자열 정규화를 제거한다.
+변경 파일: `public/js/core/menuNavigation.js`
+수행 작업:
+1) `boardService`의 기존 code·door·이름 통합 인덱스를 전체 게시판 GO 조회에 재사용
+2) 현재 메뉴 내부의 제한된 게시판 목록은 기존 로컬 우선 선형 탐색 유지
+3) 정확한 코드와 로컬 범위 우선순위 동작 검증
+실행: `node --check`, 15개 게시판·100,000회 `SL` 조회 벤치마크, 전역 인덱스·로컬 폴백 단언, `npm run build`, `npm run smoke:boards`, `npm run smoke:command-parity`, `npm run smoke:menu-wiring`, `npm run loop:verify`, `git diff --check`
+기대: 전체 게시판 GO 조회의 15개 항목 순회와 키 정규화 제거
+결과: ✅ 15개 게시판·100,000회 `SL` 조회 중앙값이 1,330.881ms에서 11.575ms로 감소(99.1%), 조회당 약 13,309ns에서 116ns로 단축. 전역 인덱스 조회와 로컬 메뉴 우선 폴백 확인. 문법 검사, 빌드, 관련 smoke, `git diff --check`, 완료 게이트 9/9 통과.
+
+## [2026-08-05 03:52] GO 메뉴 코드 직접 인덱스 조회
+
+**LOG_ID: 20260805_0352**
+목표: `GO SL` 같은 정확한 메뉴 코드 이동에서 전체 메뉴 선형 탐색과 반복 문자열 정규화를 제거한다.
+변경 파일: `public/js/core/menuNavigation.js`
+수행 작업:
+1) 메뉴 hydration 시 이미 생성되는 `state.menuLookup` go/id 인덱스 재사용
+2) 정확한 코드에는 O(1) 직접 조회, 이름·door 등 별칭에는 기존 선형 탐색 폴백 유지
+3) 대소문자 무관 코드 이동과 기존 별칭 동작 검증
+실행: `node --check`, 49개 메뉴·20,000회 `SL` 조회 벤치마크, 직접 코드·별칭 동작 단언, `npm run build`, `npm run smoke:command-parity`, `npm run smoke:menu-wiring`, `npm run loop:verify`, `git diff --check`
+기대: 정확한 GO 코드의 49개 메뉴 순회와 키 정규화 제거
+결과: ✅ 49개 메뉴·20,000회 `SL` 조회 중앙값이 503.338ms에서 3.212ms로 감소(99.4%), 조회당 약 25,167ns에서 161ns로 단축. 정확한 코드, 이름 별칭 폴백, 프로토타입 키 안전성 확인. 문법 검사, 빌드, 관련 smoke, `git diff --check`, 완료 게이트 9/9 통과.
+
+## [2026-08-05 02:53] GO 명령의 빈 workspace 처리 제거
+
+**LOG_ID: 20260805_0253**
+목표: `/gosl`에 해당하는 `GO SL` 등 전역 이동 명령이 내비게이션에 도달하기 전에 수행하던 불필요한 비동기 호출을 제거한다.
+변경 파일: `public/js/core/commandRouterGlobalSystem.js`
+수행 작업:
+1) 모든 명령 기능이 제거되어 항상 `false`만 반환하는 workspace 처리기 확인
+2) 전역 시스템 라우터에서 해당 모듈 import·생성·await 호출 제거
+3) 실제 시스템 runtime 명령 처리 순서와 반환 동작 유지
+실행: `node --check`, 500,000회 `GO SL` 시스템 경로 벤치마크, `npm run build`, `npm run smoke:command-parity`, `npm run smoke:menu-wiring`, `npm run loop:verify`, `git diff --check`
+기대: 모든 GO 명령에서 의미 없는 Promise/함수 호출 1회 제거
+결과: ✅ 500,000회 `GO SL` 시스템 경로 중앙값이 139.583ms에서 102.110ms로 감소(26.8%), 명령당 약 279ns에서 204ns로 단축. 문법 검사, 빌드, `smoke:command-parity`, `smoke:menu-wiring`, `git diff --check`, 완료 게이트 9/9 통과.
+
+## [2026-08-05 00:54] 초기 폰트 대기 상한 단축
+
+**LOG_ID: 20260805_0054**
+목표: 선로딩된 핵심 폰트가 느리거나 실패할 때 초기 화면 표시를 막는 최대 대기 시간을 줄인다.
+변경 파일: `public/js/app.js`
+수행 작업:
+1) `index.html`의 핵심 WOFF2 폰트 2개 선로딩을 확인
+2) 실제 코드와 이전 작업 기록의 불일치(1,000ms 대기)를 수정해 폰트 게이트 상한을 300ms로 단축
+3) 폰트가 먼저 준비되면 즉시 진행하는 기존 `Promise.race` 동작과 시각 안정성 처리 유지
+실행: `node --check public/js/app.js`, 폰트 선로딩·대기 상한 정적 단언, `npm run build`, `npm run smoke:vercel-ready`, `npm run smoke:renderer-ui`, `npm run smoke:ui-layout`, `git diff --check`
+기대: 느린 폰트 환경의 초기 렌더 차단 상한을 1,000ms에서 300ms로 줄여 최악 지연 700ms(70%) 감소
+결과: ✅ 변경 대상의 `node --check`, 정적 성능 단언, `npm run build`, `smoke:renderer-ui`, `smoke:ui-layout`, `git diff --check` 통과. 폰트 게이트 상한은 1,000ms에서 300ms로 감소(700ms·70% 단축). 최초 `npm run loop:verify`는 기존 `postService.js` 길이 위반으로 8/9였으나, 후속 `LOG_ID: 20260805_0152`에서 원인을 제거한 뒤 재실행해 9/9 통과함.
+
+## [2026-08-04 23:53] 인증 화면 모듈 초기 그래프 제외
+
+**LOG_ID: 20260804_2353**
+목표: 메인 화면 진입에 필요하지 않은 인증 화면 구현을 지연 로드해 초기 JavaScript 전송량과 파싱 비용을 줄인다.
+변경 파일: `public/js/core/appFactory.js`
+수행 작업:
+1) 정적 `authScreens.js` import를 기존 lazy facade 패턴으로 전환
+2) `showLogin`·`showPasswordReset` 공개 API와 라우팅 동작 유지
+3) 인증 화면을 실제로 열 때만 구현 모듈을 한 번 로드하도록 구성
+실행: `node --check public/js/core/appFactory.js`, `node --check public/js/core/authScreens.js`, 정적 모듈 그래프 측정, `npm run smoke:vercel-ready`, `npm run smoke:boards`
+기대: 초기 그래프에서 인증 화면 구현 1개 모듈·36,804바이트 제외
+결과: ✅ `node --check`, `smoke:vercel-ready`, `smoke:boards`, `smoke:menu-wiring`, `smoke:command-parity`, `smoke:renderer-ui`, `git diff --check` 통과. 초기 그래프가 73개/681,595바이트에서 72개/645,069바이트로 감소(순감 36,526바이트)했고 `authScreens.js`가 초기 그래프에서 제외됨.
+
 ## [2026-08-04 13:59] push_github.bat 실행 시 경고(multiple values) 제거 및 git config 정리
 
 ## [2026-08-04 14:05] Startup latency optimizations
@@ -3381,6 +3498,9 @@ recipientUserId: String(...).toLowerCase()
 
 ---
 
+Warning: truncated output (original token count: 23034)
+Total output lines: 500
+
 ## [2026-07-28 17:08] [기능 개선 및 버그 수정] PDS 가상 게시판 내비게이션 맥락 보존 및 대화방 강퇴 알림 수정
 
 **LOG_ID: 20260728_1708**
@@ -3579,68 +3699,7 @@ recipientUserId: String(...).toLowerCase()
 
 발견: 서버는 `POST /api/boards/:boardId/posts/:postId/attachments`(`AttachmentRepositorySupabase.js` `_add`)가 완전히 구현돼 있고 다운로드·목록 조회도 정상 동작하는데, **이를 호출하는 클라이언트 코드가 어디에도 없었다** — `postService.js`엔 `loadAttachments`/`downloadAttachment`만 있고 `uploadAttachment` 자체가 없었으며, `public/js` 전체에 `<input type="file">`이 단 하나도 없었다. PDS 게시판 목록의 "올리기(UP)" 명령(`commandRouterBrowse.js`)조차 실제로는 `showPostWrite('create')`만 호출해 텍스트 글만 쓸 뿐, 파일은 절대 붙지 않는 이름만 그럴듯한 명령이었다. 이전 라운드에서 찾은 "첨부파일 개별 삭제 버튼 없음"(기능 격차로 보류)은 사실 이 더 큰 구멍의 일부였다.
 
-부수 발견: 첨부 업로드 UI를 실측 검증하던 중, 서버 공통 JSON 본문 파서(`httpUtils.js` `readJsonBody`)의 전역 상한이 1MB로 고정돼 있는데 첨부파일은 이 본문 안에 base64로 실려(원본 대비 ~33% 팽창) 온다는 걸 발견 — 원본 1MB(첨부 자체의 상한, `AttachmentRepositoryShared.js`)에 가까운 파일은 본문이 ~1.4MB가 되어 첨부의 구체적 안내("1024KB 이하만 업로드할 수 있습니다")보다 먼저, 실효 한도 ~750KB에서 알아보기 힘든 일반 "Request body too large" 오류로 막혔을 것이다(실측: 900KB 파일 → 구버전 상한이면 413, 새 상한에선 201 성공; 1050KB 파일 → 이제는 첨부 자체의 구체적 1024KB 안내로 정확히 거부됨을 확인).
-
-사용자 승인 절차: 업로드 UI 구현은 기존 버그 수정보다 범위가 커(파일 선택/base64 인코딩/크기 검사 등) `AskUserQuestion`으로 먼저 확인 — "지금 논의" 선택 후 두 가지 요구사항 확정: ① 업로드 트리거는 글보기 화면(U, 첨부파일목록)에서 별도 명령으로 ② 한 글에 여러 파일 첨부 허용.
-
-수정:
-1. `postService.js`: `uploadAttachment(boardId, postId, payload)` 추가(기존 `createPost`/`replyPost`와 동일한 `apiFetch` 패턴).
-2. `appFactoryHandlers.js`: `handlePostViewCommand` 의존성에 `uploadAttachment: services.postService.uploadAttachment` 연결.
-3. `commandRouterPostView.js`: 첨부파일목록 화면(`attachment-list`)에 `UP`/`UL`/`UPLOAD` 명령 추가 — 서버(`ensureAttachmentWritable`)와 동일하게 글쓴이·운영자만 허용(게스트는 로그인 안내), 숨은 `<input type="file" multiple>`로 네이티브 파일 선택창을 띄우고(취소 시 `window` 포커스 복귀로 정리), 선택된 파일마다 클라이언트 측 1MB 사전 검사 후 base64로 읽어 순차 업로드, 완료 후 목록 새로고침 + 성공/실패 건수 안내.
-4. `commandFooterText.js`: `attachmentList` 하단 도움말에 `UP:파일첨부` 추가.
-5. `httpUtils.js`: `readJsonBody`의 전역 본문 상한을 1MB → 2MB로 상향(첨부 base64 팽창 + JSON 오버헤드를 감안해 첨부 자체 상한 1MB보다 넉넉히 위로).
-
-검증: `humor` 게시판에서 실제 브라우저로 글 작성 → 첨부목록(U) → UP → 파일 2개(정상 크기 1개, 1MB 초과 1개) 동시 선택 → 정상 크기 파일은 201로 업로드되어 목록에 즉시 반영, 초과 파일은 API 호출 없이 클라이언트에서 걸러져 "최대 1024KB 초과" 안내와 함께 실패 목록에 표시됨을 확인. 권한 없는 사용자/게스트 차단은 서버 로직과 동일한 조건으로 코드 대조 확인(별도 브라우저 재현은 생략). 본문 상한 수정은 900KB(구버전 상한이면 413)/1050KB(첨부 자체 상한 위반) 두 경계값을 curl로 직접 재현해 검증. 테스트 중 생성한 실제 Supabase 게시물·첨부파일은 모두 정리(DELETE)해 원상복구. `npm run smoke:boards`, `smoke:auth-bridge`, `node scripts/smoke-command-parity.js`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과. (테스트용 `window.__debugState` 디버그 훅은 `git checkout`으로 완전히 되돌려 커밋 미포함.)
-
-결과: ✅ 기능 구현 완료 (사용자 요구사항 승인 후 구현). 첨부 목록 화면의 크기 표시가 1KB 미만 파일에서 반올림으로 "0 KB"로 보이는 기존의 사소한 표시 문제를 발견했으나, 이번 작업 범위와 무관한 별개의 사소한 결함이라 손대지 않고 남겨둠.
-
-## [2026-07-27 12:01] [/loop 채팅 전수조사] 대화방 개설 실패 시 구체적 오류 대신 로비로 조용히 튕겨나가며 5단계 입력 초안이 사실상 증발하던 버그 발견·수정
-
-**LOG_ID: 20260727_1201**
-목표: 글쓰기/글수정(4라운드 연속 무버그) → 사용자 선택 "모두"(댓글/답글, PDS, 회원정보수정, 채팅 순환) → 댓글/답글(제목 60자 재발 버그 발견) → PDS(기능 격차만 발견, 버그 아님) → 회원정보수정(무버그) → 이번 라운드는 채팅.
-
-발견: 대화방 개설은 제목→환영메시지→공개/비공개→(비번)→최대인원 5단계 순차 입력을 거치는데, 서버(`chatServiceRoutes.js` POST `/api/chat/rooms`)는 제목을 100자로 제한(초과 시 `createValidationError`로 명확히 거부, 조용한 절삭 아님)한다. 클라이언트는 이 제한을 사전 검증하지 않아 100자 초과 제목으로 5단계를 전부 입력한 뒤에야 서버가 거부하는데, 그 catch 블록이 **서버의 구체적 사유를 버리고** "대화방 개설 중 오류가 발생했습니다"라는 뭉뚱그린 메시지만 띄운 뒤 `restoreStateFromURL()`로 로비를 다시 그렸다 — 그 재렌더가 이 힌트를 로비 기본 힌트("상위(P),초기화면(T)...")로 **즉시 덮어써** 사용자는 실패 사유를 볼 틈도 없이 조용히 튕겨나갔고, 5단계에 걸쳐 입력한 초안(제목/환영메시지/공개여부/인원)도 이어갈 방법이 없어 사실상 증발했다. 실측 재현: 120자 제목으로 5단계 완주 → 힌트가 로비 기본 힌트로 즉시 바뀜, `_chatRoomCreateStage`가 `null`로 리셋되어 재개 불가.
-
-수정:
-1. `commandRouterChat.js` 제목 입력 단계에 100자 초과 시 즉시 안내하는 클라이언트 사전검증 추가(myinfo 닉네임 사전검증 20260721_2200과 동일 패턴) — 왕복 없이 바로 알려준다.
-2. 개설 API 실패(catch) 시 `error.message`(서버가 준 구체적 사유)를 그대로 보여주고, `restoreStateFromURL()`(화면 전체 재렌더 → 힌트 즉시 덮어씀) 대신 `_chatRoomCreateStage`를 `'title'`로 되돌려 **같은 화면에서** 제목부터 바로 재입력할 수 있게 했다. `room`이 falsy로 돌아온 경우도 동일하게 처리.
-
-검증: 120자 제목 → 왕복 없이 즉시 "대화방 제목은 100자 이하여야 합니다" 안내, `stage` 유지. `page.route()`로 개설 API를 강제 500 실패시킨 뒤 5단계 완주 → 힌트에 서버가 준 구체적 사유가 그대로 표시되고 `stage:'title'`로 즉시 재입력 가능함을 확인(화면 전환 없음). 이어서 같은 요청을 통과시켜 재시도 → 정상 개설 확인. `npm run smoke:chat-rooms`, `smoke:command-parity`, `smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과. (테스트용 `window.__debugState` 디버그 훅은 `git checkout`으로 완전히 되돌려 커밋 미포함.)
-
-결과: ✅ 버그 수정 완료.
-
-## [2026-07-27 11:49] [/loop 댓글·답글 전수조사] 답글 제목 자동채움이 60자를 넘으면 maxlength로도 못 막고 저장 시 다시 조용히 잘리던 버그 발견·수정
-
-**LOG_ID: 20260727_1149**
-목표: 글쓰기/글수정 전수조사 4라운드 연속 무버그로 사용자에게 계속 여부 확인 → "다른 기능으로 주제를 바꿔 계속" → 댓글/답글, PDS 업로드/다운로드, 회원정보수정, 채팅 4개 영역을 순환 조사하기로 함(사용자 선택: "모두"). 이번 라운드는 댓글/답글부터 시작.
-
-발견: 직전 라운드(20260727_1127)에서 제목 입력창에 `maxlength=60`(머리말 있으면 그만큼 뺀 값)을 추가해 "타이핑으로 60자를 넘기는" 경로는 막았는데, **답글(reply) 모드는 다른 경로**였다 — `showPostWrite()`가 `titleVal = "Re: " + 원글제목`을 계산해 `editor.title`에 미리 채우고, `renderBbsEditor()`가 이를 `titleEl.value = editor.title`로 DOM에 **프로그래밍적으로** 대입한다. `maxlength` 속성은 브라우저가 **사용자 타이핑만** 제한하고 `.value` 직접 대입에는 아무 영향이 없다 — 원글 제목이 이미 60자에 가까우면 "Re: " 4자가 더해져 64자가 되고, 입력창엔 64자가 그대로 보이는데 저장하면 서버가 다시 60자로 조용히 잘랐다(20260727_1127과 동일한 버그 클래스의 재발, 다른 경로). 실측 재현: 60자 원글에 답글 → 답글 제목 입력창 값이 64자로 표시 → 저장된 답글 제목은 60자.
-
-수정: `renderBbsEditor()`에서 `titleEl.value` 대입 시점에 이미 계산된 `titleMaxLength`(머리말 접두어 고려된 값)로 직접 잘라(`.slice(0, titleMaxLength)`) 대입한다 — 어떤 경로로 `editor.title`이 채워지든(답글 자동채움 포함, 향후 추가될 경로 포함) 입력창에 보이는 값과 실제 저장되는 값이 항상 일치하게 만드는 단일 지점 방어.
-
-검증: 60자 원글에 답글 시작 → 제목 입력창 `value.length`가 이제 정확히 `maxLength`(60)와 일치함을 확인(수정 전엔 64). `npm run smoke:boards`, `smoke:command-parity`, `smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과. (테스트용 `window.__debugState` 디버그 훅은 `git checkout`으로 완전히 되돌려 커밋 미포함.)
-
-결과: ✅ 버그 수정 완료. 서버 측 답글 로직(`SupabaseBoardRepositoryWriteOps.js` `replyToPost`, 스레드 깊이 `depth: parent.step+1` 계산)도 함께 읽어봤으나 정상.
-
-## [2026-07-27 11:27] [/loop 글쓰기·글수정 전수조사 3] 제목 60자 서버 제한이 클라이언트에 없어 조용히 잘려나가던 버그 발견·수정
-
-**LOG_ID: 20260727_1127**
-목표: `/loop 글쓰기기능, 글수정기능에서 이상한점 있는지 찾아내서 수정` 계속 — 이전 라운드(20260727_1012/1111)에서 고친 수정사항들이 서로 잘 맞물리는지 재검증(목록에서 시작한 수정 취소, 연속 Ctrl+S 중복 저장 방지, PDS 키워드 미입력 저장 거부, 모바일 박스 에디터)까지는 새 버그 없음 확인 후, 서버 측 입력 검증(BoardRepositoryShared.js)과 클라이언트 입력창의 제약이 실제로 일치하는지 대조.
-
-발견: 서버(`BoardRepositoryShared.js` `MAX_TITLE_LENGTH=60`)는 제목을 60자로 자르는데, 박스 에디터의 제목 `<input>`에는 `maxlength` 속성이 전혀 없었다(`el.maxLength === -1`). 84자 제목을 입력해 저장하면 정확히 60자로 조용히 잘려 저장되고, 저장 후 힌트에도 어떤 안내가 없었다 — 사용자가 의도적으로 넣은 끝부분("_END" 등)이 통째로 사라져도 알아챌 방법이 전혀 없다.
-
-수정: `renderBbsEditor()`의 제목 입력창에 `maxlength`를 추가해 브라우저가 애초에 60자를 넘겨 타이핑되지 않도록 막는다. 단, 머리말이 있는 게시판은 저장 시 `"[머리말] "` 접두어가 이 필드 앞에 더 붙으므로(`buildStoredTitle`), 접두어 길이만큼 뺀 값(`60 - (선택된 머리말.length + 3)`)을 한도로 써서 접두어까지 합친 최종 저장 제목이 다시 60자를 넘어 같은 문제가 재발하지 않게 했다.
-
-검증: 일반 게시판(공지사항) — 84자 입력 시 정확히 60자에서 입력 자체가 막힘 확인. 머리말 있는 게시판(plaza, "가입인사" 선택) — `maxLength` 속성이 정확히 53(=60-4-3)으로 계산됨을 확인, 저장된 최종 제목("[가입인사] BBB...") 길이가 정확히 60자로 서버 제한과 일치함을 확인(더 이상 접두어 포함 시 넘치지 않음). `npm run smoke:boards`, `smoke:command-parity`, `smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js` 전부 재통과. (테스트용 `window.__debugState` 디버그 훅은 `git checkout`으로 완전히 되돌려 커밋 미포함.)
-
-결과: ✅ 버그 수정 완료.
-
-## [2026-07-27 11:11] [/loop 글쓰기·글수정 전수조사 2] 글보기에서 시작한 수정(E)을 취소하면 원래 글이 아니라 엉뚱하게 게시판 목록으로 튕겨나가는 버그 발견·수정
-
-**LOG_ID: 20260727_1111**
-목표: `/loop 글쓰기기능, 글수정기능에서 이상한점 있는지 찾아내서 수정` 계속 — 답글/PDS 업로드 흐름 조사(이미 20260726_1800에 전수조사되어 정상 확인된 영역이라 재확인만 하고 통과), `cancelPostWrite()`의 이동 로직을 성공 경로와 대조하며 점검.
-
-발견: `handleWriteSubmit()`의 저장 **성공** 경로는 수정(edit) 모드일 때 `handlers.showPostView(...)`로 방금 수정한 글로 돌아가는데, **취소** 경로(`cancelPostWrite()`)는 모드 구분 없이 언제나 `showPostList(...)`(게시판 목록)로만 보냈다. 글보기 화면에서 E로 수정을 시작했다가 취소하면, 성공했을 때와 달리 방금 읽던 글이 아니라 목록으로 튕겨나갔다. 실측 재현: `/plaza/16` 글보기 → E(수정, 머리말 있는 게시판이라 1단계 선택 후 박스 에디터 진입) → Esc(취소) → `data-screen: "post-list"`(기대: `post-view`, `state.post` 여전히 16 유지).
+부수 발견: 첨부 업로드 UI를 실측 검증하던 중, 서버 공통 JSON 본문 파서(`httpUtils.js` `readJsonBody`)의 전역 상한이 1MB로 고정돼 있는데 첨부파일은 이 본문 안에 base64로 실려(원본 대비 ~33% 팽창) 온다는 걸 발견 — 원본 1MB(첨부 자체의 상한, `AttachmentRepositoryShared.js`)에 가까운 파일은 본문이 ~1.4MB가 되…3034 tokens truncated…하면, 성공했을 때와 달리 방금 읽던 글이 아니라 목록으로 튕겨나갔다. 실측 재현: `/plaza/16` 글보기 → E(수정, 머리말 있는 게시판이라 1단계 선택 후 박스 에디터 진입) → Esc(취소) → `data-screen: "post-list"`(기대: `post-view`, `state.post` 여전히 16 유지).
 
 수정: `cancelPostWrite()`가 `clearPostWriteEditor()`로 에디터를 지우기 **전에** `editor.mode`/`editor.targetPostId`를 먼저 확인해, 수정 모드이고 대상 글 ID가 있으면 `handlers.showPostView(boardId, targetPostId)`로 돌아가도록 성공 경로와 맞췄다. 새 글 작성(create)과 답글(reply)은 원래부터 **성공 시에도** 목록으로 가므로(답글은 목록에서 스레드로 바로 보이는 게 의도된 동작) 취소도 그대로 목록 유지 — 함께 바꾸지 않았다.
 
@@ -3880,6 +3939,9 @@ DOM `textContent` 직접 확인으로 실제 데이터 손실(화면 렌더링 �
 검증:
 - 동일한 재현 테스트로 재확인: 8개 화면 전부 `overflowY:auto`, `lineMinHeight:15.84px`, 클리핑 122px→0px로 완전히 해소.
 - `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`(3개 뷰포트 × 27개 라우트), `npm run smoke:command-parity` 모두 통과.
+
+Warning: truncated output (original token count: 23889)
+Total output lines: 500
 
 결과: ✅ 완료 — 직전 라운드에 발견한 근본 원인(min-height 화이트리스트 누락)이 예상대로 훨씬 더 광범위했음을 확인하고 한 번에 정리했다. 이제 이 세션에 새로 만들거나 고친 화면 중 이 두 화이트리스트에서 빠진 것은 없는지 다음 라운드에 한 번 더 전수 대조가 필요하다(정적 raw-HTML 화면과 고정 개수 게임 화면은 이미 확인 완료로 제외). 다음 라운드는 남은 미등록 화면(conf-agenda-new/conf-room-create/vote-create/pt-prepare 등 짧은 입력 폼) 마무리 점검 또는 20번째 각도를 탐색한다.
 
@@ -4124,106 +4186,7 @@ DOM `textContent` 직접 확인으로 실제 데이터 손실(화면 렌더링 �
 - Playwright로 844×390/932×430/667×375 랜드스케이프 뷰포트에서 11개 화면(대문/help/policy/account/omok/agora/board-plaza/weather/news/chat/index)의 `#terminal-screen` `scrollHeight - clientHeight`를 측정 — 대부분 화면에서 53~244px(옵션에 따라 최대 244px)의 "클리핑"으로 보이는 수치를 확인하고 이를 실버그로 오판, `#terminal-screen`에 landscape 전용 `overflow-y:auto` 규칙을 추가하는 수정을 실제로 적용했었다.
 - 수정 후에도 수치가 전혀 안 바뀌어 이상함을 느끼고 재검토 — style.css 323번째 줄(미디어쿼리 밖, 전역)에 이미 `#terminal-screen { overflow-y: auto !important; ... }`가 있다는 것을 발견했다. Portrait 미디어쿼리만 이 전역 규칙을 `overflow: hidden !important`로 되돌리고(그래서 portrait는 화면별 화이트리스트로 다시 켜줘야 했던 것), landscape 블록은 애초에 이 전역 규칙을 되돌리는 코드가 없어 계속 `auto` 상태로 남아있었다 — 즉 "클리핑"으로 보였던 수치는 실제로는 스크롤 가능한 여유분일 뿐, 유실된 내용이 아니었다.
 - git stash로 실제 서빙되는 CSS를 직접 확인하고(내가 추가한 규칙이 없는 상태) `#terminal-screen.scrollTop = 99999`를 강제 실행해 실측 검증: 244px 전부 스크롤로 도달 가능함을 확인(`scrollTop`이 0→244로 정상 이동, 하단 내용이 실제로 보임) — 화면 잘림이 아니라 처음부터 정상적으로 스크롤되는 화면이었다.
-- 적용했던 landscape 전용 `overflow-y:auto` 추가 규칙은 (전역 규칙과 사실상 중복이라) 아무 효과가 없는 무해한 코드였지만, 실제 버그를 고치는 게 아니므로 되돌렸다(`git checkout -- public/style.css`).
-
-결과: ❌ 버그 아님(오탐 정정) — landscape 방향은 이미 전역 규칙(323번째 줄)에 의해 스크롤이 정상 동작 중이었다. 이번 라운드는 실제 코드 변경 없이 마무리하며, 6번째 각도(랜드스케이프 방향)는 이걸로 소진됐다고 판단한다. 다음 라운드는 새로운 7번째 각도를 찾아야 한다.
-
-## [2026-07-27 02:45] [/loop 계속] 설문조사 상세(buildVoteDetailAnsi) 선택지 무제한 렌더링 발견 — 페이지네이션으로 수정
-
-**LOG_ID: 20260727_0245**
-목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드(첨부파일 목록)와 같은 각도(리스트 항목 수 무제한 렌더링)로 나머지 빌더 함수들을 전수조사. `amusementAnsiBuilders.js`/`arcadeAnsiBuilders.js`/`chatAnsiBuilders.js`/`weatherAnsiBuilders.js`/`systemAnsiBuilders.js`의 남은 forEach/map 호출을 모두 점검했고, 대부분 이미 slice로 제한돼 있거나(방 목록/참여자 미리보기 등) 고정 개수(MBTI 16종, 퀴즈 4지선다, 게임 시도 횟수 등)라 안전했다.
-
-발견:
-- `voteAnsiBuilders.js`의 `buildVoteDetailAnsi(vote)`가 `vote.options`를 한 줄도 자르지 않고 전부 렌더 — 개수 상한이 전혀 없음.
-- 서버(`VoteRepositoryMemory.js`/`VoteRepositorySupabase.js` `createVote`)는 선택지 최소 2개만 강제할 뿐(`options.length < 2` 검사) 상한이 없고, 설문 등록 UI(`commandRouterVote.js`)도 쉼표로 구분한 값을 그대로 다 받아 넘긴다 — 로그인한 사용자가 "1,2,3,...,15"처럼 선택지 15개짜리 설문을 실제로 만들 수 있는, 실사용 경로로 재현 가능한 버그.
-- 직접 함수 호출 테스트로 확인: 옵션 15개 → 26줄(25행 고정 격자 초과), 20개는 더 심함.
-
-구현:
-- 접속자 목록/첨부파일 목록과 달리, 설문 선택지는 전부 실제로 투표 가능해야 하므로(감춘 항목에는 투표를 못 하게 하면 안 됨) 목록을 자르는 `slice(0,N)` 패턴 대신 **페이지네이션**을 적용 — 번호 입력으로 투표하는 방식은 어느 페이지에 있든 그대로 동작하므로 기능 손실이 없다.
-- 각 선택지를 (라벨+막대그래프) 한 묶음으로 묶어 묶음 단위로 페이지를 나눠(줄 단위로 자르면 라벨과 막대가 서로 다른 페이지로 갈라질 위험이 있음), `buildCompatAnsi`와 동일한 고정 오버헤드 차감 방식 적용.
-- `totalBudget`을 25행 꽉 채운 값이 아니라 여유 마진을 둔 값(데스크톱 22, 모바일 16)으로 설정 — 이번 세션에 policy/my-stats에서 이미 겪은 "25행 딱 맞추면 실기기에서 컨테이너가 눌려 마지막 줄이 잘린다"는 교훈을 반영.
-- `voteScreens.js`의 `showVoteDetail(voteId, fromHistory, requestedPageNo=1)`이 `built.pageNo`/`built.pageCount`를 `state.serviceData`에 저장(compat-result와 동일한 패턴 재사용 — `terminalHintMarkup.js`의 범용 폴백 분기가 이미 `state.serviceData.pageNo/pageCount`를 읽으므로 별도 배선 불필요).
-- `commandRouterVote.js`의 `vote-detail` 블록에 F키 다음 페이지 처리 추가(B는 이미 "목록"으로 쓰이고 있어 이전 페이지 키는 두지 않음 — compat-result/blood-result와 동일하게 F만 지원하는 전방향 전용 페이지네이션).
-- `commandFooterText.js`의 `voteDetail` 배열에 `'F'`(라벨 기본값 "다음쪽") 추가 — 마지막 페이지에서는 `getFooterPageState()`의 범용 필터가 자동으로 숨김.
-
-검증:
-- `node --check`로 4개 수정 파일(voteAnsiBuilders.js/voteScreens.js/commandRouterVote.js/commandFooterText.js) 모두 문법 통과.
-- 직접 함수 호출 재현 테스트: 옵션 2/5/8/10개는 1페이지(13~21줄), 15/20/50개는 모두 2페이지 이상으로 분할되며 페이지당 최대 22줄(수정 전 옵션 15개 기준 26줄이 넘던 것 대비 25행 이내로 여유 있게 수렴) — 옵션 번호가 페이지 경계에서 중복되거나 누락되지 않고 정확히 한 번씩만 등장함을 확인.
-- `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`(3개 뷰포트 × 27개 라우트), `npm run smoke:command-parity` 모두 통과. (`npm test`는 이 환경에 `archive/dev-only/tests/unit` 디렉터리 자체가 없어 이번 세션과 무관하게 사전부터 실행 불가능한 상태 — 별도 조치 없이 스킵.)
-
-결과: ✅ 완료 — 접속자 목록/첨부파일 목록에 이어 세 번째로 발견한 "무제한 리스트 렌더링" 버그지만, 이번엔 목록을 자르면 기능이 깨지는(투표 불가) 경우라 페이지네이션으로 다르게 접근했다. 5번째 각도(무제한 리스트 렌더링)를 이번 라운드에서 최종적으로 소진 — 나머지 빌더 함수의 forEach/map 전수 재확인 결과 추가 인스턴스는 없음. 다음 라운드는 새로운 6번째 각도를 탐색해야 한다.
-
-## [2026-07-27 02:30] [/loop 계속] PDS 첨부파일 목록(buildAttachmentListAnsi) 무제한 렌더링 발견 및 수정
-
-**LOG_ID: 20260727_0230**
-목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 4개 각도(wrapAnsiText/fitCell/style.css whitelist ×2/raw-HTML 트랜스크립트) 소진 후, 5번째 각도로 아직 점검하지 않은 빌더 함수들의 "리스트 항목 수 무제한 렌더링" 여부를 재검토 (이전에 `buildActiveUsersAnsi`, `buildCompatAnsi`에서 같은 버그 클래스를 찾아 고친 전례가 있음).
-
-발견:
-- `ansiBoardBuilders.js`의 `buildAttachmentListAnsi(attachments)`가 `attachments.forEach`로 첨부파일 전부를 한 줄씩 렌더 — 개수 상한이 전혀 없음.
-- `AttachmentRepository*.js`(Memory/Supabase) 어디에도 게시글당 첨부 개수 제한이 없어, 이론상 무제한으로 쌓일 수 있음.
-- 직접 함수 호출 테스트로 확인: 첨부 20개 → 26줄(25행 고정 격자 초과), 25개 → 31줄.
-
-구현:
-- `buildActiveUsersAnsi`(접속자 목록)에 적용했던 것과 동일한 패턴 적용: `MAX_VISIBLE_ATTACHMENTS = 15`로 `slice(0, 15).forEach(...)`, 초과 시 `... 외 N개 더 있습니다.` 안내 줄 추가.
-- 렌더링만 잘라내고 `state._attachments`(다운로드 선택 핸들러 `commandRouterPostView.js`가 참조하는 실제 배열)는 그대로 두어, 화면에 보이는 1~15번 번호가 실제 데이터 인덱스와 계속 정확히 일치하도록 보존.
-
-검증:
-- `node --check ansiBoardBuilders.js` 통과.
-- 직접 함수 호출 재현 테스트: n=0→7줄, n=5→11줄, n=15→21줄, n=20→22줄(수정 전 26줄), n=25→22줄(초과 안내 줄 포함, 수정 전 31줄) — 모두 25행 이내로 확인.
-- `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`(3개 뷰포트 × 27개 라우트) 모두 통과.
-
-결과: ✅ 완료 — 접속자 목록(`buildActiveUsersAnsi`)과 동일한 "무제한 리스트 렌더링" 버그 클래스를 PDS 첨부파일 목록에서도 찾아 수정. 5번째 각도가 새 버그를 낳았으므로, 아직 점검하지 않은 다른 빌더 함수들(리스트를 다루는 나머지 함수들)에 대한 전수조사를 다음 라운드에도 이어간다.
-
-## [2026-07-27 02:00] [/loop 계속] raw-HTML 트랜스크립트 화면(로그인/비번찾기/마이인포) 점검 — 새 버그 없음, 4번째 각도 소진
-
-**LOG_ID: 20260727_0200**
-목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — ANSI 격자가 아니라 별도의 append-only "트랜스크립트" 렌더(쪽지 보내기/건의하기가 이미 이 방식으로 `white-space:pre-wrap` 버그를 겪고 고쳐진 전력이 있음)를 쓰는 화면들을 재검토.
-
-확인:
-- 안건 발의(conf-agenda-new)도 같은 "여러 줄 입력 → 등록" 구조지만, 실제로는 입력된 줄을 화면에 시각적으로 되비추지 않고(`setHint`로 "N줄 입력됨" 카운터만 갱신) 최종 등록 시점에야 페이징된 안건 보기 화면으로 넘어간다 — 쪽지 보내기와 달리 "길어지는 트랜스크립트를 계속 렌더링"하는 구조 자체가 아니라 애초에 이 버그 클래스에 해당하지 않음.
-- 로그인/비밀번호 재설정/마이인포 확인창(authScreens.js/myInfoRenderer.js)도 트랜스크립트 방식을 쓰지만, 되비추는 값이 아이디·이메일처럼 길이가 짧고 사실상 고정된 값이라(자유 서술형 장문이 아님) 쪽지/건의하기와 같은 위험이 없음.
-결과: ✅ 완료 — 새 버그 없음. 이번 세션에서 시도한 4개 각도(wrapAnsiText 무제한 렌더링/fitCell 무말줄임 절삭/style.css whitelist 누락/raw-HTML 트랜스크립트 오버플로) 중 마지막도 소진 — 전부 완료 또는 원천적으로 해당 없음으로 판정됐다. 사용자에게 계속/전환/종료 여부를 다시 안내한다.
-
-## [2026-07-27 01:45] [/loop 계속] style.css 화면별 whitelist 전체 재점검 완료 — 추가 누락 없음, 이 각도도 소진
-
-**LOG_ID: 20260727_0145**
-목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드에서 남긴 숙제("style.css에 비슷한 화이트리스트가 더 있는지 점검") 수행. `data-screen="..."` 셀렉터가 여러 화면에 걸쳐 반복되는 그룹을 전부 나열해 분류.
-
-확인 — style.css에 존재하는 화면별 다중 셀렉터 그룹은 총 4개뿐이었다:
-1. `main/board-select/news-menu/weather-menu`의 `.ansi-screen-body{padding:0 1px}` — 항목 수가 고정된 정적 메뉴 화면 전용 여백 압축, 세로 잘림 버그 클래스와 무관(안전).
-2. `overflow-y:auto` whitelist(news-list/news-view/help/omok-play/chat-room/vote-detail/scramble-play/policy/my-stats) — 이번 세션에서 이미 완결.
-3. `min-height:1.32em` whitelist — 직전 라운드(20260727_0130)에서 이미 완결.
-4. `#terminal-container{font-size:...0.025}` whitelist(news-list/news-view/help/omok-play만) — post-view가 20260721_1630에 폭 계산 오류로 의도적으로 제외된 전력이 있어, 폭 캘리브레이션과 얽힌 별도 위험군으로 그대로 둔다(직전 라운드에도 동일하게 판단).
-새로 발견된 누락은 없었다.
-결과: ✅ 완료 — 새 버그 없음. "style.css 화면별 whitelist 누락" 각도도 이제 소진 상태(그룹 4개 중 3개는 이미 완결, 1개는 애초에 무관). 이번 세션에서 이 각도로만 실질 버그 2건(policy 20260726_2230, min-height 20260727_0130)을 찾았다는 점에서 가치 있는 탐색이었으나, 이제 더 훑을 대상이 남아있지 않다.
-
-## [2026-07-27 01:30] [/loop 계속] 새 탐색 각도(짧은 세로 뷰포트) — CSS min-height 완화 화이트리스트에서 7개 화면 누락 발견·수정
-
-**LOG_ID: 20260727_0130**
-목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 2회 연속 무버그(wrapAnsiText, fitCell 각도) 이후 완전히 새로운 각도로 전환: `style.css`에서 이미 확인된 "화면별 whitelist 확장 패턴"(policy 버그의 근본 원인이었던 그 패턴)이 **다른 CSS 규칙에도** 남아있는지 재검색.
-
-발견: `.ansi-line{min-height:24px}`(고정 픽셀 하한)를 `min-height:1.32em`(폰트 크기에 비례, 뷰포트가 짧아져 폰트가 vh 기준으로 줄어들면 줄 높이도 함께 줄어듦)로 완화하는 별도의 화이트리스트가 있는데, `news-list/news-view/help/omok-play/post-view` 5개만 포함하고 이번 세션에서 overflow-y:auto 화이트리스트에 추가했던 `chat-room/vote-detail/scramble-play/policy/my-stats/conf-agenda/memo-view` 7개 화면이 전부 빠져 있었다. 실측(360×400 짧은 세로 뷰포트): `help`는 `scrollHeight-clientHeight` 초과분이 25px(≈1줄)인데 `policy`는 187px(≈8줄) — 같은 overflow-y:auto 안전망이 있어도 실제 스크롤해야 하는 분량이 7배 넘게 차이났다.
-
-구현: 위 7개 화면을 `.ansi-line{min-height:1.32em}` 화이트리스트에 추가. 단, 바로 아래 있는 별도의 `#terminal-container{font-size:...0.025}` 화이트리스트(post-view가 20260721_1630에 폭 계산 오류로 제외된 전력이 있는 그룹)에는 넣지 않았다 — 이건 44칸 폭 캘리브레이션과 얽혀 있어 잘못 확장하면 이미 고친 "왼쪽 쏠림" 버그(20260726_2200)를 다시 만들 위험이 있고, 이번에 고치는 문제는 순수 세로 줄 높이라 서로 무관하다.
-검증: 동일 조건(360×400) 재측정 — `policy`의 clippedPx가 187px→40px로 감소(약 4.7배 개선), `help`의 25px 기준에 근접. `smoke:full-traversal`/`smoke-mobile-viewports.js` 전부 통과. `@media(max-width:768px) and (orientation:portrait)` 안에 스코프돼 있어 데스크톱은 무관.
-결과: ✅ 완료 — 2회 연속 무버그 이후 각도 전환으로 찾은 세 번째 실질 결함. "화면별 whitelist 확장 패턴에서 신규 화면 누락"이라는 이번 세션의 대표 버그 클래스가 overflow-y:auto 목록뿐 아니라 인접한 min-height 목록에도 독립적으로 존재했다는 것을 확인 — 앞으로 유사한 화이트리스트가 style.css에 더 있는지도 다음 라운드에서 점검할 가치가 있다.
-
-## [2026-07-27 01:00] [/loop 계속] 새 탐색 각도(말줄임표 없는 fitCell 단일행 절삭) 점검 — 새 버그 없음, 2회 연속 무버그
-
-**LOG_ID: 20260727_0100**
-목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 직전 라운드가 `wrapAnsiText` 기준 전수조사를 마무리로 판단했으므로, 완전히 다른 각도로 전환: `fitCell(...)` 단독 사용(줄바꿈·말줄임표 없이 한 줄로 그냥 잘라내는 방식)이 남아있는 곳을 코드베이스 전체에서 재검색.
-
-확인: 사용자 콘텐츠에 적용되는 `fitCell(제목/닉네임/이름)` 호출을 전부 나열해 분류 —
-1. 목록(list) 행 절삭(게시판/투표/회의실/안건/쪽지/접속자/대화실 목록 등): 표 형식 목록에서 긴 항목을 짧게 보여주는 것은 원래 설계된 정상 동작(전체 내용은 상세보기에서 확인 가능) — 버그 아님.
-2. 메인 메뉴 "[작은공지]" 미리보기(ansiBoardBuilders.js): 점(dot-leader) 절삭 + "(GO NOTICE)" 이동 안내가 함께 있어 의도된 미리보기 — 버그 아님.
-3. 상세보기(단일 항목 전체 표시) 화면의 제목/닉네임: 게시글 보기·안건 보기·쪽지 보기·이용 현황(ACCT)·회원 검색·프로필은 전부 이미 이전 라운드(이번 세션 또는 그 이전)에서 `wrapAnsiText`로 교체가 끝나 있음을 코드 주석으로 재확인.
-새로 발견된 미교체 사례는 없었다.
-결과: ✅ 완료 — 새 버그 없음. 이 각도로도 소진 상태. 2회 연속(20260727_0050, 20260727_0100) 새 결함을 찾지 못했다 — 사용자에게 계속/전환/종료 여부를 다시 안내한다.
-
-## [2026-07-27 00:50] [/loop 계속] 나머지 wrapAnsiText 사용 화면 전수 점검 완료 — 새 버그 없음, `wrapAnsiText` 기준 전수조사 마무리
-
-**LOG_ID: 20260727_0050**
-목표: `/loop 다른 메뉴의 ui는 글자잘림없는지 전수조사 실행해` 계속 — 지난 라운드에서 남긴 나머지 항목(`postListView.js`, `voteAnsiBuilders.js`의 vote-list/vote-create, `chatAnsiBuilders.js`의 chat-lobby, `arcadeAnsiBuilders.js`의 잔여 게임 8종)을 점검.
+- 적용했던 landscape 전용 `overflow-y:auto` 추가 규칙은 (전역 규칙과 사실…3889 tokens truncated…조사 실행해` 계속 — 지난 라운드에서 남긴 나머지 항목(`postListView.js`, `voteAnsiBuilders.js`의 vote-list/vote-create, `chatAnsiBuilders.js`의 chat-lobby, `arcadeAnsiBuilders.js`의 잔여 게임 8종)을 점검.
 
 확인 결과 — 전부 안전:
 - `postListView.js`: `wrapAnsiText`는 목록 행에 표시할 "쪽수" 숫자만 계산하는 용도이고, 실제 목록 행 자체는 여전히 `fitCell`로 한 줄 고정이라 위험 없음.
@@ -4381,6 +4344,9 @@ DOM `textContent` 직접 확인으로 실제 데이터 손실(화면 렌더링 �
 확인: `buildPostViewAnsi`/`buildPostListAnsi` 모두 `highlightText()`를 먼저 적용한 뒤 그 결과를 `wrapAnsiText`에 넘기는 순서였다 — `displayWidth()`가 ANSI 이스케이프 코드를 이미 올바르게 제외하고 계산하므로(이번 세션 전체에서 반복 검증된 전제) 강조 표시 자체가 폭 계산을 오염시키지 않는다. 안전.
 결과: ✅ 완료 — 새 버그는 없었다. 이번 세션(이 `/loop` 연속 실행 구간)에서 총 28건의 실제 버그를 발견·수정했고(ANSI 텍스트 절삭 18건+, 하드코딩 고정폭 다이얼로그 4건, raw-HTML 트랜스크립트 미보호 3건, 인라인 프롬프트 세로 오버플로 2건+중앙화 리팩터링 1건, 이모지 폭 미계산 1건), 이후 7개 라운드 연속으로 서로 다른 각도(다이얼로그/로그인/검색, 랜드스케이프 스트레스, 채팅/핫스팟, 키보드 시나리오, fitCellEllipsis, 전투 게임, 검색어 하이라이트)를 시도했지만 새 결함을 찾지 못했다 — 이 좁은 텍스트/레이아웃 폭 버그 클래스에 한해서는 합리적으로 소진에 도달했다고 판단된다. 사용자의 "계속 반복" 지시가 유효한 한 다음 라운드도 이어가되, 순수 텍스트 폭 버그 사냥보다는 완전히 다른 범주(예: 실제 로그인 세션으로 PDS 업로드/다운로드 전체 흐름, 실기기 터치 제스처 회귀, 접근성)로 전환하거나, 사용자가 중단을 원하면 언제든 새 지시로 반영할 수 있음을 남긴다.
 
+Warning: truncated output (original token count: 38964)
+Total output lines: 500
+
 ## [2026-07-26 16:30] [/loop 계속] 이모지 수정 파급 검증(fitCellEllipsis 절삭 무결성) + 전투 게임 재검토 — 새 버그 없음
 
 **LOG_ID: 20260726_1630**
@@ -4504,254 +4470,7 @@ DOM `textContent` 직접 확인으로 실제 데이터 손실(화면 렌더링 �
 
 **LOG_ID: 20260726_1245**
 목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드(PDS 전송 박스)에서 하드코딩된 박스그리기/고정폭 다이얼로그 패턴을 새 탐색 축으로 잡은 뒤, `grep -rln "┌\|└\|├\|┤"`와 `.padEnd(NN)`/`'X'.repeat(NN)` 하드코딩 패턴을 `public/js/core/*.js` 전체에서 재탐색.
-발견: `postWriteView.js`의 `renderBbsEditor()`(게시글 작성/수정에 실제로 쓰이는 박스 에디터, 옛 줄단위 트랜스크립트 에디터는 이미 죽은 코드로 확인됨)에서 `const sep = '─'.repeat(76);`이 이미 계산되어 있는 `isMobile` 변수를 전혀 참조하지 않고 데스크톱 76칸 폭 그대로 렌더되고 있었다. 이 구분선은 `white-space:pre` 스타일의 `<div>`로 렌더되어 줄바꿈되지 않고, 부모의 `overflow-x:hidden`에 의해 조용히 잘렸다. Playwright로 실제 DOM에 동일 스타일의 테스트 `<div>`를 주입해 `scrollWidth`(570) vs `clientWidth`(390) 비교로 확인(처음엔 `getBoundingClientRect().width`로 측정해 390이 나와 오버플로가 없는 것처럼 보였으나, 이는 블록 요소 자체의 레이아웃 박스 크기일 뿐 내부 콘텐츠 오버플로 여부를 반영하지 않는다는 걸 인지하고 `scrollWidth`/`clientWidth` 비교로 재측정해 570 vs 390, 즉 약 180px(32%) 오버플로를 확인).
-구현: `ansiTopbarScreen.js`가 모바일 레이아웃을 44컬럼(`layoutCols`)으로 정의하고 있는 걸 근거로, `sep`를 `'─'.repeat(isMobile ? 40 : 76)`으로 수정(데스크톱 76칸은 완전히 그대로 유지).
-검증: 동일한 Playwright 측정 하네스로 40칸 구분선의 `scrollWidth`(390) vs `clientWidth`(390)를 확인해 오버플로 해소를 확인. 안전 마진을 파악하기 위해 38~76칸 범위로 추가 측정한 결과, 이 뷰포트에서 실제 오버플로 임계값은 50~60칸 사이였고 40칸은 충분한 여유를 두고 안전함을 확인. 실제 로그인 후 글쓰기 화면 진입은 이번 세션에서 이미 확립된 비용 대비 가치 판단에 따라(PDS 전송 박스와 동일하게) 전체 로그인 플로우 대신 정밀한 DOM 측정으로 대체. `npm run smoke:full-traversal`, `scripts/smoke-mobile-viewports.js`(27×2), `npm run smoke:boards` 재실행 전부 통과. 테스트 스크립트(`check_editor_sep*.js`)와 스크린샷은 검증 후 삭제.
-결과: ✅ 완료 — 같은 버그 클래스의 18번째 사례. PDS 전송 박스와 마찬가지로 "예외적으로 긴 입력값"이 아니라 **게시글을 쓰거나 수정할 때마다 항상 100% 재현**되는, 실사용 영향도가 높은 발견이었다.
-
-## [2026-07-26 12:30] [/loop 계속] PDS 화일 전송(다운로드) 프로토콜 애니메이션 박스 — 모바일에서 파일 다운로드마다 100% 재현되는 고정폭 오버플로 버그(17번째, 이번 세션 최고 재현율) 수정
-
-**LOG_ID: 20260726_1230**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 복합 스트레스 테스트 라운드 이후 새로운 결함 탐색으로 복귀. `commandRouterPostView.js`의 PDS(자료실) 화일 전송(다운로드) 프로토콜 선택 애니메이션(`drawTransferBox`)을 점검.
-발견: 이번 세션 통틀어 가장 확실하게 재현되는 버그였다 — `targetCols`(모바일 44/데스크톱 80)를 계산해 진행 막대 길이에는 반영하면서도, 테두리 박스(`┌──...──┐` 등)와 필드 패딩(`padEnd(25)`)은 전부 하드코딩된 고정폭(표시폭 약 54칸)이었다. 데스크톱(80칸)은 여유가 있어 문제없었지만, **모바일(44칸)에서는 예외나 특이 입력 없이 파일을 다운로드할 때마다 항상, 100% 재현**되는 오버플로였다(직접 계산 검증: 테두리 줄 표시폭 54 vs 예산 44).
-구현: `isMobile`(targetCols<60) 분기를 추가해, 모바일에서는 테두리 없는 단순 "라벨 : 값" 레이아웃(파일명/전송/크기/진행률/막대)으로 대체하고 데스크톱은 기존 박스를 그대로 유지. 파일명은 사용자 업로드 파일명이라 한글이 섞이면 `.length`(UTF-16 코드 유닛) 기준 절삭이 표시폭 기준으로는 예산을 넘길 수 있어(예: 21자 슬라이스가 실제로는 42칸), 이 파일에 없던 `displayWidth`/`truncateWithEllipsis` 헬퍼를 `ansiRenderUtils.js`의 `isWideChar`를 재사용해 로컬로 새로 작성했다(공용 `ansiBuilderUtils.js`의 deps 배선을 건드리지 않고 최소 변경으로 해결).
-검증: Node 하네스로 한글이 섞인 긴 파일명(디스플레이 폭 계산)과 짧은 파일명("readme.txt", 회귀 확인) 양쪽을 렌더 — 모바일 전 항목이 44칸 예산 안(최대 42칸)에 정확히 들어가고, 짧은 파일명은 절삭·말줄임표 없이 그대로 렌더됨을 확인. 데스크톱 경로는 코드상 완전히 그대로(분기 진입 자체가 안 됨)라 회귀 위험 없음. 실제 다운로드 UI는 로그인이 필요한 다단계 흐름(U→파일선택→프로토콜선택)이라 이번 세션에서 이미 확립된 비용 대비 가치 판단에 따라 전체 브라우저 재현 대신 정밀한 폭 계산 검증으로 대체했다. `npm run smoke:menu-wiring`/`smoke:boards`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 17번째 사례이자, "예외적인 긴 입력값에서만 재현"되던 이전 사례들과 달리 **정상적인 파일 다운로드 흐름에서 항상 100% 재현**되는, 가장 확실한 실사용 영향도를 가진 발견 중 하나였다.
-
-## [2026-07-26 12:15] [/loop 계속] 이번 세션 16건 수정을 한 화면에 동시 적용하는 복합 스트레스 테스트 — 전부 정상 동작 확인
-
-**LOG_ID: 20260726_1215**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드에서 신규 결함 탐색이 정체 지점에 도달했다고 판단했으므로, 이번엔 새 버그를 찾기보다 이번 세션에 고친 여러 수정이 **동시에** 겹치는 실제 상황에서도 서로 간섭 없이 안정적으로 동작하는지 복합 검증.
-방법: 실 Supabase API로 (1) 60자 긴 제목의 대화방을 만들고 (2) 20자 긴 닉네임 사용자를 입장시키고 (3) 그 사용자로 150자 긴 메시지를 전송한 뒤, 모바일(390px)/데스크톱(1280px) 양쪽에서 실제 브라우저로 진입해 한 화면 안에서 상단바 제목 말줄임표(20260726_1030)·입장 메시지 wrap(20260726_1000)·채팅 메시지 wrap(20260726_0630)이 전부 동시에 적용되는 것을 확인.
-확인: 상단바는 긴 제목을 정확히 말줄임표로 표시("가나다라마바사아자차가나다라마바사아자…"), 긴 닉네임의 입장 메시지는 "입장하였습니다" 문구까지 완전히 보존되어 여러 줄로 wrap(모바일 3줄/데스크톱 2줄), 긴 채팅 메시지도 발신자 라벨 아래 정확히 들여쓰기되어 완전히 wrap(모바일 11줄/데스크톱 6줄) — 세 가지 서로 다른 수정이 한 화면에서 전혀 간섭 없이 함께 작동함을 스크린샷과 `document.documentElement.scrollWidth === innerWidth`(가로 오버플로 0건) 양쪽으로 확인. `npm run smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2)도 재실행해 전체 안정성 재확인. 테스트로 만든 대화방은 서비스 롤 키로 직접 삭제해 정리.
-결과: ✅ 완료 — 새 버그는 없었지만, 이번 세션 16건의 수정이 개별적으로만이 아니라 **동시에 겹쳐도** 안정적으로 함께 동작함을 실측으로 확인한 의미 있는 안정성 검증 라운드였다.
-
-## [2026-07-26 12:00] [/loop 계속] 풀투리프레시(overscroll) 방어 범위 점검 — 추가 버그 없음, 세션 감사의 자연스러운 정체 지점 도달 판단
-
-**LOG_ID: 20260726_1200**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — `overscroll-behavior-y: contain`이 대화방/투표상세/뉴스/도움말/오목 등 특정 화면에만 개별적으로 붙어 있고 게시판 목록 같은 일반 화면(기본 `#terminal-screen` 규칙만 쓰는)에는 없는 걸 발견해, 이 화면들이 스크롤 끝에서 브라우저 기본 풀투리프레시/러버밴드 제스처에 취약한 공백인지 점검.
-확인: `html, body`에 이미 전역 `overscroll-behavior: none`이 걸려 있어(style.css:108-119), 자식 스크롤러(`#terminal-screen`)가 개별적으로 `overscroll-behavior`를 선언하지 않아도 스크롤 체이닝이 body 선에서 이미 차단된다 — 특정 화면들에 붙은 `overscroll-behavior-y: contain`은 이미 있는 전역 방어 위에 얹은 중복 방어(벨트 앤 서스펜더스)였지 실제 공백을 메우는 수정이 아니었다. CSS 캐스케이드 논리로 확인했고, 별도의 실기기 재현 없이도 이 결론은 명확하다.
-결과: ✅ 완료 — 새 버그는 없었다. 이번 라운드로 이번 세션의 텍스트 오버플로우 버그 클래스(16건 수정) 관련 탐색은 사실상 소진됐고, 최근 6개 라운드 연속(오락실/PDS, 세이프에어리어, 폼 에러, 실시간 회전, 오버스크롤) 신규 결함이 나오지 않았다. 자연스러운 정체 지점에 도달했다고 판단하지만, 사용자의 "계속 반복" 지시가 유효한 한 다음 라운드도 계속 진행한다 — 다만 이제부터는 매 라운드 새로운 결함을 찾기보다 이미 발견된 16건의 수정이 실제로 안정적인지(회귀 없는지) 확인하는 방향에 더 무게를 둘 시점으로 판단된다.
-
-## [2026-07-26 11:45] [/loop 계속] 실시간 화면 회전 전환(orientationchange) 검증 — 추가 버그 없음, 랜드스케이프 수정이 라이브 회전에도 유효함을 확인
-
-**LOG_ID: 20260726_1145**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 지금까지 랜드스케이프/키보드 테스트는 전부 "해당 방향으로 새로 페이지를 로드"하는 방식이었고, 실제 기기처럼 화면이 켜진 채로 방향을 "전환"하는 라이브 회전 시나리오는 한 번도 테스트하지 않았다. `terminalUiCore.js`에 이미 `resize`/`orientationchange` 리스너와 `--stable-vh` 재계산 로직이 있는 걸 확인하고, 이게 실제로 올바르게 동작하는지 검증.
-방법: Playwright로 오목 게임을 세로(390x844)로 먼저 로드한 뒤, 페이지 새로고침 없이 `setViewportSize`로 가로(844x390)로 바꾸고 `resize`/`orientationchange` 이벤트를 직접 발생시켜 실제 회전을 흉내냈다(반대 방향도 동일하게 테스트).
-확인: 세로→가로 회전 시 `#terminal-screen`의 `min-height`가 회전 즉시 "0px"→"auto"로 정확히 재계산됨(직전 라운드에서 고친 CSS 미디어쿼리가 라이브 전환에도 올바르게 반응)을 확인. 이 상태에서 명령 입력창은 처음엔 뷰포트 밖(y=694/뷰포트 390)에 있었지만, 최대로 스크롤하면 정확히 뷰포트 맨 아래(bottom=394, 사실상 완전히 보임)에 도달함을 확인 — 새로고침 없이 로드한 랜드스케이프 화면과 동일한, 이미 검증된 "스크롤로 도달 가능" 패턴과 일치. 가로→세로 역방향 회전도 확인 — 입력창이 844px 뷰포트 안에 완전히 보임, 문제없음.
-결과: ✅ 완료 — 새 버그는 없었지만, 지금까지의 랜드스케이프 관련 수정들이 "새로고침 후 특정 방향으로 진입"하는 경우뿐 아니라 "화면을 켠 채로 실제 회전"하는, 더 흔한 실사용 시나리오에서도 올바르게 작동함을 처음으로 직접 검증했다. 이는 이 세션의 랜드스케이프 관련 수정 전체의 완결성을 보강하는 중요한 확인이었다.
-
-## [2026-07-26 11:30] [/loop 계속] 회원가입/로그인 폼 유효성 검사 에러 메시지(.entry-error) 오버플로 점검 — 추가 버그 없음
-
-**LOG_ID: 20260726_1130**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 지난 라운드에 예고한 대로 다른 카테고리로 전환, ANSI 그리드가 아니라 회원가입/로그인 같은 순수 HTML 폼의 유효성 검사 에러 메시지(`.entry-error`) 표시를 점검.
-확인: `signupFlowAgreement.js`/`signupFlowSubmit.js`가 서버 에러 메시지(`error.message`, 예약어 검사 실패 시 사용자 입력값이 그대로 노출되는 경우도 포함 — 이 세션 초반 SSTI 오탐 라운드에서 확인된 패턴)를 `.entry-error` div에 그대로 넣는데, 이 요소의 CSS(`entry-signup-shell.css`)는 `white-space`/`overflow` 커스텀 규칙이 전혀 없는 기본 블록 요소라 기본값(`white-space:normal`)으로 자연스럽게 줄바꿈된다. 실제 브라우저에 100자 넘는 에러 문구를 직접 주입해 확인 — 3줄로 정확히 줄바꿈되고 `scrollWidth`(388)가 뷰포트(390) 안에 완전히 들어가 오버플로 없음을 실측 확인. 로그인 화면의 동일 클래스(`#l-error.entry-error`)는 실제 에러가 없을 때 `display:none`이라(진짜 로그인 실패를 트리거해야 보임 — 이번엔 시간 대비 가치를 고려해 직접 트리거하지 않음) 직접 확인은 못 했지만, 같은 `.entry-error` 클래스를 공유하므로 줄바꿈 동작은 동일할 것으로 판단(회원가입 쪽 실측으로 클래스 자체의 안전성은 검증됨).
-결과: ✅ 완료 — 새 버그는 없었다. 폼 유효성 검사 에러 표시는 ANSI 그리드와 달리 기본 HTML 블록 줄바꿈에 의존해 애초에 이 세션에서 찾은 버그 클래스(고정폭 fitCell 절삭)에 해당하지 않는 구조였음을 확인.
-
-## [2026-07-26 11:15] [/loop 계속] 오락실 게임 상태 메시지 및 PDS(자료실) 파일명 목록 렌더 재점검 — 추가 버그 없음
-
-**LOG_ID: 20260726_1115**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — `arcadeAnsiBuilders.js`의 게임별 상태/메시지 줄에 닉네임 외에 다른 자유 텍스트(상태 메시지 등)가 폭 제한 없이 들어가는 곳이 있는지, 그리고 PDS(자료실) 목록의 파일명 칸이 사용자 업로드 파일명(특수문자·긴 이름 가능)을 어떻게 다루는지 재점검.
-확인: `arcadeAnsiBuilders.js`는 상태/메시지 줄이 전부 고정 문구(게임 규칙 안내, 승패 판정 등)이거나 이미 지난 세션에 wrap 처리된 항목뿐, 새로운 자유 텍스트 보간은 없었다. PDS 목록의 파일명 칸(`fitCell(fileText, P.file)`)은 게시판/쪽지/대화실 목록과 동일한 "의도된 목록 한 줄 절삭" 패턴(여러 항목을 나열하는 목록 행)이라 상세보기가 아니므로 손대지 않는다 — 이미 이 세션에서 반복 확인된 구분 기준과 일치.
-결과: ✅ 완료 — 새 버그는 없었다. 이번 세션에서 이미 16건의 실제 버그를 찾아 고쳤고, 최근 3개 라운드 연속으로 신규 결함이 나오지 않아 "라벨: 자유 텍스트" 버그 클래스는 이 코드베이스 전반에서 상당히 소진된 상태로 판단된다. 다음 라운드는 완전히 다른 카테고리(예: 폼 유효성 검사 메시지, 로딩/에러 상태 UI, 실기기 터치 제스처의 다른 측면)를 탐색하는 방향으로 전환을 검토할 시점이다.
-
-## [2026-07-26 11:00] [/loop 계속] 노치/세이프에어리어(safe-area-inset) 및 쪽지 발송 힌트 메시지 커버리지 점검 — 추가 버그 없음
-
-**LOG_ID: 20260726_1100**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 텍스트 오버플로우 버그 클래스는 buildTopHeader까지 포함해 상당히 촘촘히 훑었으므로, 이번엔 노치가 있는 폰(iPhone X 이후)의 세이프에어리어 처리와, 지난 라운드 힌트바 수정이 실제로 커버하는 범위를 점검.
-확인: (1) `safe-area-inset-*` 사용처를 전수 확인 — 일반 세로 모바일 풋터(`@media (max-width:768px) and (orientation:portrait)` 안의 `#terminal-footer`, style.css:2443)와 랜드스케이프 풋터, scroll-bottom-indicator(현재는 사용자 요청으로 숨김 처리돼 있지만 CSS 자체는 정상), 알림 토스트까지 전부 `env(safe-area-inset-bottom, ...)`을 반영하고 있어 노치/홈 인디케이터 겹침 문제는 이미 없음을 재확인. (2) 쪽지 발송 완료 힌트(`setHint('...${sentCount}명에게 쪽지를 발송했습니다. (${recipients.join(', ')})')`, memoScreens.js)가 다수 수신자 나열로 길어질 수 있는 걸 발견했으나, 지난 라운드(20260726_0945)에 고친 힌트바 CSS(`text-overflow:ellipsis`/모바일 `white-space:normal`)가 이미 이 경우도 자동으로 커버함을 확인 — 개별 수정 불필요.
-결과: ✅ 완료 — 새 버그는 없었지만, 세이프에어리어 처리가 이미 충분함을 확인했고, 지난 힌트바 CSS 수정의 파급 범위(수신자 나열처럼 값의 개수 자체가 가변적인 메시지까지)를 재확인해 "이 힌트 메시지도 개별로 고쳐야 하나"라는 의문을 해소했다.
-
-## [2026-07-26 10:45] [/loop 계속] 공용 유틸(ansiBuilderUtils.js) 나머지 함수 전수 재검토 — 추가 버그 없음
-
-**LOG_ID: 20260726_1045**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드에서 `buildTopHeader`(모든 화면 공유)가 이번 세션 최대 파급력 버그였던 만큼, 같은 파일(`ansiBuilderUtils.js`) 안의 나머지 공용 함수들도 유사한 문제가 없는지 전부 재확인.
-확인: `buildThreadPrefix`(답글 들여쓰기 접두사 생성만, 사용자 텍스트 없음)/`normalizeHeaderSegment`(공백 정리만)/`estimatePostPageCount`(길이 추정치 반환만, 렌더링 없음)/`highlightText`(검색어에 ANSI 색상 코드만 씌울 뿐 별도 절삭 없음 — 결과는 이후 wrapAnsiText/fitCell을 거치므로 이중 처리 안전)/`wrapAnsiText` 자체(ANSI 이스케이프 시퀀스를 폭 계산에서 올바르게 제외하고 와이드 문자도 정확히 처리함을 코드로 직접 재확인, 이스케이프 중간에서 줄바꿈이 끊기지 않음)/`formatShortDate`·`formatLongDate`(날짜 문자열 전용, 사용자 자유 텍스트 아님) 모두 안전을 재확인. `menuIndexScreens.js`의 `toLabelText(node)`도 `getMenuNodeLabel`이 앱이 정의한 고정 메뉴 라벨이라 안전.
-결과: ✅ 완료 — 이 세션에서 반복 발견해온 "공용 헬퍼 안에 숨은 결함" 패턴이 재발하지 않도록 buildTopHeader 발견 직후 같은 파일을 곧바로 전수 재검토했고, 추가 결함은 없었다. 이 파일(`ansiBuilderUtils.js`)은 이제 완전히 재검증됐다고 판단.
-
-## [2026-07-26 10:30] [/loop 계속] 상단바 공용 엔진(buildTopHeader) — 모든 화면의 centerLabel이 말줄임표 없이 잘리던 버그(16번째, 이번 세션 최대 파급력) 수정 + 잘못된 1차 수정을 자체 발견해 재수정
-
-**LOG_ID: 20260726_1030**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — `truncateDisplayText(` 사용처를 전부 재검색하던 중, `ansiBuilderUtils.js`의 `buildTopHeader()`(모든 화면이 공유하는 상단바 렌더러) 자신이 `leftText`/`centerText`에 이 말줄임표 없는 함수를 쓰고 있음을 발견 — 지난 세션에 `.retro-topbar-center`에 CSS `text-overflow:ellipsis`를 붙였던 수정(20260726_0310)이 사실 이 ANSI 텍스트 레벨 절삭 **이후**의 안전망이라, 텍스트가 이미 폭에 딱 맞게 잘린 뒤라 거의 발동하지 않는다는 걸 재확인.
-발견: 대화방/회의실 제목처럼 서버 상한(최대 100자)까지 가능한 자유 텍스트가 `centerLabel`로 들어오면, `truncateDisplayText`가 말줄임표 없이 그대로 잘라버린다 — `buildTopHeader`는 이 앱의 **모든 화면**이 공유하는 함수라 파급력이 이번 세션 findings 중 가장 컸다.
-1차 시도 실패 자체 발견: 처음엔 이미 있는 `fitCellEllipsis`로 바로 교체했는데, 하네스로 검증하기 전에 코드를 다시 읽다가 `fitCellEllipsis`가 표 컬럼 정렬용으로 **항상 maxWidth까지 트레일링 공백 패딩**을 붙인다는 걸 상기했다 — `leftText`의 `displayWidth`를 그대로 `minCenterStart`(가운데 라벨 시작 위치) 계산에 쓰는 자리라, 패딩된 값을 쓰면 위치 계산 자체가 깨져(패딩 폭만큼 가운데 라벨이 밀려나거나 화면 밖으로 나감) 새로운 회귀를 만들 뻔했다. 실제로 하네스를 돌리기 전에 이 문제를 알아채 패딩 없이 잘렸을 때만 말줄임표를 붙이는 새 헬퍼 `truncateDisplayTextEllipsis`를 별도로 만들어 교체했다.
-구현: `ansiBuilderUtils.js`에 `truncateDisplayTextEllipsis(text, maxWidth)` 추가(공용 반환값에도 등록) — `truncateDisplayText`와 마찬가지로 패딩 없이, 잘렸을 때만 "…"를 붙인다. `buildTopHeader`의 `leftText`/`centerText` 계산에 적용.
-검증: Node 하네스로 100자(서버 최대) 제목의 centerLabel을 rightLabel 유무·모바일/데스크톱 4가지 조합으로 렌더 — 전부 정확히 예산 폭(44/44, 80/80)에 맞고 말줄임표가 정확한 위치에 붙음을 확인, 짧은 라벨("대화실 대기실", "열린광장 (PLAZA)")은 수정 전과 정확히 동일하게 중앙 정렬됨(무회귀)도 확인. 파급력이 커서 회귀 스위트를 평소보다 넓게 실행: `smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:renderer-ui`/`smoke:auth-bridge`/`smoke:boards`/`smoke:chat-rooms`/`smoke:rss-services`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 전부 통과. 실제 브라우저로 게시판 목록(모바일)과 대화실 로비(데스크톱) 스크린샷까지 육안 확인 — 상단바 정렬 깨짐 없음.
-결과: ✅ 완료 — 같은 버그 클래스의 16번째이자 이번 세션 최대 파급력 사례(모든 화면 공통 렌더러). 동시에, 재사용 가능해 보이는 기존 헬퍼(`fitCellEllipsis`)를 새 자리에 그대로 가져다 쓰기 전에 그 헬퍼의 부작용(패딩)이 새 호출 맥락(폭 계산에 결과를 재사용)과 맞는지 반드시 확인해야 한다는 교훈을 얻었다 — 이번엔 실제로 배포하기 전에 스스로 발견해 막았다.
-
-## [2026-07-26 10:15] [/loop 계속] 여론광장 설문 상세 "작성자" 필드 — "방어적으로 클램프"라던 주석과 달리 말줄임표 없이 잘리던 버그(15번째) 수정
-
-**LOG_ID: 20260726_1015**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 대화방 입장/퇴장 시스템 메시지에서 "이미 손댄 함수의 다른 분기"를 재검토해 버그를 찾은 직후라, 같은 자세로 여론광장 설문 상세(`buildVoteDetailAnsi`)의 옵션 wrap 수정(20260726_0700) 때 손대지 않고 지나쳤던 `createdBy`(작성자) 필드를 다시 읽었다.
-발견: 주석은 "createdBy는 방어적으로 클램프"(20260715_1900)라고 되어 있어 이미 안전 처리된 것처럼 보였지만, 실제 구현은 `fitCell(vote.createdBy, createdByMax, 'left')` — 말줄임표 없는 단순 절삭이었다. 작성자 닉네임(최대 20자)이 `createdByMax`(모바일 10/데스크톱 20)를 넘으면 이번 세션 내내 찾아온 것과 정확히 같은 버그(잘렸는지 알 방법이 없음)였다 — "클램프했다"는 주석이 "안전하게 처리했다"는 인상을 줘서 지난 라운드에 무심코 지나쳤던 사례.
-구현: `fitCellEllipsis`로 교체하되, 이 헬퍼가 짧은 값에도 고정폭까지 패딩을 붙이는 특성 때문에(이용자 검색 수정 때 이미 확인한 문제) 원래 코드처럼 "넘칠 때만" 적용하는 조건부 구조를 유지 — 짧은 작성자명은 여전히 패딩 없이 그대로, 넘칠 때만 말줄임표 적용 후 trim.
-검증: Node 하네스로 20자 작성자명(모바일 "가나다라…", 데스크톱 "가나다라마바사아자…")과 짧은 작성자명("홍길동", 회귀 확인)을 대조 — 말줄임표가 정확히 붙고 짧은 값은 기존과 동일한 렌더(공백 없음)를 확인. `npm run smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 15번째 사례. "방어적으로 처리했다"는 과거 주석 문구 자체를 신뢰하지 말고 실제 구현(말줄임표 유무)까지 직접 확인해야 한다는 교훈 — 이번 세션에서 이미 두 번(발의자 필드, 입장/퇴장 메시지) 겪은 "과거 판단 재검토" 패턴이 세 번째로 재현됐다.
-
-## [2026-07-26 10:00] [/loop 계속] 대화방 입장/퇴장 시스템 메시지 — 긴 닉네임이면 "입장하였습니다" 문구 자체가 통째로 잘리던 버그(14번째, 자기 자신이 이미 손댄 파일에서 재발견) 수정
-
-**LOG_ID: 20260726_1000**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — `setHint()` 호출 전수를 훑어 힌트바 CSS 수정(20260726_0945)으로 이미 커버되는지 확인하던 중, 대화방 관련 여러 setHint는 이미 안전함을 확인했고, 그 김에 지난 라운드(20260726_0630)에 대화 메시지 본문은 고쳤지만 **입장/퇴장 시스템 메시지**는 손대지 않고 남겨뒀던 `chatAnsiBuilders.js`의 같은 함수를 재검토했다.
-발견: `msgLine()`의 `message.type === 'system'` 분기가 여전히 `fitCell(line, targetCols - 2)`였다 — `who`(닉네임, 최대 20자·표시폭 40칸)와 `idLabel`(아이디, 최대 20자)을 합치면 고정 문구("■■  님이 입장하였습니다. ■■")까지 최대 약 87칸에 달해, 실측 재현(20자 닉네임으로 입장) 결과 **"입장하였습니다" 문구 자체가 통째로 잘려 사라지는** 가장 심각한 형태였다(모바일에서 fitCell이 문자열을 "■■ 가나다라마바사아자차가나다라마바사아"에서 그냥 끊어버려, 뒤의 "님이 입장하였습니다"조차 안 보임).
-구현: 지난 라운드와 동일하게 `wrapAnsiText(line, targetCols - 2)`로 감싸 여러 줄로 접는다(짧은 닉네임은 기존과 동일한 한 줄 렌더 유지).
-검증: Node 하네스로 20자 닉네임 입장(모바일 3줄/데스크톱 2줄로 완전히 보존)과 짧은 닉네임("손님") 퇴장(수정 전후 동일한 한 줄) 렌더를 대조 확인 — 전체 줄 수도 24줄 캔버스 안에 정상적으로 들어감(이미 이 화면에 적용된 `body[data-screen="chat-room"]` 스크롤 완화가 여전히 유효). `npm run smoke:chat-rooms`/`smoke:menu-wiring`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 14번째 사례이자, 지난 라운드에 자신이 직접 수정한 함수 안에서 놓친 다른 분기를 재검토로 스스로 찾아 고친 두 번째 사례(첫 번째는 20260726_0730의 발의자 필드). "이 함수를 이미 고쳤다"는 이유로 같은 함수의 다른 분기를 재검토하지 않으면 이렇게 놓칠 수 있다는 교훈을 다시 확인했다.
-
-## [2026-07-26 09:45] [/loop 계속] 하단 힌트바(#cmd-hint) 데스크톱 — 긴 메시지가 말줄임표 없이 잘리던 버그(13번째) 수정
-
-**LOG_ID: 20260726_0945**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 대화방 `/E TITLE` 명령(방 제목 최대 100자, chatServiceRoutes.js `title:{maxLength:100}`)이 성공 시 `setHint('방 제목이 [${value}](으)로 변경되었습니다.')`로 새 제목을 그대로 힌트바에 echo하는 걸 발견해, 여러 화면의 ANSI 그리드가 아니라 **하단 힌트바 자체**의 폭 처리를 점검.
-발견: `#cmd-hint`의 기본(데스크톱) CSS 규칙이 `overflow:hidden; text-overflow:clip; white-space:nowrap;`이었다 — `clip`은 말줄임표 없이 그냥 자르므로, 100자 제목이면 힌트바 폭을 넘는 부분이 아무 표시 없이 사라진다(이번 세션 반복 확인된 버그 클래스와 동일 증상, 이번엔 ANSI 그리드가 아니라 힌트바에서 처음 발견). `@media (max-width:768px)`에는 이미 `overflow:visible; white-space:normal`로 오버라이드되어 있어 **모바일은 실제로 잘리지 않고 여러 줄로 자동 줄바꿈**됨을 실측으로 확인(문제없음) — 데스크톱 전용 결함이었다.
-구현: 기본 규칙의 `text-overflow: clip`을 `text-overflow: ellipsis`로 교체(모바일 오버라이드는 그대로 유지, `.has-cmd-tokens` 모드는 이 규칙 자체를 오버라이드해 영향 없음).
-검증: 실제 브라우저로 힌트바에 260자 넘는 메시지를 직접 주입해 데스크톱(1280px)/모바일(390px) 양쪽 렌더 결과와 `getComputedStyle`을 대조 — 데스크톱은 `text-overflow: ellipsis` 적용되어 "...가나다라마바사아자…" 형태로 말줄임표가 붙어 잘림을 명시함을 스크린샷으로 확인, 모바일은 기존대로 `overflow: visible`/`white-space: normal`로 3줄에 걸쳐 완전히 보임(회귀 없음)을 확인. `npm run smoke:ui-geometry`/`smoke:ui-layout`(힌트 오버플로 로직 테스트 포함)/`smoke:renderer-ui`/`smoke:menu-wiring`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 13번째 사례이자, 이번 세션 최초로 ANSI 그리드가 아니라 힌트바(모든 `setHint()` 호출이 공유하는 전역 UI) 자체에서 찾은 결함. `setHint`는 앱 전역에서 매우 자주 호출되므로 이 한 줄짜리 CSS 수정의 실사용 파급력이 크다.
-
-## [2026-07-26 09:30] [/loop 계속] 이용자 검색(WHO/MEMBER) "찾을 수 없음" 메시지 — 검색어가 말줄임표 없이 잘리던 버그(12번째) 수정
-
-**LOG_ID: 20260726_0930**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 게시판 검색(LT/LI/LC) 화면의 상단바에 검색어가 그대로 노출되는지 확인하려다, `buildPostListAnsi`가 `contextTitle` 매개변수를 `void contextTitle;`로 아예 버리고 검색어는 `highlightText`로 목록 제목 하이라이트에만 쓴다는 걸 코드 추적으로 확인 — 이건 버그가 아니라 애초에 오버플로 위험 자체를 피해가는 의도된 설계였다(수정 불필요, 확인만 하고 종료).
-발견: 대신 근처 화면인 `buildMemberSearchAnsi`("이용자 검색", WHO/MEMBER 명령)의 "찾을 수 없음" 메시지에서 정확히 같은 버그를 찾았다 — `truncateDisplayText(notFound, 12/30)`로 검색어를 자르는데 말줄임표가 없다. `notFoundQuery`는 `cmd-input`(maxlength=200)에 사용자가 직접 입력한 검색어를 그대로 받아 아이디/닉네임 20자 제한과 무관하게 200자까지 가능하다 — 명령 이력 화면(20260726_0900)과 같은 버그 클래스.
-구현: 지난 라운드에 공용화한 `fitCellEllipsis`로 교체. 다만 이 헬퍼는 표 컬럼 정렬용으로 항상 고정폭까지 공백 패딩을 붙이는데, 여기선 `'{검색어}' 이용자가 없습니다` 같은 문장 중간에 끼워 넣는 자리라 짧은 검색어일 때 닫는 따옴표 앞에 불필요한 공백이 남는 걸 발견해(재사용 전 실측으로 미리 검증) `.replace(/\s+$/g, '')`로 후처리했다.
-검증: Node 하네스로 40자 긴 검색어(모바일/데스크톱)와 3자 짧은 검색어("abc", 회귀 확인) 렌더 결과를 직접 비교 — 긴 검색어는 "'가나다라마…' 이용자가 없습니다."로 말줄임표가 붙고, 짧은 검색어는 "'abc' 이용자가 없습니다."로 트레일링 공백 없이 수정 전과 동일하게 렌더됨을 확인. 전체 줄 표시폭도 34칸(예산 44칸)으로 여유 있음을 확인. `npm run smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 12번째 사례. 지난 라운드에 공용화한 헬퍼를 재사용하면서, 그 헬퍼의 "항상 패딩" 특성이 문장 중간 삽입 맥락에는 안 맞는다는 걸 미리 실측으로 검증해 두 번째 사용처에서 새 버그를 만들지 않았다.
-
-## [2026-07-26 09:10] [/loop 계속] 더블탭 확대 방어(touch-action) 추가 — 텍스트 버그 클래스 외 새로운 각도의 방어적 조치
-
-**LOG_ID: 20260726_0910**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 지금까지 계속 파온 "긴 자유 텍스트가 잘림/흘러넘침" 버그 클래스는 signup(순정 `<input maxlength>`)/myinfo/postWrite(박스 에디터, 전부 순수 HTML)까지 확인해 더 남은 게 없어 보여, 텍스트 오버플로우 외의 다른 각도(터치 제스처)로 전환.
-발견: `index.html`의 viewport meta에 `maximum-scale`/`user-scalable=no`가 없고, CSS 어디에도 `touch-action`이 전혀 없다는 걸 확인했다. 이 앱은 이미 자체 `clamp()`/`--stable-vh` 기반 폰트 스케일링으로 화면 폭을 관리하는 "고정 격자" 터미널 에뮬레이션인데(20260726_0555에서 확인), 네이티브 핀치/더블탭 확대를 막을 방법이 전혀 없어 오목판처럼 조밀한 탭 대상(핫스팟 225개)을 빠르게 두 번 두드리면 브라우저 기본 더블탭 확대 제스처가 걸릴 여지가 있다.
-한계 고지: 더블탭 확대는 브라우저 크롬(chrome) 레벨 네이티브 제스처라 Playwright 헤드리스로는 정확한 재현이 어렵다 — 이번 조치는 확정 재현 버그의 수정이라기보다, 이 앱과 같은 구조(자체 스케일링을 쓰고 핀치줌이 애초에 필요 없는 SPA)에서 표준적으로 쓰이는 저위험 방어 조치임을 분명히 밝힌다.
-구현: `html, body`에 `touch-action: manipulation;` 추가(더블탭·핀치 확대만 차단, 단일 손가락 스크롤/팬은 그대로 허용).
-검증: 실제 터치 탭(`page.tap()`, `hasTouch:true`)으로 오목판 핫스팟을 눌러 수정 전후 정상적으로 착수(0수→2수, 상대 응수 포함)됨을 확인해 클릭/탭 상호작용에 회귀가 없음을 검증. `getComputedStyle(document.body).touchAction`이 정확히 'manipulation'으로 반영됨을 확인. `npm run smoke:ui-geometry`/`smoke:ui-layout`/`smoke:renderer-ui`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 이번 세션 최초로 "자유 텍스트 잘림" 버그 클래스가 아닌 다른 각도(네이티브 터치 제스처)에서 찾은 방어적 개선. 정확한 재현 불가라는 한계를 투명하게 기록했다 — 실기기 사용자 피드백으로 문제가 재확인되면 이 조치가 원인 해결책이 된다.
-
-## [2026-07-26 09:00] [/loop 계속] 명령 이력(/history) 화면 — 타자연습 등에서 입력한 긴 문장이 말줄임표 없이 잘리던 버그(11번째) 수정 + fitCellEllipsis 공용화
-
-**LOG_ID: 20260726_0900**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 아직 점검하지 않은 "이용 내역(/history)" 화면(사실은 최근 입력한 명령 목록)을 확인. 사용자가 실제로 입력하는 모든 값(타자연습/스크램블 정답, 검색어, 채팅 등)이 `state.cmdHistory`에 그대로 기록된다는 걸 코드 추적(`appEventsCommandInput.js`)으로 확인하고, 이 목록을 보여주는 `buildHistoryAnsi()`가 값을 어떻게 다루는지 점검.
-발견: `truncateDisplayText(cmd, targetCols - 6)`로 자르고 있었는데, 이 함수는 `fitCell` + 공백 제거일 뿐 말줄임표를 붙이지 않는다(WHO 화면의 원래 버그, 20260726_0230에서 이미 지적됐던 것과 동일한 결함이 다른 화면에도 있었던 셈) — 타자연습 게임에서 긴 문장을 입력했다면 그 이력이 짧게 잘려서 마치 원래 짧은 명령이었던 것처럼 보인다.
-구현: 이 문제를 이미 한 번 고쳤던 `fitCellEllipsis` 헬퍼가 `systemAnsiBuilders.js` 안에만 지역적으로 있어 재사용할 수 없었다 — 공용 `ansiBuilderUtils.js`로 승격시키고(`createAnsiBuilderUtils`의 반환값에 추가), `systemAnsiBuilders.js`의 중복 정의는 제거해 공용 버전을 쓰도록 정리, `helpScreens.js`의 `buildHistoryAnsi()`에서도 `truncateDisplayText` 대신 `fitCellEllipsis`를 쓰도록 교체했다.
-검증: Node 하네스로 긴 문장("바람과 함께...") 히스토리 항목이 말줄임표("…")를 달고 잘리는지, 짧은 명령("PDS")은 그대로인지 확인. 리팩터링으로 이동한 `buildActiveUsersAnsi`(W 화면)의 `fitCellEllipsis` 사용도 함께 재검증해 무회귀 확인(경로가 여전히 "…"로 정확히 잘림). `npm run smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:full-traversal`(history/active-users 모듈 하네스 케이스 포함)/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 11번째 사례. 이번엔 처음으로 발견한 결함을 고치면서 동시에 기존 헬퍼를 공용 유틸로 승격시켜 재사용성을 개선했다 — 다음에 같은 패턴을 다른 화면에서 또 발견하면 바로 `fitCellEllipsis`를 가져다 쓸 수 있다.
-
-## [2026-07-26 08:40] [/loop 계속] 오락실/접속자목록/뉴스/날씨 전수 재검토 — 추가 버그 없음
-
-**LOG_ID: 20260726_0840**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 두 라운드에서 "짧다/안전하다"고 과거에 판단했던 필드가 실제로는 회원 닉네임이었던 경우를 연달아 발견했으므로, 같은 방식으로 아직 완전히 재검토하지 않은 나머지 ANSI 빌더 전체(`amusementAnsiBuilders.js`/`arcadeAnsiBuilders.js`/`newsAnsiBuilders.js`/`weatherAnsiBuilders.js`/`systemAnsiBuilders.js`의 접속자 목록)를 처음부터 다시 읽었다.
-확인: `amusementAnsiBuilders.js`의 MBTI/혈액형 화면에서 쓰이는 `nick` 변수는 회원 닉네임이 아니라 `MBTI_TYPES`/`BLOOD_TYPES` 배열의 고정된 유형 이름("세상의 소금형" 등, 개발자가 하드코딩한 데이터)이라 안전했다. `buildRetroArtViewAnsi`의 `item`도 `DOOR_ART`라는 고정 배열(90년대 원본 접속화면 갤러리)이라 사용자 데이터가 아니었다. `arcadeAnsiBuilders.js`는 닉네임을 아예 표시하지 않는다(전수 검색 0건). `buildActiveUsersAnsi`(W 명령, 접속자 목록)의 닉네임 컬럼은 `fitCell`로 절삭되지만, 이건 여러 사용자를 나열하는 목록 행이라 게시판/대화실 목록과 같은 "의도된 목록 절삭" 패턴 — 상세보기가 아니므로 손대지 않는다. `newsAnsiBuilders.js`는 제목/본문 모두 이미 `wrapAnsiText`, 헤드라인은 `HEADLINE_TRUNCATION_SUFFIX`(말줄임표)까지 갖춰 안전했다.
-결과: ✅ 완료 — 이번 라운드는 새 버그를 찾지 못했지만, 지난 두 라운드에서 발견한 "과거 판단이 틀렸을 수 있다"는 우려를 남은 파일 전체에 대해 체계적으로 재확인해 닫았다. 이제 이 세션에서 다룬 ANSI 빌더 9개 파일(게시판/안건/쪽지/프로필/생체리듬/대화방/투표/시스템진단/뉴스·날씨) 전부가 "라벨: 자유 텍스트" 버그 클래스에 대해 재검토를 마쳤다.
-
-## [2026-07-26 08:30] [/loop 계속] "내 이용 현황"(ACCT) 화면 닉네임 무제한 흘러넘침 버그(10번째) + 프로필/ACCT 공용 wrap 폭 계산의 2칸 오프바이원 수정
-
-**LOG_ID: 20260726_0830**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 프로필(`buildProfileAnsi`)에 있던 원본 `row()` 헬퍼(값에 폭 제한이 전혀 없던, 이번 세션에서 발견한 가장 심한 형태의 버그)와 똑같은 헬퍼가 `systemAnsiBuilders.js`의 다른 화면에도 있는지 재점검.
-발견: `buildMyStatsAnsi()`("내 이용 현황", ACCT 명령)의 `row('닉네임', stats.nickName...)`이 프로필의 원래 버그와 완전히 동일했다 — `value`에 fitCell조차 없이 그대로 이어붙여, 20자 닉네임이면 모바일 44칸 예산에서 실측 56칸으로 그대로 흘러넘쳤다(폭 제한이 아예 없는 이번 세션 두 번째 사례).
-구현 중 추가 발견: 프로필 수정(20260726_0350) 때 만든 `rowWrapped` 헬퍼를 그대로 복사해 고치다가, 그 폭 계산(`targetCols - labelWidth - 2`) 자체가 처음부터 2칸 오프바이원이었음을 깨달았다 — 실제 렌더 형식은 `"  "+label+": "+value`(2+labelWidth+2+value)인데 계산식은 2칸만 뺐어야 할 걸 앞의 "  "(2칸)를 누락해, targetCols보다 2칸 더 긴 첫 줄이 나올 수 있었다(예: 44칸 예산에서 46칸). 프로필 화면이 이미 배포된 채로 이 결함을 안고 있었다는 뜻이라, 이번 김에 `buildProfileAnsi`의 기존 `rowWrapped`도 `-4`로 함께 고쳤다.
-검증: Node 하네스로 `displayWidth(line) > targetCols`를 모든 줄에 대해 자동 비교하는 방식으로 재작성해 프로필/ACCT 양쪽, 20자 닉네임/짧은 닉네임, 모바일/데스크톱 총 6가지 조합을 전수 확인 — 오버플로 플래그 0건. `npm run smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:auth-bridge`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 10번째 사례이자, 이번 세션 자체에서 만든 수정 코드 안의 산술 오류(오프바이투)를 재검토로 스스로 찾아 고친 첫 사례. "고쳤다"고 끝내지 말고 그 수정의 계산식 자체도 실측(`displayWidth(line) > targetCols`)으로 검증해야 한다는 교훈을 얻었다 — 앞으로 wrap 폭 계산을 추가할 때마다 이 자동 비교 방식을 기본으로 쓴다.
-
-## [2026-07-26 08:00] [/loop 계속] 게시글 상세보기 — 작성자 닉네임 줄이 모바일은 무제한 흘러넘치고 데스크톱은 4글자만 남기고 잘리던 버그(9번째, 가장 먼저 고쳤어야 할 화면에서 재발견) 수정
-
-**LOG_ID: 20260726_0800**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 이번 세션 최초의 수정이 바로 게시글 상세보기(`buildPostViewAnsi`)의 제목 wrap이었으므로(20260726_0210), 같은 함수 안에 놓친 다른 자유 텍스트 필드가 있는지 재점검. `author`(닉네임)가 제목 바로 아래 메타 줄에서 어떻게 렌더되는지 다시 읽었다.
-발견: 심각도가 이번 세션 최고 수준이었다 — **모바일**은 `metaNumber + ' ' + author + (authorId...)`를 아예 fitCell조차 없이 그냥 이어붙이고 있어서, 20자 닉네임(authRoutes.js `nickName:{maxLength:20}`) 기준 실측 표시폭이 59칸으로 44칸 예산을 훌쩍 넘어 뷰포트 밖으로 그냥 흘러넘쳤다(폭 제한이 아예 없는, 이번 세션 통틀어 유일한 사례). **데스크톱**은 `fitCell(author, 8)`로 표시폭 8칸(한글 4자)만 남기고 나머지 16자가 말줄임표도 없이 통째로 사라졌다 — 20자 중 80%가 손실되는, 대화방 메시지 다음으로 심각한 절삭이었다.
-구현: 모바일/데스크톱 메타 줄을 각각 완성된 문자열로 조립한 뒤 `wrapAnsiText(metaLine, targetCols)`로 감쌌다(제목과 동일한 패턴 — 짧은 닉네임은 원래와 완전히 동일한 한 줄 그대로, 긴 닉네임만 여러 줄로 접힘). 이 화면은 24줄 고정 캔버스에 맞춰 페이지네이션을 정밀 계산하는 `headerLineCount`가 있어(20260726_0210에서 제목 줄 수를 반영하도록 이미 고쳤던 바로 그 로직), 메타 줄도 몇 줄이 됐는지(`metaLines.length`)를 반영하도록 계산식을 재정리했다(기존 "제목 1줄+메타 1줄 가정"의 매직넘버 3/4를 실제 줄 수 합산으로 교체).
-검증: Node 하네스로 20자 닉네임(모바일/데스크톱)과 짧은 닉네임("홍길동", 회귀 확인) 양쪽을 렌더 — 20자 닉네임은 모바일 2줄/데스크톱 2줄로 완전히 보존, 짧은 닉네임은 수정 전후 정확히 동일한 렌더(무회귀)로 확인. 페이지네이션 무결성도 30줄짜리 본문으로 검증 — 총 24줄 고정 캔버스를 정확히 유지하며 "(01/03)" 페이지 수도 정상 계산됨을 확인. 실 회원가입 API로 20자 닉네임 회원을 만들어 서버가 실제로 이 값을 허용함을 재확인(테스트 회원은 auth_user_id가 없는 경량 가입이라 `members` 테이블에서만 직접 삭제해 정리). `npm run smoke:boards`/`smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:auth-bridge`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 9번째 사례, 이번 세션에서 가장 먼저 손댔던 화면에 놓친 자유 텍스트 필드가 남아있었다는 점에서 교훈적이다: 한 화면에서 하나의 필드를 고쳤다고 그 화면이 완전히 안전하다고 가정하면 안 되고, 같은 화면 안의 다른 필드도 재검토해야 한다.
-
-## [2026-07-26 07:30] [/loop 계속] 토론의 광장(FORUM) 안건 보기 — "발의자"가 짧은 값이라던 기존 가정이 틀렸던 버그(8번째) 수정
-
-**LOG_ID: 20260726_0730**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드에서 놓쳤던 파일들(`ansiBoardBuilders.js`/`ansiBuilders.js`/`ansiServiceBuilders.js` — 글롭 패턴 `*AnsiBuilders.js`가 대소문자 차이로 이 3개를 빠뜨렸었다)을 포함해 `fitCell(` 정규식 사전 검색을 다시 돌렸다.
-발견: 대부분은 안전했다 — 메인 메뉴 "작은공지" 미리보기(`ansiBoardBuilders.js`)는 점 리더(dot-leader) 장식이 있는 의도된 한 줄 요약(게시판/쪽지함 목록 절삭과 같은 패턴)으로 판단해 손대지 않았고, `systemAnsiBuilders.js`의 `name`은 저장소 이름(고정 내부 키)이라 안전했다. 하지만 `confAnsiBuilders.js`의 `buildConfAgendaViewAnsi()`를 다시 읽다가, 지난 라운드(20260726_0330)에 내가 직접 남긴 주석 "발의자/재청/발의일은 원래도 짧은 값이라 fitCell 그대로 둔다"는 가정 자체가 틀렸음을 발견했다 — `발의자`는 `agenda.authorName`(회원 닉네임, 서버 최대 20자·표시폭 40칸, `authRoutes.js`의 `nickName:{maxLength:20}`)인데, 모바일 예산(`valueWidth=35`)보다 크다. 실측(Node 하네스로 20자 닉네임 렌더): "가나다라마바사아자차가나다라마바사"에서 끊기고 마지막 "아자차" 3글자가 통째로 사라짐 — 프로필 화면(20260726_0350)에서 찾았던 것과 완전히 같은 버그가 안건 보기에도 있었다.
-구현: `발의자` 행도 `안건` 제목과 동일하게 `row()` → `rowWrapped()`로 교체해 `wrapAnsiText`로 감싼다.
-검증: Node 하네스로 20자 닉네임(모바일/데스크톱)과 짧은 닉네임(회귀 확인) 양쪽을 렌더 — 20자 닉네임은 모바일에서 2줄로 완전히 보존되어 wrap됨(수정 전엔 마지막 3글자 손실), 짧은 닉네임(예: "홍길동")은 수정 전후 정확히 동일한 한 줄 렌더로 무회귀 확인. `npm run smoke:menu-wiring`/`smoke:auth-bridge`/`smoke:ui-geometry`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과.
-결과: ✅ 완료 — 같은 버그 클래스의 8번째 사례이자, 처음으로 "직전 라운드 내가 직접 쓴 주석의 가정이 틀렸다"는 걸 재검토로 스스로 발견해 고친 경우. "짧은 값이라 안전하다"는 판단은 실제 서버 측 필드 정의(회원 닉네임 등 공용 필드)를 반드시 재확인해야 함을 재확인 — 앞으로도 같은 실수를 막기 위해, 향후 라운드에서 "짧다"고 판단해 손대지 않은 필드가 실제로는 닉네임/사용자ID 등 공용 자유 텍스트 필드인지 재검토할 필요가 있다.
-
-## [2026-07-26 07:00] [/loop 계속] 여론광장(AGORA) 설문 상세 — 선택지 문구가 길이 제한 없이 fitCell로 잘리던 버그(7번째) 수정 + 스크롤 완화 확장
-
-**LOG_ID: 20260726_0700**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드(대화방 메시지)에서 "라벨: 자유 텍스트" 안티패턴을 코드베이스 전체에서 사전 검색하는 방법으로 처음 발견했으므로, 이번에도 같은 방식으로 `fitCell\((text|content|message|comment|body|desc|reply|title|memo|preview)` 정규식을 모든 `*AnsiBuilders.js`에 돌려 남은 후보를 찾았다.
-발견: 3건의 후보 중 2건(`amusementAnsiBuilders.js`의 생체리듬 박스 — 개발자가 직접 쓴 고정 문구만 감싸 안전, `chatAnsiBuilders.js`의 대화방 목록 행 — 이미 검증된 의도된 목록 절삭)은 문제없었지만, `voteAnsiBuilders.js`의 `buildVoteDetailAnsi()`가 선택지(`option`) 문구를 `fitCell`로 한 줄 절삭하고 있었다. `VoteRepositoryMemory.js`/`VoteRepositorySupabase.js`를 확인한 결과 선택지 문구는 서버에 길이 제한이 전혀 없고(개수도 최소 2개만 강제, 상한 없음) — 게시글/안건/쪽지/프로필/생체리듬/대화방메시지와 같은 버그 클래스였다. 이 화면은 LOG_ID 20260715_1900에서 제목/작성자/그래프 바는 이미 방어 처리했는데 선택지 문구만 놓쳤던 것.
-구현: 선택지 라벨(` [번호] 문구`)을 `wrapAnsiText`로 감싸되, 원래도 한 줄에 들어가는 짧은 선택지(대다수)는 기존과 완전히 동일한 한 줄 레이아웃(모바일: 라벨줄+막대줄 2줄, 데스크톱: 라벨+막대+퍼센트 한 줄)을 그대로 유지하고, 넘칠 때만 들여쓴 줄을 추가하도록 구현(첫 줄만 막대/퍼센트를 붙이고 이어지는 줄은 문구만). 이 화면은 선택지 "개수" 자체도 서버에 상한이 없어(최소 2개만 강제) 선택지가 많으면 원래도 고정 줄 수 예산을 넘을 수 있었던 사전 존재 여지였는데, 이번 길이 wrap 수정으로 그 여지가 더 커져 대화방/뉴스/도움말/오목과 동일한 `body[data-screen="vote-detail"] #terminal-screen` 스크롤 완화를 함께 추가했다(style.css:2716 부근).
-검증: Node 하네스로 `buildVoteDetailAnsi()`를 직접 호출해 150자 한글 선택지(표시폭 300칸, 서버 무제한 확인)를 포함한 가상 투표를 렌더 — 모바일(390px, 44칸)에서 8줄로, 데스크톱(1280px, 80칸)에서 15줄로 완전히 보존되어 wrap됨을 확인. 짧은 선택지("오목", "숫자야구")는 수정 전후 정확히 동일한 한 줄 레이아웃으로 렌더됨을 대조 확인(무회귀). `npm run smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:boards`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과. 실 API 호출 없이(투표 생성은 `ensureAuthenticated` 미들웨어로 실 로그인이 필요해 배보다 배꼽인 비용 — 이 세션에서 이미 확립된 판단) 하네스만으로 검증해 테스트 데이터 정리도 불필요했다.
-결과: ✅ 완료 — 같은 버그 클래스의 7번째 사례. "코드베이스 전체를 정규식으로 사전 검색" 방법론이 다시 한번 유효했음을 확인(생체리듬 발견 때와 동일한 접근으로, 사용자 신고 없이 사전에 찾음).
-
-## [2026-07-26 06:35] [/loop 계속] 대화방(CHAT) 메시지 — 서버 허용 최대 2000자 중 30~60자만 남기고 나머지가 통째로 사라지던 버그(6번째, 가장 심각) 수정
-
-**LOG_ID: 20260726_0630**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 지금까지 대화실은 로비(대기실/방목록) 화면만 점검했고 실제 방에 들어가 메시지를 주고받는 화면(`buildChatRoomAnsi`)은 아직 점검하지 않았으므로, 이전부터 반복 확인된 "라벨: 자유 텍스트 값" 버그 클래스가 여기에도 있는지 확인.
-발견: `chatAnsiBuilders.js`의 `msgLine()`이 메시지 본문을 `fitCell(text, maxText)`로 렌더링하는데, 대화 메시지는 서버에서 최대 2000자까지 허용된다(`chatServiceRoutes.js`의 `content.length > 2000` 검증). `fitCell`은 단순 절삭이라 모바일 기준 약 30자(데스크톱 약 60자)를 넘는 순간부터 초과분이 문자열 자체에서 잘려나가 화면 어디에도 남지 않았다 — 지금까지 찾은 5건(게시글/안건/쪽지/프로필/생체리듬)은 전부 시각적으로만 잘려 원본 데이터는 남아있었는데, 이번엔 유일하게 렌더 단계에서 원본 문자열 자체가 손실되는 가장 심각한 사례였다. 귓속말(`[TO:...]`) 포맷 메시지도 동일한 절삭 로직을 공유해 같은 문제를 겪었다.
-구현: `msgLine()`을 배열을 반환하도록 바꾸고, 일반 메시지와 귓속말 메시지 모두 `wrapAnsiText(text, maxText)`로 여러 줄로 접어 라벨(발신자 표시) 폭만큼 들여쓰기했다. 호출부(`parts.push(msgLine(message))` → `parts.push(...msgLine(message))`)도 배열 스프레드로 변경. 기존엔 "메시지 16개 = 화면 16줄" 가정으로 고정폭 프레임을 유지했는데, 이제 메시지 하나가 여러 줄을 차지할 수 있으므로 총 줄 수가 16줄을 넘을 수 있다 — 뉴스/도움말/오목 화면에서 이미 확립된 패턴(20260710_1815/20260718_2340/20260720_2010)을 그대로 확장해 `body[data-screen="chat-room"] #terminal-screen`에 `overflow-y:auto` 등 스크롤 완화를 추가했다(style.css:2716 부근).
-검증: 실제 대화방을 API로 생성(`/api/chat/rooms`)해 200자 한글 메시지(표시폭 400칸)를 실제로 전송(`/api/chat/rooms/:no/messages`) — Node 하네스로 `buildChatRoomAnsi` 직접 호출 결과 15줄(모바일)/7줄(데스크톱)로 완전히 보존되어 wrap됨을 확인. 실제 브라우저로도 재확인(`J 4` 명령으로 입장 — 처음엔 로비 목록의 숫자 인덱스 선택(`selectedRoom = parseInt(cmd)`)과 방번호 기반 `J` 명령을 혼동해 엉뚱한 방(#1 PLAZA)에 들어간 시행착오가 있었음, 방번호로 정확히 들어가는 `J <방번호>` 문법으로 재시도해 해결) — 모바일(390x844)/데스크톱(1280x900) 스크린샷 모두 전체 메시지가 정확히 줄바꿈되고 하단 힌트바/입력창도 정상 위치에 유지됨을 확인. 이후 짧은 메시지("짧은 메시지 테스트")도 추가해 한 줄로 정상 렌더(무회귀) 확인. `npm run smoke:chat-rooms`/`smoke:menu-wiring`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 전부 통과. 테스트로 만든 대화방은 `chat_messages`가 별도 테이블이 아니라 메모리 캐시(`messagesByRoomNo`)뿐이라 방 자체만 Supabase `chat_rooms` 테이블에서 `room_no=4` 기준 서비스 롤 키로 직접 삭제해 정리(참여자 3명이 남아 있어 일반 leave API로는 소유자 자동 종료 조건을 못 채웠음).
-결과: ✅ 완료 — 같은 버그 클래스의 6번째이자 가장 심각한 사례(문자열 자체 손실). 대화방은 이 앱의 핵심 상호작용 기능 중 하나라 실사용 영향도가 높다.
-
-## [2026-07-26 06:05] [/loop 계속] 320px 초협소 모바일(iPhone SE 1세대급) 전수조사 — 추가 버그 없음, vw 기반 폰트 스케일링 설계 검증
-
-**LOG_ID: 20260726_0600**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 이번 세션에서 지금까지 테스트한 모바일 너비는 360~390px대뿐이었으므로, 실제로 존재하는 가장 좁은 실사용 너비(320px, iPhone SE 1세대·구형 저가 안드로이드)에서도 문제가 없는지 확인. main/board-plaza/pds/chat/agora/forum/game/omok/login/signup/help/news/weather 13개 화면을 320x568로 스크린샷·측정.
-1차 오탐: omok 화면 스크린샷에서 "귀하가 흑(●) 선공입니다. 놓을 좌표를 입력하세" 문구가 시각적으로 잘려 보여 새 버그로 의심했으나, `.ansi-line`의 실제 `textContent`를 직접 덤프해보니 "...입력하세요."까지 완전한 문장이었고, `getBoundingClientRect()`로 실측한 결과 `right: 319px`(뷰포트 320px 안, 여유 1px)로 실제로는 잘리지 않았다 — 저해상도 스크린샷의 폰트 렌더링 때문에 눈으로 봤을 때만 잘린 것처럼 보인 착시였다.
-설계 확인: 이 여유가 겨우 1~2px인 이유를 추적하다가, `@media (max-width:768px) and (orientation:portrait)`(style.css:2290) 블록의 `.ansi-line { font-size: clamp(12px, min(4.2vw, calc(var(--stable-vh,100vh)*0.027)), 16px); }`가 더 오래된 고정값 규칙(`@media (max-width:400px) { .ansi-line{font-size:10px} }`, 2007행)보다 소스상 뒤에 있어 실제로 적용되는 규칙임을 확인 — 즉 모바일 세로 화면의 본문 폰트 크기는 고정 px가 아니라 뷰포트 폭에 비례(4.2vw)하도록 설계되어 있어, 44칸 고정 폭 예산이 320px든 768px든 항상 비슷한 여유로 들어맞도록 만들어져 있다(320px 기준 계산: 4.2vw=13.44px, 하한 12px보다 위라 실제 디바이스 범위에서 폭 하한에 걸리지 않음).
-검증: 13개 화면 스크린샷 전부 육안 확인 — 목록형(게시판/자료실/대화실/뉴스/날씨/오락실 메뉴), 폼형(로그인/회원가입), 안내형(도움말) 전부 잘림·겹침·깨짐 없음. `document.documentElement.scrollWidth`도 전 화면에서 뷰포트 폭과 일치(가로 오버플로 없음). 이전 라운드들에서 고친 ANSI 그리드 wrap 로직(게시글/안건/쪽지/프로필/생체리듬)은 `isMobile` 불리언 하나로 44/80칸을 가르는 구조라 320px에서도 정확히 같은 분기(44칸)를 타므로 별도 재현 없이도 로직상 영향받지 않음을 확인(폰트 크기만 vw로 달라질 뿐 글자 수 계산은 불변).
-결과: ✅ 완료 — 새 버그는 없었지만, 실사용 최소 너비(320px)에서도 안전함을 확인했고, 그 근거가 되는 vw 기반 폰트 스케일링 설계(고정 px가 아님)를 코드 추적으로 명확히 파악 — 향후 라운드에서 "폭 관련 버그"를 찾을 때 이 설계를 참고할 수 있음. 코드 변경 없음, 회귀 테스트 불필요.
-
-## [2026-07-26 05:55] [/loop 계속] 가상 키보드 열림(포터레이트/랜드스케이프 모두) 시나리오 검증 — 추가 버그 없음, 기존 방어 체계 재확인
-
-**LOG_ID: 20260726_0555**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전 라운드(20260726_0520)에서 랜드스케이프 저해상도의 `#terminal-screen` min-height 넘침 버그를 고쳤으니, 실사용에서 훨씬 더 흔한 "가상 키보드가 열려 화면 높이가 갑자기 줄어드는" 시나리오(포터레이트든 랜드스케이프든)에서도 같은 클래스의 버그가 재현되는지 확인.
-1차 실수: 포터레이트 키보드 열림을 흉내낸다고 375x300/390x400/360x350처럼 세로를 과하게 줄였는데, 이는 width>height가 되어 CSS `orientation` 미디어 피처상 오히려 "랜드스케이프"로 분류돼버려 실제 재현하려던 시나리오가 아니었다(측정으로 발견: `window.innerWidth > window.innerHeight`). 실제 키보드가 열려도 폭<높이(세로 형태)는 거의 항상 유지된다는 점을 반영해 375x400/375x380(극단)/390x500/360x420으로 재구성.
-발견: 포터레이트 키보드 열림(375x380까지 극단 테스트)에서는 main/pds/chat 전부 명령 입력창이 스크롤 없이 완전히 보였다. 원인을 추적해보니 `@media (max-width: 768px) and (orientation: portrait)`(style.css:2636) 블록 안에 이미 `#terminal-screen { min-height: 0 !important; ... }`(2682행)과 `--stable-vh`/`clamp()` 기반 동적 폰트 크기, `body[data-mobile-keyboard="visible"]` 속성 기반 스크롤 처리까지 갖춘 훨씬 정교한 키보드 대응 체계가 이미 구현되어 있었다(오목/뉴스/도움말/게시글 보기 등 화면별 세분화된 완화까지 포함). 즉 포터레이트는 애초에 안전했다 — 직전 라운드에서 랜드스케이프에 같은 처방(min-height 해제)이 빠져 있던 게 유일한 공백이었다는 걸 재확인.
-추가 검증: 랜드스케이프+키보드 동시 극단 케이스(844x220, 700x250, 812x300 — 일반 랜드스케이프 저해상도보다 더 낮음)도 확인 — main/pds는 이 높이에서도 완전히 보이거나 스크롤로 도달 가능했고, omok도 직전 라운드 수정 덕분에 스크롤로 도달 가능함을 재확인(`fullyVisible` 또는 `reachableByScroll` 중 하나는 항상 true, 완전히 도달 불가능한 조합 없음). 스크린샷으로도 깨짐 없이 확인(844x220 main: 메뉴+입력창 완전히 보임, omok: 반상 상단 정상 표시).
-결과: ✅ 완료 — 이번 라운드는 새 버그를 고치지 않았지만, (1) 포터레이트는 이미 정교한 키보드 대응 체계로 방어되어 있음을 코드 추적으로 확인, (2) 직전 랜드스케이프 수정이 키보드 열림까지 겹친 훨씬 더 극단적인 조건에서도 여전히 유효함을 검증 — 코드 변경 없음, 회귀 테스트 불필요.
-
-## [2026-07-26 05:25] [/loop 계속] 랜드스케이프 모바일(가로 방향, 844x390 등)에서 명령 입력창이 뷰포트 밖으로 완전히 밀려나던 심각한 버그 수정
-
-**LOG_ID: 20260726_0520**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 지금까지는 세로(portrait) 모바일 뷰포트만 점검해왔으므로, 폰을 눕힌 랜드스케이프(가로) 방향(예: 844x390 — 너비>높이)에서도 문제가 없는지 확인. main/pds/omok/chat 4개 라우트를 844x390 뷰포트로 스크린샷·측정.
-발견: main은 문제없었지만, pds(자료실 목록)와 omok(오목 게임)에서 심각한 버그를 발견 — 상단바가 화면 위로 잘려 보이고, 힌트바·명령 입력창(`#cmd-input`)이 스크린샷에 아예 나타나지 않았다. `getBoundingClientRect()`로 직접 측정한 결과 `cmdInputRect.top`이 `innerHeight`(390)를 넘어(예: 415~531) 완전히 뷰포트 밖에 위치했고, `#terminal-container`의 top도 음수(-116)로 나와 내용이 위아래로 대칭적으로 넘치고 있었다.
-근본 원인: `#terminal-screen`에 "본문이 항상 24행을 차지해 하단 입력창이 흔들리지 않게 한다"는 기존 정책(LOG 20260707_1735)으로 `min-height: 33.6em !important`가 걸려 있는데, 이 값은 랜드스케이프 저해상도 전용 미디어쿼리(`@media (max-height: 480px) and (orientation: landscape)`, style.css:2097)에서 오버라이드되지 않았다. 게다가 844px 너비는 일반 모바일 분기(`max-width: 768px`)도 건너뛰어 데스크톱 폰트(17px)가 그대로 적용되므로 33.6em=571px라는 고정 최소 높이가 390px 뷰포트를 크게 초과 — flex-column 안에서 이 자식(`#terminal-screen`)이 그 아래로 줄어들지 못해 형제(`#terminal-footer`)까지 통째로 화면 밖으로 밀려났다.
-구현: 해당 랜드스케이프 미디어쿼리 안에 `#terminal-screen { min-height: auto !important; }`를 추가해 이 뷰포트에서는 24행 고정 정책을 포기하고 실제 콘텐츠 높이에 맞춰 줄어들도록 함(`overflow-y: auto`가 원래도 걸려 있어 내부 스크롤이 대신 처리).
-시행착오: 처음엔 `#scroll-bottom-btn`("맨 아래로 스크롤" 버튼)을 오목처럼 화면 안 인라인 프롬프트를 쓰는 게임에서 자동으로 띄우도록 `terminalSequentialRenderer.js`/`ansiTopbarScreen.js`에 로직을 추가했으나, 이 버튼은 `retro-terminal.css:1269`에 "[LOG: 20260610_1150] 사용자 요청으로 시각적 숨김"이라는 명시적 과거 요청으로 `display: none !important` 처리되어 있어 실제로는 절대 보이지 않는 죽은 코드가 된다는 걸 뒤늦게 확인 — 과거 사용자 의도를 거스르지 않도록 두 JS 변경 모두 되돌리고 순수 CSS 수정만 남겼다.
-검증: `pds`/`chat`(하단 고정 명령 입력창 사용)는 수정 후 `cmdInputRect`가 완전히 390px 뷰포트 안에 들어와 스크롤 없이도 입력창이 보임(스크린샷 확인). `omok`(게임 보드 뒤에 인라인 프롬프트를 쓰는 화면)은 여전히 스크롤이 필요하지만 — 수정 전엔 페이지 자체가 넘치는 공간이 없어 절대 도달 불가능했던 것과 달리, 수정 후엔 `#terminal-screen`의 정상적인 내부 스크롤(`scrollHeight` 559 vs `clientHeight` 390)로 실제로 스크롤해서 도달 가능함을 직접 확인(스크롤 시 입력창이 뷰포트 맨 아래 정확히 걸쳐 보임). `npm run smoke:menu-wiring`/`smoke:boards`/`smoke:auth-bridge`/`smoke:chat-rooms`/`smoke:rss-services`/`smoke:renderer-ui`/`smoke:ui-geometry`/`smoke:ui-layout`/`smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2, 세로 방향) 재실행 전부 통과, 무회귀. (`npm test`는 이 샌드박스에 `archive/` 디렉터리 자체가 없어 이번 세션 전체에서 애초에 실행 불가능한 환경 문제 — 본 수정과 무관.)
-결과: ✅ 완료 — 이번 세션 최초로 세로가 아닌 가로(랜드스케이프) 방향 모바일을 점검했고, 지금까지의 "고정폭(가로) 넘침" 버그 클래스와는 별개로 "고정 최소 높이(세로) 넘침"이라는 새로운 버그 클래스를 찾아 수정. 하단 고정 입력창을 쓰는 대다수 화면은 스크롤 없이 완전히 정상화, 인라인 프롬프트를 쓰는 게임 화면은 최소한 스크롤로 도달 가능하도록 개선.
-
-## [2026-07-26 05:00] [/loop 계속] 로그인 화면에도 같은 flex min-width 결함 발견·부분 수정 + 낮은 심각도 잔여 사례 기록
-
-**LOG_ID: 20260726_0420**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 직전(비밀번호 찾기)에서 찾은 "flex-column 자식의 min-width:auto" CSS 결함이 같은 스타일시트(`entry-auth.css`) 안에 더 있는지 확인. `display: flex` + `flex-direction: column` 선택자를 파일 전체에서 검색.
-발견: 로그인 화면(`.entry-login-transcript`)도 정확히 같은 구조(flex-column)였다. 120자 더미 ID로 재현 — echo 줄이 뷰포트 밖으로 잘림. `.entry-login-message` 등에 비밀번호 찾기와 동일한 `min-width:0` + `word-break:break-all`을 적용했다.
-그런데 재검증 중 이 수정이 실제로는 이 재현 케이스를 못 고친다는 걸 발견했다 — 실제 DOM을 까보니 로그인의 "커밋된 줄"은 일반 텍스트 `<div>`가 아니라 `readonly` **`<input>`** 요소(`class="retro-cmd-input"`, `flex:1`)로 입력값을 보여주고 있었다(라이브 타이핑 중인 입력창과 시각적 일관성을 유지하려는 의도로 보임). `<input>` 요소는 원천적으로 줄바꿈이 불가능해 부모의 min-width를 고쳐도 이 특정 컨트롤 자체는 여전히 한 줄로 넘친다.
-판단(수정 보류): 이 정확한 재현(120자 쓰레기 값)은 실제로는 낮은 심각도로 판단했다 — 서버가 실제로 발급하는 회원 ID는 영문/숫자 20자 제한(`/^[a-zA-Z0-9_]{3,20}$/`, 표시폭 20칸)이라 애초에 44칸 예산 안에 항상 안전하게 들어간다(실측 확인: 20자 재현 시 한 줄로 깔끔). 즉 이 잘림은 "어차피 로그인에 실패할 무의미한 쓰레기 입력"에서만 나타나고, 실제로 유효할 수 있는 어떤 입력으로도 재현되지 않는다. `<input>` 기반 렌더링 자체를 바꾸는 더 큰 구조 변경은 이 낮은 실사용 위험 대비 회귀 위험이 더 크다고 판단해 이번엔 손대지 않고 발견만 기록한다(쪽지함 중복 힌트 건과 같은 패턴 — 위험도 대비 낮은 가치 판단으로 보류).
-구현: `.entry-login-message`/`.entry-login-committed-value`/`.entry-login-blank-line`에 `min-width:0`+`word-break:break-all` 추가(비밀번호 찾기와 동일 패턴 적용, 향후 이 클래스들이 순수 텍스트 줄에 쓰이는 다른 경로에는 여전히 유효한 방어적 수정).
-검증: 실제 20자(서버 최대 허용치) ID 재현 — 한 줄로 정상 표시, 무회귀. 짧은 기본 로그인 화면도 스크린샷 재확인, 무회귀. `npm run smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 통과.
-결과: ✅ 부분 완료 — 같은 CSS 결함의 7번째 사례를 찾았고, 향후 재발 방어용 CSS는 적용했으나 이 특정 화면의 정확한 재현(readonly input 기반 echo)은 구조적 제약과 낮은 실사용 위험을 근거로 의도적으로 미수정 — 발견 사실만 정확히 기록.
-
-## [2026-07-26 04:45] [/loop 계속] 비밀번호 찾기 화면 — 입력값 echo 줄이 CSS 레벨에서 안 잘리던 버그(6번째, 이번엔 ANSI 그리드가 아니라 flex 레이아웃 원인) 수정
-
-**LOG_ID: 20260726_0410**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 아직 점검하지 않았던 비밀번호 찾기(`/log/password`) 흐름 점검. 오류 메시지가 사용자 입력을 그대로 되돌려 보여주는 화면은 이 세션 초반(SSTI 오탐 발견)에서도 그랬듯 폭 관련 결함이 숨어 있기 좋은 자리라 판단해 일부러 아주 긴 문자열을 입력해 재현 시도.
-발견: 120자짜리 입력값을 넣어보니 echo 줄이 뷰포트 밖으로 그대로 잘렸다(`document.documentElement.scrollWidth`는 안 늘어남 — 이 세션에서 여러 번 확인된 "조상 요소의 overflow-x:hidden" 패턴과 동일 증상). 다만 이번엔 원인이 지금까지와 달랐다 — 게시글 제목/안건/쪽지/프로필/생체리듬은 전부 ANSI 고정폭 텍스트(`fitCell`/직접 보간) 문제였는데, 이 화면(`authScreens.js`의 `renderPasswordResetTranscript`)은 애초에 진짜 HTML `<div class="entry-password-line">`를 쓰고 `white-space`도 기본값(normal)이라 겉보기엔 안전해 보였다. 실제 원인은 CSS였다 — 이 div의 부모(`.entry-password-transcript`)가 `display:flex; flex-direction:column`인데, flex 자식의 기본 `min-width`는 `auto`(내용 크기 기준)라 좁은 화면에서 줄어들지 못했고, white-space:normal이어도 컨테이너 자체가 줄어들지 않으니 줄바꿈이 발동할 공간이 없어 그대로 조상의 overflow-x:hidden에 잘렸다.
-구현: `.entry-password-line`/`.entry-password-prompt-row`에 `min-width: 0`(줄어들 수 있게 허용 — 상단바 grid 사례(20260726_0310)와 같은 처방이지만 이번엔 flex-column이라 형제 요소와 폭을 다투지 않아 그때 겪었던 겹침 회귀 위험이 없다)과 `word-break: break-all`(공백 없는 긴 문자열도 줄바꿈되도록)을 추가.
-검증: 120자 입력 재현 테스트 — 수정 전 한 줄로 잘림 → 수정 후 3줄로 정확히 줄바꿈. 기존 정상 길이 입력(초기 화면, 짧은 안내문)은 스크린샷으로 무회귀 확인. `npm run smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 통과.
-결과: ✅ 완료 — 같은 "긴 자유 텍스트가 잘림" 증상의 6번째 사례지만, 처음으로 ANSI 그리드가 아니라 순수 CSS flex 레이아웃이 원인인 경우를 발견 — 이 버그 클래스가 렌더링 방식(ANSI 고정폭 vs HTML)을 가리지 않고 나타날 수 있음을 확인.
-
-## [2026-07-26 04:25] [/loop 계속] 생체 리듬(오락실) 데스크톱 화면 — 긴 닉네임 줄이 80칸도 넘던 버그(5번째, 같은 원인의 다른 파일) 수정
-
-**LOG_ID: 20260726_0400**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 프로필 화면에서 찾은 "닉네임 폭 미제한" 결함과 같은 소스 코드 안티패턴(값에 fitCell/wrapAnsiText 없이 그대로 문자열 보간)이 다른 파일에도 남아있는지 `${...[Nn]ick|[Nn]ame}` 계열 패턴으로 코드베이스를 훑어 확인.
-발견: `amusementAnsiBuilders.js`의 `buildBiorhythmAnsi()`(오락실 생체 리듬)가 로그인한 사용자의 닉네임을 `  생 일 : ...(양)   <...>   ${userName}님의 신체리듬` 형태로 폭 제한 없이 그대로 넣고 있었다. 이 줄 자체가 고정 문구만으로 이미 50여 칸이라, 닉네임이 20자(표시폭 40칸)에 가까우면 데스크톱(80칸) 예산도 넘긴다(직접 계산: 20자 닉네임 기준 99칸). 다만 이 함수는 `isMobile` 분기가 있어 모바일에서는 이 줄 자체를 안 그리고 점수+막대 요약으로 대체하므로 — 모바일에서는 재현되지 않고 데스크톱에서만 재현되는, 게시글 제목 버그(20260726_0210)와 같은 패턴의 결함.
-조사 방법: 로그인 세션이 필요한 화면이라(쪽지 보기 때와 같은 이유로) 실제 로그인 흉내 대신, `amusementAnsiBuilders.js`를 Node 하네스로 직접 로드해(이 세션에서 확립된 패턴) `buildBiorhythmAnsi(birth, date, '가나다라마바사아자차가나다라마바사아자차')`(20자)를 직접 호출·검증.
-구현: 문제의 줄을 `wrapAnsiText(..., targetCols)`로 감싼다. 같은 파일의 나머지 화면(MBTI/혈액형/궁합/토정비결)도 확인 — 그쪽은 전부 고정된 정적 데이터셋(코드/닉 라벨)만 보간해 사용자 자유 입력 위험이 없음을 코드 재확인.
-검증: 하네스로 20자 닉네임 렌더 결과 확인 — 수정 전 99칸 단일 줄(overflow) → 수정 후 2줄로 정확히 접힘("...가나다라마바사아자" / "차님의 신체리듬"). `node --check` 통과. `npm run smoke:full-traversal`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 통과(모바일 분기는 애초에 이 줄을 안 쓰므로 무회귀).
-결과: ✅ 완료 — "라벨: 자유 텍스트 값에 폭 제한 없음" 버그 클래스의 5번째 사례(게시글/안건/쪽지/프로필/생체리듬). 이번엔 순수 모바일이 아니라 프로필 결함과 같은 근본 원인을 코드베이스 전체에서 사전 검색해 데스크톱 전용 재발 사례를 미리 찾아 막았다는 점에서 방법론적으로 한 단계 발전.
-
-## [2026-07-26 03:45] [/loop 계속] 회원 프로필 화면 — 20자 닉네임이 뷰포트 밖으로 그냥 흘러넘치던 버그(4번째, 이번엔 절삭조차 없었음) 수정
-
-**LOG_ID: 20260726_0350**
-목표: `/loop 모바일ui가 완벽해질때까지 전수조사` 계속 — 게시글/안건/쪽지 보기에서 연달아 발견한 "라벨: 긴 자유 텍스트" 버그 클래스가 남은 "라벨: 값" 스타일 화면(회원 프로필, `buildProfileAnsi`)에도 있는지 점검. 아직 이번 세션의 정적 게스트 화면 17개 목록에 포함되지 않았던, 처음 점검하는 화면이었다.
-발견: 이번엔 이전 3건보다 더 심했다 — `buildProfileAnsi()`의 `row()` 헬퍼가 값에 `fitCell`조차 씌우지 않고 그냥 이어붙이고 있었다. 닉네임은 서버에서 한글 20자(표시폭 40칸, `authRoutes.js` `nickName: { maxLength: 20 }`)까지 허용되는데, 실제로 20자 닉네임으로 회원가입 후 프로필을 열어보니 텍스트가 말 그대로 뷰포트 오른쪽 끝을 넘어 흘러넘쳤다 — `document.documentElement.scrollWidth`는 늘지 않아(조상 요소의 `overflow-x:hidden` 때문, 이 세션에서 여러 번 확인된 패턴) 자동 오버플로 검사로는 이 결함이 절대 잡히지 않는다. 아이디는 영문/숫자 20자 제한(표시폭 20칸, `pattern: /^[a-zA-Z0-9_]{3,20}$/`)이라 애초에 안전해 손대지 않음.
-구현: `row()`는 그대로 두고 닉네임 전용 `rowWrapped(label, value)`를 추가해 `wrapAnsiText`로 여러 줄로 접고 라벨 폭만큼 들여쓰기. `wrapAnsiText`가 이 파일에 아직 구조분해되어 있지 않아 destructure 목록에 추가.
-검증: `node --check` 통과. 20자 닉네임으로 실제 회원가입(`/api/members/register`) 후 `/profile/:userId`를 모바일(390x844)·데스크톱(1280x900)에서 스크린샷 확인 — 모바일은 2줄로 정확히 접혀 잘림·흘러넘침 없음, 데스크톱(80칸 예산)은 한 줄로 충분히 들어감. 기존 짧은 닉네임 프로필도 재확인 — 좌표/줄바꿈 변화 없음(무회귀). `npm run smoke:full-traversal`(프로필 라우트 하네스 포함)/`smoke:vercel-ready`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 통과. 테스트 계정은 `/api/members/:userId` DELETE로 정리(실 Supabase 데이터 오염 없음).
+발견: `postWriteView.js`의 `renderBbsEditor()`(게시글 작성/수정에 실제로 쓰이는 박스 에디터, 옛 줄단위 트랜스크립트 에디터는 이미 죽은 코드로 확인됨)에서 `const sep = '─'.repeat(76);`이 이미 계산되어 있는 `isMobile` 변수를 전혀 참조하지 않고 데스크톱 76칸 폭 그대로 렌더되고 있었다. 이 구분선은 `white-space:pre` 스타일의 `<div>`로 렌더되어 줄바꿈되지 않고, 부모의 `overflow-x:hidden`에 의해 …18964 tokens truncated…`/api/members/register`) 후 `/profile/:userId`를 모바일(390x844)·데스크톱(1280x900)에서 스크린샷 확인 — 모바일은 2줄로 정확히 접혀 잘림·흘러넘침 없음, 데스크톱(80칸 예산)은 한 줄로 충분히 들어감. 기존 짧은 닉네임 프로필도 재확인 — 좌표/줄바꿈 변화 없음(무회귀). `npm run smoke:full-traversal`(프로필 라우트 하네스 포함)/`smoke:vercel-ready`/`scripts/smoke-mobile-viewports.js`(27×2) 재실행 통과. 테스트 계정은 `/api/members/:userId` DELETE로 정리(실 Supabase 데이터 오염 없음).
 결과: ✅ 완료 — 같은 버그 클래스의 4번째 사례, 이번엔 유일하게 "절삭조차 없던" 가장 심각한 형태. 게시글/안건/쪽지/프로필 4개 화면 모두 수정 완료.
 
 ## [2026-07-26 03:20] [/loop 계속] 쪽지 보기 화면 — 60자 제목이 말줄임표 없이 잘려 보이던 동일 유형 버그 3번째 발견·수정
@@ -7881,6 +7600,9 @@ DOM `textContent` 직접 확인으로 실제 데이터 손실(화면 렌더링 �
 
 ## [2026-07-22 12:35] [기능 개선] 상단 본문 "제목 :" 줄에서 실시간으로 타이핑 및 커서(█)가 반응하도록 인터랙션 완전 개선
 
+Warning: truncated output (original token count: 27472)
+Total output lines: 500
+
 
 **LOG_ID: 20260722_1235**
 목표: 사용자 4차 지적 — "아직도 제목 입력을 화면 아래에서 하는데". 기존에는 키보드로 제목을 칠 때 화면 맨 아래 24행 푸터 프롬프트에서 커서가 반짝여 사용자가 시선상 "화면 아래에서 제목을 입력하고 있다"고 느꼈다.
@@ -8076,134 +7798,7 @@ DOM `textContent` 직접 확인으로 실제 데이터 손실(화면 렌더링 �
 
 ---
 
-## [2026-07-21 21:00] [보안/버그 수정] "다른화면전수점검" — 4개 서브에이전트 전수 감사 결과 반영: 평문 비밀번호 저장(치명), 게시글 수정/답글 깨짐(치명), 게시판 열람권한 우회, 회원 개인정보 무인증 유출, 혈액형 'B' 입력 충돌 등 9건 수정
-
-**LOG_ID: 20260721_2100**
-목표: 사용자 요청 — "다른화면전수점검"(직전 화면별 명령어 감사에 이어, 남은 전체 화면을 빠짐없이 점검). 철학관(오락실 산하)/뉴스·날씨·자료실·복고 화면/게시판 목록·조회·글쓰기 핵심 로직/로그인·가입·내정보·회원검색 보안, 4개 영역을 백그라운드 서브에이전트 4개로 병렬 조사한 뒤, 심각도 순으로 직접 코드를 재확인하며 수정했다.
-
-**[치명] 회원 비밀번호 평문 저장**: `MemberRepositoryMemory.js`(인메모리 모드)와 `MemberRepositorySupabase.js`(Supabase 모드) 둘 다 `password` 컬럼에 평문을 그대로 저장·비교하고 있었다 — DB 백업 접근이나 서비스 롤 키 유출 시 전체 회원 비밀번호가 그대로 노출되는 구조. bcrypt 등 신규 npm 패키지는 승인이 필요해(CLAUDE.md) Node 내장 `crypto.scryptSync` 기반 신규 유틸 `src/server/PasswordHashing.js`를 작성(저장 형식 `scrypt$<salt-hex>$<key-hex>`, `timingSafeEqual`로 비교). 두 저장소의 `verifyPassword`/`setPassword`를 이 유틸로 교체했고, 기존 평문 계정은 로그인 성공 시점에 조용히 해시로 자동 마이그레이션되도록 했다(계정 잠김 없음, `isHashedPassword`로 형식 판별 후 레거시면 평문 비교→성공 시 즉시 재저장). 겸사겸사 발견한 연관 버그도 정정: `authRoutes.js` 회원가입의 비밀번호 최소 길이가 4자였는데(비밀번호 변경 라우트는 이미 6자) 6자로 통일, `signup-precheck`의 아이디 정규식이 `{3,40}`이라 실제 가입 제한(`{3,20}`)보다 넓어 21~40자 아이디가 "사용 가능"으로 잘못 안내된 뒤 실제 가입에서 거부되던 불일치도 함께 정정.
-
-**[치명] 게시글 수정/답글이 병합된 local_id 체계에서 깨짐**: 다른(병렬) 세션이 게시판을 전역 `id` 대신 게시판별 순번 `local_id`로 이전했고 목록·조회·삭제·추천·첨부 등 거의 모든 호출부가 `post.localId ?? post.id`로 갱신됐는데, `postWriteView.js`의 글쓰기 제출 함수만 누락되어 여전히 `state.post?.id`(전역 PK)를 그대로 API에 넘기고 있었다 — Supabase 배포(local_id 사용 중인 실서비스)에서 **거의 모든 글의 수정·답글이 엉뚱한 postId로 요청되어 실패**하는 상태였다. `state.post?.localId ?? state.post?.id`로 수정.
-
-**[높음] 게시판 열람권한(레벨) 우회**: `SupabaseBoardRepositoryPostReads.js`의 `getPost()`가 게시판 존재 여부만 확인하고 `listPosts()`와 달리 `assertBoardAccessible()` 호출이 아예 빠져 있었다 — 목록에서는 레벨 제한이 걸려도, 글 번호(postId)를 직접 알면 접근 레벨 미달 사용자도 `GET /api/boards/:boardId/posts/:postId`로 본문을 그대로 읽을 수 있었다. 호출 추가.
-
-**[높음] 첨부파일 목록 화면 인자 오류**: `commandRouterPostView.js`의 다운로드 완료 후 복귀 분기가 `showAttachmentList(file.postId)`를 1개 인자로만 호출 — 함수 시그니처는 `(boardId, postId, ...)`라 실제로는 `boardId` 자리에 postId가 들어가고 `postId`는 `undefined`가 되어 자료실에서 다운로드 후 복귀 시 목록이 깨졌다. `showAttachmentList(state.board.id, file.postId)`로 수정.
-
-**[높음] 회원 개인정보 무인증 유출**: `GET /api/members/:userId`, `GET /api/members/search` 두 엔드포인트에 인증 미들웨어가 전혀 없고, 응답을 만드는 `toPublicMember()`는 password/id/authUserId만 제거할 뿐 email/birthday/sex/lastLoginDateTime은 그대로 남겨둬 — **로그인 없이 아이디만 알면 아무 회원의 이메일·생일·성별·최근 접속시각을 그대로 조회**할 수 있었다(클라이언트 화면 어디에도 이 필드들을 표시하는 곳은 없어 순수 API 레벨 유출). 본인/관리자가 아닌 조회에서만 이 4개 필드를 제거하는 `_toDirectoryMember()`를 추가해 두 핸들러에 적용 — 프로필/검색 화면은 이 필드를 안 써서 기존 기능 그대로 동작.
-
-**[높음] 혈액형 'B' 입력이 게임방 이동 단축키와 충돌**: `commandRouterService.js`의 모든 서비스 화면이 P/M/B를 오락실 이동 단축키로 먼저 검사하는데, 혈액형 진단(`blood-input`/`blood-result`)만은 실제 입력값(A/B/O/AB)에도 'B'가 있어 **혈액형 B를 입력하면 항상 오락실로 튕겨나가고 결과를 볼 수 없었다**(A/O/AB는 정상 동작). 두 화면에 한해 혈액형 패턴 검사를 P/M/B 내비게이션 검사보다 먼저 하도록 순서를 바꾸고, 'B' 자체는 더 이상 내비게이션으로 안 쓰이므로 두 화면의 내비게이션 단축키에서 제거(P/M만 유지, 원래도 풋터엔 B가 안내된 적 없음).
-
-**[높음] 철학관 7개 화면 풋터(힌트바) 완전 누락**: `commandFooterText.js`의 `SCREEN_TO_CATEGORY`에 `blood-input/result`, `compat-input/input2/result`, `tojeong-input/result` 7개 화면이 아예 없어 `getSupportedFooterText()`가 매칭 카테고리를 못 찾고 빈 문자열을 반환 — 이 7개 화면은 하단 명령 힌트바가 통째로 안 보이고 있었다. 같은 계열의 bio/fortune/mbti 화면과 동일하게 `amusementInput`/`amusementView`로 매핑.
-
-**[중간] 날씨 조회 실패가 빈 화면으로만 나타남**: `weatherScreens.js`가 지역 날씨 피드 로드 실패 시 `feed.unavailable`/`feed.message`를 `buildWeatherAnsi()`에 아예 전달하지 않았고(내 위치 날씨 쪽은 이미 처리돼 있었는데 지역 날씨만 빠짐), `buildWeatherAnsi()`도 이 필드를 검사하지 않아 실패 시 헤더만 있는 빈 표가 그려졌다 — 둘 다 연결해 실패 사유 문구를 표시하도록 수정.
-**[중간] PT(제목 일괄출력) 조회 실패가 "결과 없음"과 구분 안 됨**: `postListView.js`의 `showPtResult()`가 `apiFetch(...).catch(() => null)`로 실패를 완전히 삼켜, 네트워크 오류든 진짜로 지정 번호 이후 글이 없든 사용자에게는 똑같이 보였다 — 실패 사유를 별도로 저장해 "목록을 불러오지 못했습니다: <사유>"로 구분 표시.
-
-검증: `hashPassword`/`verifyPasswordHash` 왕복(정상/오답/레거시 평문 호환) 4개 어서션 통과. `commandRouterService.js`를 Node ESM으로 직접 임포트해 혈액형 B/A 입력이 `showBloodResult`로 가고 P는 여전히 게임 이동으로 가는지 등 5개 어서션으로 확인. 회원 API PII 제거는 코드 리뷰로 확인(순수 구조분해 제거라 로직 단순). `node --check` 수정 파일 전체(13개) 통과. `npm run loop:verify`(boards/command-parity/menu-wiring/signup-ime/renderer-ui/chat-rooms/auth-bridge/vercel-ready/qa:final 9종) 전체 통과 — 특히 boards/auth-bridge가 통과해 비밀번호 해싱·local_id 수정이 기존 가입/로그인/글쓰기 스모크를 깨지 않았음을 확인.
-남은 항목(이번엔 손대지 않음, 아키텍처 영향 커서 사용자 확인 필요): 인메모리(Supabase 미연동) 배포 모드는 로그인이 클라이언트에서 `state.supabase.auth.signInWithPassword`로만 이뤄져 서버 자체 로그인 라우트가 없다 — Supabase 없이는 로그인 자체가 불가능한 구조적 공백(세션 발급 방식 설계가 필요해 이번 배치엔 미포함). 회원 탈퇴가 게시글/쪽지/대화방 멤버십에 연쇄(cascade)되지 않음. `MemoryBoardRepositoryCore.js`가 아직 전역 `id` 체계라 local_id 이전에서 빠져 있음. 답글 들여쓰기가 깊이에 비례하지 않고, 원글 삭제 시 답글이 고아로 남음. MyInfo 닉네임에 20자 클라이언트 측 상한 표시가 없음(서버는 이미 20자로 검증함). `newsScreens.js`도 피드 unavailable 상태를 버림(날씨와 같은 유형, 우선순위 낮음).
-결과: ✅ 완료 — 치명 2건(평문 비밀번호, 글수정/답글 깨짐)과 높음 4건(권한 우회, 첨부목록 인자오류, 회원정보 유출, 혈액형B 충돌+풋터 누락)을 포함해 9개 이슈를 수정했다. 오락실 게임 9종/신규 게시판 8개/N+1·에러 핸들링 등은 이전 세션에서 이미 점검 완료된 항목이라 이번 범위에서 제외했다(TaskList #1~#3 참조).
-
----
-
-## [2026-07-21 18:30] [버그 수정] 화면별 로컬 명령어 감사 — 대화방 풋터 클릭이 명령 대신 채팅 메시지로 전송되던 핵심 버그 수정, 회의실 안건 작성 취소 버그 수정, 죽은 풋터 토큰 2건 제거
-
-**LOG_ID: 20260721_1830**
-목표: 사용자 요청(직전 /help 감사에 이어) — "다른 화면도 명령어 감사해줘". CMD_META에 없는 화면 전용(로컬) 명령어 — 대화방 슬래시 명령, 투표/랭킹/회의실 세부 화면, 내 정보 편집 단계, 로그인/가입 흐름 — 를 백그라운드 서브에이전트로 조사한 뒤, 가장 중요한 발견들을 직접 코드로 재검증하고 수정했다. 투표/랭킹/내정보/entry 흐름은 조사 결과 전부 정상(풋터 힌트와 실제 동작 일치)이라 손대지 않았다.
-**가장 중요한 발견(핵심 버그)**: 대화방(chat-room) 풋터의 클릭 가능한 명령 토큰(P, T, GO, O:방만들기, ST:상황판 등)을 클릭하면 **명령이 실행되는 대신 그 글자 그대로가 채팅 메시지로 전송**되고 있었다. 원인을 두 겹으로 확인:
-1. `appEvents.js`의 `executeCommandFromClick()`이 `handleCmd(text)`를 컨텍스트 없이 호출하고 있었다 — 반면 `interactionHandlers.js`의 `executeCommand()`는 같은 상황을 `handleCmd(text, { source: 'click' })`로 정확히 구분해서 부른다(주석: "typed → message" vs "clicked → navigation"). `commandDispatcherExecution.js`는 이 `context.source==='click'` 여부로 대화방 같은 raw-text 입력 화면에서 "타이핑한 메시지"와 "클릭한 명령"을 가르는데, 풋터의 `data-cmd`/`data-cmd-fill` 토큰 클릭 경로(appEvents.js)만 이 컨텍스트가 빠져 있어 항상 "타이핑" 취급됐다.
-2. `commandRouterChat.js`에는 이미 이 정확한 문제를 겨냥한 우회 로직이 있었다 — `context?.source === 'click' && cmd === 'T'`(상단바 로고 클릭용, 20260707_1224 로그). 하지만 이건 'T' 하나에만 적용돼 있어서, 1번 버그를 고쳐도 P/GO/O/ST는 여전히 대화방 안에서 슬래시(`/`) 없이는 인식되지 않는 채로 남는 상황이었다.
-수정: (1) `appEvents.js`에 `{ source: 'click' }` 추가(근본 원인). (2) `commandRouterChat.js`의 T 전용 우회를 P/M/GO/O/ST로 확장 — 각각 슬래시 버전(`/P`, `/T`, `/GO`, `/ST`)과 동일하게 동작하도록 구현했고, **대화방 안에서 아예 핸들러가 없어 죽어 있던 `/O`(방만들기)도 이번에 새로 구현**(방을 나간 뒤 방 만들기 화면으로, 대기실의 O와 동일 동작). (3) `EAR:귓속말`은 대상 아이디+메시지 두 인자가 반드시 필요해 클릭 한 번으로 완성할 수 없으므로 풋터에서 제거(타이핑으로는 그대로 동작, `/EAR 아이디 메시지`). (4) 조사 중 추가로 발견: `chatLobby`(대기실) 풋터에도 `EAR:귓속말`과 `ST:상황판`이 있었는데, 대기실 코드에는 두 명령 모두 핸들러가 아예 없어(방에 들어가야만 의미가 있는 기능) 완전히 죽어 있었다 — 둘 다 대기실 풋터에서 제거.
-**두 번째 발견**: `commandRouterConf.js`의 안건 발의(conf-agenda-new) 화면 — 풋터(`confAgendaNew: ['P:취소', 'T', 'GO', 'H']`)는 항상 "P:취소"를 보여주는데, 실제로는 제목 입력 단계(step 0)에서만 P/M/B/T가 취소로 동작하고, 본문 입력 단계(step 1)는 오직 `/c`만 인식해서 **P를 치면 그대로 안건 본문 줄로 들어가 버렸다**. step 1에도 P/M/B/T를 취소로 인식하도록 추가(기존 `/c`도 하위 호환으로 유지) — 다른 화면들의 글쓰기 취소 관례(postWriteView.js 등)와 통일.
-검증하려 했으나 실제로는 문제없음으로 확인된 항목(서브에이전트 보고와 직접 코드 대조 결과 불일치, 반영하지 않음): 대화방 비밀번호/방만들기 단계의 "(취소: /M)" 힌트 — 코드가 실제로 `cmd === '/M'`(슬래시 포함)을 정확히 검사하고 있어 힌트와 일치했다(서브에이전트 조사 오류로 판단).
-검증: Node ESM으로 `commandRouterChat.js`/`commandRouterConf.js`를 직접 임포트해(DOM 최소 스텁) 클릭 컨텍스트 시뮬레이션 — 대화방에서 `context:{source:'click'}`로 T/M/P/GO/O/ST를 호출해 각각 올바른 화면 전환·조회 함수가 호출되고 **채팅 메시지 전송 API가 전혀 호출되지 않음**을 9개 어서션으로 확인, 반대로 클릭 컨텍스트 없는 타이핑 "T"는 우회를 안 타고 기존처럼 실제 메시지 경로로 감을 확인(총 10개 어서션 통과). 안건 작성 화면은 P/M/B/T 4개 명령 전부가 취소로 동작하고 본문 줄로 안 들어감을 확인, 기존 `/c`·`/s`와 일반 텍스트 입력도 여전히 정상 동작함을 11개 어서션으로 확인. `node --check` 전체 통과, `npm run loop:verify`(9종) 통과.
-결과: ✅ 완료 — 대화방 풋터의 핵심 클릭 버그(P/T/GO/O/ST)와 회의실 안건 작성 취소 버그를 고쳤고, 완전히 죽어 있던 풋터 토큰(대화방 EAR, 대기실 EAR·ST) 3건을 제거했다. 투표/랭킹/내정보/로그인·가입 화면은 조사 결과 전부 정상이라 변경 없음.
-
----
-
-## [2026-07-21 18:00] [기능/버그 수정] /help 명령어 감사 — SYS 카테고리 전체가 도움말에서 누락돼 있던 버그 발견·수정, 사문화 코드 2건 제거, 동작하지만 미문서 명령 20여 개 보완
-
-**LOG_ID: 20260721_1800**
-목표: 사용자 요청 — "https://01410.vercel.app/help 동작안하는 명령어는 없애던지 동작하게 기능을 추가해야해. 누락된 내용도 확인해야해". `/help`는 `commandService.js`의 `CMD_META`에서 동적으로 생성되므로, CMD_META의 모든 항목(~50개)을 실제 커맨드 디스패처(`commandDispatcherExecution.js` 파이프라인 → `commandRouterBrowse/Chat/Conf/Entry/Global*/Memo/MyInfo/PostView/Ranking/Service/Vote` 등)와 전수 대조하는 조사를 백그라운드 서브에이전트로 먼저 진행했다.
-**가장 중요한 발견(누락된 내용)**: `helpScreens.js`의 `HELP_TAB_KEYS`(도움말에 표시할 분류 목록)에 `'SYS'`가 빠져 있었다 — `i18n.js`에 `CAT_SYS: '[시스템 및 진단]'` 라벨이 이미 정의돼 있었는데도 `CAT_LABELS`와 `HELP_TAB_KEYS` 양쪽에 배선하는 걸 빠뜨려서, `cat:'SYS'`로 분류된 **H/HELP/?, CLS/CLEAR, HIST, PR, SET, UNSET, ENV, CAP 8개 명령 전부가 /help 화면에 단 한 줄도 나타나지 않고 있었다** — 정작 도움말을 여는 명령(H/HELP) 자신도 도움말에 안 나오는 상황이었다. `commandRouterGlobalNavigation.js`에도 분류 번호(0~6) 선택용으로 같은 목록이 하드코딩 중복돼 있어 함께 고쳤다(0~7로 확장, SYS 추가).
-**사문화 코드 2건 발견·제거**:
-1. `commandRouterGlobalNavigation.js`에 `MSG` 명령 핸들러가 **완전히 동일한 패턴으로 두 번** 존재했다 — 앞선 핸들러(약 332행)가 모든 분기에서 `return true`하므로 뒤의 핸들러(약 447행, 세부 구현도 다름)는 영원히 도달 불가능한 죽은 코드였다. 뒤쪽 블록을 삭제(그 블록에서만 쓰이던 `apiFetch` 의존성도 함께 제거).
-2. `commandRouterMyInfo.js`의 내 정보 화면 이메일 변경 분기(`cmd==='2'||'E'||'EMAIL'||'MAIL'`)에서 `'MAIL'`도 사문화 코드였다 — 디스패처 파이프라인에서 `handleGlobalCommand`(전역 MAIL='쪽지함 열기')가 `handleMyInfoCommand`보다 먼저 실행되기 때문에, 내 정보 화면에서 'MAIL'을 입력해도 항상 전역 쪽지함이 열렸을 뿐 이메일 변경은 한 번도 트리거된 적이 없다(E/EMAIL/2는 전역에 없어 정상 동작해 왔음). 죽은 'MAIL' 분기만 제거.
-**실제로는 동작하지만 CMD_META에 없어 /help·자동완성에서 안 보이던 명령 보완**(모두 실제 라우터 코드에서 동작 확인 후 추가): `GA/BODY`(본문검색), `NEW/NW`(최근 3일 새글), `LS`(글번호 이동), `LD`(날짜 이동), `K`(주제어 해제/쪽지 보관 — 화면별로 뜻이 다름을 desc에 명시), `KW`(주제어 목록), `UP/UPLOAD`(자료실 올리기, 별칭 UL/PUT은 tip에만), `DN/DOWNLOAD`(자료실 받기, 별칭 DL/TR/GET은 tip에만), `TIME`(이용시간), `WMAIL`(쪽지쓰기 바로가기), `WC`(카드쓰기), `ABSENT`(부재중), `MB`(편지보관함), `GRP`(주소록 그룹), `J/JOIN`(대화실 방번호 입장). `ME/MEMO`의 tip에 별칭(MAIL/RMAIL/CMAIL)도 명시. (참고: 명령 칸이 고정 폭(데스크톱 24칸)이라 별칭을 전부 CMD_META 항목으로 만들면 자동 병합된 셀 텍스트가 잘려 보이는 문제를 발견 — 대표 별칭 1~2개만 항목으로 두고 나머지는 tip 문구로 안내하는 방식으로 우회했다.)
-**설명이 실제 동작과 어긋나 있던 항목 정정**(사문화는 아니지만 오해 소지): `PW`(비밀번호 변경)는 실제로는 내 정보 화면에서만 동작하는데 desc가 이를 언급하지 않아 다른 화면에서 입력하면 아무 반응 없이 조용히 무시됐다 — desc에 "내 정보 화면에서... HI로 먼저 들어가야" 명시. `PF`(프로필)는 desc상 "정보 확인"이라 되어 있지만 실제로는 아이디 없이 입력하면 HI/MYINFO와 완전히 같은 편집 화면이 열린다(별개의 "보기 전용" 경험이 없음) — desc를 사실대로 정정.
-검증: 서브에이전트 조사 결과를 코드 재확인으로 검증(디스패처 파이프라인 순서 직접 추적, MSG 중복·MAIL 도달불가 둘 다 실제 실행 순서로 재확인). CMD_META 88개 항목 키 중복 없음을 스크립트로 확인. 병합 셀 폭이 23자(고정 24칸-1) 넘는 항목이 없는지 buildHelpAnsi 병합 로직을 그대로 재현해 스크립트로 검사(모두 통과). Playwright로 데스크톱·모바일 양쪽에서 전체 5페이지 및 새로 보이게 된 SYS 분류(단축키 "7")를 스크린샷으로 시각 확인. `node --check` 전체 통과, `npm run loop:verify`(9종) 통과, MSG 명령이 여전히 정상 응답함을 재확인(살아있는 첫 핸들러가 응답).
-결과: ✅ 완료 — /help가 이제 실제 동작하는 명령을 빠짐없이 보여주고(SYS 분류 전체 복구 + 20여 개 신규 문서화), 죽은 코드 2건을 정리했으며, 설명이 실제와 다르던 2개 항목을 정정했다. 조사 결과 CMD_META에 등재된 채로 "동작 자체가 전혀 안 되는" 명령은 없었다(전부 최소 하나의 실제 핸들러가 있었음) — 있었던 문제는 죽은 코드 2건과 도움말 표시 누락이었다.
-
----
-
-## [2026-07-21 17:45] [정리] 병렬로 진행된 다른 세션과 병합 — 1645 수정(ansiHLine 1.3배 과잉생성)을 1740의 max-width:44ch 중앙정렬 방식에 자리를 내주고 원복
-
-**LOG_ID: 20260721_1745**
-목표: 같은 저장소에서 병렬로 작업 중이던 다른 세션(로컬 Windows 환경, `push_github.bat` 워크플로)이 origin/main을 더 앞으로 진행시켜 두었다 — `git fetch` 결과 이 세션의 마지막 푸시(621f483) 이후로 로그·글번호 재정렬(local_id)·"가로선 쏠림" 재수정(1740) 등 상당한 작업이 이미 올라와 있었다. rebase로 합치는 과정에서 확인.
-발견: 1740 커밋이 나(이 세션)의 1645 수정("ansiHLine이 모바일에서 44칸을 1.3배로 과잉 생성해 폰트 대체 차이를 흡수")과 **같은 증상을 겨냥한 다른 해법**을 이미 배포해 두었다 — `.ansi-screen-body`에 `max-width:44ch; margin:0 auto;`를 주어, 44칸이 실제 폭보다 좁게 렌더링되더라도 컨테이너 자체를 44칸 폭으로 고정하고 중앙 정렬해 "왼쪽으로 쏠림"만 제거하는 방식(폭을 늘려 채우려 하지 않음). 그 커밋의 주석에 결정적 근거가 있었다: "실기기별 정확한 폰트 폭을 늘리는 방법도 시도했으나 ... 오히려 실제 문장이 화면 밖으로 잘려 유실되는 훨씬 심각한 회귀가 났다"— 내 1645 접근(컬럼 수 과잉생성)과 같은 계열의 위험을 실기기에서 이미 검증한 경고였다.
-조치: 1645의 코드(`ansiBuilderUtils.js`의 `ansiHLine` 1.3배 로직, `style.css`의 `.ansi-line{overflow-x:hidden}`)를 원래대로 되돌렸다 — 이미 배포된 1740의 중앙정렬 방식이 더 단순하고 실기기 검증까지 거쳤으므로 두 해법을 동시에 남겨둘 이유가 없었다(과잉생성은 이제 고정폭 컨테이너 안에서 아무 의미 없이 클리핑만 될 뿐이라 순수 사문화 코드). WORK_LOG의 기존 1645/1630/1615/1600 항목(양쪽에 동일하게 이미 존재)은 그대로 두고, 이 세션에서 새로 작성한 건의하기(TOSYSOP) PC통신 UI 개선(1700)만 정확한 시간 순서에 맞춰 병합했다.
-검증: `node --check`로 되돌린 `ansiBuilderUtils.js` 문법 확인, `npm run loop:verify`(9종) 통과.
-결과: ✅ 완료 — 두 세션의 작업이 충돌 없이 하나로 합쳐졌고, "가로선 쏠림" 버그는 실기기 검증을 거친 1740의 해법 하나로 정리됐다.
-
----
-
-## [2026-07-21 17:35] 프론트엔드 연산자 우선순위 구문 오류 수정 및 데스크톱 글번호 localId 누락 보완
-
-**LOG_ID: 20260721_1735**
-목표: `localId ?? post.id || ''` 등 괄호가 누락된 연산자 혼용으로 인한 브라우저 `SyntaxError`를 수정하여 공지사항이 렌더링되지 않던 런타임 버그를 차단하고, 데스크톱 뷰포트에서 localId가 아닌 PK가 표시되던 부분을 보완한다.
-변경 파일:
-1. `public/js/core/postListView.js`
-2. `public/js/core/ansiBoardBuilders.js`
-3. `public/js/core/commandRouterBrowse.js`
-수행 작업:
-1. **괄호 적용을 통한 SyntaxError 제거**: `(post.localId ?? post.id) || ''`와 같이 괄호로 묶어 자바스크립트 스펙상 널 병합(`??`)과 논리합(`||`) 연산자가 모호함 없이 올바르게 해석되도록 교정.
-2. **데스크톱 일련번호 localId 누락 보완**: `postListView.js` 257라인의 데스크톱 일괄 출력(`PT` 명령어 결과물) 포맷에서 여전히 localId가 아닌 `post.id`를 가져오고 있던 레거시를 찾아 localId 기반으로 교체.
-3. **검증**: `npm run smoke:vercel-ready`로 빌드 상태를 검증하고, 브라우저 서브에이전트로 `http://localhost:3000/NOTICE` 및 상세 페이지 `/NOTICE/1`을 직접 로딩하여 `SyntaxError` 없이 1번 글과 줄바꿈 정돈된 본문이 완벽하게 렌더링됨을 시각 검증 완료.
-결과: ✅ 완료
-
----
-
-## [2026-07-21 17:00] [기능 개선] 건의하기(TOSYSOP) 글쓰기를 정통 PC통신(하이텔/나우누리/천리안) 라인 에디터 스타일로 개선
-
-**LOG_ID: 20260721_1700**
-목표: 사용자 요청 — "건의하기 메뉴 글쓰기 수정하자. 하이텔, 나우누리, 천리안 같은 pc통신 ui로 만들자".
-기존 상태: `contactSysopScreen.js`는 `memoScreens.js`(쪽지 쓰기)의 가장 단순한 라인 에디터 패턴만 따르고 있었다 — 제목/내용 프롬프트만 있고, 단계 진입 안내문·"현재:" 표시·긴 트랜스크립트 말줄임 처리·저장 전 확인 같은, 이 앱의 다른 글쓰기 화면(`postWriteView.js`, 실제 게시판 글쓰기)이 이미 재현해 둔 정통 PC통신 관례들이 빠져 있었다.
-수정: `postWriteView.js`의 확립된 패턴을 가져와 확장했다 — ① 진입 시 "건의하기 작성" 모드 라벨 + 안내문 + "제목을 입력하십시오." 단계별 안내(기존엔 힌트바 텍스트에만 의존), ② `MAX_VISIBLE_TRANSCRIPT_LINES`(18줄) 말줄임 처리로 긴 건의 내용이 화면 하단 프롬프트를 밀어내지 않도록 안전망 추가, ③ **저장 확인 단계 신설(원전의 핵심 요소)** — `/s`/SEND 입력 시 바로 이메일을 보내던 기존 흐름 대신, "--- 보낼 내용 미리보기 ---"로 제목·본문 전체를 다시 보여주고 "이대로 시삽에게 전송하시겠습니까? (Y/N)"로 물어 Y라야 실제 발송, N이면 본문 이어쓰기로 복귀, P/M/B/`/q`는 전체 취소 — 되돌릴 수 없는 실제 이메일 발송 동작 앞에 확인 절차를 넣어 원전 게시판 저장 흐름("저장하시겠습니까? Y/N")을 재현하는 동시에 오발송도 막는다.
-검증: 이 샌드박스는 로그인이 Supabase 연동 없이는 동작하지 않아(로컬 auth 비활성) 실제 로그인 후 UI를 브라우저로 직접 조작해볼 수 없었다 — 대신 `createContactSysopScreen`을 Node ESM으로 직접 임포트해(`window`만 최소 스텁) 상태 머신을 27개 어서션으로 검증: 제목→본문→confirm 전환, `/s` 입력 시 confirm 단계 진입은 하되 `apiFetch` 미호출(발송 보류) 확인, 미리보기에 제목·본문 두 줄 모두 표시, N 입력 시 본문 단계로 복귀하며 여전히 미발송, 이후 Y 입력 시 정확히 한 번 `apiFetch('/api/contact-sysop', ...)` 호출되고 payload의 subject/content가 정확함, 발송 후 flow 초기화 및 GUIDE로 리다이렉트, confirm 단계에서 `/q` 취소 시 미발송으로 종료, 게스트는 애초에 화면 진입 자체가 막힘 — 전부 통과. 캡처한 렌더링 HTML을 실제 site CSS로 데스크톱(700px)·모바일(412px) 두 뷰포트에 그려 시각 확인(스크린샷)도 했다. `node --check` 통과, `npm run loop:verify`(9종) 통과.
-결과: ✅ 완료 — 건의하기 글쓰기가 이제 이 앱의 다른 글쓰기 화면과 동일한 수준의 정통 PC통신 라인 에디터 관례(단계별 안내, 말줄임 안전망, 저장 전 미리보기+확인)를 따른다.
-
----
-
-## [2026-07-21 16:58] 공지사항 본문 내용 정돈 및 다듬기 2차 반영
-
-**LOG_ID: 20260721_1658**
-목표: 사용자가 전달해 준 최종 다듬어진 공지사항 텍스트 문안을 80칼럼 규격에 맞춰 단락 정돈 및 DB 업데이트 반영
-변경 사항: 데이터베이스 마이그레이션 (id: 45) 적용
-수행 작업:
-1. **최종 공지사항 문안 반영**: 사용자가 새로 다듬은 텍스트(횡설수설/가입인사/불가사의/컴퓨터초보시절 언급 축소 등)를 기반으로 줄바꿈 폭을 이쁘게 맞춰 `posts` 테이블의 id 45번 공지사항 본문 갱신.
-2. **검증**: `npm run smoke:vercel-ready` 검사 실행 및 헬스 체크 통과 확인.
-결과: ✅ 완료
-
----
-
-## [2026-07-21 16:56] 공지사항 텍스트 줄바꿈 개선, 전체 글번호 재정렬 및 뷰포트 스케일 클릭 오류 수정
-
-**LOG_ID: 20260721_1656**
-목표: 공지사항 텍스트의 어색한 줄바꿈 현상 개선, 전체 게시글 번호(ID)의 1번부터 순차 정렬화, 반응형 화면 확대(transform: scale)로 인한 마우스 클릭 어긋남 오류 수정
-변경 파일: public/js/core/postListView.js
-수행 작업:
-1. **공지사항 줄바꿈 교정**: 공지사항(notice) 글 본문의 횡설수설 단락과 단어 쪼개짐(예: `자유롭게 이\n용해`, `자동차함께타기\n/불가사의/`)을 80칼럼 폭에 완벽하게 맞물리도록 수동 포맷을 다듬어 DB 갱신.
-2. **글번호 1번부터 재정렬**: `posts` 테이블의 ID가 누락되거나 건너뛴 흔적 때문에 288번부터 시작하여 공지사항이 351번으로 표시되던 것을 `created_at` 정렬 순서에 맞추어 1번부터 45번까지 일련번호로 재지정.
-3. **답글 관계 갱신**: `family_id`가 부모 게시글을 올바르게 참조할 수 있도록 매핑 업데이트를 동시 진행.
-4. **뷰포트 배율 클릭 오차 수정 (`public/js/core/postListView.js`)**: `.ansi-screen` 화면에 걸린 반응형 줌인/줌아웃(transform: scale) 배율로 인해 클릭 좌표가 약 44픽셀씩 밑으로 치우쳐 렌더링되던 더블 스케일링 버그를 감지하여, 뷰포트 확대비율(`scale = screenRect.width / screenNode.offsetWidth`)로 나눈 보정값을 적용해 마우스 클릭 영역이 텍스트 줄에 정확히 정렬되도록 수정.
-5. **검증**: `npm run smoke:vercel-ready` 검사 수행으로 빌드 무결성 확인 완료.
-결과: ✅ 완료
-
----
-
-## [2026-07-21 16:45] [버그 수정] 구분선('─')이 실기기에서 폰트 대체 폭 차이로 짧게 그려지던 진짜 원인 해결
-
-**LOG_ID: 20260721_1645**
-목표: 사용자 재보고 — 직전 수정(1630) 배포 후에도 새 스크린샷에서 동일한 픽셀 위치(y=802, 왼쪽 4px/오른쪽 117px)에 여전히 구분선이 쏠려 있음을 확인. 사용자가 "직접 확인할 수 없냐"고 물어 실제 프로덕션 URL로 직접 접속을 시도했으나, 이 샌드박스의 헤드리스 브라우저(Playwright Chromium)는 프록시를 거쳐도 외부 인터넷에 접속이 안 되는 구조적 제약이 있었다(`curl`은 되지만 브라우저 프로세스는 `ERR_PROXY_CONNECTION_FAILED`) — `curl`로 프로덕션에 배포된 style.css를 직접 받아 로컬 수정본과 바이트 단위로 비교해 배포는 확실히 완료됐음을 확인했고, 실제 프로덕션 API에서 문제의 글(#351) 원본 데이터까지 가져와 로컬에 그대로 재현했다.
-원인 재진단: 1630 수정("post-view만 폰트를 더 줄이던 비율 탓")은 틀린 진단이었다 — 로컬에서 실측하니 두 비율(0.025 vs 0.027) 모두 실제 모바일 뷰포트 폭(357px 이상)에서는 어차피 같은 15px 상한에 걸려 완전히 동일한 폰트 크기를 냈다(전/후 차이 없음, 배포해도 증상이 그대로였던 이유). 진짜 원인을 찾기 위해 폰트별 '─' 문자 렌더링 폭을 직접 비교하는 테스트 페이지를 만들어 스크린샷으로 확인한 결과: `.ansi-line`의 폰트 스택(`'BbsPrimaryFont', 'BbsLineFont', ...`)에서 `BbsLineFont`(style.css 75행)가 박스 그리기 문자 전체(U+2500-257F, '─' 포함)를 `local('GulimChe'), local('DotumChe'), local('monospace')`로 대체하도록 되어 있는데, 안드로이드에는 GulimChe/DotumChe가 없어 시스템 기본 monospace로 폴백되고, 이 폴백 폰트의 '─' 문자 폭이 본문에 쓰이는 커스텀 픽셀 폰트(DungGeunMo)보다 넓다 — 같은 44칸(또는 44×1.3배 전 기준)으로 만든 구분선이 실제 폭보다 좁게 그려져 왼쪽으로 쏠려 보인 것. 헤드리스 Chromium(리눅스)에서는 이 폴백 경로가 다르게 해석돼 재현되지 않았다(로컬 테스트가 매번 "정상"으로 나왔던 이유).
+## [2026-07-21 21:00] [보안/버그 수정] "다른화면전수점검" — 4개 서브에이전트 전수 감사 결과 반영: 평문 비밀번호 저장(치명), 게시글 수정/답글 …7472 tokens truncated…025 vs 0.027) 모두 실제 모바일 뷰포트 폭(357px 이상)에서는 어차피 같은 15px 상한에 걸려 완전히 동일한 폰트 크기를 냈다(전/후 차이 없음, 배포해도 증상이 그대로였던 이유). 진짜 원인을 찾기 위해 폰트별 '─' 문자 렌더링 폭을 직접 비교하는 테스트 페이지를 만들어 스크린샷으로 확인한 결과: `.ansi-line`의 폰트 스택(`'BbsPrimaryFont', 'BbsLineFont', ...`)에서 `BbsLineFont`(style.css 75행)가 박스 그리기 문자 전체(U+2500-257F, '─' 포함)를 `local('GulimChe'), local('DotumChe'), local('monospace')`로 대체하도록 되어 있는데, 안드로이드에는 GulimChe/DotumChe가 없어 시스템 기본 monospace로 폴백되고, 이 폴백 폰트의 '─' 문자 폭이 본문에 쓰이는 커스텀 픽셀 폰트(DungGeunMo)보다 넓다 — 같은 44칸(또는 44×1.3배 전 기준)으로 만든 구분선이 실제 폭보다 좁게 그려져 왼쪽으로 쏠려 보인 것. 헤드리스 Chromium(리눅스)에서는 이 폴백 경로가 다르게 해석돼 재현되지 않았다(로컬 테스트가 매번 "정상"으로 나왔던 이유).
 수정: 정확한 폭 비율을 기기별로 예측하는 대신, 실기기에서 어떤 폰트로 대체되든 항상 안전하게 폭을 채우는 방식을 택했다 — `ansiBuilderUtils.js`의 `ansiHLine()`이 모바일에서는 요청 폭의 1.3배만큼 '─'를 더 그리고(`Math.ceil(width*1.3)`), `style.css`의 `.ansi-line`에 `overflow-x:hidden`을 추가해 초과분을 안전하게 잘라낸다(이미 모든 모바일 화면의 `#terminal-screen`에 overflow:hidden 안전망이 있어 페이지 스크롤을 유발하지 않는다). 데스크톱(80칸)은 그대로 둬 영향 없음.
 검증: 실제 프로덕션 글 데이터(#351 "게시판 개편 안내")를 로컬에 그대로 재현해 구분선 텍스트 길이가 44→58(44×1.3)로 늘어나고 `scrollWidth(435) > offsetWidth(410)`로 실제로 넘치는 부분이 잘리는지 확인, 문서 레벨 가로 오버플로우 없음(`docScrollWidth === docClientWidth`) 확인. 데스크톱(1280px)에서는 구분선이 그대로 80글자, 오버플로우 없음 확인(영향 없음). `npm run loop:verify`(9종) 통과.
 결과: ✅ 완료 — 실기기의 폰트 대체 차이와 무관하게 구분선이 항상 화면 폭을 채우도록 방어적으로 고쳤다. (참고: 1630 수정 자체는 틀린 진단이었지만, post-view가 더 이상 세로 공간을 아낄 필요가 없다는 근거는 여전히 유효해 되돌리지 않고 유지한다.)
@@ -10381,6 +9976,9 @@ door 재배치 확인, ANSI builder 7개 함수를 격리 실행해 예외 없�
 
 ---
 
+Warning: truncated output (original token count: 20882)
+Total output lines: 500
+
 ## [2026-07-15 15:00] smoke:full-traversal 최초 실행 — 낡은 채팅 로비 테스트 발견·수정
 
 **LOG_ID: 20260715_1500**
@@ -10633,21 +10231,7 @@ door 재배치 확인, ANSI builder 7개 함수를 격리 실행해 예외 없�
 
 **LOG_ID: 20260714_1400**
 목표: 사용자가 "http://localhost:3000/help 화면 오른편으로 글이 넘쳐서 안보이는 것 같은데"라고 지적.
-**근본 원인**: `retro-terminal.css`의 `#terminal-container`에 `transform: scale(var(--terminal-scale))`(기본 1.15배, `transform-origin: top center`)가 걸려 있는데, 80칸 터미널의 실제 필요 폭(`80ch+32px`, 대략 850px)이 1.15배 확대되면 약 975~1130px가 된다. 종전 미디어쿼리는 `max-width:768px`에서만 스케일을 1로 되돌렸기 때문에, **768px~약 1100px 사이의 창 폭에서는 확대된 터미널이 실제 뷰포트보다 넓어졌다.** `html,body`에 `overflow:hidden`이 걸려 있고 스크롤바도 전역으로 숨겨놔서(`::-webkit-scrollbar{display:none}`), 넘친 부분이 스크롤조차 안 되고 그냥 잘려 보이지 않게 된다. `transform-origin:top center`라 좌우 양쪽이 대칭으로 잘리는데, `/help`처럼 각 줄이 정확히 80칸을 꽉 채우는 화면(명령/설명 컬럼 24+56=80)에서 가장 두드러지게 나타났다. 이번 세션 내내 Playwright 스크린샷에서 "PC통신동호회" 타이틀의 "PC"가 잘리거나 메뉴 번호 "1."이 안 보이던 현상도 전부 같은 원인이었다(스크린샷 뷰포트가 마침 이 불안전 구간에 위치).
-변경 파일: `public/styles/retro-terminal.css` — 스케일을 1로 되돌리는 미디어쿼리 breakpoint를 `max-width:768px`→`max-width:1100px`로 확장(폰트 글리프 폭 오차 감안해 여유 있게 설정). 768~1600px 미만 구간(스케일 1.15) 필요폭 약 975~1130px가 1100~1600px 구간에서 안전하게 들어맞고, 1600px 이상(스케일 1.25, 필요폭 약 1040~1230px)도 여전히 안전.
-검증: Playwright로 `/help`·`/`(TOP) 재확인 — 좌우 잘림 완전히 사라짐, 타이틀·번호·명령 라벨·푸터 전부 온전히 노출. 순수 CSS 변경이라 서버 재시작 불필요.
-결과: ✅ 완료
-
----
-
-## [2026-07-14 13:00] GUIDE 하위 메뉴 표시 버그 3건 수정 — 이상한 코드 노출·좌상단 라벨 오표시
-
-**LOG_ID: 20260714_1300**
-목표: 사용자가 `http://localhost:3000/guide` 하위 메뉴를 보고 "UI가 이상하고 메뉴명도 이상하고, 하위 메뉴에 접속했더니 왼쪽 상단에 guide로 통일되어 있는데"라고 지적. 실측한 결과 서로 다른 원인의 실제 버그 3건이 겹쳐 있었다.
-
-**버그 1 — 메뉴명 뒤에 흉한 내부 코드 노출**: `menuService.js`의 `getMenuNodeCode()`가 "go값이 너무 길면 코드 표시를 생략"하는 예외를 `type==='board'`에만 적용했다. GUIDE 하위 help/policy 항목(`guide_cmdhelp`/`guide_tos`/`guide_privacy`)은 board가 아니라 이 예외를 못 받아, 그대로 대문자화되어 "명령어안내 (GUIDE_CMDHELP)" 같은 스네이크케이스 코드가 화면에 그대로 노출됐다.
-**버그 2 — 정책 뷰어 좌상단이 항상 "GUIDE"로 고정**: `policyScreens.js`가 `buildTopHeader({ leftLabel: 'GUIDE', ... })`를 이용약관·개인정보처리방침 두 문서 모두에 하드코딩해뒀다. 다른 모든 화면(게시판 등)은 좌상단에 자기 자신의 코드(PLAZA/NOTICE 등)를 쓰는데 이 화면만 항상 상위 메뉴명을 썼다 — 사용자가 지적한 "guide로 통일" 현상의 정체.
-**버그 3(잠재적 사이트 전역 버그) — 메뉴 클릭으로 게시판 진입 시 상위 메뉴 제목이 표시됨**: `menuNavigationActions.js`의 `type==='board'` 분기가 `showPostList`에 `menuTitle: contextMenuTitle`(부모 메뉴 제목)을 명시적으로 넘겨서, `postListView.js`의 "게시판 메타로 제목 재계산" 로직(`hasExplicitMenuPath`가 false일 때만 동작)이 무력화됐다. 그 결과 GUIDE 하위 공지사항/건의하기를 메뉴 클릭으로 들어가면 상단에 "서비스안내 (GUIDE)"가 뜬다 — 반면 `/board/notice` 직접 URL 접속은 이 분기를 안 타서 정상("공지사항 (NOTICE)")이었기 때문에 이전 세션들의 Playwright 검증(전부 직접 URL 방식)에서 놓쳤다. BBS 하위 게시판(열린광장 등)도 메뉴 클릭으로 들어가면 동일하게 잘못 표시될 것으로 추정되는 사이트 전역 버그였다.
+**근본 원인**: `retro-terminal.css`의 `#terminal-container`에 `transform: scale(var(--terminal-scale))`(…882 tokens truncated…지사항/건의하기를 메뉴 클릭으로 들어가면 상단에 "서비스안내 (GUIDE)"가 뜬다 — 반면 `/board/notice` 직접 URL 접속은 이 분기를 안 타서 정상("공지사항 (NOTICE)")이었기 때문에 이전 세션들의 Playwright 검증(전부 직접 URL 방식)에서 놓쳤다. BBS 하위 게시판(열린광장 등)도 메뉴 클릭으로 들어가면 동일하게 잘못 표시될 것으로 추정되는 사이트 전역 버그였다.
 변경 파일:
 1. `public/js/core/menuService.js` — `getMenuNodeCode()`의 `node?.type === 'board' &&` 제한 제거, 모든 타입에 동일하게 "10자 초과 시 코드 숨김" 적용.
 2. `legacy/hanulso.mnu` — GUIDE 하위 3개 항목 go값을 `guide_cmdhelp`→`cmdhelp`, `guide_tos`→`tos`, `guide_privacy`→`privacy`로 단축(id는 유지해 고유성 보존, 트리 전체 go값 충돌 없음 확인).
@@ -12381,6 +11965,9 @@ ralph-loop 1회차). 에이전트 활용 지시에 따라 general-purpose 서브
 ## [2026-07-09 12:40] 문장 잘린 불완전 기사 차단 및 검증 필터 정책 복원
 
 **LOG_ID: 20260709_1240**
+Warning: truncated output (original token count: 20284)
+Total output lines: 500
+
 목표: 본문 중간에 `…` 이나 말줄임표 등으로 문장이 뚝 끊긴 채 크롤링되는 불완전한 뉴스 기사들을 상세 보기 진입 단계에서 강제로 차단하고 이전 캐시를 일제 무효화한다.
 변경 파일: `src/server/RssNewsService.js`
 수행 작업:
@@ -12686,11 +12273,7 @@ ralph-loop 1회차). 에이전트 활용 지시에 따라 general-purpose 서브
 변경 파일: `public/js/core/menuNavigation.js`, `public/index.html`(임시 진단 제거)
 수행 작업:
 1) [핵심 재발견] 지금까지 20260708_1710/1725/1815에서 `column-gap`/prompt 너비/커서 너비를 전부 `ch`→`em`으로 고쳤음에도 재현이 계속됐던 이유: **애초에 문제는 "간격이 넓어지는 것"이 아니라 "선택 >>" 프롬프트 텍스트 자체가 순간적으로 완전히 사라지는 것**이었다. 개선된 진단 로그가 실측: `t=13425ms`에 `promptText:""`(빈 문자열), `promptWidth:9.78`(빈 값에 맞는 최소 폭), `footerState:"visible"`(화면은 계속 떠 있음) → 불과 **39ms 뒤** `t=13464ms`에 `promptText:"선택 >>"`로 복귀. 텍스트가 사라지면 그 자리가 빈 공간으로 보이고, 다시 채워지면 "좁아진 것"처럼 보이는 착시였다 — gap이나 폭 계산 문제가 전혀 아니었다.
-2) [근본 원인] `menuNavigation.js`의 `showMain()`과 `showBoardSelect()` 둘 다, 데이터 로딩(`await Promise.all(...)`)을 시작하기도 **전에** `setHint(''); setPrompt('');`를 직접 호출해 프롬프트/힌트를 즉시 비우고 있었다. 이 시점엔 아직 `renderAnsiScreenWithTopbarSequential`이 시작되지 않아 footer 자체는 계속 `visible` 상태이므로, 데이터 로딩이 끝날 때까지(수십~수백 ms) "선택 >>"가 사라진 빈 프롬프트가 그대로 사용자에게 노출됐다. 이는 20260708_1420에서 고쳤던 `setLoading()`의 "즉시 힌트 비움" 문제와 정확히 동일한 계열이지만, 이번엔 화면 함수가 **직접** 호출하는 별개의 코드 경로였다.
-3) [수정] 두 함수에서 `setHint(''); setPrompt('');` 두 줄을 완전히 제거. 렌더러 자신의 인라인 숨김(스트리밍 시작 시 hint/promptRow를 가림)과 `applyCommandFooter`(afterBodyRender 콜백)가 최종 프롬프트/힌트를 설정하는 기존 경로만으로 충분 — 미리 비울 필요가 없었다.
-4) [검증] "메인↔게시판 선택" 왕복 20회에서 `footerState==="visible" && promptText===""` 위반 0건(수정 전이었다면 이 검증으로 잡혔을 것). 기존 4패턴 종합 회귀 6시나리오×3라운드=18회도 재확인 — 전부 통과.
-5) [정리] `index.html`에 남아있던 임시 진단 스크립트(20260708_1750/1830-TEMP) 완전 제거.
-6) [회귀] `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:boards`, `smoke:vercel-ready` 전부 통과.
+2) [근본 원인] `menuNavigation.js`의 `showMain()`과 `showBoardSelect()` 둘 다, 데이터 로딩(`await Promise.all(...)`)을 시작하기도 **전에** `setHint(''); setPrompt('');`를 직접 호출해 프롬프트/힌트를 즉시 비우고 있었다. 이 시점엔 아직 `renderAnsiScreenWithTopbarSequential…284 tokens truncated…) [회귀] `npm test`(유닛 10개 파일), `smoke:renderer-ui`, `smoke:boards`, `smoke:vercel-ready` 전부 통과.
 실행: 화면-전환-포함 30초 지속 진단으로 실제 재현 순간 포착, 프롬프트 빈 상태 검증(20회), 4패턴 종합 회귀(18회), `npm test`, smoke 3종
 기대: 화면 전환 중 "선택 >>" 프롬프트가 절대 빈 문자열로 노출되지 않는다 — "space2처럼 넓어보였다가 좁아지는" 현상의 진짜 원인이 제거되어 재현되지 않는다.
 결과: ✅ 완료 (20260708_1710/1725/1815의 ch→em 통일 작업은 별도의 실질적 개선으로 유지 — 근본 원인은 아니었지만 부수적으로 레이아웃 안정성을 높임)
@@ -18287,3 +17870,16 @@ Result: ✅ 완료 - Visual layout checks on Chrome verified 100% pixel-perfect 
 실행: `node --check`, projection/prefetch assertions, `npm run smoke:vercel-ready`, `npm run smoke:boards`
 기대: 목록 쿼리에서 `content` 제외, 조회수 갱신 응답 최소화, 다음 페이지 캐시 프리패치, 지정 smoke 통과
 결과: ✅ 완료 — 라우터 lazy loading은 기존 구현을 유지하고 나머지 최적화 및 검증을 완료함.
+
+## [2026-08-05 01:52] 다음 페이지 프리페치 스케줄러 지연 로딩
+
+**LOG_ID: 20260805_0152**
+목표: 첫 화면에 필요하지 않은 게시판 다음 페이지 프리페치 스케줄러를 초기 JavaScript 그래프에서 제외하고 완료 게이트를 복구한다.
+변경 파일: `public/js/core/postService.js`, `public/js/core/postListPrefetchService.js`
+수행 작업:
+1) 유휴 프리페치 스케줄러와 중복 요청 Map을 전용 모듈로 분리
+2) 첫 게시판 목록을 불러온 뒤에만 native `import()`로 스케줄러 로드
+3) 캐시 세대 보호, idle callback/microtask fallback, 다음 페이지 중복 요청 방지와 캐시 재사용 동작 유지
+실행: `node --check`, 정적 모듈 그래프 측정, 프리페치·캐시 재사용 동작 단언, `npm run build`, `npm run smoke:boards`, `npm run smoke:command-parity`, `npm run smoke:renderer-ui`, `npm run loop:verify`, `git diff --check`
+기대: 초기 그래프에서 프리페치 구현을 제외하고 `postService.js`를 250줄 이하로 복구
+결과: ✅ 초기 그래프 72개 유지, 645,062바이트에서 644,006바이트로 1,056바이트 감소. 프리페치 모듈 초기 그래프 제외, `postService.js` 255줄에서 249줄로 감소, 다음 페이지 1회 요청·캐시 재사용 확인, 완료 게이트 9/9 통과.

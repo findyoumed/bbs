@@ -14,6 +14,7 @@ export function createMenuNavigationActions(deps) {
     normalizeSearchKey,
     refs,
     resolveAnyMenuNodeTarget,
+    resolveLocalMenuNodeTarget,
     resolveBoardTarget,
     resolveMenuNodeTarget,
     setHint,
@@ -104,7 +105,7 @@ export function createMenuNavigationActions(deps) {
     const currentMenuNode = state.screen === 'main'
       ? state.menuTree
       : getMenuNodeByKey(state.boardMenuPath);
-    const localTargetNode = resolveMenuNodeTarget(target, getMenuChildren(currentMenuNode));
+    const localTargetNode = resolveLocalMenuNodeTarget(target, currentMenuNode);
     const targetNode = localTargetNode || resolveAnyMenuNodeTarget(target);
     if (targetNode) {
       const contextNode = localTargetNode ? currentMenuNode : getMenuParentNode(targetNode);

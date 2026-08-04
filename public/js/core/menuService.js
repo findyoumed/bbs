@@ -1,5 +1,6 @@
 export function createMenuService(deps) {
   const { apiFetch, compareDoor, state } = deps;
+  const sortedChildrenCache = new WeakMap();
 
   function isGuestMenuState() {
     return Boolean(state.user?.isGuest ?? true);
@@ -130,10 +131,20 @@ export function createMenuService(deps) {
   }
 
   function getMenuChildren(node) {
-    return (node?.children || []).filter(Boolean).slice().sort((a, b) => {
-      const diff = compareDoor(a?.door, b?.door);
-      return diff !== 0 ? diff : String(a?.name || '').localeCompare(String(b?.name || ''), 'ko');
-    });
+    if (!node || typeof node !== 'object') return [];
+    const source = Array.isArray(node.children) ? node.children : [];
+    let cached = sortedChildrenCache.get(node);
+    if (!cached || cached.source !== source) {
+      // [LOG_ID: 20260805_0553] Hydrated menu nodes are immutable. Cache their
+      // filtered/sorted children, but return a copy so callers cannot mutate it.
+      const sorted = source.filter(Boolean).slice().sort((a, b) => {
+        const diff = compareDoor(a?.door, b?.door);
+        return diff !== 0 ? diff : String(a?.name || '').localeCompare(String(b?.name || ''), 'ko');
+      });
+      cached = { source, sorted };
+      sortedChildrenCache.set(node, cached);
+    }
+    return cached.sorted.slice();
   }
 
   function getMenuNodeLabel(node) {
