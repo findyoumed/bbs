@@ -18267,3 +18267,12 @@ Result: ✅ 완료 - Visual layout checks on Chrome verified 100% pixel-perfect 
 실행: `node scripts/performance-startup.js --assert`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`, `npm run smoke:ui-geometry`, `npm run smoke:ui-layout`, `npm run smoke:vercel-ready`, `npm run loop:verify`, `npm test`, `git diff --check`
 기대: 초기 JS 요청 74개 이하, 정적 그래프 280KB 이상 절감, 전송 2.25MiB 이하, 준비시간 중앙값 142ms 이하, 전체 검증 통과
 결과: ✅ 101→87요청, JS 88→74개, 3,492,765→2,164,243바이트, 정적 JS 970.7→677.5KB, 준비시간 중앙값 150→126ms. `loop:verify` 9/9 및 브라우저/UI 검증 통과. ⚠️ `npm test`는 `HEAD`에 `archive/dev-only/tests/unit`과 단위 테스트 파일이 없는 기존 저장소 상태로 실행 불가.
+## [2026-08-04 13:59] 게시판 목록 페이로드 및 다음 페이지 프리패치 최적화 계획
+
+**LOG_ID: 20260804_1359**
+목표: 기존에 완료된 명령 라우터 지연 로딩은 유지하고, Supabase 게시판 목록 응답의 본문 페이로드를 줄이며 다음 페이지를 백그라운드에서 캐시에 준비한다.
+변경 파일: `.agents/artifacts/performance-followup-20260804/task.md`, `.agents/artifacts/performance-followup-20260804/implementation_plan.md`, `WORK_LOG.md`
+수행 작업: 1) appFactory/lazyModuleFactory의 네 라우터 lazy 적용 상태 확인 2) `fetchPagedPosts()`와 조회수 갱신의 전체 컬럼 반환 확인 3) postService 캐시·상태 적용 경계 분석 4) 5회 이내 반복 검증 계획 작성
+실행: `rg`, 대상 파일 전체 코드 검토
+기대: 목록 쿼리에서 `content` 제외, 조회수 갱신 응답 최소화, 다음 페이지 캐시 프리패치, 지정 smoke 통과
+결과: 🔄 진행 중 — 라우터 lazy loading은 이미 적용되어 있어 중복 변경하지 않고 나머지 두 영역을 구현한다.

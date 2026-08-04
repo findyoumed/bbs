@@ -19,6 +19,29 @@ const {
 // BoardVirtualBoards가 소유하도록 옮기고 양쪽이 같은 구현을 쓴다.
 const { resolveTrustedVirtualBoardId } = require('./BoardVirtualBoards');
 
+// [LOG_ID: 20260804_1359] List rows never need the post body. Keep the stable
+// identity/timestamp columns and add only columns confirmed by schema probing.
+const POST_LIST_BASE_COLUMNS = ['id', 'local_id', 'board_id', 'title', 'created_at', 'updated_at'];
+
+function buildPostListSelect(capabilities) {
+  const selected = [...POST_LIST_BASE_COLUMNS];
+  const columns = capabilities?.columns || {};
+  const add = (column, available = true) => {
+    if (available && !selected.includes(column)) selected.push(column);
+  };
+
+  add('family_id', columns.family_id);
+  add('sort_order', columns.sort_order);
+  add('depth', columns.depth);
+  add(capabilities?.userId, Boolean(capabilities?.userId));
+  add(capabilities?.nickName, Boolean(capabilities?.nickName));
+  add(capabilities?.hit, Boolean(capabilities?.hit));
+  add(capabilities?.recommend, Boolean(capabilities?.recommend));
+  add(capabilities?.category, Boolean(capabilities?.category));
+
+  return selected.join(', ');
+}
+
 async function countPosts(repo) {
   const { count, error } = await repo.client
     .from(repo.tables.posts)
@@ -126,7 +149,7 @@ async function getPost(repo, boardId, postId, options = {}) {
       })
       .eq('board_id', post.boardId)
       .eq('id', post.id)
-      .select('*')
+      .select(capabilities.hit)
       .single();
 
     // [LOG: 20260803_1200] PGRST116(0 rows matched): 게시글 조회와 조회수 증가 사이에
@@ -138,7 +161,12 @@ async function getPost(repo, boardId, postId, options = {}) {
         throw createHttpError(502, `조회수 갱신 실패: ${error.message}`);
       }
     } else {
-      post = mapPostRow(data);
+      // The update projection contains only the counter. Preserve the full
+      // post loaded above and merge the fresh value into it.
+      post = {
+        ...post,
+        hit: Number(data?.[capabilities.hit] ?? post.hit)
+      };
     }
   }
 
@@ -156,7 +184,7 @@ async function fetchPagedPosts(repo, boardId, page, pageSize, search = null) {
 
   let query = repo.client
     .from(repo.tables.posts)
-    .select('*', { count: 'exact' });
+    .select(buildPostListSelect(capabilities), { count: 'exact' });
 
   query = applyBoardFilter(query, boardId);
   query = applySupabaseSearch(query, capabilities, search);
@@ -307,6 +335,7 @@ module.exports = {
   countPostsSince,
   listBoardCounts,
   fetchPagedPosts,
+  buildPostListSelect,
   fetchPost,
   fetchPostByLocalId,
   getNavigation,
