@@ -1,3 +1,13 @@
+## [2026-08-04 02:40] 성능 리팩토링 완료 및 첨부 서비스 지연 분리
+
+**LOG_ID: 20260804_1114**
+목표: `postService.js`의 공개 API를 유지하면서 첨부파일 책임을 지연 로딩 모듈로 분리하고 성능 리팩토링 완료 게이트를 통과한다.
+변경 파일: `public/js/core/postService.js`, `public/js/core/postAttachmentService.js`, `.agents/artifacts/performance-refactor-20260804/task.md`, `.agents/artifacts/performance-refactor-20260804/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) 첨부 목록·업로드·다운로드 로직을 `postAttachmentService.js`로 추출 2) 첫 첨부 기능 사용 시 native `import()`로 한 번만 초기화 3) `postService.js`를 281줄에서 234줄로 축소 4) 작업 체크리스트와 검증 증거 정리
+실행: `node --check public/js/core/postService.js`, `node --check public/js/core/postAttachmentService.js`, `npm run qa:final`, `npm run loop:verify`, `npm run smoke:full-traversal`, `node scripts/performance-startup.js --assert`, `git diff --check`
+기대: 공개 API와 초기 성능 기준을 유지하고 `npm run loop:verify` 9개 게이트를 모두 통과한다.
+결과: ✅ 문법 검사, `qa:final`, `loop:verify` 9/9, `git diff --check` 통과. ⚠️ 현재 컨테이너에 Playwright Chromium 실행 파일이 없어 성능 하네스 재실행은 환경 제한으로 중단되었으며, 전체 순회는 HTTP fallback을 완료한 뒤 기존 환경 데이터 관련 2건을 보고했다.
+
 ## [2026-08-04 10:47] Git 원격 브랜치(보안/성능) main 브랜치 통합 및 검증 완료
 
 **LOG_ID: 20260804_1047**
@@ -18211,8 +18221,3 @@ Result: ✅ 완료 - Visual layout checks on Chrome verified 100% pixel-perfect 
 - 전체 탐색 E2E 스모크 테스트(`smoke:full-traversal`)가 기존과 완전히 동일하게 정상 작동한다.
 
 결과: (작업 중)
-
-
-
-
-
