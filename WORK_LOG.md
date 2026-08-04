@@ -1,4 +1,17 @@
-<<<<<<< HEAD
+## [2026-08-04 12:56] Merge 충돌 표시 기호 제거 및 코드 통합
+
+**LOG_ID: 20260804_1256**
+목표: `WORK_LOG.md`, `public/js/core/postAttachmentService.js`, `public/js/core/postService.js`에 남아있던 Git merge 충돌 표시 기호(`<<<<<<<`, `=======`, `>>>>>>>`)를 제거하고 정상 코드로 통합한다.
+변경 파일: `WORK_LOG.md`, `public/js/core/postAttachmentService.js`, `public/js/core/postService.js`
+수행 작업:
+1) `grep_search`로 저장소 내 모든 충돌 표시 기호 위치 특정
+2) `postAttachmentService.js` 및 `postService.js` 충돌 구문 정리 및 통합
+3) `WORK_LOG.md` 충돌 구문 정리 및 금회 작업 기록 추가
+4) `node --check` 및 smoke test 실행으로 검증
+실행: `node --check public/js/core/postService.js`, `node --check public/js/core/postAttachmentService.js`, `npm run smoke:vercel-ready`
+기대: JS 문법 검사 통과 및 smoke test 정상 통과
+결과: ✅ 완료
+
 ## [2026-08-04 02:40] 성능 리팩토링 완료 및 첨부 서비스 지연 분리
 
 **LOG_ID: 20260804_1114**
@@ -8,7 +21,7 @@
 실행: `node --check public/js/core/postService.js`, `node --check public/js/core/postAttachmentService.js`, `npm run qa:final`, `npm run loop:verify`, `npm run smoke:full-traversal`, `node scripts/performance-startup.js --assert`, `git diff --check`
 기대: 공개 API와 초기 성능 기준을 유지하고 `npm run loop:verify` 9개 게이트를 모두 통과한다.
 결과: ✅ 문법 검사, `qa:final`, `loop:verify` 9/9, `git diff --check` 통과. ⚠️ 현재 컨테이너에 Playwright Chromium 실행 파일이 없어 성능 하네스 재실행은 환경 제한으로 중단되었으며, 전체 순회는 HTTP fallback을 완료한 뒤 기존 환경 데이터 관련 2건을 보고했다.
-=======
+
 ## [2026-08-04 03:12] Lazy-load post attachment service
 
 **LOG_ID: 20260804_1114**
@@ -18,7 +31,6 @@
 실행: `node --check public/js/core/postService.js`, `node --check public/js/core/postAttachmentService.js`, `npm run qa:final`, `npm run loop:verify`, `git diff --check`, `wc -l public/js/core/postService.js`
 기대: 문법 통과, QA/loop 검증 통과, postService 250줄 이하
 결과: ✅ 완료
->>>>>>> a02d9e17aede33842895ca7e5f781b3897205d30
 
 ## [2026-08-04 10:47] Git 원격 브랜치(보안/성능) main 브랜치 통합 및 검증 완료
 

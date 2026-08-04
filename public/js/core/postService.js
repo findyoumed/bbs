@@ -191,7 +191,6 @@ export function createPostService(deps) {
     return result;
   }
 
-<<<<<<< HEAD
   async function loadAttachments(...args) {
     return (await getAttachmentService()).loadAttachments(...args);
   }
@@ -202,40 +201,6 @@ export function createPostService(deps) {
 
   async function downloadAttachment(...args) {
     return (await getAttachmentService()).downloadAttachment(...args);
-=======
-  let postAttachmentServicePromise = null;
-
-  // [LOG_ID: 20260804_1114] 첫 첨부 기능 사용 시점에만 새 모듈을 불러와 초기 진입 비용을 낮춘다.
-  async function getPostAttachmentService() {
-    if (!postAttachmentServicePromise) {
-      postAttachmentServicePromise = import('./postAttachmentService.js')
-        .then(({ createPostAttachmentService }) => createPostAttachmentService({ apiFetch, state }))
-        .catch((error) => {
-          postAttachmentServicePromise = null;
-          throw error;
-        });
-    }
-    return postAttachmentServicePromise;
-  }
-
-  async function loadAttachments(boardId, postId) {
-    const service = await getPostAttachmentService();
-    return service.loadAttachments(boardId, postId);
-  }
-
-  async function uploadAttachment(boardId, postId, payload) {
-    const service = await getPostAttachmentService();
-    return service.uploadAttachment(boardId, postId, payload);
-  }
-
-  function pickAttachmentDownloadName(fileName, contentDisposition) {
-    return String(fileName || '').trim() || String(contentDisposition || '').trim() || 'attachment.bin';
-  }
-
-  async function downloadAttachment(boardId, postId, attachmentId, fileName = '') {
-    const service = await getPostAttachmentService();
-    return service.downloadAttachment(boardId, postId, attachmentId, fileName);
->>>>>>> a02d9e17aede33842895ca7e5f781b3897205d30
   }
 
   /**

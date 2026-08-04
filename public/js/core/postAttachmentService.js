@@ -1,12 +1,6 @@
-<<<<<<< HEAD
 /**
- * [LOG_ID: 20260804_1114] Attachment operations are isolated from the core post
- * cache service so they can be loaded only when an attachment feature is used.
+ * [LOG_ID: 20260804_1114] 첨부파일 조회/업로드/다운로드 로직을 첫 사용 시점에만 불러오도록 분리한다.
  */
-=======
-// [LOG_ID: 20260804_1114] 첨부파일 조회/업로드/다운로드 로직을 첫 사용 시점에만 불러오도록 분리한다.
-
->>>>>>> a02d9e17aede33842895ca7e5f781b3897205d30
 export function createPostAttachmentService({ apiFetch, state }) {
   async function loadAttachments(boardId, postId) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/attachments`);
@@ -26,13 +20,7 @@ export function createPostAttachmentService({ apiFetch, state }) {
 
   function pickAttachmentDownloadName(fileName, contentDisposition) {
     const preferredName = String(fileName || '').trim();
-<<<<<<< HEAD
     if (preferredName) return preferredName;
-=======
-    if (preferredName) {
-      return preferredName;
-    }
->>>>>>> a02d9e17aede33842895ca7e5f781b3897205d30
 
     const headerValue = String(contentDisposition || '');
     const encodedMatch = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
@@ -44,17 +32,8 @@ export function createPostAttachmentService({ apiFetch, state }) {
       }
     }
 
-<<<<<<< HEAD
-    const quotedMatch = headerValue.match(/filename=\"?([^\";]+)\"?/i);
-    return quotedMatch?.[1]?.trim() || 'attachment.bin';
-=======
     const quotedMatch = headerValue.match(/filename="?([^";]+)"?/i);
-    if (quotedMatch?.[1]) {
-      return quotedMatch[1].trim();
-    }
-
-    return 'attachment.bin';
->>>>>>> a02d9e17aede33842895ca7e5f781b3897205d30
+    return quotedMatch?.[1]?.trim() || 'attachment.bin';
   }
 
   async function downloadAttachment(boardId, postId, attachmentId, fileName = '') {
@@ -89,14 +68,5 @@ export function createPostAttachmentService({ apiFetch, state }) {
     return true;
   }
 
-<<<<<<< HEAD
-  return { downloadAttachment, loadAttachments, uploadAttachment };
-=======
-  return {
-    loadAttachments,
-    uploadAttachment,
-    pickAttachmentDownloadName,
-    downloadAttachment
-  };
->>>>>>> a02d9e17aede33842895ca7e5f781b3897205d30
+  return { downloadAttachment, loadAttachments, uploadAttachment, pickAttachmentDownloadName };
 }
