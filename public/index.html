@@ -71,8 +71,9 @@
     </script>
     <!-- [LOG_ID: 20260708_1901] 폰트 자체 호스팅 전환 — CDN 의존성 제거 -->
     <!-- 폰트 사전 로드 (CSS 파싱 전에 다운로드 시작) -->
-    <link rel="preload" href="/fonts/Sam3KRFont.woff" as="font" type="font/woff" crossorigin>
-    <link rel="preload" href="/fonts/DungGeunMo.woff" as="font" type="font/woff" crossorigin>
+    <!-- [LOG_ID: 20260804_1305] Modern browsers preload the smaller WOFF2 assets. -->
+    <link rel="preload" href="/fonts/Sam3KRFont.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/DungGeunMo.woff2" as="font" type="font/woff2" crossorigin>
 
     <!-- CSS 병렬 로드 (@import 제거 → link 태그로 동시 다운로드) -->
     <link rel="stylesheet" href="/styles/retro-terminal.css?v=20260707_1815">

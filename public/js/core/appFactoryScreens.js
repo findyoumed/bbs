@@ -1,22 +1,22 @@
 // [LOG: 20260623_0013] origin/main에서 vote 스크린 포팅 (self-contained import)
-import { createVoteScreens } from './voteScreens.js';
-import { createConfScreens } from './confScreens.js';
-import { createAmusementScreens } from './amusementScreens.js';
 // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색(member/byid/byname)
-import { createMemberSearchScreens } from './memberSearchScreens.js';
 // [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 메뉴안내·인덱스안내(menu/index)
-import { createMenuIndexScreens } from './menuIndexScreens.js';
 // [LOG_ID: 20260720_2300] GUIDE 건의하기 — 게시판 대신 시삽 이메일 발송.
-import { createContactSysopScreen } from './contactSysopScreen.js';
 
+// [LOG_ID: 20260804_1305] Optional screen factories are injected as lazy facades.
 export function createAppFactoryScreens(deps) {
   const {
     SIGNUP_PRIVACY_TEXT,
     SIGNUP_TOS_TEXT,
+    createAmusementScreens,
     createAuthScreens,
     createChatScreens,
+    createConfScreens,
+    createContactSysopScreen,
     createHelpScreens,
+    createMemberSearchScreens,
     createMemoScreens,
+    createMenuIndexScreens,
     createPolicyScreens,
     createMenuNavigation,
     createMyInfoScreens,
@@ -27,6 +27,7 @@ export function createAppFactoryScreens(deps) {
     createSignupScreens,
     createSystemLogScreens,
     createSystemScreens,
+    createVoteScreens,
     refs,
     renderMenuHotspots,
     services,
@@ -53,9 +54,7 @@ export function createAppFactoryScreens(deps) {
     screenEl,
     serviceAnsiBuilders,
     systemAnsiBuilders,
-    terminalUiCore,
-    voteAnsiBuilders,
-    confAnsiBuilders
+    terminalUiCore
   } = services;
 
   const screenDeps = {
@@ -225,55 +224,16 @@ export function createAppFactoryScreens(deps) {
   const voteScreens = createVoteScreens({
     ...screenDeps,
     apiFetch,
-    buildVoteListAnsi: voteAnsiBuilders.buildVoteListAnsi,
-    buildVoteDetailAnsi: voteAnsiBuilders.buildVoteDetailAnsi,
-    buildVoteCreateAnsi: voteAnsiBuilders.buildVoteCreateAnsi,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
   // [LOG_ID: 20260719_1600] 토론의 광장(CONF) 스크린
   const confScreens = createConfScreens({
     ...screenDeps,
     apiFetch,
-    buildConfRoomListAnsi: confAnsiBuilders.buildConfRoomListAnsi,
-    buildConfAgendaListAnsi: confAnsiBuilders.buildConfAgendaListAnsi,
-    buildConfAgendaViewAnsi: confAnsiBuilders.buildConfAgendaViewAnsi,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
   const amusementScreens = createAmusementScreens({
     ...screenDeps,
-    buildBiorhythmIntroAnsi: serviceAnsiBuilders.buildBiorhythmIntroAnsi,
-    buildBiorhythmAnsi: serviceAnsiBuilders.buildBiorhythmAnsi,
-    buildFortuneIntroAnsi: serviceAnsiBuilders.buildFortuneIntroAnsi,
-    buildFortuneAnsi: serviceAnsiBuilders.buildFortuneAnsi,
-    buildMbtiListAnsi: serviceAnsiBuilders.buildMbtiListAnsi,
-    buildMbtiDetailAnsi: serviceAnsiBuilders.buildMbtiDetailAnsi,
-    buildBloodIntroAnsi: serviceAnsiBuilders.buildBloodIntroAnsi,
-    buildBloodAnsi: serviceAnsiBuilders.buildBloodAnsi,
-    findBloodType: serviceAnsiBuilders.findBloodType,
-    buildCompatIntroAnsi: serviceAnsiBuilders.buildCompatIntroAnsi,
-    buildCompatIntro2Ansi: serviceAnsiBuilders.buildCompatIntro2Ansi,
-    buildCompatAnsi: serviceAnsiBuilders.buildCompatAnsi,
-    buildTojeongIntroAnsi: serviceAnsiBuilders.buildTojeongIntroAnsi,
-    buildTojeongAnsi: serviceAnsiBuilders.buildTojeongAnsi,
-    buildRetroArtListAnsi: serviceAnsiBuilders.buildRetroArtListAnsi,
-    buildRetroArtViewAnsi: serviceAnsiBuilders.buildRetroArtViewAnsi,
-    findMbtiType: serviceAnsiBuilders.findMbtiType,
-    buildMbtiIntroAnsi: serviceAnsiBuilders.buildMbtiIntroAnsi,
-    buildMbtiTestQuestionAnsi: serviceAnsiBuilders.buildMbtiTestQuestionAnsi,
-    calculateMbtiFromAnswers: serviceAnsiBuilders.calculateMbtiFromAnswers,
-    MBTI_QUESTIONS: serviceAnsiBuilders.MBTI_QUESTIONS,
-    MBTI_TYPES: serviceAnsiBuilders.MBTI_TYPES,
-    // [LOG_ID: 20260720_1358] 오락실 게임 5종 (오목/오델로/숫자야구/영어단어맞추기/숫자판맞추기)
-    buildOmokAnsi: serviceAnsiBuilders.buildOmokAnsi,
-    buildOthelloAnsi: serviceAnsiBuilders.buildOthelloAnsi,
-    buildBaseballAnsi: serviceAnsiBuilders.buildBaseballAnsi,
-    buildHangmanAnsi: serviceAnsiBuilders.buildHangmanAnsi,
-    buildPuzzle15Ansi: serviceAnsiBuilders.buildPuzzle15Ansi,
-    buildScrambleAnsi: serviceAnsiBuilders.buildScrambleAnsi,
-    buildWpAnsi: serviceAnsiBuilders.buildWpAnsi,
-    buildTypingAnsi: serviceAnsiBuilders.buildTypingAnsi,
-    buildQuizAnsi: serviceAnsiBuilders.buildQuizAnsi,
-    buildBattleAnsi: serviceAnsiBuilders.buildBattleAnsi,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
 

@@ -4,6 +4,7 @@
  */
 'use strict';
 
+const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const { chromium } = require('playwright');
@@ -14,10 +15,72 @@ const COLD_RUNS = 3;
 const READY_TIMEOUT_MS = 15000;
 const TARGETS = {
   maxApiRequests: 6,
-  maxScriptRequests: 93,
+  maxColdTransferBytes: Math.floor(2.25 * 1024 * 1024),
+  maxScriptRequests: 74,
+  maxStaticModuleCount: 73,
+  maxStaticSourceBytes: 700 * 1024,
   maxMedianReadyMs: 142,
-  requireRepeatStatic304: true
+  requireRepeatStatic304: true,
+  requiredFontPaths: [
+    '/fonts/Sam3KRFont.woff2',
+    '/fonts/DungGeunMo.woff2'
+  ],
+  deferredInitialModules: [
+    'core/amusementScreens.js',
+    'core/amusementAnsiBuilders.js',
+    'core/arcadeScreens.js',
+    'core/arcadeAnsiBuilders.js',
+    'core/arcadeGameLogic.js',
+    'core/voteScreens.js',
+    'core/voteAnsiBuilders.js',
+    'core/confScreens.js',
+    'core/confAnsiBuilders.js',
+    'core/memberSearchScreens.js',
+    'core/menuIndexScreens.js',
+    'core/contactSysopScreen.js'
+  ]
 };
+
+// [LOG_ID: 20260804_1305] Browser timing is noisy, so also guard the concrete
+// static dependency graph that produced the startup improvement.
+function measureStaticModuleGraph(rootDir) {
+  const jsRoot = path.join(rootDir, 'public', 'js');
+  const entryPath = path.join(jsRoot, 'app.js');
+  const visited = new Set();
+
+  function visit(filePath) {
+    const resolvedPath = path.resolve(filePath);
+    if (visited.has(resolvedPath) || !fs.existsSync(resolvedPath)) return;
+    visited.add(resolvedPath);
+
+    const source = fs.readFileSync(resolvedPath, 'utf8');
+    const importPattern = /^\s*import(?:[\s\S]*?\sfrom\s*)?['"]([^'"]+)['"]/gm;
+    let match;
+    while ((match = importPattern.exec(source)) !== null) {
+      if (!match[1].startsWith('.')) continue;
+      let dependencyPath = path.resolve(path.dirname(resolvedPath), match[1]);
+      if (!path.extname(dependencyPath)) dependencyPath += '.js';
+      visit(dependencyPath);
+    }
+  }
+
+  visit(entryPath);
+  const modules = Array.from(visited, (filePath) =>
+    path.relative(jsRoot, filePath).split(path.sep).join('/')
+  ).sort();
+  const deferredModulesInInitialGraph = TARGETS.deferredInitialModules.filter((modulePath) =>
+    modules.includes(modulePath)
+  );
+
+  return {
+    deferredModulesInInitialGraph,
+    moduleCount: modules.length,
+    sourceBytes: Array.from(visited).reduce(
+      (total, filePath) => total + fs.statSync(filePath).size,
+      0
+    )
+  };
+}
 
 function median(values) {
   const sorted = values.slice().sort((left, right) => left - right);
@@ -132,12 +195,16 @@ async function measurePage(context, baseUrl, label) {
   const staticResponses = responses.filter((entry) =>
     entry.resourceType === 'script' || entry.resourceType === 'stylesheet'
   );
+  const fontPaths = responses
+    .filter((entry) => entry.resourceType === 'font')
+    .map((entry) => entry.path);
 
   await page.close();
   return {
     ...browserMetrics,
     apiPaths,
     duplicateApis: Object.fromEntries(duplicateApis),
+    fontPaths,
     label,
     requestCount: responses.length,
     scriptRequests: responses.filter((entry) => entry.resourceType === 'script').length,
@@ -153,17 +220,39 @@ function assertTargets(summary) {
   if (cold.apiPaths.length > TARGETS.maxApiRequests) {
     failures.push(`API requests ${cold.apiPaths.length} exceed ${TARGETS.maxApiRequests}`);
   }
+  if (cold.transferBytes > TARGETS.maxColdTransferBytes) {
+    failures.push(`cold transfer bytes ${cold.transferBytes} exceed ${TARGETS.maxColdTransferBytes}`);
+  }
   if (cold.scriptRequests > TARGETS.maxScriptRequests) {
     failures.push(`script requests ${cold.scriptRequests} exceed ${TARGETS.maxScriptRequests}`);
   }
   if (summary.medianReadyMs > TARGETS.maxMedianReadyMs) {
     failures.push(`median ready time ${summary.medianReadyMs}ms exceeds ${TARGETS.maxMedianReadyMs}ms`);
   }
+  if (summary.staticModuleGraph.moduleCount > TARGETS.maxStaticModuleCount) {
+    failures.push(`static modules ${summary.staticModuleGraph.moduleCount} exceed ${TARGETS.maxStaticModuleCount}`);
+  }
+  if (summary.staticModuleGraph.sourceBytes > TARGETS.maxStaticSourceBytes) {
+    failures.push(`static source bytes ${summary.staticModuleGraph.sourceBytes} exceed ${TARGETS.maxStaticSourceBytes}`);
+  }
+  if (summary.staticModuleGraph.deferredModulesInInitialGraph.length > 0) {
+    failures.push(`deferred modules entered the initial graph: ${summary.staticModuleGraph.deferredModulesInInitialGraph.join(', ')}`);
+  }
   if (TARGETS.requireRepeatStatic304 && summary.conditionalStatic.status !== 304) {
     failures.push(`conditional static request returned ${summary.conditionalStatic.status}, expected 304`);
   }
   if (Object.keys(cold.duplicateApis).length > 0) {
     failures.push(`duplicate APIs remain: ${Object.keys(cold.duplicateApis).join(', ')}`);
+  }
+  const missingFontPaths = TARGETS.requiredFontPaths.filter((fontPath) =>
+    !cold.fontPaths.includes(fontPath)
+  );
+  if (missingFontPaths.length > 0) {
+    failures.push(`required WOFF2 fonts were not loaded: ${missingFontPaths.join(', ')}`);
+  }
+  const legacyFontPaths = cold.fontPaths.filter((fontPath) => fontPath.endsWith('.woff'));
+  if (legacyFontPaths.length > 0) {
+    failures.push(`legacy WOFF fonts loaded in modern Chromium: ${legacyFontPaths.join(', ')}`);
   }
   if (failures.length) {
     const error = new Error(`Startup performance targets failed:\n- ${failures.join('\n- ')}`);
@@ -218,6 +307,7 @@ async function main() {
       conditionalStatic: await measureConditionalStatic(baseUrl),
       medianReadyMs: median(coldRuns.map((entry) => entry.readyMs)),
       repeatLoad,
+      staticModuleGraph: measureStaticModuleGraph(rootDir),
       targets: TARGETS
     };
 

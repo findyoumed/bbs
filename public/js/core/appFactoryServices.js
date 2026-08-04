@@ -1,9 +1,3 @@
-// [LOG: 20260623_0013] origin/main에서 vote ansi 빌더 포팅 (self-contained import)
-import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
-import { createVoteAnsiBuilders } from './voteAnsiBuilders.js';
-// [LOG_ID: 20260719_1600] 토론의 광장(CONF) ansi 빌더
-import { createConfAnsiBuilders } from './confAnsiBuilders.js';
-
 export function createAppFactoryServices(deps) {
   const {
     ansiToHTML,
@@ -114,13 +108,9 @@ export function createAppFactoryServices(deps) {
     displayWidth,
     state
   });
+  // [LOG_ID: 20260804_1305] Startup services build only shared, immediately used ANSI groups.
   const serviceAnsiBuilders = createServiceAnsiBuilders({ isWideChar, displayWidth, state });
   const systemAnsiBuilders = createSystemAnsiBuilders({ isWideChar, displayWidth });
-
-  // [LOG: 20260623_0013] vote ansi 빌더 (origin/main 포팅)
-  const ansiBuilderUtils = createAnsiBuilderUtils({ isWideChar, displayWidth });
-  const voteAnsiBuilders = createVoteAnsiBuilders({ ansiBuilderUtils });
-  const confAnsiBuilders = createConfAnsiBuilders({ ansiBuilderUtils }); // [LOG_ID: 20260719_1600]
 
   return {
     ansiToHTML,
@@ -143,8 +133,6 @@ export function createAppFactoryServices(deps) {
     restoreTheme,
     screenEl,
     serviceAnsiBuilders,
-    voteAnsiBuilders,
-    confAnsiBuilders,
     settingsService,
     soundService,
     statusManager,

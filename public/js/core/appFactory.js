@@ -83,6 +83,81 @@ const createSystemLogScreens = createLazyObjectFactory(
   () => import('./systemLogScreens.js').then((module) => module.createSystemLogScreens),
   ['showSystemLog', 'handleLogCommand']
 );
+// [LOG_ID: 20260804_1305] Keep optional feature implementations and their ANSI
+// builders outside the initial graph while preserving stable routing references.
+const createAmusementScreens = createLazyObjectFactory(
+  async () => {
+    const [screensModule, amusementBuildersModule, arcadeBuildersModule] = await Promise.all([
+      import('./amusementScreens.js'),
+      import('./amusementAnsiBuilders.js'),
+      import('./arcadeAnsiBuilders.js')
+    ]);
+    return (deps) => screensModule.createAmusementScreens({
+      ...deps,
+      ...amusementBuildersModule.createAmusementAnsiBuilders(deps),
+      ...arcadeBuildersModule.createArcadeAnsiBuilders(deps)
+    });
+  },
+  [
+    'showBiorhythm', 'showBiorhythmResult', 'showFortune', 'showFortuneResult',
+    'showMbti', 'showMbtiDetail', 'showMbtiList', 'startMbtiTest', 'handleMbtiAnswer',
+    'showBlood', 'showBloodResult', 'showCompat', 'showCompatStep2', 'showCompatResult',
+    'showTojeong', 'showTojeongResult', 'showRetroArt', 'showRetroArtView',
+    'showOmok', 'omokMove', 'omokResign', 'showOthello', 'othelloMove',
+    'showBaseball', 'baseballGuess', 'showHangman', 'hangmanGuess', 'hangmanResign',
+    'showPuzzle15', 'puzzle15Move', 'showScramble', 'scrambleGuess', 'showWp', 'wpGuess',
+    'showTyping', 'typingGuess', 'showQuiz', 'quizGuess', 'showBattle', 'battleMove',
+    'battleResign'
+  ]
+);
+const createVoteScreens = createLazyObjectFactory(
+  async () => {
+    const [screensModule, buildersModule, utilsModule] = await Promise.all([
+      import('./voteScreens.js'),
+      import('./voteAnsiBuilders.js'),
+      import('./ansiBuilderUtils.js')
+    ]);
+    return (deps) => screensModule.createVoteScreens({
+      ...deps,
+      ...buildersModule.createVoteAnsiBuilders({
+        ansiBuilderUtils: utilsModule.createAnsiBuilderUtils(deps)
+      })
+    });
+  },
+  ['showVoteList', 'showVoteDetail', 'castVote', 'showVoteCreate', 'submitVote']
+);
+const createConfScreens = createLazyObjectFactory(
+  async () => {
+    const [screensModule, buildersModule, utilsModule] = await Promise.all([
+      import('./confScreens.js'),
+      import('./confAnsiBuilders.js'),
+      import('./ansiBuilderUtils.js')
+    ]);
+    return (deps) => screensModule.createConfScreens({
+      ...deps,
+      ...buildersModule.createConfAnsiBuilders({
+        ansiBuilderUtils: utilsModule.createAnsiBuilderUtils(deps)
+      })
+    });
+  },
+  [
+    'showConfRooms', 'showConfAgendas', 'showConfAgenda', 'showConfAgendaPage',
+    'showConfRoomCreate', 'submitConfRoom', 'showConfAgendaNew', 'submitConfAgenda',
+    'secondConfAgenda', 'closeConfRoom'
+  ]
+);
+const createMemberSearchScreens = createLazyObjectFactory(
+  () => import('./memberSearchScreens.js').then((module) => module.createMemberSearchScreens),
+  ['showMemberSearch', 'findMember']
+);
+const createMenuIndexScreens = createLazyObjectFactory(
+  () => import('./menuIndexScreens.js').then((module) => module.createMenuIndexScreens),
+  ['showMenuIndex']
+);
+const createContactSysopScreen = createLazyObjectFactory(
+  () => import('./contactSysopScreen.js').then((module) => module.createContactSysopScreen),
+  ['showContactSysop', 'handleContactSysopRawInput']
+);
 const createSignupModule = createLazyObjectFactory(
   async () => {
     const [module, screensModule] = await Promise.all([
@@ -152,9 +227,14 @@ export function initApp(deps) {
     SIGNUP_PRIVACY_TEXT,
     SIGNUP_TOS_TEXT,
     createAuthScreens,
+    createAmusementScreens,
     createChatScreens,
+    createConfScreens,
+    createContactSysopScreen,
     createHelpScreens,
+    createMemberSearchScreens,
     createMemoScreens,
+    createMenuIndexScreens,
     createPolicyScreens,
     createMenuNavigation,
     createMyInfoScreens,
@@ -164,6 +244,7 @@ export function initApp(deps) {
     createSignupModule,
     createSystemLogScreens,
     createSystemScreens,
+    createVoteScreens,
     refs,
     renderMenuHotspots,
     services,

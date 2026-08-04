@@ -18245,3 +18245,12 @@ Result: ✅ 완료 - Visual layout checks on Chrome verified 100% pixel-perfect 
 - 전체 탐색 E2E 스모크 테스트(`smoke:full-traversal`)가 기존과 완전히 동일하게 정상 작동한다.
 
 결과: (작업 중)
+## [2026-08-04 13:36] 2차 초기 로딩 성능 리팩터링 및 WOFF2 전송 최적화
+
+**LOG_ID: 20260804_1305**
+목표: 첫 화면에서 사용하지 않는 선택 기능 모듈을 지연 로딩하여 초기 JavaScript 요청 수·전송량·준비시간을 줄이고, 기존 라우팅과 명령 API를 보존한다.
+변경 파일: `public/js/core/appFactory.js`, `public/js/core/appFactoryScreens.js`, `public/js/core/appFactoryServices.js`, `public/js/core/ansiServiceBuilders.js`, `scripts/performance-startup.js`, `public/index.html`, `public/style.css`, `public/styles/retro-terminal.css`, `public/fonts/DungGeunMo.woff2`, `public/fonts/Sam3KRFont.woff2`, `.agents/artifacts/performance-refactor-20260804-round2/*`, `WORK_LOG.md`
+수행 작업: 1) 오락·아케이드·투표·토론·이용자검색·전체메뉴·시삵 문의 화면과 빌더를 retry-safe lazy facade로 전환 2) 범용 서비스 빌더에서 선택 기능 의존성 제거 3) 자체 호스팅 폰트를 글리프 동일 WOFF2로 추가 변환하고 WOFF fallback 보존 4) 성능 하네스에 요청·전송·정적 모듈·WOFF2·캐시 예산 추가 5) 브라우저 전체 순회와 3종 모바일 뷰포트 검증
+실행: `node scripts/performance-startup.js --assert`, `npm run smoke:full-traversal`, `node scripts/smoke-mobile-viewports.js`, `npm run smoke:ui-geometry`, `npm run smoke:ui-layout`, `npm run smoke:vercel-ready`, `npm run loop:verify`, `npm test`, `git diff --check`
+기대: 초기 JS 요청 74개 이하, 정적 그래프 280KB 이상 절감, 전송 2.25MiB 이하, 준비시간 중앙값 142ms 이하, 전체 검증 통과
+결과: ✅ 101→87요청, JS 88→74개, 3,492,765→2,164,243바이트, 정적 JS 970.7→677.5KB, 준비시간 중앙값 150→126ms. `loop:verify` 9/9 및 브라우저/UI 검증 통과. ⚠️ `npm test`는 `HEAD`에 `archive/dev-only/tests/unit`과 단위 테스트 파일이 없는 기존 저장소 상태로 실행 불가.
