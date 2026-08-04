@@ -163,27 +163,69 @@ function readJsonBody(req) {
   return req[JSON_BODY_PROMISE];
 }
 
-function streamFile(res, filePath) {
+function createFileEtag(stats) {
+  return `W/"${stats.size.toString(16)}-${Math.trunc(stats.mtimeMs).toString(16)}"`;
+}
+
+function isFileNotModified(req, etag, modifiedAt) {
+  if (!req?.headers) return false;
+  const ifNoneMatch = String(req.headers['if-none-match'] || '').trim();
+  if (ifNoneMatch) {
+    return ifNoneMatch === '*' || ifNoneMatch.split(',').map((value) => value.trim()).includes(etag);
+  }
+
+  const ifModifiedSince = String(req.headers['if-modified-since'] || '').trim();
+  if (!ifModifiedSince) return false;
+  const requestedTime = Date.parse(ifModifiedSince);
+  return Number.isFinite(requestedTime) && Math.trunc(modifiedAt.getTime() / 1000) <= Math.trunc(requestedTime / 1000);
+}
+
+async function streamFile(res, filePath, options = {}) {
+  // [LOG_ID: 20260804_1114] Reuse metadata from the static asset index so a page
+  // loading many native modules does not queue one additional stat per response.
+  const stats = options.stats || await fs.promises.stat(filePath);
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeType = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf'
+  }[ext] || 'text/plain; charset=utf-8';
+  const etag = createFileEtag(stats);
+  const validatorHeaders = {
+    ETag: etag,
+    'Last-Modified': stats.mtime.toUTCString()
+  };
+  const headers = {
+    ...validatorHeaders,
+    'Content-Length': stats.size,
+    'Content-Type': mimeType
+  };
+
+  if (['.html', '.js', '.css'].includes(ext)) {
+    // [LOG_ID: 20260804_1114] Keep UI assets fresh while allowing no-cache
+    // revalidation to return a bodyless 304 instead of downloading each file again.
+    headers['Cache-Control'] = 'no-cache';
+    validatorHeaders['Cache-Control'] = 'no-cache';
+  }
+
+  if (isFileNotModified(options.req, etag, stats.mtime)) {
+    res.writeHead(304, validatorHeaders);
+    res.end();
+    return;
+  }
+
+  res.writeHead(200, headers);
+  if (options.req?.method === 'HEAD') {
+    res.end();
+    return;
+  }
+
   return new Promise((resolve, reject) => {
-    const ext = path.extname(filePath).toLowerCase();
-    const mimeType = {
-      '.html': 'text/html; charset=utf-8',
-      '.js': 'text/javascript; charset=utf-8',
-      '.css': 'text/css; charset=utf-8',
-      '.svg': 'image/svg+xml',
-      '.ico': 'image/x-icon',
-      '.woff': 'font/woff',
-      '.woff2': 'font/woff2',
-      '.ttf': 'font/ttf'
-    }[ext] || 'text/plain; charset=utf-8';
-
-    const headers = { 'Content-Type': mimeType };
-    if (['.html', '.js', '.css'].includes(ext)) {
-      // [LOG: 20260611_1540] Revalidate UI assets so prompt/cursor fixes are not hidden by stale browser cache.
-      headers['Cache-Control'] = 'no-cache';
-    }
-
-    res.writeHead(200, headers);
     const stream = fs.createReadStream(filePath);
     stream.on('error', reject);
     stream.on('end', resolve);

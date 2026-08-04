@@ -8,18 +8,10 @@
 import { UI_TEXT } from './i18n.js';
 import { createCommandFooterUtils } from './commandFooter.js';
 import { createCommandFooterTextUtils } from './commandFooterText.js';
-import { createSignupScreens } from './signupScreens.js';
-import { createServiceCommandHandler } from './commandRouterService.js';
 import { createEntryCommandHandler } from './commandRouterEntry.js';
-import { createBrowseCommandHandler } from './commandRouterBrowse.js';
-import { createChatCommandHandler } from './commandRouterChat.js';
-import { createPostViewCommandHandler } from './commandRouterPostView.js';
 import { ansiToHTML, displayWidth, isWideChar } from './ansiRenderUtils.js';
 import { renderMenuHotspots, buildMenuHotspotsFromRows } from './menuHotspotUtils.js';
 import { createMenuNavigation } from './menuNavigation.js';
-import { createServiceScreens } from './serviceScreens.js';
-import { createPostScreens } from './postScreens.js';
-import { createChatScreens } from './chatScreens.js';
 import { createAuthScreens } from './authScreens.js';
 import { createApiFetch, ApiError } from './apiFetch.js';
 import { createMenuService } from './menuService.js';
@@ -27,7 +19,6 @@ import { createBoardService } from './boardService.js';
 import { createPostService } from './postService.js';
 import { createDataService } from './dataService.js';
 import { createAuthService } from './authService.js';
-import { createSignupModule } from './signupModule.js';
 import { createBoardAnsiBuilders } from './ansiBoardBuilders.js';
 import { createServiceAnsiBuilders } from './ansiServiceBuilders.js';
 import { bindAppEvents } from './appEvents.js';
@@ -36,21 +27,11 @@ import { createTerminalUiCore } from './terminalUiCore.js';
 import { createTerminalStatusManager } from './terminalStatusManager.js';
 import { createCommandPalette } from './commandPalette.js';
 import { createCommandDispatcher } from './commandDispatcher.js';
-import { createHelpScreens } from './helpScreens.js';
-import { createProfileScreens } from './profileScreens.js';
-import { createMyInfoScreens } from './myInfoScreens.js';
-import { createMemoScreens } from './memoScreens.js';
-import { createPolicyScreens } from './policyScreens.js';
 import { createSystemAnsiBuilders } from './systemAnsiBuilders.js';
-import { createSystemScreens } from './systemScreens.js';
 import { createSystemLogger } from './systemLogger.js';
-import { createSystemLogScreens } from './systemLogScreens.js';
 import { createNetworkService } from './networkService.js';
 import { createPerformanceService } from './performanceService.js';
 import { createInteractionHandlers } from './interactionHandlers.js';
-import { createMemoCommandHandler } from './commandRouterMemo.js';
-import { createMyInfoCommandHandler } from './commandRouterMyInfo.js';
-import { createGlobalCommandHandler } from './commandRouterGlobal.js';
 import { createThemeService } from './themeService.js';
 import { createSoundService } from './soundService.js';
 import { createSettingsService } from './settingsService.js';
@@ -58,6 +39,85 @@ import { createAppFactoryServices } from './appFactoryServices.js';
 import { createAppFactoryScreens } from './appFactoryScreens.js';
 import { createAppFactoryHandlers } from './appFactoryHandlers.js';
 import { initializeAppFactoryRuntime } from './appFactoryRuntime.js';
+import { createLazyHandlerFactory, createLazyObjectFactory } from './lazyModuleFactory.js';
+
+// [LOG_ID: 20260804_1114] Optional feature modules are loaded on first use. The
+// facades retain stable method references required by routing and event wiring.
+const createServiceScreens = createLazyObjectFactory(
+  () => import('./serviceScreens.js').then((module) => module.createServiceScreens),
+  ['showNewsArticle', 'showNewsList', 'showNewsMenu', 'showWeatherMenu', 'showWeatherView']
+);
+const createPostScreens = createLazyObjectFactory(
+  () => import('./postScreens.js').then((module) => module.createPostScreens),
+  ['showPostList', 'showPostView', 'showPostWrite', 'handleWriteSubmit', 'cancelPostWrite', 'showAdjacentPost', 'showPtPrepare', 'showPtResult', 'showAttachmentList']
+);
+const createChatScreens = createLazyObjectFactory(
+  () => import('./chatScreens.js').then((module) => module.createChatScreens),
+  ['openChatRoomCreate', 'showChatLobby', 'showChatRoom']
+);
+const createMemoScreens = createLazyObjectFactory(
+  () => import('./memoScreens.js').then((module) => module.createMemoScreens),
+  ['cancelMemoWrite', 'handleMemoRawInput', 'handleMemoSubmit', 'showMemoList', 'showMemoView', 'showMemoViewPage', 'showMemoWrite']
+);
+const createMyInfoScreens = createLazyObjectFactory(
+  () => import('./myInfoScreens.js').then((module) => module.createMyInfoScreens),
+  ['cancelMyInfoEdit', 'openDeleteAccount', 'openEmailChange', 'openNicknameChange', 'openPasswordChange', 'logoutFromMyInfo', 'showMyInfo', 'submitDeleteAccount', 'submitEmailChange', 'submitNicknameChange', 'submitPasswordChange']
+);
+const createHelpScreens = createLazyObjectFactory(
+  () => import('./helpScreens.js').then((module) => module.createHelpScreens),
+  ['showHelp', 'showHistory']
+);
+const createProfileScreens = createLazyObjectFactory(
+  () => import('./profileScreens.js').then((module) => module.createProfileScreens),
+  ['showProfile']
+);
+const createPolicyScreens = createLazyObjectFactory(
+  () => import('./policyScreens.js').then((module) => module.createPolicyScreens),
+  ['showPolicy']
+);
+const createSystemScreens = createLazyObjectFactory(
+  () => import('./systemScreens.js').then((module) => module.createSystemScreens),
+  ['showActiveUsers', 'showSystemDiagnostics', 'showActivitySummary', 'showMyStats']
+);
+const createSystemLogScreens = createLazyObjectFactory(
+  () => import('./systemLogScreens.js').then((module) => module.createSystemLogScreens),
+  ['showSystemLog', 'handleLogCommand']
+);
+const createSignupModule = createLazyObjectFactory(
+  async () => {
+    const [module, screensModule] = await Promise.all([
+      import('./signupModule.js'),
+      import('./signupScreens.js')
+    ]);
+    return (deps) => module.createSignupModule({
+      ...deps,
+      createSignupScreens: screensModule.createSignupScreens
+    });
+  },
+  ['showSignup']
+);
+
+const createServiceCommandHandler = createLazyHandlerFactory(
+  () => import('./commandRouterService.js').then((module) => module.createServiceCommandHandler)
+);
+const createBrowseCommandHandler = createLazyHandlerFactory(
+  () => import('./commandRouterBrowse.js').then((module) => module.createBrowseCommandHandler)
+);
+const createChatCommandHandler = createLazyHandlerFactory(
+  () => import('./commandRouterChat.js').then((module) => module.createChatCommandHandler)
+);
+const createPostViewCommandHandler = createLazyHandlerFactory(
+  () => import('./commandRouterPostView.js').then((module) => module.createPostViewCommandHandler)
+);
+const createMemoCommandHandler = createLazyHandlerFactory(
+  () => import('./commandRouterMemo.js').then((module) => module.createMemoCommandHandler)
+);
+const createMyInfoCommandHandler = createLazyHandlerFactory(
+  () => import('./commandRouterMyInfo.js').then((module) => module.createMyInfoCommandHandler)
+);
+const createGlobalCommandHandler = createLazyHandlerFactory(
+  () => import('./commandRouterGlobal.js').then((module) => module.createGlobalCommandHandler)
+);
 
 export function initApp(deps) {
   const { state, refs, SIGNUP_TOS_TEXT, SIGNUP_PRIVACY_TEXT } = deps;
@@ -102,7 +162,6 @@ export function initApp(deps) {
     createProfileScreens,
     createServiceScreens,
     createSignupModule,
-    createSignupScreens,
     createSystemLogScreens,
     createSystemScreens,
     refs,

@@ -206,6 +206,13 @@ function bindAuthStateChangeListener(state, refreshUser, showPasswordReset) {
   state.supabase.auth.onAuthStateChange((event, session) => {
     state.token = session?.access_token || '';
 
+    // [LOG_ID: 20260804_1114] initAuth() already refreshes the server session after
+    // binding this listener. Supabase immediately emits INITIAL_SESSION, so refreshing
+    // for that event duplicated /api/auth/session on every authenticated bootstrap.
+    if (event === 'INITIAL_SESSION') {
+      return;
+    }
+
     if (event === 'PASSWORD_RECOVERY') {
       state._passwordRecoveryActive = true;
       state._passwordResetMode = 'update';

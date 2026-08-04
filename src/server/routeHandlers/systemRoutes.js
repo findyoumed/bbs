@@ -14,6 +14,8 @@ class SystemRouter extends BaseRouter {
       { method: 'GET', pattern: '/favicon.ico', handler: 'favicon' },
       { method: 'GET', pattern: /^\/api\/assets\/(.+)$/, handler: 'getAsset' },
       { method: 'GET', pattern: '/api/system/stats', handler: 'getStats' },
+      // [LOG_ID: 20260804_1114] Main-screen read data shares one serverless request.
+      { method: 'GET', pattern: '/api/bootstrap', handler: 'getBootstrap' },
       { method: 'GET', pattern: '/api/auth/config', handler: 'getAuthConfig' },
       { method: 'GET', pattern: '/api/runtime-config', handler: 'getRuntimeConfig' },
       { method: 'GET', pattern: '/api/auth/session', handler: 'getSession' },
@@ -63,7 +65,8 @@ class SystemRouter extends BaseRouter {
   async favicon() {
     const faviconPath = path.join(this.deps.projectRoot, 'public', 'favicon.svg');
     if (fs.existsSync(faviconPath)) {
-      await streamFile(this.res, faviconPath);
+      // [LOG_ID: 20260804_1114] Reuse conditional static-file responses for the API favicon route.
+      await streamFile(this.res, faviconPath, { req: this.req });
     } else {
       this.res.writeHead(204);
       this.res.end();
@@ -81,6 +84,34 @@ class SystemRouter extends BaseRouter {
   async getStats() {
     const { boardRepository, memberRepository, activityRepository, runtimeConfig, assetStatsCache } = this.deps;
     return this.send(200, await this.buildAssetDynamicData(boardRepository, memberRepository, activityRepository, runtimeConfig, assetStatsCache));
+  }
+
+  async getBootstrap() {
+    const {
+      activityRepository,
+      assetStatsCache,
+      boardRepository,
+      memberRepository,
+      menuResolver,
+      runtimeConfig
+    } = this.deps;
+    // [LOG_ID: 20260804_1114] These reads are independent. Combining them removes
+    // two HTTP/serverless round trips while retaining parallel repository work.
+    const [boards, stats] = await Promise.all([
+      boardRepository.listBoards(),
+      this.buildAssetDynamicData(
+        boardRepository,
+        memberRepository,
+        activityRepository,
+        runtimeConfig,
+        assetStatsCache
+      )
+    ]);
+    return this.send(200, {
+      boards,
+      menu: menuResolver.getTree(),
+      stats
+    });
   }
 
   async getAuthConfig() {

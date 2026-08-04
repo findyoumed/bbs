@@ -98,10 +98,9 @@ export function createMenuService(deps) {
     }
   }
 
-  async function loadMenuTree() {
+  function hydrateMenuTree(sourceTree) {
     const guestMenuState = isGuestMenuState();
-    if (state.menuTree && state._menuTreeGuestState === guestMenuState) return state.menuTree;
-    const tree = applyRuntimeMenuOverrides(await apiFetch('/api/menu'));
+    const tree = applyRuntimeMenuOverrides(sourceTree);
     if (!tree) return null;
     const lookup = {}, parents = {};
     indexMenuNodes(tree, '', lookup, parents);
@@ -110,6 +109,14 @@ export function createMenuService(deps) {
     state.menuParents = parents;
     state._menuTreeGuestState = guestMenuState;
     return tree;
+  }
+
+  async function loadMenuTree() {
+    const guestMenuState = isGuestMenuState();
+    if (state.menuTree && state._menuTreeGuestState === guestMenuState) return state.menuTree;
+    // [LOG_ID: 20260804_1114] Keep standalone loading for deep links while allowing
+    // the main bootstrap response to hydrate this state directly.
+    return hydrateMenuTree(await apiFetch('/api/menu'));
   }
 
   function getMenuNodeByKey(key) {
@@ -203,6 +210,6 @@ export function createMenuService(deps) {
   return {
     getAuthLeafRoutePath, getMenuChildren, getMenuEntries, getMenuNodeByKey,
     getMenuNodeCode, getMenuNodeKey, getMenuNodeLabel, getMenuNodeTitle,
-    getMenuParentNode, getMenuNodeRoutePath, isPasswordResetRoutePath, loadMenuTree, resolveMenuRoute
+    getMenuParentNode, getMenuNodeRoutePath, hydrateMenuTree, isPasswordResetRoutePath, loadMenuTree, resolveMenuRoute
   };
 }

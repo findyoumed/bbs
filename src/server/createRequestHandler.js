@@ -12,10 +12,13 @@ const {
   handleRateLimit,
   initializeRequest
 } = require('./requestGuards');
-const { handleStaticRequest } = require('./staticRequestHandler');
+const { createStaticAssetIndex, handleStaticRequest } = require('./staticRequestHandler');
 
 function createRequestHandler(options = {}) {
   const runtime = createRequestHandlerRuntime(options);
+  // [LOG_ID: 20260804_1114] Index public-file metadata once instead of probing
+  // the filesystem for every module request.
+  runtime.staticAssetIndex = options.staticAssetIndex || createStaticAssetIndex(runtime.projectRoot);
   const guards = createRequestGuards(runtime.env);
 
   return async function handleRequest(req, res) {
@@ -50,7 +53,8 @@ function createRequestHandler(options = {}) {
         return;
       }
 
-      await handleStaticRequest(runtime, res, requestUrl);
+      // [LOG_ID: 20260804_1114] Static responses need request cache validators.
+      await handleStaticRequest(runtime, req, res, requestUrl);
     } catch (error) {
       await respondWithRequestError(error, {
         env: runtime.env,

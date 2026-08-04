@@ -25,6 +25,8 @@ export function createMenuNavigation(deps) {
     getMenuNodeKey,
     getMenuNodeLabel,
     getMenuNodeTitle,
+    hydrateBoards,
+    hydrateMenuTree,
     loadBoards,
     loadMenuTree,
     normalizeSearchKey,
@@ -121,13 +123,13 @@ export function createMenuNavigation(deps) {
     // 자체가 순간 비었다 채워지는 것이었다). 20260708_1420의 setLoading() 힌트-즉시-비움 문제와 동일 계열.
     setLoading('연결하는 중입니다..');
 
-    // [LOG: 20260712_2200] 메뉴 로드 시 시스템 통계 및 최신 공지글 병렬 로드
-    const [, menuTree, stats, noticeData] = await Promise.all([
-      loadBoards(),
-      loadMenuTree(),
-      fetch('/api/system/stats').then(res => res.ok ? res.json() : null).catch(() => null),
-      apiFetch('/api/boards/notice?page=1&pageSize=1').catch(() => null)
-    ]);
+    // [LOG_ID: 20260804_1114] 게시판, 메뉴, 통계를 한 번의 서버 병렬 조회로 받아
+    // 초기 화면의 HTTP/serverless 왕복을 줄인다. 개별 로더는 딥링크 경로에서 계속 사용한다.
+    const bootstrap = await apiFetch('/api/bootstrap');
+    hydrateBoards(bootstrap?.boards);
+    const menuTree = hydrateMenuTree(bootstrap?.menu);
+    const stats = bootstrap?.stats || {};
+    state.stats = stats;
 
     // [LOG: 20260611_1400] Clear loading timer before rendering to prevent overwriting content
     setReady(true);

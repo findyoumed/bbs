@@ -1,5 +1,5 @@
 // [LOG: 20260425_1915] API error object, retry, timeout, and default throw behavior.
-// [LOG: 20260617_1005] Helper logic moved to apiFetchHelpers.js; public exports stay compatible.
+// [LOG: 20260617_1005] [LOG_ID: 20260804_1114] Helper logic moved to apiFetchHelpers.js; public exports stay compatible.
 import {
   ApiError,
   DEFAULT_RETRY_DELAY_MS,
@@ -13,9 +13,7 @@ import {
   translateErrorMessage,
   waitWithBackoff
 } from './apiFetchHelpers.js';
-
 export { ApiError };
-
 // [LOG_ID: 20260727_0700] HTTP 헤더 값은 ISO-8859-1(Latin-1)만 허용된다 — 한글 닉네임을
 // 그대로 X-BBS-Nick-Name에 넣으면 브라우저 fetch()가 "String contains non ISO-8859-1
 // code point"로 그 호출 하나가 아니라 이후의 모든 API 요청에서 즉시 예외를 던진다(사용자

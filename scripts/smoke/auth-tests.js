@@ -99,7 +99,12 @@ async function verifyAuthRecoveryCoverage(errors) {
                                         }
                                     };
                                 },
-                                onAuthStateChange() {
+                                onAuthStateChange(callback) {
+                                    // [LOG_ID: 20260804_1114] Supabase emits this immediately after
+                                    // subscription; it must not duplicate initAuth's explicit refresh.
+                                    callback('INITIAL_SESSION', {
+                                        access_token: 'auth-recovery-smoke-token'
+                                    });
                                     return {
                                         data: {
                                             subscription: { unsubscribe() {} }
@@ -127,7 +132,9 @@ async function verifyAuthRecoveryCoverage(errors) {
                 isPasswordResetRoutePath: menuService.isPasswordResetRoutePath,
                 showPasswordReset: async () => {},
                 state,
-                refreshUser: async () => {}
+                refreshUser: async () => {
+                    state._refreshUserCalls = Number(state._refreshUserCalls || 0) + 1;
+                }
             });
 
             await initAuth();
@@ -135,11 +142,17 @@ async function verifyAuthRecoveryCoverage(errors) {
         }
 
         const loginState = await runBootstrapCase('/log/login');
+        if (loginState._refreshUserCalls !== 1) {
+            errors.push(`Auth bootstrap refreshed the server session ${loginState._refreshUserCalls || 0} times on /log/login (expected 1)`);
+        }
         if (loginState._passwordRecoveryActive || loginState._passwordResetMode !== 'request') {
             errors.push(`Auth bootstrap incorrectly armed recovery mode on /log/login (got active=${Boolean(loginState._passwordRecoveryActive)}, mode=${loginState._passwordResetMode || 'empty'})`);
         }
 
         const passwordState = await runBootstrapCase('/log/password');
+        if (passwordState._refreshUserCalls !== 1) {
+            errors.push(`Auth bootstrap refreshed the server session ${passwordState._refreshUserCalls || 0} times on /log/password (expected 1)`);
+        }
         if (!passwordState._passwordRecoveryActive || passwordState._passwordResetMode !== 'update') {
             errors.push(`Auth bootstrap did not arm recovery mode on /log/password (got active=${Boolean(passwordState._passwordRecoveryActive)}, mode=${passwordState._passwordResetMode || 'empty'})`);
         }

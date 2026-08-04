@@ -23,11 +23,18 @@ export function createBoardService(deps = {}) {
     boardIndexes = createEmptyBoardIndexes();
   }
 
+  function hydrateBoards(data) {
+    // [LOG_ID: 20260804_1114] Main bootstrap can seed the same board state used by
+    // the standalone loader without issuing a second request.
+    state.boards = Array.isArray(data) ? data : (data?.boards || []);
+    resetBoardIndexes();
+    return state.boards;
+  }
+
   async function loadBoards() {
     if (getBoards().length > 0) return;
     const data = await apiFetch('/api/boards');
-    state.boards = Array.isArray(data) ? data : (data?.boards || []);
-    resetBoardIndexes();
+    hydrateBoards(data);
   }
 
   function getBoardKey(board) {
@@ -138,6 +145,7 @@ export function createBoardService(deps = {}) {
     getBoardDoor,
     getBoardKey,
     getBoardMenuPath,
+    hydrateBoards,
     loadBoards,
     normalizeSearchKey
   };
