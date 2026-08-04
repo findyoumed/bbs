@@ -49,7 +49,7 @@ exit /b 1
 echo.
 echo [5/5] Pushing to GitHub...
 git branch -M main
-git push -u origin main
+git push origin main
 if errorlevel 1 goto PUSH_FAILED
 
 echo.
