@@ -1,3 +1,13 @@
+## [2026-08-04 03:12] Lazy-load post attachment service
+
+**LOG_ID: 20260804_1114**
+목표: 첨부파일 관련 로직을 새 모듈로 분리하고, 첫 사용 시점에만 동적으로 불러오도록 하여 초기 진입 비용을 낮춘다.
+변경 파일: public/js/core/postService.js, public/js/core/postAttachmentService.js
+수행 작업: 1) 첨부파일 로직을 새 모듈로 분리 2) postService의 첨부 API를 lazy facade로 대체 3) 모듈 초기화 실패 시 Promise 재시도 가능하게 처리 4) 워크로그 및 walkthrough 기록 갱신
+실행: `node --check public/js/core/postService.js`, `node --check public/js/core/postAttachmentService.js`, `npm run qa:final`, `npm run loop:verify`, `git diff --check`, `wc -l public/js/core/postService.js`
+기대: 문법 통과, QA/loop 검증 통과, postService 250줄 이하
+결과: ✅ 완료
+
 ## [2026-08-04 10:47] Git 원격 브랜치(보안/성능) main 브랜치 통합 및 검증 완료
 
 **LOG_ID: 20260804_1047**
