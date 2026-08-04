@@ -1,3 +1,20 @@
+## [2026-08-04 10:47] Git 원격 브랜치(보안/성능) main 브랜치 통합 및 검증 완료
+
+**LOG_ID: 20260804_1047**
+목표:
+- GitHub의 `fix/security-password-recovery-redirect` 및 `performance/refactor-queries` 브랜치를 분석하여 `main` 브랜치로 정상 병합(merge).
+
+수행 작업:
+1. 원격 브랜치 비교 결과 미통합 커밋 5개 확인:
+   - `fix/security-password-recovery-redirect` (보안 재전송 검증 관련 2개 커밋)
+   - `performance/refactor-queries` (게시판 쿼리/답글 순서 캐싱 성능 관련 3개 커밋)
+2. `main` 브랜치로 병합 (`git merge origin/fix/security-password-recovery-redirect`, `git merge origin/performance/refactor-queries`).
+3. `node scripts/smoke-password-recovery.js` 및 주요 JS 파일 `node --check` 검증 수행.
+
+실행: `node scripts/smoke-password-recovery.js`
+기대: `{"ok": true, "message": "Password recovery redirect smoke passed"}`
+결과: ✅ 성공 (main 브랜치에 완전히 병합 완료)
+
 ## [2026-08-03 17:00] [버그수정] getMyStats 하드코딩 컬럼 선택 + rateLimiter buckets.clear() DoS 벡터
 
 **LOG_ID: 20260803_1700**
