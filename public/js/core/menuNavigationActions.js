@@ -26,10 +26,23 @@ export function createMenuNavigationActions(deps) {
   } = deps;
 
   async function executeGoCommand(rawCmd) {
-    const match = String(rawCmd || '').trim().match(/^GO\s+(.+)$/i);
-    if (!match) return false;
+    const command = String(rawCmd || '').trim();
+    const first = command.charCodeAt(0);
+    const second = command.charCodeAt(1);
+    // [LOG_ID: 20260805_0812] Most commands are not GO. Check the two-byte
+    // prefix before trimming/capturing a regex, while preserving all whitespace
+    // separators accepted by the previous /^GO\s+(.+)$/i parser.
+    if (
+      command.length < 4
+      || (first !== 71 && first !== 103)
+      || (second !== 79 && second !== 111)
+      || !/\s/.test(command[2])
+    ) {
+      return false;
+    }
 
-    const target = match[1].trim();
+    const target = command.slice(2).trim();
+    if (!target) return false;
     const normalized = normalizeSearchKey(target);
     // [LOG_ID: 20260720_2320] GL은 PDS(자료실)의 별칭 — GO GL도 자료실로 이동
     if (normalized === 'GL') return await executeGoCommand('GO PDS');

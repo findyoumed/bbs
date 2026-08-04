@@ -1,3 +1,16 @@
+## [2026-08-05 08:12] 비-GO 명령의 GO 판별 단축
+
+**LOG_ID: 20260805_0812**
+목표: 모든 명령 입력에서 반복되는 `GO` 정규식 캡처 비용을 줄여 명령 처리 지연을 단축한다.
+변경 파일: `public/js/core/menuNavigationActions.js`, `WORK_LOG.md`
+수행 작업:
+1) ASCII `GO` 접두와 공백을 먼저 확인해 비-GO 입력을 즉시 반환
+2) 기존 인자 trim, 대소문자, 탭·유니코드 공백 구분 동작 유지
+3) `GOLD`, `GO`, `GO   ` 등 오탐·빈 인자 차단
+실행: `node --check`, 비-GO 50,000회 벤치마크, GO 문법·공백·오탐 단언, `npm run build`, 관련 smoke, `npm run loop:verify`, `git diff --check`
+기대: `/gosl`을 포함한 전체 명령 파이프라인의 GO 진입 판별 비용 감소
+결과: ✅ 비-GO 50,000회 판별 중앙값이 4.952ms에서 4.663ms로 감소(5.8%), 호출당 약 99ns에서 93ns로 단축. `GOLD`, 빈 `GO`, 탭 구분 `go TOP` 동작을 확인했고 문법 검사, 빌드, 관련 smoke, `git diff --check`, 완료 게이트 9/9 통과.
+
 ## [2026-08-05 07:54] GO 로컬 메뉴 실패 탐색 캐시
 
 **LOG_ID: 20260805_0754**
