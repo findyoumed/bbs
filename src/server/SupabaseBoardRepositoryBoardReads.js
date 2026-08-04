@@ -7,6 +7,34 @@ const {
 } = require('./BoardRepositoryShared');
 const { shouldUseBoardFallback } = require('./SupabaseBoardRepositorySchema');
 
+const BOARD_CACHE_TTL_MS = 30 * 1000;
+
+function getBoardCache(repo) {
+  if (!repo._boardCache) {
+    repo._boardCache = new Map();
+  }
+  return repo._boardCache;
+}
+
+function cacheBoard(repo, board) {
+  if (!board?.boardId) return board;
+  getBoardCache(repo).set(board.boardId, {
+    at: Date.now(),
+    board: cloneBoard(board)
+  });
+  return board;
+}
+
+function getCachedBoard(repo, boardId) {
+  const cached = getBoardCache(repo).get(boardId);
+  if (!cached) return null;
+  if (Date.now() - cached.at >= BOARD_CACHE_TTL_MS) {
+    getBoardCache(repo).delete(boardId);
+    return null;
+  }
+  return cloneBoard(cached.board);
+}
+
 function mergeBoardDefinition(repo, board) {
   if (!board) {
     return null;
@@ -53,6 +81,11 @@ function mergeBoardList(repo, boards) {
 }
 
 async function listBoards(repo) {
+  const cached = repo._boardListCache;
+  if (cached && (Date.now() - cached.at) < BOARD_CACHE_TTL_MS) {
+    return cached.data.map(cloneBoard);
+  }
+
   const { data, error } = await repo.client
     .from(repo.tables.boards)
     .select('*')
@@ -62,15 +95,31 @@ async function listBoards(repo) {
 
   if (error) {
     if (shouldUseBoardFallback(error)) {
-      return repo.boards.map(cloneBoard);
+      const fallback = repo.boards.map(cloneBoard);
+      repo._boardListCache = { at: Date.now(), data: fallback };
+      return fallback.map(cloneBoard);
     }
     throw createHttpError(502, `게시판 목록 조회 실패: ${error.message}`);
   }
 
-  return mergeBoardList(repo, (data || []).map((row) => mapBoardRow(row)));
+  const result = mergeBoardList(repo, (data || []).map((row) => mapBoardRow(row)));
+  const cache = getBoardCache(repo);
+  const now = Date.now();
+  for (const board of result) {
+    if (board?.boardId) {
+      cache.set(board.boardId, { at: now, board: cloneBoard(board) });
+    }
+  }
+  repo._boardListCache = { at: now, data: result.map(cloneBoard) };
+  return result;
 }
 
 async function getBoard(repo, boardId) {
+  const cached = getCachedBoard(repo, boardId);
+  if (cached) {
+    return cached;
+  }
+
   const { data, error } = await repo.client
     .from(repo.tables.boards)
     .select('*')
@@ -85,10 +134,10 @@ async function getBoard(repo, boardId) {
   }
 
   if (data) {
-    return mergeBoardDefinition(repo, mapBoardRow(data));
+    return cacheBoard(repo, mergeBoardDefinition(repo, mapBoardRow(data)));
   }
 
-  return cloneBoard(repo.boards.find((board) => board.boardId === boardId));
+  return cacheBoard(repo, cloneBoard(repo.boards.find((board) => board.boardId === boardId)));
 }
 
 module.exports = {
