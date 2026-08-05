@@ -2,6 +2,19 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 09:52] 익명 요청의 불필요한 회원 DB 조회 제거
+
+**LOG_ID: 20260805_0952**
+목표: 모든 익명 API 요청이 존재하지 않는 `guest` 회원을 Supabase에서 조회하며 만드는 지연을 제거한다.
+변경 파일: `src/server/AuthMemberProfileService.js`, `WORK_LOG.md`
+수행 작업:
+1) `isGuest` 또는 정규화 ID가 `guest`인 합성 신원은 회원 저장소 조회 전 즉시 반환
+2) 로그인 회원의 프로필 조회·이메일 재사용·신규 프로필 저장 흐름은 유지
+3) 저장소 호출 횟수와 100,000회 처리 시간을 전후 측정
+실행: 게스트·회원 동작 단언, `node --check`, `npm run build`, `npm run smoke:auth-bridge`, `npm run loop:verify`, `git diff --check`
+기대: 익명 요청당 Supabase 왕복 1회 제거, 저장소 장애 시 직렬 타임아웃 구간 단축
+결과: ✅ 100,000회 게스트 처리에서 회원 저장소 호출이 100,000회에서 0회로 감소했고 순수 처리 시간이 17.308ms에서 12.140ms로 단축(29.9%, 호출당 173ns→121ns). 로그인 회원 병합 단언, 빌드, auth smoke 32개, 완료 게이트 9/9 통과.
+
 ## [2026-08-05 09:48] 게시판 메타 조회 원문 오류의 502 차단
 
 **LOG_ID: 20260805_0948**

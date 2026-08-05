@@ -94,7 +94,11 @@ class AuthMemberProfileService {
   }
 
   async enrichUser(user) {
-    if (!this.memberRepository || !user?.userId) {
+    const userId = String(user?.userId || '').trim().toLowerCase();
+    // [LOG_ID: 20260805_0952] Guest identities are synthetic and never have a
+    // member row. Avoid one Supabase lookup on every anonymous API request,
+    // especially the serial delay it adds while the repository is unavailable.
+    if (!this.memberRepository || !userId || user?.isGuest || userId === 'guest') {
       return user;
     }
 
