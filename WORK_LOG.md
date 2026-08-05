@@ -2,6 +2,29 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 17:49] zip_project.py 기본 제외 목록에 docs/ 폴더 추가
+
+**LOG_ID: 20260805_1749**
+목표: 용량이 큰 `docs/` 폴더를 zip 압축 대상에서 제외한다.
+변경 파일: `zip_project.py`, `WORK_LOG.md`
+수행 작업:
+1) `zip_project.py` 내 `all_patterns` 기본 제외 목록에 `docs/` 규칙 추가
+실행: `python -m py_compile zip_project.py`, `python zip_project.py`
+기대: `docs/` 디렉터리 내 수많은 이미지/문서 파일이 압축 대상에서 제외되어 압축 속도가 향상되고 zip 용량이 대폭 축소됨
+결과: ✅ 정상 반영 (834개 → 52개 파일로 압축 대상 축소)
+
+## [2026-08-05 17:48] zip_project.py 압축 실시간 진행 상황 콘솔 출력 기능 추가
+
+**LOG_ID: 20260805_1748**
+목표: zip_project.py 실행 시 전체 파일 수와 개별 파일 압축 진행 상황([현재/전체] Added: 파일명)을 화면에 출력한다.
+변경 파일: `zip_project.py`, `WORK_LOG.md`
+수행 작업:
+1) 대상 파일 미리 수집 후 총 파일 수(total_files) 파악
+2) 압축 시 `[현재/전체] Added: 파일경로` 실시간 print 출력 추가
+실행: `python -m py_compile zip_project.py`, `python zip_project.py`
+기대: 압축 실행 시 몇 번째 파일이 저장되는지 실시간으로 진행률 확인 가능
+결과: ✅ 정상 작동 확인
+
 ## [2026-08-05 14:35] 초기 로딩 성능 회귀 복구 및 선택 기능 ANSI 빌더 지연 로딩
 
 **LOG_ID: 20260805_1435**

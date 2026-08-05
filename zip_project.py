@@ -65,27 +65,37 @@ def zip_project(output_filename=None):
     # 2. Add some default ignores if not present
     all_patterns.append((root_dir, ".git/"))
     all_patterns.append((root_dir, output_filename))
+    # [LOG: 20260805_1749] docs/ 폴더 용량 문제로 압축 제외 추가
+    all_patterns.append((root_dir, "docs/"))
 
     print(f"Creating {output_filename}...")
-    
+
+    # [LOG: 20260805_1748] 압축 진행 상황(진행률 및 추가 파일명) 콘솔 출력 추가
+    # 3. Collect files to include
+    target_files = []
+    for file_path in root_dir.rglob("*"):
+        if file_path.is_file():
+            ignored = False
+            for p in [file_path] + list(file_path.parents):
+                if is_ignored(p, all_patterns):
+                    ignored = True
+                    break
+            
+            # [LOG: 20260411_1252] .env 및 zip_project.py 파일 강제 포함
+            if not ignored or file_path.name in [".env", "zip_project.py"]:
+                target_files.append(file_path)
+
+    total_files = len(target_files)
+    print(f"Total target files: {total_files}")
+
     count = 0
     # [LOG: 20260417_1050] metadata_encoding 제거 (쓰기 모드에서 지원 안됨)
     with zipfile.ZipFile(output_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for file_path in root_dir.rglob("*"):
-            if file_path.is_file():
-                # Check if this file or any of its parents are ignored
-                ignored = False
-                for p in [file_path] + list(file_path.parents):
-                    if is_ignored(p, all_patterns):
-                        ignored = True
-                        break
-                
-                # [LOG: 20260411_1252] .env 및 zip_project.py 파일 강제 포함
-                if not ignored or file_path.name in [".env", "zip_project.py"]:
-                    arcname = str(file_path.relative_to(root_dir)).replace(os.sep, "/")
-                    zipf.write(file_path, arcname)
-                    # print(f"Added: {arcname}")
-                    count += 1
+        for index, file_path in enumerate(target_files, 1):
+            arcname = str(file_path.relative_to(root_dir)).replace(os.sep, "/")
+            zipf.write(file_path, arcname)
+            print(f"[{index}/{total_files}] Added: {arcname}")
+            count += 1
 
     print(f"Done! {count} files added to {output_filename}.")
 
