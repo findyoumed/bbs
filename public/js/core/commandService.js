@@ -155,6 +155,11 @@ export const CMD_META = {
   // [LOG_ID: 20260729_1708] 사용자 요청으로 SET, UNSET, ENV 명령어 제거
 };
 
+// [LOG_ID: 20260805_1054] 명령 메타데이터는 초기화 후 변경되지 않으므로 같은 접두어의
+// 자동완성 결과를 매 입력 이벤트마다 다시 필터·정렬하지 않도록 제한된 캐시를 사용한다.
+const commandMatchCache = new Map();
+const COMMAND_MATCH_CACHE_LIMIT = 64;
+
 /**
  * Returns commands matching the prefix. Used for autocomplete.
  */
@@ -162,7 +167,11 @@ export function getCommandMatches(prefix) {
   const upper = String(prefix || '').trim().toUpperCase();
   if (!upper) return [];
 
-  return Object.keys(CMD_META)
+  if (commandMatchCache.has(upper)) {
+    return commandMatchCache.get(upper).slice();
+  }
+
+  const matches = Object.keys(CMD_META)
     .filter(cmd => cmd.startsWith(upper))
     .sort((left, right) => {
       const leftExact = left === upper ? 1 : 0;
@@ -176,6 +185,12 @@ export function getCommandMatches(prefix) {
       if (left.length !== right.length) return left.length - right.length;
       return left.localeCompare(right);
     });
+
+  if (commandMatchCache.size >= COMMAND_MATCH_CACHE_LIMIT) {
+    commandMatchCache.delete(commandMatchCache.keys().next().value);
+  }
+  commandMatchCache.set(upper, matches);
+  return matches.slice();
 }
 
 /**
