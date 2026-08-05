@@ -27,12 +27,11 @@ export function createPostService(deps) {
     }
     return attachmentServicePromise;
   }
-
   // [LOG: 20260426_2300] 캐시 저장소 (목록 캐시는 boardId_page_search 형식, 본문 캐시는 boardId_postId 형식)
   const listCache = new Map();
+  const listRequests = new Map(); // [LOG_ID: 20260805_1353] 같은 목록의 동시 API 요청을 공유한다.
   const postCache = new Map();
   let listCacheGeneration = 0;
-
   // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "목록 출력방식"(SET SORT) 재현.
   // 서버는 최신순(내림차순)으로 페이지 단위를 내려주므로, OLD 설정 시 현재 페이지 안에서만
   // 순서를 뒤집는다(페이지 경계를 다시 계산하는 서버 정렬 파라미터까지는 이번 스코프가 아니다).
@@ -40,7 +39,6 @@ export function createPostService(deps) {
     const sort = String(state.envVars?.SORT || '').trim().toUpperCase();
     return sort === 'OLD' ? [...items].reverse() : items;
   }
-
   function normalizePostListResponse(data, fallbackPage) {
     return {
       board: data?.board || null,
@@ -56,7 +54,6 @@ export function createPostService(deps) {
   function normalizePostViewResponse(data) {
     return data?.post ? { board: data.board || null, post: data.post } : { board: null, post: data || null };
   }
-
   // [LOG: 20260801_0100] 관련 게시판의 모든 목록 캐시 삭제.
   // 물리 게시판(pds_util 등)이 가상 게시판(pds) 소속이면 부모 가상 게시판의 목록 캐시도
   // 함께 삭제한다. 예: pds_util 글 삭제 후 PDS 가상 목록으로 돌아올 때 stale 캐시가
@@ -66,9 +63,9 @@ export function createPostService(deps) {
     const virtualParent = PHYSICAL_TO_VIRTUAL[String(boardId || '')];
     const virtualPrefix = virtualParent ? `${virtualParent}_` : null;
     listCacheGeneration += 1;
-    for (const key of listCache.keys()) {
-      if (key.startsWith(keyPrefix) || (virtualPrefix && key.startsWith(virtualPrefix))) {
-        listCache.delete(key);
+    for (const cache of [listCache, listRequests]) {
+      for (const key of cache.keys()) {
+        if (key.startsWith(keyPrefix) || (virtualPrefix && key.startsWith(virtualPrefix))) cache.delete(key);
       }
     }
   }
@@ -118,15 +115,17 @@ export function createPostService(deps) {
     const cacheKey = buildListCacheKey(boardId, page, searchParams);
     const cached = listCache.get(cacheKey);
     if (cached) return cached;
-
-    const data = normalizePostListResponse(
-      await apiFetch(buildPostsUrl(boardId, page, searchParams)),
-      page
-    );
-    if (!data.degraded && generation === listCacheGeneration) {
-      listCache.set(cacheKey, data);
-    }
-    return data;
+    const pending = listRequests.get(cacheKey);
+    if (pending) return pending;
+    const request = apiFetch(buildPostsUrl(boardId, page, searchParams))
+      .then((response) => normalizePostListResponse(response, page))
+      .then((data) => {
+        if (!data.degraded && generation === listCacheGeneration) listCache.set(cacheKey, data);
+        return data;
+      })
+      .finally(() => { if (listRequests.get(cacheKey) === request) listRequests.delete(cacheKey); });
+    listRequests.set(cacheKey, request);
+    return request;
   }
 
   function applyPostListState(data) {
@@ -228,6 +227,7 @@ export function createPostService(deps) {
   function clearCache() {
     listCacheGeneration += 1;
     listCache.clear();
+    listRequests.clear();
     postCache.clear();
   }
 

@@ -80,6 +80,19 @@ async function listBoardCounts(repo, options = {}) {
     return cached.data;
   }
 
+  // [LOG_ID: 20260805_1454] A cold menu can trigger overlapping count reads.
+  // Share the refresh so each board issues its two HEAD queries only once.
+  if (repo._boardCountsRequest) return repo._boardCountsRequest;
+  const request = refreshBoardCounts(repo, options);
+  repo._boardCountsRequest = request;
+  try {
+    return await request;
+  } finally {
+    if (repo._boardCountsRequest === request) delete repo._boardCountsRequest;
+  }
+}
+
+async function refreshBoardCounts(repo, options) {
   const days = Math.max(1, Number(options.recentDays) || 3);
   const sinceIso = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString();
   const counts = {};
