@@ -94,12 +94,19 @@ async function listBoards(repo) {
     .order('board_id', { ascending: true });
 
   if (error) {
-    if (shouldUseBoardFallback(error)) {
-      const fallback = repo.boards.map(cloneBoard);
-      repo._boardListCache = { at: Date.now(), data: fallback };
-      return fallback.map(cloneBoard);
+    // [LOG_ID: 20260805_0913] The legacy menu definitions are already loaded
+    // during cold start. Keep the public board list available when Supabase is
+    // temporarily unavailable or rejects the server key; board/post requests
+    // still surface their own storage errors instead of blocking the shell.
+    const fallback = repo.boards.map(cloneBoard);
+    repo._boardListCache = { at: Date.now(), data: fallback };
+    if (repo.logger && typeof repo.logger.warn === 'function') {
+      repo.logger.warn('Supabase board list unavailable; using legacy definitions.', {
+        code: error.code || '',
+        message: error.message || 'unknown error'
+      });
     }
-    throw createHttpError(502, `게시판 목록 조회 실패: ${error.message}`);
+    return fallback.map(cloneBoard);
   }
 
   const result = mergeBoardList(repo, (data || []).map((row) => mapBoardRow(row)));

@@ -2,6 +2,19 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 09:13] Supabase 게시판 목록 장애 시 초기 화면 폴백
+
+**LOG_ID: 20260805_0913**
+목표: Supabase 게시판 목록 조회가 502를 반환해 `/api/bootstrap`과 초기 화면 전체가 실패하는 장애를 완화한다.
+변경 파일: `src/server/SupabaseBoardRepositoryBoardReads.js`, `WORK_LOG.md`
+수행 작업:
+1) 게시판 목록 조회 오류를 레거시 메뉴 정의 15개로 폴백
+2) 폴백 목록을 30초 캐시하고 원인 코드·메시지는 서버 로그에만 기록
+3) 게시판/게시물의 후속 저장소 오류는 기존대로 표면화해 데이터 오류를 숨기지 않음
+실행: 실패 Supabase 클라이언트 폴백 단언, `node --check`, `npm run build`, `npm run smoke:boards`, `npm run smoke:menu-wiring`, `npm run smoke:command-parity`, `npm run loop:verify`, `git diff --check`
+기대: DB 일시 장애·인증키 거부에도 공개 메뉴와 초기 화면을 렌더링하고 반복적인 목록 재시도를 줄인다.
+결과: ✅ 모의 `Invalid API key`에서 레거시 게시판 1건 반환·30초 캐시·경고 로그를 확인했고 완료 게이트 9/9 통과. 배포 전 `/api/boards`·`/api/bootstrap` 재확인이 필요하다.
+
 ## [2026-08-05 08:52] board-select GO 게시판 실패 탐색 캐시
 
 **LOG_ID: 20260805_0852**
