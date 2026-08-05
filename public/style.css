@@ -539,21 +539,14 @@ body.theme-nownuri .write-field textarea {
     top: 0.25em;
 }
 
+/* [LOG_ID: 20260805_1214] 삭제 확인 등 프롬프트 라벨 클래스 토글 시 #terminal-prompt-row 수직 미세 이동 방지 */
 #terminal-prompt-row {
     display: flex;
-    align-items: center;
-    /* [LOG_ID: 20260707_1630] Keep a fixed one-cell gap between the rendered prompt and the input cell. */
-    /* [LOG_ID: 20260708_1710] 1ch는 "현재 적용된 폰트의 숫자 0 글자 폭"으로 정의되어, 로딩 중인
-       폴백 폰트와 로딩 완료된 커스텀 픽셀 폰트(BbsPrimaryFont)의 값이 서로 다르다(실측: 폴백 9px vs
-       로드 후 8.5px). CDN에서 폰트를 받아오는 실제 네트워크 환경(로컬 개발 서버보다 느림)에서는 이
-       전환에 1초 가까이 걸려, 그 사이 프롬프트와 입력 캐럿 사이 간격이 눈에 띄게 넓어 보였다가 폰트
-       로딩이 끝나는 순간 저절로 좁아지는 것처럼 보였다("포커스를 줘야/키를 눌러야 고쳐진다"는 것은
-       착각이었고, 실제로는 그 순간과 폰트 로딩 완료 시점이 우연히 겹친 것). em은 글자 크기에만
-       비례하고 어떤 폰트가 적용됐는지와 무관하므로(17px 기준 0.5em=8.5px, 로드된 실제 폰트의 1ch와
-       정확히 같은 값), 폰트 전환 여부와 무관하게 간격이 항상 고정된다. */
+    align-items: center !important;
     column-gap: 0.5em !important;
     row-gap: 0 !important;
     min-height: 18px;
+    height: 1.65em;
     width: 100%;
 }
 
@@ -565,6 +558,7 @@ body.theme-nownuri .write-field textarea {
 
 #terminal-prompt-row label {
     margin-right: 0 !important;
+    align-self: center !important;
 }
 
 #terminal-prompt-row label:not(:empty)::after {
@@ -591,9 +585,11 @@ body.theme-nownuri .write-field textarea {
 #cmd-input-wrapper {
     flex: 1;
     display: flex;
-    align-items: center;
+    align-items: center !important;
+    align-self: center !important;
     min-width: 0;
     position: relative;
+    height: 1.1em;
 }
 
 #cmd-mask-text {
@@ -635,8 +631,38 @@ body.theme-nownuri .write-field textarea {
     min-width: 0 !important;
 }
 
+/* [LOG_ID: 20260805_1209] (Y/N) 삭제 확인 문장 내 Y/N 클릭 토큰(.cmd-token) 및 #cmd-prompt 라벨 폰트 크기 17px 및 기준선 일치화 */
+#cmd-prompt,
+#cmd-prompt *,
+#cmd-prompt .cmd-token,
+#cmd-prompt.signup-confirm-prompt-label,
+#cmd-prompt.signup-confirm-prompt-label *,
+#cmd-prompt.myinfo-delete-confirm-prompt-label,
+#cmd-prompt.myinfo-delete-confirm-prompt-label *,
+#cmd-prompt.postview-delete-confirm-prompt-label,
+#cmd-prompt.postview-delete-confirm-prompt-label * {
+    display: inline !important;
+    vertical-align: baseline !important;
+    font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
+    font-size: var(--cmd-font-size, 17px) !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    outline: none !important;
+}
+
+#cmd-prompt.signup-confirm-prompt-label + #cmd-prompt-renderer,
+#cmd-prompt.myinfo-delete-confirm-prompt-label + #cmd-prompt-renderer,
+#cmd-prompt.postview-delete-confirm-prompt-label + #cmd-prompt-renderer {
+    display: none !important;
+}
+
 /* [LOG: 20260615_1538] Keep the footer prompt label and command input in one explicit font rendering context. */
 #terminal-footer label,
+#cmd-prompt,
+#cmd-prompt *,
 #cmd-prompt-renderer,
 #cmd-input,
 #cmd-mask-text,
@@ -745,7 +771,8 @@ body.theme-nownuri .write-field textarea {
     -webkit-text-size-adjust: 100%;
     cursor: text;
     pointer-events: auto;
-    transform: none !important;
+    /* [LOG_ID: 20260805_1213] Chromium 글리프 수직 정렬을 위해 #cmd-input/cmd-prompt와 100% 동일한 translateY(1px) 수치로 통일 */
+    transform: translateY(1px) !important;
     user-select: none;
 }
 

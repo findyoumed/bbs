@@ -50,11 +50,14 @@ class RepositoryRegistry {
       component: 'RepositoryRegistry'
     });
 
+    // [LOG_ID: 20260805_1132] SUPABASE_SERVICE_ROLE_KEY 부재/불가 시 SUPABASE_PUBLISHABLE_KEY/SUPABASE_ANON_KEY로 폴백
+    const supabaseKey = this.env.SUPABASE_SERVICE_ROLE_KEY || this.env.SUPABASE_PUBLISHABLE_KEY || this.env.SUPABASE_ANON_KEY;
+
     // 1. Board Repository
     if (useSupabase) {
       this.register('board', new SupabaseBoardRepository({
         url: this.env.SUPABASE_URL,
-        serviceRoleKey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+        serviceRoleKey: supabaseKey,
         menuFilePath: legacyPaths.menuFilePath,
         levelAliases: options.levelAliases,
         boardsTable: this.env.SUPABASE_BOARDS_TABLE,
@@ -72,7 +75,7 @@ class RepositoryRegistry {
     if (useSupabase) {
       this.register('member', new SupabaseMemberRepository({
         url: this.env.SUPABASE_URL,
-        serviceRoleKey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+        serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_MEMBERS_TABLE || 'members'
       }));
     } else {
@@ -83,7 +86,7 @@ class RepositoryRegistry {
     if (useSupabase) {
       this.register('chatRooms', new SupabaseChatRoomRepository({
         url: this.env.SUPABASE_URL,
-        serviceRoleKey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+        serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_CHAT_ROOMS_TABLE || 'chat_rooms',
         membersTable: this.env.SUPABASE_CHAT_ROOM_MEMBERS_TABLE || 'chat_room_members',
         participantTtlMs: options.chatOptions?.participantTtlMs,
@@ -98,7 +101,7 @@ class RepositoryRegistry {
     if (useSupabase) {
       this.register('memo', new SupabaseMemoRepository({
         url: this.env.SUPABASE_URL,
-        serviceRoleKey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+        serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_MEMOS_TABLE || 'memos'
       }));
     } else {
@@ -109,7 +112,7 @@ class RepositoryRegistry {
     if (useSupabase && !options.attachmentOptions?.baseDir) {
       this.register('attachment', new SupabaseAttachmentRepository({
         url: this.env.SUPABASE_URL,
-        serviceRoleKey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+        serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_ATTACHMENTS_TABLE || 'attachments',
         maxBytes: options.attachmentOptions?.maxBytes
       }));
@@ -123,7 +126,7 @@ class RepositoryRegistry {
     if (activityDriver === 'supabase' && useSupabase) {
       this.register('activity', new ActivityRepositorySupabase({
         url: this.env.SUPABASE_URL,
-        serviceRoleKey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+        serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_ACTIVITY_TABLE || 'user_activities',
         ttlMs: options.activityOptions?.ttlMs
       }));

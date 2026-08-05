@@ -12,8 +12,9 @@
 // 소유한다. 어느 env 변수 이름을 볼지(BOARD_REPOSITORY_DRIVER 단독인지, CHAT_ROOM_REPOSITORY_
 // DRIVER를 우선하고 BOARD_REPOSITORY_DRIVER로 폴백하는지 등)는 도메인마다 실제로 다르므로
 // 호출부에 남겨둔다 — 그 차이는 버그가 아니라 의도된 도메인별 오버라이드다.
+// [LOG_ID: 20260805_1130] SUPABASE_SERVICE_ROLE_KEY뿐 아니라 SUPABASE_PUBLISHABLE_KEY/SUPABASE_ANON_KEY 존재 시에도 Supabase 설정을 유효하다고 판정
 function hasSupabaseConfig(env = {}) {
-  return Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean(env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY));
 }
 
 function normalizeDriverName(value) {

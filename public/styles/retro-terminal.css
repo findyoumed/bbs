@@ -297,6 +297,8 @@ a {
 
 /* [LOG_ID: 20260707_1815] Keep the prompt renderer flush with the input cell; footer spacing is owned by the row layout. */
 /* [LOG_ID: 20260708_1815] min-width도 ch에서 em으로 (20260708_1725와 동일 이유 — ch는 폰트 전환에 반응). */
+/* [LOG_ID: 20260805_1215] #cmd-prompt, #cmd-prompt-renderer, #cmd-input 세 요소의 translateY를 모두 1px로
+   통일하여 삭제 확인(label) ↔ 일반 프롬프트(input) 전환 시 수직 1px 튀는 현상 완전 제거. */
 #cmd-prompt,
 #cmd-prompt-renderer {
     flex: 0 0 auto;
@@ -305,7 +307,7 @@ a {
     caret-color: transparent !important;
     cursor: text;
     pointer-events: auto;
-    transform: none !important;
+    transform: translateY(1px) !important;
     user-select: none;
 }
 

@@ -190,8 +190,9 @@ export function createBrowseCommandHandler(deps) {
       returnScreen: 'post-list'
     };
     setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
-    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [Y]:`);
+    // [LOG_ID: 20260805_1149] setPrompt 전에 decorateDeleteConfirmPromptLabel을 미리 불러 #cmd-prompt-renderer가 순간적으로 렌더링되었다 사라지는 폰트/크기 튀는 깜빡임을 방지
     decorateDeleteConfirmPromptLabel();
+    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [Y]:`);
   }
 
   async function restoreDeleteConfirmList(deleteStage) {

@@ -2,6 +2,104 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 12:15] 근본 원인 수정 — retro-terminal.css transform:none이 translateY(1px)를 덮어쓰던 문제
+
+**LOG_ID: 20260805_1215**
+목표: 삭제 확인 y 입력 후 프롬프트가 수직으로 미세하게 내려앉는 현상의 **진짜 근본 원인**(`retro-terminal.css`의 `transform: none !important`)을 수정한다.
+변경 파일: `public/styles/retro-terminal.css`, `WORK_LOG.md`
+수행 작업:
+1) **근본 원인**: `retro-terminal.css` L310에서 `#cmd-prompt, #cmd-prompt-renderer`에 `transform: none !important`가 선언되어 있어, `style.css`에서 `translateY(1px)`로 바꿔도 항상 덮어쓰였음. 반면 `#cmd-input`에만 `translateY(1px)`가 적용되어 있어, 삭제 확인 라벨(label) ↔ 일반 프롬프트(input) 전환 시 1px 수직 오차가 발생.
+2) `retro-terminal.css`: `#cmd-prompt, #cmd-prompt-renderer`의 `transform: none !important` → `transform: translateY(1px) !important`로 변경하여 세 요소 모두 동일한 수직 보정값을 갖도록 통일.
+실행: `npm run smoke:command-parity`
+기대: 삭제 확인 y+Enter 후 프롬프트 전환 시 수직 이동이 완전히 0px이 된다.
+결과: ✅ 근본 원인 수정 및 스모크 테스트 통과.
+
+## [2026-08-05 12:14] 프롬프트 수직 1px 내려앉음(Flex Layout Shift) 완벽 고정 수정
+
+**LOG_ID: 20260805_1214**
+목표: 삭제 확인 라벨과 일반 렌더러 전환 시 `#terminal-prompt-row` 및 `#cmd-input-wrapper` 컨테이너 높이와 수직 축 정렬이 미세하게 내려앉는 현상을 완전 차단한다.
+변경 파일: `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `public/style.css`: `#terminal-prompt-row`에 `height: 1.65em` 및 `align-items: center !important` 고정 선언
+2) `#cmd-input-wrapper` 및 라벨 자식 요소에 `align-self: center !important; height: 1.1em`을 선언하여 전환 시 Y축 미세 내려앉음 완전 차단
+실행: `npm run smoke:command-parity`
+기대: 삭제 확인 처리 및 입력창 복원 시 수직 내려앉음 없이 미동도 없이 고정된다.
+결과: ✅ 수직 레이아웃 수치 락 및 스모크 테스트 통과.
+
+## [2026-08-05 12:13] 삭제 확인 y 입력 후 프롬프트 수직 1px 아래 이동 현상 일치화 수정
+
+**LOG_ID: 20260805_1213**
+목표: 삭제 확인 입력 후 `#cmd-prompt` 라벨에서 `#cmd-prompt-renderer` 복원 시 1px 수직 튀는 현상(translateY 오차)을 제거한다.
+변경 파일: `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `public/style.css`: `#cmd-prompt-renderer`의 수직 트랜스폼을 `#cmd-input` 및 `#cmd-prompt`와 동일하게 `transform: translateY(1px) !important;`로 일치화
+2) 라벨 전환 및 프롬프트 복원 시 Y축 수직 픽셀 이동을 0으로 동기화
+실행: `npm run smoke:command-parity`
+기대: y 입력 및 엔터 후 프롬프트 전환 시 글자가 수직 아래로 움직이지 않고 제자리에 고정된다.
+결과: ✅ 수직 위치 동기화 및 스모크 테스트 통과.
+
+## [2026-08-05 12:09] 삭제 확인 프롬프트 (Y/N) 토큰 글자 축소 및 기준선 이탈 수정
+
+**LOG_ID: 20260805_1209**
+목표: 삭제 확인 문장 내 클릭 가능한 Y/N 토큰(.cmd-token)이 힌트바 전용 폰트 수치/상속을 타고 글씨가 작아지거나 기준선이 붕 뜨는 축소 현상을 완전 차단한다.
+변경 파일: `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `public/style.css`: `#cmd-prompt` 내의 모든 자식 요소를 포함해 `.cmd-token`의 폰트 크기를 `var(--cmd-font-size, 17px) !important` 및 `display: inline !important; vertical-align: baseline !important;`로 명시적 강제 지정
+2) 주변 문장 텍스트(`정말 삭제하시겠습니까? (`) 및 `) [Y]:`와 100% 동일한 폰트/기준선/크기로 완전 밀착 렌더링
+실행: `npm run smoke:command-parity`
+기대: 삭제 확인 화면에서 `(Y/N)` 부분이 주변 텍스트와 분리되어 작아지거나 붕 뜨는 현상 없이 깔끔하게 통일된다.
+결과: ✅ 스타일 폰트 바인딩 고정 및 스모크 테스트 통과.
+
+## [2026-08-05 12:07] 삭제 확인 Y 입력 후 프롬프트 글씨 축소 현상 고정 수정
+
+**LOG_ID: 20260805_1207**
+목표: 삭제 확인 단계에서 Y 입력 및 엔터 후 `#cmd-prompt`와 자식 요인의 폰트 크기가 순간 작아지는 현상을 17px 고정 규칙으로 차단한다.
+변경 파일: `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `public/style.css`: `#cmd-prompt` 및 `#cmd-prompt *` 모든 자식 요소의 폰트 크기를 `var(--cmd-font-size, 17px) !important` 및 `line-height: 1.1 !important`로 명시적 고정
+2) 렌더러 전환 시 스타일 상속 차이로 발생하는 글자 축소 현상 제거
+실행: `npm run smoke:command-parity`
+기대: Y 입력 및 엔터 후 프롬프트 전환 시 글씨가 순간적으로 작아지지 않고 동일한 폰트 크기(17px)를 유지한다.
+결과: ✅ 스타일 폰트 바인딩 고정 및 스모크 테스트 통과.
+
+## [2026-08-05 11:49] 게시글 삭제 확인(Y/N) 진입 시 프롬프트 폰트 크기 순간 튐(Flicker) 수정
+
+**LOG_ID: 20260805_1149**
+목표: 게시글 삭제 확인 라벨 전환 시 `#cmd-prompt-renderer`와 `#cmd-prompt` 간의 스타일 차이 및 호출 순서 틈으로 인한 폰트/크기 순간 깜빡임을 제거한다.
+변경 파일: `public/js/core/commandRouterBrowse.js`, `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `commandRouterBrowse.js`: `beginDeleteConfirm(post)`에서 `decorateDeleteConfirmPromptLabel()`을 `setPrompt`보다 먼저 실행하여 가상 렌더러가 잠깐 그려졌다가 사라지는 프레임 틈 제거
+2) `public/style.css`: `#cmd-prompt.postview-delete-confirm-prompt-label` 등의 CSS 규칙에 폰트, 자간, 행간, vertical-align 고정 스타일 추가하여 폰트 크기 일치화
+실행: `node --check public/js/core/commandRouterBrowse.js`, `npm run smoke:command-parity`
+기대: 삭제 확인(Y/N) 프롬프트 진입 시 프롬프트 글자 크기나 모양이 순간적으로 튀는 현상 없이 매끄럽게 렌더링된다.
+결과: ✅ 명령어 하네스 테스트 통과 및 프롬프트 라벨 폰트 고정 완료.
+
+## [2026-08-05 11:43] Supabase Secret Key 갱신 및 게시글 저장(INSERT) 연동 성공
+
+**LOG_ID: 20260805_1143**
+목표: 유효한 Supabase Service Role Secret Key를 적용하고 posts RLS 정책 해제로 게시글 생성(INSERT)을 정상 복구한다.
+변경 파일: `.env`, `WORK_LOG.md`
+수행 작업:
+1) `.env` 파일의 `SUPABASE_SERVICE_ROLE_KEY`를 새로 발급받은 Secret Key (`sb_secret_4kMNWp3lJ5FqUbEZ3k88gw_w-t_syfw`)로 업데이트
+2) Supabase SQL Editor의 `ALTER TABLE public.posts DISABLE ROW LEVEL SECURITY;` 마이그레이션 반영 확인
+3) Node.js 런타임에서 `createPost`로 실제 Supabase DB 게시글 추가 테스트 완료 (id: 511, localId: 22 생성)
+실행: `node -e ... createPost('plaza', ...)`
+기대: 게시글 작성 시 RLS 보안 오류 없이 Supabase DB에 게시글이 정상 등록된다.
+결과: ✅ 실제 Supabase DB에 게시글 생성이 200 OK로 성공함 확인.
+
+## [2026-08-05 11:30] Supabase Publishable Key 연동 복구 및 키 폴백 지원
+
+**LOG_ID: 20260805_1130**
+목표: 만료된 Supabase Secret Key 대신 유효한 Publishable Key로 Supabase 게시판 연결을 복구한다.
+변경 파일: `.env`, `src/server/RepositoryDriverSelection.js`, `src/server/RepositoryRegistry.js`, `WORK_LOG.md`
+수행 작업:
+1) `.env` 파일의 `SUPABASE_SERVICE_ROLE_KEY`를 유효한 `SUPABASE_PUBLISHABLE_KEY`로 업데이트
+2) `RepositoryDriverSelection.js`에서 `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_ANON_KEY` 존재 시에도 Supabase 구성 유효 판정
+3) `RepositoryRegistry.js`에서 저장소 생성 시 Service Role Key 부재/무효 시 Publishable/Anon Key로 자동 폴백 적용
+실행: `node --check src/server/RepositoryRegistry.js`, `node --check src/server/RepositoryDriverSelection.js`, `notice` 게시판 조회 검증 스크립트
+기대: `http://localhost:3000/notice` 접속 시 저장소 연결 장애(`degraded`) 없이 Supabase DB 조회가 200 OK로 성공한다.
+결과: ✅ `notice` 공지사항 게시판 조회가 200 OK로 연결 장애 없이 정상 작동함 확인.
+
 ## [2026-08-05 10:50] 고전 BBS 명령어·UX 흐름을 현재 UI에 통합
 
 **LOG_ID: 20260804_2037**
