@@ -2,6 +2,19 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 10:50] 고전 BBS 명령어·UX 흐름을 현재 UI에 통합
+
+**LOG_ID: 20260804_2037**
+목표: 하이텔·천리안·나우누리 자료의 실제 명령어와 입력 순서를 현재 단일 UI에 통합한다.
+변경 파일: `public/js/core/commandDispatcherExecution.js`, `public/js/core/commandNormalizer.js`, `public/js/core/commandRouterBrowse.js`, `public/js/core/commandRouterGlobalNavigation.js`, `public/js/core/commandRouterPostView.js`, `public/js/core/commandService.js`, `scripts/smoke-command-parity.js`, `WORK_LOG.md`
+수행 작업:
+1) TO 한줄쪽지, 대화실 귓속말 보호, 글 읽기 중 P 번호 이동을 연결
+2) U/DEL/FROM/DATE/KEY/MR/DOWN/USE 별칭을 기존 명령 파이프라인에 통합
+3) 번호·날짜 검색을 목표 페이지에서 중단하고 비동기 완료까지 기다리도록 수정
+4) 명령어 도움말 메타데이터와 실제 브라우저 모듈 하네스 검사를 확장
+실행: 관련 `node --check`, `npm run smoke:command-parity`, `npm run smoke:boards`, `npm run loop:verify`, `git diff --check`
+결과: ✅ 고유 커밋 단독 적용 평가에서 충돌은 WORK_LOG.md에만 한정됐고, 명령어 smoke·게시판 smoke·완료 게이트 9/9 통과. 초기 로딩 실험 커밋 4개는 현재 main과 충돌해 적용하지 않음.
+
 ## [2026-08-05 10:20] 게시글 저장소 장애를 빈 게시판으로 오인하는 동작 수정
 
 **LOG_ID: 20260805_1020**

@@ -398,6 +398,15 @@ export function createPostViewCommandHandler(deps) {
       return false;
     }
 
+    // [LOG_ID: 20260804_2037] 나우누리 원전처럼 글을 읽는 중 P 번호로 목록을
+    // 거치지 않고 다른 글을 바로 연다. 통합 PDS에서는 현재 글의 실제 하위
+    // 게시판 ID를 우선해, 보드별로 같은 번호가 있을 때도 결과가 예측 가능하게 한다.
+    const directPostMatch = String(cmd || '').match(/^P\s+(\d+)$/);
+    if (directPostMatch) {
+      await showPostView(state.post?.boardId || state.board.id, Number(directPostMatch[1]));
+      return true;
+    }
+
     // [LOG_ID: 20260724_1610] 본문 내 상하 페이징(F/B/엔터) 가로채기
     const postPageNo = Number(state.postPageNo || 1);
     const postPageCount = Number(state.postPageCount || 1);

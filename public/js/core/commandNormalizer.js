@@ -64,6 +64,9 @@ export function normalizeCommand(rawCmd, stateScreen) {
   if (cmd === 'LOG') cmd = 'LOGIN';
   if (cmd === ']') cmd = 'A';
   if (cmd === '[' || cmd === '[[') cmd = 'N';
+  // [LOG_ID: 20260804_2037] 천리안·나우누리 원전 별칭을 현재 단일 UI의
+  // 기존 명령으로 정규화한다. 인자는 아래 재조합 단계에서 그대로 보존된다.
+  if (cmd === 'USE') cmd = 'TIME';
 
   // 3. 리스트 화면 공통
   const isListScreen = ['main', 'board-select', 'post-list', 'weather-menu', 'news-menu', 'news-list', 'chat-lobby', 'memos-list'].includes(stateScreen);
@@ -77,6 +80,15 @@ export function normalizeCommand(rawCmd, stateScreen) {
   if (stateScreen === 'post-list' || stateScreen === 'post-view') {
     if (cmd === 'SW') cmd = 'LT';
     if (cmd === 'SI' || cmd === 'SN' || cmd === 'LN') cmd = 'LI';
+    if (cmd === 'DEL') cmd = 'D';
+    if (cmd === 'FROM') cmd = 'LI';
+    if (cmd === 'MR') cmd = 'PR';
+  }
+  if (stateScreen === 'post-list') {
+    if (cmd === 'U') cmd = 'W';
+    // KEY 단독 입력은 원전처럼 검색어를 묻는 단계로 들어가야 하므로 보존한다.
+    if (cmd === 'KEY' && args.length > 0) cmd = 'K';
+    if (cmd === 'DOWN') cmd = 'DN';
   }
 
   // 5. 부분 일치 보정 (Prefix Match)

@@ -24,7 +24,8 @@ export function createGlobalNavigationCommandHandler(deps) {
     showConfirm,
     showMemoList,
     showMemoWrite,
-    settingsService
+    settingsService,
+    apiFetch
   } = deps;
 
   function setDefaultPrompt() {
@@ -34,6 +35,10 @@ export function createGlobalNavigationCommandHandler(deps) {
   function isLoginShortcutScreen() {
     return ['main', 'board-select', 'top'].includes(state.screen);
   }
+
+  const quickMemoBlockedScreens = new Set([
+    'chat-room', 'memo-write', 'post-write', 'login', 'signup', 'password-reset', 'myinfo', 'contact-sysop'
+  ]);
 
   return async function handleGlobalNavigationCommand({ cmd, rawCmd, input }) {
 
@@ -51,6 +56,50 @@ export function createGlobalNavigationCommandHandler(deps) {
         setDefaultPrompt();
         return true;
       }
+    }
+
+    // [LOG_ID: 20260804_2037] 나우누리 원전의 TO ID 한줄메시지 순서를 복원한다.
+    // 작성 화면을 거치지 않고 한 번의 API 요청으로 보내되, 대화방의 TO는 기존 귓속말
+    // 명령이므로 가로채지 않는다. 쓰기·인증 화면에서도 본문을 명령으로 오인하지 않는다.
+    const quickMemoMatch = !quickMemoBlockedScreens.has(state.screen)
+      && !(state.screen === 'chat-lobby' && (state._chatRoomCreateStage || state._chatRoomJoinStage))
+      ? String(rawCmd || '').trim().match(/^TO(?:\s+(\S+))?(?:\s+(.+))?$/i)
+      : null;
+    if (quickMemoMatch) {
+      const recipientUserId = String(quickMemoMatch[1] || '').trim();
+      const content = String(quickMemoMatch[2] || '').trim();
+      if (!recipientUserId || !content) {
+        setHint('사용법: TO 아이디 한줄메시지');
+        setDefaultPrompt();
+        return true;
+      }
+      if (state.user?.isGuest) {
+        setHint('한줄쪽지는 로그인 후 이용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+
+      setHint('[' + recipientUserId + ']님에게 한줄쪽지를 보내는 중입니다..');
+      try {
+        const result = await apiFetch('/api/memos', {
+          method: 'POST',
+          body: JSON.stringify({
+            recipientUserId,
+            title: '[한줄쪽지]',
+            content
+          })
+        });
+        const absent = Array.isArray(result?.absentRecipients) && result.absentRecipients.length
+          ? result.absentRecipients[0]
+          : (result?.recipientAbsent ? { absentMsg: result.absentMsg } : null);
+        setHint(absent
+          ? '[' + recipientUserId + ']님에게 보냈습니다. [부재알림] ' + (absent.absentMsg || '현재 부재 중입니다.')
+          : '[' + recipientUserId + ']님에게 한줄쪽지를 보냈습니다.');
+      } catch (error) {
+        setHint('한줄쪽지 발송 실패: ' + error.message);
+      }
+      setDefaultPrompt();
+      return true;
     }
 
     // [LOG_ID: 20260729_1750] FIND 단독 입력 시에도 통합 검색 안내 및 동작 수행
@@ -252,7 +301,7 @@ export function createGlobalNavigationCommandHandler(deps) {
       return true;
     }
 
-    const whoMatch = cmd.match(/^(WHO|WH|PF)\s+(.+)$/);
+    const whoMatch = cmd.match(/^(WHO|WH|PF|FI)\s+(.+)$/);
     if (whoMatch) {
       // [LOG: 20260729_1624] PF/WHO [아이디]는 로그인한 사용자만 사용 가능.
       if (state.user?.isGuest) {

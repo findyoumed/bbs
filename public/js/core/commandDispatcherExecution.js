@@ -47,6 +47,13 @@ function normalizePendingSearchInput(searchType, rawInput) {
     return match ? match[1].trim() : input;
   }
 
+  // [LOG_ID: 20260804_2037] 천리안 KEY 단독 명령의 후속 입력에서도
+  // KEY/K 접두사를 다시 적은 사용자를 허용하고 실제 주제어만 검색한다.
+  if (searchType === 'k') {
+    const match = input.match(/^(?:K|KEY)\s+(.+)$/i);
+    return match ? match[1].trim() : input;
+  }
+
   return input;
 }
 

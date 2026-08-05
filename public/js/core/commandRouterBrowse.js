@@ -55,6 +55,64 @@ export function createBrowseCommandHandler(deps) {
     return all;
   }
 
+  // [LOG_ID: 20260804_2037] 번호·날짜 점프는 목표를 찾은 페이지에서 즉시 순회를 끝낸다.
+  // KW처럼 전체 집계가 필요한 명령만 fetchAllBoardPosts로 끝까지 읽는다.
+  async function findBoardPostIndex(boardId, predicate) {
+    const pageSize = 200;
+    let page = 1;
+    let pageCount = 1;
+    let scannedCount = 0;
+    do {
+      const url = '/api/boards/' + encodeURIComponent(boardId) + '?page=' + page + '&pageSize=' + pageSize;
+      const res = await apiFetch(url);
+      const posts = Array.isArray(res) ? res : (res.posts || res.items || []);
+      const pageIndex = posts.findIndex(predicate);
+      if (pageIndex >= 0) {
+        return scannedCount + pageIndex;
+      }
+      scannedCount += posts.length;
+      pageCount = Array.isArray(res) ? 1 : Number(res?.pagination?.pageCount || 1);
+      page += 1;
+    } while (page <= pageCount);
+    return -1;
+  }
+
+  // [LOG_ID: 20260804_2037] 천리안 DATE YYMMDD와 기존 LD MM/DD가 같은
+  // 스캔·이동 순서를 쓰도록 통합한다. 전체 목록 스캔과 화면 전환을 모두 await해,
+  // 스캔 중 다음 명령이 먼저 실행되는 UX 경쟁을 막는다.
+  async function jumpToPostDate(targetDate, displayDate) {
+    setHint('날짜 위치를 스캔 중입니다..');
+    try {
+      const idx = await findBoardPostIndex(
+        state.board.id,
+        (post) => new Date(post.createdAt) <= targetDate
+      );
+      if (idx < 0) {
+        setHint('지정하신 날짜(' + displayDate + ') 이전의 글이 존재하지 않습니다.');
+        setPrompt('선택 >>');
+        return;
+      }
+
+      const targetPage = Math.floor(idx / 15) + 1;
+      setHint('[목록 점프] ' + displayDate + '와 같거나 이전인 글이 있는 ' + targetPage + '페이지로 이동합니다.');
+      await showPostList(state.board.id, targetPage, {
+        menuPath: state.boardMenuPath,
+        menuTitle: state.boardMenuTitle
+      });
+    } catch (error) {
+      setHint('스캔 실패: ' + error.message);
+      setPrompt('선택 >>');
+    }
+  }
+
+  function createValidatedPostDate(year, month, day) {
+    const targetDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+    if (targetDate.getFullYear() !== year || targetDate.getMonth() !== month - 1 || targetDate.getDate() !== day) {
+      return null;
+    }
+    return targetDate;
+  }
+
   function resolveVisiblePostTarget(rawValue) {
     const value = String(rawValue || '').trim();
     if (!value) {
@@ -293,6 +351,39 @@ export function createBrowseCommandHandler(deps) {
         return true;
       }
 
+      // [LOG_ID: 20260804_2037] 천리안 DEL 단독 입력의 질의응답 순서:
+      // 삭제할 글 번호를 다음 입력으로 받은 뒤 기존 Y/N 삭제 확인 단계에 연결한다.
+      if (state._pendingDeletePostNumber) {
+        const targetInput = String(rawCmd || '').trim();
+        const cancelInput = targetInput.toUpperCase();
+        if (['0', 'P', 'M', 'B', 'T', '/M', '/Q'].includes(cancelInput)) {
+          state._pendingDeletePostNumber = false;
+          setHint('게시물 삭제를 취소했습니다.');
+          setPrompt('선택 >>');
+          if (cancelInput === 'T') {
+            await showMain();
+          }
+          return true;
+        }
+
+        const targetPost = resolveVisiblePostTarget(targetInput);
+        if (!targetPost) {
+          setHint('해당 번호의 게시물을 현재 목록에서 찾을 수 없습니다.');
+          setPrompt('삭제할 글 번호 (취소: P) >>');
+          return true;
+        }
+        if (!canManagePost(targetPost)) {
+          state._pendingDeletePostNumber = false;
+          setHint(UI_TEXT.POST_DELETE_MY_ONLY);
+          setPrompt('선택 >>');
+          return true;
+        }
+
+        state._pendingDeletePostNumber = false;
+        beginDeleteConfirm(targetPost);
+        return true;
+      }
+
       if (cmd === 'P' || cmd === 'M') {
         if (state.boardMenuPath && state.boardMenuPath !== 'top') {
           await showBoardSelect(state.boardMenuPath, state.boardMenuTitle || getBoardSelectTitle(state.boardMenuPath));
@@ -508,25 +599,26 @@ export function createBrowseCommandHandler(deps) {
       if (lsMatch) {
         const targetPostId = Number(lsMatch[1]);
         setHint('번호 위치를 스캔 중입니다..');
-        fetchAllBoardPosts(state.board.id)
-          .then((posts) => {
-            const idx = posts.findIndex((p) => Number(p.localId ?? p.id) === targetPostId);
-            if (idx >= 0) {
-              const targetPage = Math.floor(idx / 15) + 1;
-              setHint(`[목록 점프] #${targetPostId} 글이 있는 ${targetPage}페이지로 이동합니다.`);
-              return showPostList(state.board.id, targetPage, {
-                menuPath: state.boardMenuPath,
-                menuTitle: state.boardMenuTitle
-              });
-            } else {
-              setHint(`해당 번호(#${targetPostId})의 글이 존재하지 않습니다.`);
-              setPrompt('선택 >>');
-            }
-          })
-          .catch((err) => {
-            setHint(`스캔 실패: ${err.message}`);
+        try {
+          const idx = await findBoardPostIndex(
+            state.board.id,
+            (post) => Number(post.localId ?? post.id) === targetPostId
+          );
+          if (idx >= 0) {
+            const targetPage = Math.floor(idx / 15) + 1;
+            setHint(`[목록 점프] #${targetPostId} 글이 있는 ${targetPage}페이지로 이동합니다.`);
+            await showPostList(state.board.id, targetPage, {
+              menuPath: state.boardMenuPath,
+              menuTitle: state.boardMenuTitle
+            });
+          } else {
+            setHint(`해당 번호(#${targetPostId})의 글이 존재하지 않습니다.`);
             setPrompt('선택 >>');
-          });
+          }
+        } catch (error) {
+          setHint(`스캔 실패: ${error.message}`);
+          setPrompt('선택 >>');
+        }
         return true;
       }
 
@@ -544,37 +636,51 @@ export function createBrowseCommandHandler(deps) {
         // 다음 달로 자동 정정한다(2026년 2/29 → 3/1, 4/31 → 5/1 등). 정정 후 월/일이
         // 입력값과 다르면 존재하지 않는 날짜이므로 오류로 처리한다(윤년 2/29 포함).
         const currentYear = new Date().getFullYear();
-        const targetDate = new Date(currentYear, targetMonth - 1, targetDay, 23, 59, 59);
-        if (targetDate.getMonth() !== targetMonth - 1 || targetDate.getDate() !== targetDay) {
+        const targetDate = createValidatedPostDate(currentYear, targetMonth, targetDay);
+        if (!targetDate) {
           setHint(`${targetMonth}월에는 ${targetDay}일이 없습니다. (예: LD 07/13)`);
           setPrompt('선택 >>');
           return true;
         }
 
-        setHint('날짜 위치를 스캔 중입니다..');
-        fetchAllBoardPosts(state.board.id)
-          .then((posts) => {
-            const idx = posts.findIndex((p) => {
-              const postDate = new Date(p.createdAt);
-              return postDate <= targetDate;
-            });
+        await jumpToPostDate(targetDate, `${targetMonth}/${targetDay}`);
+        return true;
+      }
 
-            if (idx >= 0) {
-              const targetPage = Math.floor(idx / 15) + 1;
-              setHint(`[목록 점프] ${targetMonth}/${targetDay}와 같거나 이전인 글이 있는 ${targetPage}페이지로 이동합니다.`);
-              return showPostList(state.board.id, targetPage, {
-                menuPath: state.boardMenuPath,
-                menuTitle: state.boardMenuTitle
-              });
-            } else {
-              setHint(`지정하신 날짜(${targetMonth}/${targetDay}) 이전의 글이 존재하지 않습니다.`);
-              setPrompt('선택 >>');
-            }
-          })
-          .catch((err) => {
-            setHint(`스캔 실패: ${err.message}`);
-            setPrompt('선택 >>');
-          });
+      // 천리안 DATE YYMMDD: 00~69는 2000년대, 70~99는 1900년대로 해석한다.
+      // 역사 데이터와 현재 게시글을 모두 지정할 수 있는 고정 기준이다.
+      if (cmd === 'DATE' || cmd.startsWith('DATE ')) {
+        const dateMatch = cmd.match(/^DATE\s+(\d{2})(\d{2})(\d{2})$/);
+        if (!dateMatch) {
+          setHint('날짜 형식이 잘못되었습니다. (예: DATE 260713)');
+          setPrompt('선택 >>');
+          return true;
+        }
+        const shortYear = Number(dateMatch[1]);
+        const targetYear = shortYear >= 70 ? 1900 + shortYear : 2000 + shortYear;
+        const targetMonth = Number(dateMatch[2]);
+        const targetDay = Number(dateMatch[3]);
+        const targetDate = createValidatedPostDate(targetYear, targetMonth, targetDay);
+        if (!targetDate) {
+          setHint(`존재하지 않는 날짜입니다: ${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`);
+          setPrompt('선택 >>');
+          return true;
+        }
+        await jumpToPostDate(targetDate, `${targetYear}-${dateMatch[2]}-${dateMatch[3]}`);
+        return true;
+      }
+
+      // [LOG_ID: 20260804_2037] 천리안 KEY 단독 입력은 검색어를 묻고 다음 입력을
+      // 주제어 필터로 적용한다. 기존 K 단독 입력의 필터 해제 의미는 그대로 둔다.
+      if (cmd === 'KEY') {
+        state._pendingSearch = {
+          type: 'k',
+          boardId: state.board.id,
+          menuPath: state.boardMenuPath,
+          menuTitle: state.boardMenuTitle
+        };
+        setHint('검색할 주제어(말머리)를 입력해 주십시오.');
+        setPrompt('주제어 >>');
         return true;
       }
 
@@ -602,23 +708,22 @@ export function createBrowseCommandHandler(deps) {
       // [LOG_ID: 20260713_1020] KW 주제어(말머리) 집계 목록 명령어 추가
       if (cmd === 'KW') {
         setHint('주제어를 수집 중입니다..');
-        fetchAllBoardPosts(state.board.id)
-          .then((posts) => {
-            const keywordsSet = new Set();
-            posts.forEach((p) => {
-              const m = String(p.title || '').match(/\[([^\]]+)\]/);
-              if (m) {
-                keywordsSet.add(m[1].trim());
-              }
-            });
-            const list = [...keywordsSet].join(', ');
-            setHint(list ? `[주제어 목록] ${list}` : '이 게시판에는 등록된 주제어가 없습니다.');
-            setPrompt('선택 >>');
-          })
-          .catch((err) => {
-            setHint(`수집 실패: ${err.message}`);
-            setPrompt('선택 >>');
+        try {
+          const posts = await fetchAllBoardPosts(state.board.id);
+          const keywordsSet = new Set();
+          posts.forEach((post) => {
+            const match = String(post.title || '').match(/\[([^\]]+)\]/);
+            if (match) {
+              keywordsSet.add(match[1].trim());
+            }
           });
+          const list = [...keywordsSet].join(', ');
+          setHint(list ? `[주제어 목록] ${list}` : '이 게시판에는 등록된 주제어가 없습니다.');
+          setPrompt('선택 >>');
+        } catch (error) {
+          setHint(`수집 실패: ${error.message}`);
+          setPrompt('선택 >>');
+        }
         return true;
       }
 
@@ -701,6 +806,18 @@ export function createBrowseCommandHandler(deps) {
         }
 
         beginDeleteConfirm(targetPost);
+        return true;
+      }
+
+      if (cmd === 'D' || cmd === 'DD') {
+        if (state.user?.isGuest) {
+          setHint(UI_TEXT.LOGIN_REQUIRED);
+          setPrompt('>>');
+          return true;
+        }
+        state._pendingDeletePostNumber = true;
+        setHint('삭제할 게시물 번호를 입력하십시오.');
+        setPrompt('삭제할 글 번호 (취소: P) >>');
         return true;
       }
 

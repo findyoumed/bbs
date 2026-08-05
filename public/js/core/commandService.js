@@ -50,18 +50,20 @@ export const CMD_META = {
   N: { label: '다음글', tip: 'N', priority: 60, cat: 'POST', desc: '목록에서 다음(더 낮은 번호) 글을 읽습니다.' },
   A: { label: '이전글', tip: 'A', priority: 60, cat: 'POST', desc: '목록에서 이전(더 높은 번호) 글을 읽습니다.' },
   L: { label: '첫장', tip: 'L', priority: 55, cat: 'POST', desc: '게시판 첫 페이지로 이동하며 검색을 초기화합니다.' },
-  W: { label: '글쓰기', tip: 'W', login: true, priority: 50, cat: 'POST', desc: '새 글을 작성합니다.' },
+  // [LOG_ID: 20260804_2037] 하이텔·천리안·나우누리 원전 명령을 현재 단일 UI에 통합:
+  // 기존 동작을 중복 구현하지 않고 대표 명령에 원전 별칭을 같이 안내한다.
+  W: { label: '글쓰기', tip: 'W, U', login: true, priority: 50, cat: 'POST', desc: '새 글을 작성합니다.' },
   R: { label: '답글', tip: 'R, RE', login: true, priority: 48, cat: 'POST', desc: '현재 글에 대한 답글을 작성합니다.' },
   RE: { label: '답글', tip: 'R, RE', login: true, priority: 48, cat: 'POST', desc: '현재 글에 대한 답글을 작성합니다.' },
   E: { label: '수정', tip: 'E, ED', login: true, priority: 46, cat: 'POST', desc: '내가 작성한 글을 수정합니다.' },
   ED: { label: '수정', tip: 'E, ED', login: true, priority: 46, cat: 'POST', desc: '내가 작성한 글을 수정합니다.' },
-  D: { label: '삭제', tip: 'D, DD', login: true, priority: 44, cat: 'POST', desc: '내가 작성한 글을 삭제합니다.' },
-  DD: { label: '삭제', tip: 'D, DD', login: true, priority: 44, cat: 'POST', desc: '내가 작성한 글을 삭제합니다.' },
+  D: { label: '삭제', tip: 'D, DD, DEL', login: true, priority: 44, cat: 'POST', desc: '내가 작성한 글을 삭제합니다.' },
+  DD: { label: '삭제', tip: 'D, DD, DEL', login: true, priority: 44, cat: 'POST', desc: '내가 작성한 글을 삭제합니다.' },
   V: { label: '추천', tip: 'V, OK', login: true, priority: 34, cat: 'POST', desc: '현재 글을 추천합니다.' },
   OK: { label: '추천', tip: 'V, OK', login: true, priority: 34, cat: 'POST', desc: '현재 글을 추천합니다.' },
 
   // Search
-  LI: { label: 'ID검색', tip: 'LI [아이디]', priority: 80, cat: 'POST', desc: '작성자 아이디로 게시글을 검색합니다.' },
+  LI: { label: 'ID검색', tip: 'LI [아이디], FROM [아이디]', priority: 80, cat: 'POST', desc: '작성자 아이디로 게시글을 검색합니다.' },
   LT: { label: '제목검색', tip: 'LT [검색어]', priority: 82, cat: 'POST', desc: '제목과 본문을 포함하여 게시글을 검색합니다.' },
   // [LOG_ID: 20260729_1750] FIND, / 클릭 시 입력창에 "FIND " 텍스트가 바로 prefill되도록 prefill: true 추가
   FIND: { label: '통합검색', tip: '/, FIND [검색어]', priority: 80, cat: 'POST', prefill: true, cmdPrefill: 'FIND ', desc: '게시판 및 메뉴 통합 검색을 수행합니다.' },
@@ -74,9 +76,9 @@ export const CMD_META = {
   NEW: { label: '새글보기', tip: 'NEW, NW', priority: 76, cat: 'POST', desc: '최근 3일 이내에 작성된 게시글만 골라 봅니다.' },
   NW: { label: '새글보기', tip: 'NEW, NW', priority: 76, cat: 'POST', desc: '최근 3일 이내에 작성된 게시글만 골라 봅니다.' },
   LS: { label: '번호이동', tip: 'LS [번호]', priority: 20, cat: 'POST', desc: '글 번호로 목록에서 해당 글이 있는 페이지를 찾아 이동합니다.' },
-  LD: { label: '날짜이동', tip: 'LD [월/일]', priority: 20, cat: 'POST', desc: '작성 날짜(월/일)로 목록에서 해당 글이 있는 페이지를 찾아 이동합니다. (예: LD 07/13)' },
+  LD: { label: '날짜이동', tip: 'LD [월/일], DATE [YYMMDD]', priority: 20, cat: 'POST', desc: '작성 날짜로 목록에서 해당 글이 있는 페이지를 찾아 이동합니다. (예: LD 07/13, DATE 260713)' },
   // [LOG_ID: 20260801_1010] 쪽지함 보관 명령을 K에서 KEEP으로 정립하고 설명 분리
-  K: { label: '주제어', tip: 'K', priority: 18, cat: 'POST', desc: '게시판 목록: 주제어(말머리) 필터를 해제합니다.' },
+  K: { label: '주제어', tip: 'K [주제어], KEY [주제어]', priority: 18, cat: 'POST', desc: '게시판 목록: 주제어(말머리)로 검색하거나 필터를 해제합니다.' },
   KEEP: { label: '편지보관', tip: 'KEEP [번호]', priority: 18, cat: 'POST', desc: '쪽지함: [번호]로 편지를 보관함에 넣거나 꺼냅니다.' },
   KW: { label: '주제어목록', tip: 'KW', priority: 18, cat: 'POST', desc: '게시판에서 사용된 주제어(말머리) 목록을 모아 봅니다.' },
   // [LOG_ID: 20260721_1800] UL/PUT, DL/TR/GET도 실제로 동일하게 동작하는 별칭이지만(commandRouterBrowse.js),
@@ -86,8 +88,8 @@ export const CMD_META = {
   UPLOAD: { label: '자료올리기', tip: 'UP, UPLOAD (별칭: UL, PUT / 자료실 전용)', login: true, priority: 20, cat: 'POST', desc: '자료실(PDS)에 새 자료를 올립니다.' },
   // [LOG_ID: 20260722_3300] 하이텔 책(길라잡이 p.128) 실측: "DN 번호1,번호2..."(나열)/
   // "DN 번호1-번호2"(범위) 다중 다운로드도 지원 — 힌트에도 안내해야 발견 가능한 기능이 된다.
-  DN: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DL, TR, GET / 자료실 전용, 예: DN 3,5 또는 DN 1-3)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다. 여러 건을 한 번에 받으려면 번호를 쉼표로 나열하거나(DN 3,5) 범위를 지정합니다(DN 1-3).' },
-  DOWNLOAD: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DL, TR, GET / 자료실 전용, 예: DN 3,5 또는 DN 1-3)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다. 여러 건을 한 번에 받으려면 번호를 쉼표로 나열하거나(DN 3,5) 범위를 지정합니다(DN 1-3).' },
+  DN: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DOWN, DL, TR, GET / 자료실 전용, 예: DN 3,5 또는 DN 1-3)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다. 여러 건을 한 번에 받으려면 번호를 쉼표로 나열하거나(DN 3,5) 범위를 지정합니다(DN 1-3).' },
+  DOWNLOAD: { label: '자료받기', tip: 'DN [번호], DOWNLOAD (별칭: DOWN, DL, TR, GET / 자료실 전용, 예: DN 3,5 또는 DN 1-3)', priority: 20, cat: 'POST', desc: '자료실(PDS)에서 자료를 내려받습니다. 여러 건을 한 번에 받으려면 번호를 쉼표로 나열하거나(DN 3,5) 범위를 지정합니다(DN 1-3).' },
 
   // Auth & Profile
   LOGIN: { label: '로그인', tip: 'LOGIN, LOG', priority: 90, cat: 'AUTH', desc: 'BBS 계정으로 로그인합니다.' },
@@ -126,6 +128,8 @@ export const CMD_META = {
   ME: { label: '쪽지', tip: 'ME, MEMO (별칭: MAIL, RMAIL, CMAIL)', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   MEMO: { label: '쪽지', tip: 'ME, MEMO (별칭: MAIL, RMAIL, CMAIL)', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   WMAIL: { label: '쪽지쓰기', tip: 'WMAIL', login: true, priority: 30, cat: 'MEMO', desc: '새 쪽지 쓰기 화면을 바로 엽니다.' },
+  TO: { label: '한줄쪽지', tip: 'TO [아이디] [한줄메시지]', login: true, priority: 31, cat: 'MEMO', prefill: true, desc: '별도의 쓰기 화면 없이 상대에게 한 줄 쪽지를 바로 보냅니다.' },
+  FW: { label: '쪽지전달', tip: 'FW (쪽지 읽기 전용)', login: true, priority: 18, cat: 'MEMO', desc: '현재 읽는 쪽지를 다른 사용자에게 전달합니다.' },
   WC: { label: '카드쓰기', tip: 'WC (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지함에서 축하카드/그림엽서 쓰기를 시작합니다.' },
   ABSENT: { label: '부재중', tip: 'ABSENT, 부재 (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지함에서 부재기간(시작일/종료일)과 사유를 등록합니다. 이미 등록돼 있으면 해제 여부를 묻습니다.' },
   MB: { label: '보관함', tip: 'MB (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지 편지보관함을 엽니다. K [번호]로 보관하거나 꺼낼 수 있습니다.' },
@@ -137,11 +141,16 @@ export const CMD_META = {
   O: { label: '방만들기', tip: 'O', login: true, priority: 42, cat: 'CHAT', desc: '채팅방을 개설합니다.' },
   J: { label: '방입장', tip: 'J [방번호], JOIN [방번호]', login: true, priority: 40, cat: 'CHAT', desc: '대화실 로비에서 방 번호로 채팅방에 입장합니다.' },
   JOIN: { label: '방입장', tip: 'J [방번호], JOIN [방번호]', login: true, priority: 40, cat: 'CHAT', desc: '대화실 로비에서 방 번호로 채팅방에 입장합니다.' },
+  ST: { label: '대화상태', tip: 'ST, /ST', login: true, priority: 20, cat: 'CHAT', desc: '현재 대화방의 참여자 상태를 확인합니다.' },
+  FI: { label: '접속자찾기', tip: 'FI [아이디], /FI [아이디]', login: true, priority: 20, cat: 'CHAT', prefill: true, desc: '특정 사용자의 접속 위치나 프로필을 찾습니다.' },
   // [LOG_ID: 20260712_0030] 라벨을 '연속읽기'로 통일(사용자 결정). 뉴스의 클립보드 복사 동작은 desc에만 남긴다.
-  PR: { label: '연속읽기', tip: 'PR [번호]', priority: 15, cat: 'SYS', desc: '게시판: 해당 번호부터 엔터로 글을 이어서 읽습니다. 뉴스: 본문 전체를 한 화면에 펼치고 클립보드에 복사합니다.' },
+  PR: { label: '연속읽기', tip: 'PR [번호/범위], MR [번호/범위]', priority: 15, cat: 'SYS', desc: '게시판: 해당 번호부터 엔터로 글을 이어서 읽습니다. 뉴스: 본문 전체를 한 화면에 펼치고 클립보드에 복사합니다.' },
+  PT: { label: '제목일괄보기', tip: 'PT [시작번호]', priority: 15, cat: 'POST', desc: '지정한 번호부터 게시글 제목을 연속으로 모아 봅니다.' },
+  USER: { label: '접속자', tip: 'USER, USER ALL', priority: 24, cat: 'AUTH', desc: '현재 접속한 이용자와 접속 위치를 확인합니다.' },
+  ANSI: { label: 'ANSI제어', tip: 'ANSI, ANSI ON/OFF', priority: 14, cat: 'UI', desc: 'ANSI 화면 제어 표현을 켜거나 끕니다.' },
   // [LOG_ID: 20260721_1800] 하이텔 원전 이용시간(TIME) 확인 명령 — 실제로는 이미 배선돼
   // 있었으나 도움말에 없었다.
-  TIME: { label: '이용시간', tip: 'TIME', priority: 15, cat: 'SYS', desc: '현재 시각과 이번 접속의 누적 이용 시간을 확인합니다.' },
+  TIME: { label: '이용시간', tip: 'TIME, USE', priority: 15, cat: 'SYS', desc: '현재 시각과 이번 접속의 누적 이용 시간을 확인합니다.' },
 
   // [LOG_ID: 20260729_1708] 사용자 요청으로 SET, UNSET, ENV 명령어 제거
 };
