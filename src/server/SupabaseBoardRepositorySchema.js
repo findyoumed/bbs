@@ -38,6 +38,10 @@ function shouldUseBoardFallback(error) {
     || message.includes('invalid jwt')
     || message.includes('jwt expired')
     || message.includes('fetch failed')
+    || message.includes('bad gateway')
+    || message.includes('connection refused')
+    || message.includes('service unavailable')
+    || message.includes('upstream')
     || message.includes('network')
     || message.includes('timed out');
 }
