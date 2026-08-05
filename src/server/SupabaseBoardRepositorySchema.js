@@ -23,9 +23,15 @@ const CAPABILITY_PROBE_COLUMNS = [
 
 function shouldUseBoardFallback(error) {
   const message = String(error?.message || '').toLowerCase();
+  const status = Number(error?.status || error?.statusCode || 0);
   return error?.code === 'PGRST205'
     || error?.status === 401
     || error?.status === 403
+    // Repository helpers wrap upstream Supabase failures as HTTP 5xx errors,
+    // which can hide the original provider message. Public read paths may
+    // safely degrade for any such storage failure; other 4xx validation
+    // errors remain outside this range and keep their existing behavior.
+    || (status >= 500 && status < 600)
     || message.includes('schema cache')
     || message.includes('relation')
     || message.includes('invalid api key')

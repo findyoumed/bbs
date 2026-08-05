@@ -2,6 +2,19 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 09:34] Supabase 5xx 래핑 오류의 게시판 읽기 폴백 보강
+
+**LOG_ID: 20260805_0934**
+목표: Supabase 원본 메시지가 숨겨진 래핑된 5xx 오류도 게시판 목록 502로 전파되지 않게 한다.
+변경 파일: `src/server/SupabaseBoardRepositorySchema.js`, `WORK_LOG.md`
+수행 작업:
+1) 저장소 헬퍼가 만든 5xx 상태 오류를 게시판 읽기 폴백 대상으로 분류
+2) 기존에 폴백하던 인증 거부(401/403)는 유지하고, 그 외 입력 검증 오류는 기존 흐름을 유지
+3) 기존 키·JWT·네트워크 오류 분류와 빈 목록 응답을 재사용
+실행: 래핑된 502 폴백 단언, `node --check`, `npm run loop:verify`, `git diff --check`
+기대: `/api/boards/notice`·`/api/boards/plaza`가 Supabase 5xx 장애 때도 200 빈 목록으로 화면을 유지한다.
+결과: ✅ 로컬 단언 및 완료 게이트 통과. 배포 후 두 엔드포인트 상태 재확인 필요.
+
 ## [2026-08-05 09:27] Supabase 게시글 조회 장애의 502 전파 차단
 
 **LOG_ID: 20260805_0927**
