@@ -2,6 +2,19 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 09:27] Supabase 게시글 조회 장애의 502 전파 차단
+
+**LOG_ID: 20260805_0927**
+목표: 잘못된 Supabase 키·네트워크 장애가 게시판 진입을 502로 중단시키는 문제를 완화한다.
+변경 파일: `src/server/SupabaseBoardRepositorySchema.js`, `src/server/SupabaseBoardRepositoryPostReads.js`, `WORK_LOG.md`
+수행 작업:
+1) 인증키 거부·JWT 만료·네트워크·타임아웃 오류를 저장소 폴백 대상으로 분류
+2) 게시글 목록 조회 실패 시 30초 경고 억제와 빈 페이지 응답으로 게시판 셸 유지
+3) 정상 오류와 쓰기·본문 조회 오류는 기존 예외 흐름을 유지
+실행: 잘못된 API 키 실서비스 클라이언트 모의 단언, `node --check`, `git diff --check`
+기대: `/api/boards/{boardId}`가 저장소 연결 실패 때도 502 대신 빈 목록 화면을 반환한다.
+결과: ✅ 잘못된 키 모의에서 게시판 메타·빈 목록·페이지네이션 응답 확인. 배포 후 notice/plaza 목록 200 재확인 필요.
+
 ## [2026-08-05 09:20] 게시판 상세 조회 다중 행 502 방지
 
 **LOG_ID: 20260805_0920**

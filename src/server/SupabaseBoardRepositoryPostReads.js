@@ -8,6 +8,7 @@ const {
 const { assertBoardAccessible } = require('./BoardRepositoryAccess');
 const { normalizeSearchOptions } = require('./BoardRepositorySearch');
 const { getBoard } = require('./SupabaseBoardRepositoryBoardReads');
+const { shouldUseBoardFallback } = require('./SupabaseBoardRepositorySchema');
 const {
   applyBoardFilter,
   applyPostOrdering,
@@ -107,7 +108,35 @@ async function listPosts(repo, boardId, options = {}) {
   const pageSize = Math.max(1, Number(options.pageSize) || 15);
   const search = normalizeSearchOptions(options);
   let requestedPage = Math.max(1, Number(options.page) || 1);
-  let result = await fetchPagedPosts(repo, boardId, requestedPage, pageSize, search);
+  let result;
+  try {
+    result = await fetchPagedPosts(repo, boardId, requestedPage, pageSize, search);
+  } catch (error) {
+    // [LOG_ID: 20260805_0927] A Supabase key/network failure must not turn a
+    // public board navigation into a generic 502. Keep the board shell usable
+    // with an empty page and rate-limit the diagnostic warning.
+    const now = Date.now();
+    if (shouldUseBoardFallback(error)) {
+      if (!repo._postListFallbackWarningAt || now - repo._postListFallbackWarningAt >= 30000) {
+        repo._postListFallbackWarningAt = now;
+        if (repo.logger && typeof repo.logger.warn === 'function') {
+          repo.logger.warn('Supabase post list unavailable; returning an empty page.', {
+            boardId,
+            code: error.code || '',
+            message: error.message || 'unknown error'
+          });
+        }
+      }
+      return {
+        board,
+        items: [],
+        pagination: buildPagination(0, 1, pageSize),
+        search,
+        degraded: true
+      };
+    }
+    throw error;
+  }
   const totalPages = Math.max(1, Math.ceil((result.count || 0) / pageSize) || 1);
 
   if (requestedPage > totalPages) {

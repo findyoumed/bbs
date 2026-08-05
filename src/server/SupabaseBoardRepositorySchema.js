@@ -22,9 +22,18 @@ const CAPABILITY_PROBE_COLUMNS = [
 ];
 
 function shouldUseBoardFallback(error) {
-  return error.code === 'PGRST205'
-    || String(error.message).includes('schema cache')
-    || String(error.message).includes('relation');
+  const message = String(error?.message || '').toLowerCase();
+  return error?.code === 'PGRST205'
+    || error?.status === 401
+    || error?.status === 403
+    || message.includes('schema cache')
+    || message.includes('relation')
+    || message.includes('invalid api key')
+    || message.includes('invalid jwt')
+    || message.includes('jwt expired')
+    || message.includes('fetch failed')
+    || message.includes('network')
+    || message.includes('timed out');
 }
 
 function isMissingColumnError(error) {
