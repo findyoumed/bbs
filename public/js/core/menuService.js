@@ -115,9 +115,28 @@ export function createMenuService(deps) {
   async function loadMenuTree() {
     const guestMenuState = isGuestMenuState();
     if (state.menuTree && state._menuTreeGuestState === guestMenuState) return state.menuTree;
-    // [LOG_ID: 20260804_1114] Keep standalone loading for deep links while allowing
-    // the main bootstrap response to hydrate this state directly.
-    return hydrateMenuTree(await apiFetch('/api/menu'));
+
+    // [LOG_ID: 20260805_1400] 세션 캐시를 활용해 재진입 시 /api/menu 대기시간(Latency)을 0ms로 축소
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const cached = sessionStorage.getItem('bbs_raw_menu_tree');
+        if (cached) {
+          const rawTree = JSON.parse(cached);
+          if (rawTree && typeof rawTree === 'object') {
+            return hydrateMenuTree(rawTree);
+          }
+        }
+      }
+    } catch (e) {}
+
+    const rawTree = await apiFetch('/api/menu');
+    try {
+      if (typeof sessionStorage !== 'undefined' && rawTree) {
+        sessionStorage.setItem('bbs_raw_menu_tree', JSON.stringify(rawTree));
+      }
+    } catch (e) {}
+
+    return hydrateMenuTree(rawTree);
   }
 
   function getMenuNodeByKey(key) {

@@ -1,3 +1,4 @@
+// [LOG_ID: 20260805_1435] 선택 화면 ANSI 빌더는 appFactory의 lazy factory가 주입한다.
 export function createAppFactoryServices(deps) {
   const {
     ansiToHTML,
@@ -12,10 +13,8 @@ export function createAppFactoryServices(deps) {
     createNetworkService,
     createPerformanceService,
     createPostService,
-    createServiceAnsiBuilders,
     createSettingsService,
     createSoundService,
-    createSystemAnsiBuilders,
     createSystemLogger,
     createTerminalStatusManager,
     createTerminalUiCore,
@@ -108,10 +107,6 @@ export function createAppFactoryServices(deps) {
     displayWidth,
     state
   });
-  // [LOG_ID: 20260804_1305] Startup services build only shared, immediately used ANSI groups.
-  const serviceAnsiBuilders = createServiceAnsiBuilders({ isWideChar, displayWidth, state });
-  const systemAnsiBuilders = createSystemAnsiBuilders({ isWideChar, displayWidth });
-
   return {
     ansiToHTML,
     apiFetch,
@@ -132,11 +127,9 @@ export function createAppFactoryServices(deps) {
     postService,
     restoreTheme,
     screenEl,
-    serviceAnsiBuilders,
     settingsService,
     soundService,
     statusManager,
-    systemAnsiBuilders,
     terminalUiCore,
     applyTheme,
     toggleTheme

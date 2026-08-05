@@ -75,6 +75,13 @@ export function createPostListView(deps) {
       const heightVal = (rect.height || 16) / scale;
       btn.style.left = '0'; btn.style.top = `${topVal}px`;
       btn.style.width = '100%'; btn.style.height = `${heightVal}px`;
+      // [LOG_ID: 20260805_1417] 마우스 호버 시 해당 글 본문 초고속 백그라운드 프리페치 (0초 본문 렌더링)
+      btn.addEventListener('mouseenter', () => {
+        const pid = post.localId ?? post.id;
+        if (state.board?.id && pid && typeof deps.loadPost === 'function') {
+          deps.loadPost(state.board.id, pid, '', state.searchParams).catch(() => null);
+        }
+      });
       layer.appendChild(btn);
     });
     if (layer.childElementCount > 0) screenNode.appendChild(layer);

@@ -50,6 +50,7 @@ async function createPost(repo, boardId, input, context = {}) {
     'Post creation failed'
   );
   const updated = await mutation.initializeThreadRoot(repo, sourceBoardId, inserted.id, now);
+  readOps.invalidateReadCache?.(repo);
 
   return {
     board,

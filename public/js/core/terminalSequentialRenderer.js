@@ -129,7 +129,18 @@ export function createTerminalSequentialRenderer(deps) {
     setBusy(true);
 
     try {
-      for (let index = 0; index < lines.length; index += 1) {
+      // [LOG_ID: 20260805_1435] DocumentFragment 1회 배치를 즉시 반영해 불필요한 다음 프레임 대기 제거
+      if (delay === 0 && !revealInPlace) {
+        const fragment = document.createDocumentFragment();
+        for (let index = 0; index < lines.length; index += 1) {
+          fragment.appendChild(lines[index]);
+        }
+        container.appendChild(fragment);
+        if (scrollIntoView && !controller.userScrolledUp) {
+          container.scrollTop = container.scrollHeight;
+        }
+      } else {
+        for (let index = 0; index < lines.length; index += 1) {
         if (controller.abort) {
           break;
         }
@@ -172,6 +183,7 @@ export function createTerminalSequentialRenderer(deps) {
           const jitter = (Math.random() * 0.4 + 0.8);
           await new Promise((resolve) => window.setTimeout(resolve, delay * jitter));
         }
+      }
       }
     } catch (error) {
       console.error('[Terminal] Rendering exception:', error);

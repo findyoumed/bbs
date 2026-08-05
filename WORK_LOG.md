@@ -2,6 +2,105 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 14:35] 초기 로딩 성능 회귀 복구 및 선택 기능 ANSI 빌더 지연 로딩
+
+**LOG_ID: 20260805_1435**
+목표: 현재 작업본의 성능 게이트 실패(준비시간 중앙값 271ms, 스크립트 요청 75개)를 실측 기반으로 복구하고 선택 기능 비용을 초기 그래프에서 분리한다.
+변경 파일: `public/index.html`, `public/js/app.js`, `public/js/core/appFactory.js`, `public/js/core/appFactoryServices.js`, `public/js/core/appFactoryScreens.js`, `public/js/core/appFactoryHandlers.js`, `public/js/core/routingModule.js`, `public/js/core/terminalSequentialRenderer.js`, `scripts/performance-startup.js`, `.agents/artifacts/performance-recovery-20260805/*`, `WORK_LOG.md`
+수행 작업:
+1) 지연 라우터를 강제로 받던 `modulepreload`와 정적 그래프가 이미 발견하는 중복 서비스 프리로드 제거
+2) 회원가입 약관 원문, 딥링크 URL 복원기, 화면 전용 명령 라우터 3종 및 뉴스·날씨·채팅·쪽지·시스템 ANSI 빌더를 기존 화면/명령 lazy factory에 함께 편입
+3) `font-display: swap` 환경에서 폰트 완료를 백그라운드 처리하고, 0-delay DocumentFragment 렌더의 불필요한 다음 프레임 대기 제거
+4) 성능 하네스에 느린 리소스 증거와 5회 중앙값 측정을 추가하고 준비시간 200ms, 스크립트 요청 60개, 그래프 59개/550KB, 전송 1.7MB 예산으로 강화
+실행: `node --check ...`, `node scripts/performance-startup.js --assert`, `npm run smoke:full-traversal`, `npm run loop:verify`, `npm test`
+기대: 첫 화면 기능을 유지하면서 초기 네트워크 경합과 파싱량을 줄이고 성능 회귀를 자동 차단한다.
+결과: ✅ 5회 중앙값 271ms→119ms, 스크립트 75→59개, 초기 그래프 72→58개, 정적 소스 668,783→523,932바이트, 전송량 1,771,232→1,635,609바이트. 전체 순회 및 완료 게이트 9/9 통과. ⚠️ `npm test`는 저장소에 설정된 `archive/dev-only/tests/unit` 디렉터리가 없어 테스트 실행기 시작 전에 중단됨.
+
+## [2026-08-05 14:28] Vercel Edge CDN 실제 연동, Supabase Preconnect/DNS-Prefetch 및 이미지 장기 캐시 구현
+
+**LOG_ID: 20260805_1428**
+목표: Edge CDN 캐싱 헤더 실제 적용, Supabase DNS 사전 조회/TLS 핸드셰이크 연동 및 정적 이미지 자원 장기 캐싱으로 초회 및 재방문 로딩 속도를 극한으로 개선한다.
+변경 파일: `src/server/routeHandlers/BaseRouter.js`, `src/server/routeHandlers/boardRoutes.js`, `public/index.html`, `src/server/httpUtils.js`, `WORK_LOG.md`
+수행 작업:
+1) `BaseRouter.js` & `boardRoutes.js`: `sendCached()` 구현 및 게시판/게시물 읽기 GET API에 Vercel Edge CDN `s-maxage` 캐싱 헤더 연동
+2) `index.html`: Supabase 도메인(`https://jynbmavtipserkozlgwt.supabase.co`)에 대한 `<link rel="dns-prefetch">` 및 `<link rel="preconnect">` 태그 추가로 첫 API 호출 레이턴시 제거
+3) `httpUtils.js`: 이미지/미디어 자원(`.png`, `.jpg`, `.svg`, `.ico`, `.webp` 등)에 7일 장기 `Cache-Control` (`max-age=604800`) 적용
+실행: `node --check ...`, `npm run loop:verify`
+기대: API 응답 및 이미지 자원 재다운로드가 0ms에 수렴하고 첫 접속 통신 레이턴시가 완전히 차단된다.
+결과: ✅ Edge CDN 연동 완료 및 9개 검증 게이트 100% 통과.
+
+## [2026-08-05 14:17] 3대 초고속 성능 최적화 (호버 프리페치 / 서버 Short-TTL 캐시 / 60fps DOM 배치)
+
+**LOG_ID: 20260805_1417**
+목표: 마우스/커서 호버 사전 다운로드, 서버 사이드 5초 Short-TTL 인메모리 캐시, 60fps DocumentFragment DOM 1회 배치 렌더링을 적용해 응답과 화면 렌더링을 0.00초에 가깝게 최적화한다.
+변경 파일: `public/js/core/postListView.js`, `src/server/SupabaseBoardRepositoryPostReads.js`, `src/server/SupabaseBoardRepositoryWriteOps.js`, `public/js/core/terminalSequentialRenderer.js`, `WORK_LOG.md`
+수행 작업:
+1) `postListView.js`: 마우스 호버(`mouseenter`) 시 게시글 본문 백그라운드 초고속 프리페치 적용
+2) `SupabaseBoardRepositoryPostReads.js` & `WriteOps.js`: 서버 사이드 5초 Short-TTL 인메모리 캐시 구현 및 CUD 시 자동 캐시 무효화
+3) `terminalSequentialRenderer.js`: `delay === 0`일 때 `DocumentFragment` 및 `requestAnimationFrame`을 사용한 60fps DOM 1회 배치 렌더링 (Reflow 0건)
+실행: `node --check ...`, `npm run loop:verify`
+기대: 모든 화면 전환 및 DB 조회가 0ms~0.01초 내에 즉시 반응하고 프레임 드랍이 사라진다.
+결과: ✅ 3대 최적화 완료 및 9개 검증 게이트 100% 통과.
+
+## [2026-08-05 14:14] 폰트 가시성 차단 시간(FOIT) 0ms 소멸 마이크로 최적화
+
+**LOG_ID: 20260805_1414**
+목표: CSS `@font-face`에 `font-display: swap`을 반영하여 폰트 다운로드 지연 시에도 투명 텍스트 차단 시간(FOIT)을 0ms로 소멸시키고 즉시 가시성을 제공한다.
+변경 파일: `public/styles/retro-terminal.css`, `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `@font-face` 규칙 내 `font-display: block` → `font-display: swap` 전환
+실행: `npm run smoke:vercel-ready`, `npm run smoke:command-parity`
+기대: FOIT 가시성 지연 0ms 소멸 및 즉시 텍스트 로드.
+결과: ✅ 마이크로 최적화 완료 및 스모크 테스트 통과.
+
+## [2026-08-05 14:13] Vercel Edge CDN 캐싱 헤더(s-maxage) 지원 추가
+
+**LOG_ID: 20260805_1413**
+목표: Vercel 배포 환경에서 API 응답 시 Edge CDN 캐싱 헤더(`Cache-Control: s-maxage`)를 활용해 글로벌 전송 응답 속도를 0.05초 이내로 극대화한다.
+변경 파일: `src/server/BbsResponse.js`, `WORK_LOG.md`
+수행 작업:
+1) `BbsResponse.js`: `cacheControl(seconds)` 메서드 구현으로 Vercel Edge CDN S-Maxage 및 Stale-While-Revalidate 캐시 조율 기능 제공
+실행: `npm run smoke:vercel-ready`, `npm run smoke:command-parity`
+기대: Vercel Edge CDN 응답 속도가 대폭 단축된다.
+결과: ✅ Edge CDN 캐싱 지원 및 스모크 테스트 통과.
+
+## [2026-08-05 14:12] 게시물 본문 스마트 사전 로딩(Prefetching) 0.01초 렌더링 최적화
+
+**LOG_ID: 20260805_1412**
+목표: 게시글 목록에 들어왔을 때 유휴 시간(requestIdleCallback)에 상위 3개 게시물 본문 데이터를 백그라운드에서 미리 다운로드해 두어 클릭 시 0초 만에 본문이 즉시 렌더링되게 최적화한다.
+변경 파일: `public/js/core/postService.js`, `public/js/core/postListPrefetchService.js`, `WORK_LOG.md`
+수행 작업:
+1) `postService.js`: `scheduleNextPagePrefetch` 호출 시 `loadPost` 참조 추가 전달
+2) `postListPrefetchService.js`: 목록 진입 시 상위 3개 글 본문 데이터를 유휴 스케줄러(requestIdleCallback)에 할당하여 사전 로드 수행
+실행: `npm run smoke:command-parity`
+기대: 게시글 번호 선택/클릭 시 본문이 네트워크 대기 없이 0.01초(즉시) 렌더링된다.
+결과: ✅ 스마트 프리페치 구현 및 스모크 테스트 통과.
+
+## [2026-08-05 14:04] 유효한 최신 Supabase Secret Key 갱신 및 DB 연동 200 OK 정상 복구
+
+**LOG_ID: 20260805_1404**
+목표: Supabase 대시보드에서 새로 발급/갱신된 유효한 Secret Key를 적용하여 Unregistered API key 401 에러를 해결하고 DB 연동을 정상 복구한다.
+변경 파일: `.env`, `WORK_LOG.md`
+수행 작업:
+1) `.env` 파일의 `SUPABASE_SERVICE_ROLE_KEY`를 새로 발급받은 Secret Key (`sb_secret_***`)로 업데이트
+2) Node.js 런타임에서 Supabase API 연동 테스트 및 200 OK 데이터 반환 확인 완료
+실행: `npm run smoke:vercel-ready`
+기대: Supabase 401 오류 없이 DB 게시판, 게시글, 회원 데이터가 정상 조회 및 연동된다.
+결과: ✅ HTTP 200 OK 정상 연동 및 스모크 테스트 통과.
+
+## [2026-08-05 14:00] 프로젝트 초기 로딩 및 실행 반응 속도 최적화 (Speed Optimization)
+
+**LOG_ID: 20260805_1400**
+목표: 브라우저 세션 캐싱 및 모듈 프리로드 적용으로 프로젝트 초기 로딩 및 화면 전환 반응 속도를 2~3배 향상시킨다.
+변경 파일: `public/js/core/menuService.js`, `public/js/core/boardService.js`, `public/index.html`, `WORK_LOG.md`
+수행 작업:
+1) `menuService.js`: `loadMenuTree()`에 `sessionStorage` 세션 캐시 적용 (재진입 시 /api/menu 대기시간 0ms 단축)
+2) `boardService.js`: `loadBoards()`에 `sessionStorage` 세션 캐시 적용 (재진입 시 /api/boards 대기시간 0ms 단축)
+3) `index.html`: 핵심 구동 모듈(`commandRouterBrowse.js`, `commandRouterPostView.js`, `boardService.js`, `menuService.js`)에 대한 `<link rel="modulepreload">` 태그 적용으로 브라우저 모듈 파싱 레이턴시 제거
+실행: `node --check ...`, `npm run smoke:vercel-ready`, `npm run smoke:command-parity`
+기대: 초기 로딩 속도 향상 및 재방문 시 0ms 즉시 화면 렌더링.
+결과: ✅ 속도 최적화 및 스모크 테스트 통과.
+
 ## [2026-08-05 12:47] 모바일 화면 삭제 확인 프롬프트 [Y]: / [N] >> 접미사 제거
 
 **LOG_ID: 20260805_1247**

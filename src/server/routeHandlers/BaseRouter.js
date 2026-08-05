@@ -11,6 +11,7 @@ const {
   createNotFoundError,
   createConflictError
 } = require('../httpUtils');
+const BbsResponse = require('../BbsResponse');
 const logger = require('../logger');
 const { parsePagination, parseSort } = require('../queryUtils');
 const { getRouterBody, getRouterContext, ensureAuthenticatedContext, ensureAdminContext } = require('./BaseRouterContext');
@@ -195,6 +196,12 @@ class BaseRouter {
    */
   send(statusCode, data, message = 'Success') {
     sendApiResponse(this.res, statusCode, data, message);
+    return true;
+  }
+
+  // [LOG_ID: 20260805_1428] Edge CDN 캐싱 지원 응답: 읽기 전용 GET API에서 s-maxage 헤더를 포함하여 응답
+  sendCached(statusCode, data, seconds = 5, message = 'Success') {
+    new BbsResponse(this.res).status(statusCode).data(data).message(message).cacheControl(seconds).send();
     return true;
   }
 

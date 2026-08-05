@@ -82,13 +82,15 @@ class BoardRouter extends BaseRouter {
     return this.send(200, this.deps.boardRepository.getMeta());
   }
 
+  // [LOG_ID: 20260805_1428] 읽기 전용 GET: Edge CDN 10초 캐시
   async listBoards() {
-    return this.send(200, await this.deps.boardRepository.listBoards());
+    return this.sendCached(200, await this.deps.boardRepository.listBoards(), 10);
   }
 
   // [LOG_ID: 20260713_1230] 나우누리식 게시판 메뉴 ( 신규 / 전체 ) 건수
+  // [LOG_ID: 20260805_1428] 읽기 전용 GET: Edge CDN 30초 캐시 (카운트는 변동이 적음)
   async listBoardCounts() {
-    return this.send(200, await this.deps.boardRepository.listBoardCounts());
+    return this.sendCached(200, await this.deps.boardRepository.listBoardCounts(), 30);
   }
 
   async listHotPosts() {
@@ -96,7 +98,8 @@ class BoardRouter extends BaseRouter {
     const rawDays = Number(this.requestUrl.searchParams.get('days'));
     const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 10;
     const days = Number.isInteger(rawDays) && rawDays > 0 ? Math.min(rawDays, 365) : 7;
-    return this.send(200, await this.deps.boardRepository.listHotPosts({ limit, days }));
+    // [LOG_ID: 20260805_1428] 읽기 전용 GET: Edge CDN 60초 캐시 (인기글은 빈번히 바뀌지 않음)
+    return this.sendCached(200, await this.deps.boardRepository.listHotPosts({ limit, days }), 60);
   }
 
   async listPosts(params) {
@@ -123,7 +126,8 @@ class BoardRouter extends BaseRouter {
     });
 
     await this.enrichWithAttachmentSummaries(boardId, result);
-    return this.send(200, result);
+    // [LOG_ID: 20260805_1428] 읽기 전용 GET: Edge CDN 5초 캐시 (목록은 글 작성 시 갱신 필요)
+    return this.sendCached(200, result, 5);
   }
 
   // [LOG_ID: 20260718_1200] 자료실(PDS) 목록 화면은 원전처럼 파일명/크기/전송(다운로드 수)을

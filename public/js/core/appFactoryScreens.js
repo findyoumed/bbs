@@ -3,11 +3,9 @@
 // [LOG_ID: 20260716_1600] 하이텔 (1)-6/8 메뉴안내·인덱스안내(menu/index)
 // [LOG_ID: 20260720_2300] GUIDE 건의하기 — 게시판 대신 시삽 이메일 발송.
 
-// [LOG_ID: 20260804_1305] Optional screen factories are injected as lazy facades.
+// [LOG_ID: 20260805_1435] Optional screen factories now inject their own ANSI builders lazily.
 export function createAppFactoryScreens(deps) {
   const {
-    SIGNUP_PRIVACY_TEXT,
-    SIGNUP_TOS_TEXT,
     createAmusementScreens,
     createAuthScreens,
     createChatScreens,
@@ -52,8 +50,6 @@ export function createAppFactoryScreens(deps) {
     menuService,
     postService,
     screenEl,
-    serviceAnsiBuilders,
-    systemAnsiBuilders,
     terminalUiCore
   } = services;
 
@@ -85,18 +81,12 @@ export function createAppFactoryScreens(deps) {
 
   const systemScreens = createSystemScreens({
     ...screenDeps,
-    apiFetch,
-    buildActiveUsersAnsi: systemAnsiBuilders.buildActiveUsersAnsi,
-    buildSystemDiagnosticsAnsi: systemAnsiBuilders.buildSystemDiagnosticsAnsi,
-    buildActivitySummaryAnsi: systemAnsiBuilders.buildActivitySummaryAnsi,
-    // [LOG_ID: 20260716_2200] 하이텔 (1)-25 계열 — 내 이용 현황.
-    buildMyStatsAnsi: systemAnsiBuilders.buildMyStatsAnsi
+    apiFetch
   });
   const systemLogScreens = createSystemLogScreens({
     ...screenDeps,
     logger,
-    showToast: terminalUiCore.showToast,
-    buildSystemLogAnsi: systemAnsiBuilders.buildSystemLogAnsi
+    showToast: terminalUiCore.showToast
   });
   const menuNav = createMenuNavigation({
     ...screenDeps,
@@ -116,12 +106,6 @@ export function createAppFactoryScreens(deps) {
     ...screenDeps,
     ...dataService,
     buildBoardSelectAnsi: boardAnsiBuilders.buildBoardSelectAnsi,
-    buildLocalWeatherAnsi: serviceAnsiBuilders.buildLocalWeatherAnsi,
-    buildWeatherLocalAnsi: serviceAnsiBuilders.buildWeatherLocalAnsi,
-    buildWeatherMenuAnsi: serviceAnsiBuilders.buildWeatherMenuAnsi,
-    buildNewsArticleAnsi: serviceAnsiBuilders.buildNewsArticleAnsi,
-    buildNewsListAnsi: serviceAnsiBuilders.buildNewsListAnsi,
-    buildWeatherAnsi: serviceAnsiBuilders.buildWeatherAnsi,
     getBoardKey: boardService.getBoardKey,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
@@ -143,8 +127,6 @@ export function createAppFactoryScreens(deps) {
   const chatScreens = createChatScreens({
     ...screenDeps,
     apiFetch,
-    buildChatLobbyAnsi: serviceAnsiBuilders.buildChatLobbyAnsi,
-    buildChatRoomAnsi: serviceAnsiBuilders.buildChatRoomAnsi,
     getMenuNodeByKey: menuService.getMenuNodeByKey
   });
   const authScreens = createAuthScreens({
@@ -161,8 +143,6 @@ export function createAppFactoryScreens(deps) {
   const memoScreens = createMemoScreens({
     ...screenDeps,
     apiFetch,
-    buildMemoListAnsi: serviceAnsiBuilders.buildMemoListAnsi,
-    buildMemoViewAnsi: serviceAnsiBuilders.buildMemoViewAnsi,
     getMenuNodeByKey: menuService.getMenuNodeByKey,
     showMain
   });
@@ -174,14 +154,10 @@ export function createAppFactoryScreens(deps) {
   });
   // [LOG_ID: 20260713_2100] GUIDE 화면 이용약관/개인정보처리방침 뷰어.
   const policyScreens = createPolicyScreens({
-    ...screenDeps,
-    SIGNUP_PRIVACY_TEXT,
-    SIGNUP_TOS_TEXT
+    ...screenDeps
   });
   const signupModule = createSignupModule({
     ...screenDeps,
-    SIGNUP_PRIVACY_TEXT,
-    SIGNUP_TOS_TEXT,
     createSignupScreens,
     getMenuNodeByKey: menuService.getMenuNodeByKey,
     getMenuNodeLabel: menuService.getMenuNodeLabel,
@@ -202,12 +178,11 @@ export function createAppFactoryScreens(deps) {
     // [LOG_ID: 20260718_1400] /index URL 직접 진입 시 메뉴 트리가 없어 목록이 비던 문제 — 선로드용.
     loadMenuTree: menuService.loadMenuTree
   });
-  const profileScreens = createProfileScreens({ ...screenDeps, apiFetch, buildProfileAnsi: systemAnsiBuilders.buildProfileAnsi });
+  const profileScreens = createProfileScreens({ ...screenDeps, apiFetch });
   // [LOG_ID: 20260716_1400] 이용자검색 — 검색은 기존 authService.searchMember(/api/members/search),
   // 결과 표시는 기존 프로필 화면을 그대로 재사용한다(신규 API·신규 데이터 없음).
   const memberSearchScreens = createMemberSearchScreens({
     ...screenDeps,
-    buildMemberSearchAnsi: systemAnsiBuilders.buildMemberSearchAnsi,
     searchMember: authService.searchMember,
     showProfile: profileScreens.showProfile
   });

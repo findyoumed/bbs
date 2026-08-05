@@ -230,6 +230,11 @@ async function streamFile(res, filePath, options = {}) {
     headers['Cache-Control'] = 'public, max-age=86400, stale-while-revalidate=604800';
     validatorHeaders['Cache-Control'] = headers['Cache-Control'];
   }
+  // [LOG_ID: 20260805_1428] 이미지/미디어 정적 자원 장기 캐시: 브라우저가 매번 재다운로드하지 않도록 7일 캐시
+  if (['.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.webp', '.mp3', '.wav', '.webm'].includes(ext)) {
+    headers['Cache-Control'] = 'public, max-age=604800, stale-while-revalidate=86400';
+    validatorHeaders['Cache-Control'] = headers['Cache-Control'];
+  }
 
   if (isFileNotModified(options.req, etag, stats.mtime)) {
     res.writeHead(304, validatorHeaders);

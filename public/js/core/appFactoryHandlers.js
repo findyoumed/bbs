@@ -1,17 +1,15 @@
-// [LOG: 20260623_0013] origin/main에서 vote command handler 포팅 (self-contained import)
-import { createVoteCommandHandler } from './commandRouterVote.js';
-import { createConfCommandHandler } from './commandRouterConf.js';
-
 export function createAppFactoryHandlers(deps) {
   const {
     createBrowseCommandHandler,
     createChatCommandHandler,
+    createConfCommandHandler,
     createEntryCommandHandler,
     createGlobalCommandHandler,
     createMemoCommandHandler,
     createMyInfoCommandHandler,
     createPostViewCommandHandler,
     createServiceCommandHandler,
+    createVoteCommandHandler,
     refs,
     screens,
     services,
@@ -69,8 +67,10 @@ export function createAppFactoryHandlers(deps) {
     ...screens.chatScreens,
     ansiToHTML: services.ansiToHTML,
     apiFetch: services.apiFetch,
-    buildChatRoomAnsi: services.serviceAnsiBuilders.buildChatRoomAnsi,
     cmdInput: services.cmdInput,
+    // [LOG_ID: 20260805_1435] 지연 로딩된 채팅 ANSI 빌더의 폭 계산 의존성 전달.
+    displayWidth: services.displayWidth,
+    isWideChar: services.isWideChar,
     restoreStateFromURL: (...args) => refs.restoreStateFromURL(...args),
     screenEl: services.screenEl
   });

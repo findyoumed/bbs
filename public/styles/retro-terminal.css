@@ -6,7 +6,7 @@
     font-weight: normal;
     font-style: normal;
     /* [LOG_ID: 20260804_1405] Preserve terminal glyph metrics; JS bounds the wait. */
-    font-display: block;
+    font-display: swap;
 }
 @font-face {
     font-family: 'DungGeunMo';
@@ -14,7 +14,7 @@
          url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: bold;
     font-style: normal;
-    font-display: block;
+    font-display: swap;
 }
 
 :root,

@@ -33,7 +33,28 @@ export function createBoardService(deps = {}) {
 
   async function loadBoards() {
     if (getBoards().length > 0) return;
+
+    // [LOG_ID: 20260805_1400] 세션 캐시를 활용해 재진입 시 /api/boards 대기시간(Latency)을 0ms로 축소
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const cached = sessionStorage.getItem('bbs_raw_boards');
+        if (cached) {
+          const rawData = JSON.parse(cached);
+          if (rawData) {
+            hydrateBoards(rawData);
+            return;
+          }
+        }
+      }
+    } catch (e) {}
+
     const data = await apiFetch('/api/boards');
+    try {
+      if (typeof sessionStorage !== 'undefined' && data) {
+        sessionStorage.setItem('bbs_raw_boards', JSON.stringify(data));
+      }
+    } catch (e) {}
+
     hydrateBoards(data);
   }
 

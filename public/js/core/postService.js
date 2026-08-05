@@ -138,12 +138,11 @@ export function createPostService(deps) {
 
   function scheduleNextPagePrefetch(boardId, data, searchParams) {
     if (data.degraded) return;
-    // [LOG_ID: 20260805_0152] The optional idle prefetch implementation stays
-    // outside the startup graph and loads only after the first board list.
+    // [LOG_ID: 20260805_1412] 다음 페이지 및 상위 3개 게시물 본문을 유휴 시간에 사전 로드(Prefetch)
     void import('./postListPrefetchService.js')
       .then(({ scheduleNextPagePrefetch: schedule }) => schedule({
         boardId, data, searchParams, listCache, buildListCacheKey,
-        fetchPostsPage, generation: listCacheGeneration
+        fetchPostsPage, loadPost, generation: listCacheGeneration
       }))
       .catch(() => {});
   }

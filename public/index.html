@@ -10,6 +10,10 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
+    <!-- [LOG_ID: 20260805_1428] Supabase DNS/TLS 사전 연결: 첫 API 호출 시 DNS 조회 + TLS 핸드셰이크 지연 0ms 소멸 -->
+    <link rel="dns-prefetch" href="https://jynbmavtipserkozlgwt.supabase.co">
+    <link rel="preconnect" href="https://jynbmavtipserkozlgwt.supabase.co" crossorigin>
+
     <!-- [LOG: 20260426_1410] 테마 로딩 초고속 동기화: 자바스크립트 실행 즉시 스타일 주입 (플리커 완전 차단) -->
     <style>
         /* [LOG: 20260426_1640] 최우선순위 배경색: 브라우저 기본 흰색 노출 방지 */
@@ -91,7 +95,7 @@
     <link rel="stylesheet" href="/style.css?v=20260725_1333">
 
     <!-- JS 모듈 진입점 사전 로드 -->
-    <!-- [LOG: 20260611_1540] UI assets are revalidated by server cache headers after spacing fixes. -->
+    <!-- [LOG_ID: 20260805_1435] 엔트리 그래프만 사전 로드하고 선택 라우터는 기존 지연 로딩을 유지 -->
     <link rel="modulepreload" href="/js/app.js">
     <link rel="modulepreload" href="/js/core/appFactory.js">
 </head>

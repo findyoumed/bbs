@@ -11,21 +11,26 @@ const { chromium } = require('playwright');
 const { createAppRuntime } = require('../src/server/createAppRuntime');
 
 const ASSERT_MODE = process.argv.includes('--assert');
-const COLD_RUNS = 3;
+// [LOG_ID: 20260805_1435] Five isolated contexts make the median resilient to
+// occasional local filesystem/Chromium startup spikes without hiding regressions.
+const COLD_RUNS = 5;
 const READY_TIMEOUT_MS = 15000;
 const TARGETS = {
   maxApiRequests: 6,
-  maxColdTransferBytes: Math.floor(2.25 * 1024 * 1024),
-  maxScriptRequests: 74,
-  maxStaticModuleCount: 73,
-  maxStaticSourceBytes: 700 * 1024,
-  maxMedianReadyMs: 142,
+  // [LOG_ID: 20260805_1435] Lock in the reduced optional-feature startup graph
+  // while retaining headroom for small maintenance changes.
+  maxColdTransferBytes: Math.floor(1.7 * 1024 * 1024),
+  maxScriptRequests: 60,
+  maxStaticModuleCount: 59,
+  maxStaticSourceBytes: 550 * 1024,
+  maxMedianReadyMs: 200,
   requireRepeatStatic304: true,
   requiredFontPaths: [
     '/fonts/Sam3KRFont.woff2',
     '/fonts/DungGeunMo.woff2'
   ],
   deferredInitialModules: [
+    'core/ansiServiceBuilders.js',
     'core/amusementScreens.js',
     'core/amusementAnsiBuilders.js',
     'core/arcadeScreens.js',
@@ -35,6 +40,16 @@ const TARGETS = {
     'core/voteAnsiBuilders.js',
     'core/confScreens.js',
     'core/confAnsiBuilders.js',
+    'core/weatherAnsiBuilders.js',
+    'core/newsAnsiBuilders.js',
+    'core/chatAnsiBuilders.js',
+    'core/memoAnsiBuilders.js',
+    'core/systemAnsiBuilders.js',
+    'core/signupPolicyText.js',
+    'core/routingStateRestorer.js',
+    'core/commandRouterEntry.js',
+    'core/commandRouterVote.js',
+    'core/commandRouterConf.js',
     'core/memberSearchScreens.js',
     'core/menuIndexScreens.js',
     'core/contactSysopScreen.js'
@@ -178,9 +193,20 @@ async function measurePage(context, baseUrl, label) {
   const browserMetrics = await page.evaluate(() => {
     const probe = window.__bbsPerformanceProbe;
     const resources = performance.getEntriesByType('resource');
+    // [LOG_ID: 20260805_1435] Keep the slowest startup resources in failure
+    // evidence so timing regressions can be attributed instead of guessed.
+    const slowResources = resources
+      .map((entry) => ({
+        durationMs: Math.round(entry.duration),
+        path: `${new URL(entry.name).pathname}${new URL(entry.name).search}`,
+        startMs: Math.round(entry.startTime)
+      }))
+      .sort((left, right) => right.durationMs - left.durationMs)
+      .slice(0, 8);
     return {
       decodedBytes: resources.reduce((total, entry) => total + Number(entry.decodedBodySize || 0), 0),
       readyMs: Math.round(probe.readyAt - probe.startedAt),
+      slowResources,
       transferBytes: resources.reduce((total, entry) => total + Number(entry.transferSize || 0), 0)
     };
   });

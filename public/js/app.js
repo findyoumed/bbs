@@ -5,7 +5,6 @@
 'use strict';
 
 import { initApp } from './core/appFactory.js';
-import { SIGNUP_TOS_TEXT, SIGNUP_PRIVACY_TEXT } from './core/signupPolicyText.js';
 import { beginCommandExecution, trackCommandExecution, cancelCommandExecution } from './core/commandExecutionState.js';
 
 let state = {
@@ -33,7 +32,7 @@ const refs = {};
 
 const {
   initTooltips, initAuth, preloadBootstrap, restoreStateFromURL, restoreTheme, updateURL, showMain, showPasswordReset, renderInitError, guestUser, forceExit
-} = initApp({ state, refs, SIGNUP_TOS_TEXT, SIGNUP_PRIVACY_TEXT });
+} = initApp({ state, refs });
 
 // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "자동접속 차단시간"(SET IDLE [분]) 재현.
 // 종량제 PC통신 시절, 일정 시간 무입력 시 자동으로 접속을 끊던 동작. 기본값은 없음(off)이며
@@ -104,9 +103,9 @@ async function waitForPrimaryFonts(timeoutMs = 2500) {
 
 async function init() {
   restoreTheme(); // [LOG: 20260424_1755] 저장된 테마 즉시 복원
-  // [LOG_ID: 20260805_0054] Both primary WOFF2 fonts are preloaded, so keep a
-  // short fallback gate without delaying first render for a full second.
-  await waitForPrimaryFonts(300);
+  // [LOG_ID: 20260805_1435] font-display: swap과 WOFF2 preload를 사용하므로
+  // 폰트 완료 처리는 백그라운드에서 유지하고 인증/첫 화면 렌더는 차단하지 않는다.
+  void waitForPrimaryFonts(300);
   initTooltips();
   state.user = guestUser();
 

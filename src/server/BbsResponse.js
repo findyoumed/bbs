@@ -47,6 +47,12 @@ class BbsResponse {
     return this;
   }
 
+  // [LOG_ID: 20260805_1413] Edge CDN Caching 지원: Vercel 서버의 API 초고속 응답을 위해 s-maxage 헤더 추가
+  cacheControl(seconds = 5) {
+    this._headers['Cache-Control'] = `public, max-age=${seconds}, s-maxage=${seconds * 2}, stale-while-revalidate=59`;
+    return this;
+  }
+
   send() {
     // [LOG: 20260618_1710] Prevent ERR_HTTP_HEADERS_SENT crash if response was already started
     if (this.res.headersSent) {

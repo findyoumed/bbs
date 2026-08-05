@@ -210,7 +210,33 @@ async function getPost(repo, boardId, postId, options = {}) {
   };
 }
 
+// [LOG_ID: 20260805_1417] 서버 사이드 5초 Short-TTL 인메모리 캐시 (DB 응답속도 0ms 극대화)
+const READ_CACHE_TTL_MS = 5000;
+
+function getReadCache(repo, key) {
+  if (!repo._readCache) repo._readCache = new Map();
+  const entry = repo._readCache.get(key);
+  if (entry && (Date.now() - entry.at < READ_CACHE_TTL_MS)) {
+    return entry.data;
+  }
+  return null;
+}
+
+function setReadCache(repo, key, data) {
+  if (!repo._readCache) repo._readCache = new Map();
+  repo._readCache.set(key, { at: Date.now(), data });
+}
+
+function invalidateReadCache(repo) {
+  if (repo._readCache) repo._readCache.clear();
+  if (repo._boardCountsCache) repo._boardCountsCache = null;
+}
+
 async function fetchPagedPosts(repo, boardId, page, pageSize, search = null) {
+  const cacheKey = `list:${boardId}:${page}:${pageSize}:${JSON.stringify(search || {})}`;
+  const cached = getReadCache(repo, cacheKey);
+  if (cached) return cached;
+
   const start = (page - 1) * pageSize;
   const end = start + pageSize - 1;
   const capabilities = await ensureCapabilities(repo);
@@ -226,10 +252,16 @@ async function fetchPagedPosts(repo, boardId, page, pageSize, search = null) {
   const { data, error, count } = await query.range(start, end);
   if (error) throw createHttpError(502, `게시글 목록 조회 실패: ${error.message}`);
 
-  return { data, count: count || 0 };
+  const res = { data, count: count || 0 };
+  setReadCache(repo, cacheKey, res);
+  return res;
 }
 
 async function fetchPost(repo, boardId, postId) {
+  const cacheKey = `post:${boardId}:${postId}`;
+  const cached = getReadCache(repo, cacheKey);
+  if (cached) return cached;
+
   let query = repo.client
     .from(repo.tables.posts)
     .select('*');
@@ -241,7 +273,9 @@ async function fetchPost(repo, boardId, postId) {
     .maybeSingle();
 
   if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
-  return mapPostRow(data);
+  const mapped = mapPostRow(data);
+  setReadCache(repo, cacheKey, mapped);
+  return mapped;
 }
 
 // [LOG_ID: 20260726_1800] PDS(자료실)는 pds/pds_all/pds_util/pds_game/pds_graphic/pds_sound/
@@ -374,5 +408,6 @@ module.exports = {
   getNavigation,
   getPost,
   listHotPosts,
-  listPosts
+  listPosts,
+  invalidateReadCache
 };
