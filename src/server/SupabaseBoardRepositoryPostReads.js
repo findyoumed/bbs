@@ -8,7 +8,10 @@ const {
 const { assertBoardAccessible } = require('./BoardRepositoryAccess');
 const { normalizeSearchOptions } = require('./BoardRepositorySearch');
 const { getBoard } = require('./SupabaseBoardRepositoryBoardReads');
-const { shouldUseBoardFallback } = require('./SupabaseBoardRepositorySchema');
+const {
+  classifyBoardFallbackReason,
+  shouldUseBoardFallback
+} = require('./SupabaseBoardRepositorySchema');
 const {
   applyBoardFilter,
   applyPostOrdering,
@@ -132,7 +135,8 @@ async function listPosts(repo, boardId, options = {}) {
         items: [],
         pagination: buildPagination(0, 1, pageSize),
         search,
-        degraded: true
+        degraded: true,
+        degradedReason: classifyBoardFallbackReason(error)
       };
     }
     throw error;

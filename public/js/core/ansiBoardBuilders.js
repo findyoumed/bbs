@@ -96,7 +96,7 @@ export function createBoardAnsiBuilders(deps) {
     return parts.join('\n');
   }
 
-  function buildPostListAnsi(board, posts, page, totalPages, totalCount, contextTitle = '', searchParams = {}) {
+  function buildPostListAnsi(board, posts, page, totalPages, totalCount, contextTitle = '', searchParams = {}, options = {}) {
     void contextTitle;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
@@ -280,7 +280,13 @@ export function createBoardAnsiBuilders(deps) {
     // (postListView.js)에서 더 이상 넘기지 않는다. 사유는 그쪽 주석 참조.
 
     if (!posts.length) {
-      parts.push(ansiColor(8) + ' 등록된 글이 없습니다.' + ANSI_RESET);
+      // [LOG_ID: 20260805_1020] A degraded response means the registered rows
+      // could not be read; calling it an empty board misleads users and caches
+      // an outage as data loss.
+      const emptyMessage = options.degraded
+        ? ' 게시글 저장소에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+        : ' 등록된 글이 없습니다.';
+      parts.push(ansiColor(options.degraded ? 11 : 8) + emptyMessage + ANSI_RESET);
     } else {
       posts.slice(0, 15).forEach((post) => parts.push(postLine(post)));
     }

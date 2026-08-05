@@ -46,6 +46,37 @@ function shouldUseBoardFallback(error) {
     || message.includes('timed out');
 }
 
+// [LOG_ID: 20260805_1020] A degraded public list must distinguish a real empty
+// board from an unavailable store without exposing provider error details.
+// Keep the public reason deliberately coarse; the full error stays in server
+// logs for operators.
+function classifyBoardFallbackReason(error) {
+  const message = String(error?.message || '').toLowerCase();
+  const status = Number(error?.status || error?.statusCode || 0);
+
+  if (status === 401 || status === 403
+    || message.includes('invalid api key')
+    || message.includes('invalid jwt')
+    || message.includes('jwt expired')) {
+    return 'credentials';
+  }
+  if (error?.code === 'PGRST205'
+    || message.includes('schema cache')
+    || message.includes('relation')) {
+    return 'schema';
+  }
+  if (message.includes('fetch failed')
+    || message.includes('bad gateway')
+    || message.includes('connection refused')
+    || message.includes('service unavailable')
+    || message.includes('upstream')
+    || message.includes('network')
+    || message.includes('timed out')) {
+    return 'network';
+  }
+  return 'storage';
+}
+
 function isMissingColumnError(error) {
   return shouldUseBoardFallback(error)
     || String(error?.message || '').includes('does not exist');
@@ -132,6 +163,7 @@ async function ensureCapabilities(repo) {
 }
 
 module.exports = {
+  classifyBoardFallbackReason,
   shouldUseBoardFallback,
   ensureCapabilities
 };

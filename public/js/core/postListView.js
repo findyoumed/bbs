@@ -146,7 +146,16 @@ export function createPostListView(deps) {
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const footerAssetPath = String(state.board?.footerFile || '').trim();
     const rendered = await renderAnsiScreenWithTopbarSequential({
-      ansiText: buildPostListAnsi(state.board, state.posts, state.page, state.totalPages, state.totalCount, displayTitle, searchParams),
+      ansiText: buildPostListAnsi(
+        state.board,
+        state.posts,
+        state.page,
+        state.totalPages,
+        state.totalCount,
+        displayTitle,
+        searchParams,
+        { degraded: data.degraded, degradedReason: data.degradedReason }
+      ),
       ansiToHTML,
       screenEl,
       renderScreenSequential,

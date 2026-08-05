@@ -2,6 +2,19 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 10:20] 게시글 저장소 장애를 빈 게시판으로 오인하는 동작 수정
+
+**LOG_ID: 20260805_1020**
+목표: Supabase 읽기 장애가 `등록된 글이 없습니다`로 표시·캐시되어 실제 등록 글이 사라진 것처럼 보이는 문제를 제거한다.
+변경 파일: `src/server/SupabaseBoardRepositorySchema.js`, `src/server/SupabaseBoardRepositoryPostReads.js`, `public/js/core/postService.js`, `public/js/core/ansiBoardBuilders.js`, `public/js/core/postListView.js`, `WORK_LOG.md`
+수행 작업:
+1) 저장소 장애 응답에 비밀값을 노출하지 않는 `credentials`/`schema`/`network`/`storage` 원인 분류 추가
+2) 클라이언트가 `degraded` 상태를 보존하고 장애 빈 목록은 캐시·다음 페이지 프리페치하지 않도록 변경
+3) 장애 시 `등록된 글이 없습니다` 대신 저장소 연결 오류와 재시도 안내 표시
+실행: 원인 분류·응답 정규화·ANSI 메시지 단언, `node --check`, `npm run build`, `npm run smoke:boards`, `npm run loop:verify`, `git diff --check`
+기대: 실제 빈 게시판과 저장소 장애를 구분하고, 연결 복구 후 재진입 시 등록 글을 즉시 다시 조회한다.
+결과: ✅ 장애 분류·비캐시·재시도·표시 단언, 빌드, boards smoke, 완료 게이트 9/9, `git diff --check` 통과. 운영 배포 후 `degradedReason`으로 실제 연결 원인을 재확인한다.
+
 ## [2026-08-05 09:52] 익명 요청의 불필요한 회원 DB 조회 제거
 
 **LOG_ID: 20260805_0952**

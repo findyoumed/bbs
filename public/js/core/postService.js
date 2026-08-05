@@ -48,9 +48,11 @@ export function createPostService(deps) {
       page: Number(data?.pagination?.page || data?.page || fallbackPage || 1),
       totalCount: Number(data?.pagination?.totalCount || data?.totalCount || 0),
       totalPages: Number(data?.pagination?.pageCount || data?.totalPages || 1),
+      // [LOG_ID: 20260805_1020] Keep outages distinct from genuinely empty boards.
+      degraded: data?.degraded === true,
+      degradedReason: String(data?.degradedReason || '')
     };
   }
-
   function normalizePostViewResponse(data) {
     return data?.post ? { board: data.board || null, post: data.post } : { board: null, post: data || null };
   }
@@ -121,7 +123,7 @@ export function createPostService(deps) {
       await apiFetch(buildPostsUrl(boardId, page, searchParams)),
       page
     );
-    if (generation === listCacheGeneration) {
+    if (!data.degraded && generation === listCacheGeneration) {
       listCache.set(cacheKey, data);
     }
     return data;
@@ -135,6 +137,7 @@ export function createPostService(deps) {
   }
 
   function scheduleNextPagePrefetch(boardId, data, searchParams) {
+    if (data.degraded) return;
     // [LOG_ID: 20260805_0152] The optional idle prefetch implementation stays
     // outside the startup graph and loads only after the first board list.
     void import('./postListPrefetchService.js')
