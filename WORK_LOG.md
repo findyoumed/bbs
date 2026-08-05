@@ -2,6 +2,19 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 09:48] 게시판 메타 조회 원문 오류의 502 차단
+
+**LOG_ID: 20260805_0948**
+목표: Supabase 오류 원문 형식과 무관하게 알려진 게시판 진입이 502로 중단되지 않게 한다.
+변경 파일: `src/server/SupabaseBoardRepositoryBoardReads.js`, `WORK_LOG.md`
+수행 작업:
+1) `notice`·`plaza` 등 레거시 정의가 있는 게시판은 메타 쿼리 실패 시 즉시 레거시 정의 사용
+2) 동일 저장소 인스턴스에서 30초 동안 경고 로그를 억제
+3) 정의가 없는 게시판은 기존 502 오류 처리를 유지
+실행: 프록시 오류 전체 요청 모의, `node --check`, `npm run loop:verify`, `git diff --check`
+기대: `/api/boards/{boardId}`가 Supabase 게이트웨이 장애에도 200 빈 목록 화면으로 진입한다.
+결과: ✅ 로컬 전체 요청에서 notice/plaza 200·degraded 빈 목록 확인. 배포 후 실서비스 재확인 필요.
+
 ## [2026-08-05 09:39] Supabase 프록시 502 원문 판별 보강
 
 **LOG_ID: 20260805_0939**

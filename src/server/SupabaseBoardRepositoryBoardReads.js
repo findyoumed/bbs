@@ -5,7 +5,6 @@ const {
   mapBoardRow,
   cloneBoard
 } = require('./BoardRepositoryShared');
-const { shouldUseBoardFallback } = require('./SupabaseBoardRepositorySchema');
 
 const BOARD_CACHE_TTL_MS = 30 * 1000;
 
@@ -137,8 +136,23 @@ async function getBoard(repo, boardId) {
     .limit(1);
 
   if (error) {
-    if (shouldUseBoardFallback(error)) {
-      return cloneBoard(repo.boards.find((board) => board.boardId === boardId));
+    // [LOG_ID: 20260805_0948] A Supabase gateway can return an opaque HTML
+    // error before its provider status/message is available. Known public
+    // boards already have complete legacy definitions, so use those for any
+    // failed metadata read instead of turning navigation into a 502.
+    const fallback = cloneBoard(repo.boards.find((board) => board.boardId === boardId));
+    if (fallback) {
+      if (!repo._boardReadFallbackWarningAt || Date.now() - repo._boardReadFallbackWarningAt >= 30000) {
+        repo._boardReadFallbackWarningAt = Date.now();
+        if (repo.logger && typeof repo.logger.warn === 'function') {
+          repo.logger.warn('Supabase board metadata unavailable; using legacy definition.', {
+            boardId,
+            code: error.code || '',
+            message: error.message || 'unknown error'
+          });
+        }
+      }
+      return fallback;
     }
     throw createHttpError(502, `게시판 조회 실패: ${error.message}`);
   }
