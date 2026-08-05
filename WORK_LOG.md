@@ -420,3 +420,16 @@
 실행: `node --check public/js/core/postService.js`, 동시 요청·무효화·오류 재시도·degraded 회귀 단언, `npm run build`, `npm run loop:verify`, `git diff --check`
 기대: 동일 목록의 동시 API 요청 수 2회에서 1회로 감소
 결과: ✅ 동시 동일 목록 요청의 실제 API 호출이 2회에서 1회로 감소(50%). 응답 Promise 공유, 무효화 후 새 요청, 오류 후 재시도, degraded 응답 비캐시를 확인했으며 빌드와 완료 게이트 9/9를 통과했다.
+
+## [2026-08-05 14:54] 게시판 수 집계 동시 요청 단일화
+
+**LOG_ID: 20260805_1454**
+목표: 게시판 메뉴 동시 진입 시 같은 Supabase 집계가 중복 실행되는 비용을 제거한다.
+변경 파일: `src/server/SupabaseBoardRepositoryPostReads.js`, `WORK_LOG.md`
+수행 작업:
+1) 캐시 미스 상태의 게시판 수 집계 Promise를 저장소 인스턴스에서 공유
+2) 완료·전송 오류 후 진행 요청을 제거해 캐시 사용과 다음 재시도 유지
+3) 기존 게시판별 오류 무시와 60초 결과 캐시 정책 유지
+실행: `node --check`, 15개 게시판 동시 집계·캐시·전송 오류 재시도 단언, `npm run build`, `npm run loop:verify`, `git diff --check`
+기대: 동일 집계 2회 동시 실행 시 Supabase HEAD 쿼리 60개를 30개로 감소
+결과: ✅ Supabase 쿼리가 60개에서 30개로 감소(50%). 캐시 적중 추가 쿼리 0개와 전송 오류 후 30개 쿼리 재시도를 확인했고 빌드 및 완료 게이트 9/9를 통과했다. `npm test`는 원격 `main`에 테스트 대상 디렉터리 `archive/dev-only/tests/unit`이 없어 기존 실행기가 시작되지 않았다.
