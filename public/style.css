@@ -643,6 +643,7 @@ body.theme-nownuri .write-field textarea {
 #cmd-prompt.postview-delete-confirm-prompt-label * {
     display: inline !important;
     vertical-align: baseline !important;
+    transform: translateY(1px) !important;
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
     font-size: var(--cmd-font-size, 17px) !important;
     line-height: 1.1 !important;

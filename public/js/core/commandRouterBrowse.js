@@ -171,7 +171,7 @@ export function createBrowseCommandHandler(deps) {
     noChoice.textContent = 'N';
     promptLabel.append(noChoice);
 
-    promptLabel.append(document.createTextNode(') [Y]:'));
+    promptLabel.append(document.createTextNode('):'));
   }
 
   function clearDeleteConfirmPromptLabel() {
@@ -190,9 +190,9 @@ export function createBrowseCommandHandler(deps) {
       returnScreen: 'post-list'
     };
     setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
-    // [LOG_ID: 20260805_1149] setPrompt 전에 decorateDeleteConfirmPromptLabel을 미리 불러 #cmd-prompt-renderer가 순간적으로 렌더링되었다 사라지는 폰트/크기 튀는 깜빡임을 방지
+    // [LOG_ID: 20260805_1247] 모바일 화면 말줄임표 잘림 및 표시 변경 방지를 위해 [Y]: 접미사 제거
     decorateDeleteConfirmPromptLabel();
-    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [Y]:`);
+    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N):`);
   }
 
   async function restoreDeleteConfirmList(deleteStage) {
@@ -348,7 +348,7 @@ export function createBrowseCommandHandler(deps) {
         }
 
         setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${deleteStage.postTitle || deleteStage.postId}`);
-        setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [Y]:`);
+        setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N):`);
         return true;
       }
 

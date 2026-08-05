@@ -154,7 +154,7 @@ export function createPostViewCommandHandler(deps) {
     noChoice.textContent = 'N';
     promptLabel.append(noChoice);
 
-    promptLabel.append(document.createTextNode(') [N] >>'));
+    promptLabel.append(document.createTextNode('):'));
   }
 
   function clearPostDeleteConfirmPromptLabel() {
@@ -171,7 +171,7 @@ export function createPostViewCommandHandler(deps) {
       searchParams: { ...(state.searchParams || {}) }
     };
     setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
-    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N) [N] >>`);
+    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N):`);
     decoratePostDeleteConfirmPromptLabel();
   }
 

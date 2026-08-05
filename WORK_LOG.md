@@ -2,6 +2,30 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 12:47] 모바일 화면 삭제 확인 프롬프트 [Y]: / [N] >> 접미사 제거
+
+**LOG_ID: 20260805_1247**
+목표: 좁은 모바일 화면에서 삭제 확인 문장이 `[...`로 말줄임표 처리되어 잘리거나 표시가 바뀌는 현상을 막기 위해 기본값 힌트 접미사(`[Y]:`, `[N] >>`)를 완전히 제거한다.
+변경 파일: `public/js/core/commandRouterBrowse.js`, `public/js/core/commandRouterPostView.js`, `WORK_LOG.md`
+수행 작업:
+1) `commandRouterBrowse.js`: `decorateDeleteConfirmPromptLabel()` 및 `setPrompt()`의 `[Y]:` 접미사를 제거하고 `정말 삭제하시겠습니까? (Y/N):`로 간결화
+2) `commandRouterPostView.js`: `decoratePostDeleteConfirmPromptLabel()` 및 `setPrompt()`의 `[N] >>` 접미사를 제거하고 `정말 삭제하시겠습니까? (Y/N):`로 간결화
+실행: `node --check ...`, `npm run smoke:command-parity`
+기대: 모바일 화면에서도 문장이 잘림(`[...`) 없이 전체 출력되고, 엔터/입력 시 프롬프트 표시 변화가 없다.
+결과: ✅ 프롬프트 텍스트 간소화 및 스모크 테스트 통과.
+
+## [2026-08-05 12:46] style.css 내 #cmd-prompt 삭제 확인 라벨 transform: translateY(1px) 누락 보완
+
+**LOG_ID: 20260805_1246**
+목표: 브라우저 DOM 실측 결과를 반영하여 `style.css` 내 `#cmd-prompt.postview-delete-confirm-prompt-label` 등의 삭제 확인 라벨 블록에 누락되어 있던 `transform: translateY(1px) !important;` 수치를 명시해 1px 수직 이격(Layout Shift)을 완벽 차단한다.
+변경 파일: `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) 브라우저 서브에이전트를 통해 실시간 Y 좌표 위치 분석 수행
+2) `public/style.css`: `#cmd-prompt` 관련 전용 스타일 블록에 `transform: translateY(1px) !important;` 명시 추가
+실행: `npm run smoke:command-parity`
+기대: 삭제 확인 라벨(label) ↔ 일반 프롬프트(input) 전환 시 1px도 흔들림 없이 위치가 완벽히 보정된다.
+결과: ✅ 수직 위치 좌표 정밀 교정 및 테스트 통과.
+
 ## [2026-08-05 12:15] 근본 원인 수정 — retro-terminal.css transform:none이 translateY(1px)를 덮어쓰던 문제
 
 **LOG_ID: 20260805_1215**
@@ -80,7 +104,7 @@
 목표: 유효한 Supabase Service Role Secret Key를 적용하고 posts RLS 정책 해제로 게시글 생성(INSERT)을 정상 복구한다.
 변경 파일: `.env`, `WORK_LOG.md`
 수행 작업:
-1) `.env` 파일의 `SUPABASE_SERVICE_ROLE_KEY`를 새로 발급받은 Secret Key (`sb_secret_4kMNWp3lJ5FqUbEZ3k88gw_w-t_syfw`)로 업데이트
+1) `.env` 파일의 `SUPABASE_SERVICE_ROLE_KEY`를 새로 발급받은 Secret Key (`sb_secret_***`)로 업데이트
 2) Supabase SQL Editor의 `ALTER TABLE public.posts DISABLE ROW LEVEL SECURITY;` 마이그레이션 반영 확인
 3) Node.js 런타임에서 `createPost`로 실제 Supabase DB 게시글 추가 테스트 완료 (id: 511, localId: 22 생성)
 실행: `node -e ... createPost('plaza', ...)`
