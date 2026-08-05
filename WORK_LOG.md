@@ -260,3 +260,15 @@
 실행: `node --check public/js/core/appFactory.js`, `node --check public/js/core/authScreens.js`, 정적 모듈 그래프 측정, `npm run smoke:vercel-ready`, `npm run smoke:boards`
 기대: 초기 그래프에서 인증 화면 구현 1개 모듈·36,804바이트 제외
 결과: ✅ `node --check`, `smoke:vercel-ready`, `smoke:boards`, `smoke:menu-wiring`, `smoke:command-parity`, `smoke:renderer-ui`, `git diff --check` 통과. 초기 그래프가 73개/681,595바이트에서 72개/645,069바이트로 감소(순감 36,526바이트)했고 `authScreens.js`가 초기 그래프에서 제외됨.
+## [2026-08-05 10:54] 명령어 자동완성 접두어 캐시
+
+**LOG_ID: 20260805_1054**
+목표: 입력 이벤트마다 같은 명령어 접두어의 후보를 다시 필터·정렬하는 비용을 줄인다.
+변경 파일: public/js/core/commandService.js, WORK_LOG.md
+수행 작업:
+1) 런타임에 변하지 않는 CMD_META의 접두어별 자동완성 결과를 Map에 캐시
+2) 캐시를 64개로 제한하고 반환 배열은 복사해 기존 호출자 격리 동작 유지
+3) 기존 우선순위·정확 일치 정렬 규칙은 그대로 유지
+실행: `node --check`, 100,000회 자동완성 벤치마크, 캐시 상한·복사본 단언, `npm run build`, 관련 smoke, `npm run loop:verify`, `git diff --check`
+기대: 반복 입력에서 명령어 메타데이터 전체 필터·정렬 제거
+결과: ✅ 동일 접두어 100,000회 자동완성 중앙값이 52.19ms에서 4.38ms로 감소(91.6%), 호출당 약 522ns에서 44ns로 단축. 반환 배열 격리, 캐시 64개 상한, 문법 검사, 빌드, 관련 smoke, `git diff --check`, 완료 게이트 9/9 통과.
