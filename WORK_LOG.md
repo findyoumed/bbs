@@ -2,6 +2,19 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-05 09:20] 게시판 상세 조회 다중 행 502 방지
+
+**LOG_ID: 20260805_0920**
+목표: 게시판 진입 시 `maybeSingle()`이 중복 레거시 행을 502로 변환해 게시글 목록을 막는 오류를 제거한다.
+변경 파일: `src/server/SupabaseBoardRepositoryBoardReads.js`, `WORK_LOG.md`
+수행 작업:
+1) `getBoard` 조회를 `limit(1)` 배열 응답으로 변경
+2) 중복 행이 있어도 첫 게시판 정의를 결정적으로 선택
+3) 기존 캐시·레거시 폴백·정상 단일 행 동작 유지
+실행: 중복 행 모의 단언, `node --check`, `git diff --check`
+기대: `/api/boards/{boardId}`와 게시글 목록의 PGRST116 502 제거
+결과: ✅ 모의 중복 행에서 첫 행 선택 통과. 배포 후 `/api/boards/notice`·`/api/boards/plaza` 200 확인 예정.
+
 ## [2026-08-05 09:13] Supabase 게시판 목록 장애 시 초기 화면 폴백
 
 **LOG_ID: 20260805_0913**

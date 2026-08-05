@@ -131,7 +131,10 @@ async function getBoard(repo, boardId) {
     .from(repo.tables.boards)
     .select('*')
     .eq('board_id', boardId)
-    .maybeSingle();
+    // [LOG_ID: 20260805_0920] Legacy migrations can leave duplicate board
+    // rows. A board lookup needs one definition, so avoid maybeSingle()'s
+    // PGRST116 error and keep the deterministic first row.
+    .limit(1);
 
   if (error) {
     if (shouldUseBoardFallback(error)) {
@@ -140,8 +143,9 @@ async function getBoard(repo, boardId) {
     throw createHttpError(502, `게시판 조회 실패: ${error.message}`);
   }
 
-  if (data) {
-    return cacheBoard(repo, mergeBoardDefinition(repo, mapBoardRow(data)));
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row) {
+    return cacheBoard(repo, mergeBoardDefinition(repo, mapBoardRow(row)));
   }
 
   return cacheBoard(repo, cloneBoard(repo.boards.find((board) => board.boardId === boardId)));
