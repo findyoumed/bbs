@@ -28,7 +28,8 @@ export function createPostAttachmentService({ apiFetch, state }) {
       try {
         return decodeURIComponent(encodedMatch[1]);
       } catch (error) {
-        console.error('첨부 파일명 decode 실패:', error.message);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+        // console.error('첨부 파일명 decode 실패:', error.message);
       }
     }
 

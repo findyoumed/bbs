@@ -26,7 +26,8 @@ function registerAuditLogListener() {
         metadata: { title: post.title }
       });
     } catch (err) {
-      console.warn('[EventBus:POST_CREATED] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:POST_CREATED] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -47,7 +48,8 @@ function registerAuditLogListener() {
         }
       });
     } catch (err) {
-      console.warn('[EventBus:POST_UPDATED] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:POST_UPDATED] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -64,7 +66,8 @@ function registerAuditLogListener() {
         metadata: { title: post.title }
       });
     } catch (err) {
-      console.warn('[EventBus:POST_DELETED] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:POST_DELETED] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -81,7 +84,8 @@ function registerAuditLogListener() {
         metadata: { title: post.title }
       });
     } catch (err) {
-      console.warn('[EventBus:POST_RECOMMENDED] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:POST_RECOMMENDED] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -97,7 +101,8 @@ function registerAuditLogListener() {
         metadata: { ip: context.ip || '' }
       });
     } catch (err) {
-      console.warn('[EventBus:MEMBER_LOGIN] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:MEMBER_LOGIN] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -113,7 +118,8 @@ function registerAuditLogListener() {
         metadata: {}
       });
     } catch (err) {
-      console.warn('[EventBus:MEMBER_LOGOUT] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:MEMBER_LOGOUT] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -129,7 +135,8 @@ function registerAuditLogListener() {
         metadata: { recipientUserId: memo.recipientUserId, title: memo.title }
       });
     } catch (err) {
-      console.warn('[EventBus:MEMO_SENT] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:MEMO_SENT] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -145,7 +152,8 @@ function registerAuditLogListener() {
         metadata: { title: room.title }
       });
     } catch (err) {
-      console.warn('[EventBus:CHAT_ROOM_CREATED] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:CHAT_ROOM_CREATED] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -161,7 +169,8 @@ function registerAuditLogListener() {
         metadata: { title: vote.title }
       });
     } catch (err) {
-      console.warn('[EventBus:VOTE_CREATED] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:VOTE_CREATED] 감사 로그 기록 실패:', err.message);
     }
   });
 
@@ -177,7 +186,8 @@ function registerAuditLogListener() {
         metadata: { optionIndex: voteRecord.optionIndex }
       });
     } catch (err) {
-      console.warn('[EventBus:VOTE_CAST] 감사 로그 기록 실패:', err.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[EventBus:VOTE_CAST] 감사 로그 기록 실패:', err.message);
     }
   });
 }

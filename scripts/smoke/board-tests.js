@@ -355,7 +355,7 @@ async function verifyBoardPostWriteHarness(errors, options) {
                     title: overrides.postTitle ?? postTitle,
                     content: overrides.postContent ?? postContent,
                     userId: overrides.postUserId || ownerUserId,
-                    authorUserId: overrides.postUserId || ownerUserId
+                    authorUserId: overrides.postAuthorUserId ?? overrides.postUserId ?? ownerUserId
                 }];
 
             const deps = {
@@ -1223,6 +1223,37 @@ async function verifyBoardPostWriteHarness(errors, options) {
             }
             if (guestRecommendHarness.metrics.showPostViewCalls.length !== guestShowPostViewCallsBeforeRecommend) {
                 errors.push(`Board guest recommend command unexpectedly reloaded the post at /board/${boardId}/${postId}`);
+            }
+        }
+
+        const selfRecommendHarness = createHarness(buildUser(ownerUserId, { nickName: 'board-owner', isGuest: false }), {
+            postTitle,
+            postContent,
+            postUserId: ownerUserId,
+            postAuthorUserId: '00000000-0000-0000-0000-000000000001'
+        });
+        globalThis.window.location.pathname = `/board/${encodeURIComponent(boardId)}/${encodeURIComponent(postId)}`;
+        globalThis.window.location.search = '';
+        await selfRecommendHarness.restorer.restoreStateFromURL();
+        if (selfRecommendHarness.state.screen !== 'post-view') {
+            errors.push(`Board self recommend harness did not enter post-view at /board/${boardId}/${postId}`);
+        } else {
+            const selfShowPostViewCallsBeforeRecommend = selfRecommendHarness.metrics.showPostViewCalls.length;
+            const selfRecommendHandled = await selfRecommendHarness.postViewCommandHandler({
+                cmd: 'OK',
+                context: {}
+            });
+            if (selfRecommendHandled !== true) {
+                errors.push(`Board self recommend command was not handled at /board/${boardId}/${postId}`);
+            }
+            if (selfRecommendHarness.getHint() !== '자신의 글은 추천할 수 없습니다.') {
+                errors.push(`Board self recommend command is missing the self-recommend hint at /board/${boardId}/${postId}`);
+            }
+            if (selfRecommendHarness.metrics.recommendCalls.length !== 0) {
+                errors.push(`Board self recommend command attempted an API call when authorUserId differs at /board/${boardId}/${postId}`);
+            }
+            if (selfRecommendHarness.metrics.showPostViewCalls.length !== selfShowPostViewCallsBeforeRecommend) {
+                errors.push(`Board self recommend command unexpectedly reloaded the post at /board/${boardId}/${postId}`);
             }
         }
 

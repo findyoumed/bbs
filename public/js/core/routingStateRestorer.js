@@ -212,7 +212,8 @@ export function createRoutingStateRestorer(deps) {
                   link = parsed.link || '';
                 }
               } catch (e) {
-                console.error('Failed to load news metadata from sessionStorage', e);
+                // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+                // console.error('Failed to load news metadata from sessionStorage', e);
               }
             }
 
@@ -569,7 +570,11 @@ export function createRoutingStateRestorer(deps) {
             return await showAttachmentList(resolvedBoardId, postId, true);
           }
           if (postId) {
-            return await showPostView(resolvedBoardId, postId, true);
+            try {
+              return await showPostView(resolvedBoardId, postId, true);
+            } catch (postErr) {
+              return await showPostList(resolvedBoardId, 1, {}, true);
+            }
           }
           return await showPostList(resolvedBoardId, page, {}, true);
         }
@@ -590,7 +595,8 @@ export function createRoutingStateRestorer(deps) {
           stack: error.stack
         });
       } else {
-        console.error('[Routing Error] URL 복원 실패:', error);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+        // console.error('[Routing Error] URL 복원 실패:', error);
       }
       await showMain(true);
     }

@@ -74,7 +74,8 @@ class MemoryBoardRepository {
 
   findPostRecord(boardId, postId) {
     const boardIds = new Set(this.getBoardSourceIds(boardId));
-    return this.posts.find((post) => boardIds.has(String(post.boardId || '').trim()) && post.id === Number(postId));
+    const numId = Number(postId);
+    return this.posts.find((post) => boardIds.has(String(post.boardId || '').trim()) && (post.localId === numId || post.id === numId));
   }
 
   resolveMutationBoardId(boardId, postBoardId = '') {
@@ -108,9 +109,10 @@ class MemoryBoardRepository {
 
   async deletePost(boardId, postId, context = {}) {
     const board = await this.getBoard(boardId); assertBoardAccessible(board, context, this.levelAliases);
-    const idx = this.posts.findIndex((post) => { const sourceBoardId = this.resolveMutationBoardId(boardId, post.boardId); return sourceBoardId === String(post.boardId || '').trim() && post.id === Number(postId); });
+    const target = this.findPostRecord(boardId, postId);
+    if (!target) throw createHttpError(404, '글 없음');
+    const idx = this.posts.indexOf(target);
     if (idx === -1) throw createHttpError(404, '글 없음');
-    const target = this.posts[idx];
     assertPostMutable(target, context);
     // [LOG_ID: 20260722_0010] Supabase 드라이버와 동일한 정책 — "원글"이 답글을 갖고 있는 경우에만
     // 완전 삭제 대신 자리표시자로 남긴다(원글이 없으면 답글들이 소속될 곳이 없어 고아가 됨).

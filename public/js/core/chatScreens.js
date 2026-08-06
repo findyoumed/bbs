@@ -25,7 +25,8 @@ export function createChatScreens(deps) {
     try {
       return JSON.parse(JSON.stringify(state.serviceData || {}));
     } catch (error) {
-      console.error('채팅 히스토리 serviceData 스냅샷 실패:', error.message);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('채팅 히스토리 serviceData 스냅샷 실패:', error.message);
       return null;
     }
   }
@@ -164,7 +165,8 @@ export function createChatScreens(deps) {
         state._chatMessages = Array.isArray(messages) ? messages : [];
         return state._chatMessages;
       } catch (error) {
-        console.error('채팅 메시지 동기화 실패:', error.message);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+        // console.error('채팅 메시지 동기화 실패:', error.message);
         if (throwOnError) {
           throw error;
         }

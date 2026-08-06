@@ -27,8 +27,8 @@ class AssetManager {
         // [LOG: 20260404_2318] 메뉴 XML 의 txt/... 경로를 legacy/txt 기준 상대경로로 정규화
         const assetPath = normalizeAssetPath(filename);
         if (!assetPath) {
-            // [LOG: 20260425_2220] 잘못된 상대경로는 디렉터리 read 시도 전에 즉시 차단
-            console.error(`Asset load error [${filename}]:`, 'Invalid asset path');
+            // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.error 주석 처리
+            // console.error(`Asset load error [${filename}]:`, 'Invalid asset path');
             return `\x1b[31m[Error loading asset: ${filename}]\x1b[0m`;
         }
         const filePath = path.join(this.legacyTxtPath, assetPath);
@@ -36,7 +36,8 @@ class AssetManager {
         try {
             return fs.readFileSync(filePath, 'utf8');
         } catch (err) {
-            console.error(`Asset load error [${filename}]:`, err);
+            // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.error 주석 처리
+            // console.error(`Asset load error [${filename}]:`, err);
             return `\x1b[31m[Error loading asset: ${filename}]\x1b[0m`;
         }
     }

@@ -155,33 +155,24 @@ export function createPostService(deps) {
   }
 
   // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 글보기 내비게이션 복원을 위해 virtualBoardId와 searchParams를 함께 실어 보내고 캐시하도록 함
-  async function loadPost(boardId, postId, virtualBoardId = '', searchParams = {}) {
-    let cacheKey = virtualBoardId ? `${boardId}_${postId}_v_${virtualBoardId}` : `${boardId}_${postId}`;
-    if (searchParams.lt) cacheKey += `_lt_${searchParams.lt}`;
-    if (searchParams.li) cacheKey += `_li_${searchParams.li}`;
-    if (searchParams.lc) cacheKey += `_lc_${searchParams.lc}`;
-    if (searchParams.k) cacheKey += `_k_${searchParams.k}`;
-    if (searchParams.la) cacheKey += `_la_${searchParams.la}`;
-    if (searchParams.recent) cacheKey += `_recent_${searchParams.recent}`;
-
-    if (postCache.has(cacheKey)) {
-      return postCache.get(cacheKey);
-    }
+  async function loadPost(boardId, postId, virtualBoardId = '', searchParams = {}, fetchOptions = {}) {
+    let cacheKey = `${boardId}_${postId}`;
+    if (virtualBoardId) cacheKey += `_v_${virtualBoardId}`;
+    for (const k of ['lt', 'li', 'lc', 'k', 'la', 'recent']) { if (searchParams[k]) cacheKey += `_${k}_${searchParams[k]}`; }
+    if (postCache.has(cacheKey)) return postCache.get(cacheKey);
 
     let url = `/api/boards/${encodeURIComponent(boardId)}/posts/${postId}?view=1`;
-    if (virtualBoardId) {
-      url += `&virtualBoardId=${encodeURIComponent(virtualBoardId)}`;
-    }
-    if (searchParams.lt) url += `&lt=${encodeURIComponent(searchParams.lt)}`;
-    if (searchParams.li) url += `&li=${encodeURIComponent(searchParams.li)}`;
-    if (searchParams.lc) url += `&lc=${encodeURIComponent(searchParams.lc)}`;
-    if (searchParams.k) url += `&k=${encodeURIComponent(searchParams.k)}`;
-    if (searchParams.la) url += `&la=${encodeURIComponent(searchParams.la)}`;
-    if (searchParams.recent) url += `&recent=${encodeURIComponent(searchParams.recent)}`;
+    if (virtualBoardId) url += `&virtualBoardId=${encodeURIComponent(virtualBoardId)}`;
+    for (const k of ['lt', 'li', 'lc', 'k', 'la', 'recent']) { if (searchParams[k]) url += `&${k}=${encodeURIComponent(searchParams[k])}`; }
 
-    const data = normalizePostViewResponse(await apiFetch(url));
-    postCache.set(cacheKey, data);
-    return data;
+    try {
+      const raw = await apiFetch(url, { silent: true, throwOnError: false, ...fetchOptions });
+      const data = normalizePostViewResponse(raw);
+      if (data?.post) postCache.set(cacheKey, data);
+      return data || { board: null, post: null };
+    } catch (error) {
+      return { board: null, post: null };
+    }
   }
 
   async function createPost(boardId, payload) {
@@ -211,8 +202,8 @@ export function createPostService(deps) {
     return result;
   }
 
-  async function recommendPost(boardId, postId) {
-    const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/recommend`, { method: 'POST' });
+  async function recommendPost(boardId, postId, options = {}) {
+    const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/recommend`, { method: 'POST', silent: true, ...options });
     invalidatePostCache(boardId, postId);
     return result;
   }

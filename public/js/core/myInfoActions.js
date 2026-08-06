@@ -49,7 +49,8 @@ export function createMyInfoActions(deps) {
             });
             return result?.verified === true;
         } catch (error) {
-            console.error('[MyInfo] current password verification request failed:', error.message);
+            // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+            // console.error('[MyInfo] current password verification request failed:', error.message);
             return false;
         }
     }
@@ -343,7 +344,8 @@ export function createMyInfoActions(deps) {
                     silent: true
                 });
             } catch (error) {
-                console.error('[MyInfo] email change failed:', error.message);
+                // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+                // console.error('[MyInfo] email change failed:', error.message);
                 clearMessage();
                 appendTranscriptLine({ prompt: error.message || '이메일을 변경하지 못했습니다.', value: '' });
                 await renderMyInfo(true);
@@ -378,7 +380,8 @@ export function createMyInfoActions(deps) {
                 try {
                     await doLogin(targetUserId, String(state._myInfoDraft?.password || ''));
                 } catch (sessionError) {
-                    console.error('[MyInfo] Email changed, but session refresh failed:', sessionError.message);
+                    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+                    // console.error('[MyInfo] Email changed, but session refresh failed:', sessionError.message);
                 }
             }
             resetPasswordFailureCount('email-current');
@@ -535,7 +538,8 @@ export function createMyInfoActions(deps) {
                     try {
                         await doLogin(targetUserId, normalizedPassword);
                     } catch (sessionError) {
-                        console.error('[MyInfo] Password changed, but session refresh failed:', sessionError.message);
+                        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+                        // console.error('[MyInfo] Password changed, but session refresh failed:', sessionError.message);
                         resetPasswordFailureCount();
                         resetMyInfoState();
                         await doLogout({ localOnly: true });
@@ -549,7 +553,8 @@ export function createMyInfoActions(deps) {
                 if (promptRow) {
                     promptRow.style.display = '';
                 }
-                console.error('[MyInfo] Password change failed:', error.message);
+                // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+                // console.error('[MyInfo] Password change failed:', error.message);
                 clearMessage();
                 appendTranscriptLine({ prompt: error.message || '비밀번호를 변경하지 못했습니다.', value: '' });
                 setStage('password-confirm');
@@ -649,7 +654,8 @@ export function createMyInfoActions(deps) {
                         silent: true
                     });
                 } catch (error) {
-                    console.error('[MyInfo] delete account failed:', error.message);
+                    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+                    // console.error('[MyInfo] delete account failed:', error.message);
                     setMessage(error.message || '회원 탈퇴를 처리하지 못했습니다.', 'error');
                     await renderMyInfo(true);
                     return false;
@@ -666,7 +672,8 @@ export function createMyInfoActions(deps) {
                 try {
                     await doLogout({ localOnly: true });
                 } catch (error) {
-                    console.error('[MyInfo] logout fallback after delete failed:', error.message);
+                    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+                    // console.error('[MyInfo] logout fallback after delete failed:', error.message);
                     state.token = '';
                     state.user = guestUser();
                 }
@@ -718,7 +725,8 @@ export function createMyInfoActions(deps) {
         try {
             await doLogout();
         } catch (error) {
-            console.error('[MyInfo] logout failed:', error.message);
+            // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+            // console.error('[MyInfo] logout failed:', error.message);
             state.token = '';
             state.user = guestUser();
         }

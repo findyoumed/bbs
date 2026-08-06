@@ -53,7 +53,8 @@ setInterval(() => {
       await wait(600);
       await forceExit();
     } catch (error) {
-      console.warn('유휴 자동 종료 실패:', error.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('유휴 자동 종료 실패:', error.message);
       idleExitInFlight = false;
     }
   })();
@@ -79,13 +80,13 @@ async function waitForPrimaryFonts(timeoutMs = 2500) {
 
     const fontReadyPromise = Promise.allSettled([
       document.fonts.load('17px "Sam3KRFont"'),
-      document.fonts.load('17px "BbsPrimaryFont"'),
       document.fonts.load('17px "DungGeunMo"')
     ]).then(async () => {
       try {
         await document.fonts.ready;
       } catch (error) {
-        console.warn('폰트 준비 확인 실패:', error.message);
+        // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+        // console.warn('폰트 준비 확인 실패:', error.message);
       }
     });
 
@@ -94,7 +95,8 @@ async function waitForPrimaryFonts(timeoutMs = 2500) {
       wait(timeoutMs)
     ]);
   } catch (error) {
-    console.warn('폰트 로드 대기 실패:', error.message);
+    // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+    // console.warn('폰트 로드 대기 실패:', error.message);
   } finally {
     rootEl.classList.remove('fonts-loading');
     rootEl.classList.add('fonts-ready');
@@ -120,7 +122,8 @@ async function init() {
       await result;
     } catch (e) {
       if (e?.type !== 'cancelled') {
-        console.error('Navigation error:', e.message);
+        // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.error 주석 처리
+        // console.error('Navigation error:', e.message);
       }
     }
   };
@@ -133,7 +136,8 @@ async function init() {
     try {
       await initAuth();
     } catch (authError) {
-      console.warn('인증 초기화 실패 (손님 모드 지속):', authError.message);
+      // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('인증 초기화 실패 (손님 모드 지속):', authError.message);
     }
 
     if (window.location.pathname !== '/') {
@@ -142,7 +146,8 @@ async function init() {
       await showMain();
     }
   } catch (e) {
-    console.error('초기 화면 렌더 실패:', e.message);
+    // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.error 주석 처리
+    // console.error('초기 화면 렌더 실패:', e.message);
     const terminal = await import('./core/appFactory.js').then(m => window.terminal); // Try to get terminal instance
     if (terminal?.setReady) {
       terminal.setReady(true);

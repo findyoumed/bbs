@@ -168,7 +168,7 @@ export function createBrowseCommandHandler(deps) {
     noChoice.className = 'cmd-token cmd-clickable';
     noChoice.dataset.cmd = 'N';
     noChoice.dataset.tip = '아니오(N)';
-    noChoice.textContent = 'N';
+    noChoice.textContent = 'n';
     promptLabel.append(noChoice);
 
     promptLabel.append(document.createTextNode('):'));
@@ -190,9 +190,8 @@ export function createBrowseCommandHandler(deps) {
       returnScreen: 'post-list'
     };
     setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
-    // [LOG_ID: 20260805_1247] 모바일 화면 말줄임표 잘림 및 표시 변경 방지를 위해 [Y]: 접미사 제거
+    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/n):`);
     decorateDeleteConfirmPromptLabel();
-    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N):`);
   }
 
   async function restoreDeleteConfirmList(deleteStage) {
@@ -323,17 +322,19 @@ export function createBrowseCommandHandler(deps) {
 
         if (!textInput || normalizedInput === 'Y' || normalizedInput === 'YES') {
           state._deleteConfirmStage = null;
-          clearDeleteConfirmPromptLabel();
           if (typeof deletePost !== 'function') {
+            clearDeleteConfirmPromptLabel();
             setHint(`${UI_TEXT.ERROR}: deletePost handler is not available.`);
             setPrompt('>>');
             return true;
           }
           try {
             await deletePost(deleteStage.boardId, deleteStage.postId);
+            clearDeleteConfirmPromptLabel();
             await restoreDeleteConfirmList(deleteStage);
             showToast?.(UI_TEXT.POST_DELETE_SUCCESS, 2000, 'success');
           } catch (error) {
+            clearDeleteConfirmPromptLabel();
             setHint(`${UI_TEXT.ERROR}: ${error.message}`);
             setPrompt('>>');
           }
@@ -348,7 +349,8 @@ export function createBrowseCommandHandler(deps) {
         }
 
         setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${deleteStage.postTitle || deleteStage.postId}`);
-        setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N):`);
+        setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/n):`);
+        decorateDeleteConfirmPromptLabel();
         return true;
       }
 
@@ -889,14 +891,31 @@ export function createBrowseCommandHandler(deps) {
         return true;
       }
 
-      const byPostId = state.posts.find((post) => String(post.localId ?? post.id) === rawCmd);
-      if (byPostId) { await showPostView(byPostId.boardId || state.board.id, byPostId.localId ?? byPostId.id); return true; }
+      if (/^\d+$/.test(rawCmd)) {
+        const targetPost = (state.posts || []).find((post) => String(post.localId ?? post.id) === rawCmd);
+        if (targetPost) {
+          await showPostView(targetPost.boardId || state.board.id, targetPost.localId ?? targetPost.id);
+          return true;
+        }
 
-      const n = parseInt(rawCmd, 10);
-      if (n >= 1 && state.posts[n - 1]) {
-        const target = state.posts[n - 1];
-        await showPostView(target.boardId || state.board.id, target.localId ?? target.id);
-        return true;
+        const n = parseInt(rawCmd, 10);
+        if (n >= 1 && state.posts && state.posts[n - 1]) {
+          const rowTarget = state.posts[n - 1];
+          await showPostView(rowTarget.boardId || state.board.id, rowTarget.localId ?? rowTarget.id);
+          return true;
+        }
+
+        if (state.board?.id) {
+          setHint(`게시물 #${rawCmd}번을 불러오는 중입니다..`);
+          try {
+            await showPostView(state.board.id, rawCmd);
+            return true;
+          } catch (err) {
+            setHint(`해당 번호(#${rawCmd})의 글이 존재하지 않습니다.`);
+            setPrompt('선택 >>');
+            return true;
+          }
+        }
       }
 
       return false;

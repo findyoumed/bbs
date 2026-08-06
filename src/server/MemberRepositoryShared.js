@@ -158,7 +158,8 @@ async function logMemberActivity(deps, activity) {
   if (logger && typeof logger.info === 'function') {
     logger.info(`[MemberActivity] ${JSON.stringify(entry)}`);
   } else {
-    console.log(`[MemberActivity] ${JSON.stringify(entry)}`);
+    // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.log 주석 처리
+    // console.log(`[MemberActivity] ${JSON.stringify(entry)}`);
   }
 }
 

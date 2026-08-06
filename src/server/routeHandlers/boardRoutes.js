@@ -126,8 +126,8 @@ class BoardRouter extends BaseRouter {
     });
 
     await this.enrichWithAttachmentSummaries(boardId, result);
-    // [LOG_ID: 20260805_1428] 읽기 전용 GET: Edge CDN 5초 캐시 (목록은 글 작성 시 갱신 필요)
-    return this.sendCached(200, result, 5);
+    // [LOG_ID: 20260806_1037] 게시글 목록은 글 작성/수정/삭제 후 즉시 갱신되어야 하므로 브라우저 HTTP 캐시 헤더(5초) 제거
+    return this.send(200, result);
   }
 
   // [LOG_ID: 20260718_1200] 자료실(PDS) 목록 화면은 원전처럼 파일명/크기/전송(다운로드 수)을

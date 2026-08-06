@@ -539,7 +539,7 @@ body.theme-nownuri .write-field textarea {
     top: 0.25em;
 }
 
-/* [LOG_ID: 20260805_1214] 삭제 확인 등 프롬프트 라벨 클래스 토글 시 #terminal-prompt-row 수직 미세 이동 방지 */
+/* [LOG_ID: 20260806_1324] #terminal-prompt-row의 column-gap: 0.5em을 복원하여 선택 >>와 정말 삭제하시겠습니까? (Y/n): 모두 100% 동일한 표준 1칸 공백 보장 */
 #terminal-prompt-row {
     display: flex;
     align-items: center !important;
@@ -561,10 +561,24 @@ body.theme-nownuri .write-field textarea {
     align-self: center !important;
 }
 
-#terminal-prompt-row label:not(:empty)::after {
-    /* [LOG: 20260611_1600] Render exactly one terminal blank after the prompt; flex gap and string spaces stay zero. */
-    content: " ";
-    white-space: pre;
+#terminal-prompt-row label::after,
+#terminal-prompt-row label:not(:empty)::after,
+#terminal-prompt-row label.signup-confirm-prompt-label::after,
+#terminal-prompt-row label.myinfo-delete-confirm-prompt-label::after,
+#terminal-prompt-row label.postview-delete-confirm-prompt-label::after {
+    /* [LOG_ID: 20260806_1326] 모든 프롬프트 라벨의 ::after 가상 요소 공백을 완벽 제거하여 column-gap: 0.5em으로만 100% 균일 1칸 공백 보장 */
+    content: "" !important;
+    display: none !important;
+}
+
+#terminal-prompt-row label.signup-confirm-prompt-label,
+#terminal-prompt-row label.myinfo-delete-confirm-prompt-label,
+#terminal-prompt-row label.postview-delete-confirm-prompt-label {
+    /* [LOG_ID: 20260806_1324] inline-flex 박스 기반으로 column-gap: 0.5em을 온전히 받아 1칸 공백 적용 */
+    display: inline-flex !important;
+    align-items: center !important;
+    margin-right: 0 !important;
+    padding-right: 0 !important;
 }
 
 #terminal-prompt-row label:not(.signup-confirm-prompt-label):not(.myinfo-delete-confirm-prompt-label):not(.postview-delete-confirm-prompt-label) {
@@ -635,11 +649,8 @@ body.theme-nownuri .write-field textarea {
 #cmd-prompt,
 #cmd-prompt *,
 #cmd-prompt .cmd-token,
-#cmd-prompt.signup-confirm-prompt-label,
 #cmd-prompt.signup-confirm-prompt-label *,
-#cmd-prompt.myinfo-delete-confirm-prompt-label,
 #cmd-prompt.myinfo-delete-confirm-prompt-label *,
-#cmd-prompt.postview-delete-confirm-prompt-label,
 #cmd-prompt.postview-delete-confirm-prompt-label * {
     display: inline !important;
     vertical-align: baseline !important;
@@ -652,6 +663,29 @@ body.theme-nownuri .write-field textarea {
     margin: 0 !important;
     border: none !important;
     outline: none !important;
+}
+
+#cmd-prompt.signup-confirm-prompt-label,
+#cmd-prompt.myinfo-delete-confirm-prompt-label,
+#cmd-prompt.postview-delete-confirm-prompt-label {
+    /* [LOG_ID: 20260806_1327] 선택 >>은 100% 보존하고 정말 삭제하시겠습니까 라벨 우측 여백만 -0.5em(1칸) 핀포인트 축소 */
+    display: inline-flex !important;
+    align-items: center !important;
+    vertical-align: baseline !important;
+    font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
+    font-size: var(--cmd-font-size, 17px) !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    margin-right: -0.5em !important;
+    border: none !important;
+    outline: none !important;
+}
+
+#terminal-prompt-row #cmd-prompt.postview-delete-confirm-prompt-label {
+    /* [LOG_ID: 20260806_1410] retro-terminal.css의 #terminal-prompt-row #cmd-prompt(0.5em)가 ID 두 개라 기존 삭제 라벨 선언보다 우선해 공백이 두 칸으로 남았다. 삭제 확인에만 0으로 재정의해 row의 column-gap 한 칸만 남긴다. */
+    margin-right: 0 !important;
 }
 
 #cmd-prompt.signup-confirm-prompt-label + #cmd-prompt-renderer,

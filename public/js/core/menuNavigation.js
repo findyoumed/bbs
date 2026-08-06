@@ -192,7 +192,8 @@ export function createMenuNavigation(deps) {
           return;
         }
       } catch (err) {
-        console.warn('HOME 리다이렉션 에러:', err.message);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+        // console.warn('HOME 리다이렉션 에러:', err.message);
       } finally {
         state._isHomeRedirecting = false;
       }
@@ -321,7 +322,8 @@ export function createMenuNavigation(deps) {
       ? state.menuTree
       : getMenuNodeByKey(menuPath);
     if (!menuNode) {
-      console.error('메뉴 화면 진입 실패:', menuPath);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('메뉴 화면 진입 실패:', menuPath);
       await showMain();
       return;
     }

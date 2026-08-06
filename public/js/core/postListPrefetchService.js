@@ -10,7 +10,8 @@ export function scheduleNextPagePrefetch({
   buildListCacheKey,
   fetchPostsPage,
   loadPost,
-  generation
+  generation,
+  getCurrentGeneration
 }) {
   const runIdle = (task) => {
     if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
@@ -20,14 +21,17 @@ export function scheduleNextPagePrefetch({
     }
   };
 
-  // [LOG_ID: 20260805_1412] 상위 3개 게시글 본문 스마트 사전 로드 (글 클릭 시 0초 렌더링)
+  // [LOG_ID: 20260806_1025] 상위 3개 게시글 본문 백그라운드 무소음 사전 로드 (삭제/미존재 글 404 에러 로그 억제)
   if (Array.isArray(data.items) && data.items.length > 0 && typeof loadPost === 'function') {
     const topItems = data.items.slice(0, 3);
     runIdle(() => {
+      if (typeof getCurrentGeneration === 'function' && getCurrentGeneration() !== generation) {
+        return;
+      }
       for (const item of topItems) {
         const pId = item.localId ?? item.id;
         if (pId) {
-          loadPost(boardId, pId, '', searchParams).catch(() => null);
+          loadPost(boardId, pId, '', searchParams, { silent: true, throwOnError: false }).catch(() => null);
         }
       }
     });
@@ -41,9 +45,14 @@ export function scheduleNextPagePrefetch({
   const cacheKey = buildListCacheKey(boardId, nextPage, searchParams);
   if (listCache.has(cacheKey) || pendingPrefetches.has(cacheKey)) return;
 
-  const run = () => fetchPostsPage(boardId, nextPage, searchParams, generation)
-    .catch(() => null)
-    .finally(() => pendingPrefetches.delete(cacheKey));
+  const run = () => {
+    if (typeof getCurrentGeneration === 'function' && getCurrentGeneration() !== generation) {
+      return Promise.resolve(null);
+    }
+    return fetchPostsPage(boardId, nextPage, searchParams, generation)
+      .catch(() => null)
+      .finally(() => pendingPrefetches.delete(cacheKey));
+  };
   const prefetchPromise = new Promise((resolve) => {
     const start = () => run().then(resolve, resolve);
     runIdle(start);

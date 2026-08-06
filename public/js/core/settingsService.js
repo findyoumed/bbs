@@ -73,7 +73,8 @@ export function createSettingsService(deps) {
       const savedVfs = localStorage.getItem(KEYS.VFS);
       state.vfs = savedVfs ? JSON.parse(savedVfs) : {};
     } catch (e) {
-      console.warn('[Settings] Failed to load settings:', e);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[Settings] Failed to load settings:', e);
     }
   }
 
@@ -96,7 +97,8 @@ export function createSettingsService(deps) {
     try {
       localStorage.setItem(KEYS.VFS, JSON.stringify(vfs));
     } catch (e) {
-      console.warn('[Settings] Failed to save VFS:', e);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[Settings] Failed to save VFS:', e);
     }
   }
 
@@ -108,7 +110,8 @@ export function createSettingsService(deps) {
     try {
       localStorage.setItem(KEYS.ENV_VARS, JSON.stringify(vars));
     } catch (e) {
-      console.warn('[Settings] Failed to save env vars:', e);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[Settings] Failed to save env vars:', e);
     }
   }
 
@@ -119,7 +122,8 @@ export function createSettingsService(deps) {
     try {
       localStorage.setItem(KEYS.ALIASES, JSON.stringify(aliases));
     } catch (e) {
-      console.warn('[Settings] Failed to save aliases:', e);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[Settings] Failed to save aliases:', e);
     }
   }
 
@@ -135,7 +139,8 @@ export function createSettingsService(deps) {
         activeId
       }));
     } catch (e) {
-      console.warn('[Settings] Failed to save workspaces:', e);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[Settings] Failed to save workspaces:', e);
     }
   }
 
@@ -154,7 +159,8 @@ export function createSettingsService(deps) {
       
       localStorage.setItem(KEYS.STATS, JSON.stringify(state.cmdStats));
     } catch (e) {
-      console.warn('[Settings] Failed to record command execution:', e);
+      // [LOG_ID: 20260806_1601] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[Settings] Failed to record command execution:', e);
     }
   }
 
@@ -179,7 +185,8 @@ export function createSettingsService(deps) {
 
       localStorage.setItem(KEYS.HISTORY, JSON.stringify(state.cmdHistory));
     } catch (e) {
-      console.warn('[Settings] Failed to save history:', e);
+      // [LOG_ID: 20260806_1601] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('[Settings] Failed to save history:', e);
     }
   }
 

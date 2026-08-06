@@ -2,7 +2,8 @@ async function readJsonOrFallback(response, fallbackValue = null, label = 'respo
   try {
     return await response.json();
   } catch (error) {
-    console.error(`[Auth] Failed to parse ${label}`, error);
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+    // console.error(`[Auth] Failed to parse ${label}`, error);
     return fallbackValue;
   }
 }
@@ -217,11 +218,13 @@ export function createAuthServiceActions(deps) {
         try {
           const { error } = await state.supabase.auth.signOut();
           if (error) {
-            console.warn('[Auth] Supabase signOut failed; clearing local session:', error.message);
+            // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+            // console.warn('[Auth] Supabase signOut failed; clearing local session:', error.message);
             await clearSupabaseSessionLocally();
           }
         } catch (error) {
-          console.warn('[Auth] Supabase signOut threw; clearing local session:', error.message);
+          // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+          // console.warn('[Auth] Supabase signOut threw; clearing local session:', error.message);
           await clearSupabaseSessionLocally();
         }
       }

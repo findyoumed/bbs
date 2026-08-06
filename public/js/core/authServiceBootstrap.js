@@ -2,7 +2,8 @@ function safeParseStoredJson(storageKey) {
   try {
     return JSON.parse(window.localStorage.getItem(storageKey) || 'null');
   } catch (error) {
-    console.error(`[Auth] Failed to parse localStorage item: ${storageKey}`, error);
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+    // console.error(`[Auth] Failed to parse localStorage item: ${storageKey}`, error);
     return null;
   }
 }
@@ -11,7 +12,8 @@ function safeRemoveStoredItem(storageKey) {
   try {
     window.localStorage.removeItem(storageKey);
   } catch (error) {
-    console.error(`[Auth] Failed to remove localStorage item: ${storageKey}`, error);
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+    // console.error(`[Auth] Failed to remove localStorage item: ${storageKey}`, error);
   }
 }
 
@@ -19,7 +21,8 @@ async function readJsonOrNull(response, label) {
   try {
     return await response.json();
   } catch (error) {
-    console.error(`[Auth] Failed to parse ${label} response`, error);
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+    // console.error(`[Auth] Failed to parse ${label} response`, error);
     return null;
   }
 }
@@ -108,7 +111,8 @@ async function exchangeRecoveryCodeForSession(state, code) {
 
   const { data, error } = await state.supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    console.error('[Auth] Password recovery code exchange failed:', error.message);
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+    // console.error('[Auth] Password recovery code exchange failed:', error.message);
     return null;
   }
   return data?.session || null;
@@ -124,7 +128,8 @@ async function verifyRecoveryTokenHashForSession(state, tokenHash) {
     type: 'recovery'
   });
   if (error) {
-    console.error('[Auth] Password recovery token verification failed:', error.message);
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+    // console.error('[Auth] Password recovery token verification failed:', error.message);
     return null;
   }
   return data?.session || null;
@@ -143,7 +148,8 @@ async function setRecoverySessionFromImplicitTokens(state, recoveryParams) {
     refresh_token: refreshToken
   });
   if (error) {
-    console.error('[Auth] Password recovery implicit session restore failed:', error.message);
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+    // console.error('[Auth] Password recovery implicit session restore failed:', error.message);
     return null;
   }
   return data?.session || null;

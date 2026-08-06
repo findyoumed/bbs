@@ -70,10 +70,6 @@ export function cancelCommandPending(options = {}) {
 }
 
 export function trackCommandPending(result, options = {}) {
-  if (!result || typeof result.finally !== 'function') {
-    return;
-  }
-
   const delayMs = Number.isFinite(Number(options.delayMs)) ? Number(options.delayMs) : 80;
   const pendingValue = String(options.value || '').trim();
   const clearOnSettled = options.clearOnSettled === true;

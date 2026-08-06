@@ -35,7 +35,8 @@ export function createCommandFooterUtils(deps = {}) {
       assetCache[key] = text;
       return text;
     } catch (error) {
-      console.warn('footer asset load failed:', key, error?.message || error);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+      // console.warn('footer asset load failed:', key, error?.message || error);
       assetCache[key] = '';
       return '';
     }

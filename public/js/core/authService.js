@@ -47,7 +47,8 @@ export function createAuthService(deps) {
         : payload;
       state.user = sessionData?.user || guestUser();
     } catch (error) {
-      console.error('[Auth] Failed to refresh user session', error);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('[Auth] Failed to refresh user session', error);
       state.user = guestUser();
     }
     const isGuest = Boolean(state.user?.isGuest ?? true);

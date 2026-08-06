@@ -266,9 +266,8 @@ async function streamFile(res, filePath, options = {}) {
 }
 
 function selectStaticCompression(req, ext, size) {
-  // Avoid paying a compressor setup cost for tiny module requests; the large
-  // vendor/stylesheets still receive Brotli/gzip and dominate transfer size.
-  if (!req?.headers || Number(size || 0) < 16384 || !['.html', '.js', '.css', '.svg', '.json', '.txt'].includes(ext)) {
+  // [LOG_ID: 20260806_0912] Lower compression threshold from 16KB to 1KB so JS modules (>1KB) benefit from Brotli/Gzip compression, reducing network payload and speed.
+  if (!req?.headers || Number(size || 0) < 1024 || !['.html', '.js', '.css', '.svg', '.json', '.txt'].includes(ext)) {
     return null;
   }
 

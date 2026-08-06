@@ -671,7 +671,8 @@ export function createNewsScreens(deps) {
           link = parsed.link || '';
         }
       } catch (e) {
-        console.error('Failed to load news metadata from sessionStorage', e);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+        // console.error('Failed to load news metadata from sessionStorage', e);
       }
     }
 
@@ -691,7 +692,8 @@ export function createNewsScreens(deps) {
       resolvedArticle = { ...state.serviceData.article };
       resolvedTopicTitle = String(state.serviceData?.topicTitle || '').trim();
       if (resolvedArticle.detailFetched === false) {
-        console.warn('Article detail not fully fetched, but allowing entry as fallback');
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+        // console.warn('Article detail not fully fetched, but allowing entry as fallback');
       }
     } else {
       try {
@@ -705,7 +707,8 @@ export function createNewsScreens(deps) {
           state.screen = prevScreen;
           throw error;
         }
-        console.debug('뉴스 본문 상세 로드 실패, 목록으로 복귀:', error.message);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.debug 주석 처리
+        // console.debug('뉴스 본문 상세 로드 실패, 목록으로 복귀:', error.message);
         await showNewsList(topicDoor, {
           fromHistory: true,
           pageNo: Math.max(1, Number(state.serviceData?.listPageNo || 1))
@@ -747,7 +750,8 @@ export function createNewsScreens(deps) {
         topicTitle = topicResult.topicTitle;
         items = topicResult.items;
       } catch (e) {
-        console.warn('Failed to load topic state for list page preloading:', e.message);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+        // console.warn('Failed to load topic state for list page preloading:', e.message);
       }
     }
 
@@ -782,7 +786,8 @@ export function createNewsScreens(deps) {
       const minClientLength = (isBreakingStub || isPhotoArticle) ? 10 : 30;
 
       if ((isClientTruncated && !isPhotoArticle) || clientTrimmed.length < minClientLength) {
-        console.debug('클라이언트측 잘린 기사 감지로 차단:', articleNo);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.debug 주석 처리
+        // console.debug('클라이언트측 잘린 기사 감지로 차단:', articleNo);
         setReady(true);
         const incompleteError = new Error(`불완전한 뉴스 기사입니다: ${articleNo}`);
         incompleteError.type = 'incomplete';

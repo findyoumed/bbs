@@ -237,12 +237,12 @@ async function recommendPost(repo, boardId, postId, context = {}) {
   // [LOG: 20260731_1740] 레거시 글 작성자 아이디 대소문자 차이로 추천이 우회되는 결함 방지
   const postAuthorId = String(post.userId || '').trim().toLowerCase();
   if (postAuthorId === userId) {
-    throw createHttpError(400, 'You cannot recommend your own post.');
+    throw createHttpError(400, '자신의 글은 추천할 수 없습니다.');
   }
 
   const existingRecommendation = await mutation.findRecommendation(repo, post.id, userId);
   if (existingRecommendation) {
-    throw createHttpError(409, 'Post already recommended.');
+    throw createHttpError(409, '이미 추천한 게시글입니다.');
   }
 
   const now = new Date().toISOString();

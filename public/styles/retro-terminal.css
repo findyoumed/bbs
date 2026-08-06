@@ -309,11 +309,19 @@ a {
     pointer-events: auto;
     transform: translateY(1px) !important;
     user-select: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+    word-spacing: normal !important;
+    white-space: pre !important;
 }
 
 #cmd-input {
     /* [LOG: 20260615_1628] Match editable input glyph Y-position to the prompt renderer. */
     transform: translateY(1px) !important;
+    /* [LOG_ID: 20260806_1017] 접속 초기 영문 키보드/IME 기본 활성화 */
+    ime-mode: inactive;
 }
 
 #cmd-ghost-text {

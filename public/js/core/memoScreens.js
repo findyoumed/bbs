@@ -204,7 +204,7 @@ export function createMemoScreens(deps) {
             state.memoViewPageCount = built.pageCount;
             const deleteConfirm = state._memoDeleteConfirm;
             const deleteConfirmHtml = deleteConfirm && String(deleteConfirm.memoId || '') === String(state._currentMemoId || '')
-                ? '<div class="ansi-line ansi-yellow">[안내] 이 쪽지를 삭제하시겠습니까? (y/n)</div>'
+                ? '<div class="ansi-line ansi-yellow">[안내] 이 쪽지를 삭제하시겠습니까? (Y/n)</div>'
                 : '';
             await renderAnsiScreenWithTopbarSequential({
                 ansiText: built.text,
@@ -218,7 +218,7 @@ export function createMemoScreens(deps) {
                     await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
                     if (deleteConfirmHtml) {
                         setHint('삭제하려면 Y, 취소하려면 N을 입력하세요.');
-                        setPrompt('삭제 (y/n) >>');
+                        setPrompt('삭제 (Y/n) >>');
                     }
                 }
             });

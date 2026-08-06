@@ -95,7 +95,8 @@ export function createRoutingUrlBuilder(deps) {
           try {
             sessionStorage.setItem(sessionKey, JSON.stringify({ key: articleKey, link: articleLink }));
           } catch (e) {
-            console.error('Failed to store news metadata in sessionStorage', e);
+            // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+            // console.error('Failed to store news metadata in sessionStorage', e);
           }
         }
 

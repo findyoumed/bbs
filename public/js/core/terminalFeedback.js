@@ -64,7 +64,8 @@ export function createTerminalFeedback(deps) {
     if (active) {
       busyTimeout = window.setTimeout(() => {
         if (container && (container.classList.contains('is-busy') || container.classList.contains('is-data-busy'))) {
-          console.warn('[Terminal] Busy state guardian triggered: Auto-clearing busy state.');
+          // [LOG_ID: 20260806_1601] AI 코딩 주석화 — console.warn 주석 처리
+          // console.warn('[Terminal] Busy state guardian triggered: Auto-clearing busy state.');
           // [LOG: 20260506_0949] Clear stuck busy state silently; do not show timeout toast to users.
           setBusy(false);
         }
@@ -110,7 +111,8 @@ export function createTerminalFeedback(deps) {
   }
 
   function showError(message) {
-    console.error('[BBS UI ERROR]', message);
+    // [LOG_ID: 20260806_1601] AI 코딩 주석화 — console.error 주석 처리
+    // console.error('[BBS UI ERROR]', message);
     setFooterVisibility(true);
     document.getElementById('terminal-footer')?.classList.remove('is-divider-pending');
 

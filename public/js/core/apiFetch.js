@@ -63,7 +63,7 @@ function reportError(error, context) {
     return;
   }
 
-  console.error('API 오류:', path, error.message);
+  // [LOG_ID: 20260806_1512] /* console.error('API 오류:', path, error.message); */
   if (logger) {
     logger.error(`${logPrefix}: ${method} ${path}`, error.toJSON());
   }
@@ -155,6 +155,7 @@ export function createApiFetch(deps) {
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         try {
           const res = await fetchWithTimeout(path, {
+            cache: fetchOptions.cache || 'no-cache',
             ...fetchOptions,
             method,
             headers: { ...baseHeaders, ...(fetchOptions.headers || {}) }
@@ -174,7 +175,7 @@ export function createApiFetch(deps) {
             });
 
             if (shouldRetry) {
-              console.warn(`API 재시도 중 (${attempt}/${maxAttempts - 1}): ${path}`, error.message);
+              // [LOG_ID: 20260806_1512] /* console.warn(`API 재시도 중...`); */
               await waitWithBackoff(attempt, delayBaseMs);
               continue;
             }
@@ -209,7 +210,7 @@ export function createApiFetch(deps) {
           const error = createNetworkError({ path, method, err, attempt, maxAttempts, retryable: shouldRetry });
 
           if (shouldRetry) {
-            console.warn(`API 재시도 중 (${attempt}/${maxAttempts - 1}): ${path}`, error.message);
+            // [LOG_ID: 20260806_1512] /* console.warn(`API 재시도 중...`); */
             await waitWithBackoff(attempt, delayBaseMs);
             continue;
           }
@@ -241,9 +242,7 @@ export function createApiFetch(deps) {
   }
 
   apiFetch.getLastError = () => state.lastApiError || null;
-  apiFetch.clearLastError = () => {
-    state.lastApiError = null;
-  };
+  apiFetch.clearLastError = () => { state.lastApiError = null; };
 
   return { apiFetch };
 }

@@ -6,7 +6,8 @@ export function createMenuTreeHelpers(deps) {
   async function loadMenuTree() {
     if (state.menuTree) return state.menuTree;
     const tree = applyRuntimeMenuOverrides(await apiFetch('/api/menu'));
-    if (!tree) { console.error('메뉴 트리 로드 실패'); return null; }
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+    if (!tree) { /* console.error('메뉴 트리 로드 실패'); */ return null; }
     const lookup = {}, parents = {};
     indexMenuNodes(tree, '', lookup, parents);
     state.menuTree = tree; state.menuLookup = lookup; state.menuParents = parents;

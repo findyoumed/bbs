@@ -53,12 +53,14 @@ async function handleStaticRequest(runtime, req, res, requestUrl) {
 
   if (!hasExtension) {
     applyHtmlSecurityPolicy(res);
-    // [LOG_ID: 20260804_1114] Forward request validators so repeat navigation can use 304.
+    // [LOG_ID: 20260806_1555] The asset index caches paths for lookup speed, but cached stats
+    // can make an already-running dev server return 304 for a newly edited JS module.
+    // Let streamFile read current metadata so browser revalidation cannot retain stale code.
     const indexEntry = runtime.staticAssetIndex?.get('/index.html');
     return streamFile(
       res,
       indexEntry?.filePath || path.join(runtime.projectRoot, 'public', 'index.html'),
-      { req, stats: indexEntry?.stats }
+      { req }
     );
   }
 
@@ -75,7 +77,7 @@ async function handleStaticRequest(runtime, req, res, requestUrl) {
     applyHtmlSecurityPolicy(res);
   }
 
-  await streamFile(res, finalPath, { req, stats: indexedEntry?.stats });
+  await streamFile(res, finalPath, { req });
 }
 
 module.exports = {

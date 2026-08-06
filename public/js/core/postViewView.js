@@ -16,6 +16,10 @@ export function createPostViewView(deps) {
     screenEl,
     setLoading,
     setReady,
+    setHint,
+    setPrompt,
+    showPostList,
+    showMain,
     state,
     updateURL,
     renderScreenSequential
@@ -42,10 +46,39 @@ export function createPostViewView(deps) {
       const isParentVirtual = currentParentId === 'pds';
       const virtualBoardId = (isParentVirtual && boardKey !== currentParentId) ? currentParentId : '';
 
-      const data = await loadPost(boardKey, postId, virtualBoardId, state.searchParams || {});
+      // [LOG_ID: 20260806_1105] 삭제되거나 존재하지 않는 글(404)에 대한 URL 복원/접근 시 안전하게 게시판 목록으로 폴백
+      let data = null;
+      try {
+        data = await loadPost(boardKey, postId, virtualBoardId, state.searchParams || {});
+      } catch (err) {
+        state.post = null;
+        setReady(true);
+        if (typeof setHint === 'function') setHint('해당 글을 찾을 수 없습니다.');
+        if (typeof setPrompt === 'function') setPrompt('선택 >>');
+        if (typeof showPostList === 'function' && boardKey) {
+          await showPostList(boardKey, 1, {}, fromHistory);
+        } else if (typeof showMain === 'function') {
+          await showMain(fromHistory);
+        }
+        return;
+      }
+
       // [LOG_ID: 20260801_1930] ESC 취소 후 이전 화면이 복원된 상태에서 stale fetch가 완료돼
       // 렌더링을 덮어씌우는 경쟁 조건 방지 — screen 값이 바뀌었으면 조용히 중단한다.
       if (state.screen !== 'post-view') return;
+
+      if (!data?.post) {
+        state.post = null;
+        setReady(true);
+        if (typeof setHint === 'function') setHint('해당 글을 찾을 수 없습니다.');
+        if (typeof setPrompt === 'function') setPrompt('선택 >>');
+        if (typeof showPostList === 'function' && boardKey) {
+          await showPostList(boardKey, 1, {}, fromHistory);
+        } else if (typeof showMain === 'function') {
+          await showMain(fromHistory);
+        }
+        return;
+      }
 
       state.post = data.post;
       // [LOG: 20260429_0047] Direct /board/:boardId/:postId entry must keep

@@ -214,7 +214,8 @@ export function bindCommandInputEvents(deps) {
         const handled = terminalInputHandler(raw);
         if (handled && typeof handled.catch === 'function') {
           handled.catch((error) => {
-            console.error('[CommandInput] Terminal input handler failed:', error);
+            // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+            // console.error('[CommandInput] Terminal input handler failed:', error);
           });
         }
         if (handled) return true;
@@ -223,7 +224,8 @@ export function bindCommandInputEvents(deps) {
       // [LOG: 20260509_1115] Raw prompt input is consumed before command history for PC communication-style line editors.
       if (state._signupEnterHandler && state._signupEnterHandler(raw)) return true;
     } catch (error) {
-      console.error('[CommandInput] Terminal input dispatch failed:', error);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('[CommandInput] Terminal input dispatch failed:', error);
       return true;
     }
 
@@ -359,7 +361,8 @@ export function bindCommandInputEvents(deps) {
       try {
         window.localStorage?.setItem('bbs_cmd_history', JSON.stringify(state.cmdHistory));
       } catch (error) {
-        console.warn('[CommandInput] Failed to purge sensitive history:', error.message);
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+        // console.warn('[CommandInput] Failed to purge sensitive history:', error.message);
       }
       if (state.cmdStats && typeof state.cmdStats === 'object') {
         delete state.cmdStats[cmd];
@@ -367,7 +370,8 @@ export function bindCommandInputEvents(deps) {
         try {
           window.localStorage?.setItem('bbs_cmd_stats', JSON.stringify(state.cmdStats));
         } catch (error) {
-          console.warn('[CommandInput] Failed to purge sensitive stats:', error.message);
+          // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.warn 주석 처리
+          // console.warn('[CommandInput] Failed to purge sensitive stats:', error.message);
         }
       }
     }
@@ -389,6 +393,14 @@ export function bindCommandInputEvents(deps) {
     }
     trackCommandExecution(state, result, token);
     trackCommandPending(result, { value: cmd, clearOnSettled: true });
+    Promise.resolve(result).finally(() => {
+      if (cmdInput && !isSensitiveCommandInput()) {
+        cmdInput.value = '';
+        if (typeof CustomEvent === 'function') {
+          cmdInput.dispatchEvent(new CustomEvent('bbs:mask-state-change'));
+        }
+      }
+    }).catch(() => {});
     void result;
   }
 

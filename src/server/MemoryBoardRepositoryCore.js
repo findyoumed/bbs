@@ -25,8 +25,11 @@ class MemoryBoardRepositoryCore {
     const data = sanitizeNewPostInput(input, context), now = new Date().toISOString();
     const sourceBoardId = this.repo.resolveMutationBoardId(boardId);
     const nextId = this.repo.nextPostId++;
-    // [LOG_ID: 20260731_1415] Supabase mapPostRow와의 동등성 보장 — localId를 명시적으로 부여한다.
-    const post = { id: nextId, localId: nextId, boardId: sourceBoardId, family: 0, orderby: 0, step: 0, userId: data.userId, nickName: data.nickName, title: data.title, content: data.content, category: data.category, hit: 0, recommend: 0, createdAt: now, updatedAt: now };
+    const existingBoardPosts = this.repo.filterPostsByBoard(sourceBoardId);
+    const maxLocalId = existingBoardPosts.reduce((max, p) => Math.max(max, Number(p.localId || 0)), 0);
+    const localId = maxLocalId + 1;
+    // [LOG_ID: 20260731_1415] Supabase mapPostRow와의 동등성 보장 — localId를 게시판별 순차 부여한다.
+    const post = { id: nextId, localId, boardId: sourceBoardId, family: 0, orderby: 0, step: 0, userId: data.userId, nickName: data.nickName, title: data.title, content: data.content, category: data.category, hit: 0, recommend: 0, createdAt: now, updatedAt: now };
     post.family = post.id; this.repo.posts.push(post);
     return { board, post: clonePost(post) };
   }
@@ -48,8 +51,11 @@ class MemoryBoardRepositoryCore {
     this.repo.posts.forEach(p => { if (p.boardId === sourceBoardId && p.family === parent.family && p.orderby > parent.orderby) p.orderby++; });
     const now = new Date().toISOString();
     const nextId = this.repo.nextPostId++;
-    // [LOG_ID: 20260731_1415] Supabase mapPostRow와의 동등성 보장 — localId를 명시적으로 부여한다.
-    const reply = { id: nextId, localId: nextId, boardId: sourceBoardId, family: parent.family, orderby: parent.orderby + 1, step: parent.step + 1, userId: data.userId, nickName: data.nickName, title: data.title, content: data.content, category: data.category, hit: 0, recommend: 0, createdAt: now, updatedAt: now };
+    const existingBoardPosts = this.repo.filterPostsByBoard(sourceBoardId);
+    const maxLocalId = existingBoardPosts.reduce((max, p) => Math.max(max, Number(p.localId || 0)), 0);
+    const localId = maxLocalId + 1;
+    // [LOG_ID: 20260731_1415] Supabase mapPostRow와의 동등성 보장 — localId를 게시판별 순차 부여한다.
+    const reply = { id: nextId, localId, boardId: sourceBoardId, family: parent.family, orderby: parent.orderby + 1, step: parent.step + 1, userId: data.userId, nickName: data.nickName, title: data.title, content: data.content, category: data.category, hit: 0, recommend: 0, createdAt: now, updatedAt: now };
     this.repo.posts.push(reply);
     return { board, post: clonePost(reply) };
   }

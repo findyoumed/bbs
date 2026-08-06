@@ -370,6 +370,12 @@ export function createTerminalHintFooter(deps) {
     }
 
     if (cmdPromptEl) {
+      // [LOG_ID: 20260806_1615] 새 프롬프트가 삭제/회원가입 확인 문구가 아닐 경우 전용 라벨 클래스를 자동 제거하여 레이아웃 튐 차단
+      if (!promptText.includes('삭제하시겠습니까') && !promptText.includes('가입하시겠습니까') && !promptText.includes('탈퇴하시겠습니까')) {
+        cmdPromptEl.classList.remove('postview-delete-confirm-prompt-label');
+        cmdPromptEl.classList.remove('myinfo-delete-confirm-prompt-label');
+        cmdPromptEl.classList.remove('signup-confirm-prompt-label');
+      }
       // [LOG: 20260611_1516] Keep prompt text exact; forced trailing spaces shift the empty cursor start.
       const trimmed = promptText.trimEnd();
       cmdPromptEl.textContent = trimmed || '';
@@ -407,14 +413,16 @@ export function createTerminalHintFooter(deps) {
       try {
         rawText = assetPath ? await loadAssetText(assetPath) : '';
       } catch (error) {
-        console.warn(`[Terminal] Failed to load footer asset: ${assetPath}`, error);
+        // [LOG_ID: 20260806_1601] AI 코딩 주석화 — console.warn 주석 처리
+        // console.warn(`[Terminal] Failed to load footer asset: ${assetPath}`, error);
       }
 
       if (!looksLikeCommandFooter(rawText) && fallbackAssetPath) {
         try {
           rawText = await loadAssetText(fallbackAssetPath);
         } catch (error) {
-          console.warn(`[Terminal] Failed to load fallback footer asset: ${fallbackAssetPath}`, error);
+          // [LOG_ID: 20260806_1601] AI 코딩 주석화 — console.warn 주석 처리
+          // console.warn(`[Terminal] Failed to load fallback footer asset: ${fallbackAssetPath}`, error);
         }
       }
 
@@ -423,7 +431,8 @@ export function createTerminalHintFooter(deps) {
       setPrompt(supportedParsed?.prompt || parsed.prompt);
       setHint(supportedParsed?.hint || parsed.hint);
     } catch (error) {
-      console.error('[Terminal] Error applying command footer:', error);
+      // [LOG_ID: 20260806_1601] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('[Terminal] Error applying command footer:', error);
       setPrompt(DEFAULT_COMMAND_PROMPT);
       setHint(fallbackText);
     } finally {

@@ -32,6 +32,9 @@ export const UI_TEXT = {
   POST_DELETE_MY_ONLY: '본인의 글만 삭제할 수 있습니다.',
   POST_EDIT_MY_ONLY: '본인의 글만 수정할 수 있습니다.',
   POST_NOT_FOUND: '해당 글을 찾을 수 없습니다.',
+  POST_RECOMMEND_SELF_FORBIDDEN: '자신의 글은 추천할 수 없습니다.',
+  POST_RECOMMEND_ALREADY: '이미 추천한 게시물입니다.',
+  POST_RECOMMEND_SUCCESS: '게시물을 추천했습니다.',
   
   // [LOG_ID: 20260722_3200] 하이텔 책(그림 9.4, p.124) "단어1 * 단어2"(모두 포함)/
   // "단어1 + 단어2"(하나만 포함) 문법을 힌트에도 안내한다 — 기능만 있고 안내가 없으면

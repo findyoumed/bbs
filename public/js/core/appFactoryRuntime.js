@@ -287,7 +287,8 @@ export function initializeAppFactoryRuntime(deps) {
     if (services.logger) {
       services.logger.fatal(`런타임 오류: ${message}`, errorDetails);
     } else {
-      console.error('Global JS Error:', message, errorDetails);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('Global JS Error:', message, errorDetails);
     }
 
     services.terminalUiCore.showError(`런타임 오류: ${message}`);
@@ -305,7 +306,8 @@ export function initializeAppFactoryRuntime(deps) {
         stack: reason?.stack
       });
     } else {
-      console.error('Unhandled Rejection:', reason);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('Unhandled Rejection:', reason);
     }
     if (!(reason instanceof ApiError)) {
       services.terminalUiCore.showToast('비동기 처리 중 오류가 발생했습니다.', 3000, 'warn');

@@ -151,7 +151,7 @@ export function createPostViewCommandHandler(deps) {
     noChoice.className = 'cmd-token cmd-clickable';
     noChoice.dataset.cmd = 'N';
     noChoice.dataset.tip = '아니오(N)';
-    noChoice.textContent = 'N';
+    noChoice.textContent = 'n';
     promptLabel.append(noChoice);
 
     promptLabel.append(document.createTextNode('):'));
@@ -171,7 +171,7 @@ export function createPostViewCommandHandler(deps) {
       searchParams: { ...(state.searchParams || {}) }
     };
     setHint(`${UI_TEXT.POST_DELETE_TARGET}: ${post.title || (post.localId ?? post.id)}`);
-    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/N):`);
+    setPrompt(`${UI_TEXT.POST_DELETE_CONFIRM} (Y/n):`);
     decoratePostDeleteConfirmPromptLabel();
   }
 
@@ -183,11 +183,12 @@ export function createPostViewCommandHandler(deps) {
     if (state.screen === 'post-view' && state._postDeleteConfirmStage) {
       const deleteStage = state._postDeleteConfirmStage;
       state._postDeleteConfirmStage = null;
-      clearPostDeleteConfirmPromptLabel();
-      const normalizedInput = String(cmd || '').trim().toUpperCase();
-      if (normalizedInput === 'Y' || normalizedInput === 'YES') {
+      const rawInput = String(cmd || '').trim();
+      const normalizedInput = rawInput.toUpperCase();
+      if (rawInput === '' || normalizedInput === 'Y' || normalizedInput === 'YES') {
         try {
           await deletePost(deleteStage.boardId, deleteStage.postId);
+          clearPostDeleteConfirmPromptLabel();
           await showPostList(deleteStage.boardId, deleteStage.page, {
             menuPath: deleteStage.menuPath,
             menuTitle: deleteStage.menuTitle,
@@ -195,10 +196,12 @@ export function createPostViewCommandHandler(deps) {
           });
           deps.showToast?.(UI_TEXT.POST_DELETE_SUCCESS, 2000, 'success');
         } catch (error) {
+          clearPostDeleteConfirmPromptLabel();
           setHint(`${UI_TEXT.ERROR}: ${error.message}`);
           setPrompt('선택 >>');
         }
       } else {
+        clearPostDeleteConfirmPromptLabel();
         setHint('삭제를 취소했습니다.');
         setPrompt('선택 >>');
       }
@@ -584,14 +587,23 @@ export function createPostViewCommandHandler(deps) {
     }
 
     if (cmd === 'OK' || cmd === 'V') {
-      // [LOG: 20260429_0229] `V` is documented as login-required, so guest users
-      // must stay on the current post and see the same login hint as other guarded flows.
       if (isGuestUser) {
         setHint(UI_TEXT.LOGIN_REQUIRED);
         return true;
       }
-      await recommendPost(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
-      await showPostView(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
+      // [LOG_ID: 20260806_1656] 본인 작성 글 추천 시 서버 HTTP 400 bad request 발생 및 브라우저 콘솔 에러 차단을 위해 사전 검사
+      const isMyPost = Boolean(state.user?.userId && state.user.userId === (state.post?.authorUserId || state.post?.userId));
+      if (isMyPost) {
+        setHint(`${UI_TEXT.ERROR}: 자신의 글은 추천할 수 없습니다.`);
+        return true;
+      }
+      try {
+        await recommendPost(state.post.boardId || state.board.id, state.post.localId ?? state.post.id, { silent: true });
+        deps.showToast?.('게시글을 추천했습니다.', 2000, 'success');
+        await showPostView(state.post.boardId || state.board.id, state.post.localId ?? state.post.id);
+      } catch (error) {
+        setHint(`${UI_TEXT.ERROR}: ${error.message || '추천할 수 없습니다.'}`);
+      }
       return true;
     }
 

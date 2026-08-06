@@ -340,7 +340,7 @@ export function createBoardAnsiBuilders(deps) {
         ANSI_RESET;
     const metaLines = wrapAnsiText(metaLine, targetCols);
 
-    const rawContent = post?.content || post?.body || '';
+    const rawContent = (post?.content !== undefined && post?.content !== null && String(post.content).trim() !== '') ? post.content : (post?.body || '(본문 내용이 없습니다.)');
     const highlightedContent = highlightText(rawContent, highlightTerm, 14, 15);
     const contentLines = wrapAnsiText(highlightedContent, targetCols);
 

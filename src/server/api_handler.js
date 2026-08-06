@@ -18,7 +18,8 @@ try {
     });
 } catch (error) {
     initError = error;
-    console.error('[api_handler] init failed:', error);
+    // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.error 주석 처리
+    // console.error('[api_handler] init failed:', error);
     void errorTracker.captureException(error, { component: 'src/server/api_handler', stage: 'init' });
 }
 

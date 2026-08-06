@@ -68,7 +68,8 @@ export function createProfileScreens(deps) {
 
       await renderProfileAnsi(buildProfileAnsi(member));
     } catch (e) {
-      console.error('프로필 조회 실패:', e.message);
+      // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('프로필 조회 실패:', e.message);
       await renderProfileAnsi(buildProfileAnsi(null, { error: true }));
     }
     if (shouldAutoFocusCommandInput()) {

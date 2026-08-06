@@ -309,8 +309,10 @@ export function createPostWriteView(deps) {
         }
       }
       editor._saving = true;
-      const titleVal = titleEl.value.trim();
-      const lines = bodyEl.value.split('\n');
+      const titleVal = (titleEl && titleEl.value.trim()) || editor.title || '';
+      let lines = (bodyEl && bodyEl.value.trim())
+        ? bodyEl.value.split('\n')
+        : (editor.bodyLines && editor.bodyLines.length ? editor.bodyLines : []);
       if (lines.length > 0 && lines[lines.length - 1].trim() === '.') lines.pop();
       if (keywordParts) {
         editor.keywords = keywordParts;
@@ -1043,8 +1045,10 @@ export function createPostWriteView(deps) {
         state.post = null;
         await handlers.showPostView(boardId, postId, false);
       } else {
+        // [LOG_ID: 20260806_1031] 새 글/답글 작성 후 1페이지로 복원 및 검색 파라미터 초기화 (작성된 글 바로 노출)
         state.posts = null;
-        await showPostList(boardId, state.page, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle });
+        state.searchParams = {};
+        await showPostList(boardId, 1, { menuPath: state.boardMenuPath, menuTitle: state.boardMenuTitle, searchParams: {} });
       }
       return true;
     } catch (e) {

@@ -232,9 +232,22 @@ export function createCommandDispatcherExecution(deps) {
         setPrompt('선택 >>');
         return false;
       }
-      console.error('[Dispatcher] Error processing command:', error);
-      terminalUiCore.showError(`오류: ${error.message}`);
-      setPrompt('>>');
+      const rawMsg = error?.message || '명령 처리 중 오류가 발생했습니다.';
+      const isSelfError = rawMsg.includes('본인') || rawMsg.includes('자신') || rawMsg.includes('own post');
+      const isAlreadyError = rawMsg.includes('이미') || rawMsg.includes('already');
+      const hintMsg = isSelfError ? (UI_TEXT.POST_RECOMMEND_SELF_FORBIDDEN || '자신의 글은 추천할 수 없습니다.')
+                    : isAlreadyError ? (UI_TEXT.POST_RECOMMEND_ALREADY || '이미 추천한 게시물입니다.')
+                    : `오류: ${rawMsg}`;
+      if (!isSelfError && !isAlreadyError) {
+        // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
+        // console.error('[Dispatcher] Error processing command:', error);
+      }
+      if (typeof setHint === 'function') {
+        setHint(hintMsg);
+      } else {
+        terminalUiCore.showError(hintMsg);
+      }
+      setPrompt('선택 >>');
       return false;
     }
   }

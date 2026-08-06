@@ -186,7 +186,8 @@ export function createTerminalSequentialRenderer(deps) {
       }
       }
     } catch (error) {
-      console.error('[Terminal] Rendering exception:', error);
+      // [LOG_ID: 20260806_1601] AI 코딩 주석화 — console.error 주석 처리
+      // console.error('[Terminal] Rendering exception:', error);
       container.innerHTML = htmlContent;
       showNotification(UI_TEXT.RENDER_ERROR, 3000, 'warn');
     } finally {

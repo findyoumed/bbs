@@ -27,13 +27,16 @@ export function createSystemLogger(options = {}) {
 
     listeners.forEach(callback => callback(entry, logs));
     
-    // Also log to console for developer convenience
-    const consoleMethod = level.toLowerCase() === 'error' || level.toLowerCase() === 'fatal' ? 'error' : 
-                          level.toLowerCase() === 'warn' ? 'warn' : 'log';
-    if (data) {
-      console[consoleMethod](`[${entry.level}] ${message}`, data);
-    } else {
-      console[consoleMethod](`[${entry.level}] ${message}`);
+    // [LOG_ID: 20260806_1512] AI 코딩 주석화 — 콘솔창 노이즈 제거를 위해 브라우저 콘솔 출력을 주석 처리함.
+    // 필요 시 window.__ENABLE_CONSOLE_LOGS__ = true 환경에서만 출력 가능.
+    if (typeof window !== 'undefined' && window.__ENABLE_CONSOLE_LOGS__) {
+      const consoleMethod = level.toLowerCase() === 'error' || level.toLowerCase() === 'fatal' ? 'error' : 
+                            level.toLowerCase() === 'warn' ? 'warn' : 'log';
+      if (data) {
+        console[consoleMethod](`[${entry.level}] ${message}`, data);
+      } else {
+        console[consoleMethod](`[${entry.level}] ${message}`);
+      }
     }
   }
 

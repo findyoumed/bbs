@@ -31,7 +31,7 @@ export function createMemoCommandHandler(deps) {
         state._memoDeleteConfirm = { memoId };
         await showMemoView(memoId, true);
         setHint?.('삭제하려면 Y, 취소하려면 N을 입력하세요.');
-        setPrompt?.('삭제 (y/n) >>');
+        setPrompt?.('삭제 (Y/n) >>');
         return true;
     }
 
@@ -59,7 +59,7 @@ export function createMemoCommandHandler(deps) {
                     ? new Date(current.absentEnd).toLocaleDateString('ko-KR')
                     : '수동 해제 전까지';
                 setHint?.(`이미 부재중입니다: "${current.absentReason}" (복귀예정: ${until}). 해제하시겠습니까?`);
-                setPrompt?.('부재통지 해제 (y/n) >>');
+                setPrompt?.('부재통지 해제 (Y/n) >>');
             } else {
                 state._absentStage = 'start';
                 state._absentDraft = {};
