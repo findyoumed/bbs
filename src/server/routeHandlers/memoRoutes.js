@@ -87,10 +87,11 @@ class MemoRouter extends BaseRouter {
 
   // [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — 받는 사람을 쉼표/공백으로 여러 명 적으면
   // 수신자 수만큼 쪽지를 만든다. 쪽지 1건 = 1행이라 스키마 변경 없이 된다.
-  // (원전의 "그룹지정"=이름 붙인 수신자 그룹 저장은 별도 테이블이 필요해 구현하지 않았다.)
-  // [LOG_ID: 20260728_1751] 단체편지 및 쪽지 발송 전 수신자가 실제로 가입된 회원인지 전수 사전 유효성 검사 추가
+  // [LOG_ID: 20260716_2000] 하이텔 (10)-6 단체편지 — 받는 사람을 쉼표/공백으로 여러 명 적으면
+  // 수신자 수만큼 쪽지를 만든다. 쪽지 1건 = 1행이라 스키마 변경 없이 된다.
+  // [LOG_ID: 20260807_1435] 듀얼 발송 시스템: 이메일 형태(@)와 BBS 회원 아이디 분기 처리
   async createMemo() {
-    const { memoRepository, memberRepository } = this.deps;
+    const { memoRepository, memberRepository, mailService } = this.deps;
     const body = await this.getCreateMemoBody();
     const context = await this.getContext();
 
@@ -103,10 +104,14 @@ class MemoRouter extends BaseRouter {
       this.validationError(`단체편지는 한 번에 최대 ${MEMO_MAX_RECIPIENTS}명까지 보낼 수 있습니다.`);
     }
 
-    // [LOG_ID: 20260731_1445] 수신자 회원 정보 사전 검증 및 Map 캐싱 — 발송 루프에서의 중복 DB 조회를 제거한다.
+    const isEmailFormat = (str) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
+    const emailRecipients = recipients.filter(isEmailFormat);
+    const memberRecipients = recipients.filter(r => !isEmailFormat(r));
+
+    // BBS 회원 수신자 사전 검증
     const recipientMembersMap = new Map();
     if (memberRepository) {
-      for (const recipientUserId of recipients) {
+      for (const recipientUserId of memberRecipients) {
         const recipientMember = await memberRepository.getMember(recipientUserId);
         if (!recipientMember) {
           this.validationError(`존재하지 않는 회원 아이디입니다: ${recipientUserId}`);
@@ -115,11 +120,11 @@ class MemoRouter extends BaseRouter {
       }
     }
 
-    // [LOG_ID: 20260722_3000] global.absentMessages(프로세스 메모리 Map — 서버 재시작/서버리스
-    // 인스턴스 교체마다 소실되던 것)를 대신해 members 테이블에 영속 저장된 부재통지를 조회한다.
     const results = [];
     const absentRecipients = [];
-    for (const recipientUserId of recipients) {
+
+    // 1) BBS 회원 수신자 처리 (내부 쪽지함 DB 저장 + 회원 가입 이메일로 동시 알림 전송)
+    for (const recipientUserId of memberRecipients) {
       const created = await memoRepository.createMemo({ ...body, recipientUserId }, context);
       results.push(created);
       const recipientMember = recipientMembersMap.get(recipientUserId) || null;
@@ -129,18 +134,44 @@ class MemoRouter extends BaseRouter {
           absentMsg: recipientMember.absentReason
         });
       }
+
+      // [LOG_ID: 20260807_1436] 회원 가입 시 등록된 이메일이 있을 경우 외부 메일로도 동시 알림 전송!
+      if (recipientMember?.email && mailService && typeof mailService.sendExternalEmail === 'function') {
+        try {
+          await mailService.sendExternalEmail({
+            to: recipientMember.email,
+            subject: body.title || `[01410 PC통신] ${context.userId}님이 보낸 쪽지/편지`,
+            content: body.content,
+            fromUserId: context.userId
+          });
+        } catch (mailErr) {
+          console.warn(`[MemberEmailNotice] Failed to send email to ${recipientMember.email}:`, mailErr.message);
+        }
+      }
     }
 
-    // 수신자 1명이면 종전 응답 형태(쪽지 객체 + recipientAbsent/absentMsg)를 그대로 유지한다 —
-    // 기존 클라이언트/스모크 테스트가 이 형태에 의존한다.
+    // 2) 외부 이메일 수신자 처리 (Resend 외부 메일 전송 + 기록 저장)
+    for (const emailAddr of emailRecipients) {
+      if (mailService && typeof mailService.sendExternalEmail === 'function') {
+        await mailService.sendExternalEmail({
+          to: emailAddr,
+          subject: body.title,
+          content: body.content,
+          fromUserId: context.userId
+        });
+      }
+      const createdLog = await memoRepository.createMemo({ ...body, recipientUserId: emailAddr }, context);
+      results.push(createdLog);
+    }
+
     const first = absentRecipients[0] || null;
     return this.send(201, {
-      ...results[0],
+      ...(results[0] || {}),
       recipientAbsent: Boolean(first),
       absentMsg: first ? first.absentMsg : null,
-      // 단체편지용 추가 필드 (수신자 1명일 때도 채워지므로 클라이언트가 일관되게 읽을 수 있다)
       recipients,
       sentCount: results.length,
+      emailSentCount: emailRecipients.length,
       absentRecipients
     });
   }

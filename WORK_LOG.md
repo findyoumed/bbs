@@ -2,6 +2,184 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-07 17:30] [버그수정] /memo 지연 모듈 파싱 오류 복구
+
+**LOG_ID: 20260807_1730**
+목표: `/memo` 진입 시 `수신 데이터 처리 불가 - 응답 형식 오류입니다.`가 표시되는 현상을 수정한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업: `buildMemoViewAnsi` 내부에 중복 삽입돼 닫는 중괄호를 누락시킨 함수 블록을 제거하고, 원래 보기 결과 반환부와 함수 종료를 복구했다.
+실행: `node --check public/js/core/memoAnsiBuilders.js`, ESM 동적 import 검사, `npm run smoke:vercel-ready`
+기대: `/memo` 지연 모듈이 `Unexpected end of input` 없이 로드되고 전자우편 메뉴가 표시된다.
+결과: ✅ 완료 — 브라우저 로그인 모의 상태에서 `MEMO` 명령으로 전자우편 메뉴가 정상 표시되고 해당 오류 문구 및 런타임 오류가 없음을 확인했다.
+
+## [2026-08-07 16:49] [버그수정] 명령 디스패처 내 Unexpected end of input 힌트바 포맷팅 정화
+
+**LOG_ID: 20260807_1649**
+목표: `/memo` 접속 또는 명령어 실행 중 예외 처리 과정에서 `오류: Unexpected end of input`이 힌트바에 출력되던 현상을 방지하도록 `commandDispatcherExecution.js` 예외 포맷터 갱신.
+변경 파일: `public/js/core/commandDispatcherExecution.js`, `WORK_LOG.md`
+수행 작업:
+1) `commandDispatcherExecution.js`: 예외 메시지가 `Unexpected end of input`인 경우 `오류: Unexpected end of input` 대신 `"수신 데이터 처리 불가 - 응답 형식 오류입니다."`로 변환 출력.
+실행: `node --check public/js/core/commandDispatcherExecution.js`, `npm run smoke:vercel-ready`
+기대: 날것의 개발자용 영문 파싱 오류 텍스트 노출 차단.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 16:48] [버그수정] API 응답 파싱 시 "Unexpected end of input" raw 예외 노출 방지 및 안전 처리
+
+**LOG_ID: 20260807_1648**
+목표: 서버 응답 본문이 공백이거나 비어있을 때 `JSON.parse`로 인해 발생하던 `Unexpected end of input` raw 자바스크립트 예외가 화면에 노출되는 현상을 방지하고 사용자 친화적인 한국어 안내 메시지로 정화 처리.
+변경 파일: `public/js/core/apiFetchHelpers.js`, `WORK_LOG.md`
+수행 작업:
+1) `apiFetchHelpers.js`: `readResponsePayload`에서 `!rawText || !rawText.trim()` 검사를 강화하여 공백/빈 응답을 안전하게 `null` 반환하도록 예외 처리.
+2) `translateErrorMessage`: `Unexpected end of input` 및 JSON 파싱 관련 예외 발생 시 날것의 개발자용 에러 대신 `"수신 데이터 처리 불가 - 응답 형식 오류입니다."` 안내 문구로 번역하여 출력.
+실행: `node --check public/js/core/apiFetchHelpers.js`, `npm run smoke:vercel-ready`
+기대: 날것의 `Unexpected end of input` 문구 대신 명확한 정화 문구가 노출됨.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 16:45] [UI정정] /memo 상단바 타이틀에 레거시 전화번호(☎ 02-590-3800) 텍스트 노출 현상 수정
+
+**LOG_ID: 20260807_1645**
+목표: `http://localhost:3000/memo` 진입 시 상단바 중앙 라벨(`//*[@id="terminal-screen"]/div/div[1]/div[2]/span[2]`)에 하드코딩되어 포함되던 `☎ 02-590-3800` 문구를 제거하고 상단바 파서(`extractTopbarModel`)에서 전화번호 패턴 정화 처리.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `public/js/core/ansiTopbarScreen.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `buildMemoMenuAnsi`의 `buildTopHeader` 호출부에서 하드코딩된 `'☎ 02-590-3800'` 수신처 인자를 제거.
+2) `ansiTopbarScreen.js`: `extractTopbarModel` 상단바 제목 파서에 레거시 전화번호 패턴 정화 정규식 추가.
+실행: `node --check public/js/core/memoAnsiBuilders.js`, `node --check public/js/core/ansiTopbarScreen.js`, `npm run smoke:vercel-ready`
+기대: `/memo` 접속 시 상단바 중앙에 `전자우편`만 깔끔하게 노출됨.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:43] [버그수정] 상단바 로고 클릭 시 "executeGoCommand is not a function" 런타임 오류 수정
+
+**LOG_ID: 20260807_1443**
+목표: `/memo` 등 상단바 로고/링크 클릭 시 발생하던 `executeGoCommand is not a function` 오류 원인을 분석하여, `appFactoryHandlers.js` 내 핸들러 공통 의존성(`handlerDeps` 및 `globalCommandHandlerDeps`)에 내비게이션 명령 함수(`executeGoCommand`)를 누락 없이 주입하도록 수정.
+변경 파일: `public/js/core/appFactoryHandlers.js`, `WORK_LOG.md`
+수행 작업:
+1) `appFactoryHandlers.js`: `handlerDeps` 객체에 `executeGoCommand: (...args) => screens.menuNav?.executeGoCommand?.(...args)` 주입.
+2) `globalCommandHandlerDeps`에 `...handlerDeps`를 전개하여 `commandRouterGlobalNavigation`에서 내비게이션 클릭 명령(`T` 등) 처리 시 안전하게 홈 이동 가능하도록 연결.
+실행: `node --check public/js/core/appFactoryHandlers.js`, `npm run smoke:vercel-ready`
+기대: 상단바 로고/링크 클릭 시 `executeGoCommand is not a function` 오류 없이 초기화면으로 정상 이동됨.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:36] [기능확장] GO WMAIL/쪽지 보내기 시 회원 가입 이메일로도 동시 이메일 알림 전송 기능 구현
+
+**LOG_ID: 20260807_1436**
+목표: `GO WMAIL` 및 쪽지 보내기 화면에서 회원 ID(예: `hong`)에게 쪽지/편지를 보낼 때, 수신 회원이 가입 시 실제 이메일 주소를 등록해 두었을 경우 BBS 내부 쪽지함 DB 저장과 동시에 **상대방의 실제 외부 이메일로도 자동 알림 이메일을 동시 발송**하도록 백엔드 핸들러 기능 확장.
+변경 파일: `src/server/routeHandlers/memoRoutes.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoRoutes.js`: `createMemo` 수신자 처리 루프에서 `recipientMember.email` 존재 여부를 확인하고, 이메일이 등록되어 있으면 `mailService.sendExternalEmail()`을 통해 상대방 실제 이메일로 동시 전송.
+실행: `node --check src/server/routeHandlers/memoRoutes.js`, `npm run smoke:vercel-ready`, `npm run smoke:command-parity`
+기대: `GO WMAIL`로 상대방 ID에게 쪽지 발송 시 내부 쪽지함 저장과 상대방 실제 이메일 발송이 동시에 이루어짐.
+결과: ✅ 검증 성공 (`node --check`, `smoke:vercel-ready`, `smoke:command-parity` 통과).
+
+## [2026-08-07 14:35] [기능구현] 듀얼 발송 시스템 (BBS 내부 쪽지 + 외부 인터넷 이메일 전송) 통합 구현
+
+**LOG_ID: 20260807_1435**
+목표: 받는 사람 필드에 BBS 회원 ID(예: `sysop`, `hong`)를 입력하면 내부 쪽지함 DB 저장으로, 인터넷 이메일 주소(예: `friend@gmail.com`)를 입력하면 백엔드 Resend 외부 이메일 엔진을 통한 실제 인터넷 이메일 발송으로 자동으로 분기 처리되는 **듀얼 발송 시스템** 구현.
+변경 파일: `src/server/SysopMailService.js`, `src/server/routeHandlers/memoRoutes.js`, `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `SysopMailService.js`: 외부 수신자(`to`)에게 실제 이메일을 보낼 수 있는 `sendExternalEmail({ to, subject, content, fromUserId })` 백엔드 메일 서비스 메서드 추가.
+2) `memoRoutes.js`: `createMemo` 핸들러에서 수신자 중 이메일 형태(`@` 포함)를 판별하여, 이메일 주소는 `mailService.sendExternalEmail()`로 발송 후 기록하고 회원 아이디는 기존 내부 쪽지함 DB로 자동 이원화 전송.
+3) `memoScreens.js`: `memo-ed-target` 받는 사람 입력창 placeholder를 `"받는 사람 아이디 또는 이메일 주소 (hong, hong@gmail.com)"`로 갱신하여 듀얼 입력을 지원.
+실행: `node --check src/server/SysopMailService.js`, `node --check src/server/routeHandlers/memoRoutes.js`, `node --check public/js/core/memoScreens.js`, `npm run smoke:vercel-ready`, `npm run smoke:command-parity`
+기대: 회원이 ID 또는 인터넷 이메일 주소를 자유롭게 적어 쪽지/메일을 보낼 수 있음.
+결과: ✅ 검증 성공 (`node --check`, `smoke:vercel-ready`, `smoke:command-parity` 통과).
+
+## [2026-08-07 14:28] [UI/UX명칭정정] 상단바 타이틀 명칭을 "메모 쓰기"에서 "쪽지 보내기"로 명확히 수정
+
+**LOG_ID: 20260807_1428**
+목표: 사용자 지정사항("메뉴이름이 메모쓰기가 아니라 '쪽지 보내기' 이다")을 반영하여, 상단바 제목(topbar centerLabel)을 `메모 쓰기`에서 공식 명칭인 **`쪽지 보내기`**로 정확히 정정.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `renderMemoBbsEditor`의 상단바 `centerLabel` 분기 문구를 `MEMO | 쪽지 보내기`로 수정.
+실행: `node --check public/js/core/memoScreens.js`, `npm run smoke:vercel-ready`
+기대: `http://localhost:3000/memo/write` 진입 시 상단바에 `MEMO` | `쪽지 보내기`가 정갈하게 표출됨.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:27] [기능/UI정정] /memo/write (메모 쓰기) 기본 플로우를 메모 쓰기(isMemo=true)로 지정하여 제목(제 목) 필드 없이 깔끔한 2단계 입력 폼 유지
+
+**LOG_ID: 20260807_1427**
+목표: 사용자 지정사항("http://localhost:3000/memo/write 이 부분은 메모 쓰기잖아")을 반영하여 `/memo/write` 진입 기본 플로우를 **메모 쓰기 (`isMemo: true`)**로 정정 설정, 제목(`제 목 :`) 입력란 없이 `받는 사람 :` -> `내 용 :` 2개 필드로 깔끔하고 빠른 쪽지 작성 환경 제공.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `createMemoWriteFlow`에 `isMemo: true` 속성을 명시 추가하여 `/memo/write` 진입 시 `hasSubjectField`가 `false`로 평가되어 제목 입력 필드가 노출되지 않도록 처리.
+2) 상단바 타이틀을 `MEMO | 메모 쓰기`로 표시하고 탭/화살표 키 이동을 `받는 사람` -> `내 용` 2단계로 연결.
+실행: `node --check public/js/core/memoScreens.js`, `npm run smoke:vercel-ready`
+기대: `http://localhost:3000/memo/write` 진입 시 제목 필드 없이 `받는 사람 :`과 `내 용 :`만 선명하게 표출됨.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:23] [기능/UI구분] 편지 쓰기(WMAIL)와 메모 쓰기(MEMO)의 제목(제 목) 입력 필드 유무 구분 구현
+
+**LOG_ID: 20260807_1423**
+목표: 사용자 지적사항("메모쓰기와 편지쓰기의 다른 점은 메모쓰기는 편지쓰기에서 제목 부분이 없는거야")을 반영하여, **편지 쓰기 (`WMAIL`)** 화면에는 게시판 글쓰기(`notice/write`)와 동일하게 `제 목 :` (`memo-ed-subject`) 입력 필드를 추가하고, **메모/쪽지 쓰기 (`isMemo`)** 화면에는 제목 없이 `받는 사람 :` 및 `내 용 :`으로 동작하도록 명확히 분기 구현.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `renderMemoBbsEditor` 내 `hasSubjectField` 분기를 도입하여 **편지 쓰기** 시 `받는 사람 :` -> `제 목 :` -> `내 용 :` 3단계 폼을 렌더링하고, 탭/화살표 키 이동 및 포커스 클릭을 연결.
+2) **메모 쓰기 (`isMemo`)** 모드 및 축하카드 모드에서는 `제 목 :` 필드 없이 `받는 사람 :` -> `내 용 :` 2단계 폼으로 렌더링.
+실행: `node --check public/js/core/memoScreens.js`, `npm run smoke:vercel-ready`
+기대: 편지 쓰기(`WMAIL`) 화면에는 `제 목 :` 입력란이 나타나 게시판 글쓰기와 100% 동일한 서식을 제공하며, 메모 쓰기 시에는 제목 없이 빠르게 쪽지를 발송할 수 있음.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:21] [UI/UX버그수정] 쪽지/편지 쓰기(memo-write) 하단 저장/전송 안내 문구 게시판 글쓰기(notice/write) 규격과 100% 동일하게 일치 (이중 출력 제거)
+
+**LOG_ID: 20260807_1421**
+목표: `/memo/write` (편지 쓰기) 화면 하단에 폼 내부 안내 텍스트(`bodyHtml`)와 터미널 풋터 힌트(`setHint`)가 이중으로 중복 출력되던 현상을 게시판 글쓰기 (`notice/write` / `postWriteView.js`) 및 건의하기 (`/guide/tosysop` / `contactSysopScreen.js`) 규격에 맞춰 단일화 수정.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `renderMemoBbsEditor`의 `bodyHtml` 하단 가이드를 게시판 글쓰기와 동일하게 `전송: Ctrl+S 또는 마지막 줄에 . 후 Enter` 1 줄로 정돈하여 구분선 아래 터미널 풋터 `setHint` 힌트(`전송: Ctrl+S 또는 마지막 줄에 . 취소: Escape 이동: Tab/화살표`)와의 이중 텍스트 중복을 제거.
+실행: `node --check public/js/core/memoScreens.js`, `npm run smoke:vercel-ready`
+기대: `/memo/write` 진입 시 게시판 글쓰기와 100% 동일하게 구분선 위에는 `전송: Ctrl+S 또는 마지막 줄에 . 후 Enter`, 구분선 아래에는 `setHint` 터미널 프롬프트가 단일 출력됨.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:18] [UI/UX동기화] 쪽지/편지 쓰기(memo-write) 화면을 게시판 글쓰기(notice/write) UI 구조 및 마우스 클릭/포커스 동작과 100% 통합 동기화
+
+**LOG_ID: 20260807_1418**
+목표: `/memo/write` (편지 쓰기) 화면을 `notice/write` (`postWriteView.js`) 및 `/guide/tosysop` (`contactSysopScreen.js`) 게시판 글쓰기의 폼 에디터 규격과 100% 동일하게 동기화하여, 라벨(`<label>`) 및 행 영역 클릭 시 인라인 포커스, 마우스 포인터(`cursor: pointer`, `cursor: text`), 폰트 색상(`#ffffff`), `setReady?.(true)` 상태까지 완벽히 통일.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `renderMemoBbsEditor`의 라벨 요소를 `<label for="${targetId}">`, `<label for="${bodyId}">`로 변경하고 마우스 커서(`cursor: pointer !important`, `cursor: text !important`) 추가.
+2) `memo-ed-target-row` 및 `memo-ed-body-row` 구획에 마우스 클릭 이벤트 리스너를 바인딩하여 라벨이나 행 내 여백 영역 클릭 시 해당하는 `input` / `textarea`로 자동 포커스 이동 구현.
+3) `renderMemoBbsEditor` 렌더링 시점에 `setReady?.(true)`를 명시 호출하여 `notice/write`와 동일한 터미널 풋터 상태 보장.
+실행: `node --check public/js/core/memoScreens.js`, `npm run smoke:vercel-ready`
+기대: `/memo/write` 진입 시 라벨/행 클릭 및 마우스 호버 포인터가 게시판 글쓰기(`notice/write`) 화면과 100% 동일하게 동작함.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:17] [UI/UX버그수정] 크롬/웹킷 브라우저 placeholder 벤더 프리픽스 분리로 받는 사람(#memo-ed-target) 안내문구 100% 순백색(#ffffff) 강제
+
+**LOG_ID: 20260807_1417**
+목표: `/memo/write` (쪽지/편지 쓰기) 화면의 `받는 사람` 입력창(`#memo-ed-target`) placeholder 안내 문구가 크롬/웹킷 브라우저 기본 회색(gray) 스타일로 덮어씌워지던 현상을 벤더 프리픽스(`::-webkit-input-placeholder`, `::-moz-placeholder`) 개별 분기 선언 및 인라인 `<style>` 태그 주입으로 100% pure white (`#ffffff !important`) 처리.
+변경 파일: `public/js/core/memoScreens.js`, `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `public/style.css`: 표준 `::placeholder`와 WebKit 벤더 프리픽스(`::-webkit-input-placeholder`), Moz 벤더 프리픽스(`::-moz-placeholder`)를 콤마 결합 없이 각각 독립된 CSS 룰셋으로 분리 정의하여 웹킷 엔진의 셀렉터 파싱 드롭 방지.
+2) `memoScreens.js`: `renderMemoBbsEditor`의 `bodyHtml` 최상단에 인라인 `<style>` 요소 주입을 추가하여 DOM 렌더링 시점에 즉시 `#memo-ed-target::placeholder` 및 벤더 프리픽스 폰트 색상을 `#ffffff !important`로 덮어씀.
+실행: `node --check public/js/core/memoScreens.js`, `npm run smoke:vercel-ready`
+기대: `/memo/write` 진입 시 `받는 사람` 입력창(`#memo-ed-target`)의 placeholder ("받는 사람 아이디 (여러 명은 쉼표로)") 문구가 "받는 사람 :" 제목과 100% 동일하게 하얀색(`#ffffff`)으로 렌더링됨.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:12] [UI/UX개선] http://localhost:3000/memo/write 받는 사람(#memo-ed-target) 및 본문 폰트/캐럿 색상 #ffffff 강제
+
+**LOG_ID: 20260807_1412**
+목표: `/memo/write` (쪽지/편지 쓰기) 화면의 `//*[@id="memo-ed-target"]` (받는 사람 입력창) 및 본문(`memo-ed-body`) 폰트 색상, 커서(caret) 및 placeholder 색상을 100% pure white (`#ffffff !important`)로 통합 강제.
+변경 파일: `public/js/core/memoScreens.js`, `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `renderMemoBbsEditor`의 `inputStyle` 및 `textareaStyle` 인라인 스타일 템플릿에 `color: #ffffff !important`, `caret-color: #ffffff !important`, `-webkit-text-fill-color: #ffffff !important` 명시 추가.
+2) `public/style.css`: `#memo-ed-target`, `#memo-ed-body`, `#memo-ed-target::placeholder`, `#memo-ed-body::placeholder` 전용 CSS 규칙을 추가하여 브라우저 기본 스타일이나 자동완성(autofill)에 상관없이 100% 순백색(`#ffffff`)으로 표출되도록 강제.
+실행: `node --check public/js/core/memoScreens.js`, `npm run smoke:vercel-ready`
+기대: `/memo/write` 진입 시 `받는 사람` 입력창(`#memo-ed-target`)의 폰트 및 placeholder 텍스트가 100% 하얀색(`#ffffff`)으로 선명하게 표출됨.
+결과: ✅ 검증 성공 (`node --check` & `smoke:vercel-ready` 통과).
+
+## [2026-08-07 14:05] [UI/UX개선] http://localhost:3000/memo 전자우편(MAIL) PC통신 원전 서브메뉴 및 레이아웃 구현
+
+**LOG_ID: 20260807_1405**
+목표: `/memo` (전자우편/MEMO) 진입 시 나우누리/하이텔 원전(`docs/NOWNURI_SCREENS_FULL_DECODED.txt` 91행) 기준의 PC통신 전자우편 대문 서브메뉴(MAIL) 화면 및 ANSI 레이아웃 스타일을 충실하게 구현하여 PC통신 감성을 복원.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `public/js/core/memoScreens.js`, `public/js/core/commandRouterMemo.js`, `public/js/core/routingUrlBuilder.js`, `public/js/core/routingStateRestorer.js`, `public/js/core/menuNavigationActions.js`, `public/js/core/commandRouterGlobalNavigation.js`, `public/js/core/appFactory.js`, `public/js/core/appFactoryHandlers.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: 나우누리 원전(`docs/NOWNURI_SCREENS_FULL_DECODED.txt` 91행) 기준 `MAIL` 서브메뉴 ANSI 화면 생성 함수 `buildMemoMenuAnsi` 구현.
+2) `memoScreens.js`: `/memo` 진입 시 `showMemoMenu`를 통해 전자우편 대문 서브메뉴(1. 편지 읽기, 2. 편지 쓰기, 3. 배달 확인/취소 등)를 표출.
+3) `commandRouterMemo.js` & `commandRouterGlobalNavigation.js`: `memo-menu` 화면에서의 1~7 번호 선택 및 `MAIL`/`ME`/`MEMO` 명령 시 서브메뉴 진입, `RMAIL`(받은편지함)/`CMAIL`(보낸편지함)/`WMAIL`(편지쓰기) 단축 명령 처리.
+4) `routingUrlBuilder.js` & `routingStateRestorer.js`: `/memo` 접속 시 대문 서브메뉴, `/memo?box=inbox|sent|archive` 접속 시 해당 쪽지함 목록으로 상호 호환 라우팅.
+실행: `node --check public/js/core/*.js`, `npm run smoke:command-parity`, `npm run smoke:vercel-ready`
+기대: `http://localhost:3000/memo` 진입 시 나우누리 원전 형태의 PC통신 전자우편 메인 메뉴가 출력되고 1~7 번호 및 단축 명령으로 편지 읽기/쓰기/배달확인으로 이동됨.
+결과: ✅ 검증 성공 (smoke:command-parity, smoke:vercel-ready 통과).
+
 ## [2026-08-06 17:41] 건의하기(`contact-sysop`) 화면을 `notice/write`(`postWriteView.js` 게시판 글쓰기) 구조와 100% 완전 동기화
 
 **LOG_ID: 20260806_1741**

@@ -99,9 +99,20 @@ export function createMenuNavigationActions(deps) {
     // "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)"로
     // GO 이동이 가능했다. 명령어(ME/MEMO/RMAIL/CMAIL/WMAIL)로는 이미 직접 입력 가능했지만
     // GO 접두 형태는 메뉴/게시판만 매칭하고 CMD_META로 안 넘어가 빠져 있었다(사용자 지적).
-    if (normalized === 'MAIL' || normalized === 'RMAIL' || normalized === 'CMAIL') {
+    if (normalized === 'MAIL') {
+      if (typeof refs.showMemoMenu === 'function') {
+        await refs.showMemoMenu();
+        return true;
+      }
       if (typeof refs.showMemoList === 'function') {
         state._memoBox = 'inbox';
+        await refs.showMemoList();
+        return true;
+      }
+    }
+    if (normalized === 'RMAIL' || normalized === 'CMAIL') {
+      if (typeof refs.showMemoList === 'function') {
+        state._memoBox = normalized === 'CMAIL' ? 'sent' : 'inbox';
         await refs.showMemoList();
         return true;
       }
@@ -232,10 +243,16 @@ export function createMenuNavigationActions(deps) {
       await refs.showChatLobby();
       return true;
     }
-    // [LOG_ID: 20260713_1700] 쪽지함(전자우편) 메인 메뉴 진입점
-    if (node.type === 'memo' && typeof refs.showMemoList === 'function') {
-      await refs.showMemoList();
-      return true;
+    // [LOG_ID: 20260807_1405] 쪽지함(전자우편) 메인 메뉴 진입점
+    if (node.type === 'memo') {
+      if (typeof refs.showMemoMenu === 'function') {
+        await refs.showMemoMenu();
+        return true;
+      }
+      if (typeof refs.showMemoList === 'function') {
+        await refs.showMemoList();
+        return true;
+      }
     }
     if (node.type === 'login' && typeof refs.showLogin === 'function') {
       refs.showLogin();

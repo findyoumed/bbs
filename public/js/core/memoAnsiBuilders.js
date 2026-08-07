@@ -244,6 +244,7 @@ export function createMemoAnsiBuilders(deps) {
       joinedLines.push(ANSI_RESET);
     }
 
+    // [LOG_ID: 20260807_1730] 중복 삽입된 보기 함수 블록이 닫는 중괄호를 삼켜 지연 모듈 import가 실패했다.
     return {
       text: joinedLines.slice(0, totalLines).join('\n'),
       pageNo: currentPage,
@@ -251,8 +252,37 @@ export function createMemoAnsiBuilders(deps) {
     };
   }
 
+  // [LOG_ID: 20260807_1405] 나우누리 원전(docs/NOWNURI_SCREENS_FULL_DECODED.txt 91행) 기준
+  // 전자우편(MAIL) 대문 서브메뉴 ANSI 화면 생성 함수
+  function buildMemoMenuAnsi(currentUserId = '') {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+
+    const parts = [
+      buildTopHeader({ leftLabel: 'MAIL', centerLabel: '전자우편' }, '', targetCols),
+      ansiHLine(targetCols, 8),
+      '',
+      ansiColor(15) + '  1. 편지 읽기         (RMAIL)' + ANSI_RESET,
+      ansiColor(15) + '  2. 편지 쓰기         (WMAIL)' + ANSI_RESET,
+      ansiColor(15) + '  3. 배달 확인/취소     (CMAIL)' + ANSI_RESET,
+      '',
+      ansiColor(15) + '  5. 동보편지 주소록   (GRP)' + ANSI_RESET,
+      ansiColor(15) + '  6. 부재 설정/해제     (ABSENT)' + ANSI_RESET,
+      ansiColor(15) + '  7. 전자우편 이용안내' + ANSI_RESET,
+      ''
+    ];
+
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < 24) {
+      joinedLines.push('');
+    }
+
+    return joinedLines.join('\n');
+  }
+
   return {
     buildMemoListAnsi,
-    buildMemoViewAnsi
+    buildMemoViewAnsi,
+    buildMemoMenuAnsi
   };
 }

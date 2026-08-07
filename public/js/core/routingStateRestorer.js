@@ -335,9 +335,12 @@ export function createRoutingStateRestorer(deps) {
       if (segments[1]) {
         return await showMemoView(decodeURIComponent(segments[1]), true);
       }
-      // [LOG_ID: 20260713_1000] URL 쿼리 파라미터에서 box 복원
-      // [LOG_ID: 20260716_1800] 편지보관함(archive) 추가 — 알 수 없는 값은 받은쪽지함으로 떨군다.
-      const box = String(query?.get('box') || 'inbox');
+      // [LOG_ID: 20260807_1405] /memo 접속 시 쿼리에 box가 없으면 전자우편 대문 메뉴(showMemoMenu)로 이동
+      const rawBox = query?.get('box');
+      if (!rawBox && typeof showMemoMenu === 'function') {
+        return await showMemoMenu(true);
+      }
+      const box = String(rawBox || 'inbox');
       state._memoBox = ['inbox', 'sent', 'archive'].includes(box) ? box : 'inbox';
       await showMemoList(true);
     },
@@ -542,7 +545,8 @@ export function createRoutingStateRestorer(deps) {
         if (routeNode.type === 'typing' && typeof showTyping === 'function') return await showTyping(true);
         if (routeNode.type === 'quiz' && typeof showQuiz === 'function') return await showQuiz(true);
         if (routeNode.type === 'battle' && typeof showBattle === 'function') return await showBattle(true);
-        // [LOG_ID: 20260713_1700] 쪽지함(전자우편) 메인 메뉴 진입점 — /memo 직접 접속/새로고침 복원
+        // [LOG_ID: 20260807_1405] 쪽지함(전자우편) 메인 메뉴 진입점 — showMemoMenu 우선 호출
+        if (routeNode.type === 'memo' && typeof showMemoMenu === 'function') return await showMemoMenu(true);
         if (routeNode.type === 'memo' && typeof showMemoList === 'function') return await showMemoList(true);
         // [LOG_ID: 20260720_2300] 건의하기(시삽 이메일 발송) — /tosysop 직접 접속/새로고침 복원
         if (routeNode.type === 'contact-sysop' && typeof showContactSysop === 'function') return await showContactSysop(true);

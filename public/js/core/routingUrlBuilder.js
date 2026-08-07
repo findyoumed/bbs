@@ -234,12 +234,15 @@ export function createRoutingUrlBuilder(deps) {
         return '/myinfo';
       }
 
+      // [LOG_ID: 20260807_1405] 나우누리 원전(MAIL) 서브메뉴 및 상자별 URL 라우팅
+      case 'memo-menu':
+        return '/memo';
+
       case 'memo-list': {
-        // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) — 상자가 셋이 됐다.
         const box = state._memoBox || 'inbox';
         if (box === 'sent') return '/memo?box=sent';
         if (box === 'archive') return '/memo?box=archive';
-        return '/memo';
+        return '/memo?box=inbox';
       }
 
       case 'memo-view':

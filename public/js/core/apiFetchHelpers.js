@@ -106,14 +106,15 @@ export async function readResponsePayload(res) {
     return null;
   }
   const rawText = await res.text();
-  if (!rawText) {
+  if (!rawText || !rawText.trim()) {
     return null;
   }
   if (shouldTreatAsJson(res.headers?.get?.('content-type'))) {
     try {
       return JSON.parse(rawText);
     } catch (error) {
-      throw createParseError(`응답 JSON 파싱 실패: ${error.message}`, rawText);
+      // [LOG_ID: 20260807_1648] 빈 응답/잘린 응답으로 인한 Unexpected end of input 시 파싱 에러 생성
+      throw createParseError(`수신 데이터 형식 오류 (JSON 파싱 실패)`, rawText);
     }
   }
   return rawText;
@@ -122,7 +123,9 @@ export async function readResponsePayload(res) {
 export function translateErrorMessage(error) {
   if (error.type === 'timeout') return '요청 시간이 초과되었습니다.';
   if (error.type === 'network') return '데이터 통신망 오동작 - 네트워크 연결을 확인하세요.';
-  if (error.type === 'parse') return '수신 데이터 처리 불가 - 시스템 관리자에게 문의하세요.';
+  if (error.type === 'parse' || error.message?.includes('Unexpected end of input') || error.message?.includes('JSON')) {
+    return '수신 데이터 처리 불가 - 응답 형식 오류입니다.';
+  }
 
   const status = error.status;
   if (status === 401) return '사용 권한이 없습니다. 로그인이 필요합니다.';

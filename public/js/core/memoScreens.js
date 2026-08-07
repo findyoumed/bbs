@@ -56,6 +56,7 @@ export function createMemoScreens(deps) {
         apiFetch,
         applyCommandFooter,
         buildMemoListAnsi,
+        buildMemoMenuAnsi,
         buildMemoViewAnsi,
         cmdInput,
         esc,
@@ -116,6 +117,39 @@ export function createMemoScreens(deps) {
         state._memoTarget = '';
         renderMemoStatus('쪽지 기능은 로그인 후 이용하실 수 있습니다.');
         return false;
+    }
+
+    // [LOG_ID: 20260807_1405] PC통신 나우누리 원전(docs/NOWNURI_SCREENS_FULL_DECODED.txt 91행) 기준
+    // 전자우편 메인 서브메뉴(MAIL) 화면 렌더링 함수
+    async function showMemoMenu(fromHistory = false) {
+        state.screen = 'memo-menu';
+        clearMemoWriteFlow();
+        state._memoDeleteConfirm = null;
+        if (!ensureMemoAccess()) {
+            return;
+        }
+        if (!fromHistory) {
+            updateURL();
+        }
+        setLoading('데이터를 송수신 중입니다..');
+
+        try {
+            const ansiText = buildMemoMenuAnsi(state.user?.userId || '');
+            await renderAnsiScreenWithTopbarSequential({
+                ansiText,
+                ansiToHTML,
+                screenEl,
+                renderScreenSequential,
+                afterBodyRender: async () => {
+                    await applyCommandFooter(getMenuNodeByKey('memo')?.footer, getSupportedFooterText(state));
+                }
+            });
+            setHint('메뉴 번호(1-7) 또는 단축 명령어(RMAIL, WMAIL, CMAIL)를 입력하세요. (P: 상위메뉴)');
+            setPrompt('선택 (1-7) >>');
+            focusCommandInput();
+        } catch (e) {
+            renderMemoStatus(`전자우편 메뉴를 불러오지 못했습니다. ${String(e?.message || '알 수 없는 오류입니다.')}`);
+        }
     }
 
     async function showMemoList(fromHistory = false) {
@@ -291,7 +325,8 @@ export function createMemoScreens(deps) {
             bodyLines: [],
             transcript,
             stage: target ? 'body' : 'target',
-            sending: false
+            sending: false,
+            isMemo: true
         };
     }
 
@@ -358,15 +393,20 @@ export function createMemoScreens(deps) {
     function renderMemoBbsEditor(flow, onSave, onCancel) {
         flow.stage = 'bbs-form';
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-        const targetId = 'memo-ed-target';
-        const bodyId   = 'memo-ed-body';
+        const targetId  = 'memo-ed-target';
+        const subjectId = 'memo-ed-subject';
+        const bodyId    = 'memo-ed-body';
+        const hasSubjectField = !flow.isMemo && !flow.cardMode;
         const sep = '─'.repeat(isMobile ? 40 : 76);
 
+        // [LOG_ID: 20260807_1412] 폰트 색상을 #ffffff 순백색으로 강제 (caret-color, -webkit-text-fill-color 포함)
         const inputStyle = `
           flex: 1;
           background: transparent;
           border: none;
           color: #ffffff !important;
+          caret-color: #ffffff !important;
+          -webkit-text-fill-color: #ffffff !important;
           font-family: inherit !important;
           font-size: inherit !important;
           line-height: inherit !important;
@@ -386,6 +426,8 @@ export function createMemoScreens(deps) {
           background: transparent;
           border: none;
           color: #ffffff !important;
+          caret-color: #ffffff !important;
+          -webkit-text-fill-color: #ffffff !important;
           font-family: inherit !important;
           font-size: inherit !important;
           line-height: inherit !important;
@@ -397,35 +439,94 @@ export function createMemoScreens(deps) {
           resize: none;
         `;
 
+        const subjectRowHtml = hasSubjectField ? `
+  <div id="memo-ed-subject-row" class="memo-ed-row">
+    <label for="${subjectId}" class="memo-ed-label">제    목 :&nbsp;</label>
+    <input id="${subjectId}" type="text" autocomplete="off" spellcheck="false" maxlength="60" placeholder="편지 제목" style="${inputStyle}"/>
+  </div>` : '';
+
         const bodyHtml = `
+<style>
+  #${targetId}, #${subjectId}, #${bodyId} {
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    cursor: text !important;
+  }
+  #${targetId}::placeholder, #${subjectId}::placeholder, #${bodyId}::placeholder {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+  }
+  #${targetId}::-webkit-input-placeholder, #${subjectId}::-webkit-input-placeholder, #${bodyId}::-webkit-input-placeholder {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+  }
+  #${targetId}::-moz-placeholder, #${subjectId}::-moz-placeholder, #${bodyId}::-moz-placeholder {
+    color: #ffffff !important;
+    opacity: 1 !important;
+  }
+  .memo-ed-label {
+    white-space: nowrap;
+    user-select: none;
+    color: #ffffff !important;
+    font-family: inherit;
+    cursor: pointer !important;
+  }
+  .memo-ed-row {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+    gap: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .memo-ed-body-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    margin-top: 4px;
+    min-height: 4.4em;
+    cursor: pointer;
+  }
+</style>
 <div style="display:flex;flex-direction:column;height:100%;overflow-y:auto;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
-  <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
-    <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">받는 사람 :&nbsp;</span>
-    <input id="${targetId}" type="text" autocomplete="off" spellcheck="false" placeholder="받는 사람 아이디 (여러 명은 쉼표로)" style="${inputStyle}"/>
+  <div id="memo-ed-target-row" class="memo-ed-row">
+    <label for="${targetId}" class="memo-ed-label">받는 사람 :&nbsp;</label>
+    <input id="${targetId}" type="text" autocomplete="off" spellcheck="false" placeholder="받는 사람 아이디 또는 이메일 주소 (hong, hong@gmail.com)" style="${inputStyle}"/>
   </div>
+  ${subjectRowHtml}
   <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
-  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
-    <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내    용 :</div>
+  <div id="memo-ed-body-row" class="memo-ed-body-wrapper">
+    <label for="${bodyId}" class="memo-ed-label" style="padding-bottom:4px;">내    용 :</label>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
   </div>
   <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;flex-shrink:0;">
-    전송: Ctrl+S 또는 마지막 줄에 . 후 Enter  취소: Escape 또는 /q  이동: Tab/화살표
+    전송: Ctrl+S 또는 마지막 줄에 . 후 Enter
   </div>
 </div>`;
 
         renderRawHtmlScreenWithTopbar({
             leftLabel: 'MEMO',
-            centerLabel: flow.cardMode ? '축하카드 작성' : '편지 쓰기',
+            centerLabel: flow.cardMode ? '축하카드 작성' : (flow.isMemo ? '쪽지 보내기' : '편지 쓰기'),
             bodyHtml,
             screenEl,
             isMobile
         });
 
-        const targetEl = document.getElementById(targetId);
-        const bodyEl   = document.getElementById(bodyId);
+        const targetEl  = document.getElementById(targetId);
+        const subjectEl = document.getElementById(subjectId);
+        const bodyEl    = document.getElementById(bodyId);
+        const targetRowEl  = document.getElementById('memo-ed-target-row');
+        const subjectRowEl = document.getElementById('memo-ed-subject-row');
+        const bodyRowEl   = document.getElementById('memo-ed-body-row');
         if (!targetEl || !bodyEl) return;
 
         targetEl.value = String(flow.target || state._memoTarget || '').trim();
+        if (subjectEl) {
+            subjectEl.value = String(flow.subject || '').trim();
+        }
         bodyEl.value   = Array.isArray(flow.bodyLines) ? flow.bodyLines.join('\n') : '';
 
         const promptRow = document.getElementById('terminal-prompt-row');
@@ -435,16 +536,44 @@ export function createMemoScreens(deps) {
         flow._textareaActive = true;
         setHint('전송: Ctrl+S 또는 마지막 줄에 .  취소: Escape  이동: Tab/화살표');
         setPrompt('내용 >>');
+        setReady?.(true);
+
+        const onTargetRowClick = (e) => {
+            if (e.target !== targetEl) {
+                targetEl.focus();
+            }
+        };
+
+        const onSubjectRowClick = (e) => {
+            if (subjectEl && e.target !== subjectEl) {
+                subjectEl.focus();
+            }
+        };
+
+        const onBodyRowClick = (e) => {
+            if (e.target !== bodyEl) {
+                bodyEl.focus();
+            }
+        };
+
+        targetRowEl?.addEventListener('click', onTargetRowClick);
+        subjectRowEl?.addEventListener('click', onSubjectRowClick);
+        bodyRowEl?.addEventListener('click', onBodyRowClick);
 
         function cleanup() {
             flow._textareaActive = false;
             flow._saving = false;
             targetEl.disabled = false;
+            if (subjectEl) subjectEl.disabled = false;
             bodyEl.disabled = false;
             if (promptRow) promptRow.style.display = '';
             if (cmdInput) cmdInput.style.display = '';
 
+            targetRowEl?.removeEventListener('click', onTargetRowClick);
+            subjectRowEl?.removeEventListener('click', onSubjectRowClick);
+            bodyRowEl?.removeEventListener('click', onBodyRowClick);
             targetEl.removeEventListener('keydown', onTargetKey);
+            if (subjectEl) subjectEl.removeEventListener('keydown', onSubjectKey);
             bodyEl.removeEventListener('keydown', onBodyKey);
             if (cmdInput) {
                 cmdInput.removeEventListener('keydown', onCmdKey);
@@ -453,8 +582,9 @@ export function createMemoScreens(deps) {
 
         function doSave() {
             if (flow._saving) return;
-            const targetVal = targetEl.value.trim();
-            const bodyVal   = bodyEl.value.trim();
+            const targetVal  = targetEl.value.trim();
+            const subjectVal = subjectEl ? subjectEl.value.trim() : '';
+            const bodyVal    = bodyEl.value.trim();
 
             if (!targetVal) {
                 setHint('받는 사람 아이디를 입력해주세요.');
@@ -470,6 +600,7 @@ export function createMemoScreens(deps) {
             flow._saving = true;
             const expanded = expandRecipients(targetVal);
             flow.target = expanded;
+            flow.subject = subjectVal;
             state._memoTarget = expanded;
 
             const lines = bodyEl.value.split('\n');
@@ -477,11 +608,13 @@ export function createMemoScreens(deps) {
             flow.bodyLines = lines;
 
             targetEl.disabled = true;
+            if (subjectEl) subjectEl.disabled = true;
             bodyEl.disabled = true;
 
             const releaseFields = () => {
                 flow._saving = false;
                 targetEl.disabled = false;
+                if (subjectEl) subjectEl.disabled = false;
                 bodyEl.disabled = false;
             };
 
@@ -499,6 +632,9 @@ export function createMemoScreens(deps) {
                 cleanup();
                 flow.stage = 'letter_type';
                 appendMemoWriteLine('[받는 사람]', flow.target);
+                if (flow.subject) {
+                    appendMemoWriteLine('[제목]', flow.subject);
+                }
                 appendMemoWriteLine('[내용]', flow.bodyLines.join('\n'));
                 appendMemoWriteLine('[편지 종류 선택]', '');
                 for (let i = 1; i <= 8; i += 1) {
@@ -518,8 +654,27 @@ export function createMemoScreens(deps) {
             if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
             if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
                 e.preventDefault();
+                if (subjectEl) {
+                    subjectEl.focus();
+                    subjectEl.setSelectionRange(0, 0);
+                } else {
+                    bodyEl.focus();
+                    bodyEl.setSelectionRange(0, 0);
+                }
+            }
+        }
+
+        function onSubjectKey(e) {
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
+            if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
+            if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+                e.preventDefault();
                 bodyEl.focus();
                 bodyEl.setSelectionRange(0, 0);
+            } else if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
+                e.preventDefault();
+                targetEl.focus();
+                targetEl.setSelectionRange(targetEl.value.length, targetEl.value.length);
             }
         }
 
@@ -536,8 +691,13 @@ export function createMemoScreens(deps) {
             }
             if ((e.key === 'ArrowUp' && isOnFirstLine(bodyEl)) || (e.key === 'Tab' && e.shiftKey)) {
                 e.preventDefault();
-                targetEl.focus();
-                targetEl.setSelectionRange(targetEl.value.length, targetEl.value.length);
+                if (subjectEl) {
+                    subjectEl.focus();
+                    subjectEl.setSelectionRange(subjectEl.value.length, subjectEl.value.length);
+                } else {
+                    targetEl.focus();
+                    targetEl.setSelectionRange(targetEl.value.length, targetEl.value.length);
+                }
                 return;
             }
             if (e.key === 'Enter') {
@@ -558,6 +718,7 @@ export function createMemoScreens(deps) {
         }
 
         targetEl.addEventListener('keydown', onTargetKey);
+        if (subjectEl) subjectEl.addEventListener('keydown', onSubjectKey);
         bodyEl.addEventListener('keydown', onBodyKey);
         if (cmdInput) {
             cmdInput.addEventListener('keydown', onCmdKey);
@@ -894,6 +1055,7 @@ export function createMemoScreens(deps) {
         handleMemoRawInput,
         handleMemoSubmit,
         showMemoList,
+        showMemoMenu,
         showMemoView,
         showMemoViewPage,
         showMemoWrite

@@ -23,6 +23,7 @@ export function createGlobalNavigationCommandHandler(deps) {
     showLogin,
     showConfirm,
     showMemoList,
+    showMemoMenu,
     showMemoWrite,
     settingsService,
     apiFetch
@@ -362,18 +363,33 @@ export function createGlobalNavigationCommandHandler(deps) {
       return false;
     }
 
-    // [LOG_ID: 20260713_1160] 전역 ME / MEMO / CMAIL 명령어 배선 추가 (나우누리 편지함 조회)
-    // [LOG_ID: 20260714_1900] RMAIL(편지읽기)/MAIL(전자우편 진입) 추가 — 원전(NOW_MENU.DAT)의
-    // "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)" 4개 명령
-    // 중 RMAIL/MAIL만 배선이 빠져 있었다(사용자 지적).
-    if (cmd === 'ME' || cmd === 'MEMO' || cmd === 'CMAIL' || cmd === 'RMAIL' || cmd === 'MAIL') {
+    // [LOG_ID: 20260807_1405] ME / MEMO / MAIL 명령어 실행 시 전자우편 대문 메뉴(showMemoMenu)로 진입하고
+    // RMAIL(편지읽기, 받은상자) / CMAIL(배달확인/취소, 보낸상자)은 해당 상자 목록으로 진입한다.
+    if (cmd === 'ME' || cmd === 'MEMO' || cmd === 'MAIL') {
+      if (state.user?.isGuest) {
+        setHint('쪽지함은 로그인 후 사용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+      if (typeof showMemoMenu === 'function') {
+        await showMemoMenu();
+        return true;
+      }
+      if (typeof showMemoList === 'function') {
+        state._memoBox = 'inbox';
+        await showMemoList();
+        return true;
+      }
+      return false;
+    }
+
+    if (cmd === 'CMAIL' || cmd === 'RMAIL') {
       if (state.user?.isGuest) {
         setHint('쪽지함은 로그인 후 사용하실 수 있습니다.');
         setDefaultPrompt();
         return true;
       }
       if (typeof showMemoList === 'function') {
-        // [LOG_ID: 20260731_1430] CMAIL(배달확인/취소)은 보낸편지함(sent), 그 외(ME/MEMO/RMAIL/MAIL)는 받은편지함(inbox)으로 진입한다.
         state._memoBox = cmd === 'CMAIL' ? 'sent' : 'inbox';
         await showMemoList();
         return true;

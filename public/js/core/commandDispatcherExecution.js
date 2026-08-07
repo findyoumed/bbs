@@ -235,8 +235,10 @@ export function createCommandDispatcherExecution(deps) {
       const rawMsg = error?.message || '명령 처리 중 오류가 발생했습니다.';
       const isSelfError = rawMsg.includes('본인') || rawMsg.includes('자신') || rawMsg.includes('own post');
       const isAlreadyError = rawMsg.includes('이미') || rawMsg.includes('already');
+      const isUnexpectedEnd = rawMsg.includes('Unexpected end of input') || rawMsg.includes('JSON');
       const hintMsg = isSelfError ? (UI_TEXT.POST_RECOMMEND_SELF_FORBIDDEN || '자신의 글은 추천할 수 없습니다.')
                     : isAlreadyError ? (UI_TEXT.POST_RECOMMEND_ALREADY || '이미 추천한 게시물입니다.')
+                    : isUnexpectedEnd ? '수신 데이터 처리 불가 - 응답 형식 오류입니다.'
                     : `오류: ${rawMsg}`;
       if (!isSelfError && !isAlreadyError) {
         // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리

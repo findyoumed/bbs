@@ -5,6 +5,7 @@ export function createMemoCommandHandler(deps) {
         apiFetch,
         showMain,
         showMemoList,
+        showMemoMenu,
         showMemoView,
         showMemoViewPage,
         showMemoWrite,
@@ -193,6 +194,47 @@ export function createMemoCommandHandler(deps) {
     }
 
     return async function handleMemoCommand({ input, rawCmd, cmd, context }) {
+        // [LOG_ID: 20260807_1405] 나우누리 원전(docs/NOWNURI_SCREENS_FULL_DECODED.txt 91행) 전자우편 서브메뉴 명령 가로채기
+        if (state.screen === 'memo-menu') {
+            if (state._absentStage) {
+                return await handleAbsentFlowInput(input);
+            }
+            if (cmd === '1' || cmd === 'RMAIL' || cmd === 'R' || cmd === 'I') {
+                state._memoBox = 'inbox';
+                await showMemoList();
+                return true;
+            }
+            if (cmd === '2' || cmd === 'WMAIL' || cmd === 'W') {
+                await showMemoWrite();
+                return true;
+            }
+            if (cmd === '3' || cmd === 'CMAIL' || cmd === 'S') {
+                state._memoBox = 'sent';
+                await showMemoList();
+                return true;
+            }
+            if (cmd === '5' || cmd === 'GRP') {
+                const groups = listGroups();
+                const names = Object.keys(groups);
+                setHint(names.length
+                    ? `저장된 그룹: ${names.map((n) => `@${n}(${groups[n].split(',').length})`).join(', ')} · GRP+ 이름 id,id 저장 / GRP- 이름 삭제`
+                    : '저장된 그룹이 없습니다. GRP+ 가족 hong,kim,lee 처럼 만드세요.');
+                return true;
+            }
+            if (cmd === '6' || cmd === 'ABSENT' || cmd === '부재') {
+                return await beginAbsentFlow();
+            }
+            if (cmd === '7') {
+                setHint('1: 편지 읽기 (RMAIL), 2: 편지 쓰기 (WMAIL), 3: 배달 확인 (CMAIL), 5: 주소록, 6: 부재 설정');
+                return true;
+            }
+            if (cmd === 'T' || cmd === 'P' || cmd === 'M' || cmd === 'B') {
+                await showMain();
+                return true;
+            }
+            return false;
+        }
+
         if (state.screen === 'memo-list') {
             // [LOG_ID: 20260722_3000] 부재통지(ABSENT/NOMAN) 단계별 입력 가로채기 — 하이텔·천리안
             // 두 책 모두 확인된 "시작일 → 종료일 → 사유" 3단계 흐름(beginAbsentFlow/handleAbsentFlowInput).
@@ -275,8 +317,12 @@ export function createMemoCommandHandler(deps) {
                 await showMain();
                 return true;
             }
-            if (cmd === 'P' || cmd === 'M' || cmd === 'B') {
-                await showMain();
+            if (cmd === 'P' || cmd === 'M' || cmd === 'B' || cmd === 'L') {
+                if (typeof showMemoMenu === 'function') {
+                    await showMemoMenu();
+                } else {
+                    await showMain();
+                }
                 return true;
             }
             if (cmd === 'W') {

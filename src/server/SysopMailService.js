@@ -42,6 +42,43 @@ class SysopMailService {
 
     return { id: data?.id || null };
   }
+
+  // [LOG_ID: 20260807_1435] 듀얼 메일/쪽지 시스템용 외부 인터넷 이메일 발송 메서드
+  async sendExternalEmail({ to, subject, content, fromUserId }) {
+    const safeTo = String(to || '').trim().toLowerCase();
+    const safeSubject = String(subject || '').trim().slice(0, 200) || '(제목 없음)';
+    const safeContent = String(content || '').trim();
+    const safeUserId = String(fromUserId || 'guest').trim();
+
+    if (!safeTo || !safeTo.includes('@')) {
+      throw createHttpError(400, '올바른 이메일 주소를 입력해주세요.');
+    }
+    if (!safeContent) {
+      throw createHttpError(400, '내용을 입력해주세요.');
+    }
+
+    if (!this.enabled || !this.client) {
+      // API 키가 미설정된 테스트/로컬 환경에서는 시뮬레이션 성공 반환
+      console.log(`[MailSimulate] External email to ${safeTo} from ${safeUserId}: ${safeSubject}`);
+      return { id: `sim_${Date.now()}`, simulated: true };
+    }
+
+    const { data, error } = await this.client.emails.send({
+      from: this.fromEmail,
+      to: safeTo,
+      subject: `[01410 PC통신] ${safeSubject}`,
+      text: `발신자: ${safeUserId}\n\n${safeContent}`
+    });
+
+    if (error) {
+      const errorMessage = typeof error === 'string'
+        ? error
+        : (error?.message || JSON.stringify(error));
+      throw createHttpError(502, `이메일 발송 실패: ${errorMessage}`);
+    }
+
+    return { id: data?.id || null };
+  }
 }
 
 function createSysopMailServiceFromEnv(env = process.env) {

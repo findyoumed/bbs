@@ -77,6 +77,9 @@ function extractTopbarModel(rows) {
   if (pageLabelMatch) {
     rightLabel = pageLabelMatch[1];
     remainder = remainder.slice(0, pageLabelMatch.index);
+  } else {
+    // [LOG_ID: 20260807_1645] 전화번호/레거시 연락처 문구(☎ 02-590-3800 등)가 상단바 중앙 제목에 노출되는 현상 차단.
+    remainder = remainder.replace(/[\s\u260E\u260F]*\d{2,4}-\d{3,4}-\d{4}\s*$/, '');
   }
 
   return {

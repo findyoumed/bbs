@@ -1667,6 +1667,54 @@ body[data-screen="news-view"] #terminal-screen {
     overflow-y: hidden !important;
 }
 
+#terminal-wrapper input::placeholder,
+#terminal-wrapper textarea::placeholder {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+#terminal-wrapper input::-webkit-input-placeholder,
+#terminal-wrapper textarea::-webkit-input-placeholder {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+#terminal-wrapper input::-moz-placeholder,
+#terminal-wrapper textarea::-moz-placeholder {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+/* [LOG_ID: 20260807_1417] Chrome/WebKit placeholder vendor prefix 분리 선언으로 순백색(#ffffff) 강제 */
+#memo-ed-target,
+#memo-ed-body {
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+#memo-ed-target::placeholder,
+#memo-ed-body::placeholder {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+#memo-ed-target::-webkit-input-placeholder,
+#memo-ed-body::-webkit-input-placeholder {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+#memo-ed-target::-moz-placeholder,
+#memo-ed-body::-moz-placeholder {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
 body[data-screen="news-view"] #terminal-screen {
     /* [LOG: 20260707_1528] 기존 570px 최소 높이는 작은 PC 뷰포트에서 footer와 충돌해 스크롤을 만들었다. */
     min-height: 0 !important;
@@ -1976,8 +2024,20 @@ body[data-print-view="true"] .ansi-screen {
 
 #terminal-wrapper input::placeholder,
 #terminal-wrapper textarea::placeholder {
-    color: #fff !important;
-    opacity: 1;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+/* [LOG_ID: 20260807_1412] 편지/쪽지 쓰기 폼 입력창(#memo-ed-target, #memo-ed-body) 폰트 및 캐럿 색상을 #ffffff 순백색으로 강제 */
+#memo-ed-target,
+#memo-ed-body,
+#memo-ed-target::placeholder,
+#memo-ed-body::placeholder {
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
 }
 
 
