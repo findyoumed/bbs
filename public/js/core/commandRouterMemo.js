@@ -6,6 +6,7 @@ export function createMemoCommandHandler(deps) {
         showMain,
         showMemoList,
         showMemoMenu,
+        showMemoHelp,
         showMemoView,
         showMemoViewPage,
         showMemoWrite,
@@ -170,7 +171,7 @@ export function createMemoCommandHandler(deps) {
         }
 
         const answer = String(input || '').trim().toUpperCase();
-        if (answer === 'Y' || answer === 'YES') {
+        if (!answer || answer === 'Y' || answer === 'YES') {
             setHint?.('쪽지를 삭제하는 중입니다..');
             await apiFetch(`/api/memos/${pending.memoId}`, { method: 'DELETE' });
             state._memoDeleteConfirm = null;
@@ -178,7 +179,7 @@ export function createMemoCommandHandler(deps) {
             return true;
         }
 
-        if (!answer || answer === 'N' || answer === 'NO' || answer === 'P' || answer === 'M' || answer === 'B') {
+        if (answer === 'N' || answer === 'NO' || answer === 'P' || answer === 'M' || answer === 'B') {
             const memoId = pending.memoId;
             state._memoDeleteConfirm = null;
             await showMemoView(memoId, true);
@@ -194,6 +195,11 @@ export function createMemoCommandHandler(deps) {
     }
 
     return async function handleMemoCommand({ input, rawCmd, cmd, context }) {
+        if (state.screen === 'memo-help') {
+            await showMemoMenu();
+            return true;
+        }
+
         // [LOG_ID: 20260807_1405] 나우누리 원전(docs/NOWNURI_SCREENS_FULL_DECODED.txt 91행) 전자우편 서브메뉴 명령 가로채기
         if (state.screen === 'memo-menu') {
             if (state._absentStage) {
@@ -224,8 +230,12 @@ export function createMemoCommandHandler(deps) {
             if (cmd === '6' || cmd === 'ABSENT' || cmd === '부재') {
                 return await beginAbsentFlow();
             }
-            if (cmd === '7') {
-                setHint('1: 편지 읽기 (RMAIL), 2: 편지 쓰기 (WMAIL), 3: 배달 확인 (CMAIL), 5: 주소록, 6: 부재 설정');
+            if (cmd === '7' || cmd === 'HELP' || cmd === 'H') {
+                if (typeof showMemoHelp === 'function') {
+                    await showMemoHelp();
+                } else {
+                    setHint('1: 편지 읽기 (RMAIL), 2: 편지 쓰기 (WMAIL), 3: 배달 확인 (CMAIL), 5: 주소록, 6: 부재 설정');
+                }
                 return true;
             }
             if (cmd === 'T' || cmd === 'P' || cmd === 'M' || cmd === 'B') {

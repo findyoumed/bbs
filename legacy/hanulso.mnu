@@ -264,7 +264,7 @@
 
 		<!-- 04. 전자우편(쪽지함) -->
 		<item type="memo" id="bbs_memo" door="4" go="memo" access_level="1">
-			<name>전자우편 (MEMO)</name>
+			<name>전자우편 (MAIL)</name>
 			<header></header>
 			<footer></footer>
 		</item>

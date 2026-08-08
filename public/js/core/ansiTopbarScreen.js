@@ -103,7 +103,7 @@ function buildTopbarHtml(model) {
   const rightLabel = escapeHtml(model?.rightLabel || '');
 
   return `
-<div class="retro-topbar retro-topbar--ansi" data-layout-mode="${layoutMode}" data-layout-cols="${layoutCols}">
+<div class="retro-topbar retro-topbar--ansi" data-layout-mode="${layoutMode}" data-layout-cols="${layoutCols}" onwheel="event.preventDefault();" style="user-select:none;overflow:hidden;">
   <div class="retro-topbar-row1">
     <a class="retro-topbar-left" href="/" data-menu-path="top" aria-label="초기화면으로 이동">${siteLabel}</a>
     <span class="retro-topbar-line">────────────────────────────────────────────────────────────────────────────────</span>
@@ -137,7 +137,7 @@ export function renderRawHtmlScreenWithTopbar({ leftLabel = '', centerLabel = ''
     rightLabel
   };
 
-  const html = `<div class="ansi-screen" data-layout-mode="${layoutMode}" data-layout-cols="${layoutCols}">${buildTopbarHtml(model)}<div class="ansi-screen-body">${bodyHtml}</div></div>`;
+  const html = `<div class="ansi-screen" data-layout-mode="${layoutMode}" data-layout-cols="${layoutCols}" style="overflow:hidden;">${buildTopbarHtml(model)}<div class="ansi-screen-body">${bodyHtml}</div></div>`;
 
   if (screenEl) {
     screenEl.innerHTML = html;

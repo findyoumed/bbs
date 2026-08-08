@@ -92,7 +92,7 @@ const createMemoScreens = createLazyObjectFactory(
       ...buildersModule.createMemoAnsiBuilders(deps)
     });
   },
-  ['cancelMemoWrite', 'handleMemoRawInput', 'handleMemoSubmit', 'showMemoList', 'showMemoMenu', 'showMemoView', 'showMemoViewPage', 'showMemoWrite']
+  ['cancelMemoWrite', 'handleMemoRawInput', 'handleMemoSubmit', 'showMemoList', 'showMemoMenu', 'showMemoHelp', 'showMemoView', 'showMemoViewPage', 'showMemoWrite']
 );
 const createMyInfoScreens = createLazyObjectFactory(
   () => import('./myInfoScreens.js').then((module) => module.createMyInfoScreens),

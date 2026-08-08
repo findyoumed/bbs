@@ -10,7 +10,32 @@ const {
 class MemoryMemoRepository {
   constructor() {
     this.nextId = 1;
-    this.memos = [];
+    this.memos = [
+      {
+        id: this.nextId++,
+        senderUserId: 'sysop',
+        recipientUserId: 'user1',
+        title: '안녕',
+        content: '안녕...\n반갑습니다. 시험 발송 편지입니다.',
+        isRead: true,
+        createdAt: '2026-08-01T03:38:00.000Z',
+        readAt: '2026-08-01T03:40:00.000Z',
+        senderArchived: false,
+        recipientArchived: false
+      },
+      {
+        id: this.nextId++,
+        senderUserId: 'sysop',
+        recipientUserId: 'user2',
+        title: '테스트',
+        content: '테스트\n안녕...\n보낸편지함 테스트용 문구입니다.',
+        isRead: false,
+        createdAt: '2026-08-01T03:39:00.000Z',
+        readAt: null,
+        senderArchived: false,
+        recipientArchived: false
+      }
+    ];
   }
 
   getMeta() {

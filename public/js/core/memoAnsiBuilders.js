@@ -82,7 +82,11 @@ export function createMemoAnsiBuilders(deps) {
         ? (memo.recipientUserId || 'guest')
         : (memo.senderUserId || 'guest');
       const marker = memoTypeMarker(memo);
-      const cleanTitle = stripMemoTypeTag(memo.title) || memo.content || '';
+      let rawTitle = stripMemoTypeTag(memo.title).split(/[\r\n]+/)[0].trim();
+      if (!rawTitle && memo.content) {
+        rawTitle = String(memo.content).split(/[\r\n]+/)[0].trim();
+      }
+      const cleanTitle = rawTitle || '(제목 없음)';
       const markerText = marker ? `[${marker}]` : '';
       const availableTitleWidth = titleWidth - (markerText ? displayWidth(markerText) + 1 : 0);
       const user = fitCell(userField, idWidth);
@@ -111,9 +115,10 @@ export function createMemoAnsiBuilders(deps) {
       return line;
     }
 
-    const boxTitle = isArchive ? '편지보관함' : (isSent ? '보낸쪽지함' : '받는쪽지함');
+    const boxTitle = isArchive ? '편지보관함' : (isSent ? '보낸편지함' : '받은편지함');
+    const leftLabel = isArchive ? 'MAIL' : (isSent ? 'CMAIL' : 'RMAIL');
     const parts = [
-      buildTopHeader({ leftLabel: 'MEMO', centerLabel: boxTitle }, `(총 ${memos.length}통)`, targetCols),
+      buildTopHeader({ leftLabel, centerLabel: boxTitle }, `(총 ${memos.length}통)`, targetCols),
       colHeader(),
       ansiHLine(targetCols, 8)
     ];
@@ -137,11 +142,11 @@ export function createMemoAnsiBuilders(deps) {
     // buildTopHeader의 4줄은 renderAnsiScreenWithTopbar가 본문에서 떼어내므로,
     // 총 24줄(80x24 PC통신 프레임) 예산에 맞춰 나머지를 빈 줄로 채운다.
     const joinedLines = parts.join('\n').split('\n');
-    while (joinedLines.length < 24) {
+    while (joinedLines.length < 23) {
       joinedLines.push('');
     }
 
-    return joinedLines.join('\n');
+    return joinedLines.slice(0, 23).join('\n');
   }
 
   // [LOG_ID: 20260713_1000] 보낸 편지 상세 조회 시 보낸이 대신 '받는이: ID'로 표시하도록 currentUserId 전달받음
@@ -178,15 +183,13 @@ export function createMemoAnsiBuilders(deps) {
     if (typeTag) {
       headerLines.push(ansiColor(14) + fitCell('종류', labelWidth) + ' : ' + ansiColor(9) + fitCell(typeTag, valueWidth) + ANSI_RESET);
     }
+    let singleLineTitle = '';
     if (cleanTitle) {
-      // [LOG_ID: 20260726_0340] 제목은 서버에서 최대 60자까지 저장되는데(MemoRepositoryShared.js)
-      // fitCell 한 줄 절삭이라 긴 제목이 말줄임표 없이 그냥 잘렸다(게시글 상세보기/토론의 광장
-      // 안건 보기와 동일한 버그 클래스 — 실측 재현). wrapAnsiText로 여러 줄로 접는다.
-      const titleLabel = fitCell('제목', labelWidth);
-      const titleIndent = ' '.repeat(labelWidth + 3);
-      wrapAnsiText(cleanTitle, valueWidth).forEach((line, i) => {
-        headerLines.push(ansiColor(14) + (i === 0 ? `${titleLabel} : ` : titleIndent) + ansiColor(15) + line + ANSI_RESET);
-      });
+      singleLineTitle = cleanTitle.split(/[\r\n]+/)[0].trim();
+      if (singleLineTitle) {
+        const titleLabel = fitCell('제목', labelWidth);
+        headerLines.push(ansiColor(14) + `${titleLabel} : ` + ansiColor(15) + fitCell(singleLineTitle, valueWidth) + ANSI_RESET);
+      }
     }
     headerLines.push(ansiHLine(targetCols, 8));
 
@@ -206,16 +209,25 @@ export function createMemoAnsiBuilders(deps) {
       }
     }
 
+    const cleanSingleTitle = stripMemoTypeTag(singleLineTitle).trim();
+    const rawBodyLines = bodyText.split('\n');
+    if (cleanSingleTitle && rawBodyLines.length > 0) {
+      const cleanFirstBodyLine = stripMemoTypeTag(rawBodyLines[0]).trim();
+      if (cleanFirstBodyLine === cleanSingleTitle || cleanFirstBodyLine.startsWith(cleanSingleTitle)) {
+        rawBodyLines.shift();
+      }
+    }
+
     const contentLines = [];
-    bodyText.split('\n').forEach((line) => {
+    rawBodyLines.forEach((line) => {
       wrapAnsiText(line, targetCols).forEach((wrapped) => {
         contentLines.push(wrapped);
       });
     });
 
-    const totalLines = 24;
+    const totalLines = 23;
     const topHeaderLines = 4; // buildTopHeader() 반환 줄 수
-    const baseLines = Math.max(3, totalLines - topHeaderLines - headerLines.length);
+    const baseLines = Math.max(3, totalLines - topHeaderLines - headerLines.length - 1);
 
     const pages = [];
     let currentLineIdx = 0;
@@ -233,7 +245,7 @@ export function createMemoAnsiBuilders(deps) {
     const visibleBodyLines = pages[currentPage - 1] || [];
     const pageLabel = buildPageLabel(currentPage, pageCount);
 
-    const parts = [buildTopHeader({ leftLabel: 'MEMO', centerLabel: '쪽지 보기' }, pageLabel, targetCols)];
+    const parts = [buildTopHeader({ leftLabel: 'MEMO', centerLabel: '편지 읽기' }, pageLabel, targetCols)];
     parts.push(...headerLines);
     visibleBodyLines.forEach((line) => {
       parts.push(ansiColor(15) + line + ANSI_RESET);
@@ -244,7 +256,6 @@ export function createMemoAnsiBuilders(deps) {
       joinedLines.push(ANSI_RESET);
     }
 
-    // [LOG_ID: 20260807_1730] 중복 삽입된 보기 함수 블록이 닫는 중괄호를 삼켜 지연 모듈 import가 실패했다.
     return {
       text: joinedLines.slice(0, totalLines).join('\n'),
       pageNo: currentPage,
@@ -260,14 +271,13 @@ export function createMemoAnsiBuilders(deps) {
 
     const parts = [
       buildTopHeader({ leftLabel: 'MAIL', centerLabel: '전자우편' }, '', targetCols),
-      ansiHLine(targetCols, 8),
       '',
       ansiColor(15) + '  1. 편지 읽기         (RMAIL)' + ANSI_RESET,
       ansiColor(15) + '  2. 편지 쓰기         (WMAIL)' + ANSI_RESET,
-      ansiColor(15) + '  3. 배달 확인/취소     (CMAIL)' + ANSI_RESET,
+      ansiColor(15) + '  3. 배달 확인         (CMAIL)' + ANSI_RESET,
       '',
       ansiColor(15) + '  5. 동보편지 주소록   (GRP)' + ANSI_RESET,
-      ansiColor(15) + '  6. 부재 설정/해제     (ABSENT)' + ANSI_RESET,
+      ansiColor(15) + '  6. 부재 설정         (ABSENT)' + ANSI_RESET,
       ansiColor(15) + '  7. 전자우편 이용안내' + ANSI_RESET,
       ''
     ];

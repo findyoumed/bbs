@@ -143,7 +143,9 @@ export function createAppFactoryScreens(deps) {
   const memoScreens = createMemoScreens({
     ...screenDeps,
     apiFetch,
+    buildMenuHotspotsFromRows,
     getMenuNodeByKey: menuService.getMenuNodeByKey,
+    renderMenuHotspots,
     showMain
   });
   // [LOG_ID: 20260720_2300] GUIDE 건의하기 — 시삽 이메일 발송 화면.

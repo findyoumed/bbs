@@ -49,6 +49,9 @@ export function createMenuService(deps) {
     if (getMenuNodeKey(nextNode) === 'pds') {
       nextNode.name = '자료실';
     }
+    if (getMenuNodeKey(nextNode) === 'memo') {
+      nextNode.name = '전자우편 (MAIL)';
+    }
     nextNode.children = Array.isArray(nextNode.children)
       ? nextNode.children.map((child) => applyMenuNodeOverrides(child))
       : [];
@@ -181,7 +184,8 @@ export function createMenuService(deps) {
 
   function getMenuNodeTitle(node) {
     const label = getMenuNodeLabel(node), code = getMenuNodeCode(node);
-    return (!code || label.toUpperCase().includes(`(${code})`)) ? label : `${label} (${code})`;
+    const hasParenthesizedCode = /\([A-Z0-9_-]+\)/i.test(label);
+    return (!code || hasParenthesizedCode || label.toUpperCase().includes(`(${code})`)) ? label : `${label} (${code})`;
   }
 
   function getMenuNodeRoutePath(nodeOrKey) {

@@ -3526,9 +3526,7 @@ body[data-screen="post-write"] .ansi-screen-body,
 body[data-screen="memo-write"] .ansi-screen-body {
     flex: 1;
     min-height: 0;
+    overflow: hidden !important;
     display: flex;
     flex-direction: column;
 }
-
-
-

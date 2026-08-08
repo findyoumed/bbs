@@ -99,7 +99,7 @@ export function createMenuNavigationActions(deps) {
     // "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)"로
     // GO 이동이 가능했다. 명령어(ME/MEMO/RMAIL/CMAIL/WMAIL)로는 이미 직접 입력 가능했지만
     // GO 접두 형태는 메뉴/게시판만 매칭하고 CMD_META로 안 넘어가 빠져 있었다(사용자 지적).
-    if (normalized === 'MAIL') {
+    if (normalized === 'MAIL' || normalized === 'MEMO' || normalized === 'ME') {
       if (typeof refs.showMemoMenu === 'function') {
         await refs.showMemoMenu();
         return true;

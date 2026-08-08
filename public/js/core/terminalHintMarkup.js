@@ -266,6 +266,16 @@ export function createTerminalHintMarkup(deps) {
       return token ? stash(token) : match;
     });
 
+    // [LOG_ID: 20260808_1237] 작성 화면 단축 힌트 항목(Ctrl+S, Escape, Tab, 전송, 취소 등)에 마우스 호버링 및 클릭 핫스팟 부여
+    source = source.replace(/\b(Ctrl\+S|Escape|Tab)\b/gi, (match) => {
+      const normalizedCmd = match.toUpperCase();
+      return stash(`<span class="cmd-token cmd-clickable" data-cmd-fill="${esc(normalizedCmd)}" data-tip="${esc(match)}">${esc(match)}</span>`);
+    });
+
+    source = source.replace(/([가-힣A-Za-z0-9_]+):\s*(Ctrl\+S|Escape|Tab)/gi, (match, label, cmd) => {
+      return stash(`<span class="cmd-token cmd-clickable" data-cmd-fill="${esc(cmd)}" data-tip="${esc(label)}">${esc(label)}: ${esc(cmd)}</span>`);
+    });
+
     source = source.replace(/\b([A-Z]{1,8}):([^\s,()<>]{1,10})/g, (match, cmd, label) => {
       if (cmd === 'HTTP' || cmd === 'HTTPS') {
         return match;

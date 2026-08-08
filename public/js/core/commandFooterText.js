@@ -19,6 +19,8 @@ export const CMD_ORDER = {
   policy: ['F:다음', 'B:이전', 'P', 'GO', 'H'],
   newsMenu: ['P', 'T', 'GO', 'LOGIN', 'H'],
   weatherMenu: ['P', 'T', 'GO', 'H'],
+  memoMenu: ['P', 'T', 'GO', 'W:쓰기', 'R:읽기', 'C:배달확인', 'H'],
+  memoHelp: ['P:메뉴', 'T', 'GO', 'H'],
   // [LOG_ID: 20260725_0900] 사용자 요청 — "모바일에서 명령어힌트바 공지사항글의 힌트바처럼
   // 구성해줘"(postView가 이미 쓰는 짧은 라벨 + T 생략 스타일과 통일). '다음페이지'/'이전페이지'
   // 대신 '다음'/'이전'을 써도 shouldShowFooterToken의 페이지네이션 숨김 검사(20260723_2240)가
@@ -139,6 +141,8 @@ const SCREEN_TO_CATEGORY = {
   'news-view': 'serviceArticle',
   'weather-menu': 'weatherMenu',
   'weather-view': 'weatherView',
+  'memo-menu': 'memoMenu',
+  'memo-help': 'memoHelp',
   'memo-list': 'memoList',
   'memo-view': 'memoView',
   'memo-write': 'memoWrite',
@@ -214,13 +218,13 @@ export function createCommandFooterTextUtils(deps) {
     // [LOG_ID: 20260716_1800] 하이텔 (10)-5 편지보관함(mbox) 추가 — 상자가 셋이 됐다.
     if (category === 'memoList' && state) {
       if (state._memoBox === 'archive') {
-        order = ['P', 'T', 'GO', 'I:받은쪽지', 'S:보낸쪽지', 'KEEP:보관해제', 'H'];
+        order = ['P', 'T', 'GO', 'I:받은편지', 'S:보낸편지', 'KEEP:보관해제', 'H'];
       } else if (state._memoBox === 'sent') {
-        order = ['P', 'T', 'GO', 'I:받은쪽지', 'MB:보관함', 'CM:발송취소', 'KEEP:보관', 'H'];
+        order = ['P', 'T', 'GO', 'I:받은편지', 'MB:보관함', 'CM:발송취소', 'KEEP:보관', 'H'];
       } else {
         // [LOG_ID: 20260720_1740] WMAIL:올리기(나우누리), WC:축하카드(vmail), GRP:그룹(주소록) 3사 기능 힌트 전역 통합
         // [LOG_ID: 20260801_1035] WMAIL:올리기 토큰 숨김 및 K:보관을 KEEP:보관으로 변경
-        order = ['P', 'T', 'GO', 'W:쓰기', 'WC:축하카드', 'GRP:그룹', 'S:보낸쪽지', 'MB:보관함', 'KEEP:보관', 'H'];
+        order = ['P', 'T', 'GO', 'W:쓰기', 'WC:축하카드', 'GRP:그룹', 'S:보낸편지', 'MB:보관함', 'KEEP:보관', 'H'];
       }
     }
 

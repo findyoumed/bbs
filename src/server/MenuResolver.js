@@ -5,10 +5,17 @@ class MenuResolver {
     this.menuPath = menuPath;
     this.tree = null;
     this.lookup = null;
+    this.lastMtime = 0;
   }
 
   getTree() {
-    if (!this.tree) {
+    let mtime = 0;
+    try {
+      mtime = fs.statSync(this.menuPath).mtimeMs;
+    } catch (_) {}
+
+    if (!this.tree || mtime !== this.lastMtime) {
+      this.lastMtime = mtime;
       this.tree = this._loadTree();
       this.lookup = {};
       indexTree(this.tree, this.lookup);

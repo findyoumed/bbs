@@ -106,8 +106,9 @@ export function createContactSysopScreen(deps) {
     if (!flow) return;
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    const titleId = 'tosysop-ed-title';
-    const bodyId = 'tosysop-ed-body';
+    const targetId  = 'tosysop-ed-target';
+    const subjectId = 'tosysop-ed-subject';
+    const bodyId    = 'tosysop-ed-body';
     const sep = '─'.repeat(isMobile ? 40 : 76);
 
     const inputStyle = `
@@ -115,6 +116,8 @@ export function createContactSysopScreen(deps) {
       background: transparent;
       border: none;
       color: #ffffff !important;
+      caret-color: #ffffff !important;
+      -webkit-text-fill-color: #ffffff !important;
       font-family: inherit !important;
       font-size: inherit !important;
       line-height: inherit !important;
@@ -134,6 +137,8 @@ export function createContactSysopScreen(deps) {
       background: transparent;
       border: none;
       color: #ffffff !important;
+      caret-color: #ffffff !important;
+      -webkit-text-fill-color: #ffffff !important;
       font-family: inherit !important;
       font-size: inherit !important;
       line-height: inherit !important;
@@ -143,41 +148,82 @@ export function createContactSysopScreen(deps) {
       padding: 0;
       margin: 0;
       resize: none;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      overscroll-behavior: none !important;
     `;
 
     const bodyHtml = `
-<div style="display:flex;flex-direction:column;height:100%;overflow-y:auto;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
-  <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
-    <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">수    신 :&nbsp;</span>
-    <span style="color:#ffffff !important;font-family:inherit;">시삽 (SYSOP)</span>
+<style>
+  #${targetId}, #${subjectId} {
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    cursor: text !important;
+    overflow: hidden !important;
+  }
+  #${bodyId} {
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    cursor: text !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  .tosysop-ed-label {
+    white-space: nowrap;
+    user-select: none;
+    color: #ffffff !important;
+    font-family: inherit;
+    cursor: pointer !important;
+  }
+  .tosysop-ed-row {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+    gap: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .tosysop-ed-body-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    margin-top: 4px;
+    min-height: 4.4em;
+    cursor: pointer;
+    overflow: hidden !important;
+  }
+</style>
+<div onwheel="event.preventDefault();" style="display:flex;flex-direction:column;height:100%;overflow:hidden !important;overscroll-behavior:none !important;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
+  <div id="tosysop-ed-target-row" class="tosysop-ed-row">
+    <label for="${targetId}" class="tosysop-ed-label">받는 사람 :&nbsp;</label>
+    <input id="${targetId}" type="text" autocomplete="off" spellcheck="false" value="sysop" readonly style="${inputStyle};cursor:not-allowed;opacity:0.9;"/>
   </div>
-  <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
-    <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">제    목 :&nbsp;</span>
-    <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" maxlength="60" style="${inputStyle}" autofocus />
+  <div id="tosysop-ed-subject-row" class="tosysop-ed-row">
+    <label for="${subjectId}" class="tosysop-ed-label">제    목 :&nbsp;</label>
+    <input id="${subjectId}" type="text" autocomplete="off" spellcheck="false" maxlength="60" placeholder="" style="${inputStyle}"/>
   </div>
   <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
-  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
-    <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내    용 :</div>
+  <div id="tosysop-ed-body-row" class="tosysop-ed-body-wrapper">
+    <label for="${bodyId}" class="tosysop-ed-label" style="padding-bottom:4px;">내    용 :</label>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
-  </div>
-  <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;flex-shrink:0;">
-    저장: Ctrl+S 또는 마지막 줄에 . 후 Enter
   </div>
 </div>`;
 
     renderRawHtmlScreenWithTopbar({
-      leftLabel: 'TOSYSOP',
-      centerLabel: '시삽에게 건의하기 (글쓰기)',
+      leftLabel: 'WMAIL',
+      centerLabel: '건의하기',
       bodyHtml,
       screenEl,
       isMobile
     });
 
-    const titleEl = document.getElementById(titleId);
+    const subjectEl = document.getElementById(subjectId);
     const bodyEl = document.getElementById(bodyId);
-    if (!titleEl || !bodyEl) return;
+    if (!subjectEl || !bodyEl) return;
 
-    titleEl.value = String(flow.subject || '').slice(0, 60);
+    subjectEl.value = String(flow.subject || '').slice(0, 60);
     bodyEl.value = Array.isArray(flow.bodyLines) ? flow.bodyLines.join('\n') : '';
 
     const promptRow = typeof document !== 'undefined' ? document.getElementById('terminal-prompt-row') : null;
@@ -187,10 +233,9 @@ export function createContactSysopScreen(deps) {
       cmdInput.disabled = false;
     }
 
-    setHint('저장: Ctrl+S 또는 마지막 줄에 .  취소: Escape  이동: Tab/화살표');
-    setPrompt('내용 >>');
+    setHint('전송: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Escape  |  이동: Tab/화살표');
+    setPrompt('선택 >>');
     setReady?.(true);
-    focusCommandInput();
 
     function doSave() {
       submitContactSysop();
@@ -200,31 +245,31 @@ export function createContactSysopScreen(deps) {
       return ta.value.substring(0, ta.selectionStart).indexOf('\n') === -1;
     }
 
-    function onTitleKey(e) {
-      if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
+    function onSubjectKey(e) {
+      if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape') { e.preventDefault(); cancelContactSysop(); return; }
       if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault();
-        bodyEl.focus();
+        safeFocus(bodyEl);
         bodyEl.setSelectionRange(0, 0);
       }
     }
 
     function onBodyKey(e) {
-      if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
+      if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape') { e.preventDefault(); cancelContactSysop(); return; }
       if (e.key === 'Tab' && !e.shiftKey) {
         e.preventDefault();
         if (cmdInput) {
-          cmdInput.focus();
+          safeFocus(cmdInput);
           cmdInput.select();
         }
         return;
       }
       if ((e.key === 'ArrowUp' && isOnFirstLine(bodyEl)) || (e.key === 'Tab' && e.shiftKey)) {
         e.preventDefault();
-        titleEl.focus();
-        titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
+        safeFocus(subjectEl);
+        subjectEl.setSelectionRange(subjectEl.value.length, subjectEl.value.length);
         return;
       }
       if (e.key === 'Enter') {
@@ -240,14 +285,15 @@ export function createContactSysopScreen(deps) {
     }
 
     function onCmdKey(e) {
-      if (e.key === 'Tab' && e.shiftKey) {
+      if ((e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowUp') {
         e.preventDefault();
-        bodyEl.focus();
+        safeFocus(bodyEl);
+        bodyEl.setSelectionRange(bodyEl.value.length, bodyEl.value.length);
       }
     }
 
-    titleEl.oninput = (e) => { flow.subject = e.target.value; };
-    titleEl.addEventListener('keydown', onTitleKey);
+    subjectEl.oninput = (e) => { flow.subject = e.target.value; };
+    subjectEl.addEventListener('keydown', onSubjectKey);
 
     bodyEl.oninput = (e) => { flow.bodyLines = e.target.value.split('\n'); };
     bodyEl.addEventListener('keydown', onBodyKey);

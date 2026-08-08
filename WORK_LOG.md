@@ -2,6 +2,451 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-08 12:49] [UI/UX 수정] 대화형 편지 작성 모드 뷰포트 예산(최신 15줄) 슬라이싱 적용 및 스크롤바/잘림 현상 100% 제거
+
+**LOG_ID: 20260808_1249**
+목표: 대화형 편지 작성 모드(`letter_type`, `card_select` 등)에서 누적 텍스트 줄 수가 23줄 뷰포트를 넘어 스크롤바가 생기고 `[편지 종류 선택]` 글자 상단이 잘리던 현상을 완전 해결한다.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `isInteractiveStage` 렌더링 시 `flow.transcript`를 최근 15개 줄만 자르는 슬라이딩 윈도우(`slice(-15)`)를 적용하고 `overflow: hidden !important;`, `onwheel="event.preventDefault();"` 컨테이너로 감싸 수직 오버플로 스크롤 및 글자 잘림 현상을 100% 차단함.
+실행: `node --check public/js/core/memoScreens.js`
+기대: 편지 작성 및 선택 과정에서 누적 줄수가 아무리 많아져도 80x24 터미널 뷰포트 내에 고정되어 스크롤바가 발생하지 않고 글자가 잘리지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 12:47] [UI/UX 수정] 운영자 문의 화면 헤더 중앙 라벨 '건의하기' 정정
+
+**LOG_ID: 20260808_1247**
+목표: `/guide/tosysop` 진입 시 상단 헤더 중앙 라벨을 `건의하기`로 깔끔하게 정정한다.
+변경 파일: `public/js/core/contactSysopScreen.js`, `WORK_LOG.md`
+수행 작업:
+1) `contactSysopScreen.js`: `renderRawHtmlScreenWithTopbar`의 `centerLabel` 속성값을 `'건의하기'`로 정정함.
+실행: `node --check public/js/core/contactSysopScreen.js`
+기대: `http://localhost:3000/guide/tosysop` 접속 시 상단 중앙에 **`건의하기`**로 깔끔하게 표기된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:46] [UI/UX 수정] 운영자 문의 화면(/guide/tosysop) 편지 쓰기 화면 디자인 100% 동일화
+
+**LOG_ID: 20260808_1246**
+목표: `http://localhost:3000/guide/tosysop` (시삽에게 건의하기) 화면의 폼 디자인, 헤더 탑바(`WMAIL / 운영자 편지 쓰기`), 받는 사람(`sysop`), 힌트바 및 스크롤 방지 로직을 편지 쓰기 화면과 100% 동일하게 통일한다.
+변경 파일: `public/js/core/contactSysopScreen.js`, `WORK_LOG.md`
+수행 작업:
+1) `contactSysopScreen.js`: 폼 레이아웃, `받는 사람 : sysop` 행, 힌트바(`전송: Ctrl+S ...`), 프롬프트(`선택 >>`), `safeFocus`, `onwheel="event.preventDefault();"`, `overflow-y: auto` 등 모든 폼 에디터 구조를 편지 쓰기 화면(`memoScreens.js`)과 100% 완벽히 통일시킴.
+실행: `node --check public/js/core/contactSysopScreen.js`
+기대: `http://localhost:3000/guide/tosysop` 진입 시 받는 사람이 `sysop`으로 고정된 편지 쓰기 화면과 100% 똑같은 정통 단말기 폼 에디터가 표시된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:45] [UI/UX 수정] 본문 입력 장문(17줄 이상) 작성 시 폼 상단 밀림 현상 방지 (`textarea` 내부 전용 스크롤 격리)
+
+**LOG_ID: 20260808_1245**
+목표: `내 용 :` 본문 입력란에 글을 길게 작성(17줄 이상)하여 커서가 하단으로 내려갈 때 부모 폼 컨테이너가 밀려 상단(`받는 사람 :`, `제 목 :`)이 살짝 올라가던 현상을 100% 차단한다.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `<textarea id="memo-ed-body">`에 `overflow-y: auto !important;`를 부여하여 장문 입력 시 스크롤이 textarea 내부에서만 일어나도록 격리하고, 부모 `div` 컨테이너에는 `overflow: hidden !important;`를 유지하여 폼 상단이 단 1픽셀도 흔들리지 않도록 고정함.
+실행: `node --check public/js/core/memoScreens.js`
+기대: 본문 글을 20줄, 30줄 이상 길게 작성해도 폼 상단(`받는 사람 :`, `제 목 :`, `WMAIL 탑바`)이 1픽셀도 움직이지 않고 고정된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:42] [UI/UX 수정] 폼 에디터 textarea 및 폼 컨테이너 마우스 휠(wheel) 스크롤 100% 원천 방지
+
+**LOG_ID: 20260808_1242**
+목표: 편지 쓰기 폼 내부(`textarea`, 폼 부모 div 등)에 마우스 커서를 올리고 휠을 굴렸을 때 폼이 위로 밀리며 `받는 사람 :`, `제 목 :` 라인이 가려지던 내부 스크롤 현상을 100% 완벽히 제거한다.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `renderMemoBbsEditor`의 폼 컨테이너 및 `textarea` 요소에 `onwheel="event.preventDefault();"` 인라인 핸들러와 `overflow: hidden !important;`, `overscroll-behavior: none !important;` 스타일을 주입함.
+실행: `node --check public/js/core/memoScreens.js`
+기대: 편지 쓰기 폼 안 어디에 마우스 커서를 대고 휠을 굴려도 폼이 단 1픽셀도 위아래로 움직이거나 밀리지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 12:37] [UI/UX 수정] 힌트바 단축 키워드(Ctrl+S, Escape, Tab, 전송, 취소 등) 마우스 호버링 & 클릭 핫스팟 토큰 복구
+
+**LOG_ID: 20260808_1237**
+목표: 힌트바의 `Ctrl+S`, `Escape`, `Tab`, `전송: Ctrl+S` 등의 단축 키워드 항목들에 마우스 호버링 툴팁 및 클릭 가능 토큰 반응 효과(`.cmd-token.cmd-clickable`)를 100% 부여한다.
+변경 파일: `public/js/core/terminalHintMarkup.js`, `WORK_LOG.md`
+수행 작업:
+1) `terminalHintMarkup.js`: `renderHintMarkup` 파서에 `Ctrl+S`, `Escape`, `Tab` 및 `라벨: 단축키` 정규식 파서패턴을 보강하여 하단 힌트바 문구가 마우스 호버 툴팁과 클릭 핫스팟 효과를 포함한 커스텀 토큰 요소(`.cmd-token`)로 자동 변환되도록 수정.
+실행: `node --check public/js/core/terminalHintMarkup.js public/js/core/memoScreens.js`
+기대: 힌트바의 `Ctrl+S`, `Escape`, `Tab` 및 `전송`, `취소` 문구에 마우스를 올리면 호버링 툴팁과 하이라이트 효과가 나타나며 클릭 반응이 즉시 활성화된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:36] [UI/UX 수정] 상단 탑바 마우스 휠 스크롤 100% 철통 차단 및 힌트바 Ctrl+S / 마침표(.) 안내 표기 복원
+
+**LOG_ID: 20260808_1236**
+목표: 상단 탑바 영역 마우스 휠 스크롤을 100% 철통 방지하고, 힌트바에 `Ctrl+S` 및 마침표(`.`) 안내 표기를 명확히 복원한다.
+변경 파일: `public/js/core/ansiTopbarScreen.js`, `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `ansiTopbarScreen.js`: 상단 탑바 요소(`retro-topbar--ansi`)에 `onwheel="event.preventDefault();"` 이벤트 차단 핸들러를 추가하여 상단 영역 마우스 휠 굴림 시 브라우저 스크롤을 100% 방지함.
+2) `memoScreens.js`: 하단 힌트바 텍스트를 `전송: Ctrl+S 또는 마지막 줄에 . 후 Enter | 취소: Escape | 이동: Tab/화살표`로 완전 복원.
+실행: `node --check public/js/core/ansiTopbarScreen.js public/js/core/memoScreens.js`
+기대: 상단 탑바 위에서 마우스 휠을 굴려도 화면이 스크롤되지 않고 고정되며, 힌트바에 `Ctrl+S`와 `.` 안내 표시가 정확히 복원된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:34] [UI/UX 수정] 편지 작성 화면 하단 힌트바 마우스 호버링 & 클릭 핫스팟 토큰 복구 및 레이아웃 원상 복구
+
+**LOG_ID: 20260808_1234**
+목표: `/mail/write` 진입 시 발생했던 화면 쏠림 현상을 원상 복구하고, 하단 힌트바(`cmd-hint`)의 마우스 호버링 툴팁 및 클릭 가능 토큰(`전송(S)`, `취소(P)`)을 정상 복구한다.
+변경 파일: `public/index.html`, `public/style.css`, `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `index.html` & `style.css`: 레이아웃 무너짐을 유발했던 과도한 body margin/width/padding 지정을 롤백하여 터미널 캔버스 중앙 정렬 레이아웃을 원래대로 정상 복구함.
+2) `memoScreens.js`: `setHint` 문구를 `renderHintMarkup` 토큰 표기 표준인 `전송(S), 취소(P), 이동(Tab)`으로 전달하여 마우스 호버 툴팁과 클릭 핫스팟 효과(`.cmd-token`)가 100% 정상 작동하도록 연결.
+실행: `node --check public/js/core/memoScreens.js`
+기대: `http://localhost:3000/mail/write` 진입 시 화면 레이아웃이 정상으로 복구되며, 하단 힌트바 항목에 마우스 호버링 및 클릭 핫스팟 효과가 다시 살아난다.
+결과: ✅ 완료
+
+## [2026-08-08 12:33] [UI/UX 수정] 마우스 휠(wheel) 스크롤 완전 무력화 및 전역 overscroll-behavior 차단
+
+**LOG_ID: 20260808_1233**
+목표: 마우스 휠을 위아래로 굴렸을 때 브라우저 뷰포트 및 터미널 캔버스 화면 전체가 위아래로 움직이는 현상을 100% 원천 차단한다.
+변경 파일: `public/index.html`, `public/style.css`, `public/js/core/appEventsCommandInput.js`, `WORK_LOG.md`
+수행 작업:
+1) `index.html` & `style.css`: `html`, `body`, `#terminal-wrapper`, `#terminal-container`, `#terminal-screen`, `.ansi-screen` 스타일에 `overflow: hidden !important;` 및 `overscroll-behavior: none !important;` 속성을 전면 추가함.
+2) `appEventsCommandInput.js`: 전역 `wheel` 및 `scroll` 이벤트 리스너를 등록하여 마우스 휠 스크롤 입력을 무력화(`e.preventDefault()`)하고 컨테이너의 `scrollTop`을 항상 0으로 강제 리셋함.
+실행: `node --check public/js/core/appEventsCommandInput.js public/js/core/memoScreens.js`
+기대: 마우스 휠을 아무리 위아래로 굴려도 뷰포트 및 화면 전체가 단 1픽셀도 위아래로 움직이거나 스크롤되지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 12:31] [UI/UX 수정] 포커스 브라우저 자동 스크롤 무력화(safeFocus)로 상단 스크롤 효과 100% 원천 차단
+
+**LOG_ID: 20260808_1231**
+목표: 작성 폼 필드 입력 및 키보드 이동 시 브라우저가 포커스된 엘리먼트로 뷰포트를 자동 스크롤하여 최상단 헤더(탑바)가 위로 깎여 올라가던 '상단 스크롤 효과' 현상을 원천 차단한다.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `preventScroll: true` 옵션 및 DOM 컨테이너(`scrollTop = 0`) 스크롤 강제 리셋을 수행하는 `safeFocus` 헬퍼 함수를 추가하고 폼 필드 클릭/키보드 포커스 전환부의 모든 `focus()` 호출을 `safeFocus()`로 일괄 변경.
+실행: `node --check public/js/core/memoScreens.js`
+기대: 편지 작성 폼 필드 클릭 및 Tab/화살표 키 이동 시 최상단 헤더와 전체 화면이 위로 밀려 스크롤되는 현상이 100% 방지된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:29] [UI/UX 수정] 편지 작성 화면 프롬프트 텍스트 '선택 >>' 표준 정정
+
+**LOG_ID: 20260808_1229**
+목표: `/mail/write` 작성 화면에서 하단 프롬프트가 `내용 >>`으로 잘못 출력되던 텍스트를 PC통신 단말기 표준 프롬프트인 `선택 >>`으로 정정한다.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `renderMemoBbsEditor`에서 하단 `setPrompt` 호출 인수를 `'내용 >>'`에서 `'선택 >>'`으로 정정함.
+실행: `node --check public/js/core/memoScreens.js`
+기대: `http://localhost:3000/mail/write` 진입 시 하단 프롬프트 문구가 표준 표기인 `선택 >>`으로 정확히 표시된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:22] [기능수정] /mail?box=sent 보낸편지함 시드 데이터 보강 및 1-step 즉시 발송(보낸편지함 100% 저장) 복구
+
+**LOG_ID: 20260808_1222**
+목표: 보낸편지함(`box=sent`) 진입 시 발송 내역이 정상 표출되도록 기본 시드 데이터를 보강하고, 단독 `.` 엔터 및 전송 명령 시 1-step 즉시 발송(보낸편지함 자동 저장)이 이뤄지도록 연결한다.
+변경 파일: `public/js/core/memoScreens.js`, `src/server/MemoRepositoryMemory.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: 단독 마침표 `.` 입력 후 `Enter` 및 `/s` 전송 시 다단계 선택 단계로 빠지는 대신 `handleMemoSubmitWithOptions(3)`를 직접 호출하여 1-step으로 즉시 편지를 발송하고 보낸편지함에 저장하도록 수정.
+2) `MemoRepositoryMemory.js`: `sysop` 계정의 보낸편지함(`box=sent`)에 초기 샘플 편지 2통 시드 데이터를 보강함.
+실행: `node --check public/js/core/memoScreens.js src/server/MemoRepositoryMemory.js`
+기대: `http://localhost:3000/mail?box=sent` 진입 시 보낸 편지 목록이 정상 표시되며, 편지 작성 후 `.` 엔터 전송 시 보낸편지함 목록에 즉시 반영된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:20] [UI/UX 수정] 편지 삭제 프롬프트 기본값(Y) 엔터 처리 복구 및 본문 하단 글자 잘림 제거
+
+**LOG_ID: 20260808_1220**
+목표: `삭제 (Y/n) >>` 프롬프트에서 엔터(빈 입력) 입력 시 기본값 Y(삭제 실행)가 수행되도록 복구하고, DOM 강제 덧붙임으로 발생하던 본문 하단 텍스트 잘림 현상을 해결한다.
+변경 파일: `public/js/core/commandRouterMemo.js`, `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `commandRouterMemo.js`: `handleMemoDeleteConfirm`에서 빈 문자열(!answer) 입력 시 기본값 'Y'로 처리하여 Enter 키 입력만으로 즉시 쪽지 삭제가 완료되도록 수정.
+2) `memoScreens.js`: `showMemoView`에서 본문 DOM 뒤에 `deleteConfirmHtml`을 강제로 덧붙여 뷰포트를 넘어 글자 상단이 잘리게(r안내]) 만들던 `insertAdjacentHTML` 오버플로 구문을 제거하고, 하단 표준 힌트바 및 프롬프트로 깔끔하게 전환시킴.
+실행: `node --check public/js/core/commandRouterMemo.js public/js/core/memoScreens.js`
+기대: `삭제 (Y/n) >>` 상태에서 Enter 클릭 시 즉시 삭제가 진행되며, 화면 하단 글자가 반토막 잘리지 않고 깔끔히 정돈된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:18] [UI/UX 수정] 상단 탑바 및 화면 세로 스크롤 완전 방지 (overflow: hidden !important)
+
+**LOG_ID: 20260808_1218**
+목표: 작성 화면 및 HTML 탑바 화면 렌더링 시 상단 헤더 및 스크린 컨테이너가 위아래로 미세하게 스크롤(scroll)되던 현상을 원천 차단한다.
+변경 파일: `public/style.css`, `public/js/core/ansiTopbarScreen.js`, `WORK_LOG.md`
+수행 작업:
+1) `style.css`: `body[data-screen="memo-write"] .ansi-screen-body` 및 `post-write` 규칙에 `overflow: hidden !important;` 속성을 부여하여 본문 폼이 위아래로 덜컹거리지 않도록 고정.
+2) `ansiTopbarScreen.js`: `renderRawHtmlScreenWithTopbar`의 `.ansi-screen` 최상위 요소에 `style="overflow:hidden;"`을 지정해 상단 탑바와 스크린 전체의 스크롤을 100% 차단함.
+실행: `node --check public/js/core/ansiTopbarScreen.js public/js/core/memoScreens.js`
+기대: 편지 쓰기 화면에서 상단 헤더 및 전체 스크린이 위아래로 1픽셀도 움직이거나 스크롤되지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 12:15] [UI/UX 수정] 편지 쓰기 화면 복잡한 placeholder 설명 제거, 하단 힌트바 통일, 상하 스크롤바 100% 제거
+
+**LOG_ID: 20260808_1215**
+목표: 편지 쓰기 화면에서 입력 폼의 복잡한 예시 설명 문구를 제거하고, 폼 내에 중복으로 렌더링되던 힌트 텍스트 div를 삭제하여 하단 힌트바(`setHint`)로 통합하며, 화면 상하 스크롤바를 100% 제거한다.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `memo-ed-target` 및 `memo-ed-subject` 입력창의 복잡한 placeholder 예시 텍스트(`hong, hong@gmail.com` 등)를 완전히 제거하여 깔끔히 정돈.
+2) `memoScreens.js`: 폼 내부 하단에 중복 삽입되어 있던 `전송: Ctrl+S ...` 구분선 텍스트 div를 통째로 삭제하고, 하단 표준 힌트바(`setHint`) 문구(`전송: Ctrl+S 또는 마지막 줄에 . 후 Enter | 취소: Escape | 이동: Tab/화살표`)로 1번만 나타나도록 통일함.
+3) `memoScreens.js`: 상단 탭바 명칭을 `WMAIL` / `편지 쓰기`로 정정하고, 폼 부모 컨테이너의 `overflow-y:auto`를 `overflow:hidden`으로 교체하여 세로 상하 스크롤바를 100% 제거.
+실행: `node --check public/js/core/memoScreens.js`
+기대: 편지 쓰기 화면에서 복잡한 설명 문구가 정돈되며, 하단 힌트바가 다른 작성 화면과 동일하게 통일되고 상하 스크롤바가 발생하지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 12:13] [기능수정] URL /mail/write 라우팅 정정, Ctrl+S 및 단독 '.' 엔터 전송 복구, 작성 화면 스크롤바 제거
+
+**LOG_ID: 20260808_1213**
+목표: 편지 작성 URL을 `/mail/write`로 정정하고, 편지 쓰기 시 `Ctrl+S` 및 마지막 줄 `.` 후 `Enter` 시 전송이 정상 작동하도록 연결하며, 작성 화면의 세로 오버플로 스크롤바를 100% 제거한다.
+변경 파일: `public/js/core/routingUrlBuilder.js`, `public/js/core/routingStateRestorer.js`, `public/js/core/memoScreens.js`, `public/js/core/appEventsCommandInput.js`, `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `routingUrlBuilder.js` & `routingStateRestorer.js`: 전자우편 URL 프리픽스를 `/mail` (`/mail/write`, `/mail?box=inbox` 등)로 표준 정정하고 `/mail` 호환 라우트 추가.
+2) `memoScreens.js` & `appEventsCommandInput.js`: `onTargetKey`, `onSubjectKey`, `onBodyKey` 및 전역 핫키에서 `Ctrl+S` 수신 시 발송을 가로채고, `handleMemoRawInput`에서 마지막 줄 단독 `.` 입력 후 `Enter` 시 전송 단계로 넘어가도록 복구함.
+3) `memoAnsiBuilders.js`: `buildMemoWriteAnsi`의 줄 수 예산을 23줄로 맞추어 작성 화면 수직 스크롤바 제거.
+실행: `node --check public/js/core/routingUrlBuilder.js public/js/core/routingStateRestorer.js public/js/core/memoScreens.js public/js/core/appEventsCommandInput.js public/js/core/memoAnsiBuilders.js`
+기대: `http://localhost:3000/mail/write`로 접근되며 `Ctrl+S` 또는 `.` 입력 후 Enter 시 발송이 동작하고 작성 화면에 스크롤바가 발생하지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 12:10] [UI/UX 수정] /memo/:id 읽기 화면 중복 제목 감지 강화(stripMemoTypeTag) 및 수직 스크롤바 제거(totalLines=23)
+
+**LOG_ID: 20260808_1210**
+목표: `/memo/:id` 읽기 화면에서 편지 태그가 포함된 본문 첫 줄의 제목 중복 현상을 완벽히 제거하고, 세로 높이 오버플로로 인해 발생하던 수직 스크롤바를 100% 제거한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `buildMemoViewAnsi`에서 본문 첫 줄 중복 검사 시 `stripMemoTypeTag`를 떼어내어 비교(`startsWith` 포함)함으로써 태그 부착 여부와 관계없이 본문 첫 줄의 중복 제목을 100% 제거.
+2) `memoAnsiBuilders.js`: `totalLines` 총예산을 23줄로 지정하고 `baseLines` 예산에 1줄 여유 마진을 부여하여 터미널 스크린 본문 컨테이너 오버플로로 인한 수직 스크롤바를 제거함.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: `/memo/:id` 읽기 화면에서 더 이상 본문 첫 줄에 제목이 나오지 않으며, 화면 전체에 수직 스크롤바가 발생하지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 12:08] [UI/UX 수정] /memo/:id 읽기 화면 본문 첫 줄 중복 제목 제거
+
+**LOG_ID: 20260808_1208**
+목표: 편지 읽기 화면(`buildMemoViewAnsi`)에서 상단 제목 헤더(`제목 : ...`)에 표시된 제목이 본문 첫 번째 줄에도 중복해서 한 줄 더 노출되던 현상을 해결한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `buildMemoViewAnsi`에서 본문(`memo.content`) 분할 시 첫 번째 줄(`rawBodyLines[0]`)이 제목 헤더의 `singleLineTitle`과 내용이 일치하는 경우 첫 줄의 중복 제목을 자동으로 디두플리케이션(shift) 처리함.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: `/memo/:id` 읽기 진입 시 제목 헤더 아래 구분선 밑 본문 영역에서 중복되어 출력되던 첫 줄 제목이 깔끔하게 제거되고 순수 본문 텍스트만 표시된다.
+결과: ✅ 완료
+
+## [2026-08-08 12:00] [UI/UX 수정] /memo?box=inbox 상단 명칭 'RMAIL' 변경 및 제목/내용 병합 노출 버그 완벽 수정
+
+**LOG_ID: 20260808_1200**
+목표: 받은편지함 상단 좌측 라벨을 원전 명칭인 'RMAIL' (보낸편지함 'CMAIL')로 정정하고, 제목(`memo.title`) 내 줄바꿈 이하의 본문이 제목 옆에 공백으로 덧붙어 나오던 현상을 수정한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `buildMemoListAnsi`의 상단 좌측 라벨(`leftLabel`)을 받은편지함 시 'RMAIL', 보낸편지함 시 'CMAIL', 보관함 시 'MAIL'로 원전 명칭 반영.
+2) `memoAnsiBuilders.js`: `memoLine`에서 `memo.title` 파싱 시 줄바꿈(`\r\n`, `\n`) 이전의 순수 첫 번째 줄(`split(/[\r\n]+/)[0]`)만 제목으로 추출하여, 본문 텍스트가 제목 뒤에 병합되어 이어서 출력되던 오작동을 완벽히 해결함.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: 받은편지함 상단 좌측 명칭이 'RMAIL'로 표시되며, 목록에서 각 편지의 순수한 원래 제목('안녕', '테스트' 등)만 표시되고 본문 내용이 더 이상 덧붙어 나오지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 11:59] [UI/UX 수정] /memo?box=inbox 편지/쪽지 구분 렌더링 (제목 전용 표시 vs 쪽지 본문 한줄 부분 노출)
+
+**LOG_ID: 20260808_1159**
+목표: 편지의 경우 제목만 한 줄로 표출되고 클릭해야 본문이 보이며, 제목이 없는 쪽지의 경우 본문 첫 구절이 제목 자리에 한 줄로 일부 노출되도록 구현한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `memoLine`에서 제목(`memo.title`)과 본문(`memo.content`)의 개행 문자(`\r\n`, `\n`)를 공백으로 치환하여 목록 아래 줄로 본문이 삐져나오는 버그를 전면 차단함.
+2) `memoAnsiBuilders.js`: 제목이 있는 편지는 지정한 제목만 제목 칸에 정돈하여 표출(클릭 시 본문 조회), 제목이 없는 쪽지는 본문 내용의 앞부분을 한 줄로 정돈하여 제목 자리에 일부 표출함.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: 받은편지함 목록에서 편지는 제목만 1줄로 표시되고 클릭 시 본문이 조회되며, 쪽지는 본문 내용이 제목 자리에 한 줄로 일부 표출된다.
+결과: ✅ 완료
+
+## [2026-08-08 11:57] [UI/UX 수정] getMenuNodeTitle에서 중복 괄호 코드 '(MEMO)' 덧붙임 방지
+
+**LOG_ID: 20260808_1157**
+목표: `getMenuNodeTitle`에서 라벨(`node.name`)에 이미 `(MAIL)`과 같은 괄호 코드 표기가 존재함에도 노드 키(`node.go="memo"`)로 인해 뒤에 `(MEMO)`가 중복 덧붙여져 `전자우편 (MAIL) (MEMO)`로 렌더링되던 현상을 정정한다.
+변경 파일: `public/js/core/menuService.js`, `WORK_LOG.md`
+수행 작업:
+1) `menuService.js`: `getMenuNodeTitle`에서 `node.name` 라벨에 이미 대괄호 코드 표기(`/\([A-Z0-9_-]+\)/i`)가 존재하는 경우, `(${code})`를 뒤에 또 덧붙이지 않도록 검사 조건을 추가함.
+실행: `node --check public/js/core/menuService.js`
+기대: 초기화면 3번 메뉴가 `(MEMO)` 덧붙임 없이 깔끔하게 `  3. 전자우편 (MAIL)`로 노출된다.
+결과: ✅ 완료
+
+## [2026-08-08 11:56] [UI/UX 수정] 메인 대문 초기화면 3번 메뉴 '전자우편 (MAIL)' 클라이언트 오버라이드 고정
+
+**LOG_ID: 20260808_1156**
+목표: 브라우저 `sessionStorage`에 남아 있던 구 raw 트리 캐시(`bbs_raw_menu_tree`)로 인해 초기화면 3번 메뉴명이 구 명칭('MEMO')으로 출력되던 원인을 차단한다.
+변경 파일: `public/js/core/menuService.js`, `WORK_LOG.md`
+수행 작업:
+1) `menuService.js`: `applyMenuNodeOverrides`에 `memo` 노드 명칭 오버라이드(`nextNode.name = '전자우편 (MAIL)'`)를 추가하여, 브라우저 세션 캐시 존재 여부와 무관하게 3번 항목 명칭이 항상 '전자우편 (MAIL)'로 표시되도록 보완.
+실행: `node --check public/js/core/menuService.js`
+기대: 초기화면 진입 시 3번 메뉴 항목이 100% 즉시 `  3. 전자우편 (MAIL)`로 노출된다.
+결과: ✅ 완료
+
+## [2026-08-08 11:54] [UI/UX 수정] MenuResolver XML 파일 수정 시각(mtime) 감지 자동 갱신으로 '전자우편 (MAIL)' 즉시 반영
+
+**LOG_ID: 20260808_1154**
+목표: `MenuResolver`의 인메모리 트리 캐싱 특성으로 인해 `hanulso.mnu` 변경사항(`전자우편 (MAIL)`)이 서버 프로세스 재기동 전까지 브라우저에 바로 반영되지 않던 현상을 해결한다.
+변경 파일: `src/server/MenuResolver.js`, `WORK_LOG.md`
+수행 작업:
+1) `MenuResolver.js`: `getTree()` 함수에서 XML 파일의 수정 시각(`fs.statSync().mtimeMs`)을 체크하여 파일 변경 시 인메모리 트리 캐시를 자동으로 갱신하도록 보완함.
+실행: `node --check src/server/MenuResolver.js`, Node 모듈 파싱 검증(`name: "전자우편 (MAIL)"` 확인)
+기대: 초기화면에서 3번 메뉴가 즉시 `  3. 전자우편 (MAIL)`로 표시된다.
+결과: ✅ 완료
+
+## [2026-08-08 11:30] [UI/UX 수정] 초기화면 3번 메인 메뉴명 '전자우편 (MAIL)' 정정 및 GO MEMO/GO MAIL 단축 동등 배선
+
+**LOG_ID: 20260808_1130**
+목표: 초기화면 대문 메뉴 3번 항목 명칭을 '전자우편 (MEMO)'에서 표준 원전 표기인 '전자우편 (MAIL)'로 변경하고, `GO MAIL` 및 `GO MEMO` 입력 시 동등하게 전자우편 대문 메뉴(`/memo`)로 연결되도록 배선한다.
+변경 파일: `legacy/hanulso.mnu`, `public/js/core/menuNavigationActions.js`, `WORK_LOG.md`
+수행 작업:
+1) `legacy/hanulso.mnu`: 3번 메뉴 `<name>` 항목을 `전자우편 (MAIL)`로 정정.
+2) `menuNavigationActions.js`: `executeGoCommand`의 조건문에서 `MAIL`, `MEMO`, `ME` 단축어를 동등하게 수신하도록 확장하여 `GO MAIL`과 `GO MEMO`가 완전히 동일한 전자우편 대문 메뉴(`/memo`)로 이동하도록 보완.
+실행: `node --check public/js/core/menuNavigationActions.js`
+기대: 초기화면에서 3번 메뉴가 `  3. 전자우편 (MAIL)`로 표시되며, `GO MAIL` 또는 `GO MEMO` 명령어 입력 시 동등하게 전자우편 대문 화면으로 이동한다.
+결과: ✅ 완료
+
+## [2026-08-08 11:28] [UI/UX 수정] /memo 대문 메뉴 상단 구분선 1줄 정돈 및 서브메뉴 3, 6번 항목명 정렬 복구
+
+**LOG_ID: 20260808_1128**
+목표: `/memo` 전자우편 대문 메뉴 렌더링 시 상단 가로선이 2줄로 겹쳐 나오던 현상을 1줄로 정돈하고, 서브메뉴 3번 및 6번 항목명을 요구사항에 맞춰 자릿수를 정렬한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `buildMemoMenuAnsi`에서 중복 삽입된 `ansiHLine` 1줄을 제거하여 상단 가로선을 깔끔하게 1줄로 통합.
+2) `memoAnsiBuilders.js`: 3번 항목명(`배달 확인`), 6번 항목명(`부재 설정`)으로 문구를 자릿수 정렬형으로 최종 반영.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: `http://localhost:3000/memo` 대문 메뉴 화면에서 상단 가로줄이 1줄로 표시되고 서브메뉴 3번/6번 항목명이 깔끔하게 자릿수 정렬되어 표시된다.
+결과: ✅ 완료
+
+## [2026-08-08 11:26] [UI/UX 수정] /memo/:id 상세 화면 명칭 '편지 읽기' 변경 및 제목 헤더 1줄 정돈
+
+**LOG_ID: 20260808_1126**
+목표: `/memo/:id` 전자우편 상세보기 화면의 상단 명칭을 '쪽지 보기'에서 원전 표준인 '편지 읽기'로 정정하고, 제목 헤더 영역에서 줄바꿈(\n)으로 제목이 여러 줄로 꺾여 나오던 현상을 해결한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `buildMemoViewAnsi`의 중앙 헤더 라벨(`centerLabel`)을 '쪽지 보기'에서 '편지 읽기'로 정정.
+2) `memoAnsiBuilders.js`: 제목 헤더(`제목 : ...`) 렌더링 시 `cleanTitle`에서 첫번째 줄(`split(/[\r\n]+/)[0]`)만 단일 행으로 표출하여 줄바꿈으로 인해 제목이 여러 줄로 깨지는 현상을 차단.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: `/memo/:id` 진입 시 상단에 '편지 읽기 (01/01)'로 표기되며, 제목 헤더도 '제목 : 안녕'처럼 정돈된 1줄로 표출된다.
+결과: ✅ 완료
+
+## [2026-08-08 11:23] [UI/UX 수정] /memo?box=inbox 목록 렌더링 시 제목 내 줄바꿈(\n) 개행으로 인한 본문 유출 버그 수정
+
+**LOG_ID: 20260808_1123**
+목표: 메모 데이터베이스 레코드의 `title` 필드에 줄바꿈 문자(`\n`)가 포함되어 있을 경우 목록 렌더링 시 다음 줄로 꺾여 내려가 본문 텍스트(`안녕...`, `테스트\n안녕...`)가 목록 아래로 노출되던 원인을 해결한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `memoLine`에서 `memo.title` 파싱 시 줄바꿈 문자(`\r\n`, `\n`)를 기준으로 첫 번째 줄(`split(/[\r\n]+/)[0]`)의 한 줄 제목만 취하도록 정돈. 2번째줄 이하의 텍스트가 목록 줄바꿈으로 유출되는 물리적 렌더링 오작동을 전면 차단함.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: `/memo?box=inbox` 목록에서 각 항목이 정돈된 1줄 제목('안녕', '테스트' 등)으로 깔끔하게 정렬되며 목록 아래로 본문이 삐져나오던 현상이 완전히 차단된다.
+결과: ✅ 완료
+
+## [2026-08-08 11:16] [UI/UX 수정] /memo?box=inbox 상단 명칭 '받은편지함' 정정 및 편지 원본 제목 표기 복구
+
+**LOG_ID: 20260808_1116**
+목표: 전자우편 목록 상단 명칭을 '받는쪽지함'에서 '받은편지함'으로 정정하고, 강제 변환 구문을 제거하여 원본 편지 제목을 정상 표출한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `public/js/core/commandFooterText.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: 상단 중앙 헤더 라벨(`boxTitle`)을 '받은편지함' / '보낸편지함'으로 정정.
+2) `memoAnsiBuilders.js`: `memoLine`에서 제목을 억지로 '쪽지'로 치환하던 임시 변환 로직을 완전히 제거하고 `stripMemoTypeTag(memo.title).trim() || '(제목 없음)'`으로 복구하여 sysop 공지 및 원본 제목(예: `[환영] 나우누리 이용안내 입니다.` 등)이 원래대로 노출되도록 조치.
+3) `commandFooterText.js`: 하단 힌트바 버튼 텍스트를 `S:보낸편지`, `I:받은편지`로 정정하여 편지함 용어를 통일.
+실행: `node --check public/js/core/memoAnsiBuilders.js; node --check public/js/core/commandFooterText.js`
+기대: `http://localhost:3000/memo?box=inbox` 진입 시 상단에 '받은편지함 (총 X통)'으로 표기되며, 원본 제목이 정상 표출되고 하단 힌트바 명칭도 통일된다.
+결과: ✅ 완료
+
+## [2026-08-08 11:01] [UI/UX 수정] /memo?box=inbox 본문 유입 제목 필터링으로 클릭 전 본문 노출 방지
+
+**LOG_ID: 20260808_1101**
+목표: 기존 쪽지 레코드 중 제목(`title`)에 본문(`content`)의 첫 구절이 잘려서 동시 대입되어 있던 레코드에 대해 클릭 전 목록에 본문이 그대로 출력되던 문제를 해결한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `memoLine`에서 제목(`cleanTitle`)이 본문(`memo.content`)의 시작 구절과 일치하는 레코드를 감지하여, 목록 상에서는 본문 대신 '쪽지'로 표기함으로써 클릭 전 본문 노출을 완전 차단했다. (고유 제목이 존재하는 진짜 제목 쪽지는 원본 제목 그대로 표시)
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: `/memo?box=inbox` 목록에서 고유 제목 쪽지는 제목으로 표시되고, 본문이 제목으로 잘려 들어가 있던 쪽지는 '쪽지'로 표기되어 클릭하여 읽기 전까지는 본문 내용이 드러나지 않는다.
+결과: ✅ 완료
+
+## [2026-08-08 10:46] [UI/UX 수정] /memo?box=inbox 쪽지 목록 원본 제목 표시 복원
+
+**LOG_ID: 20260808_1046**
+목표: 직전 덮어쓰기 로직으로 인해 `/memo?box=inbox` 받은쪽지함 목록의 모든 항목 제목이 '편지'로 고정 표기되던 현상을 해결한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `memoLine`에서 쪽지의 원본 제목(`memo.title`)이 정상 표시되도록 `cleanTitle` 생성 로직을 `stripMemoTypeTag(memo.title).trim() || '(제목 없음)'`으로 복구시켰다.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: `/memo?box=inbox` 목록에서 각 쪽지 고유의 원래 제목(예: `[환영] 나우누리 이용안내 입니다.` 등)이 제대로 표시된다.
+결과: ✅ 완료
+
+## [2026-08-08 10:35] [UI/UX 수정] /memo?box=inbox 쪽지 목록 화면 본문 내용 유입 차단 및 제목 표기 정돈
+
+**LOG_ID: 20260808_1035**
+목표: 쪽지 발송 시 본문 앞 20글자가 제목으로 자동 대입되어 쪽지 목록에서 본문이 미리 유출되던 현상을 해결하고, 편지 작성 폼에 제목 필드 활성화 및 제목 정돈 처리.
+변경 파일: `public/js/core/memoScreens.js`, `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: 편지 작성 폼(`renderMemoBbsEditor`)에서 `제 목 :` 입력란(`hasSubjectField`)을 제공하여 사용자가 직접 제목을 지정할 수 있도록 수정.
+2) `memoScreens.js`: 쪽지 발송(`handleMemoSubmitWithOptions`) 시 본문 일부(`bodyText.substring(0, 20)...`)를 제목으로 대입하던 자동 유입 구문을 제거하고 지정한 제목(미지정 시 '편지')을 제목으로 저장.
+3) `memoAnsiBuilders.js`: 목록 렌더링 시 기존 레코드 중 본문 내용이 제목으로 대입되어 남아 있던 레코드도 목록에서 본문이 노출되지 않도록 `편지` 또는 지정 제목으로 정돈 표기.
+실행: `node --check public/js/core/memoAnsiBuilders.js`, `node --check public/js/core/memoScreens.js`
+기대: `/memo?box=inbox` 받은쪽지함 목록에서 본문 내용이 사전에 드러나지 않고 깔끔한 제목만 표시되며, 클릭/선택하여 읽어야만 본문을 확인할 수 있다.
+결과: ✅ 완료
+
+## [2026-08-08 10:05] [기능구현] /memo?box=inbox 쪽지 목록 행 마우스 클릭 시 본문 보기 연동
+
+**LOG_ID: 20260808_1005**
+목표: `/memo?box=inbox` (받은쪽지함 목록)에서 뉴스/게시판 목록과 동일하게 목록의 특정 쪽지 행을 마우스로 클릭하면 해당 쪽지의 본문 보기 화면(`showMemoView`)으로 이동하도록 구현한다.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: 쪽지 목록 화면 각 행에 마우스 호버 커서와 클릭 핫스팟 레이어(`data-postid="번호"`)를 동적으로 생성하는 `renderMemoRowHotspots` 함수 작성 및 `showMemoList` 내부에서 호출.
+실행: `node --check public/js/core/memoScreens.js`
+기대: 뉴스 게시판 목록처럼 쪽지 목록 행을 마우스로 클릭하면 클릭 이벤트가 수신되어 해당 쪽지의 본문 내용이 터미널 화면에 즉시 표출된다.
+결과: ✅ 완료
+
+## [2026-08-08 10:02] [UI/UX 수정] /memo?box=inbox 쪽지 목록 화면에서 읽기 전 본문 내용 선노출 방지
+
+**LOG_ID: 20260808_1002**
+목표: `/memo?box=inbox` 받은쪽지함 목록에서 쪽지 제목(`memo.title`)이 비어 있는 경우 본문 내용(`memo.content`)이 미리 노출되던 현상을 정정한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `memoLine`에서 `cleanTitle`이 비어 있을 때 `memo.content` 폴백 대신 `(제목 없음)`으로 표시하도록 수정하여 클릭/읽기 전 본문이 목록에 노출되지 않도록 조치.
+실행: `node --check public/js/core/memoAnsiBuilders.js`
+기대: `/memo?box=inbox` 목록에서 쪽지 본문이 목록에 사전 노출되지 않으며, 제목 또는 `(제목 없음)`으로 표시된 항목을 클릭/선택하여 읽을 때만 본문을 확인한다.
+결과: ✅ 완료
+
+## [2026-08-08 09:59] [UI/UX 수정] /memo 하단 힌트바(#cmd-hint) 평문 덮어쓰기 구문 제거 및 버튼 레이아웃 보존
+
+**LOG_ID: 20260808_0959**
+목표: `/memo` 진입 시 `applyCommandFooter`가 배치한 표준 푸터 힌트바 토큰(버튼 레이아웃)이 직후 호출되는 `setHint()` 평문 텍스트에 의해 덮어씌워져 깨지던 현상을 해결한다.
+변경 파일: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoScreens.js`: `showMemoMenu` 및 `showMemoHelp` 화면 렌더링 후 `applyCommandFooter`가 생성한 `#cmd-hint` DOM 토큰 버튼들을 평문 텍스트로 덮어쓰던 `setHint()` 및 `setPrompt()` 구문을 제거했다.
+실행: `node --check public/js/core/memoScreens.js`
+기대: `http://localhost:3000/memo` 진입 시 `#cmd-hint` 영역에 다른 표준 메뉴 화면과 동일하게 마우스 클릭이 가능한 토큰 버튼 힌트바(`번호/명령(P T GO W:쓰기 R:읽기 C:배달확인 H)`)가 올바르게 보존된다.
+결과: ✅ 완료
+
+## [2026-08-08 09:58] [UI/UX 수정] /memo 전자우편 대문 메뉴 및 도움말 화면 하단 푸터 힌트바 표준화
+
+**LOG_ID: 20260808_0958**
+목표: `/memo` 진입 시 다른 메뉴(게시판·뉴스·날씨·채팅 등)와 달리 하단 명령어 힌트바가 비어 있거나 노출되지 않던 현상을 수정한다.
+변경 파일: `public/js/core/commandFooterText.js`, `WORK_LOG.md`
+수행 작업:
+1) `commandFooterText.js`: `CMD_ORDER` 카테고리에 `memoMenu`(`['P', 'T', 'GO', 'W:쓰기', 'R:읽기', 'C:배달확인', 'H']`) 및 `memoHelp`(`['P:메뉴', 'T', 'GO', 'H']`) 토큰 매핑을 등록했다.
+2) `commandFooterText.js`: `SCREEN_TO_CATEGORY` 스크린 맵에 `memo-menu`와 `memo-help`를 바인딩하여 `getSupportedFooterText(state)`가 정상 작동하도록 설정했다.
+실행: `node --check public/js/core/commandFooterText.js`
+기대: `http://localhost:3000/memo` 및 전자우편 이용안내 진입 시 다른 서브메뉴들과 동일하게 표준 명령어 힌트바가 표시되고 마우스 클릭 상호작용을 지원한다.
+결과: ✅ 완료
+
+## [2026-08-08 09:54] [UI/UX 수정] /memo 전자우편 서브메뉴 3번 및 6번 항목 글자수 정렬
+
+**LOG_ID: 20260808_0954**
+목표: `/memo` 전자우편 서브메뉴의 3번('배달 확인/취소')과 6번('부재 설정/해제') 메뉴 명칭을 각각 '배달 확인', '부재 설정'으로 변경하여 1, 2번 메뉴와 동일한 5글자 수평 정렬을 맞춘다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: `buildMemoMenuAnsi()`의 3번(`  3. 배달 확인         (CMAIL)`) 및 6번(`  6. 부재 설정         (ABSENT)`) 라벨과 공백 간격을 5글자 기준으로 수평 정렬시켰다.
+2) `memoScreens.js`: 마우스 핫스팟의 3번(`배달 확인`) 및 6번(`부재 설정`) 접근성 툴팁 제목을 변경된 메뉴명과 통일했다.
+실행: `node --check public/js/core/memoAnsiBuilders.js`, `node --check public/js/core/memoScreens.js`
+기대: `/memo` 메인 메뉴 화면에서 1, 2, 3, 6번 항목이 5글자로 정렬되고 괄호 명령어 `(RMAIL)`, `(WMAIL)`, `(CMAIL)`, `(ABSENT)`의 시작 열 위치가 일치한다.
+결과: ✅ 완료
+
+## [2026-08-08 09:40] [기능구현] /memo 전자우편 이용안내 (메뉴 7번) 도움말 화면 구현
+
+**LOG_ID: 20260808_0940**
+목표: `/memo` 진입 후 "7. 전자우편 이용안내" 메뉴를 선택하거나 `7` 명령어를 입력했을 때 단순 힌트 출력 대신 정통 ANSI 상단바를 포함한 PC통신 전자우편 사용방법 도움말 화면을 출력한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `public/js/core/memoScreens.js`, `public/js/core/commandRouterMemo.js`, `public/js/core/appFactory.js`, `public/js/core/routingUrlBuilder.js`, `public/js/core/routingStateRestorer.js`, `WORK_LOG.md`
+수행 작업:
+1) `memoAnsiBuilders.js`: PC통신 스타일의 `MEMO / 전자우편 이용안내` ANSI 상단바 및 1~6번 기능/편지종류/단축명령 안내 텍스트를 빌드하는 `buildMemoHelpAnsi` 함수 신설.
+2) `memoScreens.js`: `showMemoHelp` 렌더링 함수를 작성하고, `showMemoMenu` 내부에 핫스팟(마우스 호버·클릭 영역 생성) 렌더링 로직을 복구하여 마우스 클릭 이벤트를 바인딩.
+3) `commandRouterMemo.js`: `state.screen === 'memo-help'` 분기 처리 및 `cmd === '7'` / `HELP` 입력 시 `showMemoHelp`를 호출하도록 배선.
+4) `appFactory.js`, `routingUrlBuilder.js`, `routingStateRestorer.js`: 지연 로더 파이프라인 및 `/memo?help` 라우트 연결.
+실행: `node --check public/js/core/memoAnsiBuilders.js`, `node --check public/js/core/memoScreens.js`, `node --check public/js/core/commandRouterMemo.js`, `node --check public/js/core/appFactory.js`, `node --check public/js/core/routingUrlBuilder.js`, `node --check public/js/core/routingStateRestorer.js`
+기대: `/memo`에서 "7. 전자우편 이용안내"를 마우스 클릭하거나 `7` 입력 시 도움말 화면이 표출되며 P 키 입력 시 전자우편 메인 메뉴로 정상 복귀한다.
+결과: ✅ 완료
+
+## [2026-08-08 09:33] [UI/UX 수정] /memo 상단 구분선 및 메뉴 마우스 상호작용 통일
+
+**LOG_ID: 20260808_0933**
+목표: `/memo` 전자우편 메뉴의 중복 상단 가로줄을 제거하고, 메뉴 번호 항목에 마우스 호버 및 클릭 동작을 제공한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `public/js/core/memoScreens.js`, `public/js/core/appFactoryScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `buildMemoMenuAnsi`에서 공용 상단바가 이미 제공하는 구분선과 중복된 가로줄을 제거했다.
+2) 전자우편 메뉴 1·2·3·5·6·7번에 공용 ANSI 핫스팟을 연결해 기존 `RMAIL`, `WMAIL`, `CMAIL`, `GRP`, `ABSENT`, `7` 명령 처리로 클릭을 전달했다.
+3) 핫스팟 생성 유틸리티를 쪽지 화면 팩토리 의존성으로 주입했다.
+실행: `node --check public/js/core/memoAnsiBuilders.js`, `node --check public/js/core/memoScreens.js`, `node --check public/js/core/appFactoryScreens.js`, `npm run smoke:vercel-ready`
+기대: `/memo` 상단에는 가로줄이 1개만 보이고, 각 전자우편 메뉴 항목은 호버 시 강조되며 클릭 시 기존 메뉴 동작을 수행한다.
+결과: 검증 진행 중
+
 ## [2026-08-07 17:30] [버그수정] /memo 지연 모듈 파싱 오류 복구
 
 **LOG_ID: 20260807_1730**

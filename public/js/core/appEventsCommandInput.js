@@ -24,6 +24,7 @@ export function bindCommandInputEvents(deps) {
 
   let lastMatchIndex = -1;
 
+
   function moveCaretToEnd() {
     if (typeof cmdInput.setSelectionRange !== 'function') return;
     const end = cmdInput.value.length;
@@ -268,6 +269,16 @@ export function bindCommandInputEvents(deps) {
       } else if (typeof jumpToContent === 'function') {
         event.preventDefault();
         jumpToContent();
+      }
+      return;
+    }
+
+    if (event.ctrlKey && (event.key === 's' || event.key === 'S' || event.code === 'KeyS')) {
+      event.preventDefault();
+      if (state.screen === 'memo-write') {
+        void handleCmd('/s');
+      } else if (typeof handleCmd === 'function') {
+        void handleCmd('SAVE');
       }
       return;
     }

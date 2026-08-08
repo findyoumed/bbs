@@ -15,6 +15,8 @@ export function createRoutingStateRestorer(deps) {
     showLogin,
     showMain,
     showMemoList,
+    showMemoMenu,
+    showMemoHelp,
     showMemoView,
     showMemoWrite,
     showMyInfo,
@@ -327,6 +329,9 @@ export function createRoutingStateRestorer(deps) {
     },
 
     async memo(segments, query) {
+      if (query?.has('help') || segments[1] === 'help') {
+        if (typeof showMemoHelp === 'function') return await showMemoHelp(true);
+      }
       // [LOG: 20260429_0515] Restore /memo/write into the actual compose screen
       // instead of collapsing back to the memo list after reload/history restore.
       if (segments[1] === 'write') {
@@ -343,6 +348,9 @@ export function createRoutingStateRestorer(deps) {
       const box = String(rawBox || 'inbox');
       state._memoBox = ['inbox', 'sent', 'archive'].includes(box) ? box : 'inbox';
       await showMemoList(true);
+    },
+    async mail(segments, query) {
+      return await this.memo(segments, query);
     },
     // [LOG_ID: 20260714_1200] 여론광장(AGORA) 라우트 — 투표/설문. 종전 /game/vote 하위에 있던 것을
     // 최상위로 옮겼다(오락실 하위 중복 항목 제거와 함께). /agora, /agora/create, /agora/:voteId.

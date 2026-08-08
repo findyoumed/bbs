@@ -236,20 +236,23 @@ export function createRoutingUrlBuilder(deps) {
 
       // [LOG_ID: 20260807_1405] 나우누리 원전(MAIL) 서브메뉴 및 상자별 URL 라우팅
       case 'memo-menu':
-        return '/memo';
+        return '/mail';
 
       case 'memo-list': {
         const box = state._memoBox || 'inbox';
-        if (box === 'sent') return '/memo?box=sent';
-        if (box === 'archive') return '/memo?box=archive';
-        return '/memo?box=inbox';
+        if (box === 'sent') return '/mail?box=sent';
+        if (box === 'archive') return '/mail?box=archive';
+        return '/mail?box=inbox';
       }
 
       case 'memo-view':
-        return `/memo/${encodeURIComponent(_currentMemoId || '')}`;
+        return `/mail/${encodeURIComponent(_currentMemoId || '')}`;
 
       case 'memo-write':
-        return '/memo/write';
+        return '/mail/write';
+
+      case 'memo-help':
+        return '/mail?help';
 
       case 'post-write': {
         const lowercaseBoardId = String(boardId || '').toLowerCase();
