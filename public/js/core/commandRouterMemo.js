@@ -195,9 +195,37 @@ export function createMemoCommandHandler(deps) {
     }
 
     return async function handleMemoCommand({ input, rawCmd, cmd, context }) {
+        // [LOG_ID: 20260810_1335] 도움말도 memo footer의 공통 단축키를 실제 화면 전환으로 연결한다.
+        // 기존에는 어떤 입력이든 메뉴로 돌아가 T/GO 및 쓰기·목록 단축키가 먹지 않았다.
         if (state.screen === 'memo-help') {
-            await showMemoMenu();
-            return true;
+            if (cmd === 'T') {
+                await showMain();
+                return true;
+            }
+            if (cmd === 'P' || cmd === 'M' || cmd === 'B') {
+                await showMemoMenu();
+                return true;
+            }
+            if (cmd === 'W' || cmd === '2' || cmd === 'WMAIL') {
+                await showMemoWrite();
+                return true;
+            }
+            if (cmd === 'R' || cmd === '1' || cmd === 'RMAIL') {
+                state._memoBox = 'inbox';
+                await showMemoList();
+                return true;
+            }
+            if (cmd === 'C' || cmd === '3' || cmd === 'CMAIL' || cmd === 'S') {
+                state._memoBox = 'sent';
+                await showMemoList();
+                return true;
+            }
+            if (cmd === 'H' || cmd === '7' || cmd === 'HELP') {
+                await showMemoHelp(true);
+                return true;
+            }
+            // GO [코드]는 전역 이동 라우터가 처리하도록 여기서 삼키지 않는다.
+            return false;
         }
 
         // [LOG_ID: 20260807_1405] 나우누리 원전(docs/NOWNURI_SCREENS_FULL_DECODED.txt 91행) 전자우편 서브메뉴 명령 가로채기
@@ -214,7 +242,7 @@ export function createMemoCommandHandler(deps) {
                 await showMemoWrite();
                 return true;
             }
-            if (cmd === '3' || cmd === 'CMAIL' || cmd === 'S') {
+            if (cmd === '3' || cmd === 'C' || cmd === 'CMAIL' || cmd === 'S') {
                 state._memoBox = 'sent';
                 await showMemoList();
                 return true;
@@ -471,8 +499,12 @@ export function createMemoCommandHandler(deps) {
             // B는 게시글 보기와 동일하게 이전쪽(1쪽에서는 기존처럼 목록)으로 처리한다.
             const memoPageNo = Number(state.memoViewPageNo || 1);
             const memoPageCount = Number(state.memoViewPageCount || 1);
-            if (cmd === '' && memoPageNo < memoPageCount) {
-                await showMemoViewPage(memoPageNo + 1);
+            if (cmd === '') {
+                if (memoPageNo < memoPageCount) {
+                    await showMemoViewPage(memoPageNo + 1);
+                } else {
+                    await showMemoList();
+                }
                 return true;
             }
             if (cmd === 'B' && memoPageNo > 1) {
@@ -491,9 +523,15 @@ export function createMemoCommandHandler(deps) {
                 await showMain();
                 return true;
             }
-            if (cmd === 'RE') {
+            if (cmd === 'R' || cmd === 'RE') {
                 const memo = state._memos?.find((m) => String(m?.id) === String(state._currentMemoId));
-                if (memo) await showMemoWrite(memo.senderUserId);
+                if (memo) {
+                    const currentUserId = state.user?.userId || '';
+                    const recipientUserId = memo.senderUserId === currentUserId
+                        ? memo.recipientUserId
+                        : memo.senderUserId;
+                    await showMemoWrite(recipientUserId);
+                }
                 return true;
             }
             // [LOG_ID: 20260713_1100] 쪽지 전달(FW / F) 기능 추가

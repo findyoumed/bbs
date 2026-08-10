@@ -67,6 +67,8 @@ export const CMD_ORDER = {
   // [LOG_ID: 20260801_1035] WMAIL:전달을 FW:전달로 수정, K:보관을 KEEP:보관으로 변경
   memoView: ['L:목록', 'B:이전쪽', 'N:다음편지', 'A:이전편지', 'P', 'T', 'GO', 'RE:답장', 'FW:전달', 'KEEP:보관', 'DD:삭제', 'H'],
   memoWrite: ['P:취소', 'SEND:전송', 'H'],
+  // [LOG_ID: 20260810_1530] /guide/tosysop도 편지쓰기와 같은 클릭 가능한 전송·취소·도움말 footer를 사용한다.
+  contactSysop: ['P:취소', 'SEND:전송', 'H'],
   // [LOG_ID: 20260719_2300] ME:쪽지쓰기 — 나우로 웹프리 ID수첩("아이디 클릭 → 바로 쪽지 보내기") 재현.
   profile: ['P', 'T', 'GO', 'ME:쪽지쓰기', 'H'],
   // [LOG_ID: 20260716_1400] 하이텔 (1)-24 이용자검색 — 원전의 byid/byname 두 하위 항목을
@@ -146,6 +148,7 @@ const SCREEN_TO_CATEGORY = {
   'memo-list': 'memoList',
   'memo-view': 'memoView',
   'memo-write': 'memoWrite',
+  'contact-sysop': 'contactSysop',
   profile: 'profile',
   'member-search': 'memberSearch',
   'menu-index': 'menuIndex',

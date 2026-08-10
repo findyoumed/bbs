@@ -2,6 +2,85 @@
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
 
+## [2026-08-10 18:05] `/guide/tosysop` cmd-hint 클릭 토큰 및 전송 라우팅 연결
+
+**LOG_ID: 20260810_1530**
+목표: `/guide/tosysop`의 `#cmd-hint`가 hover만 표시되고 클릭 명령이 실행되지 않는 문제를 수정한다.
+변경 파일: `public/js/core/commandFooterText.js`, `public/js/core/contactSysopScreen.js`, `public/js/core/appFactoryHandlers.js`, `public/js/core/commandRouterGlobalNavigation.js`, `WORK_LOG.md`
+수행 작업:
+1) `contactSysop` footer 카테고리(`P:취소`, `SEND:전송`, `H`)와 화면 매핑을 추가함.
+2) 건의하기 화면이 공용 footer 렌더러를 사용해 `#cmd-hint` 내부에 `data-cmd` 클릭 토큰을 생성하도록 함.
+3) 클릭으로 들어온 `SEND/P/M/B/T`를 건의하기 전용 raw handler로 연결해 실제 전송·취소·이동이 실행되도록 함.
+실행: `node --check` 대상 3개, `npm run loop:verify`
+기대: `#cmd-hint`의 전송·취소·도움말 항목이 클릭 가능한 토큰으로 동작하고, 입력 행 클릭도 포커스를 이동한다.
+결과: ✅ `loop:verify` 9/9 통과
+
+## [2026-08-10 16:30] 건의하기 편집 화면 클릭 포커스 연결
+
+**LOG_ID: 20260810_1510**
+목표: `전송: Ctrl+S ... | 이동: Tab/화살표` 안내가 표시되는 건의하기 화면에서 hover만 되고 행 클릭이 입력 동작으로 이어지지 않는 문제를 수정한다.
+변경 파일: `public/js/core/contactSysopScreen.js`, `WORK_LOG.md`
+수행 작업:
+1) 받는 사람·제목·내용 행에 클릭 이벤트를 연결해 제목/내용 입력창으로 포커스를 이동함.
+2) 화면에 없던 `safeFocus()`를 추가해 화살표·Tab 이동 핸들러도 정상적으로 포커스를 이동하도록 함.
+3) 화면 종료 시 클릭·키보드 리스너를 제거하는 정리 함수를 등록함.
+실행: `node --check public/js/core/contactSysopScreen.js`, `npm run smoke:vercel-ready`, `npm run loop:verify`
+기대: 건의하기 편집 화면의 각 입력 행을 클릭하면 즉시 입력할 수 있고, 기존 키보드 이동·전송·취소 동작이 유지된다.
+결과: ✅ `loop:verify` 9/9 통과
+
+## [2026-08-10 13:24] 문서 기준 전자우편 도움말 및 canonical URL 정합성 수정
+
+**LOG_ID: 20260810_1324**
+목표: `docs/NOWNURI_MENUS/전자우편_1.txt`와 현재 `/memo` 화면의 불일치를 먼저 수정한다.
+변경 파일: `public/js/core/memoAnsiBuilders.js`, `public/js/core/routingUrlBuilder.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`
+수행 작업:
+1) `buildMemoHelpAnsi`를 추가해 전자우편 7번 메뉴가 실제 이용안내 본문을 렌더링하도록 연결함.
+2) 메뉴·목록·상세·작성·도움말 URL 생성 기준을 `/mail`에서 문서·스모크 계약의 `/memo`로 통일함. 기존 `/mail` 복원 별칭은 유지함.
+3) 루프 작업 체크리스트와 구현 계획을 `artifacts/`에 기록함.
+실행: `node --check public/js/core/memoAnsiBuilders.js`, `node --check public/js/core/routingUrlBuilder.js`, `npm run smoke:vercel-ready`, `npm run smoke:command-parity`, `npm run smoke:menu-wiring`
+기대: 7번 도움말이 빈 화면이 아니며, 전자우편 관련 내부 링크가 `/memo` 경로를 사용한다.
+결과: ✅ 완료
+
+## [2026-08-10 13:36] 전자우편 도움말·답장·Enter·C 단축키 라우팅 정합성 수정
+
+**LOG_ID: 20260810_1335**
+목표: 문서에 표시된 전자우편 단축키가 실제 화면 전환과 일치하도록 수정한다.
+변경 파일: `public/js/core/commandRouterMemo.js`, `WORK_LOG.md`
+수행 작업:
+1) 도움말 화면에서 P/M/B, T, W, R, C, H를 각각 메뉴·초기화면·쓰기·받은편지함·보낸편지함·도움말로 연결하고 GO는 전역 라우터로 전달함.
+2) 메뉴의 `C` 단축키를 배달 확인/취소 목록(보낸편지함)으로 연결함.
+3) 쪽지 상세에서 Enter가 다음 페이지를 넘기고 마지막 페이지에서는 목록으로 돌아가도록 수정함.
+4) 쪽지 상세의 `R`과 `RE`가 현재 사용자가 발신자인 경우 수신자에게, 수신자인 경우 발신자에게 답장하도록 수정함.
+실행: `node --check public/js/core/commandRouterMemo.js`, `node --check public/js/core/commandNormalizer.js`, `npm run smoke:command-parity`
+기대: 도움말·메뉴·쪽지 상세의 단축키 입력과 클릭 명령이 화면 의도대로 동작한다.
+결과: ✅ 완료
+
+## [2026-08-10 13:28] 지연 편지 서버 노출 차단 및 목록 본문 미리보기 제거
+
+**LOG_ID: 20260810_1400**
+목표: 지연 편지가 클라이언트 필터를 우회해 API·unread 배지·직접 상세 조회에 노출되는 문제와 제목 없는 편지의 본문 첫 줄 노출을 수정한다.
+변경 파일: `src/server/MemoRepositoryShared.js`, `src/server/MemoRepositoryMemory.js`, `src/server/MemoRepositorySupabase.js`, `public/js/core/memoAnsiBuilders.js`, `WORK_LOG.md`
+수행 작업:
+1) 공통 `isMemoDelayedPending`/`isMemoVisibleToRecipient` 판정 함수를 추가해 두 저장소의 받은편지함·안 읽은 수·상세 조회에 동일한 수신 보류 정책을 적용함.
+2) 목록 조회에서만 적용되던 Supabase 지연 필터를 서버 목록·unread count에도 적용함.
+3) 제목이 비어 있으면 본문 첫 줄을 목록 제목으로 대체하던 로직을 제거하고 `(제목 없음)`을 표시함.
+실행: `node --check` 대상 4개, `npm run smoke:vercel-ready`, Memory repository 지연 편지 목록/unread 확인
+기대: 지정 시간이 지나기 전 지연 편지는 수신자에게 보이지 않고, 목록은 본문 내용을 제목처럼 노출하지 않는다.
+결과: ✅ 완료
+
+## [2026-08-10 13:37] 전자우편 문서 정합성 수정 루프 검증 완료
+
+**LOG_ID: 20260810_1437**
+목표: 단계별 수정 결과를 전체 완료 게이트로 검증하고 산출물을 닫는다.
+변경 파일: `artifacts/task.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업:
+1) 루프 체크리스트의 5개 항목을 모두 완료 처리함.
+2) 변경 내용·검증 명령·결과를 `artifacts/walkthrough.md`에 기록함.
+3) `loop:verify`의 9개 검증 항목을 순차 실행함.
+실행: `npm run loop:verify`, `git diff --check`
+기대: 모든 완료 게이트가 통과하고 문서·코드·검증 기록이 일치한다.
+결과: ✅ `loop:verify` 9/9 통과, `qa:final` 포함
+
 ## [2026-08-08 13:25] [기능수정] 답장요망([답장요망]) 편지 수신자 읽기 시 힌트바 자동 안내 100% 완성
 
 **LOG_ID: 20260808_1325**

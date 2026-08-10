@@ -25,6 +25,7 @@ export function createGlobalNavigationCommandHandler(deps) {
     showMemoList,
     showMemoMenu,
     showMemoWrite,
+    handleContactSysopRawInput,
     settingsService,
     apiFetch
   } = deps;
@@ -42,6 +43,15 @@ export function createGlobalNavigationCommandHandler(deps) {
   ]);
 
   return async function handleGlobalNavigationCommand({ cmd, rawCmd, input }) {
+
+    // [LOG_ID: 20260810_1530] /guide/tosysop의 #cmd-hint 토큰은 클릭 시
+    // commandDispatcher를 거치므로 state._terminalInputHandler가 자동 실행되지 않는다.
+    // 전송·취소·초기화면 토큰만 건의하기 raw handler로 명시적으로 연결한다.
+    if (state.screen === 'contact-sysop'
+      && typeof handleContactSysopRawInput === 'function'
+      && ['SEND', 'P', 'M', 'B', 'T'].includes(cmd)) {
+      return await handleContactSysopRawInput(rawCmd || cmd, { source: 'click' });
+    }
 
     if (cmd === 'LOGIN' || (cmd === 'L' && isLoginShortcutScreen())) {
       if (state.user?.isGuest) {

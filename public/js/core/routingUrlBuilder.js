@@ -234,25 +234,26 @@ export function createRoutingUrlBuilder(deps) {
         return '/myinfo';
       }
 
-      // [LOG_ID: 20260807_1405] 나우누리 원전(MAIL) 서브메뉴 및 상자별 URL 라우팅
+      // [LOG_ID: 20260810_1015] 문서·스모크 계약의 canonical 전자우편 경로를 /memo로 통일
+      // /mail은 routingStateRestorer에서 계속 읽을 수 있는 호환 별칭으로 유지한다.
       case 'memo-menu':
-        return '/mail';
+        return '/memo';
 
       case 'memo-list': {
         const box = state._memoBox || 'inbox';
-        if (box === 'sent') return '/mail?box=sent';
-        if (box === 'archive') return '/mail?box=archive';
-        return '/mail?box=inbox';
+        if (box === 'sent') return '/memo?box=sent';
+        if (box === 'archive') return '/memo?box=archive';
+        return '/memo?box=inbox';
       }
 
       case 'memo-view':
-        return `/mail/${encodeURIComponent(_currentMemoId || '')}`;
+        return `/memo/${encodeURIComponent(_currentMemoId || '')}`;
 
       case 'memo-write':
-        return '/mail/write';
+        return '/memo/write';
 
       case 'memo-help':
-        return '/mail?help';
+        return '/memo?help';
 
       case 'post-write': {
         const lowercaseBoardId = String(boardId || '').toLowerCase();

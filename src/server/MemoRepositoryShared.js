@@ -30,6 +30,23 @@ function normalizeMemo(row) {
   };
 }
 
+// [LOG_ID: 20260810_1400] 지연편지는 클라이언트 목록 필터만으로는 직접 URL/API 조회와
+// unread 배지에 노출될 수 있었다. 제목 태그에 저장된 지연 분과 createdAt을 공통 판정해
+// 메모리/Supabase 드라이버가 같은 수신 보류 정책을 적용한다.
+function isMemoDelayedPending(memo, now = Date.now()) {
+  const match = String(memo?.title || '').match(/지연:(\d+)분/);
+  if (!match) return false;
+  const delayMs = Number(match[1]) * 60 * 1000;
+  const createdMs = Date.parse(memo?.createdAt || '');
+  if (!Number.isFinite(createdMs) || !Number.isFinite(delayMs)) return false;
+  return (Number(now) - createdMs) < delayMs;
+}
+
+function isMemoVisibleToRecipient(memo, userId, now = Date.now()) {
+  const normalizedUserId = String(userId || '').trim().toLowerCase();
+  return memo?.recipientUserId !== normalizedUserId || !isMemoDelayedPending(memo, now);
+}
+
 // 이 사용자가 이 쪽지를 "보관"했는지 — 받은 쪽지면 receiver_archived, 보낸 쪽지면 sender_archived.
 // (자기 자신에게 보낸 쪽지는 받은 쪽 기준을 우선한다.)
 function isArchivedFor(memo, userId) {
@@ -104,6 +121,8 @@ module.exports = {
   createHttpError,
   isArchivedFor,
   isMissingMemosTableError,
+  isMemoDelayedPending,
+  isMemoVisibleToRecipient,
   normalizeMemo,
   normalizeText,
   parseRecipients,

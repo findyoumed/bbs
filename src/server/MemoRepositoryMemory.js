@@ -3,6 +3,7 @@
 const {
   canAccessMemo,
   createHttpError,
+  isMemoVisibleToRecipient,
   normalizeText,
   validateMemoInput
 } = require('./MemoRepositoryShared');
@@ -63,7 +64,8 @@ class MemoryMemoRepository {
     return this.memos
       .filter((memo) => (isSentBox
         ? memo.senderUserId === userId && !memo.senderArchived
-        : memo.recipientUserId === userId && !memo.recipientArchived))
+        : memo.recipientUserId === userId && !memo.recipientArchived
+          && isMemoVisibleToRecipient(memo, userId)))
       .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
       .map((memo) => ({ ...memo }));
   }
@@ -74,7 +76,8 @@ class MemoryMemoRepository {
     return {
       count: this.memos.filter((memo) => memo.recipientUserId === userId
         && memo.isRead !== true
-        && !memo.recipientArchived).length
+        && !memo.recipientArchived
+        && isMemoVisibleToRecipient(memo, userId)).length
     };
   }
 
@@ -97,6 +100,10 @@ class MemoryMemoRepository {
     const memo = this._findMemo(id);
     if (!canAccessMemo(memo, context)) {
       throw createHttpError(403, '메모를 볼 권한이 없습니다.');
+    }
+    if (memo.recipientUserId === normalizeText(context.userId, 'guest').toLowerCase()
+      && !isMemoVisibleToRecipient(memo, context.userId)) {
+      throw createHttpError(404, '아직 배달되지 않은 쪽지입니다.');
     }
     return { ...memo };
   }

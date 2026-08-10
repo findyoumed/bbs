@@ -122,6 +122,9 @@ export function createAppFactoryHandlers(deps) {
     ...screens.menuNav,
     state,
     refs,
+    // [LOG_ID: 20260810_1530] #cmd-hint의 SEND/P/T 클릭 명령도 건의하기 전용
+    // raw-input 처리기와 동일한 흐름으로 실행되도록 전역 라우터에 주입한다.
+    handleContactSysopRawInput: screens.contactSysopScreens.handleContactSysopRawInput,
     doLogout: services.authService.doLogout,
     showLogin: screens.authScreens.showLogin,
     toggleMute: services.soundService.toggleMute,

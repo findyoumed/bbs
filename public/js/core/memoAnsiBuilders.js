@@ -82,10 +82,9 @@ export function createMemoAnsiBuilders(deps) {
         ? (memo.recipientUserId || 'guest')
         : (memo.senderUserId || 'guest');
       const marker = memoTypeMarker(memo);
-      let rawTitle = stripMemoTypeTag(memo.title).split(/[\r\n]+/)[0].trim();
-      if (!rawTitle && memo.content) {
-        rawTitle = String(memo.content).split(/[\r\n]+/)[0].trim();
-      }
+      // [LOG_ID: 20260810_1400] 목록에서 제목이 비어 있을 때 본문 첫 줄을 제목처럼
+      // 노출하면 본문 미리보기와 제목 구분이 무너진다. 레거시 빈 제목은 안내 문구로 표시한다.
+      const rawTitle = stripMemoTypeTag(memo.title).split(/[\r\n]+/)[0].trim();
       const cleanTitle = rawTitle || '(제목 없음)';
       const markerText = marker ? `[${marker}]` : '';
       const availableTitleWidth = titleWidth - (markerText ? displayWidth(markerText) + 1 : 0);
@@ -290,9 +289,53 @@ export function createMemoAnsiBuilders(deps) {
     return joinedLines.join('\n');
   }
 
+  // [LOG_ID: 20260810_1015] docs/NOWNURI_MENUS/전자우편_1.txt 기준 전자우편 이용안내 화면
+  // 메뉴 7번이 빈 화면으로 끝나지 않도록 독립적인 ANSI 도움말 본문을 제공한다.
+  function buildMemoHelpAnsi() {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const targetCols = isMobile ? 44 : 80;
+    const helpLines = [
+      ansiColor(14) + '  [ 전자우편 이용안내 ]' + ANSI_RESET,
+      '',
+      ansiColor(15) + '  1  편지 읽기        RMAIL' + ANSI_RESET,
+      ansiColor(15) + '  2  편지 쓰기        WMAIL' + ANSI_RESET,
+      ansiColor(15) + '  3  배달 확인/취소    CMAIL' + ANSI_RESET,
+      ansiColor(15) + '  5  동보편지 주소록   GRP' + ANSI_RESET,
+      ansiColor(15) + '  6  부재 설정/해제    ABSENT' + ANSI_RESET,
+      ansiColor(15) + '  7  이 화면           HELP' + ANSI_RESET,
+      '',
+      ansiColor(14) + '  편지 목록에서 번호를 입력하면 내용을 읽습니다.' + ANSI_RESET,
+      ansiColor(14) + '  P: 메뉴로 돌아가기   Enter: 다음 편지/페이지' + ANSI_RESET,
+      ansiColor(14) + '  T: 첫 화면           H: 도움말' + ANSI_RESET,
+      ansiColor(14) + '  GO 명령으로 게시판·메뉴 경로로 이동할 수 있습니다.' + ANSI_RESET,
+      '',
+      ansiColor(8) + '  단축키: R 읽기  W 쓰기  C 배달확인  M 메뉴' + ANSI_RESET
+    ];
+    const wrappedLines = [];
+    helpLines.forEach((line) => {
+      if (!line) {
+        wrappedLines.push('');
+        return;
+      }
+      const visible = wrapAnsiText(line, targetCols);
+      wrappedLines.push(...(visible.length ? visible : ['']));
+    });
+
+    const parts = [
+      buildTopHeader({ leftLabel: 'MAIL', centerLabel: '전자우편 이용안내' }, '', targetCols),
+      ...wrappedLines
+    ];
+    const joinedLines = parts.join('\n').split('\n');
+    while (joinedLines.length < 24) {
+      joinedLines.push('');
+    }
+    return joinedLines.slice(0, 24).join('\n');
+  }
+
   return {
     buildMemoListAnsi,
     buildMemoViewAnsi,
-    buildMemoMenuAnsi
+    buildMemoMenuAnsi,
+    buildMemoHelpAnsi
   };
 }

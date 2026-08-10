@@ -7,6 +7,7 @@ const {
   canAccessMemo,
   createHttpError,
   isMissingMemosTableError,
+  isMemoVisibleToRecipient,
   normalizeMemo,
   normalizeText,
   validateMemoInput
@@ -46,7 +47,8 @@ class SupabaseMemoRepository extends BaseRepository {
       if (error) {
         this._throwError('보관함 목록 조회', error, { table: this.table });
       }
-      return (data || []).map(normalizeMemo);
+      return (data || []).map(normalizeMemo)
+        .filter((memo) => isMemoVisibleToRecipient(memo, userId));
     }
 
     const isSentBox = context.box === 'sent';
@@ -59,7 +61,8 @@ class SupabaseMemoRepository extends BaseRepository {
     if (error) {
       this._throwError('메모 목록 조회', error, { table: this.table });
     }
-    return (data || []).map(normalizeMemo);
+    return (data || []).map(normalizeMemo)
+      .filter((memo) => isSentBox || isMemoVisibleToRecipient(memo, userId));
   }
 
   // [LOG_ID: 20260716_1800] 보관/보관해제. 받은 쪽지면 receiver_archived, 보낸 쪽지면
@@ -95,9 +98,9 @@ class SupabaseMemoRepository extends BaseRepository {
     // [LOG: 20260731_1750] normalizeText는 trim만 하므로 toLowerCase() 추가 정형화
     const userId = normalizeText(context.userId, 'guest').toLowerCase();
     const columns = await this._getColumnMap();
-    const { count, error } = await this.client
+    const { data, error } = await this.client
       .from(this.table)
-      .select('*', { count: 'exact', head: true })
+      .select('*')
       .eq(columns.recipient, userId)
       .eq('is_read', false)
       // [LOG_ID: 20260716_1800] 보관한 쪽지는 받은쪽지함에서 빠지므로 안 읽은 수에서도 뺀다 —
@@ -106,7 +109,9 @@ class SupabaseMemoRepository extends BaseRepository {
     if (error) {
       this._throwError('미수신 메모 수 조회', error, { table: this.table });
     }
-    return { count: count || 0 };
+    const visible = (data || []).map(normalizeMemo)
+      .filter((memo) => isMemoVisibleToRecipient(memo, userId));
+    return { count: visible.length };
   }
 
   async getMemo(id, context = {}) {
@@ -124,6 +129,10 @@ class SupabaseMemoRepository extends BaseRepository {
     }
     if (!canAccessMemo(memo, context)) {
       throw createHttpError(403, '메모를 볼 권한이 없습니다.');
+    }
+    if (memo.recipientUserId === normalizeText(context.userId, 'guest').toLowerCase()
+      && !isMemoVisibleToRecipient(memo, context.userId)) {
+      throw createHttpError(404, '아직 배달되지 않은 쪽지입니다.');
     }
     return memo;
   }

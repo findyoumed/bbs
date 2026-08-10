@@ -11,8 +11,10 @@ import { convertKoreanToEnglish } from './commandNormalizer.js';
 export function createContactSysopScreen(deps) {
   const {
     apiFetch,
+    applyCommandFooter,
     cmdInput,
     esc,
+    getSupportedFooterText,
     screenEl,
     setHint,
     setPrompt,
@@ -34,6 +36,9 @@ export function createContactSysopScreen(deps) {
   }
 
   function clearContactSysopFlow() {
+    if (typeof state._contactSysopFlow?._editorCleanup === 'function') {
+      state._contactSysopFlow._editorCleanup();
+    }
     if (typeof document !== 'undefined') {
       const footerEl = document.getElementById('terminal-footer');
       if (footerEl) {
@@ -219,8 +224,12 @@ export function createContactSysopScreen(deps) {
       isMobile
     });
 
+    const targetEl = document.getElementById(targetId);
     const subjectEl = document.getElementById(subjectId);
     const bodyEl = document.getElementById(bodyId);
+    const targetRowEl = document.getElementById('tosysop-ed-target-row');
+    const subjectRowEl = document.getElementById('tosysop-ed-subject-row');
+    const bodyRowEl = document.getElementById('tosysop-ed-body-row');
     if (!subjectEl || !bodyEl) return;
 
     subjectEl.value = String(flow.subject || '').slice(0, 60);
@@ -236,6 +245,48 @@ export function createContactSysopScreen(deps) {
     setHint('전송: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Escape  |  이동: Tab/화살표');
     setPrompt('선택 >>');
     setReady?.(true);
+    // [LOG_ID: 20260810_1530] 기존 안내 문장은 일반 텍스트라 #cmd-hint의 각 항목에
+    // data-cmd가 없었다. 공용 footer 렌더러를 사용해 SEND/P/H를 실제 클릭 토큰으로 만든다.
+    void applyCommandFooter?.('', getSupportedFooterText?.(state));
+
+    // [LOG_ID: 20260810_1510] 행에는 hover 커서만 있었고 클릭 시 포커스를 옮기는
+    // 동작이 없어 라벨·빈 행을 눌러도 입력할 수 없었다. 쪽지 작성 화면과 동일하게
+    // 안전한 포커스 함수와 행별 클릭 위임을 제공한다.
+    function safeFocus(el) {
+      if (!el || typeof el.focus !== 'function') return;
+      try {
+        el.focus({ preventScroll: true });
+      } catch (_) {
+        el.focus();
+      }
+    }
+
+    const onTargetRowClick = (event) => {
+      if (event.target !== targetEl) safeFocus(subjectEl);
+    };
+    const onSubjectRowClick = (event) => {
+      if (event.target !== subjectEl) safeFocus(subjectEl);
+    };
+    const onBodyRowClick = (event) => {
+      if (event.target !== bodyEl) safeFocus(bodyEl);
+    };
+
+    targetRowEl?.addEventListener('click', onTargetRowClick);
+    subjectRowEl?.addEventListener('click', onSubjectRowClick);
+    bodyRowEl?.addEventListener('click', onBodyRowClick);
+
+    const editorCleanup = () => {
+      targetRowEl?.removeEventListener('click', onTargetRowClick);
+      subjectRowEl?.removeEventListener('click', onSubjectRowClick);
+      bodyRowEl?.removeEventListener('click', onBodyRowClick);
+      subjectEl.removeEventListener('keydown', onSubjectKey);
+      bodyEl.removeEventListener('keydown', onBodyKey);
+      cmdInput?.removeEventListener('keydown', onCmdKey);
+      if (state._contactSysopFlow?._editorCleanup === editorCleanup) {
+        state._contactSysopFlow._editorCleanup = null;
+      }
+    };
+    flow._editorCleanup = editorCleanup;
 
     function doSave() {
       submitContactSysop();
