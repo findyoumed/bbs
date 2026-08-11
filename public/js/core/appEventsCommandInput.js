@@ -205,14 +205,16 @@ export function bindCommandInputEvents(deps) {
     return false;
   }
 
-  function dispatchRawTerminalInput(raw) {
+  // [LOG_ID: 20260811_1435] Await async raw handlers so resolved false values
+  // can fall through to the normal command router.
+  async function dispatchRawTerminalInput(raw) {
     try {
       const terminalInputHandler = typeof state?._terminalInputHandler === 'function'
         ? state._terminalInputHandler
         : null;
 
       if (terminalInputHandler) {
-        const handled = terminalInputHandler(raw);
+        const handled = await terminalInputHandler(raw);
         if (handled && typeof handled.catch === 'function') {
           handled.catch((error) => {
             // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
@@ -223,7 +225,7 @@ export function bindCommandInputEvents(deps) {
       }
 
       // [LOG: 20260509_1115] Raw prompt input is consumed before command history for PC communication-style line editors.
-      if (state._signupEnterHandler && state._signupEnterHandler(raw)) return true;
+      if (state._signupEnterHandler && await state._signupEnterHandler(raw)) return true;
     } catch (error) {
       // [LOG_ID: 20260806_1512] AI 코딩 주석화 — console.error 주석 처리
       // console.error('[CommandInput] Terminal input dispatch failed:', error);
@@ -233,7 +235,7 @@ export function bindCommandInputEvents(deps) {
     return false;
   }
 
-  function handleKeyDown(event) {
+  async function handleKeyDown(event) {
     if (isCommandExecutionLocked()) {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -348,7 +350,7 @@ export function bindCommandInputEvents(deps) {
     clearSuggestions();
     lastMatchIndex = -1;
 
-    if (dispatchRawTerminalInput(raw)) {
+    if (await dispatchRawTerminalInput(raw)) {
       // [LOG_ID: 20260707_1648] Raw-enter handlers own their own clearing/echo behavior; do not blank the footer here.
       state.cmdHistoryIndex = -1;
       state.cmdHistoryTemp = '';

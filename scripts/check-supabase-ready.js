@@ -183,6 +183,11 @@ async function selectChatProbeAuthUser(client) {
 
   return {
     userId: data.id,
+    // [LOG_ID: 20260811_1600] ChatRoomRepository distinguishes the app userId
+    // from the Supabase Auth UUID in authUserId. The probe previously omitted
+    // authUserId, so authenticated sessions were counted as guests and the
+    // intended guest join incorrectly failed with `정원 초과`.
+    authUserId: data.id,
     nickName: data.nickname || data.username || data.name || '회원'
   };
 }

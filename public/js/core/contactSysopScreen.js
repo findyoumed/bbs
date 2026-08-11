@@ -11,10 +11,8 @@ import { convertKoreanToEnglish } from './commandNormalizer.js';
 export function createContactSysopScreen(deps) {
   const {
     apiFetch,
-    applyCommandFooter,
     cmdInput,
     esc,
-    getSupportedFooterText,
     screenEl,
     setHint,
     setPrompt,
@@ -57,6 +55,25 @@ export function createContactSysopScreen(deps) {
     state._contactSysopFlow = null;
   }
 
+  // [LOG_ID: 20260811_1546] 입력 검증 문구는 PC통신식 편집 화면의 본문 안에
+  // 표시하고, 하단 힌트바의 전송·취소 안내를 덮어쓰지 않는다.
+  function clearInlineValidationError() {
+    if (typeof document === 'undefined') return;
+    document.querySelector('.tosysop-ed-validation')?.remove();
+  }
+
+  function showInlineValidationError(message, rowId) {
+    if (typeof document === 'undefined') return;
+    clearInlineValidationError();
+    const row = document.getElementById(rowId);
+    if (!row?.parentNode) return;
+    const errorEl = document.createElement('div');
+    errorEl.className = 'tosysop-ed-validation';
+    errorEl.setAttribute('role', 'alert');
+    errorEl.textContent = String(message || '입력값을 확인해주세요.');
+    row.parentNode.insertBefore(errorEl, row);
+  }
+
   async function cancelContactSysop() {
     clearContactSysopFlow();
     await showBoardSelect('guide', '서비스 안내');
@@ -74,12 +91,12 @@ export function createContactSysopScreen(deps) {
     const content = String(bodyEl ? bodyEl.value : (Array.isArray(flow.bodyLines) ? flow.bodyLines.join('\n') : '')).trim();
 
     if (!subject) {
-      setHint('제목을 입력해주세요.');
+      showInlineValidationError('제목을 입력해주세요.', 'tosysop-ed-subject-row');
       if (titleEl) titleEl.focus();
       return false;
     }
     if (!content) {
-      setHint('내용을 입력해주세요.');
+      showInlineValidationError('내용을 입력해주세요.', 'tosysop-ed-body-row');
       if (bodyEl) bodyEl.focus();
       return false;
     }
@@ -199,15 +216,23 @@ export function createContactSysopScreen(deps) {
     cursor: pointer;
     overflow: hidden !important;
   }
+  .tosysop-ed-validation {
+    color: #ffff55 !important;
+    font-family: inherit;
+    white-space: pre-wrap;
+    padding: 2px 0;
+    margin: 0;
+    flex-shrink: 0;
+  }
 </style>
 <div onwheel="event.preventDefault();" style="display:flex;flex-direction:column;height:100%;overflow:hidden !important;overscroll-behavior:none !important;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
   <div id="tosysop-ed-target-row" class="tosysop-ed-row">
     <label for="${targetId}" class="tosysop-ed-label">받는 사람 :&nbsp;</label>
-    <input id="${targetId}" type="text" autocomplete="off" spellcheck="false" value="sysop" readonly style="${inputStyle};cursor:not-allowed;opacity:0.9;"/>
+    <input id="${targetId}" type="text" autocomplete="off" spellcheck="false" value="sysop" readonly style="${inputStyle}"/>
   </div>
   <div id="tosysop-ed-subject-row" class="tosysop-ed-row">
     <label for="${subjectId}" class="tosysop-ed-label">제    목 :&nbsp;</label>
-    <input id="${subjectId}" type="text" autocomplete="off" spellcheck="false" maxlength="60" placeholder="" style="${inputStyle}"/>
+    <input id="${subjectId}" type="text" autocomplete="off" spellcheck="false" maxlength="60" placeholder="" style="${inputStyle}" autofocus />
   </div>
   <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   <div id="tosysop-ed-body-row" class="tosysop-ed-body-wrapper">
@@ -218,7 +243,7 @@ export function createContactSysopScreen(deps) {
 
     renderRawHtmlScreenWithTopbar({
       leftLabel: 'WMAIL',
-      centerLabel: '건의하기',
+      centerLabel: '편지 쓰기',
       bodyHtml,
       screenEl,
       isMobile
@@ -245,10 +270,8 @@ export function createContactSysopScreen(deps) {
     setHint('전송: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Escape  |  이동: Tab/화살표');
     setPrompt('선택 >>');
     setReady?.(true);
-    // [LOG_ID: 20260810_1530] 기존 안내 문장은 일반 텍스트라 #cmd-hint의 각 항목에
-    // data-cmd가 없었다. 공용 footer 렌더러를 사용해 SEND/P/H를 실제 클릭 토큰으로 만든다.
-    void applyCommandFooter?.('', getSupportedFooterText?.(state));
-
+    // [LOG_ID: 20260811_1130] WMAIL 편지쓰기와 동일한 일반 힌트바를 유지한다.
+    // 공용 SEND/P/H footer를 덧씌우면 수신자만 다른 편지쓰기 화면이라는 기준에서 벗어난다.
     // [LOG_ID: 20260810_1510] 행에는 hover 커서만 있었고 클릭 시 포커스를 옮기는
     // 동작이 없어 라벨·빈 행을 눌러도 입력할 수 없었다. 쪽지 작성 화면과 동일하게
     // 안전한 포커스 함수와 행별 클릭 위임을 제공한다.
@@ -343,15 +366,22 @@ export function createContactSysopScreen(deps) {
       }
     }
 
-    subjectEl.oninput = (e) => { flow.subject = e.target.value; };
+    subjectEl.oninput = (e) => { flow.subject = e.target.value; clearInlineValidationError(); };
     subjectEl.addEventListener('keydown', onSubjectKey);
 
-    bodyEl.oninput = (e) => { flow.bodyLines = e.target.value.split('\n'); };
+    bodyEl.oninput = (e) => { flow.bodyLines = e.target.value.split('\n'); clearInlineValidationError(); };
     bodyEl.addEventListener('keydown', onBodyKey);
 
     if (cmdInput) {
       cmdInput.addEventListener('keydown', onCmdKey);
     }
+
+    setTimeout(() => {
+      if (subjectEl) {
+        safeFocus(subjectEl);
+        subjectEl.setSelectionRange(subjectEl.value.length, subjectEl.value.length);
+      }
+    }, 10);
   }
 
   async function handleContactSysopRawInput(raw, context = {}) {

@@ -177,8 +177,8 @@ export function createTerminalUiCore(deps) {
     setBusy,
     echoCommand,
     showNotification,
-    showToast: (text, duration = 2500, level = 'info') => {
-      showNotification(text, duration, level);
+    showToast: (text, duration = 2500, level = 'info', options = {}) => {
+      showNotification(text, duration, level, options);
     },
     renderScreenSequential,
     interruptRendering,

@@ -585,6 +585,16 @@ export function createMemoScreens(deps) {
     cursor: pointer;
     overflow: hidden !important;
   }
+  /* [LOG_ID: 20260811_1546] 필수 입력 오류는 하단 힌트바가 아닌
+     해당 입력 행 바로 위에 표시해 전송·취소 안내를 보존한다. */
+  .memo-ed-validation {
+    color: #ffff55 !important;
+    font-family: inherit;
+    white-space: pre-wrap;
+    padding: 2px 0;
+    margin: 0;
+    flex-shrink: 0;
+  }
 </style>
 <div onwheel="event.preventDefault();" style="display:flex;flex-direction:column;height:100%;overflow:hidden !important;overscroll-behavior:none !important;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
   <div id="memo-ed-target-row" class="memo-ed-row">
@@ -686,11 +696,39 @@ export function createMemoScreens(deps) {
             subjectRowEl?.removeEventListener('click', onSubjectRowClick);
             bodyRowEl?.removeEventListener('click', onBodyRowClick);
             targetEl.removeEventListener('keydown', onTargetKey);
-            if (subjectEl) subjectEl.removeEventListener('keydown', onSubjectKey);
+            targetEl.removeEventListener('keypress', onTargetKey);
+            targetEl.removeEventListener('input', clearInlineValidationError);
+            if (subjectEl) {
+                subjectEl.removeEventListener('keydown', onSubjectKey);
+                subjectEl.removeEventListener('keypress', onSubjectKey);
+                subjectEl.removeEventListener('input', clearInlineValidationError);
+            }
             bodyEl.removeEventListener('keydown', onBodyKey);
+            bodyEl.removeEventListener('input', clearInlineValidationError);
             if (cmdInput) {
                 cmdInput.removeEventListener('keydown', onCmdKey);
             }
+            if (typeof screenEl?.removeEventListener === 'function') {
+                screenEl.removeEventListener('keydown', onMemoFieldCapture, true);
+                screenEl.removeEventListener('keypress', onMemoFieldCapture, true);
+          }
+        }
+
+        // [LOG_ID: 20260811_1546] 입력 검증 문구는 PC통신식 편집 화면 안에
+        // 표시하고, 하단 힌트바의 전송·취소 안내를 덮어쓰지 않는다.
+        function clearInlineValidationError() {
+            screenEl?.querySelector('.memo-ed-validation')?.remove();
+        }
+
+        function showInlineValidationError(message, rowId) {
+            clearInlineValidationError();
+            const row = document.getElementById(rowId);
+            if (!row?.parentNode) return;
+            const errorEl = document.createElement('div');
+            errorEl.className = 'memo-ed-validation';
+            errorEl.setAttribute('role', 'alert');
+            errorEl.textContent = String(message || '입력값을 확인해주세요.');
+            row.parentNode.insertBefore(errorEl, row);
         }
 
         function doSave() {
@@ -700,12 +738,12 @@ export function createMemoScreens(deps) {
             const bodyVal    = bodyEl.value.trim();
 
             if (!targetVal) {
-                setHint('받는 사람 아이디를 입력해주세요.');
+                showInlineValidationError('받는 사람 아이디를 입력해주세요.', 'memo-ed-target-row');
                 targetEl.focus();
                 return;
             }
             if (!bodyVal) {
-                setHint('내용을 입력해주세요.');
+                showInlineValidationError('내용을 입력해주세요.', 'memo-ed-body-row');
                 bodyEl.focus();
                 return;
             }
@@ -762,11 +800,30 @@ export function createMemoScreens(deps) {
             return ta.value.substring(0, ta.selectionStart).indexOf('\n') === -1;
         }
 
+        // [LOG_ID: 20260811_1330] Keyboard layouts/IME modes can report Enter
+        // as key, code, or legacy keyCode. Treat all browser variants as the
+        // same next-field action, matching the existing Tab behavior.
+        function isEnterKey(e) {
+            return e?.key === 'Enter'
+                || e?.code === 'Enter'
+                || e?.code === 'NumpadEnter'
+                || e?.keyCode === 13
+                || e?.which === 13;
+        }
+
+        function isForwardFieldKey(e) {
+            return isEnterKey(e)
+                || e?.key === 'ArrowDown'
+                || (e?.key === 'Tab' && !e.shiftKey);
+        }
+
         function onTargetKey(e) {
+            if (e.type === 'keypress' && !isForwardFieldKey(e)) return;
             if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) { e.preventDefault(); doSave(); return; }
             if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
-            if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+            if (isForwardFieldKey(e)) {
                 e.preventDefault();
+                e.stopPropagation();
                 if (subjectEl) {
                     safeFocus(subjectEl);
                     subjectEl.setSelectionRange(0, 0);
@@ -778,10 +835,12 @@ export function createMemoScreens(deps) {
         }
 
         function onSubjectKey(e) {
+            if (e.type === 'keypress' && !isForwardFieldKey(e)) return;
             if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) { e.preventDefault(); doSave(); return; }
             if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
-            if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+            if (isForwardFieldKey(e)) {
                 e.preventDefault();
+                e.stopPropagation();
                 safeFocus(bodyEl);
                 bodyEl.setSelectionRange(0, 0);
             } else if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
@@ -813,7 +872,7 @@ export function createMemoScreens(deps) {
                 }
                 return;
             }
-            if (e.key === 'Enter') {
+            if (isEnterKey(e)) {
                 const pos = bodyEl.selectionStart;
                 const before = bodyEl.value.substring(0, pos);
                 const currentLine = before.split('\n').pop().trim();
@@ -830,11 +889,39 @@ export function createMemoScreens(deps) {
             }
         }
 
+        // Delegate forward navigation at the screen boundary as a fallback
+        // for browsers that do not deliver the composed Enter event to the
+        // input's own listener. This keeps Enter and Tab behavior identical.
+        function onMemoFieldCapture(e) {
+            if (e.target !== targetEl && e.target !== subjectEl) return;
+            if (!isForwardFieldKey(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.target === targetEl && subjectEl) {
+                safeFocus(subjectEl);
+                subjectEl.setSelectionRange(0, 0);
+                return;
+            }
+            safeFocus(bodyEl);
+            bodyEl.setSelectionRange(0, 0);
+        }
+
         targetEl.addEventListener('keydown', onTargetKey);
-        if (subjectEl) subjectEl.addEventListener('keydown', onSubjectKey);
+        targetEl.addEventListener('keypress', onTargetKey);
+        targetEl.addEventListener('input', clearInlineValidationError);
+        if (subjectEl) {
+            subjectEl.addEventListener('keydown', onSubjectKey);
+            subjectEl.addEventListener('keypress', onSubjectKey);
+            subjectEl.addEventListener('input', clearInlineValidationError);
+        }
         bodyEl.addEventListener('keydown', onBodyKey);
+        bodyEl.addEventListener('input', clearInlineValidationError);
         if (cmdInput) {
             cmdInput.addEventListener('keydown', onCmdKey);
+        }
+        if (typeof screenEl?.addEventListener === 'function') {
+            screenEl.addEventListener('keydown', onMemoFieldCapture, true);
+            screenEl.addEventListener('keypress', onMemoFieldCapture, true);
         }
 
         flow._textareaCleanup = cleanup;
@@ -1123,12 +1210,20 @@ export function createMemoScreens(deps) {
         // 발생한다(재현 경로: 폼에서 Tab → cmdInput 포커스 → 임의 텍스트 입력 후 Enter).
         // /q 명령은 폼 취소로 연결하고, 그 외 cmdInput 입력은 소비만 하고 무시한다.
         if (flow.stage === 'bbs-form') {
-            if (trimmed === '/q' || koCmd === '/Q') {
+            if (trimmed === '/q' || koCmd === '/Q' || cmd === 'P' || cmd === 'M' || cmd === 'B') {
                 if (typeof flow._doCancel === 'function') {
                     flow._doCancel();
                 } else {
                     await cancelMemoWrite();
                 }
+                return true;
+            }
+
+            // [LOG_ID: 20260811_1430] The form owns ordinary text input, but
+            // global memo navigation must still reach commandRouterGlobalNavigation.
+            // Returning false lets ME/MEMO/RMAIL/WMAIL/MAIL/CMAIL/T run normally.
+            if (['ME', 'MEMO', 'RMAIL', 'WMAIL', 'MAIL', 'CMAIL', 'T'].includes(cmd)) {
+                return false;
             }
             return true;
         }

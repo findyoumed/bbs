@@ -93,7 +93,7 @@ export function createAppFactoryServices(deps) {
     isPasswordResetRoutePath: menuService.isPasswordResetRoutePath,
     showPasswordReset: (...args) => refs.showPasswordReset(...args),
     // [LOG_ID: 20260712_1940] 접속 시 새 쪽지 도착 알림(notifyUnreadMemos)용 토스트 출력기.
-    showToast: (text, duration, level) => terminalUiCore.showToast(text, duration, level),
+    showToast: (text, duration, level, options = {}) => terminalUiCore.showToast(text, duration, level, options),
     state,
     updateUserInfo: () => statusManager.update()
   });

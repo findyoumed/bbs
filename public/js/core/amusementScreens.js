@@ -21,10 +21,11 @@ export function createAmusementScreens(deps) {
   const validDate = (input) => { const value = String(input || '').replace(/\D/g, ''); if (value.length !== 8) return null; const date = new Date(Number(value.slice(0, 4)), Number(value.slice(4, 6)) - 1, Number(value.slice(6))); return date.getFullYear() === Number(value.slice(0, 4)) && date.getMonth() === Number(value.slice(4, 6)) - 1 && date.getDate() === Number(value.slice(6)) ? date : null; };
   const validYear = (input) => { const year = Number(String(input || '').replace(/\D/g, '')); return year >= 1900 && year <= new Date().getFullYear() ? year : null; };
   async function showBiorhythm(fromHistory = false) { state.screen = 'bio-input'; state.serviceData = { kind: 'biorhythm' }; if (!fromHistory) updateURL(); await render(buildBiorhythmIntroAnsi(), 'amusementInput', '생년월일 입력 (예: 19900101) >> '); inlineMount('bio-prompt-host', 'game-prompt-host'); }
-  async function showBiorhythmResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'bio-result'; state.serviceData = { kind: 'biorhythm', birth: birth.getTime() }; if (!fromHistory) updateURL(); const userName = state.user?.nickname || state.user?.username || state.user?.name || '사용자'; await render(buildBiorhythmAnsi(birth, new Date(), userName), 'amusementView', '선택 >> '); return true; }
+  async function showBiorhythmResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01'); inlineMount('bio-prompt-host', 'game-prompt-host'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'bio-result'; state.serviceData = { kind: 'biorhythm', birth: birth.getTime() }; if (!fromHistory) updateURL(); const userName = state.user?.nickname || state.user?.username || state.user?.name || '사용자'; await render(buildBiorhythmAnsi(birth, new Date(), userName), 'amusementView', '선택 >> '); return true; }
   // [LOG: 20260724_0948] 생년월일 8자리 입력 처리 및 birth 전달
   async function showFortune(fromHistory = false) { state.screen = 'fortune-input'; state.serviceData = { kind: 'fortune' }; if (!fromHistory) updateURL(); await render(buildFortuneIntroAnsi(), 'amusementInput', '생년월일 입력 (예: 19900101) >> '); inlineMount('fortune-prompt-host', 'game-prompt-host'); }
-  async function showFortuneResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 19900101'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'fortune-result'; state.serviceData = { kind: 'fortune', birth: birth.getTime() }; if (!fromHistory) updateURL(); await render(buildFortuneAnsi(birth), 'amusementView', '선택 >> '); return true; }
+  async function showFortuneResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 19900101'); inlineMount('fortune-prompt-host', 'game-prompt-host'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'fortune-result'; state.serviceData = { kind: 'fortune', birth: birth.getTime() }; if (!fromHistory) updateURL(); await render(buildFortuneAnsi(birth), 'amusementView', '선택 >> '); return true; }
+
 
   // [LOG_ID: 20260723_1134] MBTI 화면 요소별 마우스 호버/클릭(핫스팟) 바인딩 헬퍼
   function attachMbtiHotspots(screenNode, items) {
@@ -198,8 +199,28 @@ export function createAmusementScreens(deps) {
   async function showMbtiDetail(input, fromHistory = false) { const type = findMbtiType(input); if (!type) { setHint('번호(1~16) 또는 유형코드(예: INFP)를 입력하세요.'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'mbti-detail'; state.serviceData = { kind: 'mbti', mbtiCode: type.code }; state._mbtiCode = type.code; if (!fromHistory) updateURL(); await render(buildMbtiDetailAnsi(type), 'amusementView', '선택 >> '); return true; }
 
   // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현 — 혈액형 성격진단/궁합/토정비결.
-  // 결과는 URL로 복원하지 않는다(바이오리듬/오늘의운세/MBTI와 동일하게, 새로고침 시 입력 화면으로 복귀).
-  // [LOG_ID: 20260724_0955] 혈액형 입력 프롬프트 내 마우스 호버 및 클릭(핫스팟) 적용
+  // [LOG_ID: 20260811_1126] 혈액형 입력/결과 화면 전역 클릭 위임으로 A, B, O, AB 핫스팟 클릭 100% 동작 보장
+  if (typeof window !== 'undefined' && !window._bloodHotspotDelegated) {
+    window._bloodHotspotDelegated = true;
+    document.addEventListener('click', (e) => {
+      const target = e.target?.closest('.blood-hotspot');
+      if (target) {
+        const val = target.getAttribute('data-val');
+        if (val && ['A', 'B', 'O', 'AB'].includes(val.toUpperCase())) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (cmdInput) {
+            cmdInput.value = val.toUpperCase();
+          }
+          showBloodResult(val.toUpperCase());
+        }
+      }
+    }, true);
+  }
+
+  // [LOG_ID: 20260811_1233] 혈액형 프롬프트 핫스팟: 클릭 전용 mock div.
+  // 키보드 입력은 #cmd-input(별개 요소)에서 처리되므로 realRenderer 숨김에 영향 없음.
+  // 키보드 라우팅 수정은 commandRouterService.js의 정규식 우선순위로 해결됨.
   function attachBloodPromptHotspots() {
     const promptRow = document.querySelector('#blood-prompt-host #terminal-prompt-row');
     if (!promptRow) return;
@@ -224,61 +245,119 @@ export function createAmusementScreens(deps) {
       vertical-align: middle;
       white-space: pre;
       user-select: none;
+      pointer-events: auto !important;
+      position: relative;
+      z-index: 100;
     `;
-    mock.innerHTML = `혈액형 입력 (<span class="blood-hotspot" data-val="A">A</span>/<span class="blood-hotspot" data-val="B">B</span>/<span class="blood-hotspot" data-val="O">O</span>/<span class="blood-hotspot" data-val="AB">AB</span>) >> `;
+    mock.innerHTML = `혈액형 입력 (<span class="blood-hotspot" data-val="A">A</span>/<span class="blood-hotspot" data-val="B">B</span>/<span class="blood-hotspot" data-val="O">O</span>/<span class="blood-hotspot" data-val="AB">AB</span>) >>`;
 
     const hotspots = mock.querySelectorAll('.blood-hotspot');
     hotspots.forEach(el => {
-      el.addEventListener('click', async (e) => {
+      const handler = async (e) => {
         e.preventDefault();
         e.stopPropagation();
         const val = el.getAttribute('data-val');
+        if (cmdInput) {
+          cmdInput.value = val;
+        }
         await showBloodResult(val);
-      });
+      };
+      el.addEventListener('click', handler);
+      el.addEventListener('mousedown', handler);
     });
 
     realRenderer.parentNode.insertBefore(mock, realRenderer);
   }
 
   async function showBlood(fromHistory = false) {
+    const prevErr = document.querySelector('.blood-error-msg');
+    if (prevErr) prevErr.remove();
     state.screen = 'blood-input';
     state.serviceData = { kind: 'blood' };
     if (!fromHistory) updateURL();
-    await render(buildBloodIntroAnsi(), 'amusementInput', '혈액형 입력 (A/B/O/AB) >> ');
+    const rendered = await render(buildBloodIntroAnsi(), 'amusementInput', '혈액형 입력 (A/B/O/AB) >>');
     inlineMount('blood-prompt-host', 'game-prompt-host');
     attachBloodPromptHotspots();
+    if (rendered && rendered.screenNode) {
+      attachBloodResultHotspots(rendered.screenNode);
+    }
   }
-  // [LOG_ID: 20260724_0957] 혈액형 결과 화면 본문 안내문 내 A/B/O/AB 클릭 가능하게 치환 적용
+
   function attachBloodResultHotspots(screenNode) {
     if (!screenNode) return;
     const bodyContainer = screenNode.querySelector('.ansi-screen-body') || screenNode;
     const lineNodes = Array.from(bodyContainer.querySelectorAll('.ansi-line'));
-    const targetLine = lineNodes.find(ln => (ln.textContent || '').includes('다른 혈액형을 보려면'));
+    const targetLine = lineNodes.find(ln => (ln.textContent || '').includes('A/B/O/AB') || (ln.textContent || '').includes('다른 혈액형을 보려면'));
     if (!targetLine) return;
 
     let html = targetLine.innerHTML;
     const replacement = '<span class="blood-hotspot" data-val="A">A</span>/<span class="blood-hotspot" data-val="B">B</span>/<span class="blood-hotspot" data-val="O">O</span>/<span class="blood-hotspot" data-val="AB">AB</span>';
     if (html.includes('A/B/O/AB')) {
-      targetLine.innerHTML = html.replace('A/B/O/AB', replacement);
+      targetLine.innerHTML = html.replace(/A\/B\/O\/AB/g, replacement);
     }
 
     const hotspots = targetLine.querySelectorAll('.blood-hotspot');
     hotspots.forEach(el => {
-      el.addEventListener('click', async (e) => {
+      const handler = async (e) => {
         e.preventDefault();
         e.stopPropagation();
         const val = el.getAttribute('data-val');
+        if (cmdInput) {
+          cmdInput.value = val;
+        }
         await showBloodResult(val);
-      });
+      };
+      el.addEventListener('click', handler);
+      el.addEventListener('mousedown', handler);
     });
   }
 
-  async function showBloodResult(input, fromHistory = false, pageNo = 1) { const type = findBloodType(input); if (!type) { setHint('혈액형을 A, B, O, AB 중에서 입력하세요.'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'blood-result'; const built = buildBloodAnsi(type, pageNo); state.serviceData = { kind: 'blood', bloodCode: type.code, pageNo: built.pageNo, pageCount: built.pageCount }; if (!fromHistory) updateURL(); const rendered = await render(built.text, 'amusementView', '선택 >> '); if (rendered && rendered.screenNode) { attachBloodResultHotspots(rendered.screenNode); } return true; }
+  async function showBloodResult(input, fromHistory = false, pageNo = 1) {
+    const rawVal = String(input || '').trim().toUpperCase();
+    if (!rawVal) return false;
+    const type = findBloodType(rawVal);
+    if (!type) {
+      // [LOG_ID: 20260811_1242] setHint()는 syncScreenContext()→restorePromptRow()를 트리거하여
+      // 프롬프트가 터미널 푸터로 복귀하는 부작용이 있으므로 사용하지 않는다.
+      // 대신 프롬프트 호스트 바로 위에 안내 메시지를 직접 삽입한다.
+      const host = document.getElementById('blood-prompt-host');
+      if (host) {
+        let errEl = document.querySelector('.blood-error-msg');
+        if (!errEl) {
+          errEl = document.createElement('div');
+          errEl.className = 'blood-error-msg';
+          errEl.style.cssText = 'color: #ff6; font-family: inherit; font-size: inherit; white-space: pre; padding: 0; margin: 0;';
+          host.parentNode.insertBefore(errEl, host);
+        }
+        errEl.textContent = '혈액형은 A, B, O, AB 중에서 입력하세요.';
+      }
+      return false;
+    }
+    // 이전 에러 메시지 제거
+    const prevErr = document.querySelector('.blood-error-msg');
+    if (prevErr) prevErr.remove();
+    if (typeof restorePromptRow === 'function') {
+      restorePromptRow();
+    }
+    state.screen = 'blood-result';
+    const built = buildBloodAnsi(type, pageNo);
+    state.serviceData = { kind: 'blood', bloodCode: type.code, pageNo: built.pageNo, pageCount: built.pageCount };
+    if (!fromHistory) updateURL();
+    const rendered = await render(built.text, 'amusementView', '선택 >> ');
+    if (rendered && rendered.screenNode) {
+      attachBloodResultHotspots(rendered.screenNode);
+    }
+    return true;
+  }
 
   async function showCompat(fromHistory = false) { state.screen = 'compat-input'; state.serviceData = { kind: 'compat' }; if (!fromHistory) updateURL(); await render(buildCompatIntroAnsi(), 'amusementInput', '첫 번째 사람 생년월일 입력 (예: 19900101) >> '); inlineMount('compat-prompt-host', 'game-prompt-host'); }
   async function showCompatStep2(input, fromHistory = false) {
     const birth1 = input instanceof Date ? input : validDate(input);
-    if (!birth1) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01'); return false; }
+    if (!birth1) {
+      setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01');
+      inlineMount('compat-prompt-host', 'game-prompt-host');
+      return false;
+    }
     state.screen = 'compat-input2';
     state.serviceData = { kind: 'compat', birth1: birth1.getTime() };
     if (!fromHistory) updateURL();
@@ -288,7 +367,11 @@ export function createAmusementScreens(deps) {
   }
   async function showCompatResult(input, fromHistory = false, pageNo = 1) {
     const birth2 = input instanceof Date ? input : validDate(input);
-    if (!birth2) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1995-05-05'); return false; }
+    if (!birth2) {
+      setHint('생년월일 형식이 올바르지 않습니다. 예) 1995-05-05');
+      inlineMount('compat2-prompt-host', 'game-prompt-host');
+      return false;
+    }
     const birth1Time = state.serviceData?.birth1;
     if (!birth1Time) { await showCompat(fromHistory); return false; }
     if (typeof restorePromptRow === 'function') { restorePromptRow(); }
@@ -302,7 +385,7 @@ export function createAmusementScreens(deps) {
   }
 
   async function showTojeong(fromHistory = false) { state.screen = 'tojeong-input'; state.serviceData = { kind: 'tojeong' }; if (!fromHistory) updateURL(); await render(buildTojeongIntroAnsi(), 'amusementInput', '생년월일 입력 (예: 19900101) >> '); inlineMount('tojeong-prompt-host', 'game-prompt-host'); }
-  async function showTojeongResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'tojeong-result'; state.serviceData = { kind: 'tojeong', birth: birth.getTime() }; if (!fromHistory) updateURL(); await render(buildTojeongAnsi(birth), 'amusementView', '선택 >> '); return true; }
+  async function showTojeongResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01'); inlineMount('tojeong-prompt-host', 'game-prompt-host'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'tojeong-result'; state.serviceData = { kind: 'tojeong', birth: birth.getTime() }; if (!fromHistory) updateURL(); await render(buildTojeongAnsi(birth), 'amusementView', '선택 >> '); return true; }
 
   // [LOG: 20260713_1355] 추억의 접속화면(retro-list) 목록 마우스 호버 및 클릭(핫스팟) 활성화
   function renderRetroArtListHotspots(screenNode, items, lineOffset = 3) {

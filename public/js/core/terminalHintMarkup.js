@@ -36,6 +36,15 @@ export function createTerminalHintMarkup(deps) {
     return `<span class="cmd-token cmd-clickable" data-tip="${esc(tip)}" ${dataAttr}>${tokenText}</span>`;
   }
 
+  // [LOG_ID: 20260811_1200] Compose hint shortcuts execute their actions
+  // directly while keeping the visible Ctrl+S/Escape text unchanged.
+  function buildShortcutActionToken(label, cmd) {
+    const normalizedCmd = String(cmd || '').trim().toUpperCase();
+    const visibleLabel = String(label || '').trim();
+    if (!normalizedCmd || !visibleLabel) return '';
+    return `<span class="cmd-token cmd-clickable" data-tip="${esc(visibleLabel)}" data-cmd="${esc(normalizedCmd)}">${esc(visibleLabel)}</span>`;
+  }
+
   function buildParenCommandToken(labelOverride, cmd) {
     const normalizedCmd = String(cmd || '').trim().toUpperCase();
     const label = String(labelOverride || '').trim();
@@ -259,6 +268,15 @@ export function createTerminalHintMarkup(deps) {
 
     source = source.replace(/\{\{([^|{}]+)\|([A-Z0-9]{1,8})\}\}/g, (_, label, cmd) => {
       return stash(buildCommandToken(cmd, label));
+    });
+
+    // [LOG_ID: 20260811_1200] WMAIL/contact-sysop shortcut clicks execute
+    // SEND/P instead of only filling Ctrl+S/Escape in the command input.
+    source = source.replace(/전송\s*:\s*(Ctrl\+S)/gi, (_, shortcut) => {
+      return `전송: ${stash(buildShortcutActionToken(shortcut, 'SEND'))}`;
+    });
+    source = source.replace(/취소\s*:\s*(Escape)/gi, (_, shortcut) => {
+      return `취소: ${stash(buildShortcutActionToken(shortcut, 'P'))}`;
     });
 
     source = source.replace(/([가-힣A-Za-z0-9_]+)\(([A-Z0-9]{1,8})\)/g, (match, label, cmd) => {

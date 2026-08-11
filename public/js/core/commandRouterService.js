@@ -79,10 +79,10 @@ export function createServiceCommandHandler(deps) {
 
     // [LOG_ID: 20260623_1300] Restore GAME input handling.
     const goGame = async () => { await showBoardSelect('game'); return true; };
-    if (s === 'bio-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showBiorhythmResult(rawCmd); return true; } return false; }
+    if (s === 'bio-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); await showBiorhythmResult(rawCmd || input); return true; }
     if (s === 'bio-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showBiorhythm(); return true; } if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showBiorhythmResult(rawCmd); return true; } return false; }
     // [LOG: 20260724_0948] 오늘의 운세 생년월일 8자리 입력 라우팅 정규식 수정
-    if (s === 'fortune-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
+    if (s === 'fortune-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); await showFortuneResult(rawCmd || input); return true; }
     if (s === 'fortune-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showFortune(); return true; } if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showFortuneResult(rawCmd); return true; } return false; }
     if (['mbti-intro', 'mbti-test', 'mbti-list', 'mbti-detail'].includes(s)) {
       if (cmd === 'T') { await showMain(); return true; }
@@ -102,14 +102,27 @@ export function createServiceCommandHandler(deps) {
     // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현 — 혈액형 성격진단/궁합/토정비결.
     // [LOG_ID: 20260721_2000] 혈액형 'B'가 P/M/B 내비게이션 단축키와 겹쳐 게임방으로 튕기던 문제 —
     // 혈액형 입력 패턴을 P/M/B 내비게이션 체크보다 먼저 검사해 'B' 입력이 정상적으로 결과로 이어지게 한다.
-    if (s === 'blood-input') { if (cmd === 'T') { await showMain(); return true; } if (/^(A|B|O|AB)$/i.test(cmd)) { await showBloodResult(cmd); return true; } if (['P', 'M'].includes(cmd)) return goGame(); return false; }
+    if (s === 'blood-input') {
+      if (cmd === 'T') { await showMain(); return true; }
+      const cleanVal = String(rawCmd || input || cmd || '').trim().toUpperCase();
+      if (!cleanVal) return false;
+      if (/^(A|B|O|AB)$/i.test(cleanVal)) {
+        await showBloodResult(cleanVal);
+        return true;
+      }
+      if (['P', 'M', 'B'].includes(cmd)) return goGame();
+      // [LOG_ID: 20260811_1242] 유효하지 않은 입력은 showBloodResult()에 위임하여
+      // 힌트 출력 + 프롬프트 인라인 재마운트가 한 곳에서 처리되도록 한다.
+      await showBloodResult(cleanVal);
+      return true;
+    }
     // [LOG_ID: 20260725_0830] F로 설명 문단 다음 페이지 이동(전수조사로 발견된 세로 오버플로 수정).
     // B는 이미 "B형 결과 보기"로 쓰이고 있어(아래 A/B/O/AB 분기) 페이지네이션의 "이전"으로는 쓰지 않는다.
     if (s === 'blood-result') { if (cmd === 'T') { await showMain(); return true; } if (cmd === 'F') { const pageNo = Number(state.serviceData?.pageNo || 1); const pageCount = Number(state.serviceData?.pageCount || 1); if (pageNo < pageCount) { await showBloodResult(state.serviceData.bloodCode, false, pageNo + 1); return true; } } if (cmd === 'L') { await showBlood(); return true; } if (/^(A|B|O|AB)$/i.test(cmd)) { await showBloodResult(cmd); return true; } if (['P', 'M'].includes(cmd)) return goGame(); return false; }
-    if (s === 'compat-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showCompatStep2(rawCmd); return true; } return false; }
-    if (s === 'compat-input2') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showCompatResult(rawCmd); return true; } return false; }
+    if (s === 'compat-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); await showCompatStep2(rawCmd || input); return true; }
+    if (s === 'compat-input2') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); await showCompatResult(rawCmd || input); return true; }
     if (s === 'compat-result') { if (cmd === 'T') { await showMain(); return true; } if (cmd === 'F') { const pageNo = Number(state.serviceData?.pageNo || 1); const pageCount = Number(state.serviceData?.pageCount || 1); if (pageNo < pageCount) { await showCompatResult(new Date(state.serviceData.birth2), false, pageNo + 1); return true; } } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showCompat(); return true; } return false; }
-    if (s === 'tojeong-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showTojeongResult(rawCmd); return true; } return false; }
+    if (s === 'tojeong-input') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); await showTojeongResult(rawCmd || input); return true; }
     if (s === 'tojeong-result') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (cmd === 'L') { await showTojeong(); return true; } if (/^\d{8}$/.test(String(rawCmd).replace(/\D/g, ''))) { await showTojeongResult(rawCmd); return true; } return false; }
     // [LOG_ID: 20260711_1400] 추억의 접속화면 (olddos-bbs txt/door 아트 이식)
     if (s === 'retro-list' || s === 'retro-view') { if (cmd === 'T') { await showMain(); return true; } if (['P', 'M', 'B'].includes(cmd)) return goGame(); if (s === 'retro-view' && cmd === 'L') { await showRetroArt(); return true; } if (/^\d+$/.test(cmd)) { return await showRetroArtView(cmd); } return false; }

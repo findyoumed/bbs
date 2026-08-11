@@ -125,9 +125,32 @@ export function createAppFactoryHandlers(deps) {
     // [LOG_ID: 20260810_1530] #cmd-hint의 SEND/P/T 클릭 명령도 건의하기 전용
     // raw-input 처리기와 동일한 흐름으로 실행되도록 전역 라우터에 주입한다.
     handleContactSysopRawInput: screens.contactSysopScreens.handleContactSysopRawInput,
+    // [LOG_ID: 20260811_1610] WHO/WH/UID global commands call the active-user
+    // screen directly; omit it here and the command fails at runtime.
+    showActiveUsers: screens.systemScreens.showActiveUsers,
+    // [LOG_ID: 20260811_1615] Global navigation/runtime commands use these
+    // screen and service functions directly; keep the dependency graph
+    // explicit so H/C/SYSINFO and related commands cannot fail at runtime.
+    showProfile: screens.profileScreens.showProfile,
+    showMyInfo: screens.myInfoScreens.showMyInfo,
+    showHelp: screens.helpScreens.showHelp,
+    showHistory: screens.helpScreens.showHistory,
+    showPolicy: screens.policyScreens.showPolicy,
+    showMenuIndex: screens.menuIndexScreens.showMenuIndex,
+    showPostList: screens.postScreens.showPostList,
+    showSystemDiagnostics: screens.systemScreens.showSystemDiagnostics,
+    showActivitySummary: screens.systemScreens.showActivitySummary,
+    showSystemLog: screens.systemLogScreens.showSystemLog,
+    showMemoList: screens.memoScreens.showMemoList,
+    showMemoMenu: screens.memoScreens.showMemoMenu,
+    showMemoWrite: screens.memoScreens.showMemoWrite,
     doLogout: services.authService.doLogout,
+    // [LOG_ID: 20260811_1400] Global FIND navigation calls the board index
+    // helper directly, so provide the service method to the command router.
+    findBoardByCode: services.boardService.findBoardByCode,
     showLogin: screens.authScreens.showLogin,
     toggleMute: services.soundService.toggleMute,
+    toggleTheme: services.toggleTheme,
     networkService: services.networkService,
     adjustZoom: services.terminalUiCore.adjustZoom,
     setZoom: services.terminalUiCore.setZoom,

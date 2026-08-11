@@ -29,7 +29,14 @@ export function createAuthService(deps) {
       const result = await apiFetch('/api/memos/unread/count', { silent: true });
       const count = Number(result?.count || 0);
       if (count > 0 && typeof showToast === 'function') {
-        showToast(`새 쪽지가 ${count}통 도착해 있습니다. (쪽지함: ME)`, 5000, 'info');
+        showToast(`새 쪽지가 ${count}통 도착해 있습니다. (쪽지함: ME)`, 5000, 'info', {
+          title: '클릭하여 받은 쪽지함 열기',
+          onClick: () => {
+            if (typeof window !== 'undefined') {
+              window.location.assign('/memo');
+            }
+          }
+        });
       }
     } catch (error) {
       // 접속 알림은 부가 기능 — 실패는 조용히 넘긴다.

@@ -375,7 +375,22 @@ export function createGlobalNavigationCommandHandler(deps) {
 
     // [LOG_ID: 20260807_1405] ME / MEMO / MAIL 명령어 실행 시 전자우편 대문 메뉴(showMemoMenu)로 진입하고
     // RMAIL(편지읽기, 받은상자) / CMAIL(배달확인/취소, 보낸상자)은 해당 상자 목록으로 진입한다.
-    if (cmd === 'ME' || cmd === 'MEMO' || cmd === 'MAIL') {
+    // [LOG_ID: 20260811_1230] ME/MEMO open the received inbox, matching RMAIL.
+    if (cmd === 'ME' || cmd === 'MEMO') {
+      if (state.user?.isGuest) {
+        setHint('쪽지함은 로그인 후 사용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+      if (typeof showMemoList === 'function') {
+        state._memoBox = 'inbox';
+        await showMemoList();
+        return true;
+      }
+      return false;
+    }
+
+    if (cmd === 'MAIL') {
       if (state.user?.isGuest) {
         setHint('쪽지함은 로그인 후 사용하실 수 있습니다.');
         setDefaultPrompt();
@@ -383,11 +398,6 @@ export function createGlobalNavigationCommandHandler(deps) {
       }
       if (typeof showMemoMenu === 'function') {
         await showMemoMenu();
-        return true;
-      }
-      if (typeof showMemoList === 'function') {
-        state._memoBox = 'inbox';
-        await showMemoList();
         return true;
       }
       return false;

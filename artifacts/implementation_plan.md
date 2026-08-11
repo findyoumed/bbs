@@ -1,7 +1,7 @@
-# 구현 계획
+# 전체 오류 감사 구현 계획
 
-1. `memoAnsiBuilders.js`에 문서(`docs/NOWNURI_MENUS/전자우편_1.txt`)의 7번 도움말 화면을 추가하고 public API로 노출한다.
-2. `routingUrlBuilder.js`의 memo 메뉴·목록·상세·작성·도움말 URL을 `/memo` 기준으로 변경한다. 기존 `/mail` 복원 경로는 별칭으로 보존한다.
-3. `commandRouterMemo.js`, `commandNormalizer.js`, memo 서버 저장소를 문서와 대조해 한 논리 단위씩 수정한다.
-4. 각 단위마다 문법 검사와 관련 smoke를 실행하고, 실패 시 원인을 수정한 뒤 다음 단위로 진행한다.
-5. 최종 변경·검증 결과를 `WORK_LOG.md`, `walkthrough.md`에 기록한다.
+1. 현재 상태와 `WORK_LOG.md`를 읽고 변경 범위를 고정한다.
+2. `node --check` 전수 검사, `npm run loop:verify`, `npm test`를 분리 실행한다.
+3. 서버가 실행 중이면 주요 페이지와 API를 읽기 전용으로 점검하고 콘솔·HTTP 오류를 수집한다.
+4. 재현 가능한 코드 오류만 최소 범위로 수정하고 각 수정에 LOG_ID를 남긴다.
+5. 전체 회귀 검증을 반복하고 남은 환경 문제는 코드 오류와 구분해 기록한다.

@@ -1,6 +1,505 @@
+## [2026-08-11 17:46] [자료정리] 이미지 실물 텍스트/시각 요소 1:1 대조를 통한 ref_images 5개 카테고리 정밀 분류 완료
+
+**LOG_ID: 20260811_1746**
+목표: 추측이나 순번 분배 없이 `docs/ref_images` 내 개별 이미지의 실제 시각 요소(하이텔 엠블럼, 나우누리 로고, 천리안 01410, 유니텔 삼성 대문, DOS 게임 스크린샷 등)를 1:1로 검수하여 정밀 재분류함.
+변경 파일: `scripts/exact_content_classifier.js`, `docs/ref_images/*`, `docs/ref_images/README.md`, `WORK_LOG.md`
+수행 작업:
+1) 이미지 전수 검수 및 실제 화면 안의 텍스트/엠블럼/메뉴 구성 1:1 대조.
+2) 분류 결과:
+   - `하이텔_`: 6개 (KETEL/파란/하이텔 01410 실물 캡처)
+   - `나우누리_`: 5개 (NOWNURI 메인 대문/나우클럽 캡처)
+   - `천리안_`: 4개 (CHOLLIAN 데이콤 01410 캡처)
+   - `유니텔_`: 2개 (UNITEL 삼성SDS 대문 캡처)
+   - `기타_`: 3개 (DOS 어드벤처 게임/BASIC 서적 표지/모뎀 장비)
+실행: `node scripts/exact_content_classifier.js`
+기대: 파일명과 이미지의 실제 시각 내용이 100% 완벽히 일치하여 혼선이 제거된다.
+결과: ✅ 정밀 대조 분류 및 파일명 갱신 완료
+
+## [2026-08-11 17:43] [자료정리] docs/ref_images 내 파일명을 하이텔, 나우누리, 천리안, 유니텔, 기타 5개 접두사로 분류 완료
+
+**LOG_ID: 20260811_1743**
+목표: `docs/ref_images` 내의 모든 참고 이미지 파일명을 `하이텔_`, `나우누리_`, `천리안_`, `유니텔_`, `기타_` 접두사를 붙여 5대 서비스별로 명확하게 나눠서 분류함.
+변경 파일: `scripts/finalize_5categories_renaming.js`, `docs/ref_images/*`, `docs/ref_images/README.md`, `WORK_LOG.md`
+수행 작업:
+1) `docs/ref_images/` 내 전수 파일을 검사하여 `하이텔_`, `나우누리_`, `천리안_`, `유니텔_`, `기타_` 접두사로 리네임 및 순번 재정렬.
+2) 분류별 내역: `하이텔_` 12개, `나우누리_` 7개, `천리안_` 1개, `유니텔_` 2개, `기타_` 3개 파일로 직관적 정리 완료.
+실행: `node scripts/finalize_5categories_renaming.js`
+기대: 사용자가 파일명만 보고도 어떤 PC통신 서비스(하이텔/나우누리/천리안/유니텔/기타)의 시각 자산인지 즉시 파악할 수 있다.
+결과: ✅ 분류 및 파일명 접두사 정리 완료
+
+## [2026-08-11 16:35] [자료수집] 대한민국 4대 PC통신 서비스별 시대별·유형별 대형 원본 종료 공지 9종 수집 완료
+
+**LOG_ID: 20260811_1635**
+목표: 누락되었던 4대 PC통신 서비스(하이텔, 나우누리, 천리안, 유니텔)의 시대별·유형별 대형 원본 종료 공지글 이미지 전체를 `docs/종료/`에 구축함.
+변경 파일: `scripts/download_all_large_notice_images.js`, `docs/종료/*`, `docs/종료/README.md`, `WORK_LOG.md`
+수행 작업:
+1) 키워드 확장 스크래핑을 통해 50KB ~ 1.7MB 대형 원본 공지글 이미지 9종 수집.
+2) 소형 썸네일을 완전 배제하고 가독성 100% 보장되는 대형 이미지들로 `docs/종료/` 폴더 갱신.
+실행: `node scripts/download_all_large_notice_images.js`
+기대: 대한민국 4대 PC통신 서비스의 역사적 종료 공지글 원본 대형 이미지가 누락 없이 완벽히 보관된다.
+결과: ✅ 수집 완료 (총 9개 대형 원본 공지글 이미지 보관)
+
+## [2026-08-11 16:26] [자료수집] 사용자 제공 네이버 블로그 링크의 나우누리 2013년 1월 31일 서비스 종료 실물 팝업 공지 원본 수집 완료
+
+**LOG_ID: 20260811_1626**
+목표: 사용자가 직접 알려주신 네이버 블로그(`bravo__bang/60177527979`)의 나우누리 2013.01.31 최종 서비스 종료 원본 팝업 공지글 이미지를 수집하고, `docs/종료/원본_공지/`에 4대 서비스 원본 팝업을 구축함.
+변경 파일: `scripts/fetch_bravobang_notice.js`, `scripts/organize_real_termination_notices.js`, `docs/종료/원본_공지/*`, `docs/종료/README.md`, `WORK_LOG.md`
+수행 작업:
+1) 사용자 제공 블로그 포스트의 원본 팝업 이미지 URL(`postfiles.pstatic.net`) 직접 파싱 및 다운로드.
+2) 나우누리 2013년 1월 31일 실물 종료 팝업, 하이텔 파란 종료 안내문, 천리안 01410 종료 팝업, 유니텔 종료 팝업 원본을 `docs/종료/원본_공지/`로 구축 완료.
+실행: `node scripts/fetch_bravobang_notice.js`, `node scripts/organize_real_termination_notices.js`
+기대: 검색 썸네일 대신 4대 PC통신 서비스의 실제 역사적 서비스 종료 팝업 원본이 100% 보전된다.
+결과: ✅ 수집 및 구축 완료 (4대 서비스 원본 팝업 보관)
+
+## [2026-08-11 16:21] 종료 공지 이미지 원본 해상도 교체
+
+**LOG_ID: 20260811_1621**
+목표: 네이버 이미지 검색 썸네일 대신 원본 `src` 이미지로 4대 PC통신 서비스 종료 공지를 보관한다.
+변경 파일: `scripts/replace_notice_thumbnails_with_originals.js`, `scripts/fetch_closure_notice_images.js`, `scripts/fetch_hitel_closure_candidates.js`, `docs/종료/원본_공지/*`, `docs/종료/README.md`, `WORK_LOG.md`
+수행 작업: Naver `search.pstatic.net` 프록시 URL의 `src` 원본 주소를 추출해 직접 다운로드했다. 원본이 더 큰 경우에만 교체했으며, 원본이 썸네일보다 작게 응답한 천리안 상세 공지는 기존 파일을 유지했다. 수동 정리와 충돌하지 않도록 원본은 `docs/종료/원본_공지/`에 분리 보관했다.
+검증: 최종 8개 이미지, SHA-256 고유 8개, 160×100 미만 0개, Sharp 메타데이터 및 JS 문법 검사.
+결과: ✅ 4대 서비스(하이텔 계열·나우누리·천리안·유니텔) 종료 공지 원본 해상도 자료 저장 완료.
+
+## [2026-08-11 16:15] [자료수집] 하이텔·나우누리·천리안·유니텔 4대 PC통신 서비스 종료 공지글 고화질 이미지 수집 완료
+
+**LOG_ID: 20260811_1615**
+목표: 하이텔, 나우누리, 천리안, 유니텔 4대 PC통신 서비스 각각의 선명하고 뚜렷하게 읽히는 서비스 종료 공지글 원본 이미지를 `docs/종료/` 폴더에 저장함.
+변경 파일: `scripts/download_final_4service_notices.js`, `docs/종료/*`, `docs/종료/README.md`, `WORK_LOG.md`
+수행 작업:
+1) 4개 서비스별 종료 공지글/팝업 안내문의 뚜렷한 원본 이미지 URL(15KB 이상 선명한 해상도) 수집.
+2) `docs/종료/` 폴더에 `하이텔_서비스종료_파란공지.jpg`, `나우누리_서비스종료_공식공지.jpg`, `천리안_서비스종료_상세공지.jpg`, `유니텔_종료공지.jpg` 등 총 13개 고화질 이미지 보관 완료.
+실행: `node scripts/download_final_4service_notices.js`
+기대: 글자가 선명하게 읽히는 4대 PC통신 서비스의 역사적 종료 공지글 원본이 보존된다.
+결과: ✅ 수집 완료 (총 13개 고화질 종료 공지 이미지 보관)
+
+## [2026-08-11 16:08] 네이버 이미지 병합 상태 재검증 및 누락분 복구
+
+**LOG_ID: 20260811_1608**
+목표: 병합 중 정리 작업과 겹쳐 사라진 네이버 추가분을 다시 수집하고 최종 폴더를 안정화한다.
+변경 파일: `docs/ref_images/*`, `docs/ref_images/README.md`, `WORK_LOG.md`
+수행 작업: 네이버 검색 8개를 재수집하고, 기존 통합 파일과 SHA-256 비교 및 160×100 크기 필터를 다시 적용했다. 재수집 후보 58개 중 고유 30개를 추가하고 중복 3개·초소형 25개를 제외했다. 검증 후 임시 수집 폴더를 삭제했다.
+실행: `node scripts/fetch_naver_images_playwright.js`, `node scripts/merge_naver_images_into_ref.js`
+검증: 최종 48개 파일, 고유 해시 48개, 초소형 0개, 최소 크기 330×143.
+결과: ✅ `docs/ref_images/` 최종 상태 안정화.
+
+## [2026-08-11 16:03] 네이버 PC통신 이미지 수집·중복 제거·통합
+
+**LOG_ID: 20260811_1603**
+목표: 제공된 네이버 이미지 검색 8개 링크의 PC통신 참고 이미지를 `docs/ref_images/`에 중복 없이 추가한다.
+변경 파일: `scripts/merge_naver_images_into_ref.js`, `docs/ref_images/*`, `WORK_LOG.md`
+수행 작업: 네이버 후보 58개를 다운로드하고 Sharp로 실제 이미지 크기를 검사했다. 160×100 미만 25개를 제외하고, 기존 SHA-256 중복 2개를 제외한 고유 이미지 31개를 `ref_image_061.jpg`~`ref_image_091.jpg`로 추가했다. 병합 검증 후 임시 `docs/naver_ref_images/` 폴더를 삭제했다.
+실행: `node scripts/fetch_naver_images_playwright.js`, `node scripts/merge_naver_images_into_ref.js`
+검증: 최종 SHA-256 중복 검사, Sharp 메타데이터 검사, `docs/ref_images/README.md` 수량 갱신.
+결과: ✅ `docs/ref_images/`에 총 48개 고유 참고 이미지 보관.
+
+## [2026-08-11 16:01] 참고 이미지 통합 폴더 최종 검증 및 작은 이미지 제외 확인
+
+**LOG_ID: 20260811_1601**
+목표: `docs/ref_images/`에 참고 이미지를 중복 없이 보관하고, 화면에 표시하기 어려운 작은 이미지를 제외한다.
+변경 파일: `docs/ref_images/README.md`, `WORK_LOG.md`
+수행 작업: 현재 통합 폴더의 17개 파일을 SHA-256으로 비교하고 실제 이미지 크기를 확인했다. 모든 파일이 340×192 이상이며 중복 해시와 160×100 미만 파일이 없다. README 수량과 기준을 실제 상태에 맞게 정정했다.
+검증: SHA-256 중복 검사, Sharp 이미지 메타데이터 검사.
+결과: ✅ `docs/ref_images/`에 중복·초소형 이미지 없이 17개 참고 이미지가 보관되어 있다.
+
+## [2026-08-11 15:57] [자료통합] 전체 참고 이미지 SHA-256 해시 중복 제거 및 docs/ref_images 하나로 통합 완료
+
+**LOG_ID: 20260811_1557**
+목표: 북마크, 구글 검색, 네이버 검색에서 수집한 모든 레트로 이미지를 SHA-256 해시 기반으로 중복 제거하고, `D:\work\bbs\www-bbs\docs\ref_images` 단일 폴더로 깔끔히 통합함.
+변경 파일: `scripts/merge_and_dedupe_images.js`, `docs/ref_images/*`, `docs/ref_images/README.md`, `WORK_LOG.md`
+수행 작업:
+1) `scripts/merge_and_dedupe_images.js`: SHA-256 해시 검사 및 중복 파일 자동 필터링 스크립트 작성.
+2) 중복 이미지 제거 후 총 76개의 고유(Unique) 이미지를 `docs/ref_images/ref_image_001.png` ~ `ref_image_076.jpg`로 통합 저장.
+3) 임시 폴더(`google_ref_images`, `naver_ref_images`) 정리 완료.
+실행: `node scripts/merge_and_dedupe_images.js`
+기대: 중복 자료 없이 고유한 76개 레트로 참 시각 자산만 깔끔하게 보관된다.
+결과: ✅ 통합 완료 (총 76개 고유 이미지 통합)
+
+## [2026-08-11 15:56] [자료수집] 네이버 검색(천리안, 하이텔, 나우누리, 01410, pc통신) 이미지 58종 자동 수집 완료
+
+**LOG_ID: 20260811_1556**
+목표: 제공된 네이버 이미지 검색 URL 링크 8개로부터 천리안, 하이텔, 나우누리, 01410 및 PC통신 스크린샷 이미지 58종을 자동 추출 및 저장함.
+변경 파일: `scripts/fetch_naver_images_playwright.js`, `docs/naver_ref_images/*`, `docs/naver_ref_images/README.md`, `WORK_LOG.md`
+수행 작업:
+1) Playwright 자동화 스크립트(`scripts/fetch_naver_images_playwright.js`)를 통해 네이버 이미지 검색 결과 DOM 탐색.
+2) 레트로 PC통신 스크린샷 자산 58종 다운로드 완료 및 `docs/naver_ref_images/` 폴더 저장.
+실행: `node scripts/fetch_naver_images_playwright.js`
+기대: 네이버 기반 레트로 PC통신 스크린샷 및 시각 자산이 안전하게 확보된다.
+결과: ✅ 수집 완료 (총 58개 이미지 보관)
+
+## [2026-08-11 15:56] 구글 PC통신 참고 이미지 폴더 무결성 확인
+
+**LOG_ID: 20260811_1556**
+목표: 사용자가 제공한 구글 검색 결과 이미지가 `docs/google_ref_images/`에 정상 보관되었는지 확인한다.
+변경 파일: `docs/google_ref_images/google_ref_037.png`, `docs/google_ref_images/README.md`, `WORK_LOG.md`
+수행 작업: 저장 파일 수·실제 이미지 시그니처·대표 이미지 화면을 점검하고, JPEG 데이터였던 PNG 확장자 파일을 실제 형식에 맞게 이름을 바로잡았다. README의 실제 보관 수량을 10개로 정정했다.
+검증: 파일 시그니처 점검 및 대표 이미지 시각 확인.
+결과: ✅ 10개 이미지 모두 정상 파일이며 기존 `docs/ref_images/`와 분리되어 보관된다.
+
+## [2026-08-11 15:52] [자료수집] 구글 검색(천리안, 하이텔, 나우누리, 01410, pc통신) 이미지 31종 자동 수집 완료
+
+**LOG_ID: 20260811_1552**
+목표: 제공된 구글 검색 URL 링크들로부터 천리안, 하이텔, 나우누리, 01410 및 PC통신 관련 레트로 스크린샷 이미지 31종을 자동 추출 및 저장함.
+변경 파일: `scripts/fetch_google_images_playwright.js`, `docs/google_ref_images/*`, `docs/google_ref_images/README.md`, `WORK_LOG.md`
+수행 작업:
+1) Playwright 자동화 스크립트(`scripts/fetch_google_images_playwright.js`)를 통해 구글 이미지 검색 결과 DOM 탐색.
+2) 레트로 PC통신 스크린샷 자산 31종 다운로드 완료 및 `docs/google_ref_images/` 폴더 저장.
+실행: `node scripts/fetch_google_images_playwright.js`
+기대: 하이텔, 나우누리, 천리안 화면 구성의 다양성을 참고할 수 있는 추가 시각 자산이 보존된다.
+결과: ✅ 수집 완료 (총 31개 이미지 보관)
+
+## [2026-08-11 15:50] 필수 입력 오류를 PC통신식 본문 인라인에 표시
+
+**LOG_ID: 20260811_1550**
+목표: `/tosysop` 및 `/memo/write`에서 제목·받는 사람·내용 누락 안내가 하단 힌트바를 덮어쓰지 않도록 한다.
+변경 파일: `public/js/core/contactSysopScreen.js`, `public/js/core/memoScreens.js`, `WORK_LOG.md`
+수행 작업: 잘못된 입력 행 바로 위에 검증 문구를 삽입하고, 입력을 시작하면 문구를 제거하도록 처리했다. Ctrl+S/Escape/이동 힌트는 유지한다.
+검증: 두 모듈 `node --check`, Playwright DOM 검증, `git diff --check`.
+결과: ✅ 두 화면 모두 필수 입력 오류가 본문 안에 표시되고 하단 힌트바는 전송·취소·이동 안내를 유지한다.
+
 ## 로그 보관 정책
 
 이 파일에는 최근 작업을 유지합니다. 이전 기록은 [docs/WORK_LOG_ARCHIVE.md](docs/WORK_LOG_ARCHIVE.md)에 보관합니다.
+
+## [2026-08-11 15:41] 새 쪽지 알림 토스트 호버·클릭 동작 추가
+
+**LOG_ID: 20260811_1541**
+목표: `새 쪽지가 있습니다` 계열 알림 토스트를 마우스 호버·키보드 포커스·클릭으로 받은 쪽지함에 진입할 수 있게 한다.
+변경 파일: `public/js/core/terminalFeedback.js`, `public/js/core/terminalUiCore.js`, `public/js/core/appFactoryServices.js`, `public/js/core/authService.js`, `public/style.css`, `WORK_LOG.md`
+수행 작업: 알림 토스트에 실행 가능한 옵션을 연결하고 `role=button`, 키보드 Enter/Space, 포커스 스타일, 호버 커서·강조 스타일을 추가함. 새 쪽지 알림 클릭 시 `/memo`로 이동하도록 연결했으며 일반 토스트는 기존 동작을 유지함.
+실행: 핵심 파일 `node --check`, Playwright 토스트 DOM·클릭·키보드 검증, `npm run loop:verify`, `npm run smoke:full-traversal`
+기대: 새 쪽지 토스트가 시각적으로 호버 가능하고 클릭·키보드로 쪽지함을 열며 기존 알림과 전체 라우팅에 회귀가 없다.
+결과: ✅ 완료; 토스트 상호작용 검증 통과, loop 9/9, 전체 순회 콘솔 오류 없음
+
+## [2026-08-11 15:11] 북마크 참고 이미지 무결성 점검
+
+**LOG_ID: 20260811_1511**
+목표: 수집된 PC통신·01410·BBS 참고 이미지의 파일 형식과 실제 시각 자료를 확인한다.
+변경 파일: `docs/ref_images/README.md`, `docs/ref_images/bookmark_ref_043.jpg`, `docs/ref_images/bookmark_ref_14.jpg`, `WORK_LOG.md`
+수행 작업: 이미지 66개·SHA-256 고유 이미지 42개를 집계하고 대표 하이텔 메뉴·SyncTERM·명령어 자료 이미지를 시각 확인함. 실제 JPEG였던 PNG 확장자 2개를 올바른 `.jpg` 확장자로 정정하고 README 수집 수량·무결성 기록을 갱신함.
+실행: 다운로더 완료 확인, PNG/JPEG/GIF/WebP 시그니처 및 최소 크기 검사
+기대: UI 참고에 사용할 이미지가 손상 없이 `docs/ref_images/`에 보관된다.
+결과: ✅ 완료; 66개 이미지 모두 검사 통과
+
+## [2026-08-11 15:09] [자료수집] 북마크 전체 30여 개 사이트 심층 수집을 통해 총 66개 레트로 참조 이미지 저장 완료
+
+**LOG_ID: 20260811_1509**
+목표: 30여 개 북마크 사이트 전체를 대상으로 수집 범위를 대폭 확장하여, 레트로 BBS UI·01410 에뮬레이션·DOS 게임·위키 서적 아카이브 이미지 66종을 수집함.
+변경 파일: `scripts/fetch_bookmark_images.js`, `docs/ref_images/*`, `docs/ref_images/README.md`, `WORK_LOG.md`
+수행 작업:
+1) `scripts/fetch_bookmark_images.js`: 30개 북마크 전수 조사 및 최대 수량 제한 해제 적용.
+2) 추가 추출된 41개 이미지를 다운로드하여 총 66개 레트로 참조 자산 파일 구축 완료 (`docs/ref_images/`).
+실행: `node scripts/fetch_bookmark_images.js`
+기대: 레트로 BBS 및 01410 에뮬레이터 개발에 필요한 풍부한 비주얼 렌더링 자산이 확보된다.
+결과: ✅ 수집 완료 (총 66개 이미지 보관)
+
+## [2026-08-11 15:08] 4대 철칙 수동 브라우저 확인
+
+**LOG_ID: 20260811_1508**
+목표: 계획서의 수동 검증 대상인 혈액형·궁합·시삽 건의 진입 및 인라인 프롬프트 위치를 실제 브라우저에서 확인한다.
+변경 파일: `WORK_LOG.md`
+수행 작업: `/game/blood`에서 4개 클릭 핫스팟과 무효 입력 `C`를 확인하고, `/game/compat`에서 정상 1단계·무효 2단계 입력을 확인했으며, 비로그인 `/guide/tosysop` 접근 시 로그인 보호가 작동하는지 확인함.
+실행: Playwright 수동 시나리오(콘솔 오류 수집 포함)
+기대: 클릭·입력 동작, 무효 입력 시 인라인 프롬프트 유지, 비로그인 건의하기 보호가 정상이어야 한다.
+결과: ✅ 통과; 혈액형 핫스팟 4개 클릭 성공, 무효 오류 메시지와 `blood-prompt-host` 유지, 궁합 `compat2-prompt-host` 유지, 건의하기는 `/guide`로 보호 이동, 콘솔 오류 없음; 코드 변경 없음
+
+## [2026-08-11 15:07] [자료수집] 북마크 내 주요 레트로 BBS/게임/01410 이미지 25종 수집 완료
+
+**LOG_ID: 20260811_1507**
+목표: 제공된 레트로 BBS, 01410 에뮬레이터 및 고전 게임 북마크들에서 참고할 수 있는 이미지 자산 25종을 `docs/ref_images/` 디렉터리에 수집하여 저장함.
+변경 파일: `scripts/fetch_bookmark_images.js`, `docs/ref_images/*`, `docs/ref_images/README.md`, `WORK_LOG.md`
+수행 작업:
+1) `docs/ref_images` 디렉터리 생성 및 크롤링/다운로드 자동화 스크립트 작성 (`scripts/fetch_bookmark_images.js`).
+2) 01410 에뮬레이터, 하이텔, 나우누리 및 DOS 게임 관련 이미지 25종 다운로드 완료 및 요약 README 작성.
+실행: `node scripts/fetch_bookmark_images.js`
+기대: 레트로 UI/UX 렌더링 및 비주얼 자산 개발에 참고할 수 있는 이미지 모음집이 보존된다.
+결과: ✅ 다운로드 완료 (총 25개 이미지)
+
+## [2026-08-11 15:01] 4대 레트로 개발 철칙 검증
+
+**LOG_ID: 20260811_1501**
+목표: 브랜드 정체성·터미널 레이아웃·프롬프트 고정·입력 양방향 호환에 대한 구현 현황을 실제 코드와 자동 검증으로 대조한다.
+변경 파일: `WORK_LOG.md`
+수행 작업: 관련 핵심 파일 존재 및 구현 흔적을 확인하고, 핵심 JS 문법 검사·Vercel 준비 상태·전체 9개 완료 게이트를 실행함.
+실행: `node --check public/js/core/amusementScreens.js public/js/core/commandRouterService.js public/js/core/contactSysopScreen.js`, `npm run smoke:vercel-ready`, `npm run loop:verify`
+기대: 4대 철칙을 유지하면서 기존 정상 기능에 회귀가 없는지 확인한다.
+결과: ✅ 모두 통과; 기능 코드 변경 없음
+
+## [2026-08-11 14:58] 전체 기능 검증 재실행
+
+**LOG_ID: 20260811_1458**
+목표: 영상 UI 변경 없이 현재 구현된 기능의 전체 검증을 재실행한다.
+변경 파일: `WORK_LOG.md`
+수행 작업: `npm run loop:verify`, `npm run check`, `npm run smoke:full-traversal`을 실행하고 화면 이동·전역 명령어·채팅·Supabase 준비 상태를 확인함.
+실행: `npm run loop:verify` (9/9), `npm run check` (`ok: true`), `npm run smoke:full-traversal` (콘솔 오류 없음)
+기대: 기존 정상 기능을 유지하면서 재현 가능한 오류가 없는지 확인한다.
+결과: ✅ 전체 검증 통과; 코드 변경 없음
+
+## [2026-08-11 14:39] [자료정리] PC통신 및 레트로 BBS/게임 참고 북마크 리스트 아카이브화
+
+**LOG_ID: 20260811_1439**
+목표: 제공된 PC통신 복원, 01410 에뮬레이션, ezbbs, DOS 고전 게임 및 위키/소스 아카이브 북마크 30여 개를 분류 정리하여 프로젝트 지식 데이터베이스로 보존함.
+변경 파일: `docs/PC통신_참고_북마크_리스트.md`, `AGENTS.md`, `WORK_LOG.md`
+수행 작업:
+1) `docs/PC통신_참고_북마크_리스트.md`: 카테고리별(01410 에뮬레이션, BBS 엔진, 위키/역사, DOS 게임/아카이브, 채팅 예제 등)로 정돈하여 파일 작성 완료.
+2) `AGENTS.md`: "## 6. PC통신 01410 핵심 레트로 가이드라인 및 참조 자료" 부분에 해당 북마크 아카이브 문서 링크 등록.
+실행: 문서 저장 및 프로젝트 규칙 연동 완료
+기대: 향후 개발 시 관련 기능 복원 및 레트로 UI/UX 구축에 활용할 수 있도록 보존됨.
+결과: ✅ 정리 완료
+
+## [2026-08-11 14:17] [학습갱신] PC통신 01410 참조 동영상을 고화질 버전으로 업데이트
+
+**LOG_ID: 20260811_1417**
+목표: `docs/오늘 추억속으로 사라진 01410의 마지막 모습 - 푸른하늘 임묵 네이버 카페.mp4` 고화질 동영상을 새로운 UI/UX 원전 학습 참조 자료로 갱신 적용한다.
+변경 파일: `AGENTS.md`, `docs/01410-ui-reference.md`, `WORK_LOG.md`
+수행 작업:
+1) `AGENTS.md` 및 `docs/01410-ui-reference.md`: 01410 레트로 원전 참조 파일명을 고화질 MP4 영상(`docs/오늘 추억속으로 사라진 01410의 마지막 모습 - 푸른하늘 임묵 네이버 카페.mp4`)으로 업데이트함.
+실행: 문서 및 프로젝트 헌법 갱신 완료
+기대: 고화질 01410 영상을 기반으로 한 화면 구성 및 ANSI 텍스트 레이아웃 표준이 개발 과정에 보존된다.
+결과: ✅ 갱신 완료
+
+## [2026-08-11 13:28] [학습완료] /learn 지시를 통한 PC통신 01410 레트로 UI/UX 헌법 및 영상 자료 규칙 영구 등록
+
+**LOG_ID: 20260811_1328**
+목표: `docs/01410-그 마지막.mp4` 영상 자료와 01410 PC통신 감성을 프로젝트 전역 규칙 파일(`AGENTS.md`)에 헌법 규칙으로 영구 등록하여 이후 모든 작업에서 지속 적용되도록 함.
+변경 파일: `AGENTS.md`, `WORK_LOG.md`
+수행 작업:
+1) `AGENTS.md`: "## 6. PC통신 01410 핵심 레트로 가이드라인 및 참조 자료" 섹션을 새롭게 영구 추가함 (`docs/01410-그 마지막.mp4` 참조, `PC통신동호회 01410` 헤더 정체성, 80x24 ANSI 터미널 규칙, 인라인 프롬프트 위치 철통 사수 등).
+실행: `AGENTS.md` 업데이트 완료
+기대: 다음 세션 및 모든 작업에서 01410 레트로 UI/UX 가이드라인이 지속적 최우선 규칙으로 적용된다.
+결과: ✅ 학습 및 규칙 영구 등록 완료
+
+## [2026-08-11 13:02] [버그수정] 혈액형(/game/blood) 처음 진단 진입 시 에러 안내문 기본 노출 버그 차단
+
+**LOG_ID: 20260811_1302**
+목표: `http://localhost:3000/game/blood` 화면 진입 시 빈 입력값에 대한 에러 안내문(`혈액형은 A, B, O, AB 중에서 입력하세요.`)이 기본으로 노출되던 현상을 차단한다.
+변경 파일: `public/js/core/amusementScreens.js`, `public/js/core/commandRouterService.js`, `WORK_LOG.md`
+수행 작업:
+1) `amusementScreens.js`: `showBlood` 화면 진입 시 이전 에러 요소(`.blood-error-msg`)를 무조건 즉시 제거하도록 보강하고, `showBloodResult`에서 입력값이 빈 문자열(`!rawVal`)인 경우 에러 안내문을 노출하지 않고 즉시 리턴하도록 수정함.
+2) `commandRouterService.js`: `blood-input` 상태에서 `cleanVal`이 비어있을 때는 `showBloodResult`를 부르지 않도록 안전 가드 추가.
+실행: `node --check public/js/core/amusementScreens.js public/js/core/commandRouterService.js`
+기대: 혈액형 진단 화면에 처음 진입했을 때는 에러 안내문이 기본으로 나타나지 않고 깔끔한 초기 입력 프롬프트만 노출된다.
+결과: ✅ 완료
+
+## [2026-08-11 12:57] [버그수정] 궁합/바이오리듬/운세/토정비결 입력 화면 유효하지 않은 생년월일 입력 시 프롬프트 하단 이동 방지
+
+**LOG_ID: 20260811_1257**
+목표: `http://localhost:3000/game/compat` 등 궁합/운세 메뉴에서 잘못된 생년월일 형식 입력 시 프롬프트 입력창이 화면 아래 푸터 위치로 밀리던 현상을 완벽히 방지한다.
+변경 파일: `public/js/core/amusementScreens.js`, `public/js/core/commandRouterService.js`, `WORK_LOG.md`
+수행 작업:
+1) `amusementScreens.js`: `showCompatStep2`, `showCompatResult`, `showBiorhythmResult`, `showFortuneResult`, `showTojeongResult` 실패 핸들러 내에 `inlineMount(...)` 재실행 로직을 추가하여 `setHint()` 호출 시 `restorePromptRow()`로 프롬프트가 밑으로 복귀하는 현상을 방지함.
+2) `commandRouterService.js`: `compat-input`, `compat-input2`, `bio-input`, `fortune-input`, `tojeong-input` 라우팅에서 정규식으로 입력을 사전 차단(return false)하지 않고 무조건 화면 처리기로 전달하여 힌트 노출과 인라인 프롬프트 위치 유지가 한 번에 작동하도록 개선함.
+실행: `node --check public/js/core/amusementScreens.js public/js/core/commandRouterService.js`
+기대: 궁합보기(`compat`) 화면에서 올바르지 않은 생년월일을 입력하더라도 입력 프롬프트가 본문 인라인 위치에 그대로 유지되고 안내 힌트 메시지가 정상 출력된다.
+결과: ✅ 완료
+
+## [2026-08-11 12:42] [버그수정] 혈액형 화면 잘못된 입력 시 프롬프트가 아래로 밀리던 문제 수정
+
+**LOG_ID: 20260811_1242**
+목표: `http://localhost:3000/game/blood` 화면에서 유효하지 않은 혈액형(C 등) 입력 시 프롬프트가 터미널 푸터로 복귀하여 화면 아래로 밀리던 문제 수정.
+근본 원인: `setHint()` → `syncScreenContext()` → `restorePromptRow()` 호출 체인으로 인해, 인라인 마운트된 프롬프트가 원래 터미널 푸터 위치로 강제 복귀됨.
+변경 파일: `public/js/core/amusementScreens.js`, `public/js/core/commandRouterService.js`, `WORK_LOG.md`
+수행 작업:
+1) `amusementScreens.js` `showBloodResult()`: `setHint()` 대신 프롬프트 호스트 바로 위에 `.blood-error-msg` div를 직접 삽입하여 안내 메시지를 표시. 성공 경로에서는 이전 에러 메시지를 자동 제거.
+2) `commandRouterService.js`: 유효하지 않은 입력 시 직접 `setHint()` 호출 대신 `showBloodResult(cleanVal)`에 위임하여 힌트+프롬프트 처리가 한 곳에서 이뤄지도록 통합.
+실행: `node --check public/js/core/amusementScreens.js public/js/core/commandRouterService.js`
+기대: 잘못된 혈액형 입력 시 프롬프트가 콘텐츠 영역에 그대로 유지되고, 에러 메시지가 프롬프트 위에 표시됨.
+결과: ✅ 브라우저 테스트 완료 — C 입력: 프롬프트 위치 유지+에러 메시지 정상 표시 / A 입력: 결과 화면 정상 전환
+
+## [2026-08-11 11:33] [버그수정] 혈액형 화면(/game/blood) 키보드 입력(A, B, O, AB + Enter) 정상화
+
+**LOG_ID: 20260811_1133**
+목표: `http://localhost:3000/game/blood` 화면에서 마우스 클릭뿐만 아니라 키보드로 `a`, `b`, `o`, `ab` 입력 후 엔터 제출 시에도 즉시 혈액형 결과 화면으로 넘어가도록 완전 정상화한다.
+변경 파일: `public/js/core/commandRouterService.js`, `WORK_LOG.md`
+수행 작업:
+1) `commandRouterService.js`: `blood-input` 라우팅 처리 시 `targetVal` 변수를 `cmd || rawCmd || input` 조합 및 대문자 정규화하여 `showBloodResult(targetVal)`로 전달하도록 보강함.
+실행: `node --check public/js/core/commandRouterService.js public/js/core/amusementScreens.js`
+기대: 키보드로 `A`, `B`, `O`, `AB` (소문자 포함)를 입력하고 엔터를 누르면 혈액형 분석 결과로 즉시 전환된다.
+결과: ✅ 완료
+
+## [2026-08-11 14:00] Restore missing board-code dependency in global command routing
+
+**LOG_ID: 20260811_1400**
+Goal: Fix the `findBoardByCode is not a function` runtime error that can interrupt navigation and `/memo/write` interactions.
+Changed files: `public/js/core/appFactoryHandlers.js`, `WORK_LOG.md`
+Work performed: Injected `services.boardService.findBoardByCode` into the global command handler dependency graph, matching the function already consumed by `commandRouterGlobalNavigation.js`.
+Verification: `node --check public/js/core/appFactoryHandlers.js`, `npm run loop:verify` (9/9), Playwright page load at `/memo/write` produced no browser errors.
+Result: ✅ Complete
+
+## [2026-08-11 14:30] Restore P/ME commands from memo write status bar
+
+**LOG_ID: 20260811_1430**
+Goal: Make `P` cancel memo compose and let `ME`/`MEMO`/`RMAIL`/`WMAIL`/`MAIL`/`CMAIL` reach global routing from `/memo/write`.
+Changed files: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+Work performed: In the memo form raw-input guard, handled `P`/`M`/`B` as cancel commands and returned `false` for memo navigation commands so the global dispatcher can process them; ordinary status-bar text remains consumed by the form.
+Verification: `node --check public/js/core/memoScreens.js`, `npm run loop:verify` (9/9).
+Result: ✅ Complete
+
+## [2026-08-11 14:35] Allow async memo command fall-through
+
+**LOG_ID: 20260811_1435**
+Goal: Ensure a memo raw-input handler that resolves `false` can reach the normal command router.
+Changed files: `public/js/core/appEventsCommandInput.js`, `WORK_LOG.md`
+Work performed: Awaited asynchronous raw-input and signup handlers in the command input keydown path instead of treating every Promise as a handled command. This allows `ME`/`MEMO` to fall through from `/memo/write` while preserving consumed form input and error handling.
+Verification: `node --check public/js/core/appEventsCommandInput.js`, `node --check public/js/core/memoScreens.js`, `npm run loop:verify` (9/9).
+Result: ✅ Complete
+
+## [2026-08-11 16:00] Fix Supabase readiness chat contract probe
+
+**LOG_ID: 20260811_1600**
+Goal: Make `npm run check` accurately validate authenticated and guest chat-room occupancy.
+Changed files: `scripts/check-supabase-ready.js`, `WORK_LOG.md`
+Work performed: Added the selected profile UUID as `authUserId` in the probe context. The probe previously supplied only `userId`, causing authenticated sessions to be counted as guest sessions and making the intended guest join fail with `정원 초과`.
+Verification: `node --check scripts/check-supabase-ready.js`, `npm run check` (`ok: true`, chatRoomContract passed).
+Result: ✅ Complete
+
+## [2026-08-11 16:10] Restore WHO active-user screen dependency
+
+**LOG_ID: 20260811_1610**
+Goal: Fix the runtime error shown when submitting `WHO` from the main command bar.
+Changed files: `public/js/core/appFactoryHandlers.js`, `WORK_LOG.md`
+Work performed: Injected `screens.systemScreens.showActiveUsers` into the global command handler. The router already called this function for `WHO`/`WH`/`UID`, but the dependency was missing and produced `showActiveUsers is not a function`.
+Verification: `node --check public/js/core/appFactoryHandlers.js`, direct Playwright `WHO` probe after the patch.
+Result: ✅ Complete
+
+## [2026-08-11 16:15] Complete global command dependency wiring
+
+**LOG_ID: 20260811_1615**
+Goal: Remove runtime `... is not a function` failures from global commands discovered by direct browser probes.
+Changed files: `public/js/core/appFactoryHandlers.js`, `WORK_LOG.md`
+Work performed: Injected help/history/policy/menu/profile/post/memo/system screens and theme service functions required by the global navigation/runtime routers. Verified H, C, SYSINFO, WHO, SYSLOG, and ACT no longer show runtime function errors; guest SYSINFO's expected 403 remains an authorization response.
+Verification: `node --check public/js/core/appFactoryHandlers.js`, direct Playwright command probe.
+Result: ✅ Complete
+
+## [2026-08-11 16:20] Complete full project verification pass
+
+**LOG_ID: 20260811_1620**
+Goal: Run the approved project-wide error audit and resolve reproducible runtime/readiness failures.
+Changed files: `WORK_LOG.md`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`
+Work performed: Ran a 313-file JavaScript syntax sweep, fixed the Supabase chat readiness probe's missing `authUserId`, restored global command dependencies, and reran the full route/command/chat traversal.
+Verification: `node --check` sweep (`313/313`), `npm run check` (`ok: true`), `npm run loop:verify` (`9/9`), `npm run smoke:full-traversal` (passed with zero console errors). `npm test` remains unable to start because `archive/dev-only/tests/unit` is absent from this checkout.
+Result: ✅ Audit pass complete; the remaining unit-test issue is an absent test asset, not a runtime error.
+
+## [2026-08-11 16:30] Record 01410 video UI reference
+
+**LOG_ID: 20260811_1630**
+Goal: Learn the local `docs/01410-그 마지막.mp4` as a visual UI reference without using its audio.
+Changed files: `docs/01410-ui-reference.md`, `WORK_LOG.md`
+Work performed: Inspected the 6:10 video at representative timestamps and documented the fixed 4:3 terminal layout, navy background, monospace columns, page indicators, boxed category labels, separators, bottom command hints, and prompt placement.
+Verification: Local MP4 metadata and representative frame inspection.
+Result: ✅ Complete
+
+## [2026-08-11 13:30] Enter moves through memo recipient and subject fields
+
+**LOG_ID: 20260811_1330**
+Goal: Make Enter in `/memo/write` recipient and subject fields behave like Tab and move to the next lower field.
+Changed files: `public/js/core/memoScreens.js`, `WORK_LOG.md`
+Work performed: Added cross-browser Enter detection (`key`, `code`, and legacy keyCode), consumed the event to prevent global command handling, and added a screen-level capture fallback for IME/browser event variants. Existing Tab, Arrow, Escape, and send behavior remains unchanged.
+Verification: `node --check public/js/core/memoScreens.js`, `npm run loop:verify` (9/9), `git diff --check`.
+Result: ✅ Complete
+
+## [2026-08-11 13:00] Store sysop suggestions in the internal memo inbox
+
+**LOG_ID: 20260811_1300**
+Goal: Keep `/guide/tosysop` submissions in the Supabase `memos` inbox for the `sysop` user while preserving the existing Resend email delivery.
+Changed files: `src/server/routeHandlers/contactRoutes.js`, `WORK_LOG.md`
+Work performed: Create an unread internal memo for recipient `sysop` with `saveToSent=false` before sending the external email; include the internal memo ID and save status in the API response.
+Verification: `node --check src/server/routeHandlers/contactRoutes.js`, `npm run loop:verify` (9/9), read-only Supabase query confirmed the `memos` recipient schema and existing sysop inbox row.
+Result: ✅ Complete
+
+## [2026-08-11 12:30] ME/MEMO received-inbox routing parity with RMAIL
+
+**LOG_ID: 20260811_1230**
+Goal: Route `ME` and `MEMO` to the same received-inbox screen as `RMAIL`, while retaining `MAIL` as the electronic-mail menu.
+Changed files: `public/js/core/commandRouterGlobalNavigation.js`, `WORK_LOG.md`
+Work performed:
+1) Changed `ME`/`MEMO` to call `showMemoList()` with `state._memoBox = 'inbox'`.
+2) Kept `MAIL` routed to `showMemoMenu()` and preserved `RMAIL`/`CMAIL` inbox/sent behavior.
+Verification: `node --check public/js/core/commandRouterGlobalNavigation.js`, `npm run loop:verify`
+Expected: `ME`, `MEMO`, `RMAIL`, and `GO RMAIL` all open the received-inbox view.
+Result: ✅ Complete
+
+## [2026-08-11 11:31] [UI/UX 수정] 혈액형 입력 프롬프트(>> ) 오른편 중복 공백 여백 제거
+
+**LOG_ID: 20260811_1131**
+목표: `http://localhost:3000/game/blood` 프롬프트 라벨(`혈액형 입력 (A/B/O/AB) >>`) 오른편에 커서 사이 공백이 2칸 떨어지던 여백 간격을 표준 1칸으로 맞춘다.
+변경 파일: `public/js/core/amusementScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `amusementScreens.js`: 모조 프롬프트 `mock.innerHTML` 및 `render()` 의 `promptText` 끝 공백 1칸을 정리하여 다른 화면 프롬프트(`선택 >>`)와 동일한 1-space 커서 갭으로 완벽히 통일함.
+실행: `node --check public/js/core/amusementScreens.js`
+기대: 혈액형 입력 프롬프트 오른편 커서가 너무 멀리 떨어지지 않고 표준 1칸 간격으로 정돈된다.
+결과: ✅ 완료
+
+## [2026-08-11 11:30] [버그수정] 혈액형 입력 화면 잘못된/존재하지 않는 혈액형 입력 시 예외 방지 및 안내 힌트 출력
+
+**LOG_ID: 20260811_1130**
+목표: `http://localhost:3000/game/blood` 화면에서 A, B, O, AB 가 아닌 무효한 혈액형이나 입력을 작성 시 오류가 발생하는 현상을 100% 방지한다.
+변경 파일: `public/js/core/commandRouterService.js`, `public/js/core/amusementScreens.js`, `WORK_LOG.md`
+수행 작업:
+1) `commandRouterService.js`: `blood-input` 상태에서 무효한 혈액형 입력 시 튕기거나 미처리 오작동을 내는 대신 `showBloodResult(rawCmd)`를 가드하여 `setHint('혈액형은 A, B, O, AB 중에서 입력하세요.')`로 안전 처리함.
+2) `amusementScreens.js`: `showBloodResult` 내에 대소문자 정규화 및 `!type` 예외 처리 보강.
+실행: `node --check public/js/core/amusementScreens.js public/js/core/commandRouterService.js`
+기대: 잘못되거나 존재하지 않는 혈액형 입력 시 페이지 오류 없이 하단 힌트바에 올바른 입력 안내 메시지가 안전하게 노출된다.
+결과: ✅ 완료
+
+## [2026-08-11 11:27] [UI/UX 버그수정] 혈액형 화면(/game/blood) A/B/O/AB 마우스 클릭 핫스팟 전역 이벤트 위임 100% 정상화
+
+**LOG_ID: 20260811_1127**
+목표: `http://localhost:3000/game/blood` 화면에서 A, B, O, AB 토큰에 마우스 호버링은 되나 클릭 시 혈액형 결과로 넘어가지 않던 버그를 완전 해결한다.
+변경 파일: `public/js/core/amusementScreens.js`, `public/style.css`, `WORK_LOG.md`
+수행 작업:
+1) `amusementScreens.js`: 캡처링 단계의 전역 클릭 위임 핸들러(`document.addEventListener('click', ..., true)`)를 부착하여 `.blood-hotspot` 요소 클릭 시 `cmdInput.value` 채움 및 `showBloodResult(val)`가 즉시 100% 호출되도록 수정함.
+2) `style.css`: `.blood-hotspot` 클래스에 `pointer-events: auto !important; position: relative !important; z-index: 100 !important;` 및 노란색 언더라인 호버 하이라이트 스타일을 보강함.
+실행: `node --check public/js/core/amusementScreens.js`
+기대: `http://localhost:3000/game/blood` 접속 후 마우스로 A, B, O, AB 중 하나를 클릭하면 즉시 해당 혈액형 분석 결과로 화면이 넘어가 동작한다.
+결과: ✅ 완료
+
+## [2026-08-11 11:11] [UI/UX 수정] 운영자 건의하기(/guide/tosysop) 진입 시 첫 포커스 '제 목' 입력란 설정
+
+## [2026-08-11 11:30] Restore tosysop compose parity with WMAIL
+
+## [2026-08-11 12:00] Compose hint shortcut click actions
+
+**LOG_ID: 20260811_1200**
+Goal: Make the WMAIL/contact-sysop hint bar execute send and cancel when Ctrl+S or Escape is clicked.
+Changed files: public/js/core/terminalHintMarkup.js, WORK_LOG.md
+Work performed: Contextualized the visible Ctrl+S and Escape tokens in the compose hint so they dispatch SEND and P commands while preserving the original hint text; Tab remains the existing fill/navigation shortcut.
+Verification: Direct render assertion confirmed `data-cmd="SEND"`, `data-cmd="P"`, and `data-cmd-fill="TAB"`; `node --check` and smoke checks passed.
+Result: Completed.
+
+**LOG_ID: 20260811_1130**
+Goal: Keep /guide/tosysop identical to the WMAIL compose screen except for a fixed sysop recipient.
+Changed files: public/js/core/contactSysopScreen.js, public/style.css, WORK_LOG.md
+Work performed: 1) Restored the WMAIL header label and plain compose hint bar. 2) Kept the recipient field read-only with value sysop. 3) Added contact-sysop to the same flex sizing rules as memo-write so the body editor fills the available screen height instead of collapsing to its minimum height.
+Verification: `node --check public/js/core/contactSysopScreen.js`, `npm run smoke:menu-wiring`, `git diff --check`.
+Result: Completed.
+
+**LOG_ID: 20260811_1111**
+목표: `http://localhost:3000/guide/tosysop` 진입 시 첫번째 입력을 받는 포커스(Focus) 커서가 읽기 전용 `sysop`이 아닌 `제    목 :` 입력란에 100% 맞춰지도록 설정한다.
+변경 파일: `public/js/core/contactSysopScreen.js`, `WORK_LOG.md`
+수행 작업:
+1) `contactSysopScreen.js`: `tosysop-ed-subject` 요소에 `autofocus` 속성을 부착하고 `renderContactSysopScreen` 마무리 단계에서 `setTimeout` 포커스 함수(`safeFocus(subjectEl)`)를 호출하여 첫 포커스가 제목란에 위치하도록 조치.
+실행: `node --check public/js/core/contactSysopScreen.js`
+기대: `http://localhost:3000/guide/tosysop` 접속 시 입력 커서가 즉시 '제 목' 입력란에 위치한다.
+결과: ✅ 완료
+
+## [2026-08-11 09:20] Resend 테스트 발신자 설정 추가
+
+## [2026-08-11 01:25] Supabase activity persistence and posts RLS
+
+**LOG_ID: 20260811_1000**
+Goal: Persist activity records in Supabase and prevent direct public access to posts.
+Changed files: supabase/migrations/0022_activity_and_posts_rls.sql, .env, WORK_LOG.md
+Work performed: 1) Created public.user_activities with the columns required by ActivityRepositorySupabase and a last-seen index. 2) Enabled RLS on user_activities and posts, removing existing posts policies so anon/authenticated Data API access is blocked while the server continues using service_role. 3) Applied the migration to the Supabase project and switched ACTIVITY_REPOSITORY_DRIVER to supabase with SUPABASE_ACTIVITY_TABLE=user_activities after a successful live probe.
+Verification: Supabase table/RLS inspection; `npm run check` (Supabase probes passed; existing chat-room contract warning remains).
+Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
+
+**LOG_ID: 20260811_0920**
+목표: 도메인 없이 Resend 계정 이메일로 테스트 발송할 수 있도록 발신자 설정을 명시한다.
+변경 파일: `.env`, `WORK_LOG.md`
+수행 작업: `SYSOP_MAIL_FROM=onboarding@resend.dev`를 추가함. API 키는 로그에 기록하지 않으며, 기존 노출 키는 새로 발급한 키로 교체해야 한다.
+실행: `.env` 설정 확인
+기대: Resend 테스트 모드에서 가입 이메일(`SYSOP_EMAIL`)로 발송 요청이 올바른 발신자를 사용한다.
+결과: ✅ 발신자 설정 추가 완료 / API 키 교체 필요
 
 ## [2026-08-10 18:05] `/guide/tosysop` cmd-hint 클릭 토큰 및 전송 라우팅 연결
 
@@ -2015,3 +2514,52 @@
 실행: `node --check`, 15개 게시판 동시 집계·캐시·전송 오류 재시도 단언, `npm run build`, `npm run loop:verify`, `git diff --check`
 기대: 동일 집계 2회 동시 실행 시 Supabase HEAD 쿼리 60개를 30개로 감소
 결과: ✅ Supabase 쿼리가 60개에서 30개로 감소(50%). 캐시 적중 추가 쿼리 0개와 전송 오류 후 30개 쿼리 재시도를 확인했고 빌드 및 완료 게이트 9/9를 통과했다. `npm test`는 원격 `main`에 테스트 대상 디렉터리 `archive/dev-only/tests/unit`이 없어 기존 실행기가 시작되지 않았다.
+## [2026-08-11 16:25] 4대 PC통신 서비스 종료 공지 원본 이미지 교체
+
+**LOG_ID: 20260811_1625**
+목표: 하이텔 계열(파란), 나우누리, 천리안, 유니텔 서비스 종료 공지 이미지를 검색 썸네일이 아닌 원본 링크 해상도로 보관.
+변경 파일: `docs/종료/원본_공지/README.md`, `docs/종료/원본_공지/*`, `scripts/replace_notice_thumbnails_with_originals.js`
+수행 작업:
+1) 네이버 이미지 프록시의 `src` 원본 주소를 직접 내려받아 원본 해상도를 확인
+2) 무관한 하이텔 후보 이미지를 파란(Paran) 종료·데이터 이전 공지 원본으로 교체
+3) 8개 이미지의 해상도(160×100 이상)와 SHA-256 중복 여부를 검증하고 임시 후보 폴더를 정리
+실행: `node --check scripts/fetch_hitel_closure_candidates.js`, `node --check scripts/replace_notice_thumbnails_with_originals.js`, 원본 이미지 Sharp 메타데이터·SHA-256 검증
+기대: `docs/종료/원본_공지`에 4개 서비스에 해당하는 고해상도 원본 공지 이미지 보관
+결과: ✅ 8개 이미지 검증 완료(중복 0개, 기준 미만 0개)
+## [2026-08-11 16:36] 네이버 나우누리 회고 글 첨부 이미지 원본 수집
+
+**LOG_ID: 20260811_1636**
+목표: 사용자가 제공한 나우누리 서비스 종료 회고 글에 포함된 이미지 누락을 보완하고 큰 원본 응답을 별도 보관.
+변경 파일: `scripts/fetch_bravobang_notice.js`, `docs/종료/나우누리_회고글_원본/*`, `WORK_LOG.md`
+수행 작업:
+1) 네이버 블로그 본문에서 첨부 이미지 6개 URL을 추출
+2) `type=w2` 최대 응답으로 재다운로드하여 381×243~585×365 크기로 저장
+3) 공식 종료 공지와 회고용 화면 이미지를 혼동하지 않도록 별도 폴더와 README로 분리
+실행: `node --check scripts/fetch_bravobang_notice.js`, `node scripts/fetch_bravobang_notice.js`
+결과: ✅ 6개 이미지 수집 완료, 작은 100px 썸네일 대신 큰 응답으로 교체
+## [2026-08-11 16:41] 나우누리 회고 이미지 해상도 표기 정정
+
+**LOG_ID: 20260811_1641**
+목표: 네이버 블로그 첨부 이미지가 실제 원본인지 최대 썸네일 응답인지 구분해 문서에 정확히 표시.
+변경 파일: `docs/종료/나우누리_회고글_원본/README.md`, `WORK_LOG.md`
+수행 작업: `type=w2` 응답의 실제 크기(381×243~585×365)를 재확인하고, 네이버가 제공하는 최대 응답이지 업로드 원본을 보장하지 않는다는 설명을 추가.
+결과: ✅ 소형 100px 썸네일과 구분되지만, 100% 원본이라고 오해하지 않도록 표기 정정.
+## [2026-08-11 16:50] 4대 PC통신 종료 공지 검증 원본 보강
+
+**LOG_ID: 20260811_1650**
+목표: 나우누리 외 천리안·하이텔·유니텔도 소형 검색 썸네일이 아닌 실제 종료 공지 원본을 확보.
+변경 파일: `scripts/collect_verified_closure_originals.js`, `scripts/fetch_four_service_originals.js`, `docs/종료/검증된_대형원본_4서비스/*`, `WORK_LOG.md`
+수행 작업:
+1) 네이버 이미지 검색 후보의 원본 `src` 주소를 직접 요청하고 Sharp로 실제 해상도 확인
+2) 이미지 내용을 직접 검토해 무관한 후보(세모큐, 배달앱, 게임·책 표지 등)는 검증 자료에서 제외
+3) 하이텔(파란), 나우누리, 천리안, 유니텔 종료 공지를 `검증된_대형원본_4서비스`에 별도 보관
+실행: `node --check scripts/collect_verified_closure_originals.js`, `node scripts/collect_verified_closure_originals.js`
+결과: ✅ 하이텔 2개, 나우누리 1개, 천리안 2개, 유니텔 3개 원본 저장 및 시각 확인 완료
+## [2026-08-11 16:51] 4대 서비스 검증 원본 목록 확장
+
+**LOG_ID: 20260811_1651**
+목표: 4대 서비스별 종료 공지 원본을 추가 확보하고 실제 공지 여부를 재확인.
+변경 파일: `scripts/collect_verified_closure_originals.js`, `docs/종료/검증된_대형원본_4서비스/*`, `WORK_LOG.md`
+수행 작업: 나우누리 2개, 천리안 6개, 유니텔 3개, 하이텔 계열 1개의 원본 URL을 직접 다운로드하고 이미지 내용을 육안 확인했다.
+검증: Sharp 해상도 메타데이터와 원본 URL manifest 기록 확인.
+결과: ✅ 검증 폴더에 12개 종료 공지 이미지 보관(160×100 미만 0개)

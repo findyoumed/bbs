@@ -1,16 +1,19 @@
-# 전자우편 문서 기준 정합성 수정 체크리스트
+# 전체 오류 감사 체크리스트
 
-**작업일:** 2026-08-10
-**반복 상한:** 최대 5회
+작업일: 2026-08-11
 
-- [x] 전자우편 이용안내 ANSI 빌더를 구현하고 7번 메뉴에 연결
-- [x] 전자우편 canonical URL을 `/memo`로 통일하고 `/mail` 별칭은 유지
-- [x] 메뉴·도움말 명령 및 답장/Enter 동작 정합성 점검
-- [x] 지연 편지 노출 정책과 목록 제목 미리보기 점검
-- [x] 문법·스모크 검증, WORK_LOG 및 walkthrough 갱신
+- [x] `/memo/write` 상태바의 `P` 취소 및 `ME`/`MEMO` 명령 전달 수정
+- [x] 비동기 raw 입력 핸들러의 `false` 결과가 일반 라우터로 전달되도록 수정
+- [x] `findBoardByCode` 의존성 누락 오류 수정
+- [x] 전체 회귀 게이트 및 변경 파일 문법 검사
+- [x] `npm test` 단위 테스트 실행 불가 원인 확인 및 별도 처리 결정
+- [x] 서버/API 및 브라우저 콘솔 오류 순회
 
 ## 종료 기준
 
-- 수정 대상 JavaScript 파일 `node --check` 통과
-- `npm run smoke:vercel-ready` 통과
-- 실행한 검증의 성공·실패를 `walkthrough.md`와 `WORK_LOG.md`에 사실대로 기록
+- 변경 JavaScript 파일 `node --check` 통과
+- `npm run loop:verify` 9/9 통과
+- `npm run check` Supabase liveReady/ok 통과
+- `npm run smoke:full-traversal` 콘솔 오류 없이 통과
+- HTTP/API 점검에서 재현 가능한 오류 0건 또는 원인·범위 기록
+- 결과를 `walkthrough.md`와 `WORK_LOG.md`에 기록

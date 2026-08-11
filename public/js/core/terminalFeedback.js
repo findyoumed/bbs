@@ -25,8 +25,32 @@ export function createTerminalFeedback(deps) {
         clearTimeout(notificationTimeout);
       }
 
-      notifyEl.className = `terminal-notification-row level-${level}`;
+      const onClick = typeof options?.onClick === 'function' ? options.onClick : null;
+      notifyEl.className = `terminal-notification-row level-${level}${onClick ? ' is-interactive' : ''}`;
       notifyEl.textContent = normalizedText;
+      notifyEl.setAttribute('role', onClick ? 'button' : 'status');
+      notifyEl.setAttribute('aria-live', 'polite');
+      notifyEl.setAttribute('aria-label', onClick
+        ? `${normalizedText} 쪽지함을 열려면 클릭하세요.`
+        : normalizedText);
+      if (onClick) {
+        notifyEl.tabIndex = 0;
+        notifyEl.title = options.title || '클릭하여 쪽지함 열기';
+        notifyEl.onclick = (event) => {
+          event.preventDefault();
+          onClick(event);
+        };
+        notifyEl.onkeydown = (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          onClick(event);
+        };
+      } else {
+        notifyEl.removeAttribute('tabindex');
+        notifyEl.removeAttribute('title');
+        notifyEl.onclick = null;
+        notifyEl.onkeydown = null;
+      }
       notifyEl.style.display = 'block';
 
       notificationTimeout = setTimeout(() => {
