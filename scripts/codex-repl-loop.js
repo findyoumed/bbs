@@ -498,3 +498,144 @@ async function main() {
     console.log(`
 +------------------------------------------------------------+
 |        Codex Test REPL Loop - Test Automation              |
++------------------------------------------------------------+
+| Usage: node scripts/codex-repl-loop.js "Test Goal"         |
+|        --verify "Test Command" --max N                     |
+|   or:  node scripts/codex-repl-loop.js --task-file "file"  |
+|        --memory-file "state.md" --verify "Test Command"    |
++------------------------------------------------------------+
+`);
+    process.exit(1);
+  }
+
+  if (config.verifyCommands.length === 0) {
+    console.error('❌ --verify option is required.');
+    process.exit(1);
+  }
+
+  config.sessionName = inferSessionName(config);
+
+  if (config.memoryFile) {
+    config.memoryPath = ensureMemoryFile(config.memoryFile, cwd, config.sessionName);
+    config.memorySnapshot = fs.readFileSync(config.memoryPath, 'utf8').trim();
+  } else {
+    config.memoryPath = '';
+    config.memorySnapshot = '';
+  }
+
+  if (!process.argv.includes('--max')) {
+    const answer = await askUser('\n🔄 몇 번 반복하시겠습니까? (기본값 3): ');
+    const num = parseInt(answer.trim(), 10);
+    if (!Number.isNaN(num) && num > 0) config.maxRetries = num;
+  }
+
+  console.log(`\n[START] Codex Test REPL Loop\n- Session: ${config.sessionName}\n- Task Source: ${taskSource}\n- Max Retries: ${config.maxRetries}\n- Auto Commit: ${config.autoCommit ? 'ON' : 'OFF'}\n- Evolve: ${config.evolveMode ? 'ON' : 'OFF'}\n- Memory File: ${config.memoryFile || '(none)'}\n`);
+
+  if (config.dryRun) {
+    console.log('🔵 [DRY RUN] Exit after planning.');
+    config.verifyCommands.forEach((command) => {
+      console.log(`- verify: ${command}`);
+    });
+    process.exit(0);
+  }
+
+  const baseTask = config.task;
+  const baselineDirtyFiles = config.autoCommit ? await listDirtyFiles(cwd) : new Set();
+  let phase = 'initial';
+  let previousVerification = null;
+
+  for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
+    if (config.memoryPath) {
+      config.memorySnapshot = fs.readFileSync(config.memoryPath, 'utf8').trim();
+    }
+
+    const currentTask = buildLoopTask(baseTask, config, attempt, phase, previousVerification);
+
+    console.log(`\n>>> Attempt ${attempt}/${config.maxRetries} (${timestamp()})`);
+
+    const codexResult = await runCodex(currentTask, config, cwd);
+    if (!codexResult.success) {
+      console.error(`\n❌ Codex 실행 중 오류가 발생했습니다. (Exit Code: ${codexResult.exitCode})`);
+      process.exit(1);
+    }
+
+    console.log('\n>>> Verification Phase');
+    const verification = await runVerification(config.verifyCommands, cwd);
+    const changedFiles = setToSortedArray(await listDirtyFiles(cwd));
+
+    if (verification.allPassed) {
+      const nextFocus = config.evolveMode && attempt < config.maxRetries
+        ? 'Stay inside existing features. Choose the next highest-risk unstable flow and avoid repeating already-complete work from memory.'
+        : 'Stop here unless a future verify command or console/page error reveals a regression.';
+
+      let commitResult = {
+        success: false,
+        skipped: true,
+        files: [],
+        message: '',
+        note: 'Auto-commit disabled.',
+      };
+
+      if (config.autoCommit) {
+        appendAutomationLog(config, {
+          attempt,
+          status: 'PASS',
+          results: verification.results,
+          files: changedFiles,
+          commitNote: 'Requested after verification pass.',
+          nextFocus,
+        });
+        commitResult = await commitCycleChanges(config, cwd, attempt, baselineDirtyFiles);
+      } else {
+        appendAutomationLog(config, {
+          attempt,
+          status: 'PASS',
+          results: verification.results,
+          files: changedFiles,
+          commitNote: 'Skipped because auto-commit is disabled.',
+          nextFocus,
+        });
+      }
+
+      if (config.autoCommit && commitResult.success) {
+        console.log(`\n📦 Automatic Commit Complete: ${commitResult.message}`);
+      } else if (config.autoCommit) {
+        console.log(`\n📦 Automatic Commit Note: ${commitResult.note}`);
+      }
+
+      if (config.evolveMode && attempt < config.maxRetries) {
+        console.log('\n✅ Passed! Evolving to the next cycle...');
+        previousVerification = verification;
+        phase = 'evolve';
+        continue;
+      }
+
+      console.log(`\n✅ ALL TESTS PASSED! (Finished at attempt ${attempt})`);
+      process.exit(0);
+    }
+
+    appendAutomationLog(config, {
+      attempt,
+      status: 'FAIL',
+      results: verification.results,
+      files: changedFiles,
+      commitNote: 'No commit because verification failed.',
+      nextFocus: 'Fix the failing verify commands first. Do not start new work until they pass.',
+    });
+
+    if (attempt < config.maxRetries) {
+      console.log('\n⚠️ Tests failed - preparing next retry cycle...');
+      previousVerification = verification;
+      phase = 'retry';
+      continue;
+    }
+  }
+
+  console.log(`\n❌ Failed to pass tests after ${config.maxRetries} attempts.`);
+  process.exit(1);
+}
+
+main().catch((err) => {
+  console.error('Fatal Error:', err);
+  process.exit(1);
+});
