@@ -23,6 +23,7 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 const projectRoot = path.resolve(__dirname, '..');
+const CHECK_TIMEOUT_MS = 120000;
 
 // 순서대로 실행(각 스모크가 자체 http 서버를 띄우므로 순차 실행으로 포트 충돌을 피한다).
 const CHECKS = [
@@ -30,6 +31,7 @@ const CHECKS = [
   { name: 'bootstrap-concurrency', file: 'smoke-bootstrap-concurrency.js' },
   { name: 'post-navigation', file: 'smoke-post-navigation.js' },
   { name: 'post-read-dedupe', file: 'smoke-post-read-dedupe.js' },
+  { name: 'loop-runner', file: 'smoke-loop-runner.js' },
   { name: 'command-parity', file: 'smoke-command-parity.js' },
   { name: 'menu-wiring', file: 'smoke-menu-wiring.js' },
   { name: 'signup-ime', file: 'smoke-signup-ime.mjs' },
@@ -49,7 +51,9 @@ function runCheck(check) {
     // 출력을 캡처(콘솔로 스트리밍하지 않음) — 실패 항목만 증거를 뒤에 모아 출력한다.
     stdio: ['ignore', 'pipe', 'pipe'],
     // 넉넉한 버퍼(일부 스모크는 출력이 길다).
-    maxBuffer: 32 * 1024 * 1024
+    maxBuffer: 32 * 1024 * 1024,
+    timeout: CHECK_TIMEOUT_MS,
+    killSignal: 'SIGTERM'
   });
   const durationMs = Date.now() - startedAt;
   const ok = result.status === 0 && !result.error;
@@ -58,6 +62,7 @@ function runCheck(check) {
     ok,
     durationMs,
     status: result.status,
+    timedOut: Boolean(result.error && result.error.code === 'ETIMEDOUT'),
     // 실패 증거: stderr 우선, 없으면 stdout 끝부분.
     evidence: ok ? '' : String(result.stderr || result.stdout || result.error?.message || '').trim()
   };
