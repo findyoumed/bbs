@@ -219,7 +219,7 @@ async function getPost(repo, boardId, postId, options = {}) {
   return {
     board,
     post,
-    navigation: await getNavigation(repo, targetBoardId, post.id, options.search)
+    navigation: await getNavigation(repo, targetBoardId, post.id, options.search, post)
   };
 }
 
@@ -320,11 +320,13 @@ async function fetchPostByLocalId(repo, boardId, localId) {
   return mapPostRow(Array.isArray(data) ? (data[0] || null) : data);
 }
 
-async function getNavigation(repo, boardId, postId, search = null) {
+async function getNavigation(repo, boardId, postId, search = null, knownPost = null) {
   const capabilities = await ensureCapabilities(repo);
   const pid = Number(postId);
 
-  const post = await fetchPost(repo, boardId, pid);
+  // [LOG_ID: 20260813_2042] getPost() already loaded the full post by local_id.
+  // Reusing it avoids a second full-row fetch by global id before navigation.
+  const post = knownPost || await fetchPost(repo, boardId, pid);
   if (!post) {
     return { latestId: null, prevId: null, nextId: null };
   }
@@ -334,7 +336,7 @@ async function getNavigation(repo, boardId, postId, search = null) {
 
   let latestQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
   latestQuery = applySupabaseSearch(latestQuery, capabilities, search);
-  const { data: latestData } = await applyPostOrdering(latestQuery, repo, capabilities).limit(1).maybeSingle();
+  latestQuery = applyPostOrdering(latestQuery, repo, capabilities).limit(1);
 
   if (capabilities.threaded) {
     const familyId = Number(post.family || 0);
@@ -347,7 +349,6 @@ async function getNavigation(repo, boardId, postId, search = null) {
       .order('family_id', { ascending: true })
       .order('sort_order', { ascending: false })
       .limit(1);
-    const { data: prevData } = await prevQuery.maybeSingle();
 
     let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
     nextQuery = applySupabaseSearch(nextQuery, capabilities, search);
@@ -356,7 +357,14 @@ async function getNavigation(repo, boardId, postId, search = null) {
       .order('family_id', { ascending: false })
       .order('sort_order', { ascending: true })
       .limit(1);
-    const { data: nextData } = await nextQuery.maybeSingle();
+    // [LOG_ID: 20260813_2042] Navigation candidates are independent reads.
+    // Run them together so detail-view latency is bounded by the slowest query,
+    // not the sum of latest + previous + next round trips.
+    const [{ data: latestData }, { data: prevData }, { data: nextData }] = await Promise.all([
+      latestQuery.maybeSingle(),
+      prevQuery.maybeSingle(),
+      nextQuery.maybeSingle()
+    ]);
 
     return {
       latestId: extractNavId(latestData),
@@ -370,11 +378,17 @@ async function getNavigation(repo, boardId, postId, search = null) {
   const idCol = capabilities.localId || 'id';
   let prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
   prevQuery = applySupabaseSearch(prevQuery, capabilities, search);
-  const { data: prevData } = await prevQuery.gt(idCol, localPid).order(idCol, { ascending: true }).limit(1).maybeSingle();
+  prevQuery = prevQuery.gt(idCol, localPid).order(idCol, { ascending: true }).limit(1);
 
   let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
   nextQuery = applySupabaseSearch(nextQuery, capabilities, search);
-  const { data: nextData } = await nextQuery.lt(idCol, localPid).order(idCol, { ascending: false }).limit(1).maybeSingle();
+  nextQuery = nextQuery.lt(idCol, localPid).order(idCol, { ascending: false }).limit(1);
+
+  const [{ data: latestData }, { data: prevData }, { data: nextData }] = await Promise.all([
+    latestQuery.maybeSingle(),
+    prevQuery.maybeSingle(),
+    nextQuery.maybeSingle()
+  ]);
 
   return {
     latestId: extractNavId(latestData),
