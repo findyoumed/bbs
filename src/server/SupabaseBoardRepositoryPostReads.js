@@ -240,8 +240,15 @@ function setReadCache(repo, key, data) {
   repo._readCache.set(key, { at: Date.now(), data });
 }
 
+function getReadRequests(repo) {
+  if (!repo._readRequests) repo._readRequests = new Map();
+  return repo._readRequests;
+}
+
 function invalidateReadCache(repo) {
   if (repo._readCache) repo._readCache.clear();
+  if (repo._readRequests) repo._readRequests.clear();
+  repo._readCacheGeneration = Number(repo._readCacheGeneration || 0) + 1;
   if (repo._boardCountsCache) repo._boardCountsCache = null;
 }
 
@@ -250,24 +257,41 @@ async function fetchPagedPosts(repo, boardId, page, pageSize, search = null) {
   const cached = getReadCache(repo, cacheKey);
   if (cached) return cached;
 
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize - 1;
-  const capabilities = await ensureCapabilities(repo);
+  // [LOG_ID: 20260813_2057] Share concurrent identical list reads instead of
+  // sending the same PostgREST query once per browser/server request.
+  const requests = getReadRequests(repo);
+  const pending = requests.get(cacheKey);
+  if (pending) return pending;
 
-  let query = repo.client
-    .from(repo.tables.posts)
-    .select(buildPostListSelect(capabilities), { count: 'exact' });
+  const generation = Number(repo._readCacheGeneration || 0);
+  const request = (async () => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize - 1;
+    const capabilities = await ensureCapabilities(repo);
 
-  query = applyBoardFilter(query, boardId);
-  query = applySupabaseSearch(query, capabilities, search);
-  query = applyPostOrdering(query, repo, capabilities);
+    let query = repo.client
+      .from(repo.tables.posts)
+      .select(buildPostListSelect(capabilities), { count: 'exact' });
 
-  const { data, error, count } = await query.range(start, end);
-  if (error) throw createHttpError(502, `게시글 목록 조회 실패: ${error.message}`);
+    query = applyBoardFilter(query, boardId);
+    query = applySupabaseSearch(query, capabilities, search);
+    query = applyPostOrdering(query, repo, capabilities);
 
-  const res = { data, count: count || 0 };
-  setReadCache(repo, cacheKey, res);
-  return res;
+    const { data, error, count } = await query.range(start, end);
+    if (error) throw createHttpError(502, `게시글 목록 조회 실패: ${error.message}`);
+
+    const res = { data, count: count || 0 };
+    if (generation === Number(repo._readCacheGeneration || 0)) {
+      setReadCache(repo, cacheKey, res);
+    }
+    return res;
+  })();
+  requests.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    if (requests.get(cacheKey) === request) requests.delete(cacheKey);
+  }
 }
 
 async function fetchPost(repo, boardId, postId) {
@@ -275,20 +299,35 @@ async function fetchPost(repo, boardId, postId) {
   const cached = getReadCache(repo, cacheKey);
   if (cached) return cached;
 
-  let query = repo.client
-    .from(repo.tables.posts)
-    .select('*');
+  const requests = getReadRequests(repo);
+  const pending = requests.get(cacheKey);
+  if (pending) return pending;
 
-  query = applyBoardFilter(query, boardId);
+  const generation = Number(repo._readCacheGeneration || 0);
+  const request = (async () => {
+    let query = repo.client
+      .from(repo.tables.posts)
+      .select('*');
 
-  const { data, error } = await query
-    .eq('id', Number(postId))
-    .maybeSingle();
+    query = applyBoardFilter(query, boardId);
 
-  if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
-  const mapped = mapPostRow(data);
-  setReadCache(repo, cacheKey, mapped);
-  return mapped;
+    const { data, error } = await query
+      .eq('id', Number(postId))
+      .maybeSingle();
+
+    if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
+    const mapped = mapPostRow(data);
+    if (generation === Number(repo._readCacheGeneration || 0)) {
+      setReadCache(repo, cacheKey, mapped);
+    }
+    return mapped;
+  })();
+  requests.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    if (requests.get(cacheKey) === request) requests.delete(cacheKey);
+  }
 }
 
 // [LOG_ID: 20260726_1800] PDS(자료실)는 pds/pds_all/pds_util/pds_game/pds_graphic/pds_sound/
