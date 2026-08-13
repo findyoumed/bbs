@@ -244,26 +244,36 @@ class SystemRouter extends BaseRouter {
       return cache.data;
     }
 
+    // [LOG_ID: 20260813_2028] 캐시가 비어 있는 cold start에서도 메인 화면의
+    // 동시 요청이 동일한 통계 4종 조회를 각각 실행하던 문제를 막는다. 기존에는
+    // 이전 snapshot이 있을 때만 refreshPromise를 공유했으므로, 첫 방문 동시
+    // 요청마다 Supabase count 쿼리 세트가 중복되었다.
+    if (cache?.refreshPromise) {
+      return cache.data || cache.refreshPromise;
+    }
+
     // [LOG_ID: 20260804_1405] Public startup stats are non-critical. Serve the
     // last snapshot immediately while one request refreshes it in the background.
-    if (cache?.data && cache.refreshPromise) {
-      return cache.data;
-    }
     if (cache?.data) {
-      cache.refreshPromise = this.refreshAssetDynamicData(
+      const refreshRequest = this.refreshAssetDynamicData(
         boardRepository,
         memberRepository,
         activityRepository,
         runtimeConfig,
         cache,
         now
-      ).catch(() => null).finally(() => {
-        cache.refreshPromise = null;
-      });
+      );
+      const trackedRequest = refreshRequest
+        .catch(() => null)
+        .finally(() => {
+          if (cache.refreshPromise === trackedRequest) cache.refreshPromise = null;
+        });
+      cache.refreshPromise = trackedRequest;
+      void trackedRequest.catch(() => {});
       return cache.data;
     }
 
-    return this.refreshAssetDynamicData(
+    const refreshRequest = this.refreshAssetDynamicData(
       boardRepository,
       memberRepository,
       activityRepository,
@@ -271,6 +281,11 @@ class SystemRouter extends BaseRouter {
       cache,
       now
     );
+    const trackedRequest = refreshRequest.finally(() => {
+      if (cache?.refreshPromise === trackedRequest) cache.refreshPromise = null;
+    });
+    if (cache) cache.refreshPromise = trackedRequest;
+    return trackedRequest;
   }
 
   async refreshAssetDynamicData(boardRepository, memberRepository, activityRepository, runtimeConfig, cache, now = Date.now()) {
