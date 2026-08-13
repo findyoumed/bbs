@@ -27,6 +27,7 @@ const projectRoot = path.resolve(__dirname, '..');
 // 순서대로 실행(각 스모크가 자체 http 서버를 띄우므로 순차 실행으로 포트 충돌을 피한다).
 const CHECKS = [
   { name: 'boards', file: 'smoke-boards.js' },
+  { name: 'bootstrap-concurrency', file: 'smoke-bootstrap-concurrency.js' },
   { name: 'command-parity', file: 'smoke-command-parity.js' },
   { name: 'menu-wiring', file: 'smoke-menu-wiring.js' },
   { name: 'signup-ime', file: 'smoke-signup-ime.mjs' },
