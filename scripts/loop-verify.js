@@ -29,6 +29,7 @@ const CHECKS = [
   { name: 'boards', file: 'smoke-boards.js' },
   { name: 'bootstrap-concurrency', file: 'smoke-bootstrap-concurrency.js' },
   { name: 'post-navigation', file: 'smoke-post-navigation.js' },
+  { name: 'post-read-dedupe', file: 'smoke-post-read-dedupe.js' },
   { name: 'command-parity', file: 'smoke-command-parity.js' },
   { name: 'menu-wiring', file: 'smoke-menu-wiring.js' },
   { name: 'signup-ime', file: 'smoke-signup-ime.mjs' },
