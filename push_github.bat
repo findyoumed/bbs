@@ -34,7 +34,7 @@ echo.
 echo ==============================================================
 echo   Conflict Resolution Steps:
 echo ==============================================================
-echo   1. Open conflicted files (like WORK_LOG.md) in your editor.
+echo   1. Open the conflicted files in your editor.
 echo   2. Resolve conflict blocks and save the files.
 echo   3. Run the following commands in terminal:
 echo      git add [filename]
