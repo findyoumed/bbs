@@ -12,6 +12,7 @@
     "smoke:bootstrap-concurrency": "node scripts/smoke-bootstrap-concurrency.js",
     "smoke:post-navigation": "node scripts/smoke-post-navigation.js",
     "smoke:post-read-dedupe": "node scripts/smoke-post-read-dedupe.js",
+    "smoke:loop-runner": "node scripts/smoke-loop-runner.js",
     "smoke:command-parity": "node scripts/smoke-command-parity.js",
     "smoke:menu-wiring": "node scripts/smoke-menu-wiring.js",
     "smoke:signup-ime": "node scripts/smoke-signup-ime.mjs",
