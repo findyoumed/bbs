@@ -107,11 +107,11 @@ class SystemRouter extends BaseRouter {
         assetStatsCache
       )
     ]);
-    return this.send(200, {
+    return this.sendCached(200, {
       boards,
       menu: menuResolver.getTree(),
       stats
-    });
+    }, 10);
   }
 
   async getAuthConfig() {
