@@ -198,6 +198,8 @@ export function createPostService(deps) {
 
   async function replyPost(boardId, postId, payload) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/reply`, { method: 'POST', body: JSON.stringify(payload) });
+    invalidatePostCache(boardId, postId);
+    if (state.board?.id && state.board.id !== boardId) invalidatePostCache(state.board.id, postId);
     invalidateListCache(boardId);
     return result;
   }
