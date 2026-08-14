@@ -32,6 +32,7 @@ const CHECKS = [
   { name: 'post-navigation', file: 'smoke-post-navigation.js' },
   { name: 'post-read-dedupe', file: 'smoke-post-read-dedupe.js' },
   { name: 'post-service-cache', file: 'smoke-post-service-cache.js' },
+  { name: 'schema-concurrency', file: 'smoke-schema-concurrency.js' },
   { name: 'loop-runner', file: 'smoke-loop-runner.js' },
   { name: 'command-parity', file: 'smoke-command-parity.js' },
   { name: 'menu-wiring', file: 'smoke-menu-wiring.js' },
