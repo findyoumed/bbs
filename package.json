@@ -13,6 +13,7 @@
     "smoke:post-navigation": "node scripts/smoke-post-navigation.js",
     "smoke:post-read-dedupe": "node scripts/smoke-post-read-dedupe.js",
     "smoke:post-service-cache": "node scripts/smoke-post-service-cache.js",
+    "smoke:schema-concurrency": "node scripts/smoke-schema-concurrency.js",
     "smoke:loop-runner": "node scripts/smoke-loop-runner.js",
     "smoke:command-parity": "node scripts/smoke-command-parity.js",
     "smoke:menu-wiring": "node scripts/smoke-menu-wiring.js",
