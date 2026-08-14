@@ -43,7 +43,9 @@ export function scheduleNextPagePrefetch({
 
   const nextPage = currentPage + 1;
   const cacheKey = buildListCacheKey(boardId, nextPage, searchParams);
-  if (listCache.has(cacheKey) || pendingPrefetches.has(cacheKey)) return;
+  // fetchPostsPage owns TTL/LRU validation. Map.has() would treat an expired
+  // entry as fresh and suppress the prefetch.
+  if (pendingPrefetches.has(cacheKey)) return;
 
   const run = () => {
     if (typeof getCurrentGeneration === 'function' && getCurrentGeneration() !== generation) {
