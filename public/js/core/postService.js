@@ -2,6 +2,14 @@
 // 서버측 src/server/BoardVirtualBoards.js의 MERGED_BOARD_SOURCES와 동기화 유지 필요.
 // 가상 게시판 자체('pds')는 포함하지 않는다 — invalidateListCache('pds')는 이미 'pds_*'
 // 전체를 지우므로 추가 cascade가 필요 없다.
+import {
+  buildPostCacheKey,
+  normalizePostListResponse,
+  normalizePostViewResponse,
+  readTimedCache,
+  writeTimedCache
+} from './postReadCache.js';
+
 const PHYSICAL_TO_VIRTUAL = Object.freeze({
   pds_all: 'pds',
   pds_util: 'pds',
@@ -27,32 +35,15 @@ export function createPostService(deps) {
     }
     return attachmentServicePromise;
   }
-  // [LOG: 20260426_2300] 캐시 저장소 (목록 캐시는 boardId_page_search 형식, 본문 캐시는 boardId_postId 형식)
   const listCache = new Map();
-  const listRequests = new Map(); // [LOG_ID: 20260805_1353] 같은 목록의 동시 API 요청을 공유한다.
+  const listRequests = new Map();
   const postCache = new Map();
+  const postRequests = new Map(); // 상세 글 동시 API 요청을 공유한다.
   let listCacheGeneration = 0;
-  // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "목록 출력방식"(SET SORT) 재현.
-  // 서버는 최신순(내림차순)으로 페이지 단위를 내려주므로, OLD 설정 시 현재 페이지 안에서만
-  // 순서를 뒤집는다(페이지 경계를 다시 계산하는 서버 정렬 파라미터까지는 이번 스코프가 아니다).
+  let postCacheGeneration = 0;
   function applySortOrder(items) {
     const sort = String(state.envVars?.SORT || '').trim().toUpperCase();
     return sort === 'OLD' ? [...items].reverse() : items;
-  }
-  function normalizePostListResponse(data, fallbackPage) {
-    return {
-      board: data?.board || null,
-      items: Array.isArray(data?.items) ? data.items : (data?.posts || []),
-      page: Number(data?.pagination?.page || data?.page || fallbackPage || 1),
-      totalCount: Number(data?.pagination?.totalCount || data?.totalCount || 0),
-      totalPages: Number(data?.pagination?.pageCount || data?.totalPages || 1),
-      // [LOG_ID: 20260805_1020] Keep outages distinct from genuinely empty boards.
-      degraded: data?.degraded === true,
-      degradedReason: String(data?.degradedReason || '')
-    };
-  }
-  function normalizePostViewResponse(data) {
-    return data?.post ? { board: data.board || null, post: data.post } : { board: null, post: data || null };
   }
   // [LOG: 20260801_0100] 관련 게시판의 모든 목록 캐시 삭제.
   // 물리 게시판(pds_util 등)이 가상 게시판(pds) 소속이면 부모 가상 게시판의 목록 캐시도
@@ -69,23 +60,22 @@ export function createPostService(deps) {
       }
     }
   }
-
   // [LOG: 20260801_0000] 특정 글의 모든 postCache 변형 키 삭제 — 단순 `${boardId}_${postId}` 뿐 아니라
   // loadPost가 만드는 가상게시판(_v_) 및 검색 파라미터(_lt_/_li_/_lc_ 등) 변형 키까지 포함한다.
   // 수정·삭제·추천 후 가상게시판(PDS 병합 보드 등)이나 검색 문맥에서 같은 글을 재조회하면
   // 기존 코드(단일 키 삭제)는 확장된 변형 키를 놔두어 구버전이 그대로 서비스되던 문제를 해소한다.
   function invalidatePostCache(boardId, postId) {
     const keyPrefix = `${boardId}_${postId}`;
-    for (const key of postCache.keys()) {
-      if (key === keyPrefix || key.startsWith(keyPrefix + '_')) {
-        postCache.delete(key);
+    postCacheGeneration += 1;
+    for (const cache of [postCache, postRequests]) {
+      for (const key of cache.keys()) {
+        if (key === keyPrefix || key.startsWith(keyPrefix + '_')) {
+          cache.delete(key);
+        }
       }
     }
   }
 
-  /**
-   * [LOG: 20260426_2305] 검색 파라미터를 포함한 고유한 캐시 키 생성
-   */
   function buildListCacheKey(boardId, page, searchParams = {}) {
     let key = `${boardId}_${page}`;
     if (searchParams.lt) key += `_lt_${searchParams.lt}`;
@@ -113,14 +103,14 @@ export function createPostService(deps) {
 
   async function fetchPostsPage(boardId, page, searchParams, generation = listCacheGeneration) {
     const cacheKey = buildListCacheKey(boardId, page, searchParams);
-    const cached = listCache.get(cacheKey);
+    const cached = readTimedCache(listCache, cacheKey);
     if (cached) return cached;
     const pending = listRequests.get(cacheKey);
     if (pending) return pending;
     const request = apiFetch(buildPostsUrl(boardId, page, searchParams))
       .then((response) => normalizePostListResponse(response, page))
       .then((data) => {
-        if (!data.degraded && generation === listCacheGeneration) listCache.set(cacheKey, data);
+        if (!data.degraded && generation === listCacheGeneration) writeTimedCache(listCache, cacheKey, data);
         return data;
       })
       .finally(() => { if (listRequests.get(cacheKey) === request) listRequests.delete(cacheKey); });
@@ -141,7 +131,8 @@ export function createPostService(deps) {
     void import('./postListPrefetchService.js')
       .then(({ scheduleNextPagePrefetch: schedule }) => schedule({
         boardId, data, searchParams, listCache, buildListCacheKey,
-        fetchPostsPage, loadPost, generation: listCacheGeneration
+        fetchPostsPage, loadPost, generation: listCacheGeneration,
+        getCurrentGeneration: () => listCacheGeneration
       }))
       .catch(() => {});
   }
@@ -156,22 +147,34 @@ export function createPostService(deps) {
 
   // [LOG_ID: 20260728_1728] PDS 가상 게시판 및 검색 상태의 글보기 내비게이션 복원을 위해 virtualBoardId와 searchParams를 함께 실어 보내고 캐시하도록 함
   async function loadPost(boardId, postId, virtualBoardId = '', searchParams = {}, fetchOptions = {}) {
-    let cacheKey = `${boardId}_${postId}`;
-    if (virtualBoardId) cacheKey += `_v_${virtualBoardId}`;
-    for (const k of ['lt', 'li', 'lc', 'k', 'la', 'recent']) { if (searchParams[k]) cacheKey += `_${k}_${searchParams[k]}`; }
-    if (postCache.has(cacheKey)) return postCache.get(cacheKey);
+    const cacheKey = buildPostCacheKey(boardId, postId, virtualBoardId, searchParams);
+    const cached = readTimedCache(postCache, cacheKey);
+    if (cached) return cached;
+    const pending = postRequests.get(cacheKey);
+    if (pending) return pending;
 
-    let url = `/api/boards/${encodeURIComponent(boardId)}/posts/${postId}?view=1`;
-    if (virtualBoardId) url += `&virtualBoardId=${encodeURIComponent(virtualBoardId)}`;
-    for (const k of ['lt', 'li', 'lc', 'k', 'la', 'recent']) { if (searchParams[k]) url += `&${k}=${encodeURIComponent(searchParams[k])}`; }
+    const generation = postCacheGeneration;
+    const request = (async () => {
+      let url = `/api/boards/${encodeURIComponent(boardId)}/posts/${postId}?view=1`;
+      if (virtualBoardId) url += `&virtualBoardId=${encodeURIComponent(virtualBoardId)}`;
+      for (const k of ['lt', 'li', 'lc', 'k', 'la', 'recent']) {
+        if (searchParams[k]) url += `&${k}=${encodeURIComponent(searchParams[k])}`;
+      }
 
+      try {
+        const raw = await apiFetch(url, { silent: true, throwOnError: false, ...fetchOptions });
+        const data = normalizePostViewResponse(raw);
+        if (data?.post && generation === postCacheGeneration) writeTimedCache(postCache, cacheKey, data);
+        return data || { board: null, post: null };
+      } catch (error) {
+        return { board: null, post: null };
+      }
+    })();
+    postRequests.set(cacheKey, request);
     try {
-      const raw = await apiFetch(url, { silent: true, throwOnError: false, ...fetchOptions });
-      const data = normalizePostViewResponse(raw);
-      if (data?.post) postCache.set(cacheKey, data);
-      return data || { board: null, post: null };
-    } catch (error) {
-      return { board: null, post: null };
+      return await request;
+    } finally {
+      if (postRequests.get(cacheKey) === request) postRequests.delete(cacheKey);
     }
   }
 
@@ -207,6 +210,7 @@ export function createPostService(deps) {
   async function recommendPost(boardId, postId, options = {}) {
     const result = await apiFetch(`/api/boards/${encodeURIComponent(boardId)}/posts/${postId}/recommend`, { method: 'POST', silent: true, ...options });
     invalidatePostCache(boardId, postId);
+    invalidateListCache(boardId);
     return result;
   }
 
@@ -219,9 +223,11 @@ export function createPostService(deps) {
    */
   function clearCache() {
     listCacheGeneration += 1;
+    postCacheGeneration += 1;
     listCache.clear();
     listRequests.clear();
     postCache.clear();
+    postRequests.clear();
   }
 
   return {
