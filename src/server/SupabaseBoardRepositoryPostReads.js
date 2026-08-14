@@ -344,19 +344,40 @@ async function fetchPost(repo, boardId, postId) {
 // 경로도 있어 여기서는 최소한 "조용히 막히는" 대신 결정적으로 하나를 골라 응답한다(가장
 // 최근에 작성된 글 우선) — 완벽한 구분은 아니지만 오류로 완전히 막히는 것보다는 낫다.
 async function fetchPostByLocalId(repo, boardId, localId) {
-  let query = repo.client
-    .from(repo.tables.posts)
-    .select('*');
+  const cacheKey = `post-local:${boardId}:${localId}`;
+  const cached = getReadCache(repo, cacheKey);
+  if (cached) return cached;
 
-  query = applyBoardFilter(query, boardId);
+  const requests = getReadRequests(repo);
+  const pending = requests.get(cacheKey);
+  if (pending) return pending;
 
-  const { data, error } = await query
-    .eq('local_id', Number(localId))
-    .order('created_at', { ascending: false })
-    .limit(1);
+  const generation = Number(repo._readCacheGeneration || 0);
+  const request = (async () => {
+    let query = repo.client
+      .from(repo.tables.posts)
+      .select('*');
 
-  if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
-  return mapPostRow(Array.isArray(data) ? (data[0] || null) : data);
+    query = applyBoardFilter(query, boardId);
+
+    const { data, error } = await query
+      .eq('local_id', Number(localId))
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
+    const mapped = mapPostRow(Array.isArray(data) ? (data[0] || null) : data);
+    if (mapped && generation === Number(repo._readCacheGeneration || 0)) {
+      setReadCache(repo, cacheKey, mapped);
+    }
+    return mapped;
+  })();
+  requests.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    if (requests.get(cacheKey) === request) requests.delete(cacheKey);
+  }
 }
 
 async function getNavigation(repo, boardId, postId, search = null, knownPost = null) {
