@@ -206,6 +206,9 @@ async function getPost(repo, boardId, postId, options = {}) {
       if (error.code !== 'PGRST116') {
         throw createHttpError(502, `조회수 갱신 실패: ${error.message}`);
       }
+      // The row disappeared after the initial read. Do not keep serving it
+      // from the local-id cache on the next detail request.
+      repo._readCache?.delete(`post-local:${boardId}:${postId}`);
     } else {
       // The update projection contains only the counter. Preserve the full
       // post loaded above and merge the fresh value into it.
@@ -213,6 +216,7 @@ async function getPost(repo, boardId, postId, options = {}) {
         ...post,
         hit: Number(data?.[capabilities.hit] ?? post.hit)
       };
+      setReadCache(repo, `post-local:${boardId}:${postId}`, post);
     }
   }
 
