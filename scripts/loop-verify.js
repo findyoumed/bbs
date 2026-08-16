@@ -27,10 +27,13 @@ const CHECK_TIMEOUT_MS = 120000;
 
 // 순서대로 실행(각 스모크가 자체 http 서버를 띄우므로 순차 실행으로 포트 충돌을 피한다).
 const CHECKS = [
+  { name: 'syntax', file: 'check-syntax.js' },
+  { name: 'security-boundaries', file: 'smoke-security-boundaries.js' },
   { name: 'boards', file: 'smoke-boards.js' },
   { name: 'bootstrap-concurrency', file: 'smoke-bootstrap-concurrency.js' },
   { name: 'post-navigation', file: 'smoke-post-navigation.js' },
   { name: 'post-read-dedupe', file: 'smoke-post-read-dedupe.js' },
+  { name: 'post-read-cache-hardening', file: 'smoke-post-read-cache-hardening.js' },
   { name: 'post-service-cache', file: 'smoke-post-service-cache.js' },
   { name: 'post-hit-cache', file: 'smoke-post-hit-cache.js' },
   { name: 'schema-concurrency', file: 'smoke-schema-concurrency.js' },

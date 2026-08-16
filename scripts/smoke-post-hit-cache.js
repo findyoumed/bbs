@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const { getPost } = require('../src/server/SupabaseBoardRepositoryPostReads');
+const { fetchPost, getPost } = require('../src/server/SupabaseBoardRepositoryPostReads');
 
 const updateValues = [];
 const postRow = {
@@ -54,6 +54,9 @@ function createQuery(kind = 'read') {
     viewerId: 'reader',
     context: { level: 1 }
   });
+  const globalIdPost = await fetchPost(repo, 'plaza', 10);
+  assert.strictEqual(globalIdPost.hit, 1, 'global-id detail cache should receive the incremented hit count');
+
   await getPost(repo, 'plaza', 7, {
     incrementHit: true,
     viewerId: 'reader',

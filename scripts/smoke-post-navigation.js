@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const { getNavigation } = require('../src/server/SupabaseBoardRepositoryPostReads');
+const { getNavigation, invalidateReadCache } = require('../src/server/SupabaseBoardRepositoryPostReads');
 
 function createQuery(callLog) {
   const query = {
@@ -49,6 +49,14 @@ function createQuery(callLog) {
   assert.deepStrictEqual(navigation, { latestId: 99, prevId: 8, nextId: 12 });
   assert.strictEqual(callLog.length, 3);
   assert(elapsedMs < 65, `navigation queries should run in parallel (elapsed ${elapsedMs}ms)`);
+
+  const cachedNavigation = await getNavigation(repo, 'plaza', knownPost.id, null, knownPost);
+  assert.deepStrictEqual(cachedNavigation, navigation);
+  assert.strictEqual(callLog.length, 3, 'cached navigation should avoid another query batch');
+
+  invalidateReadCache(repo);
+  await getNavigation(repo, 'plaza', knownPost.id, null, knownPost);
+  assert.strictEqual(callLog.length, 6, 'cache invalidation should refresh navigation');
   console.log(JSON.stringify({ ok: true, queryCount: callLog.length, elapsedMs }));
 })().catch((error) => {
   console.error(error.stack || error.message);

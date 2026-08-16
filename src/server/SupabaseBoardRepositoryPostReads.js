@@ -75,25 +75,45 @@ async function countPostsSince(repo, since) {
 // 병렬 수행하고 저장소 인스턴스에 60초 캐시해 Supabase 부하를 막는다. 실패한 게시판은 표기만 생략.
 async function listBoardCounts(repo, options = {}) {
   const cacheTtlMs = 60 * 1000;
+  const recentDays = normalizeRecentDays(options);
+  const cacheKey = String(recentDays);
   const cached = repo._boardCountsCache;
-  if (cached && (Date.now() - cached.at) < cacheTtlMs) {
+  if (cached && cached.key === cacheKey && (Date.now() - cached.at) < cacheTtlMs) {
     return cached.data;
   }
 
   // [LOG_ID: 20260805_1454] A cold menu can trigger overlapping count reads.
   // Share the refresh so each board issues its two HEAD queries only once.
-  if (repo._boardCountsRequest) return repo._boardCountsRequest;
-  const request = refreshBoardCounts(repo, options);
-  repo._boardCountsRequest = request;
+  // Keep the recent-days value in the key: internal callers can request a
+  // different window without receiving a result from the previous window.
+  if (!repo._boardCountsRequests) repo._boardCountsRequests = new Map();
+  const pending = repo._boardCountsRequests.get(cacheKey);
+  if (pending) return pending;
+
+  const generation = Number(repo._boardCountsGeneration || 0);
+  const request = (async () => {
+    const data = await refreshBoardCounts(repo, { ...options, recentDays });
+    if (generation === Number(repo._boardCountsGeneration || 0)) {
+      repo._boardCountsCache = { at: Date.now(), data, key: cacheKey };
+    }
+    return data;
+  })();
+  repo._boardCountsRequests.set(cacheKey, request);
   try {
     return await request;
   } finally {
-    if (repo._boardCountsRequest === request) delete repo._boardCountsRequest;
+    if (repo._boardCountsRequests.get(cacheKey) === request) {
+      repo._boardCountsRequests.delete(cacheKey);
+    }
   }
 }
 
+function normalizeRecentDays(options = {}) {
+  return Math.max(1, Number(options.recentDays) || 3);
+}
+
 async function refreshBoardCounts(repo, options) {
-  const days = Math.max(1, Number(options.recentDays) || 3);
+  const days = normalizeRecentDays(options);
   const sinceIso = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString();
   const counts = {};
 
@@ -113,7 +133,6 @@ async function refreshBoardCounts(repo, options) {
     };
   }));
 
-  repo._boardCountsCache = { at: Date.now(), data: counts };
   return counts;
 }
 
@@ -217,6 +236,10 @@ async function getPost(repo, boardId, postId, options = {}) {
         hit: Number(data?.[capabilities.hit] ?? post.hit)
       };
       setReadCache(repo, `post-local:${boardId}:${postId}`, post);
+      // Detail reads can address the same row by its global primary key.
+      // Keep that cache entry coherent too, otherwise the next navigation
+      // path can briefly show the pre-increment counter.
+      setReadCache(repo, `post:${boardId}:${post.id}`, post);
     }
   }
 
@@ -229,19 +252,34 @@ async function getPost(repo, boardId, postId, options = {}) {
 
 // [LOG_ID: 20260805_1417] 서버 사이드 5초 Short-TTL 인메모리 캐시 (DB 응답속도 0ms 극대화)
 const READ_CACHE_TTL_MS = 5000;
+const READ_CACHE_MAX_ENTRIES = 500;
 
 function getReadCache(repo, key) {
-  if (!repo._readCache) repo._readCache = new Map();
-  const entry = repo._readCache.get(key);
-  if (entry && (Date.now() - entry.at < READ_CACHE_TTL_MS)) {
-    return entry.data;
+  const cache = repo._readCache;
+  if (!cache) return null;
+
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at >= READ_CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
   }
-  return null;
+
+  cache.delete(key);
+  cache.set(key, entry);
+  return entry.data;
 }
 
 function setReadCache(repo, key, data) {
+  if (data == null) return;
   if (!repo._readCache) repo._readCache = new Map();
-  repo._readCache.set(key, { at: Date.now(), data });
+  const cache = repo._readCache;
+  cache.delete(key);
+  cache.set(key, { at: Date.now(), data });
+  while (cache.size > READ_CACHE_MAX_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    cache.delete(oldestKey);
+  }
 }
 
 function getReadRequests(repo) {
@@ -253,6 +291,8 @@ function invalidateReadCache(repo) {
   if (repo._readCache) repo._readCache.clear();
   if (repo._readRequests) repo._readRequests.clear();
   repo._readCacheGeneration = Number(repo._readCacheGeneration || 0) + 1;
+  repo._boardCountsGeneration = Number(repo._boardCountsGeneration || 0) + 1;
+  if (repo._boardCountsRequests) repo._boardCountsRequests.clear();
   if (repo._boardCountsCache) repo._boardCountsCache = null;
 }
 
@@ -394,6 +434,14 @@ async function getNavigation(repo, boardId, postId, search = null, knownPost = n
   if (!post) {
     return { latestId: null, prevId: null, nextId: null };
   }
+  const navigationCacheKey = `navigation:${boardId}:${post.id}:${JSON.stringify(search || {})}`;
+  const cachedNavigation = getReadCache(repo, navigationCacheKey);
+  if (cachedNavigation) return cachedNavigation;
+
+  const cacheNavigation = (navigation) => {
+    setReadCache(repo, navigationCacheKey, navigation);
+    return navigation;
+  };
   const localPid = Number(post.localId || post.id);
 
   const extractNavId = (row) => (row ? Number(row.local_id ?? row.id ?? 0) : null);
@@ -430,11 +478,11 @@ async function getNavigation(repo, boardId, postId, search = null, knownPost = n
       nextQuery.maybeSingle()
     ]);
 
-    return {
+    return cacheNavigation({
       latestId: extractNavId(latestData),
       prevId: extractNavId(prevData),
       nextId: extractNavId(nextData)
-    };
+    });
   }
 
   // [LOG: 20260429_0508] Non-threaded boards render in descending id order,
@@ -454,38 +502,59 @@ async function getNavigation(repo, boardId, postId, search = null, knownPost = n
     nextQuery.maybeSingle()
   ]);
 
-  return {
+  return cacheNavigation({
     latestId: extractNavId(latestData),
     prevId: extractNavId(prevData),
     nextId: extractNavId(nextData)
-  };
+  });
 }
 
 async function listHotPosts(repo, options = {}) {
   const capabilities = await ensureCapabilities(repo);
   const limit = Math.min(100, Math.max(1, Number(options.limit) || 10));
   const days = Math.max(1, Number(options.days) || 7);
-  const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const cacheKey = `hot:${days}:${limit}`;
+  const cached = getReadCache(repo, cacheKey);
+  if (cached) return cached;
 
-  let query = repo.client
-    .from(repo.tables.posts)
-    .select('*')
-    .gte('created_at', sinceIso);
+  const requests = getReadRequests(repo);
+  const pending = requests.get(cacheKey);
+  if (pending) return pending;
 
-  if (capabilities.recommend) {
-    query = query.order(capabilities.recommend, { ascending: false });
+  const generation = Number(repo._readCacheGeneration || 0);
+  const request = (async () => {
+    const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    let query = repo.client
+      .from(repo.tables.posts)
+      .select('*')
+      .gte('created_at', sinceIso);
+
+    if (capabilities.recommend) {
+      query = query.order(capabilities.recommend, { ascending: false });
+    }
+    if (capabilities.hit) {
+      query = query.order(capabilities.hit, { ascending: false });
+    } else {
+      query = query.order('id', { ascending: false });
+    }
+    query = query.limit(limit);
+
+    const { data, error } = await query;
+
+    if (error) throw createHttpError(502, `인기 게시글 조회 실패: ${error.message}`);
+    const posts = (data || []).map(mapPostRow);
+    if (generation === Number(repo._readCacheGeneration || 0)) {
+      setReadCache(repo, cacheKey, posts);
+    }
+    return posts;
+  })();
+  requests.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    if (requests.get(cacheKey) === request) requests.delete(cacheKey);
   }
-  if (capabilities.hit) {
-    query = query.order(capabilities.hit, { ascending: false });
-  } else {
-    query = query.order('id', { ascending: false });
-  }
-  query = query.limit(limit);
-
-  const { data, error } = await query;
-
-  if (error) throw createHttpError(502, `인기 게시글 조회 실패: ${error.message}`);
-  return (data || []).map(mapPostRow);
 }
 
 module.exports = {
