@@ -7,6 +7,7 @@
     "check:syntax": "node scripts/check-syntax.js",
     "smoke:security-boundaries": "node scripts/smoke-security-boundaries.js",
     "smoke:post-read-cache-hardening": "node scripts/smoke-post-read-cache-hardening.js",
+    "smoke:prefetch-scheduler": "node scripts/smoke-prefetch-scheduler.js",
     "build": "node scripts/smoke-vercel-ready.js",
     "start": "node server.js",
     "dev": "node server.js",

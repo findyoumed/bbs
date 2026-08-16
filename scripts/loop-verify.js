@@ -29,6 +29,7 @@ const CHECK_TIMEOUT_MS = 120000;
 const CHECKS = [
   { name: 'syntax', file: 'check-syntax.js' },
   { name: 'security-boundaries', file: 'smoke-security-boundaries.js' },
+  { name: 'prefetch-scheduler', file: 'smoke-prefetch-scheduler.js' },
   { name: 'boards', file: 'smoke-boards.js' },
   { name: 'bootstrap-concurrency', file: 'smoke-bootstrap-concurrency.js' },
   { name: 'post-navigation', file: 'smoke-post-navigation.js' },

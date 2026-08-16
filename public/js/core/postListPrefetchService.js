@@ -49,7 +49,10 @@ export function scheduleNextPagePrefetch({
 
   const run = () => {
     if (typeof getCurrentGeneration === 'function' && getCurrentGeneration() !== generation) {
-      return Promise.resolve(null);
+      // A board/search change cancels this idle task. Always release the key;
+      // otherwise a later visit to the same page is treated as permanently
+      // in-flight and never gets prefetched again.
+      return Promise.resolve(null).finally(() => pendingPrefetches.delete(cacheKey));
     }
     return fetchPostsPage(boardId, nextPage, searchParams, generation)
       .catch(() => null)
