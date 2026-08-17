@@ -37,6 +37,23 @@ const CITY_KO = {
   'Jeju-do': '제주도'
 };
 
+function isPrivateClientIp(value) {
+  let ip = String(value || '').trim().toLowerCase();
+  if (!ip || ip === '::1') return true;
+  if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+
+  const octets = ip.split('.');
+  if (octets.length === 4 && octets.every((part) => /^\d+$/.test(part))) {
+    const [first, second] = octets.map(Number);
+    if (octets.some((part) => Number(part) > 255)) return false;
+    return first === 0 || first === 10 || first === 127 || first === 169 && second === 254
+      || first === 172 && second >= 16 && second <= 31
+      || first === 192 && second === 168;
+  }
+
+  return /^(?:fc|fd)[0-9a-f]{2}:/.test(ip) || ip.startsWith('fe80:');
+}
+
 function getKstDateKey(value = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Seoul',
@@ -164,7 +181,7 @@ class RssWeatherService extends RssServiceBase {
     let result;
     try {
       // 1) IP → 위치 (로컬/사설 IP면 공인IP 자동 감지)
-      const isLocal = !clientIp || clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.startsWith('192.168.') || clientIp.startsWith('10.') || clientIp.startsWith('172.');
+      const isLocal = isPrivateClientIp(clientIp);
       const geoPath = isLocal ? '' : clientIp;
       const geoRes = await this.fetchImpl(
         `http://ip-api.com/json/${geoPath}?fields=status,city,regionName,lat,lon&lang=ko`,
