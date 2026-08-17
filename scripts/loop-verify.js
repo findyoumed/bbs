@@ -31,6 +31,7 @@ const CHECKS = [
   { name: 'security-boundaries', file: 'smoke-security-boundaries.js' },
   { name: 'prefetch-scheduler', file: 'smoke-prefetch-scheduler.js' },
   { name: 'weather-labels', file: 'smoke-weather-labels.js' },
+  { name: 'weather-date-kst', file: 'smoke-weather-date-kst.js' },
   { name: 'boards', file: 'smoke-boards.js' },
   { name: 'bootstrap-concurrency', file: 'smoke-bootstrap-concurrency.js' },
   { name: 'post-navigation', file: 'smoke-post-navigation.js' },

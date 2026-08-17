@@ -37,6 +37,34 @@ const CITY_KO = {
   'Jeju-do': '제주도'
 };
 
+function getKstDateKey(value = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(value).reduce((result, part) => {
+    if (part.type !== 'literal') result[part.type] = part.value;
+    return result;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function formatKstForecastDay(dateValue, todayKey, weekdays) {
+  const match = String(dateValue || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return '';
+  const [, year, month, day] = match;
+  const dateMs = Date.UTC(Number(year), Number(month) - 1, Number(day));
+  const todayMatch = String(todayKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const todayMs = todayMatch
+    ? Date.UTC(Number(todayMatch[1]), Number(todayMatch[2]) - 1, Number(todayMatch[3]))
+    : dateMs;
+  const offset = Math.round((dateMs - todayMs) / 86400000);
+  const suffix = offset === 0 ? ' 오늘' : offset === 1 ? ' 내일' : offset === 2 ? ' 모레' : '';
+  const dayName = weekdays[new Date(dateMs).getUTCDay()];
+  return `${month}/${day}(${dayName})${suffix}`;
+}
+
 function toKoreanCity(city, region) {
   return CITY_KO[city] || CITY_KO[region] || city || region || '알 수 없음';
 }
@@ -87,17 +115,11 @@ class RssWeatherService extends RssServiceBase {
         const d = data?.daily;
         if (!d?.time) return { items: [] };
         const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const todayKey = getKstDateKey();
         return {
           items: d.time.map((t, i) => {
-            const date = new Date(t + 'T00:00:00+09:00');
-            const offset = Math.round((date - today) / 86400000);
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            const dayName = WEEKDAYS[date.getDay()];
-            const suffix = offset === 0 ? ' 오늘' : offset === 1 ? ' 내일' : offset === 2 ? ' 모레' : '';
             return {
-              day: `${mm}/${dd}(${dayName})${suffix}`,
+              day: formatKstForecastDay(t, todayKey, WEEKDAYS),
               weather: WMO_WEATHER[d.weather_code?.[i]] || '알 수 없음',
               high: d.temperature_2m_max?.[i] != null ? String(Math.round(d.temperature_2m_max[i])) : '',
               low: d.temperature_2m_min?.[i] != null ? String(Math.round(d.temperature_2m_min[i])) : '',
@@ -166,16 +188,10 @@ class RssWeatherService extends RssServiceBase {
             const current = wx?.current || {};
             const d = wx?.daily || {};
             const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const todayKey = getKstDateKey();
             const days = (d.time || []).map((t, i) => {
-              const date = new Date(t + 'T00:00:00+09:00');
-              const offset = Math.round((date - today) / 86400000);
-              const mm = String(date.getMonth() + 1).padStart(2, '0');
-              const dd = String(date.getDate()).padStart(2, '0');
-              const dayName = WEEKDAYS[date.getDay()];
-              const suffix = offset === 0 ? ' 오늘' : offset === 1 ? ' 내일' : '';
               return {
-                day: `${mm}/${dd}(${dayName})${suffix}`,
+                day: formatKstForecastDay(t, todayKey, WEEKDAYS),
                 weather: WMO_WEATHER[d.weather_code?.[i]] || '알 수 없음',
                 high: d.temperature_2m_max?.[i] != null ? String(Math.round(d.temperature_2m_max[i])) : '',
                 low: d.temperature_2m_min?.[i] != null ? String(Math.round(d.temperature_2m_min[i])) : '',
