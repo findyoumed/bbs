@@ -41,8 +41,8 @@ const rendered = stripAnsi(builders.buildLocalWeatherAnsi({
   ]
 }));
 
-assert(rendered.includes('08/16(일)  약한 비'), '오늘 접미사가 날씨 칸으로 흘러가면 안 된다');
-assert(rendered.includes('08/17(월)  구름 조금'), '내일 접미사가 날씨 칸으로 흘러가면 안 된다');
+assert(/08\/16\(일\)\s+약한 비/.test(rendered), '오늘 접미사가 날씨 칸으로 흘러가면 안 된다');
+assert(/08\/17\(월\)\s+구름 조금/.test(rendered), '내일 접미사가 날씨 칸으로 흘러가면 안 된다');
 assert(!rendered.includes('오약한 비'), '날짜 접미사 오가 날씨명 앞에 남아 있다');
 assert(!rendered.includes('내구름 조금'), '날짜 접미사 내가 날씨명 앞에 남아 있다');
 console.log(JSON.stringify({ ok: true, checked: ['오늘', '내일'] }));
