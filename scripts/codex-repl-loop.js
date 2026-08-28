@@ -183,7 +183,7 @@ function buildLoopTask(baseTask, config, attempt, phase, verification) {
       '- Focus on existing functionality working reliably.',
       '- Do not add new user-facing features, redesigns, or scope expansion unless a failing verify command requires it.',
       '- Prioritize failing verify commands, Playwright console errors, page errors, broken routes, and regressions in current flows.',
-      '- Before finishing this cycle, update WORK_LOG.md and the loop memory file with completed work, current stable areas, and the next focus so the next cycle does not repeat work.',
+      '- Before finishing this cycle, update the loop memory file with completed work, current stable areas, and the next focus so the next cycle does not repeat work.',
     ].join('\n'),
   ];
 

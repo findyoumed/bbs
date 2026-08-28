@@ -145,21 +145,34 @@ function buildCapabilities(keys) {
 async function ensureCapabilities(repo) {
   if (repo.capabilities) return repo.capabilities;
 
-  const { data, error } = await repo.client
-    .from(repo.tables.posts)
-    .select('*')
-    .limit(1);
+  // A cold list/detail request can ask for capabilities at the same time.
+  // Share the probe so an empty legacy table does not trigger duplicate
+  // schema reads (and duplicate per-column probes) for the same repository.
+  if (repo._capabilitiesRequest) return repo._capabilitiesRequest;
 
-  if (error) throw createHttpError(502, `게시글 스키마 조회 실패: ${error.message}`);
+  const request = (async () => {
+    const { data, error } = await repo.client
+      .from(repo.tables.posts)
+      .select('*')
+      .limit(1);
 
-  const keys = new Set(Object.keys((data || [])[0] || {}));
-  if (keys.size === 0) {
-    await probeCapabilitiesFromEmptyTable(repo, keys);
+    if (error) throw createHttpError(502, `게시글 스키마 조회 실패: ${error.message}`);
+
+    const keys = new Set(Object.keys((data || [])[0] || {}));
+    if (keys.size === 0) {
+      await probeCapabilitiesFromEmptyTable(repo, keys);
+    }
+
+    repo.capabilities = buildCapabilities(keys);
+    return repo.capabilities;
+  })();
+
+  repo._capabilitiesRequest = request;
+  try {
+    return await request;
+  } finally {
+    if (repo._capabilitiesRequest === request) delete repo._capabilitiesRequest;
   }
-
-  repo.capabilities = buildCapabilities(keys);
-
-  return repo.capabilities;
 }
 
 module.exports = {

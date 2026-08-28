@@ -1,31 +1,24 @@
 ---
 name: loop-engineering
-description: Run an autonomous development loop that iteratively plans, implements, verifies, and polishes changes based on a test harness until all exit criteria are met.
+description: Run a bounded plan, implementation, verification, and refinement loop for BBS changes.
 ---
 
-# Loop Engineering Skill
+# Loop Engineering
 
-Use this skill when you need to autonomously build, debug, or refine a feature in a loop of planning, execution, and verification.
+Use this skill for multi-step development or bug-fixing work that has a repeatable test harness.
 
-## 4-Phase Loop Engineering Workflow
+## Workflow
 
-### Phase 1: Planning (Plan Mode)
-1. **Analyze Requirements**: Research the task, codebase, and dependencies. Do not make code edits.
-2. **Setup Checklist**: Create/update the `task.md` checklist in the artifacts directory.
-3. **Define Exit Criteria**: Specify concrete tests (e.g., `npm run loop:verify` or a custom smoke test) that must pass to terminate the loop.
-4. **Cap Iterations**: Limit the loop to 5-10 iterations to prevent infinite token consumption.
-5. **Formulate Plan**: Write the `implementation_plan.md` in the artifacts directory.
+1. Inspect the requirements, current code, dependencies, and relevant tests before editing.
+2. Define a small checklist and concrete exit criteria in the conversation or a temporary workspace file.
+3. Implement one logical change at a time and keep the iteration limit between 5 and 10.
+4. Run the relevant smoke tests after each change; use `npm run loop:verify` as the deterministic completion gate.
+5. If a test fails, use its output to correct the implementation and rerun the affected checks.
+6. Report changed files, test results, skipped checks, and remaining environment limitations.
 
-### Phase 2: Execution (YOLO Mode)
-1. **Write Full Code**: Never omit code. Always output complete file contents.
-2. **Work Log**: Log every change in `WORK_LOG.md` with timestamps and `LOG_ID` annotations.
-3. **Incremental Progress**: Implement one logical change at a time and move to verification.
+## Rules
 
-### Phase 3: Verification (Harness)
-1. **Execute Tests**: Run the specified harness commands (e.g., `npm run loop:verify`).
-2. **Collect Evidence**: Capture test output (exit codes, failures, build logs).
-3. **Self-Correct**: If tests fail, analyze the failure evidence, adjust the implementation plan if necessary, and repeat Phase 2.
-
-### Phase 4: Reporting
-1. **Document Accomplishments**: Create `walkthrough.md` with changes made, test results, and screenshots.
-2. **Close Checklist**: Ensure all items in `task.md` are marked completed.
+- Do not invent APIs, paths, or test results.
+- Do not add packages or broaden the feature without user approval.
+- Keep changes small and preserve existing behavior outside the requested scope.
+- Do not treat a passing static check as proof of browser or Supabase behavior; distinguish those results explicitly.

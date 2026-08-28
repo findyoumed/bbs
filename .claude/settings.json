@@ -20,17 +20,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python -c \"import json; print(json.dumps({'systemMessage': '/log 실행 → WORK_LOG.md 기록 (CLAUDE.md 규칙 #5)'}))\"",
-            "statusMessage": "WORK_LOG 알림..."
-          }
-        ]
-      }
     ]
   }
 }

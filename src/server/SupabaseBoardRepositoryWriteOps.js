@@ -30,13 +30,15 @@ async function createPost(repo, boardId, input, context = {}) {
   const sourceBoardId = resolveSourceBoardId(boardId);
 
   if (!capabilities.threaded) {
+    const post = await mutation.insertMappedPost(
+      repo,
+      mutation.buildPostPayload(repo, sourceBoardId, board, data, now, capabilities),
+      'Post creation failed'
+    );
+    readOps.invalidateReadCache?.(repo);
     return {
       board,
-      post: await mutation.insertMappedPost(
-        repo,
-        mutation.buildPostPayload(repo, sourceBoardId, board, data, now, capabilities),
-        'Post creation failed'
-      )
+      post
     };
   }
 
@@ -87,13 +89,15 @@ async function replyToPost(repo, boardId, parentPostId, input, context = {}) {
   const sourceBoardId = resolveSourceBoardId(boardId, parent.boardId);
 
   if (!capabilities.threaded) {
+    const post = await mutation.insertMappedPost(
+      repo,
+      mutation.buildPostPayload(repo, sourceBoardId, board, data, now, capabilities),
+      'Reply creation failed'
+    );
+    readOps.invalidateReadCache?.(repo);
     return {
       board,
-      post: await mutation.insertMappedPost(
-        repo,
-        mutation.buildPostPayload(repo, sourceBoardId, board, data, now, capabilities),
-        'Reply creation failed'
-      )
+      post
     };
   }
 
@@ -108,6 +112,7 @@ async function replyToPost(repo, boardId, parentPostId, input, context = {}) {
     }),
     'Reply creation failed'
   );
+  readOps.invalidateReadCache?.(repo);
 
   return {
     board,
@@ -130,19 +135,21 @@ async function updatePost(repo, boardId, postId, input, context = {}) {
   }
 
   const patch = sanitizePostPatch(input, post);
+  const updatedPost = await mutation.updateMappedPost(
+    repo,
+    post.boardId,
+    post.id,
+    {
+      title: patch.title,
+      content: patch.content,
+      updated_at: new Date().toISOString()
+    },
+    'Post update failed'
+  );
+  readOps.invalidateReadCache?.(repo);
   return {
     board,
-    post: await mutation.updateMappedPost(
-      repo,
-      post.boardId,
-      post.id,
-      {
-        title: patch.title,
-        content: patch.content,
-        updated_at: new Date().toISOString()
-      },
-      'Post update failed'
-    )
+    post: updatedPost
   };
 }
 
@@ -174,25 +181,28 @@ async function deletePost(repo, boardId, postId, context = {}) {
     }
 
     if (count > 0) {
+      const tombstonedPost = await mutation.updateMappedPost(
+        repo,
+        post.boardId,
+        post.id,
+        {
+          title: '[삭제된 글입니다]',
+          content: '',
+          updated_at: new Date().toISOString()
+        },
+        'Post delete (tombstone) failed'
+      );
+      readOps.invalidateReadCache?.(repo);
       return {
         board,
         tombstoned: true,
-        post: await mutation.updateMappedPost(
-          repo,
-          post.boardId,
-          post.id,
-          {
-            title: '[삭제된 글입니다]',
-            content: '',
-            updated_at: new Date().toISOString()
-          },
-          'Post delete (tombstone) failed'
-        )
+        post: tombstonedPost
       };
     }
   }
 
   await mutation.deletePostRecord(repo, post.boardId, post.id);
+  readOps.invalidateReadCache?.(repo);
 
   return {
     board,
@@ -247,10 +257,12 @@ async function recommendPost(repo, boardId, postId, context = {}) {
 
   const now = new Date().toISOString();
   await mutation.insertRecommendation(repo, post.id, userId, now);
+  const updatedPost = await mutation.updateRecommendationCount(repo, post.boardId, post.id, capabilities, now);
+  readOps.invalidateReadCache?.(repo);
 
   return {
     board,
-    post: await mutation.updateRecommendationCount(repo, post.boardId, post.id, capabilities, now)
+    post: updatedPost
   };
 }
 

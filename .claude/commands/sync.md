@@ -16,5 +16,5 @@ npm run smoke:vercel-ready
 2. 실패 항목이 있으면 해당 파일 경로를 확인
 
 실패 시 확인사항:
-- `public/js/main.js`가 올바른 모듈을 import하는지 확인
-- `public/js/core/` 또는 `public/js/ui/` 경로가 맞는지 확인
+- `public/js/app.js`가 올바른 모듈을 import하는지 확인
+- `public/js/core/` 경로와 `vercel.json`의 정적 자산 설정을 확인

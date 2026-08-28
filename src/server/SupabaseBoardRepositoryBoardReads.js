@@ -85,6 +85,26 @@ async function listBoards(repo) {
     return cached.data.map(cloneBoard);
   }
 
+  // [LOG_ID: 20260813_2018] 여러 사용자가 캐시 만료 직후 동시에 메인 화면에
+  // 들어오면 동일한 Supabase 목록 조회가 중복 실행될 수 있다. 갱신 중인 요청을
+  // 공유해 동시 요청당 실제 DB 조회를 한 번으로 제한한다.
+  if (repo._boardListRequest) {
+    return repo._boardListRequest;
+  }
+
+  const request = refreshBoardList(repo);
+  repo._boardListRequest = request;
+  try {
+    return await request;
+  } finally {
+    if (repo._boardListRequest === request) {
+      delete repo._boardListRequest;
+    }
+  }
+}
+
+async function refreshBoardList(repo) {
+
   const { data, error } = await repo.client
     .from(repo.tables.boards)
     .select('*')

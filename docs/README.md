@@ -60,16 +60,15 @@
 3. **접근성 보강**: Screen-level accessibility 의미 구조 재검토.
 
 ### 4-2. 검증 게이트
-- `npm test`: 전체 테스트 실행
-- `npm run smoke:vercel-ready`: 프런트 자산 계약 검증
-- `npm run smoke:boards`, `smoke:auth-bridge`, `smoke:chat-rooms`: 주요 기능 스모크 테스트
+- `npm run build`: 프런트 자산·Vercel 계약 검증
+- `npm run check`: 저장소 드라이버와 필수 파일 검증
+- `npm run qa:final`: 서버·핵심 파일·기본 API 검증
+- `npm run loop:verify`: 결정적 주요 기능 스모크 테스트 일괄 실행
 
 ---
 
 ## 5. 개발 및 소스 수정 규칙
 
-- **코드 생략 금지**: 수정 시 파일 전체 코드를 제공해야 함.
 - **모듈화**: 파일당 라인 수는 250라인을 경고 지점으로 보며, 논리적 단위로 분리 권장.
 - **추측 금지**: 불확실한 부분은 질문을 통해 확인.
-- **작업 기록**: 모든 변경 사항은 `WORK_LOG.md`에 기록.
 - **검증 필수**: 수정 후 관련 스모크 테스트를 반드시 실행하여 정상 작동 확인.

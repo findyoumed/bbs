@@ -216,8 +216,11 @@ export function createWeatherAnsiBuilders(deps) {
     const lineWidth = widths.day + widths.weather + widths.high + widths.low + widths.rain;
     parts.push(`  ${ansiColor(8)}${'─'.repeat(lineWidth)}${ANSI_RESET}`);
     (local?.days || []).forEach((d) => {
+      // 날짜 칸의 폭을 넘는 '오늘/내일/모레' 접미사가 날씨 칸으로 흘러가지 않게 한다.
+      // 예: '08/17(월) 내일' + '구름 조금' -> '내구름 조금'이 되던 문제를 방지한다.
+      const dayLabel = String(d.day || '').replace(/\s+(?:오늘|내일|모레)$/, '');
       parts.push(
-        `  ${ansiColor(11)}${fitCell(d.day || '', widths.day)}${ANSI_RESET}` +
+        `  ${ansiColor(11)}${fitCell(dayLabel, widths.day)}${ANSI_RESET}` +
         `${ansiColor(15)}${fitCell(d.weather || '', widths.weather)}${ANSI_RESET}` +
         `${ansiColor(13)}${fitCell(d.high ? `${d.high}℃` : '', widths.high)}${ANSI_RESET}` +
         `${ansiColor(12)}${fitCell(d.low ? `${d.low}℃` : '', widths.low)}${ANSI_RESET}` +

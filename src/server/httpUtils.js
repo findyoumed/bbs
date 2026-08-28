@@ -95,6 +95,17 @@ function readJsonBody(req) {
     // 막혔다(첨부 업로드 UI 신설 중 실측 확인). base64 팽창 + JSON 오버헤드를 감안해
     // 첨부 상한(1MB)보다 넉넉히 위인 2MB로 올린다.
     const maxBytes = 2 * 1024 * 1024;
+
+    // Reject an oversized request from its declared size before buffering any
+    // body bytes. The streaming guard below remains necessary because clients
+    // may omit or falsify Content-Length (chunked requests).
+    const declaredLength = Number(req.headers?.['content-length']);
+    if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+      req.resume?.();
+      reject(createError(413, 'Request body too large'));
+      return;
+    }
+
     let raw = '';
     let receivedBytes = 0;
     let settled = false;
@@ -335,15 +346,18 @@ function sendText(res, statusCode, text) {
 function buildCorsHeaders(origin, allowedOrigins) {
   const normalizedOrigin = String(origin || '').trim();
   const hasAllowlist = Array.isArray(allowedOrigins) && allowedOrigins.length > 0;
-  const originHeader = hasAllowlist
-    ? (allowedOrigins.includes(normalizedOrigin) ? normalizedOrigin : allowedOrigins[0])
-    : '*';
   const headers = {
-    'Access-Control-Allow-Origin': originHeader,
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Article-Key, X-Article-Link, X-BBS-User-Id, X-BBS-Nick-Name, X-BBS-Level, X-BBS-Admin',
     'Access-Control-Max-Age': '86400'
   };
+
+  if (!hasAllowlist) {
+    headers['Access-Control-Allow-Origin'] = '*';
+  } else if (allowedOrigins.includes(normalizedOrigin)) {
+    headers['Access-Control-Allow-Origin'] = normalizedOrigin;
+  }
+
   if (hasAllowlist) {
     headers.Vary = 'Origin';
   }

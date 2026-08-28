@@ -75,25 +75,45 @@ async function countPostsSince(repo, since) {
 // 병렬 수행하고 저장소 인스턴스에 60초 캐시해 Supabase 부하를 막는다. 실패한 게시판은 표기만 생략.
 async function listBoardCounts(repo, options = {}) {
   const cacheTtlMs = 60 * 1000;
+  const recentDays = normalizeRecentDays(options);
+  const cacheKey = String(recentDays);
   const cached = repo._boardCountsCache;
-  if (cached && (Date.now() - cached.at) < cacheTtlMs) {
+  if (cached && cached.key === cacheKey && (Date.now() - cached.at) < cacheTtlMs) {
     return cached.data;
   }
 
   // [LOG_ID: 20260805_1454] A cold menu can trigger overlapping count reads.
   // Share the refresh so each board issues its two HEAD queries only once.
-  if (repo._boardCountsRequest) return repo._boardCountsRequest;
-  const request = refreshBoardCounts(repo, options);
-  repo._boardCountsRequest = request;
+  // Keep the recent-days value in the key: internal callers can request a
+  // different window without receiving a result from the previous window.
+  if (!repo._boardCountsRequests) repo._boardCountsRequests = new Map();
+  const pending = repo._boardCountsRequests.get(cacheKey);
+  if (pending) return pending;
+
+  const generation = Number(repo._boardCountsGeneration || 0);
+  const request = (async () => {
+    const data = await refreshBoardCounts(repo, { ...options, recentDays });
+    if (generation === Number(repo._boardCountsGeneration || 0)) {
+      repo._boardCountsCache = { at: Date.now(), data, key: cacheKey };
+    }
+    return data;
+  })();
+  repo._boardCountsRequests.set(cacheKey, request);
   try {
     return await request;
   } finally {
-    if (repo._boardCountsRequest === request) delete repo._boardCountsRequest;
+    if (repo._boardCountsRequests.get(cacheKey) === request) {
+      repo._boardCountsRequests.delete(cacheKey);
+    }
   }
 }
 
+function normalizeRecentDays(options = {}) {
+  return Math.max(1, Number(options.recentDays) || 3);
+}
+
 async function refreshBoardCounts(repo, options) {
-  const days = Math.max(1, Number(options.recentDays) || 3);
+  const days = normalizeRecentDays(options);
   const sinceIso = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString();
   const counts = {};
 
@@ -113,7 +133,6 @@ async function refreshBoardCounts(repo, options) {
     };
   }));
 
-  repo._boardCountsCache = { at: Date.now(), data: counts };
   return counts;
 }
 
@@ -206,6 +225,9 @@ async function getPost(repo, boardId, postId, options = {}) {
       if (error.code !== 'PGRST116') {
         throw createHttpError(502, `조회수 갱신 실패: ${error.message}`);
       }
+      // The row disappeared after the initial read. Do not keep serving it
+      // from the local-id cache on the next detail request.
+      repo._readCache?.delete(`post-local:${boardId}:${postId}`);
     } else {
       // The update projection contains only the counter. Preserve the full
       // post loaded above and merge the fresh value into it.
@@ -213,35 +235,64 @@ async function getPost(repo, boardId, postId, options = {}) {
         ...post,
         hit: Number(data?.[capabilities.hit] ?? post.hit)
       };
+      setReadCache(repo, `post-local:${boardId}:${postId}`, post);
+      // Detail reads can address the same row by its global primary key.
+      // Keep that cache entry coherent too, otherwise the next navigation
+      // path can briefly show the pre-increment counter.
+      setReadCache(repo, `post:${boardId}:${post.id}`, post);
     }
   }
 
   return {
     board,
     post,
-    navigation: await getNavigation(repo, targetBoardId, post.id, options.search)
+    navigation: await getNavigation(repo, targetBoardId, post.id, options.search, post)
   };
 }
 
 // [LOG_ID: 20260805_1417] 서버 사이드 5초 Short-TTL 인메모리 캐시 (DB 응답속도 0ms 극대화)
 const READ_CACHE_TTL_MS = 5000;
+const READ_CACHE_MAX_ENTRIES = 500;
 
 function getReadCache(repo, key) {
-  if (!repo._readCache) repo._readCache = new Map();
-  const entry = repo._readCache.get(key);
-  if (entry && (Date.now() - entry.at < READ_CACHE_TTL_MS)) {
-    return entry.data;
+  const cache = repo._readCache;
+  if (!cache) return null;
+
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at >= READ_CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
   }
-  return null;
+
+  cache.delete(key);
+  cache.set(key, entry);
+  return entry.data;
 }
 
 function setReadCache(repo, key, data) {
+  if (data == null) return;
   if (!repo._readCache) repo._readCache = new Map();
-  repo._readCache.set(key, { at: Date.now(), data });
+  const cache = repo._readCache;
+  cache.delete(key);
+  cache.set(key, { at: Date.now(), data });
+  while (cache.size > READ_CACHE_MAX_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    cache.delete(oldestKey);
+  }
+}
+
+function getReadRequests(repo) {
+  if (!repo._readRequests) repo._readRequests = new Map();
+  return repo._readRequests;
 }
 
 function invalidateReadCache(repo) {
   if (repo._readCache) repo._readCache.clear();
+  if (repo._readRequests) repo._readRequests.clear();
+  repo._readCacheGeneration = Number(repo._readCacheGeneration || 0) + 1;
+  repo._boardCountsGeneration = Number(repo._boardCountsGeneration || 0) + 1;
+  if (repo._boardCountsRequests) repo._boardCountsRequests.clear();
   if (repo._boardCountsCache) repo._boardCountsCache = null;
 }
 
@@ -250,24 +301,41 @@ async function fetchPagedPosts(repo, boardId, page, pageSize, search = null) {
   const cached = getReadCache(repo, cacheKey);
   if (cached) return cached;
 
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize - 1;
-  const capabilities = await ensureCapabilities(repo);
+  // [LOG_ID: 20260813_2057] Share concurrent identical list reads instead of
+  // sending the same PostgREST query once per browser/server request.
+  const requests = getReadRequests(repo);
+  const pending = requests.get(cacheKey);
+  if (pending) return pending;
 
-  let query = repo.client
-    .from(repo.tables.posts)
-    .select(buildPostListSelect(capabilities), { count: 'exact' });
+  const generation = Number(repo._readCacheGeneration || 0);
+  const request = (async () => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize - 1;
+    const capabilities = await ensureCapabilities(repo);
 
-  query = applyBoardFilter(query, boardId);
-  query = applySupabaseSearch(query, capabilities, search);
-  query = applyPostOrdering(query, repo, capabilities);
+    let query = repo.client
+      .from(repo.tables.posts)
+      .select(buildPostListSelect(capabilities), { count: 'exact' });
 
-  const { data, error, count } = await query.range(start, end);
-  if (error) throw createHttpError(502, `게시글 목록 조회 실패: ${error.message}`);
+    query = applyBoardFilter(query, boardId);
+    query = applySupabaseSearch(query, capabilities, search);
+    query = applyPostOrdering(query, repo, capabilities);
 
-  const res = { data, count: count || 0 };
-  setReadCache(repo, cacheKey, res);
-  return res;
+    const { data, error, count } = await query.range(start, end);
+    if (error) throw createHttpError(502, `게시글 목록 조회 실패: ${error.message}`);
+
+    const res = { data, count: count || 0 };
+    if (generation === Number(repo._readCacheGeneration || 0)) {
+      setReadCache(repo, cacheKey, res);
+    }
+    return res;
+  })();
+  requests.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    if (requests.get(cacheKey) === request) requests.delete(cacheKey);
+  }
 }
 
 async function fetchPost(repo, boardId, postId) {
@@ -275,20 +343,35 @@ async function fetchPost(repo, boardId, postId) {
   const cached = getReadCache(repo, cacheKey);
   if (cached) return cached;
 
-  let query = repo.client
-    .from(repo.tables.posts)
-    .select('*');
+  const requests = getReadRequests(repo);
+  const pending = requests.get(cacheKey);
+  if (pending) return pending;
 
-  query = applyBoardFilter(query, boardId);
+  const generation = Number(repo._readCacheGeneration || 0);
+  const request = (async () => {
+    let query = repo.client
+      .from(repo.tables.posts)
+      .select('*');
 
-  const { data, error } = await query
-    .eq('id', Number(postId))
-    .maybeSingle();
+    query = applyBoardFilter(query, boardId);
 
-  if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
-  const mapped = mapPostRow(data);
-  setReadCache(repo, cacheKey, mapped);
-  return mapped;
+    const { data, error } = await query
+      .eq('id', Number(postId))
+      .maybeSingle();
+
+    if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
+    const mapped = mapPostRow(data);
+    if (generation === Number(repo._readCacheGeneration || 0)) {
+      setReadCache(repo, cacheKey, mapped);
+    }
+    return mapped;
+  })();
+  requests.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    if (requests.get(cacheKey) === request) requests.delete(cacheKey);
+  }
 }
 
 // [LOG_ID: 20260726_1800] PDS(자료실)는 pds/pds_all/pds_util/pds_game/pds_graphic/pds_sound/
@@ -305,36 +388,67 @@ async function fetchPost(repo, boardId, postId) {
 // 경로도 있어 여기서는 최소한 "조용히 막히는" 대신 결정적으로 하나를 골라 응답한다(가장
 // 최근에 작성된 글 우선) — 완벽한 구분은 아니지만 오류로 완전히 막히는 것보다는 낫다.
 async function fetchPostByLocalId(repo, boardId, localId) {
-  let query = repo.client
-    .from(repo.tables.posts)
-    .select('*');
+  const cacheKey = `post-local:${boardId}:${localId}`;
+  const cached = getReadCache(repo, cacheKey);
+  if (cached) return cached;
 
-  query = applyBoardFilter(query, boardId);
+  const requests = getReadRequests(repo);
+  const pending = requests.get(cacheKey);
+  if (pending) return pending;
 
-  const { data, error } = await query
-    .eq('local_id', Number(localId))
-    .order('created_at', { ascending: false })
-    .limit(1);
+  const generation = Number(repo._readCacheGeneration || 0);
+  const request = (async () => {
+    let query = repo.client
+      .from(repo.tables.posts)
+      .select('*');
 
-  if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
-  return mapPostRow(Array.isArray(data) ? (data[0] || null) : data);
+    query = applyBoardFilter(query, boardId);
+
+    const { data, error } = await query
+      .eq('local_id', Number(localId))
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw createHttpError(502, `게시글 조회 실패: ${error.message}`);
+    const mapped = mapPostRow(Array.isArray(data) ? (data[0] || null) : data);
+    if (mapped && generation === Number(repo._readCacheGeneration || 0)) {
+      setReadCache(repo, cacheKey, mapped);
+    }
+    return mapped;
+  })();
+  requests.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    if (requests.get(cacheKey) === request) requests.delete(cacheKey);
+  }
 }
 
-async function getNavigation(repo, boardId, postId, search = null) {
+async function getNavigation(repo, boardId, postId, search = null, knownPost = null) {
   const capabilities = await ensureCapabilities(repo);
   const pid = Number(postId);
 
-  const post = await fetchPost(repo, boardId, pid);
+  // [LOG_ID: 20260813_2042] getPost() already loaded the full post by local_id.
+  // Reusing it avoids a second full-row fetch by global id before navigation.
+  const post = knownPost || await fetchPost(repo, boardId, pid);
   if (!post) {
     return { latestId: null, prevId: null, nextId: null };
   }
+  const navigationCacheKey = `navigation:${boardId}:${post.id}:${JSON.stringify(search || {})}`;
+  const cachedNavigation = getReadCache(repo, navigationCacheKey);
+  if (cachedNavigation) return cachedNavigation;
+
+  const cacheNavigation = (navigation) => {
+    setReadCache(repo, navigationCacheKey, navigation);
+    return navigation;
+  };
   const localPid = Number(post.localId || post.id);
 
   const extractNavId = (row) => (row ? Number(row.local_id ?? row.id ?? 0) : null);
 
   let latestQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
   latestQuery = applySupabaseSearch(latestQuery, capabilities, search);
-  const { data: latestData } = await applyPostOrdering(latestQuery, repo, capabilities).limit(1).maybeSingle();
+  latestQuery = applyPostOrdering(latestQuery, repo, capabilities).limit(1);
 
   if (capabilities.threaded) {
     const familyId = Number(post.family || 0);
@@ -347,7 +461,6 @@ async function getNavigation(repo, boardId, postId, search = null) {
       .order('family_id', { ascending: true })
       .order('sort_order', { ascending: false })
       .limit(1);
-    const { data: prevData } = await prevQuery.maybeSingle();
 
     let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
     nextQuery = applySupabaseSearch(nextQuery, capabilities, search);
@@ -356,13 +469,20 @@ async function getNavigation(repo, boardId, postId, search = null) {
       .order('family_id', { ascending: false })
       .order('sort_order', { ascending: true })
       .limit(1);
-    const { data: nextData } = await nextQuery.maybeSingle();
+    // [LOG_ID: 20260813_2042] Navigation candidates are independent reads.
+    // Run them together so detail-view latency is bounded by the slowest query,
+    // not the sum of latest + previous + next round trips.
+    const [{ data: latestData }, { data: prevData }, { data: nextData }] = await Promise.all([
+      latestQuery.maybeSingle(),
+      prevQuery.maybeSingle(),
+      nextQuery.maybeSingle()
+    ]);
 
-    return {
+    return cacheNavigation({
       latestId: extractNavId(latestData),
       prevId: extractNavId(prevData),
       nextId: extractNavId(nextData)
-    };
+    });
   }
 
   // [LOG: 20260429_0508] Non-threaded boards render in descending id order,
@@ -370,44 +490,71 @@ async function getNavigation(repo, boardId, postId, search = null) {
   const idCol = capabilities.localId || 'id';
   let prevQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
   prevQuery = applySupabaseSearch(prevQuery, capabilities, search);
-  const { data: prevData } = await prevQuery.gt(idCol, localPid).order(idCol, { ascending: true }).limit(1).maybeSingle();
+  prevQuery = prevQuery.gt(idCol, localPid).order(idCol, { ascending: true }).limit(1);
 
   let nextQuery = applyBoardFilter(repo.client.from(repo.tables.posts).select('local_id, id'), boardId);
   nextQuery = applySupabaseSearch(nextQuery, capabilities, search);
-  const { data: nextData } = await nextQuery.lt(idCol, localPid).order(idCol, { ascending: false }).limit(1).maybeSingle();
+  nextQuery = nextQuery.lt(idCol, localPid).order(idCol, { ascending: false }).limit(1);
 
-  return {
+  const [{ data: latestData }, { data: prevData }, { data: nextData }] = await Promise.all([
+    latestQuery.maybeSingle(),
+    prevQuery.maybeSingle(),
+    nextQuery.maybeSingle()
+  ]);
+
+  return cacheNavigation({
     latestId: extractNavId(latestData),
     prevId: extractNavId(prevData),
     nextId: extractNavId(nextData)
-  };
+  });
 }
 
 async function listHotPosts(repo, options = {}) {
   const capabilities = await ensureCapabilities(repo);
   const limit = Math.min(100, Math.max(1, Number(options.limit) || 10));
   const days = Math.max(1, Number(options.days) || 7);
-  const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const cacheKey = `hot:${days}:${limit}`;
+  const cached = getReadCache(repo, cacheKey);
+  if (cached) return cached;
 
-  let query = repo.client
-    .from(repo.tables.posts)
-    .select('*')
-    .gte('created_at', sinceIso);
+  const requests = getReadRequests(repo);
+  const pending = requests.get(cacheKey);
+  if (pending) return pending;
 
-  if (capabilities.recommend) {
-    query = query.order(capabilities.recommend, { ascending: false });
+  const generation = Number(repo._readCacheGeneration || 0);
+  const request = (async () => {
+    const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    let query = repo.client
+      .from(repo.tables.posts)
+      .select('*')
+      .gte('created_at', sinceIso);
+
+    if (capabilities.recommend) {
+      query = query.order(capabilities.recommend, { ascending: false });
+    }
+    if (capabilities.hit) {
+      query = query.order(capabilities.hit, { ascending: false });
+    } else {
+      query = query.order('id', { ascending: false });
+    }
+    query = query.limit(limit);
+
+    const { data, error } = await query;
+
+    if (error) throw createHttpError(502, `인기 게시글 조회 실패: ${error.message}`);
+    const posts = (data || []).map(mapPostRow);
+    if (generation === Number(repo._readCacheGeneration || 0)) {
+      setReadCache(repo, cacheKey, posts);
+    }
+    return posts;
+  })();
+  requests.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    if (requests.get(cacheKey) === request) requests.delete(cacheKey);
   }
-  if (capabilities.hit) {
-    query = query.order(capabilities.hit, { ascending: false });
-  } else {
-    query = query.order('id', { ascending: false });
-  }
-  query = query.limit(limit);
-
-  const { data, error } = await query;
-
-  if (error) throw createHttpError(502, `인기 게시글 조회 실패: ${error.message}`);
-  return (data || []).map(mapPostRow);
 }
 
 module.exports = {
