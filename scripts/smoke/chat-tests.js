@@ -482,6 +482,65 @@ async function verifyChatRoomEscCleanupCoverage(errors) {
     }
 }
 
+// [LOG_ID: 20260829_0900] domainTextFirst가 채팅 입력을 먼저 소비하므로,
+// 대화실 안에서도 원전처럼 `GO 코드`가 메시지로 전송되지 않고 전역 이동으로
+// 처리되는지 모듈 수준에서 고정한다.
+async function verifyChatGoCommandCoverage(errors) {
+    console.log('🧭 Checking GO command handling inside an active chat room...');
+
+    try {
+        const moduleCache = new Map();
+        const { createChatCommandHandler } = loadBrowserHarnessModule(
+            path.join(__dirname, '../..', 'public/js/core/commandRouterChat.js'),
+            moduleCache
+        );
+        const goCalls = [];
+        const leaveCalls = [];
+        const hints = [];
+        const prompts = [];
+        const state = {
+            screen: 'chat-room',
+            _chatRoomId: 'room-1',
+            _chatSessionKey: 'session-1',
+            _chatMessages: [],
+            user: { userId: 'smoke-user', nickName: '스모크' }
+        };
+        const handler = createChatCommandHandler({
+            apiFetch: async (url) => {
+                if (String(url).includes('/leave')) leaveCalls.push(url);
+                if (String(url).includes('/messages')) throw new Error('GO must not send a chat message');
+                return {};
+            },
+            executeGoCommand: async (rawCommand) => {
+                goCalls.push(rawCommand);
+                return rawCommand === 'GO HUMOR';
+            },
+            setHint: (value) => hints.push(String(value || '')),
+            setPrompt: (value) => prompts.push(String(value || '')),
+            state
+        });
+
+        const handled = await handler({ input: 'GO HUMOR', rawCmd: 'GO HUMOR', cmd: 'GO HUMOR', context: {} });
+        if (!handled || goCalls[0] !== 'GO HUMOR' || leaveCalls.length !== 1 || state._chatMessages.length !== 0) {
+            errors.push('Plain GO HUMOR inside a chat room did not use the global GO handler and room cleanup path');
+        }
+
+        state._chatRoomId = 'room-2';
+        const slashHandled = await handler({ input: '/GO HUMOR', rawCmd: '/GO HUMOR', cmd: '/GO HUMOR', context: {} });
+        if (!slashHandled || goCalls[1] !== 'GO HUMOR' || leaveCalls.length !== 2) {
+            errors.push('Slash GO HUMOR inside a chat room did not use the global GO handler and room cleanup path');
+        }
+
+        state._chatRoomId = 'room-3';
+        const unsupportedHandled = await handler({ input: 'GO PGF', rawCmd: 'GO PGF', cmd: 'GO PGF', context: {} });
+        if (!unsupportedHandled || leaveCalls.length !== 2 || !hints.includes('이동할 메뉴를 찾지 못했습니다.') || !prompts.includes('선택 >>')) {
+            errors.push('Unsupported GO inside a chat room should stay in the room and show a local hint');
+        }
+    } catch (error) {
+        errors.push(`Chat-room GO module harness failed: ${error.message}`);
+    }
+}
+
 // [LOG: 20260428_2339] When Playwright is available, /chat must prove room entry,
 // message send, and reload hydration instead of stopping at lobby shell coverage.
 async function verifyPlaywrightChatFlow(page, errors) {
@@ -534,5 +593,6 @@ module.exports = {
     verifyHttpChatCoverage,
     verifyChatHistorySnapshotCoverage,
     verifyChatRoomEscCleanupCoverage,
+    verifyChatGoCommandCoverage,
     verifyPlaywrightChatFlow
 };

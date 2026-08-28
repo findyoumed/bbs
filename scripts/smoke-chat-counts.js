@@ -7,6 +7,7 @@ async function main() {
   const repository = new MemoryChatRoomRepository({ defaultRoom: false });
   const authUser = {
     userId: '11111111-1111-4111-8111-111111111111',
+    authUserId: '11111111-1111-4111-8111-111111111111',
     nickName: '회원'
   };
   const guestUser = {

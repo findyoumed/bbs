@@ -3374,6 +3374,43 @@ body[data-screen="news-view"] #terminal-container.is-loading #terminal-screen .l
    visibility까지 별도로 숨길 필요가 없다. */
 
 /* [LOG: 20260617_1032] Align terminal notification font and brightness with main terminal themes */
+.terminal-error-row {
+    font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
+    font-size: var(--cmd-font-size, 17px) !important;
+    color: #ff5555 !important;
+    padding: 4px 8px;
+    margin-top: 4px;
+    border-top: 1px dashed rgba(255, 85, 85, 0.45);
+    width: 100%;
+    text-align: left;
+    white-space: pre-wrap;
+    box-sizing: border-box;
+}
+
+/* [LOG_ID: 20260829_1015] 오락실 입력 오류는 하단 명령 힌트바를 덮지 않고
+   현재 본문 프롬프트 바로 위에 표시한다. 건의/쪽지 편집기의 검증 행과 같은
+   고정폭 터미널 색상·간격을 사용한다. */
+.game-inline-validation {
+    color: #ffff55 !important;
+    font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    white-space: pre-wrap;
+    padding: 2px 0;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+/* [LOG_ID: 20260827_1500] Make keyboard focus visible on every command
+   hotspot, including retro spans that are not native buttons. */
+.cmd-clickable:focus-visible,
+[data-cmd]:focus-visible,
+[data-signup-choice]:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 1px;
+    background: #222;
+}
+
 .terminal-notification-row {
     font-family: 'BbsPrimaryFont', 'Sam3KRFont', 'GulimChe', monospace !important;
     font-size: var(--cmd-font-size, 17px) !important;

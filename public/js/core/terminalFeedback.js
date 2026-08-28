@@ -15,6 +15,25 @@ export function createTerminalFeedback(deps) {
 
   let notificationTimeout = null;
 
+  function writeErrorRow(message) {
+    const normalizedMessage = String(message || UI_TEXT.RENDER_ERROR).trim();
+    const errorEl = document.getElementById('terminal-error');
+    if (errorEl) {
+      errorEl.textContent = normalizedMessage;
+      errorEl.hidden = false;
+      return true;
+    }
+
+    // Backward-compatible fallback for embedded shells that do not yet have
+    // the dedicated error row.
+    if (hintEl) {
+      hintEl.innerHTML = `<span class="bbs-error-text">${esc(normalizedMessage)}</span>`;
+      hintEl.classList.remove('has-cmd-tokens');
+      return true;
+    }
+    return false;
+  }
+
   function showNotification(text, duration = 3000, level = 'info', options = {}) {
     const normalizedText = String(text || '').trim();
     if (!normalizedText) return;
@@ -110,9 +129,7 @@ export function createTerminalFeedback(deps) {
     // 화면까지 구분선이 계속 숨겨진 채로 고착된다).
     document.getElementById('terminal-footer')?.classList.remove('is-divider-pending');
 
-    if (hintEl) {
-      hintEl.textContent = UI_TEXT.ERROR;
-    }
+    writeErrorRow(normalizedMessage);
 
     if (cmdPromptEl) {
       cmdPromptEl.textContent = '>>';
@@ -140,10 +157,7 @@ export function createTerminalFeedback(deps) {
     setFooterVisibility(true);
     document.getElementById('terminal-footer')?.classList.remove('is-divider-pending');
 
-    if (hintEl) {
-      hintEl.innerHTML = `<span class="bbs-error-text">${esc(message)}</span>`;
-      hintEl.classList.remove('has-cmd-tokens');
-    }
+    writeErrorRow(message);
 
     // [LOG: 20260706] 입력 흔들림 대신 터미널 비주얼 벨(화면 플래시)로 에러 표시.
     triggerVisualFeedback(cmdInput?.parentElement, 'flash-terminal');

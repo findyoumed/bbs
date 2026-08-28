@@ -951,7 +951,11 @@ export function createMemoScreens(deps) {
         if (state._forwardMemoContent) {
             state._memoWriteFlow.bodyLines = state._forwardMemoContent.split('\n');
             state._forwardMemoContent = null;
-            state._memoWriteFlow.stage = 'target';
+            // [LOG_ID: 20260828_1720] `FW 번호 아이디`는 목록에서 이미
+            // 수신자를 지정했으므로 전달 본문을 채운 뒤에도 본문 단계에
+            // 머물러야 한다. 기존 읽기 화면의 무대상 FW만 받는 사람
+            // 단계를 다시 보여준다.
+            state._memoWriteFlow.stage = state._memoWriteFlow.target ? 'body' : 'target';
         }
 
         // [LOG: 20260509_1115] Memo write consumes raw terminal lines so body text is not treated as global commands.

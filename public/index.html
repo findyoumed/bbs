@@ -132,6 +132,9 @@
                 <div id="terminal-footer" data-footer-state="hidden" aria-hidden="true">
                     <!-- [LOG: 20260506_1315] Command suggestion UI disabled due to frequent misfires. -->
                     <!-- <div id="cmd-suggestion-box" class="suggestion-box"></div> -->
+                    <!-- [LOG_ID: 20260827_1400] Keep transient validation/runtime errors
+                         above the persistent command hint instead of replacing it. -->
+                    <div id="terminal-error" class="terminal-error-row" role="alert" aria-live="assertive" hidden></div>
                     <div id="cmd-hint"></div>
                     <div id="terminal-prompt-row">
                         <!-- [LOG: 20260622_1640] 크롬 자동완성이 라벨 텍스트('회원 ID')를 멤버십/포인트카드 필드로 오인해

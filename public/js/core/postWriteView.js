@@ -9,8 +9,20 @@ import { convertKoreanToEnglish } from './commandNormalizer.js';
 export function createPostWriteView(deps) {
   const {
     cmdInput, createPost, esc, getSupportedFooterText, replyPost,
-    screenEl, setHint, setPrompt, showMain, state, updatePost, updateURL
+    screenEl, setHint, setPrompt, showError, showMain, state, updatePost, updateURL
   } = deps;
+
+  // [LOG_ID: 20260827_1455] Validation and persistence failures belong in the
+  // transient error row; retain the hint fallback for isolated callers.
+  function notifyWriteError(message) {
+    const text = String(message || '').trim();
+    if (!text) return;
+    if (typeof showError === 'function') {
+      showError(text);
+    } else {
+      setHint(text);
+    }
+  }
 
   function getPostHeaderOptions(board, mode = 'create', refPost = null) {
     const options = Array.isArray(board?.postHeaders)
@@ -997,7 +1009,7 @@ export function createPostWriteView(deps) {
   async function handleWriteSubmit(handlers) {
     const { showPostList } = handlers;
     if (!state.user || state.user.isGuest) {
-      setHint(UI_TEXT.LOGIN_REQUIRED);
+      notifyWriteError(UI_TEXT.LOGIN_REQUIRED);
       setPrompt('>>');
       return;
     }
@@ -1008,11 +1020,15 @@ export function createPostWriteView(deps) {
     const body = editor ? editor.bodyLines.join('\n') : '';
 
     if (headerOptions.length && !selectedHeader) {
-      setHint('머리말을 선택하십시오.');
+      notifyWriteError('머리말을 선택하십시오.');
       return;
     }
     if (!title) {
-      setHint('제목을 입력하십시오.');
+      notifyWriteError('제목을 입력하십시오.');
+      return;
+    }
+    if (!body.trim()) {
+      notifyWriteError('내용을 입력하십시오.');
       return;
     }
 
@@ -1023,7 +1039,7 @@ export function createPostWriteView(deps) {
     const storedTitle = buildStoredTitle(title, selectedHeader, headerOptions);
 
     if (state.writeMode === 'edit' && state.post && !canEditPost(state.post)) {
-      setHint(UI_TEXT.POST_EDIT_MY_ONLY);
+      notifyWriteError(UI_TEXT.POST_EDIT_MY_ONLY);
       setPrompt('>>');
       return;
     }
@@ -1058,7 +1074,7 @@ export function createPostWriteView(deps) {
       // 사라져, 재시도(Ctrl+S)도 취소(Esc/P)도 전혀 먹히지 않는 죽은 화면이 됐다(실측 재현:
       // 저장 강제 실패 후 Ctrl+S를 다시 눌러도 API 호출 자체가 발생하지 않음 — 사용자가 쓴 글이
       // 그대로 증발할 위험). 실패 시엔 정리하지 않고 에디터를 살려둬 재시도할 수 있게 한다.
-      setHint(`저장 실패: ${e.message}`);
+      notifyWriteError(`저장 실패: ${e.message}`);
       return false;
     }
   }

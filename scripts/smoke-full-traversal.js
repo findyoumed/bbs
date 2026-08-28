@@ -80,6 +80,7 @@ async function runHttpTraversal(errors) {
     await chatTests.verifyHttpChatCoverage(errors);
     await chatTests.verifyChatHistorySnapshotCoverage(errors);
     await chatTests.verifyChatRoomEscCleanupCoverage(errors);
+    await chatTests.verifyChatGoCommandCoverage(errors);
     await boardTests.verifyHttpBoardCoverage(errors);
     await memoTests.verifyHttpMemoCoverage(errors);
     await authTests.verifyAuthEntryRouteCoverage(errors);
@@ -97,6 +98,7 @@ async function runHttpTraversal(errors) {
     await systemTests.verifyActiveUsersCommandCoverage(errors);
     // [LOG: 20260802_0000] Supabase 드라이버 await 누락 버그 회귀 테스트
     await systemTests.verifyAsyncActivityRepositoryAwaitCoverage(errors);
+    await memoTests.verifyContactSysopCoverage(errors);
     await memoTests.verifyMemoWriteCoverage(errors);
     await memoTests.verifyMemoWriteFormGuard(errors);
     await miscTests.verifyHelpCoverage(errors);
@@ -131,6 +133,15 @@ async function runPlaywrightTraversal(browser, errors) {
     await page.waitForTimeout(1000);
     await ensureTerminalReady(page, '/', errors);
 
+    // [LOG_ID: 20260828_1830] 대문 핫스팟은 텍스트 위에 투명 버튼을 겹치는
+    // 구조라, 렌더가 성공해도 좌표가 겹치거나 클릭 라우팅이 빠지면 사용자는
+    // 메뉴를 선택할 수 없다. 원전의 번호 선택을 보완한 마우스 접근성 경로를
+    // 실제 브라우저에서 각 항목 한 번씩 실행해 이동 결과까지 회귀 검증한다.
+     await verifyTopMenuHotspotClicks(page, errors);
+     await verifyAgoraRouteSemantics(page, errors);
+     await verifyContactEditorInteraction(page, errors);
+     await verifyGameInlineValidation(page, errors);
+
     // 2. Traversal Logic (Simplified Crawler)
     for (const route of config.TEST_ROUTES) {
         console.log(`📡 Checking route: ${route}`);
@@ -144,6 +155,195 @@ async function runPlaywrightTraversal(browser, errors) {
     await chatTests.verifyPlaywrightChatFlow(page, errors);
 
     await context.close();
+}
+
+async function verifyTopMenuHotspotClicks(page, errors) {
+    const hotspotSelector = '.ansi-hotspot-layer button';
+    const initialCount = await page.locator(hotspotSelector).count();
+    if (initialCount < 2) {
+        errors.push(`Top menu hotspot count is too low: ${initialCount}`);
+        return;
+    }
+
+    for (let index = 0; index < initialCount; index += 1) {
+        await page.goto(config.BASE_URL, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(350);
+        const hotspot = page.locator(hotspotSelector).nth(index);
+        const count = await page.locator(hotspotSelector).count();
+        if (count <= index) {
+            errors.push(`Top menu hotspot ${index + 1} disappeared after reload`);
+            continue;
+        }
+
+        const label = await hotspot.getAttribute('aria-label');
+        await hotspot.click();
+        await page.waitForTimeout(450);
+        const screen = await page.locator('#terminal-container').getAttribute('data-screen');
+        const url = page.url();
+        const transitioned = url !== config.BASE_URL || (screen && screen !== 'main');
+        if (!transitioned) {
+            errors.push(`Top menu hotspot did not transition: ${label || index + 1}`);
+        }
+        if (label === '이동: GO NOTICE' && !url.includes('/notice')) {
+            errors.push(`GO NOTICE hotspot opened an unexpected route: ${url}`);
+        }
+    }
+    console.log(`🖱️  Verified ${initialCount} top-menu hotspots by browser click.`);
+}
+
+async function verifyAgoraRouteSemantics(page, errors) {
+    // [LOG_ID: 20260828_2000] legacy/hanulso.mnu의 AGORA 부모 메뉴와 VOTE 자식 경로를
+    // 직접 새로고침해도 동일한 의미로 복원하는지 브라우저에서 검증한다.
+    await page.goto(`${config.BASE_URL}/agora`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(450);
+    const agoraScreen = await page.locator('#terminal-container').getAttribute('data-screen');
+    const agoraHotspots = await page.locator('.ansi-hotspot-layer button').count();
+    if (agoraScreen !== 'board-select' || agoraHotspots < 1) {
+        errors.push(`AGORA container route mismatch: screen=${agoraScreen}, hotspots=${agoraHotspots}`);
+    }
+
+    await page.goto(`${config.BASE_URL}/agora/vote`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(450);
+    const voteScreen = await page.locator('#terminal-container').getAttribute('data-screen');
+    if (voteScreen !== 'vote-list') {
+        errors.push(`AGORA vote route mismatch: screen=${voteScreen}`);
+    }
+    console.log(`?뼮截? Verified AGORA container and /agora/vote route semantics.`);
+}
+
+async function verifyContactEditorInteraction(page, errors) {
+    // 인증 상태를 바꾸는 편집 화면 검사는 주 순회 페이지의 상태를 오염하지
+    // 않도록 같은 브라우저 컨텍스트의 별도 페이지에서 수행한다.
+    const contactPage = await page.context().newPage();
+    contactPage.setDefaultNavigationTimeout(config.TIMEOUT);
+    contactPage.setDefaultTimeout(config.TIMEOUT);
+    contactPage.on('console', (msg) => {
+        if (msg.type() === 'error') errors.push(`[contact editor] ${msg.text()}`);
+    });
+    contactPage.on('pageerror', (error) => {
+        errors.push(`[contact editor] ${error.message}`);
+    });
+
+    try {
+        await contactPage.goto(`${config.BASE_URL}/guide`, { waitUntil: 'networkidle' });
+        await contactPage.waitForTimeout(450);
+         await contactPage.evaluate(() => {
+             window.__debugState.user = {
+                userId: 'qa-contact-user',
+                nickName: 'QA',
+                level: 1,
+                isAdmin: false,
+                isGuest: false
+             };
+         });
+
+         // [LOG_ID: 20260828_2045] 공통 전역 명령에서 SOS를 입력해도
+         // 기존 시삽 편집기로 연결되고, 명령 뒤의 긴급 메시지가 본문에 남는지 확인한다.
+         const commandInput = contactPage.locator('#cmd-input');
+         await commandInput.fill('SOS 서버 접속이 끊깁니다');
+         await commandInput.press('Enter');
+         await contactPage.waitForTimeout(450);
+         const sosSubject = contactPage.locator('#tosysop-ed-subject');
+         const sosBody = contactPage.locator('#tosysop-ed-body');
+         if (await sosSubject.count() !== 1 || await sosBody.count() !== 1) {
+             errors.push('SOS shortcut did not open the authenticated contact editor.');
+             return;
+         }
+         if ((await sosSubject.inputValue()) !== '[긴급 SOS] 시삽에게 보내는 메시지' || (await sosBody.inputValue()) !== '서버 접속이 끊깁니다') {
+             errors.push('SOS shortcut did not preserve its subject/body draft.');
+         }
+         await contactPage.keyboard.press('Escape');
+         await contactPage.waitForTimeout(300);
+
+         const contactButton = contactPage.locator('.ansi-hotspot-layer button[aria-label*="건의하기"]').first();
+        if (await contactButton.count() !== 1) {
+            errors.push('Contact sysop hotspot was not rendered on GUIDE.');
+            return;
+        }
+        await contactButton.click();
+        await contactPage.waitForTimeout(450);
+
+        const subject = contactPage.locator('#tosysop-ed-subject');
+        const body = contactPage.locator('#tosysop-ed-body');
+        if (await subject.count() !== 1 || await body.count() !== 1) {
+            errors.push('Authenticated contact sysop editor fields were not rendered.');
+            return;
+        }
+
+        await subject.fill('');
+        await body.fill('');
+        await subject.press('Control+s');
+        await contactPage.waitForTimeout(180);
+        const result = await contactPage.evaluate(() => ({
+            inlineError: document.querySelector('.tosysop-ed-validation')?.textContent || '',
+            hint: document.querySelector('#cmd-hint')?.textContent || '',
+            focused: document.activeElement?.id || ''
+        }));
+        if (!result.inlineError || !result.hint.includes('Ctrl+S') || result.focused !== 'tosysop-ed-subject') {
+            errors.push(`Contact validation escaped the editor or overwrote the hint: ${JSON.stringify(result)}`);
+        }
+        console.log('✉️  Verified authenticated contact editor and inline validation.');
+    } finally {
+        await contactPage.close();
+    }
+}
+
+async function verifyGameInlineValidation(page, errors) {
+    // [LOG_ID: 20260829_1015] 오락실 입력 오류가 하단 명령 힌트바를 덮지 않고
+    // 본문 프롬프트 위의 전용 오류 행으로 남는지 실제 브라우저에서 확인한다.
+    const gamePage = await page.context().newPage();
+    gamePage.setDefaultNavigationTimeout(config.TIMEOUT);
+    gamePage.setDefaultTimeout(config.TIMEOUT);
+    gamePage.on('console', (msg) => {
+        if (msg.type() === 'error') errors.push(`[game validation] ${msg.text()}`);
+    });
+    gamePage.on('pageerror', (error) => {
+        errors.push(`[game validation] ${error.message}`);
+    });
+
+    const cases = [
+        { route: '/game/bio', value: '19900230', message: '생년월일 형식이 올바르지 않습니다.' },
+        { route: '/game/fortune', value: '19900230', message: '생년월일 형식이 올바르지 않습니다.' },
+        { route: '/game/tojeong', value: '19900230', message: '생년월일 형식이 올바르지 않습니다.' },
+        { route: '/game/compat', value: '19900230', message: '생년월일 형식이 올바르지 않습니다.' },
+        { route: '/game/mbti', prelude: '2', value: '99', message: '번호(1~16) 또는 유형코드' }
+    ];
+
+    try {
+        for (const testCase of cases) {
+            await gamePage.goto(`${config.BASE_URL}${testCase.route}`, { waitUntil: 'networkidle' });
+            await gamePage.waitForTimeout(500);
+            if (testCase.prelude) {
+                const preludeInput = gamePage.locator('#cmd-input');
+                await preludeInput.fill(testCase.prelude);
+                await preludeInput.press('Enter');
+                await gamePage.waitForTimeout(350);
+            }
+            const beforeHint = await gamePage.locator('#cmd-hint').textContent();
+            const input = gamePage.locator('#cmd-input');
+            await input.fill(testCase.value);
+            await input.press('Enter');
+            await gamePage.waitForTimeout(250);
+            const result = await gamePage.evaluate(() => ({
+                error: document.querySelector('.game-inline-validation')?.textContent || '',
+                hint: document.querySelector('#cmd-hint')?.textContent || '',
+                errorParent: document.querySelector('.game-inline-validation')?.parentElement?.id || '',
+                screen: document.querySelector('#terminal-container')?.getAttribute('data-screen') || ''
+            }));
+            if (!result.error.includes(testCase.message)) {
+                errors.push(`Game validation missing on ${testCase.route}: ${JSON.stringify(result)}`);
+            }
+            if (result.hint !== beforeHint || result.hint.includes(testCase.message)) {
+                errors.push(`Game validation overwrote hint on ${testCase.route}: before=${JSON.stringify(beforeHint)}, after=${JSON.stringify(result.hint)}`);
+            }
+            if (!result.errorParent) {
+                errors.push(`Game validation rendered outside a screen body on ${testCase.route}.`);
+            }
+        }
+        console.log('🎮 Verified game validation stays inline and preserves the command hint.');
+    } finally {
+        await gamePage.close();
+    }
 }
 
 async function main() {

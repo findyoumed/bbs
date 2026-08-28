@@ -97,13 +97,122 @@ export function ansiToHTML(text) {
   let bg = 0;
   let bold = false;
   let rev = false;
+  // [LOG_ID: 20260827_1330] Keep the common VT/ANSI cursor state separate
+  // from the renderer's custom F=/G= colour extensions.
+  let savedRow = 0;
+  let savedCol = 0;
+  let scrollTop = 0;
+  let scrollBottom = ANSI_ROWS - 1;
+
+  const blankCell = () => ({ ch: ' ', fg: 7, bg: 0, bold: false, rev: false });
+  const blankRow = () => Array.from({ length: ANSI_COLS }, blankCell);
+  const clampCursor = () => {
+    row = Math.max(0, Math.min(ANSI_ROWS - 1, row));
+    col = Math.max(0, Math.min(ANSI_COLS - 1, col));
+  };
+
+  function scrollUp(top, bottom, count = 1) {
+    const start = Math.max(0, Math.min(ANSI_ROWS - 1, top));
+    const end = Math.max(start, Math.min(ANSI_ROWS - 1, bottom));
+    const amount = Math.max(1, Math.min(end - start + 1, count));
+    for (let i = 0; i < amount; i += 1) {
+      buf.splice(start, 1);
+      buf.splice(end, 0, blankRow());
+    }
+  }
+
+  function scrollDown(top, bottom, count = 1) {
+    const start = Math.max(0, Math.min(ANSI_ROWS - 1, top));
+    const end = Math.max(start, Math.min(ANSI_ROWS - 1, bottom));
+    const amount = Math.max(1, Math.min(end - start + 1, count));
+    for (let i = 0; i < amount; i += 1) {
+      buf.splice(end, 1);
+      buf.splice(start, 0, blankRow());
+    }
+  }
+
+  function eraseCell() {
+    return blankCell();
+  }
+
+  function eraseLine(mode = 0) {
+    const from = mode === 1 || mode === 2 ? 0 : Math.max(0, Math.min(ANSI_COLS - 1, col));
+    const to = mode === 1 ? Math.max(0, Math.min(ANSI_COLS - 1, col)) : ANSI_COLS - 1;
+    for (let c = from; c <= to; c += 1) buf[row][c] = eraseCell(buf[row][c]);
+  }
+
+  function eraseDisplay(mode = 0) {
+    if (mode === 2) {
+      for (let r = 0; r < ANSI_ROWS; r += 1) buf[r] = blankRow();
+      return;
+    }
+    if (mode === 1) {
+      for (let r = 0; r <= row; r += 1) {
+        const from = r === row ? 0 : 0;
+        const to = r === row ? col : ANSI_COLS - 1;
+        for (let c = from; c <= to; c += 1) buf[r][c] = eraseCell(buf[r][c]);
+      }
+      return;
+    }
+    for (let r = row; r < ANSI_ROWS; r += 1) {
+      const from = r === row ? col : 0;
+      for (let c = from; c < ANSI_COLS; c += 1) buf[r][c] = eraseCell(buf[r][c]);
+    }
+  }
+
+  function insertChars(count = 1) {
+    const amount = Math.max(1, Math.min(ANSI_COLS - col, count));
+    const line = buf[row];
+    line.splice(col, 0, ...Array.from({ length: amount }, blankCell));
+    line.length = ANSI_COLS;
+  }
+
+  function deleteChars(count = 1) {
+    const amount = Math.max(1, Math.min(ANSI_COLS - col, count));
+    const line = buf[row];
+    line.splice(col, amount);
+    line.push(...Array.from({ length: amount }, blankCell));
+    line.length = ANSI_COLS;
+  }
+
+  function insertLines(count = 1) {
+    if (row < scrollTop || row > scrollBottom) return;
+    const amount = Math.max(1, Math.min(scrollBottom - row + 1, count));
+    for (let i = 0; i < amount; i += 1) {
+      buf.splice(row, 0, blankRow());
+      buf.splice(scrollBottom + 1, 1);
+    }
+  }
+
+  function deleteLines(count = 1) {
+    if (row < scrollTop || row > scrollBottom) return;
+    const amount = Math.max(1, Math.min(scrollBottom - row + 1, count));
+    for (let i = 0; i < amount; i += 1) {
+      buf.splice(row, 1);
+      buf.splice(scrollBottom, 0, blankRow());
+    }
+  }
+
+  function csiNumber(values, index = 0, fallback = 1) {
+    const value = values[index];
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  }
   let maxRowReached = 0; // [LOG: 20260428_1110] Initialize to 0 to allow adaptive height (Remove 25-line min)
+
+  function advanceLine() {
+    col = 0;
+    row += 1;
+    if (row > scrollBottom) {
+      scrollUp(scrollTop, scrollBottom);
+      row = scrollBottom;
+    }
+    if (row > maxRowReached && row < ANSI_ROWS) maxRowReached = row;
+  }
 
   function putChar(ch) {
     if (row >= ANSI_ROWS) return;
     if (col >= ANSI_COLS) {
-      col += 1;
-      return;
+      advanceLine();
     }
     buf[row][col] = { ch, fg, bg, bold, rev };
     if (row > maxRowReached) maxRowReached = row;
@@ -116,9 +225,7 @@ export function ansiToHTML(text) {
 
   function clearScreen() {
     for (let r = 0; r < ANSI_ROWS; r += 1) {
-      for (let c = 0; c < ANSI_COLS; c += 1) {
-        buf[r][c] = { ch: ' ', fg: 7, bg: 0, bold: false, rev: false };
-      }
+      buf[r] = blankRow();
     }
     maxRowReached = 0;
   }
@@ -137,15 +244,77 @@ export function ansiToHTML(text) {
       const cmd = index < input.length ? input[index] : '';
       index += 1;
 
+      const parsedParams = params.replace(/^[?>=]/, '').split(';').map((value) => {
+        if (value === '') return null;
+        const number = Number.parseInt(value, 10);
+        return Number.isFinite(number) ? number : null;
+      });
+
       if (cmd === 'H' || cmd === 'f') {
         const parts = params.split(';');
         row = Math.max(0, Math.min(ANSI_ROWS - 1, (parseInt(parts[0], 10) || 1) - 1));
         col = Math.max(0, Math.min(ANSI_COLS - 1, (parseInt(parts[1], 10) || 1) - 1));
         if (row > maxRowReached) maxRowReached = row;
-      } else if (cmd === 'J') {
-        clearScreen();
-        row = 0;
+      } else if (cmd === 'A') {
+        row -= csiNumber(parsedParams);
+        clampCursor();
+      } else if (cmd === 'B' || cmd === 'e') {
+        row += csiNumber(parsedParams);
+        clampCursor();
+      } else if (cmd === 'C' || cmd === 'a') {
+        col += csiNumber(parsedParams);
+        clampCursor();
+      } else if (cmd === 'D') {
+        col -= csiNumber(parsedParams);
+        clampCursor();
+      } else if (cmd === 'E') {
+        row += csiNumber(parsedParams);
         col = 0;
+        clampCursor();
+      } else if (cmd === 'F' && !params.startsWith('=')) {
+        row -= csiNumber(parsedParams);
+        col = 0;
+        clampCursor();
+      } else if (cmd === 'G' && !params.startsWith('=')) {
+        col = Math.max(0, Math.min(ANSI_COLS - 1, csiNumber(parsedParams) - 1));
+      } else if (cmd === 'd') {
+        row = Math.max(0, Math.min(ANSI_ROWS - 1, csiNumber(parsedParams) - 1));
+      } else if (cmd === 'J') {
+        if (!params) {
+          clearScreen();
+          row = 0;
+          col = 0;
+        } else {
+          eraseDisplay(Number.isFinite(parsedParams[0]) ? parsedParams[0] : 0);
+        }
+      } else if (cmd === 'K') {
+        eraseLine(Number.isFinite(parsedParams[0]) ? parsedParams[0] : 0);
+      } else if (cmd === 'P') {
+        deleteChars(csiNumber(parsedParams));
+      } else if (cmd === '@') {
+        insertChars(csiNumber(parsedParams));
+      } else if (cmd === 'L') {
+        insertLines(csiNumber(parsedParams));
+      } else if (cmd === 'M') {
+        deleteLines(csiNumber(parsedParams));
+      } else if (cmd === 'S') {
+        scrollUp(scrollTop, scrollBottom, csiNumber(parsedParams));
+      } else if (cmd === 'T') {
+        scrollDown(scrollTop, scrollBottom, csiNumber(parsedParams));
+      } else if (cmd === 'r') {
+        const top = csiNumber(parsedParams, 0, 1) - 1;
+        const bottom = csiNumber(parsedParams, 1, ANSI_ROWS) - 1;
+        scrollTop = Math.max(0, Math.min(ANSI_ROWS - 1, top));
+        scrollBottom = Math.max(scrollTop, Math.min(ANSI_ROWS - 1, bottom));
+        row = scrollTop;
+        col = 0;
+      } else if (cmd === 's') {
+        savedRow = row;
+        savedCol = col;
+      } else if (cmd === 'u') {
+        row = savedRow;
+        col = savedCol;
+        clampCursor();
       } else if (cmd === 'F' && params.startsWith('=')) {
         fg = Math.max(0, Math.min(15, parseInt(params.slice(1), 10) || 0));
       } else if (cmd === 'G' && params.startsWith('=')) {
@@ -173,13 +342,15 @@ export function ansiToHTML(text) {
           }
         }
       }
+    } else if (input[index] === '\x1b') {
+      // Ignore unsupported/non-CSI escape sequences instead of exposing the
+      // control character as visible text in the terminal buffer.
+      index += Math.min(2, input.length - index);
     } else if (input[index] === '\r') {
       col = 0;
       index += 1;
     } else if (input[index] === '\n') {
-      col = 0;
-      row += 1;
-      if (row > maxRowReached && row < ANSI_ROWS) maxRowReached = row;
+      advanceLine();
       index += 1;
     } else {
       const cp = input.codePointAt(index);

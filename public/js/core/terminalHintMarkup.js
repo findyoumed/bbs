@@ -33,7 +33,7 @@ export function createTerminalHintMarkup(deps) {
     const tokenText = normalizedCmd === label.toUpperCase()
       ? esc(label)
       : `${esc(label)}(${esc(normalizedCmd)})`;
-    return `<span class="cmd-token cmd-clickable" data-tip="${esc(tip)}" ${dataAttr}>${tokenText}</span>`;
+    return `<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(tip)}" data-tip="${esc(tip)}" ${dataAttr}>${tokenText}</span>`;
   }
 
   // [LOG_ID: 20260811_1200] Compose hint shortcuts execute their actions
@@ -42,7 +42,7 @@ export function createTerminalHintMarkup(deps) {
     const normalizedCmd = String(cmd || '').trim().toUpperCase();
     const visibleLabel = String(label || '').trim();
     if (!normalizedCmd || !visibleLabel) return '';
-    return `<span class="cmd-token cmd-clickable" data-tip="${esc(visibleLabel)}" data-cmd="${esc(normalizedCmd)}">${esc(visibleLabel)}</span>`;
+    return `<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(visibleLabel)}" data-tip="${esc(visibleLabel)}" data-cmd="${esc(normalizedCmd)}">${esc(visibleLabel)}</span>`;
   }
 
   function buildParenCommandToken(labelOverride, cmd) {
@@ -60,7 +60,7 @@ export function createTerminalHintMarkup(deps) {
         : `data-cmd="${esc(normalizedCmd)}"`;
     const tip = String(meta.tip || `${label}[${normalizedCmd}]`).trim();
 
-    return `<span class="cmd-token cmd-clickable" data-tip="${esc(tip)}" ${dataAttr}>${esc(label)}(${esc(normalizedCmd)})</span>`;
+    return `<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(tip)}" data-tip="${esc(tip)}" ${dataAttr}>${esc(label)}(${esc(normalizedCmd)})</span>`;
   }
 
   function getCommandTokenText(cmd, labelOverride = '') {
@@ -287,11 +287,11 @@ export function createTerminalHintMarkup(deps) {
     // [LOG_ID: 20260808_1237] 작성 화면 단축 힌트 항목(Ctrl+S, Escape, Tab, 전송, 취소 등)에 마우스 호버링 및 클릭 핫스팟 부여
     source = source.replace(/\b(Ctrl\+S|Escape|Tab)\b/gi, (match) => {
       const normalizedCmd = match.toUpperCase();
-      return stash(`<span class="cmd-token cmd-clickable" data-cmd-fill="${esc(normalizedCmd)}" data-tip="${esc(match)}">${esc(match)}</span>`);
+      return stash(`<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(match)}" data-cmd-fill="${esc(normalizedCmd)}" data-tip="${esc(match)}">${esc(match)}</span>`);
     });
 
     source = source.replace(/([가-힣A-Za-z0-9_]+):\s*(Ctrl\+S|Escape|Tab)/gi, (match, label, cmd) => {
-      return stash(`<span class="cmd-token cmd-clickable" data-cmd-fill="${esc(cmd)}" data-tip="${esc(label)}">${esc(label)}: ${esc(cmd)}</span>`);
+      return stash(`<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(label)}" data-cmd-fill="${esc(cmd)}" data-tip="${esc(label)}">${esc(label)}: ${esc(cmd)}</span>`);
     });
 
     source = source.replace(/\b([A-Z]{1,8}):([^\s,()<>]{1,10})/g, (match, cmd, label) => {

@@ -25,8 +25,8 @@ export function createSignupFlowUi(deps) {
 
     hintEl.innerHTML =
       '신청확인 [<input id="signup-confirm-input" class="signup-confirm-input" maxlength="1" autocomplete="off" spellcheck="false">]'
-      + ' (<span class="cmd-token cmd-clickable" data-tip="Y" data-signup-choice="y">신청</span>,'
-      + '<span class="cmd-token cmd-clickable" data-tip="N" data-signup-choice="n">취소</span>,'
+      + ' (<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="Y" data-tip="Y" data-signup-choice="y">신청</span>,'
+      + '<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="N" data-tip="N" data-signup-choice="n">취소</span>,'
       + '<span class="cmd-token">1~5:수정</span>)';
 
     const confirmEl = hintEl.querySelector('#signup-confirm-input');
@@ -66,8 +66,8 @@ export function createSignupFlowUi(deps) {
     }
 
     hintEl.innerHTML = '동의확인 [<input id="signup-agree-input" class="signup-confirm-input" maxlength="1" autocomplete="off" spellcheck="false">]'
-      + ' (<span class="cmd-token cmd-clickable" data-tip="Y" data-signup-choice="y">동의</span>,'
-      + '<span class="cmd-token cmd-clickable" data-tip="N" data-signup-choice="n">취소</span>)';
+      + ' (<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="Y" data-tip="Y" data-signup-choice="y">동의</span>,'
+      + '<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="N" data-tip="N" data-signup-choice="n">취소</span>)';
 
     const agreeInput = hintEl.querySelector('#signup-agree-input');
     if (agreeInput) {

@@ -330,6 +330,20 @@ export function bindAppEvents(deps) {
     }, true);
   }
 
+  // [LOG_ID: 20260827_1345] Command tokens are spans so their retro text
+  // layout remains unchanged. Give keyboard users the same action as a mouse
+  // click when a token receives focus with Tab.
+  document.addEventListener('keydown', (event) => {
+    const token = event.target?.closest?.('.cmd-token, [data-cmd], [data-signup-choice]');
+    if (!token || (event.key !== 'Enter' && event.key !== ' ')) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    token.click();
+  }, { capture: true });
+
   document.addEventListener('click', (event) => {
     const action = getCommandClickAction(event.target);
     if (!action) {

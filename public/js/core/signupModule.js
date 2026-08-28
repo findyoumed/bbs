@@ -31,7 +31,7 @@ export function createSignupModule(deps) {
     { key: '3', type: 'oauth', provider: 'kakao', label: '카카오로 가입' },
   ];
   const SIGNUP_METHOD_LOOKUP = SIGNUP_METHODS.reduce((acc, m) => ({ ...acc, [m.key]: m }), {});
-  const SIGNUP_AGREE_FOOTER_HINT = '동의확인(<span class="signup-footer-choice" data-signup-choice="y">동의:y</span>,<span class="signup-footer-choice" data-signup-choice="n">취소:n</span>) : <input id="signup-agree-input" class="signup-confirm-input" maxlength="1" autocomplete="off" value="y">';
+  const SIGNUP_AGREE_FOOTER_HINT = '동의확인(<span class="signup-footer-choice" role="button" tabindex="0" aria-label="Y" data-signup-choice="y">동의:y</span>,<span class="signup-footer-choice" role="button" tabindex="0" aria-label="N" data-signup-choice="n">취소:n</span>) : <input id="signup-agree-input" class="signup-confirm-input" maxlength="1" autocomplete="off" value="y">';
   const SIGNUP_CONFIRM_HINT = '신청확인에 y / n / 번호(1~5)를 입력하여 주십시오.';
   const SIGNUP_EDIT_FIELD_IDS = { '1': 'signup-userid', '2': 'signup-password', '3': 'signup-password-confirm', '4': 'signup-nickname', '5': 'signup-email' };
 
@@ -101,7 +101,7 @@ export function createSignupModule(deps) {
   const setSignupFooterHint = (runChoice, focusField) => {
     if (!hintEl) return;
     hintEl.classList.remove('has-cmd-tokens');
-    hintEl.innerHTML = '신청확인(<span class="signup-footer-choice" data-signup-choice="y">신청:y</span>,<span class="signup-footer-choice" data-signup-choice="n">취소:n</span>,수정:번호) : <input id="signup-confirm-input" class="signup-confirm-input" maxlength="1" autocomplete="off" value="y">';
+    hintEl.innerHTML = '신청확인(<span class="signup-footer-choice" role="button" tabindex="0" aria-label="Y" data-signup-choice="y">신청:y</span>,<span class="signup-footer-choice" role="button" tabindex="0" aria-label="N" data-signup-choice="n">취소:n</span>,수정:번호) : <input id="signup-confirm-input" class="signup-confirm-input" maxlength="1" autocomplete="off" value="y">';
     ensureSignupFooterVisible();
     const inp = hintEl.querySelector('#signup-confirm-input');
     focusInputAtEnd(inp);
@@ -129,7 +129,7 @@ export function createSignupModule(deps) {
   const setOAuthProfileFooterHint = (runChoice, focusField) => {
     if (!hintEl) return;
     hintEl.classList.remove('has-cmd-tokens');
-    hintEl.innerHTML = '신청확인(<span class="signup-footer-choice" data-signup-choice="y">신청:y</span>,<span class="signup-footer-choice" data-signup-choice="n">취소:n</span>,수정:번호) : <input id="signup-oauth-confirm-input" class="signup-confirm-input" maxlength="1" autocomplete="off" value="y">';
+    hintEl.innerHTML = '신청확인(<span class="signup-footer-choice" role="button" tabindex="0" aria-label="Y" data-signup-choice="y">신청:y</span>,<span class="signup-footer-choice" role="button" tabindex="0" aria-label="N" data-signup-choice="n">취소:n</span>,수정:번호) : <input id="signup-oauth-confirm-input" class="signup-confirm-input" maxlength="1" autocomplete="off" value="y">';
     ensureSignupFooterVisible();
     const inp = hintEl.querySelector('#signup-oauth-confirm-input');
     focusInputAtEnd(inp);

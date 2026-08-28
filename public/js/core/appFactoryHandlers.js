@@ -144,6 +144,8 @@ export function createAppFactoryHandlers(deps) {
     showMemoList: screens.memoScreens.showMemoList,
     showMemoMenu: screens.memoScreens.showMemoMenu,
     showMemoWrite: screens.memoScreens.showMemoWrite,
+    showContactSysop: screens.contactSysopScreens.showContactSysop,
+    showChatLobby: screens.chatScreens.showChatLobby,
     doLogout: services.authService.doLogout,
     // [LOG_ID: 20260811_1400] Global FIND navigation calls the board index
     // helper directly, so provide the service method to the command router.

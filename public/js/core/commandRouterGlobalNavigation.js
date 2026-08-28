@@ -25,6 +25,8 @@ export function createGlobalNavigationCommandHandler(deps) {
     showMemoList,
     showMemoMenu,
     showMemoWrite,
+    showContactSysop,
+    showChatLobby,
     handleContactSysopRawInput,
     settingsService,
     apiFetch
@@ -110,6 +112,42 @@ export function createGlobalNavigationCommandHandler(deps) {
         setHint('한줄쪽지 발송 실패: ' + error.message);
       }
       setDefaultPrompt();
+      return true;
+    }
+
+    // [LOG_ID: 20260828_2045] 하이텔·나우누리 원전의 SOS 긴급 명령을 현재
+    // 시삽 건의 흐름으로 연결한다. 메시지를 몰래 즉시 발송하지 않고 기존
+    // `Ctrl+S` 확인 편집기를 열어, 내부 쪽지 보존과 외부 메일 결과를 동일하게
+    // 안내하면서도 사용자가 전송 전 내용을 검토할 수 있게 한다.
+    const sosMatch = state.screen !== 'contact-sysop'
+      ? String(rawCmd || '').trim().match(/^SOS(?:\s+(.+))?$/i)
+      : null;
+    if (sosMatch) {
+      if (state.user?.isGuest) {
+        setHint('SOS는 로그인 후 이용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+      if (typeof showContactSysop !== 'function') return false;
+      const message = String(sosMatch[1] || '').trim();
+      await showContactSysop(false, {
+        subject: message ? '[긴급 SOS] 시삽에게 보내는 메시지' : '',
+        bodyLines: message ? [message] : []
+      });
+      return true;
+    }
+
+    // [LOG_ID: 20260829_1345] Nownuri CHATIN and the shared CHAT command both
+    // enter the existing chat lobby. The chat-room handler still runs first
+    // for ordinary text, so this does not change in-room message semantics.
+    if (cmd === 'CHAT' && typeof showChatLobby === 'function') {
+      if (state.user?.isGuest) {
+        setHint('대화실은 로그인 후 이용하실 수 있습니다.');
+        setDefaultPrompt();
+        return true;
+      }
+      setHint('대화실 로비로 이동합니다...');
+      await showChatLobby();
       return true;
     }
 
@@ -328,7 +366,11 @@ export function createGlobalNavigationCommandHandler(deps) {
     // USER ALL(전체 메뉴별 이용자 현황)을 추가 — 우리 접속자 목록 화면이 이미 사용자별
     // 위치(위치 컬럼)까지 보여주므로 기존 화면 그대로 재사용한다(신규 화면 불필요).
     // [LOG_ID: 20260801_1005] W는 글쓰기(Write) 명령어이므로 접속자 목록 분기에서 제외하고, WHO/WH는 접속자 목록 조회가 맞으므로 유지한다.
-    if (cmd === 'USER' || cmd === 'USER ALL' || cmd === 'UID' || cmd === 'WHO' || cmd === 'WH') {
+    // [LOG_ID: 20260829_1110] The historical guide treats `U` as the short
+    // spelling of WHO. Preserve screen-local U meanings: post-list uses U
+    // for writing and post-view uses U for its attachment list.
+    const isPostLocalUScreen = state.screen === 'post-list' || state.screen === 'post-view';
+    if (cmd === 'USER' || cmd === 'USER ALL' || cmd === 'UID' || cmd === 'WHO' || cmd === 'WH' || (cmd === 'U' && !isPostLocalUScreen)) {
       await showActiveUsers();
       return true;
     }

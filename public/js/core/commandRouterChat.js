@@ -22,6 +22,7 @@ export function createChatCommandHandler(deps) {
     apiFetch,
     buildChatRoomAnsi,
     cmdInput,
+    executeGoCommand,
     openChatRoomCreate,
     restoreStateFromURL,
     screenEl,
@@ -301,6 +302,23 @@ export function createChatCommandHandler(deps) {
           setHint(list.length ? `현재 접속자: ${list.join(', ')}` : '참여자 정보를 확인할 수 없습니다.');
           return true;
         }
+      }
+
+      // [LOG_ID: 20260829_0900] 원전 PC통신은 대화실 안에서도 `GO 코드`를
+      // 일반 대화문이 아닌 전역 이동 명령으로 처리했다. domainTextFirst가
+      // 채팅 입력을 먼저 소비하므로, 기존에는 입력한 GO가 채팅 메시지로
+      // 전송되어 "어디서든 GO" 계약이 깨졌다. 성공한 이동일 때만 방을
+      // 정리하고, 알 수 없는 대상은 방을 나가지 않은 채 안내한다.
+      const plainGoMatch = String(input || '').trim().match(/^GO\s+(.+)$/i);
+      if (plainGoMatch && typeof executeGoCommand === 'function') {
+        const handled = await executeGoCommand(`GO ${plainGoMatch[1].trim()}`);
+        if (handled) {
+          await leaveCurrentRoom();
+          return true;
+        }
+        setHint('이동할 메뉴를 찾지 못했습니다.');
+        setPrompt('선택 >>');
+        return true;
       }
 
       // [LOG: 20260411_2345] 대화방 내 명령어는 반드시 '/'로 시작해야 함
@@ -611,12 +629,25 @@ export function createChatCommandHandler(deps) {
         }
 
         // /P, /GO - 대화실에서 이동 명령(/T, /M은 위에서 이미 처리)
-        if (slashCmd === 'P') {
+        // [LOG_ID: 20260829_1035] Historical chat-room list shortcuts leave the
+        // current room and reuse the existing chat-lobby renderer.
+        if (slashCmd === 'P' || slashCmd === 'L' || slashCmd === 'LIST') {
           await leaveCurrentRoom();
           await showChatLobby();
           return true;
         }
         if (slashCmd === 'GO' || slashCmd.startsWith('GO ')) {
+          const slashGoMatch = slashCmd.match(/^GO\s+(.+)$/i);
+          if (slashGoMatch && typeof executeGoCommand === 'function') {
+            const handled = await executeGoCommand(`GO ${slashGoMatch[1].trim()}`);
+            if (handled) {
+              await leaveCurrentRoom();
+              return true;
+            }
+            setHint('이동할 메뉴를 찾지 못했습니다.');
+            setPrompt('선택 >>');
+            return true;
+          }
           await leaveCurrentRoom();
           await showMain();
           return true;

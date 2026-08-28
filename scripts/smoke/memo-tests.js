@@ -4,6 +4,7 @@
 'use strict';
 
 const path = require('path');
+const { Readable } = require('stream');
 const {
     config,
     fetchJsonResponse,
@@ -259,6 +260,99 @@ async function verifyHttpMemoCoverage(errors) {
                 errors.push(`Memo cleanup failed for /api/memos/${createdMemoId}: ${cleanupError.message}`);
             }
         }
+    }
+}
+
+async function verifyContactSysopCoverage(errors) {
+    console.log('Checking sysop contact internal memo coverage via route harness...');
+    const handleContactRoutes = require('../../src/server/routeHandlers/contactRoutes');
+
+    async function runScenario(mailShouldFail, mailConfigured = true) {
+        const calls = [];
+        const req = Readable.from([JSON.stringify({
+            subject: 'contact smoke subject',
+            content: 'contact smoke content'
+        })]);
+        req.method = 'POST';
+        req.headers = {};
+        req.socket = { remoteAddress: '127.0.0.1' };
+
+        const response = {
+            statusCode: 0,
+            headersSent: false,
+            payload: null,
+            writeHead(statusCode) {
+                this.statusCode = statusCode;
+                this.headersSent = true;
+            },
+            end(rawPayload) {
+                this.payload = JSON.parse(String(rawPayload || '{}'));
+            }
+        };
+
+        await handleContactRoutes({
+            req,
+            res: response,
+            requestUrl: new URL('http://localhost/api/contact-sysop'),
+            authBridge: {
+                resolveContext: async () => ({
+                    userId: 'contact-smoke-user',
+                    nickName: 'contact-smoke',
+                    isGuest: false,
+                    isAdmin: false
+                })
+            },
+            activityRepository: null,
+            memoRepository: {
+                async createMemo(input, context) {
+                    calls.push({ type: 'memo', input, context });
+                    return { id: 701 };
+                }
+            },
+            mailService: mailConfigured ? {
+                async sendToSysop() {
+                    calls.push({ type: 'mail' });
+                    if (mailShouldFail) throw new Error('simulated Resend outage');
+                    return { id: 'mail-701' };
+                }
+            } : null
+        });
+
+        return { calls, response };
+    }
+
+    try {
+        const delivered = await runScenario(false);
+        const deliveredData = delivered.response.payload?.data || {};
+        if (delivered.response.statusCode !== 200 || deliveredData.internalMemoSaved !== true || deliveredData.emailSent !== true) {
+            errors.push('Sysop contact success path did not report both internal memo and email delivery.');
+        }
+        if (delivered.calls.map((entry) => entry.type).join(',') !== 'memo,mail') {
+            errors.push('Sysop contact must persist the internal memo before external delivery.');
+        }
+        if (delivered.calls[0]?.input?.recipientUserId !== 'sysop' || delivered.calls[0]?.input?.saveToSent !== false) {
+            errors.push('Sysop contact internal memo target or sender-copy policy is incorrect.');
+        }
+
+        const failed = await runScenario(true);
+        const failedData = failed.response.payload?.data || {};
+        if (failed.response.statusCode !== 200 || failedData.internalMemoSaved !== true || failedData.emailSent !== false) {
+            errors.push('Sysop contact must preserve internal memo success when external delivery fails.');
+        }
+        if (!failedData.emailDeliveryWarning) {
+            errors.push('Sysop contact external delivery failure must be surfaced as a warning.');
+        }
+
+        const unconfigured = await runScenario(false, false);
+        const unconfiguredData = unconfigured.response.payload?.data || {};
+        if (unconfigured.response.statusCode !== 200 || unconfiguredData.internalMemoSaved !== true || unconfiguredData.emailSent !== false) {
+            errors.push('Sysop contact must preserve internal memo success when email service is not configured.');
+        }
+        if (!unconfiguredData.emailDeliveryWarning) {
+            errors.push('Missing sysop email service must be surfaced as a warning.');
+        }
+    } catch (error) {
+        errors.push(`Sysop contact route harness failed: ${error.message}`);
     }
 }
 
@@ -582,6 +676,7 @@ async function verifyMemoWriteFormGuard(errors) {
 }
 
 module.exports = {
+    verifyContactSysopCoverage,
     verifyHttpMemoCoverage,
     verifyMemoWriteCoverage,
     verifyMemoWriteFormGuard

@@ -1,0 +1,692 @@
+1
+2
+3
+4
+5
+6
+7
+8
+9
+0
+HiTEL
+go
+679
+0\TOP:top
+1\(1) ¬á§¡¯a´e:guide
+       2\1.‰·»¡¬aÐw:notice
+       2\2.¢…·Àá´e:ask
+       2\3.¸ó­¢¤åÑ¡/·A·¬aÐw:con
+       2\4.ˆa·³¤w¤ó/·¡¶w¶a‹q:fee
+       2\5.·¡¶w´¢‰Å/¸á¸bŠ¥:agree
+       2\*6.¡A“A´e:menu
+       2\7.¡ww´á´e:command
+       2\8.·¥•B¯a´e:index
+       2\9.¶¥¡¤w:svinfo
+      2\10.Ž‘•·¬e:drinfo
+      2\11.‹¡´ó¬wÎ‘:integ
+      2\21.§¡£©¤åÑ¡/ÑÁ¡e¥e‰w:abc
+      2\22.¸a‹¡¸÷¥¡‰ÅŸ¡:iam
+      2\23.ÒA¶¥ˆñ¬‚:member
+      2\24.¸ó­¢É·‰:account
+      2\25.ˆa·³ÑÂ·¥:entry
+      2\26.Ð»¡¯¥À÷:quit
+      2\55.Ða·¡ÉI¸÷¥¡·¡¶wŠ¥:hicard
+      2\77.¯¥¢…‰¡:smg
+      2\88.¶…µw¸aµÁ ÐqA:with
+          3\1.¬á§¡¯a ·©¤e/·¡¶w¤ó:generala
+          3\2.ID/§¡£©¤åÑ¡/ˆa·³¯¥À÷/¶a‹q:idusea
+          3\3.¸÷¥¡¶w:infoa
+          3\4.ÄñÏAÈá É·¯¥:comcoma
+          3\5.µ¡­¥•¡­¥ £¹ Ëb®¬á§¡¯a:speciala
+          3\6.¹A´e £¹ ˆå·:idea
+      2\99.¦‰ˆå¸å¸÷¥¡ ¯¥‰¡­EÈá:ethics
+1\(2) Ða·¡ÉIËb»³:special
+       2\1.¤a–‚:pcbaduk
+       2\2.Ða·¡ÉI¢…Ðb‰Å:liter
+       2\3.º—Š‚µe¥e¸÷¥¡:yanbian
+      2\11.¶¥¡¤w:silver
+      2\12.Ž‘•·¬e:dreamland
+      2\21.µB¯aÍ¡Ðe a”w:expo1993
+1\(3) “A¯a/·¥¢‰:news
+       2\1.KETEL­¢¥¡:spot
+       2\#2.¯¡¬a eÑÁ:cartoon
+      2\11.¹·Ðs»¡:daily
+          3\1.¹¡¬å·©¥¡:chosun
+          3\2.•·´a·©¥¡:dongailbo
+          3\3.Ðe‰aA¯¥¢…:han
+          3\4.º—´w·©¥¡:jecono
+         3\11.¸åq·©¥¡:chunnam
+         3\12.¦¬e·©¥¡:pusan
+         3\13.µwq·©¥¡:youngnam
+      2\12.‰w¹A»¡:econo
+          3\1.ÐeŠ‚‰w¹A¯¥¢…:ked
+          3\2. ·©‰w¹A¯¥¢…:mked
+          3\3.º—´w‰w¹A¯¥¢…:jecono
+         3\11.Knight-Ridder:kr
+      2\13.¸å¢…»¡:prof
+          3\1.¶AÉ·¯¥ ¦‚Ðe“A¯a:naiwoe
+          3\2.ÐeŠ‚Ša·B¯¥¢…:ednews
+          3\3.¯aÍ¡Ãa¬á¶‰:ss
+          3\4.‘·Ÿ±®¬e¸÷¥¡:affis
+          3\@5.Ð¶A¸å¸a¸÷¥¡:eni
+          3\6.¸å¸a¯¥¢…:junja
+          3\@7.º—Š‚¬e´ó‰w¹A­¢¥¡:chinanews
+          3\8.¶…­·¢‰ŸA“A¯a:transpt
+      2\14.¸s»¡(mag)-PCœa·¥:pcline
+      2\21.·©‹¡µ¥¡:weather
+      2\31.·¥¢‰/•·¸÷:who
+          3\@1.JOINS·¥¢‰¸÷¥¡:people
+1\(4) ¬—ÑÉ/¢…ÑÁ:living
+       2\1.ˆa¸÷/µa¬÷:home
+          3\1.»iˆá¶… ¶aŸ¡:cook
+          3\2.·±¯¥/Â‰¬e/·B´a:baby
+          3\3.‰iÑ¥¸÷¥¡:wed
+         3\11.­¡¸a¥¥‰wµw:shop
+         3\12.µa¬÷¡¡·±­¡ˆ:woman
+       2\2.­¡§¡¸a¸÷¥¡:consumer
+          3\1.Ðe‰w •¡ ¢‰ˆa:kedprice
+          3\2.¢‰ˆa¸÷¥¡:kprc
+          3\#3.®aÏ·ˆa·¡—a:market
+          3\4.­¡§¡¸a¥¡Ñ¡:sobi
+          3\5.µ•A¡e­A¤‚ÑÁ¸ñ:lotte
+          3\6.ÁA¯¥¸÷¥¡:moc
+          3\#7.ÐeŠ‚É·¯¥ ¬wÎ‘¸÷¥¡:ktinfo
+       2\3.¦•·¬e:land
+          3\@1.¦•·¬e¤—Ça ¸÷¥¡:iic
+          3\2.¦•·¬e ¯¡­A/¬w”q:noorim
+          3\3.‰·¯¡»¡ˆa¸÷¥¡:kapa
+          3\4.¦•·¬e¸÷¥¡:kdic
+         3\11.ÒA¶¥Š¥¸÷¥¡/ˆáœ:rck
+       2\4.ˆåˆw/·Ðb:health
+          3\1.‰wÓ·ža¶¥:kmc
+          3\*2.¤‚¥w¶¥:paik
+         3\11.”¶— Big Bear:dwbb
+         3\12.•·´a Phoenix:donga
+         3\13.¥¡w Brain:brain
+         3\14.”Ðe´¢¬aÒA:pmkorea
+       2\5.ŠaÉ·/¸a•·Àa:auto
+         3\#1.ŠaÉ·»¡•¡¸÷¥¡:route
+         3\#2.¸a•·Àa¸÷¥¡:motor
+         3\*3.¶…¸å¡eÐá¯¡Ðñ:license
+         3\4.‰¡­¢•¡¡¸÷¥¡:highway
+       2\6.µaÐ—:travel
+          3\1.Š‚‰Å‰×»¡´e:kntc
+          3\2.Š‚ˆaµaÐ—¸÷¥¡:ktc
+          3\3.´áÁ¥£¥¤b¸÷¥¡:seainn
+          3\4.¯¥Ñ¥µaÐ—¸÷¥¡:seiyoo
+         3\11.”ÐeÐw‰· µaÐ—¸÷¥¡/µ´¢¬á§¡¯a:kal
+         3\12.´a¯¡´aaÐw‰· µ´¢/¹·ÐsµaÐ—¸÷¥¡:asiana
+         3\13.Ðw‰·‹¡ ·¡ÀbŸB¸÷¥¡:jyoni
+         3\21.µaÐ—¬w”q(»©·):tourq
+         3\22.µaÐ—¬w”q(·w”s):toura
+         3\23.Travel Press µaÐ—“A¯a:tpnews
+         3\31.­A‰¡ˆa“e ‹¡Àa:train
+         3\32.¶a®‰µaÐ—:aladin
+         3\33.a‹a‘A¬aœw:nagne
+       2\7.¯aÍ¡Ãa/A¸á:pcsports
+          3\1.¯aÍ¡Ãa ¬á¶‰:ss
+          3\2.Ïa¡´¡Š‹¡¢¯©:kbo
+          3\3.Ïa¡´¡Š Ñe¸w­¢¥¡:homerun
+          3\4.Ïa¡/´a aÂ‚Š ‹¡¢¯©:kfa
+          3\*5.OB ¥A´á¯a:obbears
+       2\8.¤w­·/µeµ:onair
+          3\1.MBC¡ Á¡”Ðs“¡”a:mbc
+          3\#2.KBS ¢…¸a¤w­·:koins
+          3\3.SBSµA¬á  ea¶a:sbs
+         3\11.¶Ÿ¡—i· ¯aÈa:star
+       2\9.¤a–‚/µ¡œb:amuse
+          3\1.ÐeŠ‚·¡•·É·¯¥¤ ¤”iµ×‹¡¸å:probaduk
+          3\#2.ÐeŠ‚·¡•·É·¯¥¤ ¤”iµ×‹¡¸å:probdv
+          3\3.HiTEL ¤a–‚•· ‹¡¬å¸å '93‘e É·ÐsÂAˆw¸å:amabaduk
+          3\4.É·¯¥”Š‚:pcbadukin
+          3\5.‹¡¥¡ˆq¬w:pcgibo
+          3\6.Š‚¶A Ïa¡‹¡¸å:progibo
+          3\7.¤a–‚“A¯a:pcbdnews
+          3\8.¤a–‚Äéœñ:pcbdcol
+          3\#9.Èa·±ÉA¯aËa:bdtest
+         3\10.¤a–‚¡A¡¡Ìe:badukmemo
+         3\11.É¡¸÷§¡‰i:unse
+         3\12.¤a·¡µ¡Ÿ¡—q:biograph
+         3\#13.É¡¸÷§¡‰i:tojung
+         3\#14.¤a·¡µ¡Ÿ¡—q:biorym
+         3\#15.‹±‰×·©· Š—Ðs:gunghap
+         3\#16.Ìá»i‰A·±:puzzle
+         3\#21.µe¸ eÑÁ:comics
+         3\#22.‹aŸ±•·ÑÁ:fable
+      2\10.¢…Ðb‰Å:liter
+          3\1.¢…Ðb‰Å ´iŸ±Èá:??
+          3\2.¢…Ðb­¡¯¢:litnews
+          3\3.µe¸­¡¬é:novel
+         3\11.‹¡¬÷¸bˆa:??
+         3\*12.·¡¶w¸a:??
+         3\13.¢…Ðb¬w ®¬w¸b:??
+         3\*14.Ða·¡ÉI ¢…Ðb¬w:??
+         3\21.£¥·q¬a ¢…ÐbŸ¡§A:muns
+         3\31.¸bÎ‘§¡Íw:??
+         3\32.¢…µÉ¡¥:??
+      2\11.¹·Ša/¬w”q:religion
+         3\11.ÇaŸ¡¯aÀ¥¯¥¢…:christian
+         3\12.‹¡•¢Ša ¸aža­EÈa:christ
+         3\21.¦‰Ša¯¥¢…:budnews
+         3\22.BBS ¦‰Ša¸aža¯©:bbsfm
+         3\31.ˆaÉ©Ÿ¢¯¥¢…:catholic
+         3\51.Äa¶…­IŸ·:counsel
+      2\12.¢…ÑÁ/µ®‰:culture
+          3\1.¢…ÑÁÁA·B¦­¡¯¢:munhwa
+          3\2.µ·q¢…ÑÁÐ—¬a:yeeum
+          3\3.¢…ÑÁµ®‰¸÷¥¡:cans
+         3\#4.¢…ÑÁ¸÷¥¡:cult
+         3\11.Š´·§¡—¡µ¡¸÷¥¡:kuyang
+         3\12.´áŸ¥·¡§¡—¡µ¡·¡´¡‹¡:eyedle
+         3\13.AVœa·¡Ïa:ipi
+         3\14.µwÑÁ a·i:shincine
+      2\13.£¥¶¥/Ð—¸÷:govt
+         3\£¥¶¥¬áŸA¯¥À÷:civil
+      2\14.­A¢/¤óŸI:tax
+          3\1.Š‚­AÀ÷ ­A¢¸÷¥¡:ntax
+          3\2.ÐeŠ‚­A¢¬aÒA:kcta
+          3\*3.¬q·©­A¢¸÷¥¡:samil
+         3\11.¬—ÑÉ¤óŸI¬w”q¬a:lawcase
+         3\*12.Ðe‹¡Àe ¤óŸIµaÐ—:lawyer
+     2\#15.¸÷¥¡¢…ÑÁ‰×¸w:hiplaza
+     2\16.•¡¬á¸÷¥¡:bibl
+          3\1.¹·¡¬á¸â •¡¬á¸÷¥¡:chongno
+         3\11.‹±µw¬a •¡¬áµaÐ—:gys
+         3\12.£¥·q¬a· À‚:min
+         3\13.•·´a-¹½·eÀ‚· ¤i‰e:dap
+         3\14.aÃ±¤e •¡¬á¸÷¥¡:nic
+         3\15.¬a‰¸é· •¡¬á a”w:skj
+         3\16.­A‰¬a· À‚­A‰:segye
+1\(5) Ša·B/Âá´ó:educate
+       2\1.Ðb¯s:study
+          3\1.µw´áÐb¯s¸÷¥¡:sisa
+          3\2.ÐeŠ‚É·¯¥ Ðb¯s¸÷¥¡:ktlearn
+          3\3.ÐeŠ‚¤w­·É·¯¥”¸÷¥¡:kacu
+          3\4.Äñ¯aÈa—¡:comstudy
+          3\5.’…‘¼·¡ ·¡´¡‹¡:eyebook
+         3\11.Š•¡¡“·Ìs¯a:gmp
+         3\12.Ša·B¤w­·:ebs
+       2\2.»¥¡/·AÐb:advance
+          3\1.ÐeŠ‚Ša·B¯¥¢…:ednews
+          3\2.»¥¡¸÷¥¡:univ
+         3\11.µIŸ¡µ¡¯a ·AÐb¸÷¥¡:elios
+       2\3.Âá´ó:work
+          3\1.Ÿ¡ÇažËa Âá´ó¸÷¥¡:recruit
+          3\2.Å¡¯a¡¡ Âá´ó¸÷¥¡:cosmo
+          3\3.Job Data Line:jobbank
+1\(6) »wŠ¥/‹q·W:finance
+       2\1.»wŠ¥:stock
+          3\1.»wŠ¥“A¯a:stocknews
+          3\2.ÐeŠ‚»wŠ¥¸å¬e º¯¢¯¡­A:koscom
+          3\3.•·¬á»wŠ¥ º¯¢¸÷¥¡:dsstock
+          3\4.Ñe”»wŠ¥ ‹¡®‰¦…¬â:hdstock1
+          3\5.Ñe”»wŠ¥ ¯¡Ñ×»¡Îa:hdstock2
+          3\6.‰¡a»wŠ¥ ºˆa¸÷¥¡:krstock1
+          3\7.‰¡a»wŠ¥ ¯¡¸w/­¢¥¡:krstock2
+          3\8.”¯¥»wŠ¥ »wŠ¥¸÷¥¡:daeshin
+         3\#9.Ñe”»wŠ¥¸÷¥¡:hdstock3
+         3\11.¥¡œqÊ¸a¸a¢…:boram
+         3\12.•·´aÊ¸a¸a¢…:drr
+         3\20.»wŠ¥¬aœw:sls
+         3\21.Ñe”Ê¸aµeŠ­¡:hdi
+         3\22.”ÐeÊ¸aµeŠ­¡:kii
+         3\23.´ñ•¡¡w Ê¸a‰w¹AµeŠ­¡:dfmi
+         3\24.»¡¬eÊ¸a‰w¹AµeŠ­¡:jisan
+         3\25.Ï¡ÈáŸ¥Ã¡ »wŠ¥¸÷¥¡­EÈá:plst
+         3\26.Ðe£¡Ê¸aµeŠ­¡:hanmi
+         3\27.ÐeŠ‚»wŠ¥‰w¹AµeŠ­¡:kose
+         3\28.µa·•¡Ïiœa¸a:yoido
+       2\2.¸a‹q/ÑÅ·I:forex
+         3\@1.¸a‹q¯¡¸w¸÷¥¡:money
+         3\11.ÐeŠ‚¶AÑÅ·eÐ— ÑÅ·I¸÷¥¡:kebrate
+         3\12.¹¡Ów·eÐ— ÑÅ·I¸÷¥¡:chb
+         3\13.¬á¶‰¯¥Èb·eÐ— ÑÅ·I¸÷¥¡:bos
+       2\3.·eÐ—:bank
+          3\1.º—­¡‹¡´ó·eÐ—:ibk
+          3\2.ÐeŠ‚¶AÑÅ·eÐ—:keb
+       2\4.¥¡Ðñ:ins
+          3\1.”ÐeŠa·B¥¡Ðñ:kyobo
+         3\11.”ÐeÑÁ¸Ð¬w¥¡Ðñ:dfmi
+         3\12.´eŠ‚ÑÁ¸Ð¬w¥¡Ðñ:ankuk
+       2\5.‹q·W¸÷¥¡:mninfo
+          3\‹q·W¬wÎ‘¸÷¥¡:deposit
+1\(7) ‰wµw/¬e´ó:business
+       2\1.‹¡´ó/¸¢:corp
+         3\@1.KIS-DIAL:kisdial
+         3\@2.‹¡´ó/‰wµw¸÷¥¡:kmcc
+         3\3.¬wÎ‘¥i‹¡´ó¸÷¥¡:kompass
+         3\@4.TMI‹¡´ó¸÷¥¡:tmi
+       2\2.¤óŸI/­A¢:law
+         3\¬q·©­A¢¸÷¥¡:samil
+       2\3.¢µb:trade
+         3\@1.¢µb¸÷¥¡:kotra
+          3\2.ÐeŠ‚¢µb”Ÿ¡¸ñÑsÒA:aftak
+          3\3.¢µb £¹ ·³Ài¸÷¥¡:kotic
+          3\4.Š‚¹A¶¥¸a¸¯¡­A:kedraw
+       2\4.¬e´ó:industry
+          3\1.µAá»¡¸÷¥¡:pedco
+          3\2.‘·Ÿ±®¬e¸÷¥¡:affis
+         3\@3.Ð¶A¸å¸a¸÷¥¡:eni
+          3\4.‘·´ó·AÉ·¸÷¥¡ »¡¶¥¬á§¡¯a:amis
+         3\@5.·©¥¥ÓµËa¬wÎ‘¸÷¥¡:kmci
+         3\#6.®¬e¸÷¥¡:sea
+         3\@7.º—Š‚¬e´ó‰w¹A­¢¥¡:chinanews
+          3\8.¶…­·¸÷¥¡:transpt
+       2\5.ËbÐá/¬wÎa:patent
+         3\@1.¬wÎa¸÷¥¡:kotres
+       2\6.¸aža/É·‰:ecodata
+          3\1.‰w¹A¸÷À‚¸÷¥¡:epic
+          3\2.ÐeŠ‚·eÐ—¸÷¥¡:bok
+      2\21.”hÓ¥¡¡·±:cug
+          3\1.ÐeŠ‚¶AÑÅ·eÐ—:kebem
+          3\2.Ša·B¦ Š‚¹AŠa·B¸÷¥¡:inted
+          3\3.ÐeŠ‚É·¯¥ HiTEL”e i‹¡‰ÅŸ¡:crt
+          3\4.¤w­·” ·w¶wÉ·‰Ðb‰Á:kacust
+          3\5.·¡œ…—a:eland
+          3\6.ÐeŠ‚­A¢¬aÒA:kcta
+          3\7.ÐeŠ‚PC¸÷¥¡œa·¥:kpil
+          3\8.”¶ˆa¹¢:daewoo
+          3\9.”ÐeÐe·¬aÑsÒA ¸÷¥¡É·¯¥ w:koma
+         3\10.¸â¬eDBµeŠÒA:goindol
+         3\11.Š‚£¥¯¥¶wÄa—a ¸÷¥¡¬á§¡¯a:wins
+         3\12.ÐeŠ‚‰Å‰×ÑsÒA:ktasel
+         3\13.ÐeŠ‚¯¥¶w¸÷¥¡:nice
+         3\14.‹¡•¢Ša ¸aža­EÈa:christ
+        3\*15.”Ðe·ÐbÑsÒA:??
+        3\*16.­¡ÏaËa¶Á´á ÀåŠ‚:??
+        3\88.Ðe·©·eÐ— PCµeŠÒA:hbpcsg
+1\(8) ‰ÁÐb/¢…Ðå:science
+      2\*1.‰ÁÐb/‹¡®‰:??
+      2\2.ÑÅ‰w:ecology
+          3\1.”á  j‰A ”á ÎŸa‰A:env
+     2\*11.¢…Ðå:ref
+        3\*11.Š‚Ÿ³º—´w•¡¬á‰Å ¢…Ðå¸÷¥¡:lib
+1\(9) ‰A¯¡Ìe:bbs
+       2\1.´iŸ± a”w:square
+          3\1.Çe a·i:plaza
+          3\2.¬aœq·i Àx¯s“¡”a:missing
+          3\3.Ìs“¡”a:sell
+          3\4.¬s“¡”a:buy
+          3\5.¢‰¢‰ŠaÑÅ:change
+          3\6.Ñ·¥¡/‰×‰¡:pr
+          3\7.¸a•·Àa ÐqA Èa‹¡:carpool
+          3\8.Š·¥:vacant
+          3\9.Š»¢:job
+         3\10.¶¯aˆ:humor
+         3\11.®®A¡:riddle
+         3\12.¬a¬éBBS­¡¯¢:bbspr
+         3\13. õ·¡·¶“e ‰µ:good
+         3\14.ÒW¬é®¬é:say
+         3\15.É·¯¥¬aœw(‰·ˆ¬a‰Á):apology
+         3\16.‰·Í¡/SF:summer
+       2\2.Âá£¡¬—ÑÉ:hobby
+          3\1.•¢¬á:reading
+          3\2.¤‚·©¸w:contest
+          3\3.¯aÍ¡Ãa:sports
+          3\4.‰A·±:game
+          3\5.µ¡—¡µ¡:audio
+          3\6.§¡—¡µ¡:video
+          3\7.µe‹b/µwÑÁ/TV:stage
+          3\8.µaÐ—:tour
+          3\9.—w¬e/c¯¡/¬a»¥:camping
+         3\10.¸a•·Àa:car
+         3\11.”aŸeÂá£¡:etc
+         3\12.a· ¥A¯aËa 5:best5
+        3\#13.Ða·¡ÉIÑÁœw:canvas
+        3\#14.‹aŸ±¸÷¥¡ Q&A:vtxqa
+      2\3.¸÷¥¡‰×¸w:agora
+          3\1.pccom ‹¡ÒB:series
+          3\2.µe¸ˆw·:lect
+          3\3.¬—ÑÉ¬w¯¢:life
+          3\4.ˆåˆw/·Ðb:medi
+          3\5.‰ÁÐb/¸aµe:sci
+          3\6.‘·´ó¸÷¥¡:agri
+          3\7.¸÷¥¡É·¯¥:infonet
+          3\8.ÄñÏAÈá H/W:pchw
+          3\9.ÄñÏAÈá S/W:pcsw
+         3\10.·AË©Ÿ¡Ë¡ ÂÀå:pcutil
+         3\11.»¡µb¸÷¥¡:local
+         3\12.¸÷¥¡¡¡“¡Èá:monitor
+         3\13.ˆaŸaÁaº­A¶a/ˆaŸaÁa —aŸ³“¡”a:teach
+         3\21.º—Š‚¬a¸÷:china
+      2\4.Ž‘˜aœa:pccomtel
+      2\11.‰A¯¡Ìe ·¡¶w´e:bbsh
+          3\1.‰A¯¡¶¥Ã¢/º·¬aÐw:bbsinfo
+          3\2.pccom‰Á ÐqA:pccom
+1\(10) ¸å¸a¶Íe:mail
+       2\1.Íe»¡¤h‹¡:rmail
+       2\2.Íe»¡³a‹¡:wmail
+       2\3.¥¡…Íe»¡ ÑÂ·¥:cmail
+       2\4.Íe»¡¥¡‰ÅÐq:mbox
+       2\5.º­¡¢‰ÅŸ¡:group
+       2\6.¦¸É·»¡:absent
+       2\7.¸a¡w¹·:diary
+       2\8.Â‚ÐaÍe»¡¥¡‹¡:vmail
+      2\11.¸å¸a¶Íe ·¡¶w´e:mailh
+1\(11) ”ÑÁ¯©:chatting
+       2\1.”ÑÁ¯©Àqµa:chat
+       2\2.”ÑÁ¯© ·¡¶w´e:chath
+1\(12) µa¥‰×¸w:poll
+       2\1.É¡¥· ‰×¸w:conf
+          3\1.·¡¶w´e:howconf
+          3\2.‰·»¡¬aÐw:cfmemo
+          3\3.ÒA·¯©µi‹¡:openconf
+             4\1.´eˆåµiœq/¸À÷:rdcf
+             4\2.¯¥‹A´eˆå ¤i·:newcf
+          3\4.ÒA‹¡µe¸w:ppconf
+          3\5.ÒA·¯©”h‹¡:closeconf
+          3\6.‰ÁˆáÒA·¯©µiœq:oldconf
+       2\2.ÉIAŸ¡¬áÃ¡:tr
+          3\1.ÉIAŸ¡¬áÃ¡ ·¡¶w´e:enqhelp
+          3\2.ÉIAŸ¡¬áÃ¡ ¡A¡¡Ìe:enqmemo
+      2\11.À÷µÁ” Çe a”w:bluehs
+      2\21.£¥º¸a·A”w· µiŸ¥ a”w:minja
+      2\22.£¥º”w:minju
+      2\31.´å¥‰×¸w:press
+1\(13) ‰·ˆ¸aža¯©:gl
+       2\1.¸aža¯© ¡A¡¡Ìe:glmemo
+       2\2.¸ažaˆñ¬‚<92‘e5¶©¦Èá>:gldown
+            3\¸åÁA¸aža¯©:gldown 1
+       2\3.¸ažaˆñ¬‚<92‘e5¶©Œa»¡>:glold
+       2\4.¸aža¹A‰·:glup
+       2\5.¸aža‘¥Íw:glment
+       2\6.sysop‰·»¡¬aÐw:glnote
+       2\7.¬w¶w¸aža¡¢¢:gllist
+      2\11.¸aža¯© ·¡¶w´e:glh
+1\(14) •·Ñ¡ÒA:forum
+       2\1.¬aÒA/¹·Ša:fsociety
+          3\1. eÁ¡µA ¬aœw:orchid
+          3\2. –Ÿ¡Ðaa:rehab
+          3\3. ¢‰ wÁ¡:fgmn
+          3\4. ¤aŸeÉ·¯¥¡¡·±:barun
+          3\5. ”º— ÁA¡¡“¡ÈáŸ·:djmon
+          3\6. ÄñÏAÈá¬åŠaÒA:kcm
+          3\7. Ða“iaœa:hanul
+          3\8. ¦‰Ša•·Ñ¡ÒA:bud
+          3\9. ¸aµe¬aœw:rlov
+         3\10. »w¬e•¡ •·Ñ¡ÒA:jsd
+      2\*2.¬—ÑÉ/ˆa¸÷:flife
+      2\3.¢…ÑÁ/µ®‰:fculture
+          3\1. ´“¡¡A·¡Ëa:ani
+          3\2. ¯¡‘A aÀåŠ‚:cine
+          3\3. ¯©žµU:photo
+          3\4. ¯¡¬aœw:poem
+          3\5. µe‹b•·:drama
+          3\6. ‹iaœ:glnare
+          3\7. ¢Ÿ±•·:murim
+          3\8. ·¡´¡‹¡aœa:story
+          3\9. ‰ÁÐb­¡¬é:sf
+         3\10. ÑÅÈa»¡•·Ñ¡ÒA:fntsy
+         3\11.  eÑÁÀw¸b•·Ñ¡ÒA:ccc
+       2\4.·q´b/µw¬w:fmusic
+          3\1. ‰¡¸å·q´b•·Ñ¡ÒA:classic
+          3\2. ­¡Ÿ¡¡¡¡»¡:mokogy
+          3\3. ­QËiˆaœb:adlib
+          3\4. ¡AËi•·:metal
+          3\5. ÄåÉQÍ¡œáŸ¡ ÇaŸ¡¯aÀ¥ £A»¢ ˆa¯aÍI:ccmg
+          3\6. ­¡Ÿ¡¬‘:sori
+          3\7. ´å”á‹aœa¶…—a£A»¢:under
+          3\8. £A»¢  “¡´a:mania
+          3\9. ­¡Ÿ¡¡· µaÐ—:vims
+         3\10. Ða·¡Ìa·¡:hifi
+         3\11. A/V•·Ñ¡ÒA:av
+         3\12. §¡—¡µ¡Äa¡Aœa•·Ñ¡ÒA:vica
+       2\5.Âá£¡/µ¡œb/‰A·±:ffun
+          3\1. ˆµ¡•·:kga
+          3\2. ¯¡£IA·¡­e:simul
+          3\3. ‰¡¸å‰A·±•·Ñ¡ÒA:cgame
+          3\4. ¤a–‚•·:baduk
+          3\5. ¸b·e­A¬w:little
+          3\6. ¥i¬aœw:stars
+          3\7. ‰A·±‹¡•·Ñ¡ÒA:gamer
+       2\6.A¸á/µaÐ—:fleisure
+          3\1. ¬e¬aœw:san
+          3\2. ­A‰¡ ˆa“e ‹¡Àa:train
+          3\3. ¶a®‰aœa:aladin
+          3\4. ÄñA•·:comle
+          3\5. c¯¡•·Ñ¡ÒA:hook
+          3\6. ¬á¤a·¡¤é•·Ñ¡ÒA:sga
+          3\7. a‹a‘A¬aœw:nagne
+          3\8. ”iŠ»¡:dalguji
+       2\7.¯aÍ¡Ãa:fsports
+          3\1. ¯aÇ¡:ski
+          3\2. ¯a‘¡¶¥¡—aSK8:board
+          3\3. ¥©Ÿ·•·:bowl
+          3\4. ”wŠ •·Ñ¡ÒA:bill
+       2\8.Ðb®‰/Ša·B:fstudy
+          3\1. ‰¡¸â”s¬a•·Ñ¡ÒA:tomo
+          3\2. µw´á•·Ñ¡ÒA:kec
+          3\3. É·‰µeŠ:stat
+          3\4. µb¬a•·¶ÒA:•·´·¬a¸å‰·)(asia
+          3\5. ¤óÁ¥:bubchon
+          3\6. É·Ðs‰ÁÐb:phil
+          3\7. Ðe‹i¬aœw:dasom
+          3\8. ¸å¬e¸å¢…•·Ñ¡ÒA:caps
+          3\9. ¬å¬—“±—i· ¸b·e‰·ˆe:pedagogy
+         3\10. ·©¥¥´á•·Ñ¡ÒA:jbbs
+         3\11. µA¯aÍAœeÉ¡•·Ñ¡ÒA:eskom
+       2\9.‰w¹A/‰wµw:feconomy
+          3\1. »wŠ¥¬aœw:sls
+          3\2. MIS •·Ñ¡ÒA:mis
+          3\3. ‰w¹A.‰wµw µeŠÒA:naskeda
+      2\10.‰ÁÐb/‹¡®‰:fscience
+          3\1. »¡Š¬aœw:earth
+          3\2. ¬—¡w:bio
+          3\3. ·¥‰·»¡“w:aintel
+          3\4. ‰ÁÐb •·Ñ¡ÒA:ksc
+          3\5. µE»¡“¡´á¯a:engr
+          3\6. ·q¬÷µeŠ•·Ñ¡ÒA:speech
+          3\7. —¡»¡Èi•·Ñ¡ÒA:dig
+          3\8. Ž‘•©·¡:expo
+      2\11.ˆåˆw/·ža:fhealth
+          3\1. Ðe·¬a ÄñÏAÈáÉ·¯¥ •·Ñ¡ÒA:hanbang
+          3\2. Ðe‹©Ã¡Ðb:oneway
+          3\3. ‰·º—¥¡ˆå·¬aÉ·¯¥•·Ñ¡ÒA:phdcc
+          3\4. ´¢¬aÉ·¯¥:pca
+          3\5. ˆa¸÷·Ðb:famli
+          3\6. µ¤w·Ðb/É·‰•·Ñ¡ÒA:premed
+          3\7. ¸åŠ‚·‰Á”Ðb¡¡·±:medical
+      2\12.ÄñÏAÈá·©¤e:fpc
+          3\1. OS •·¶ÒA:osc
+                4\OS•·Ñ¡ÒA ¸aža¯©:osc 4
+          3\2. ¤a·¡µ¡¯a:bios
+          3\3.  Ç¥É¡¯¡:gomac
+          3\4. MSX· ÀåŠ‚:para
+          3\5. ¬°b:beginn
+          3\6. Äéœáœ…—a:cland
+          3\7. Ä—a •·Ñ¡ÒA:cad
+          3\8. ÐeŠ‚ ÄñÏAÈá ¬a¶w¸a ¡¡·±:hsm
+          3\9. ÄñÏAÈá Â‰Ìe •·Ñ¡ÒA:dtp
+         3\10. ­Q‹i:semgl
+      2\13.ÄñÏAÈá Ïa¡‹aœ£·:fprogram
+          3\1. ­¡•·ÒA:soft
+          3\2. –ž¢‰:mul
+                4\–ž¢‰¸aža¯©:mul 5
+          3\3. ÇiŸ³•A·¡Èa:clip
+          3\4. Ða“i­¡:hanulso
+          3\5. Ðe‹iÏa¡‹aœ£·•·Ñ¡ÒA:hanpro
+          3\6. ‰A¹A•·:gma
+      2\14.É·¯¥:fcomm
+          3\1. ´a aÂ´á¢¬å:ham
+          3\2. Š‚¹AÄñÏAÈáÉ·¯¥µeŠ:iccra
+          3\3. Î‰ªŸ¡•·Ñ¡ÒA:pbri
+          3\4. É·¯¥¬aœw¡¡·±:love
+      2\15.Ã¥¡¢:fsocial
+          3\1. BOSS:boss
+          3\2. Ðe¬aœw:hsr
+          3\3. ˜a™¡Ÿ¡:ddri
+          3\4. »¢¸w·¥ •·Ñ¡ÒA:jsig
+          3\5. ‰e¶ÒA:aods
+          3\6. ®ñÈá:ting
+          3\7. Ð¥e¯aÅAÃ¡:seaside
+          3\8. ¬q•·ÒA:samdong
+      2\16.»¡µb:flocal
+          3\1. ŒaÃ¡ é:ggachi
+          3\2. “w‹q‰©:apple
+             4\11. ???-->>:apple 11
+          3\3. ´·¤e‰¡·i:ygd
+          3\4. Â—qÄñÏAÈá •·Ñ¡ÒA:ccus
+          3\5. ¦Àå·¥Àå»¡µb •·Ñ¡ÒA:pica
+          3\6. §¹‰¡·i •·¶ÒA:pink
+          3\7. ´e´·Š…Í¡ É·¯¥•·Ñ¡ÒA:agca
+          3\8. ˆa‰¡Ìa:gagopa
+          3\9. á¬ñ:youido
+         3\10. µ¡ŸB•¡:oryuk
+         3\11. ˆw¶¥»¡µb É·¯¥·¥¡¡·±:kang
+      2\17.ÐbŠa:fcampus
+          3\1. ¯©”a·¡:sildai
+          3\2. Ðe¶‰ÈaŸ¡:ultari
+          3\3. ”Ðb¸å¬e·¥ µeÐs:nca
+          3\4. ¸åŠ‚”Ðb ÄñÏAÈá°áÇiµe:unicosa
+          3\5. ·¥Ða”ÐbŠa É·¯¥•·Ñ¡ÒA:inha
+          3\6. À÷¯±”:oxen
+          3\7. ÐeqPC•·Ñ¡ÒA:hnpc
+          3\8. ‰×¶…”ÐbŠa É·¯¥•·Ñ¡ÒA:kwu
+          3\9. ¬âÈs:tiger
+         3\10. ¤‚´·¡:yonsei
+         3\11. ÎŸe¡A:prm
+         3\12. ¤w­·” PCÉ·¯¥ •·Ñ¡ÒA:kacupo
+         3\13. ¦‚´b‰©:bukak
+      2\21.•·Ñ¡ÒA a”w:madang
+1\(15) ‰×‰¡/Ñ·¥¡:ad
+      2\#1.‰×‰¡‰×¸w:clads
+          3\1.‰×‰¡/Ñ·¥¡·¡¶w´e:adh
+      2\2.­¡ÏaËa¶Á´á‰×¸w:sw
+          3\#1.­¡ÏaËa¶Á´á¸÷¥¡:swinfo
+          3\2.­¡ÏaËa¶Á´á¸÷¥¡:swinfo2
+          3\11.ÇeËi:kntl
+          3\12.ÇeËiŠa·B­EÈá:kntlin
+     2\3.ÄñÏAÈá:com
+          3\1.¬qÉAÇa:samtek
+          3\2. a·¡Ça¡œ…—a:microland
+          3\3.¹A¶¸÷¥¡:jeuinfo
+          3\4.‹i¤wÄñÏAÈá:geulbang
+          3\5.USRobitics:usr
+          3\6.³¡—¡µA¯a:cds
+          3\7.¬q¬÷¸å¸a ¸÷¥¡‹¡‹¡:sec
+          3\8.¬â¸÷¸å¸a:sjc
+         3\11.Ðe¡A­¡ÏaËa:hanme
+         3\12.£¡œÄñÏAÈá:mirae
+         3\13.‹q¬÷­¡ÏaËa¶Á´á:gsw
+         3\14.Ðe‹i‰Á ÄñÏAÈá:hnc
+         3\15.Ðe•¡ÄñÏAÈá:hando
+         3\16.Çe¬aœq:ksr
+         3\17.•·¬á‰A·±Àé:dsg
+         3\18.µ¥¯¡¯aÉQ:onsys
+     2\4. éË¡£¡—¡´á:multi
+          3\1.PCœa¶…—a:pcround
+          3\2.µ¢­¡Ÿ¡:oksory
+          3\3.¹A·¡³¡Ñe¯¡¯aÉQ:jchyun
+          3\4.¬÷·©¸÷¥¡É·¯¥:sungil
+          3\5.:(º)¬‘¸å¸a:sam
+          3\6.Š¬e¸å¸a:kusan
+     2\5.700¬á§¡¯a:dial
+        3\11.ÐeŠ‚É·¯¥:kt
+        3\12.·¡•·É·¯¥:kmtc
+        3\13.aœ·¡•·É·¯¥:naray
+        3\14.¬á¶‰·¡•·É·¯¥:smt
+1\(16) º¢…/µ´¢/Ñ±¤—Ç·:shopping
+       2\1.¹/ÅA·¡Ça:flower
+          3\1.¬aœw· ¡A¯¥¸á:sfd
+          3\2.·A´á¤á¯a•A·¡:yb
+          3\3.•·¬á´· e¸å¢…¶¥ ¹A·©:jeil
+          3\4.¡»a ´… ˆa—e:rose
+          3\5.ÐÏ¡ÐÏ¡•A·¡:hhd
+          3\6.ÇAÏ¡—aÏiœa¶¡:kftd
+       2\2.·q¤e/§¡—¡µ¡ ÉA·¡Ïa:tape
+          3\1.AVœa·¡Ïa:ipi
+          3\2.Ša´·Ša·B §¡—¡µ¡‹aœ‘¸÷¥¡:ggv
+         3\*3.´áŸ¥·¡§¡—¡µ¡·¡´¡‹¡:eyedleod
+       2\3.•¡¬á:book
+          3\1.‹±µw¬a •¡¬áµaÐ—:gys
+          3\2.£¥·q¬a· À‚:min
+          3\3.•·´a-¹½·e À‚· ¤i‰e:dap
+          3\4.aÃ±¤e•¡¬á¸÷¥¡:nic
+          3\5.¬a‰¸é· •¡¬á a”w:skj
+          3\6.­A‰¬a· À‚­A‰:segye
+         3\99.Ða·¡ÉI•¡¬á:kptbook
+       2\4.®¬e¢‰:fish
+          3\1.Ðe´aŸq ®¬e¢‰:dongnam
+          3\2.Ã©¬e¡w¢‰ µw‰×Š‰§¡:sy
+       2\5.¤åµb:translate
+          3\1.ÐeŠ‚‰×¥¡:kwangbo
+          3\2.¸a·¡´å»a:gis
+          3\3.‰ÁÐb­A”:kwahak
+       2\6.£¥¶¥¬áŸA(¬÷¦‚Š):civil
+       2\7.Ëb¬eÎ‘ ¶Íeº¢…Ìe :post
+       2\8.µB¯aÍ¡Äa—a:hanaro
+       2\9.¸weˆq/·¥Ñw:toy
+           3\Ï¡Ïi»a·¥Ñw:pples
+      2\10.S/WµÁ H/W:pc
+            3\*Ñe£¥·¡‘A PC¤w:hmpc
+      2\11.ˆåˆw¯¢:goodfood
+            3\*ÐeŠ‚Ñ·¬q­EÈa:krg
+      2\12.¯aÍ¡Ãa/A¸á¶wÎ‘:sportsshop
+            3\*OB ¥A´á¯a ‹¡‘qÎ‘:obbears
+      2\31.Ðw‰·Š¥:flight
+          3\1.”ÐeÐw‰· µaÐ—¸÷¥¡/µ´¢¬á§¡¯a:kal
+          3\2.´a¯¡´aaÐw‰· µ´¢/¹·ÐsµaÐ—¸÷¥¡:asiana
+      2\51.¯¥Ðe·eÐ— Ñ±¤—Ç·:shb
+      2\*52.¶AÑÅ¯¥¶wÄa—a/YES-NET:??
+      2\53.¶AÑÅ·eÐ— Ñ±¤—Ç·:kebnet
+      2\54.Š‚£¥PC¤—Ça¬á§¡¯a:cnb
+      2\55.¹¡ÓwC&C¬á§¡¯a:chb
+      2\56.¬w´ó·eÐ— Ñ±¤—Ç·:cbk
+      2\57.ÐeŠ‚Ê¸a¯¥Èb Ñ±¤—Ç·:kitc
+      2\*58.Ðe£¡Ðuœa·¥¬á§¡¯a:kab
+1\(17) ‰·‰·¸÷¥¡:pub
+       2\1.É··©¶¥..É··©/¦‚Ðe­¡¯¢:tongil
+      2\11.ÁA¯¥¦..ÁA¯¥¸÷¥¡:moc
+      2\12.¢…ÑÁÁA·B¦..¢…ÑÁÁA·B¦­¡¯¢:munhwa
+      2\31.ÑÅ‰wÀá..ÑÅ‰w¸÷¥¡:env
+      2\41.‹¡¬wÀ÷..‹¡¬w¸÷¥¡:weather
+      2\42.Š‚­AÀ÷..­A¢¸÷¥¡:ntax
+      2\#51.¬á¶‰¯¡..ŠaÉ·»¡•¡¸÷¥¡:route
+      2\61.£¥¶¥ÀáŸ¡¬á§¡¯a:civil
+      2\71.ÐeŠ‚É·¯¥..´e¸÷¥¡:kt
+      2\#72.ÐeŠ‚É·¯¥..¬wÎ‘¸÷¥¡:ktinfo
+      2\73.º—­¡‹¡´ó·eÐ—..º—­¡‹¡´ó·eÐ—¸÷¥¡:ibk
+      2\74.ÐeŠ‚‰Å‰×‰·¬a..Š‚µaÐ—»¡´e¸÷¥¡:kntc
+      2\75.¬â·Aˆ¤i‰·¬a..µAá»¡¸÷¥¡:pedco
+      2\76.‘·®¬e¢‰·AÉ·‰·¬a..‘·´ó·AÉ·¸÷¥¡ »¡¶¥¬á§¡¯a:amis
+      2\#77.ÐeŠ‚¤w­·‰·¬a..KBS¢…¸a¸÷¥¡:koins
+      2\78.­¡§¡¸a¥¡Ñ¡¶¥..­¡§¡¸a¸÷¥¡:sobi
+      2\#79.Š‚Ÿ³®¬e»¥Ów¶¥..®¬e¸÷¥¡:sea
+      2\99.ÐeŠ‚·eÐ—..ÐeŠ‚·eÐ—¸÷¥¡:bok
+1\(18) µw¢…/Ð¶ADB:intl
+1\E-HiTEL:ehitel
+       2\1.General & Business News:news
+          3\1.Korea Herald:herald
+          3\2.Korea Economic Daily:ked
+          3\3.Buyers Guide News:bgnews
+          3\*4.Korea Economic Report:??
+       2\2.KETEL:ketel
+          3\1.Korea Economic Weekly:kew
+          3\2.Biz Group Newsline:group
+          3\3.Industry Watch:industry
+          3\4.Weather:weather
+          3\5.Hotel News:hotel
+          3\6.Won/Dollar Exchange Rates:rate
+       2\3.Stock Market Reports:stock
+          3\1.Stock Quotes:quotes
+          3\2.Lucky Securities Line:overview
+          3\3.Dongsuh Dividend/Issues:??
+       2\4.Corporate Financial Figs:corp
+          3\1.KIS:kis
+          3\2.Kompass Korea:kompass
+          3\*3.TMI-Serve:tmi
+          3\*4.Foreign Companies Directory:??
+       2\5.Foreign Exchange:forex
+          3\1.Chohung Bank:chohung
+          3\2.Bank of Seoul:seoul
+       2\6.Economic Statistics:stat
+       2\7.HiTEL Who's Who-Who's Who in Korean Business:whowho
+       2\8.Bulletin:bulletin
+          3\1.Help:help
+            4\1.Screen Information:menu
+            4\2.How to Use Editor/Commands:howto
+            4\3.My Profile:iam
+            4\4.User Information:user
+            4\5.Personal Notes:diary
+            4\6.Manual:manual
+         3\#2.Korea Telecom Int'l Service Guide:ktintl

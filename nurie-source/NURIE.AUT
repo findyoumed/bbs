@@ -1,0 +1,13 @@
+c:\la\tc\lib\c0l.obj+
+video putch attr hanout key automata hanin codeconv modem+
+plot line boxfill circle clrscr cursor image scroll mouse+
+window quick dirbox filedir helpbox popup telbox+
+hanja graph icon pcx virtual+
+btree data dbf+
+adlib bank rolread rolplay music+
+editor block nre_edit+
+crtout chat gomenu compact nre_comm+
+status hwp cal nurie
+nurie,, hgmouse.lib undefl2.lib+
+c:\la\tc\lib\emu.lib c:\la\tc\lib\mathl.lib c:\la\tc\lib\cl.lib
+

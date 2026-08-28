@@ -140,6 +140,9 @@ export function createPostViewCommandHandler(deps) {
 
     const yesChoice = document.createElement('span');
     yesChoice.className = 'cmd-token cmd-clickable';
+    yesChoice.setAttribute('role', 'button');
+    yesChoice.tabIndex = 0;
+    yesChoice.setAttribute('aria-label', 'Y');
     yesChoice.dataset.cmd = 'Y';
     yesChoice.dataset.tip = '예(Y)';
     yesChoice.textContent = 'Y';
@@ -149,6 +152,9 @@ export function createPostViewCommandHandler(deps) {
 
     const noChoice = document.createElement('span');
     noChoice.className = 'cmd-token cmd-clickable';
+    noChoice.setAttribute('role', 'button');
+    noChoice.tabIndex = 0;
+    noChoice.setAttribute('aria-label', 'N');
     noChoice.dataset.cmd = 'N';
     noChoice.dataset.tip = '아니오(N)';
     noChoice.textContent = 'n';

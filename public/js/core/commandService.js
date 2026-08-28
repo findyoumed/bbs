@@ -35,7 +35,7 @@ export const CMD_META = {
   // "다음쪽"은 남는 비대칭 현상이 발생했다(실측: /notice/1 2/7쪽, 모바일 폭 — 힌트바에 F만
   // 남고 B가 통째로 빠짐). 지금 화면에 실제 다음/이전 페이지가 있다는 사실 자체가 P/T/GO보다
   // 훨씬 중요하므로, F/B를 H(100) 바로 아래인 99로 올려 P/T/GO가 먼저 잘리게 한다.
-  F: { label: '다음쪽', tip: 'F, [ENTER]', priority: 99, cat: 'NAV', desc: '다음 페이지로 이동합니다. (또는 엔터키)' },
+  F: { label: '다음쪽', tip: 'F, [ENTER]', priority: 99, cat: 'NAV', desc: '다음 페이지로 이동합니다. (목록에서 F [번호]는 해당 번호 위치로 이동)' },
   B: { label: '이전쪽', tip: 'B', priority: 99, cat: 'NAV', desc: '이전 페이지로 이동합니다.' },
   C: { label: '배경색', tip: 'C', priority: 36, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
   COLOR: { label: '배경색', tip: 'COLOR', priority: 35, cat: 'UI', desc: '터미널 배경색 테마를 전환합니다.' },
@@ -48,7 +48,10 @@ export const CMD_META = {
   // N=더 낮은 번호(과거 방향, "다음글") — 뉴스 기사 보기(commandRouterService.js)와 동일한 방향으로
   // 게시판 글보기(commandRouterPostView.js)도 맞췄다. 라벨도 실제 동작에 맞게 함께 뒤집는다.
   N: { label: '다음글', tip: 'N', priority: 60, cat: 'POST', desc: '목록에서 다음(더 낮은 번호) 글을 읽습니다.' },
-  A: { label: '이전글', tip: 'A', priority: 60, cat: 'POST', desc: '목록에서 이전(더 높은 번호) 글을 읽습니다.' },
+  // [LOG_ID: 20260829_1205] A is context-sensitive in the historical guide:
+  // post lists use `A 번호` for reply, while post views use bare A for the
+  // previous article. Keep one canonical metadata entry but explain both.
+  A: { label: '이전글', tip: 'A (목록: A 번호=답글, 글보기: 이전글)', priority: 60, cat: 'POST', desc: '목록에서는 A 번호로 답글을 쓰고, 글 보기에서는 이전 글로 이동합니다.' },
   L: { label: '첫장', tip: 'L', priority: 55, cat: 'POST', desc: '게시판 첫 페이지로 이동하며 검색을 초기화합니다.' },
   // [LOG_ID: 20260804_2037] 하이텔·천리안·나우누리 원전 명령을 현재 단일 UI에 통합:
   // 기존 동작을 중복 구현하지 않고 대표 명령에 원전 별칭을 같이 안내한다.
@@ -95,7 +98,7 @@ export const CMD_META = {
   LOGIN: { label: '로그인', tip: 'LOGIN, LOG', priority: 90, cat: 'AUTH', desc: 'BBS 계정으로 로그인합니다.' },
   LOG: { label: '로그인', tip: 'LOGIN, LOG', priority: 90, cat: 'AUTH', desc: 'BBS 계정으로 로그인합니다.' },
   PW: { label: '비밀번호', tip: 'PW', priority: 22, cat: 'AUTH', desc: '내 정보 화면에서 비밀번호 변경을 시작합니다. (HI로 먼저 내 정보 화면에 들어가야 합니다)' },
-  WHO: { label: '회원정보', tip: 'WHO [아이디]', priority: 25, cat: 'AUTH', desc: '특정 사용자의 정보를 확인하거나 접속자 목록을 봅니다.' },
+  WHO: { label: '회원정보', tip: 'WHO [아이디], U', priority: 25, cat: 'AUTH', desc: '특정 사용자의 정보를 확인하거나 WHO/U로 접속자 목록을 봅니다.' },
   // [LOG_ID: 20260714_2100] 원전 UID(총 접속 ID 조회)/MSG(쪽지 수신 알림 ON·OFF) 명령 추가
   UID: { label: '접속자ID', tip: 'UID', priority: 24, cat: 'AUTH', desc: '현재 접속 중인 전체 이용자 ID 목록을 봅니다.' },
   MSG: { label: '쪽지알림', tip: 'MSG, MSG ON/OFF, MSG R', priority: 24, cat: 'AUTH', desc: '접속 시 새 쪽지 도착 알림을 켜거나 끕니다. MSG R로 받은쪽지함을 바로 확인합니다.' },
@@ -129,7 +132,8 @@ export const CMD_META = {
   MEMO: { label: '쪽지', tip: 'ME, MEMO (별칭: MAIL, RMAIL, CMAIL)', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
   WMAIL: { label: '쪽지쓰기', tip: 'WMAIL', login: true, priority: 30, cat: 'MEMO', desc: '새 쪽지 쓰기 화면을 바로 엽니다.' },
   TO: { label: '한줄쪽지', tip: 'TO [아이디] [한줄메시지]', login: true, priority: 31, cat: 'MEMO', prefill: true, desc: '별도의 쓰기 화면 없이 상대에게 한 줄 쪽지를 바로 보냅니다.' },
-  FW: { label: '쪽지전달', tip: 'FW (쪽지 읽기 전용)', login: true, priority: 18, cat: 'MEMO', desc: '현재 읽는 쪽지를 다른 사용자에게 전달합니다.' },
+  SOS: { label: '시삽 긴급연락', tip: 'SOS [메시지]', login: true, priority: 31, cat: 'MEMO', prefill: true, cmdPrefill: 'SOS ', desc: '시삽에게 긴급 건의를 작성하고 전송 전 확인합니다.' },
+  FW: { label: '쪽지전달', tip: 'FW [번호] [아이디] (목록), FW (읽기)', login: true, priority: 18, cat: 'MEMO', desc: '목록에서는 지정 쪽지를 입력한 사용자에게 전달하고, 읽기 화면에서는 현재 쪽지를 전달합니다.' },
   WC: { label: '카드쓰기', tip: 'WC (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지함에서 축하카드/그림엽서 쓰기를 시작합니다.' },
   ABSENT: { label: '부재중', tip: 'ABSENT, 부재 (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지함에서 부재기간(시작일/종료일)과 사유를 등록합니다. 이미 등록돼 있으면 해제 여부를 묻습니다.' },
   MB: { label: '보관함', tip: 'MB (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '쪽지 편지보관함을 엽니다. K [번호]로 보관하거나 꺼낼 수 있습니다.' },
@@ -137,7 +141,9 @@ export const CMD_META = {
   // [LOG_ID: 20260713_1230] 나우누리 CMAIL '배달 확인/취소' 재현 — 보낸쪽지함 발송 취소
   CM: { label: '발송취소', tip: 'CM [번호]', login: true, priority: 32, cat: 'MEMO', desc: '보낸쪽지함에서 상대가 아직 읽지 않은 쪽지의 발송을 취소합니다.' },
   // [LOG_ID: 20260730_1719] CHAT (대화실) 명령어 메타데이터 추가
-  CHAT: { label: '대화실', tip: 'CHAT, 대화', login: true, priority: 50, cat: 'CHAT', desc: '대화실(채팅) 로비로 바로 이동합니다.' },
+  // [LOG_ID: 20260829_1345] Nownuri CHATIN is a provider-specific spelling
+  // for the same chat-lobby destination; normalization keeps one runtime path.
+  CHAT: { label: '대화실', tip: 'CHAT, CHATIN, 대화', login: true, priority: 50, cat: 'CHAT', desc: '대화실(채팅) 로비로 바로 이동합니다.' },
   O: { label: '방만들기', tip: 'O', login: true, priority: 42, cat: 'CHAT', desc: '채팅방을 개설합니다.' },
   J: { label: '방입장', tip: 'J [방번호], JOIN [방번호]', login: true, priority: 40, cat: 'CHAT', desc: '대화실 로비에서 방 번호로 채팅방에 입장합니다.' },
   JOIN: { label: '방입장', tip: 'J [방번호], JOIN [방번호]', login: true, priority: 40, cat: 'CHAT', desc: '대화실 로비에서 방 번호로 채팅방에 입장합니다.' },

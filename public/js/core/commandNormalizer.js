@@ -65,12 +65,32 @@ export function normalizeCommand(rawCmd, stateScreen) {
   if (cmd === 'LOG') cmd = 'LOGIN';
   if (cmd === ']') cmd = 'A';
   if (cmd === '[' || cmd === '[[') cmd = 'N';
+  // [LOG_ID: 20260828_2110] Fold documented long-form commands into the
+  // existing canonical handlers so all three historical command styles share
+  // the same navigation and compose paths.
+  if (cmd === 'PREV') cmd = 'P';
+  if (cmd === 'MAIN') cmd = 'M';
+  if (cmd === 'QUIT') cmd = 'Q';
+  if (cmd === 'NEXT') cmd = 'N';
+  if (cmd === 'BACK') cmd = 'B';
+  if (cmd === 'WRITE') cmd = 'W';
+  if (cmd === 'ANSWER') cmd = 'RE';
+  if (cmd === 'FINGER') cmd = 'PF';
+  if (cmd === 'INFO') cmd = 'HI';
+  if (cmd === 'READ' && ['post-list', 'memo-menu', 'memo-list'].includes(stateScreen)) cmd = 'R';
+  // [LOG_ID: 20260829_1410] The three-service guide also accepts F [번호]
+  // on post lists for direct number positioning. The existing LS [번호]
+  // handler already provides that behavior; keep bare F as pagination.
+  if (stateScreen === 'post-list' && cmd === 'F' && args.length === 1 && /^\d+$/.test(args[0])) cmd = 'LS';
   // [LOG_ID: 20260804_2037] 천리안·나우누리 원전 별칭을 현재 단일 UI의
   // 기존 명령으로 정규화한다. 인자는 아래 재조합 단계에서 그대로 보존된다.
   if (cmd === 'USE') cmd = 'TIME';
+  // [LOG_ID: 20260829_1345] 나우누리 원전 CHATIN(대화실 진입)은
+  // 현재 서비스의 CHAT 로비와 같은 의미이므로 기존 canonical 명령을 재사용한다.
+  if (cmd === 'CHATIN') cmd = 'CHAT';
 
   // 3. 리스트 화면 공통
-  const isListScreen = ['main', 'board-select', 'post-list', 'weather-menu', 'news-menu', 'news-list', 'chat-lobby', 'memos-list'].includes(stateScreen);
+  const isListScreen = ['main', 'board-select', 'post-list', 'weather-menu', 'news-menu', 'news-list', 'chat-lobby', 'memos-list', 'memo-menu', 'memo-list', 'memo-view'].includes(stateScreen);
   if (isListScreen) {
     if (cmd === 'DIR' || cmd === 'LIST') cmd = 'L';
     if (cmd === 'CAT' || cmd === 'TYPE') cmd = 'V';
@@ -87,6 +107,7 @@ export function normalizeCommand(rawCmd, stateScreen) {
   }
   if (stateScreen === 'post-list') {
     if (cmd === 'U') cmd = 'W';
+    if (cmd === 'FL') cmd = 'L';
     // KEY 단독 입력은 원전처럼 검색어를 묻는 단계로 들어가야 하므로 보존한다.
     if (cmd === 'KEY' && args.length > 0) cmd = 'K';
     if (cmd === 'DOWN') cmd = 'DN';

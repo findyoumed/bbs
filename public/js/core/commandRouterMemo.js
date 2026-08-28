@@ -21,6 +21,20 @@ export function createMemoCommandHandler(deps) {
         return state._currentMemoId;
     }
 
+    // [LOG_ID: 20260828_1715] 원전 전자우편의 `FW 번호 아이디`는 목록에서
+    // 선택한 편지의 내용을 새 수신자에게 전달하는 명령이다. 읽기 화면의
+    // 기존 전달 흐름과 동일한 본문 형식을 사용해 중복된 작성 경로를 만들지 않는다.
+    function buildForwardMemoContent(memo) {
+        return `---------- 전달된 쪽지 ----------\n보낸이: ${memo?.senderUserId || ''}\n날짜: ${new Date(memo?.createdAt || Date.now()).toLocaleString()}\n\n${memo?.content || ''}`;
+    }
+
+    async function forwardMemoTo(memo, targetUserId = '') {
+        if (!memo) return false;
+        state._forwardMemoContent = buildForwardMemoContent(memo);
+        await showMemoWrite(String(targetUserId).trim());
+        return true;
+    }
+
     async function beginMemoDeleteConfirm() {
         const memoId = getCurrentMemoId();
         if (!memoId) {
@@ -233,6 +247,19 @@ export function createMemoCommandHandler(deps) {
             if (state._absentStage) {
                 return await handleAbsentFlowInput(input);
             }
+            // [LOG_ID: 20260828_2110] Preserve the historical mail verbs:
+            // S/SEND user opens the existing compose screen, while bare S
+            // keeps its sent-box meaning below.
+            const sendFromMenuMatch = String(rawCmd || '').trim().match(/^(?:S|SEND)\s+(\S+)$/i);
+            if (sendFromMenuMatch) {
+                await showMemoWrite(sendFromMenuMatch[1].trim());
+                return true;
+            }
+            if (cmd === 'L') {
+                state._memoBox = 'inbox';
+                await showMemoList();
+                return true;
+            }
             if (cmd === '1' || cmd === 'RMAIL' || cmd === 'R' || cmd === 'I') {
                 state._memoBox = 'inbox';
                 await showMemoList();
@@ -285,6 +312,50 @@ export function createMemoCommandHandler(deps) {
             // 있다고 명시하고, 바로 옆에서 "한 번 삭제한 편지는 되살릴 수 없으므로... 정말 지울
             // 것인지 한 번 더 생각해보고 지우도록 합시다"라고 경고한다 — 그래서 기존 단건 삭제
             // (beginMemoDeleteConfirm)와 동일하게 Y/N 확인 단계를 둔다.
+            // [LOG_ID: 20260828_2110] Direct mail verbs from the historical guide.
+            const readMemoMatch = String(rawCmd || '').trim().match(/^R\s+(\d+)$/i);
+            if (readMemoMatch) {
+                const memo = state._memos?.[parseInt(readMemoMatch[1], 10) - 1];
+                if (!memo) {
+                    setHint?.('존재하지 않는 번호입니다.');
+                    setPrompt?.('선택 >>');
+                    return true;
+                }
+                await showMemoView(memo.id);
+                return true;
+            }
+            const sendMemoMatch = String(rawCmd || '').trim().match(/^(?:S|SEND)\s+(\S+)$/i);
+            if (sendMemoMatch) {
+                await showMemoWrite(sendMemoMatch[1].trim());
+                return true;
+            }
+            // [LOG_ID: 20260828_1715] 하이텔·나우누리·천리안 공통 전달 명령
+            // `FW 번호 아이디`를 목록에서도 지원한다. 번호는 현재 목록의
+            // 표시 순서를 따르며, 없는 번호는 작성 화면을 열지 않는다.
+            const forwardMemoMatch = String(rawCmd || '').trim().match(/^FW\s+(\d+)\s+(\S+)$/i);
+            if (forwardMemoMatch) {
+                const memo = state._memos?.[parseInt(forwardMemoMatch[1], 10) - 1];
+                if (!memo) {
+                    setHint?.('존재하지 않는 번호입니다.');
+                    setPrompt?.('선택 >>');
+                    return true;
+                }
+                await forwardMemoTo(memo, forwardMemoMatch[2]);
+                return true;
+            }
+            const deleteMemoMatch = String(rawCmd || '').trim().match(/^(?:D|DELETE)\s+(\d+)$/i);
+            if (deleteMemoMatch) {
+                const memo = state._memos?.[parseInt(deleteMemoMatch[1], 10) - 1];
+                if (!memo) {
+                    setHint?.('존재하지 않는 번호입니다.');
+                    setPrompt?.('선택 >>');
+                    return true;
+                }
+                state._currentMemoId = memo.id;
+                await beginMemoDeleteConfirm();
+                return true;
+            }
+
             if (state._memoBulkDeleteConfirm) {
                 const answer = String(input || '').trim().toUpperCase();
                 if (answer === 'Y' || answer === 'YES') {
@@ -538,8 +609,7 @@ export function createMemoCommandHandler(deps) {
             if (cmd === 'FW' || cmd === 'F') {
                 const memo = state._memos?.find((m) => String(m?.id) === String(state._currentMemoId));
                 if (memo) {
-                    state._forwardMemoContent = `---------- 전달된 쪽지 ----------\n보낸이: ${memo.senderUserId}\n날짜: ${new Date(memo.createdAt).toLocaleString()}\n\n${memo.content}`;
-                    await showMemoWrite();
+                    await forwardMemoTo(memo, '');
                 }
                 return true;
             }

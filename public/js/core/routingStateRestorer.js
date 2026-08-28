@@ -352,12 +352,18 @@ export function createRoutingStateRestorer(deps) {
     async mail(segments, query) {
       return await this.memo(segments, query);
     },
-    // [LOG_ID: 20260714_1200] 여론광장(AGORA) 라우트 — 투표/설문. 종전 /game/vote 하위에 있던 것을
-    // 최상위로 옮겼다(오락실 하위 중복 항목 제거와 함께). /agora, /agora/create, /agora/:voteId.
-    // [LOG_ID: 20260718_2230] go 코드를 "acro"에서 "agora"로 정정(사용자 지적).
+    // [LOG_ID: 20260714_1200] 여론광장(AGORA)은 투표/토론을 담는 최상위 메뉴 컨테이너다.
+    // [LOG_ID: 20260828_2000] 원전 HITEL.MNU의 부모/자식 의미를 URL에도 반영한다:
+    // /agora는 메뉴, /agora/vote는 투표 목록, /agora/create와 /agora/:voteId는 기존 기능을 보존한다.
     async agora(segments) {
       const [, sub] = segments;
-      if (sub === 'create') {
+      if (!sub) {
+        if (typeof showBoardSelect === 'function') {
+          return await showBoardSelect('agora', '여론광장 (AGORA)', true);
+        }
+      } else if (sub === 'vote') {
+        if (typeof showVoteList === 'function') return await showVoteList(true);
+      } else if (sub === 'create') {
         if (typeof showVoteCreate === 'function') return await showVoteCreate(true);
       } else if (sub) {
         if (typeof showVoteDetail === 'function') return await showVoteDetail(Number(sub), true);

@@ -15,16 +15,40 @@ export function createAmusementScreens(deps) {
   // [LOG_ID: 20260726_1515] 뷰포트 밖으로 밀려나는 문제(20260726_1500)의 scrollIntoView 처리는
   // 이제 mountPromptRow 공용 함수(terminalHintFooter.js) 안으로 옮겨져 모든 호출부에 자동 적용된다.
   function inlineMount(hostId, hostClass) { if (screenEl && typeof mountPromptRow === 'function') { let host = document.getElementById(hostId); if (!host) { host = document.createElement('div'); host.id = hostId; host.className = hostClass; screenEl.appendChild(host); } mountPromptRow(host); } }
+  // [LOG_ID: 20260829_1015] 게임 입력 오류도 건의/쪽지/게시글 편집기와 같은
+  // 본문 인라인 영역에 표시한다. setHint()는 화면 문맥을 복원하면서 하단 힌트바를
+  // 다시 그릴 수 있으므로, 게임 입력 화면에서는 전용 오류 행만 갱신한다.
+  function clearGameValidationError() {
+    if (typeof document === 'undefined') return;
+    document.querySelectorAll('.game-inline-validation').forEach((node) => node.remove());
+  }
+  function showGameValidationError(message, hostId) {
+    if (typeof document === 'undefined') return;
+    clearGameValidationError();
+    const host = hostId ? document.getElementById(hostId) : null;
+    const body = screenEl?.querySelector?.('.ansi-screen-body');
+    const prompt = document.getElementById('terminal-prompt-row');
+    const anchor = host || prompt;
+    const parent = host?.parentNode || body || prompt?.parentNode || screenEl;
+    if (!parent) return;
+    const errorEl = document.createElement('div');
+    errorEl.className = 'game-inline-validation';
+    errorEl.setAttribute('role', 'alert');
+    errorEl.setAttribute('aria-live', 'polite');
+    errorEl.textContent = String(message || '입력값을 확인해주세요.');
+    if (host?.parentNode === parent) parent.insertBefore(errorEl, host);
+    else parent.appendChild(errorEl);
+  }
   // [LOG_ID: 20260707_2300] PC통신: 화면 전체(본문+하단 힌트/입력줄)가 위→아래로 이어서 나온다 —
   // afterBodyRender에서 footer 내용을 채운 뒤에야 renderAnsiScreenWithTopbarSequential이 하단을 드러낸다.
   const render = async (ansi, footer, prompt) => { const rendered = await renderAnsiScreenWithTopbarSequential({ ansiText: ansi, ansiToHTML, screenEl, renderScreenSequential, afterBodyRender: async () => { if (footer === 'none') { await applyCommandFooter(null, ''); if (prompt !== undefined) setPrompt(prompt); } else { await applyCommandFooter(getMenuNodeByKey('game')?.footer, getCommandFooterText(footer)); if (prompt !== undefined) setPrompt(prompt); } } }); focus(); return rendered; };
   const validDate = (input) => { const value = String(input || '').replace(/\D/g, ''); if (value.length !== 8) return null; const date = new Date(Number(value.slice(0, 4)), Number(value.slice(4, 6)) - 1, Number(value.slice(6))); return date.getFullYear() === Number(value.slice(0, 4)) && date.getMonth() === Number(value.slice(4, 6)) - 1 && date.getDate() === Number(value.slice(6)) ? date : null; };
   const validYear = (input) => { const year = Number(String(input || '').replace(/\D/g, '')); return year >= 1900 && year <= new Date().getFullYear() ? year : null; };
   async function showBiorhythm(fromHistory = false) { state.screen = 'bio-input'; state.serviceData = { kind: 'biorhythm' }; if (!fromHistory) updateURL(); await render(buildBiorhythmIntroAnsi(), 'amusementInput', '생년월일 입력 (예: 19900101) >> '); inlineMount('bio-prompt-host', 'game-prompt-host'); }
-  async function showBiorhythmResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01'); inlineMount('bio-prompt-host', 'game-prompt-host'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'bio-result'; state.serviceData = { kind: 'biorhythm', birth: birth.getTime() }; if (!fromHistory) updateURL(); const userName = state.user?.nickname || state.user?.username || state.user?.name || '사용자'; await render(buildBiorhythmAnsi(birth, new Date(), userName), 'amusementView', '선택 >> '); return true; }
+  async function showBiorhythmResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { inlineMount('bio-prompt-host', 'game-prompt-host'); showGameValidationError('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01', 'bio-prompt-host'); return false; } clearGameValidationError(); if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'bio-result'; state.serviceData = { kind: 'biorhythm', birth: birth.getTime() }; if (!fromHistory) updateURL(); const userName = state.user?.nickname || state.user?.username || state.user?.name || '사용자'; await render(buildBiorhythmAnsi(birth, new Date(), userName), 'amusementView', '선택 >> '); return true; }
   // [LOG: 20260724_0948] 생년월일 8자리 입력 처리 및 birth 전달
   async function showFortune(fromHistory = false) { state.screen = 'fortune-input'; state.serviceData = { kind: 'fortune' }; if (!fromHistory) updateURL(); await render(buildFortuneIntroAnsi(), 'amusementInput', '생년월일 입력 (예: 19900101) >> '); inlineMount('fortune-prompt-host', 'game-prompt-host'); }
-  async function showFortuneResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 19900101'); inlineMount('fortune-prompt-host', 'game-prompt-host'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'fortune-result'; state.serviceData = { kind: 'fortune', birth: birth.getTime() }; if (!fromHistory) updateURL(); await render(buildFortuneAnsi(birth), 'amusementView', '선택 >> '); return true; }
+  async function showFortuneResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { inlineMount('fortune-prompt-host', 'game-prompt-host'); showGameValidationError('생년월일 형식이 올바르지 않습니다. 예) 19900101', 'fortune-prompt-host'); return false; } clearGameValidationError(); if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'fortune-result'; state.serviceData = { kind: 'fortune', birth: birth.getTime() }; if (!fromHistory) updateURL(); await render(buildFortuneAnsi(birth), 'amusementView', '선택 >> '); return true; }
 
 
   // [LOG_ID: 20260723_1134] MBTI 화면 요소별 마우스 호버/클릭(핫스팟) 바인딩 헬퍼
@@ -148,7 +172,7 @@ export function createAmusementScreens(deps) {
         await startMbtiTest();
         return true;
       }
-      setHint('번호(1~16) 또는 유형코드(예: INFP)를 입력하세요.');
+      showGameValidationError('번호(1~16) 또는 유형코드(예: INFP)를 입력하세요.', 'mbti-list-prompt-host');
       return false;
     }
 
@@ -182,7 +206,7 @@ export function createAmusementScreens(deps) {
         return true;
       }
 
-      setHint('선택지 번호(1 또는 2)를 입력하세요.');
+      showGameValidationError('선택지 번호(1 또는 2)를 입력하세요.', 'mbti-test-prompt-host');
       return false;
     }
 
@@ -196,7 +220,7 @@ export function createAmusementScreens(deps) {
     return true;
   }
 
-  async function showMbtiDetail(input, fromHistory = false) { const type = findMbtiType(input); if (!type) { setHint('번호(1~16) 또는 유형코드(예: INFP)를 입력하세요.'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'mbti-detail'; state.serviceData = { kind: 'mbti', mbtiCode: type.code }; state._mbtiCode = type.code; if (!fromHistory) updateURL(); await render(buildMbtiDetailAnsi(type), 'amusementView', '선택 >> '); return true; }
+  async function showMbtiDetail(input, fromHistory = false) { const type = findMbtiType(input); if (!type) { showGameValidationError('번호(1~16) 또는 유형코드(예: INFP)를 입력하세요.', 'mbti-list-prompt-host'); return false; } clearGameValidationError(); if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'mbti-detail'; state.serviceData = { kind: 'mbti', mbtiCode: type.code }; state._mbtiCode = type.code; if (!fromHistory) updateURL(); await render(buildMbtiDetailAnsi(type), 'amusementView', '선택 >> '); return true; }
 
   // [LOG_ID: 20260719_1600] 천리안 원전 온라인 철학관(BLOOD/SAJU) 재현 — 혈액형 성격진단/궁합/토정비결.
   // [LOG_ID: 20260811_1126] 혈액형 입력/결과 화면 전역 클릭 위임으로 A, B, O, AB 핫스팟 클릭 100% 동작 보장
@@ -354,10 +378,11 @@ export function createAmusementScreens(deps) {
   async function showCompatStep2(input, fromHistory = false) {
     const birth1 = input instanceof Date ? input : validDate(input);
     if (!birth1) {
-      setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01');
       inlineMount('compat-prompt-host', 'game-prompt-host');
+      showGameValidationError('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01', 'compat-prompt-host');
       return false;
     }
+    clearGameValidationError();
     state.screen = 'compat-input2';
     state.serviceData = { kind: 'compat', birth1: birth1.getTime() };
     if (!fromHistory) updateURL();
@@ -368,10 +393,11 @@ export function createAmusementScreens(deps) {
   async function showCompatResult(input, fromHistory = false, pageNo = 1) {
     const birth2 = input instanceof Date ? input : validDate(input);
     if (!birth2) {
-      setHint('생년월일 형식이 올바르지 않습니다. 예) 1995-05-05');
       inlineMount('compat2-prompt-host', 'game-prompt-host');
+      showGameValidationError('생년월일 형식이 올바르지 않습니다. 예) 1995-05-05', 'compat2-prompt-host');
       return false;
     }
+    clearGameValidationError();
     const birth1Time = state.serviceData?.birth1;
     if (!birth1Time) { await showCompat(fromHistory); return false; }
     if (typeof restorePromptRow === 'function') { restorePromptRow(); }
@@ -385,7 +411,7 @@ export function createAmusementScreens(deps) {
   }
 
   async function showTojeong(fromHistory = false) { state.screen = 'tojeong-input'; state.serviceData = { kind: 'tojeong' }; if (!fromHistory) updateURL(); await render(buildTojeongIntroAnsi(), 'amusementInput', '생년월일 입력 (예: 19900101) >> '); inlineMount('tojeong-prompt-host', 'game-prompt-host'); }
-  async function showTojeongResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { setHint('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01'); inlineMount('tojeong-prompt-host', 'game-prompt-host'); return false; } if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'tojeong-result'; state.serviceData = { kind: 'tojeong', birth: birth.getTime() }; if (!fromHistory) updateURL(); await render(buildTojeongAnsi(birth), 'amusementView', '선택 >> '); return true; }
+  async function showTojeongResult(input, fromHistory = false) { const birth = input instanceof Date ? input : validDate(input); if (!birth) { inlineMount('tojeong-prompt-host', 'game-prompt-host'); showGameValidationError('생년월일 형식이 올바르지 않습니다. 예) 1990-01-01', 'tojeong-prompt-host'); return false; } clearGameValidationError(); if (typeof restorePromptRow === 'function') { restorePromptRow(); } state.screen = 'tojeong-result'; state.serviceData = { kind: 'tojeong', birth: birth.getTime() }; if (!fromHistory) updateURL(); await render(buildTojeongAnsi(birth), 'amusementView', '선택 >> '); return true; }
 
   // [LOG: 20260713_1355] 추억의 접속화면(retro-list) 목록 마우스 호버 및 클릭(핫스팟) 활성화
   function renderRetroArtListHotspots(screenNode, items, lineOffset = 3) {

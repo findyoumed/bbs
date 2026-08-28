@@ -30,8 +30,11 @@ export const CMD_ORDER = {
   // [LOG: 20260622_1900] 힌트바는 동적 너비 기반(trimHintEntriesToFit)으로 자동 맞춤한다.
   // 전체 명령을 나열해도 화면에 들어가는 만큼만 표시되고, 넘치면 우선순위 낮은 순으로 숨겨 도움말(H)
   // 토큰 tooltip에 모인다. (안 넘치면 전부 노출 — 일부러 줄이지 않음)
-  pdsList: ['F', 'B', 'P', 'T', 'GO', 'UP:올리기', 'DN:내리기', 'PR:연속읽기', 'LS:번호점프', 'LD:날짜점프', 'K:주제어검색', 'KW:주제어목록', 'LT:제목검색', 'LI:ID검색', 'H'],
-  postList: ['F', 'B', 'L', 'P', 'T', 'GO', 'W:글쓰기', 'PR:연속읽기', 'LS:번호점프', 'LD:날짜점프', 'K:주제어검색', 'KW:주제어목록', 'LT:제목검색', 'LI:ID검색', 'H'],
+  // [LOG_ID: 20260829_1310] NEW/NW is already handled by the list router;
+  // expose the no-argument form so the historical "new posts" filter is
+  // discoverable and clickable in both ordinary and unified PDS lists.
+  pdsList: ['F', 'B', 'P', 'T', 'GO', 'NEW:새글', 'UP:올리기', 'DN:내리기', 'PR:연속읽기', 'LS:번호점프', 'LD:날짜점프', 'K:주제어검색', 'KW:주제어목록', 'LT:제목검색', 'LI:ID검색', 'H'],
+  postList: ['F', 'B', 'L', 'P', 'T', 'GO', 'NEW:새글', 'W:글쓰기', 'PR:연속읽기', 'LS:번호점프', 'LD:날짜점프', 'K:주제어검색', 'KW:주제어목록', 'LT:제목검색', 'LI:ID검색', 'H'],
   // [LOG_ID: 20260724_1950] 사용자 요청: "다음(F),이전(B),상위(P) 힌트바에 써줘" — '다음페이지'/
   // '이전페이지'는 길어서 모바일 폭에서 다른 토큰을 더 밀어냈다. 짧은 '다음'/'이전'으로 줄여도
   // shouldShowFooterToken의 페이지네이션 숨김 검사(['다음쪽','다음','다음페이지'] 등)가 이미
@@ -48,7 +51,10 @@ export const CMD_ORDER = {
   // 없어 EAR을 눌러도(쳐도) 아무 반응이 없었다. 'ST:상황판'도 chatLobby에서 같은 이유로
   // 뺐다 — /ST(현재 방 접속자 조회) 핸들러가 chat-room 안에만 있어 대기실에선 완전히
   // 죽어 있었다 — "다른 화면도 명령어 감사해줘" 조사로 발견.
-  chat: ['P', 'T', 'GO', 'O:방만들기', 'ST:상황판', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
+  // [LOG_ID: 20260829_1240] Historical active-room shortcuts are real click
+  // targets now: `/L` returns to the room list and `/W` shows participants.
+  // Keep them in the chat-room footer so discoverability matches behavior.
+  chat: ['P', 'T', 'GO', 'O:방만들기', '/L:목록', '/W:참여자', 'ST:상황판', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
   // [LOG_ID: 20260718_1700] O(방만들기)는 CMD_META에서 login:true라 게스트 힌트바에선
   // 의도적으로 숨는다(로그인 시 노출). 원본의 "참여(번호)"는 힌트바 토큰이 아니라 프롬프트가
   // 안내한다 — 토큰 파서(terminalHintMarkup)는 ASCII 명령만 받으므로 한글 토큰은 못 쓴다.

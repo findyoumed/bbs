@@ -62,6 +62,7 @@ export function createAppFactoryScreens(deps) {
     restorePromptRow: terminalUiCore.restorePromptRow,
     state,
     setHint: terminalUiCore.setHint,
+    showError: terminalUiCore.showError,
     setFooterVisibility: terminalUiCore.setFooterVisibility,
     setPrompt: terminalUiCore.setPrompt,
     setReady: terminalUiCore.setReady,

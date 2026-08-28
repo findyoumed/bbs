@@ -1,4 +1,5 @@
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
+import { resolveHistoricalGoAlias } from './historicalGoAliases.js';
 
 export function createMenuNavigationActions(deps) {
   const {
@@ -43,7 +44,7 @@ export function createMenuNavigationActions(deps) {
 
     const target = command.slice(2).trim();
     if (!target) return false;
-    const normalized = normalizeSearchKey(target);
+    const normalized = resolveHistoricalGoAlias(target, normalizeSearchKey);
     // [LOG_ID: 20260720_2320] GL은 PDS(자료실)의 별칭 — GO GL도 자료실로 이동
     if (normalized === 'GL') return await executeGoCommand('GO PDS');
     if (normalized === 'TOP') {
@@ -94,16 +95,28 @@ export function createMenuNavigationActions(deps) {
         return true;
       }
     }
+    // [LOG_ID: 20260828_1500] HITEL.MNU's PUZZLE alias targets the existing
+    // 16p/15-puzzle screen without introducing a second game route.
+    if (normalized === '16P') {
+      if (typeof refs.showPuzzle15 === 'function') {
+        await refs.showPuzzle15();
+        return true;
+      }
+    }
 
     // [LOG_ID: 20260714_1900] 나우누리 전자우편 GO 단축 — 원전(NOW_MENU.DAT)에서
     // "11.전자우편(MAIL) -1.편지읽기(RMAIL) -2.편지쓰기(WMAIL) -3.배달확인/취소(CMAIL)"로
     // GO 이동이 가능했다. 명령어(ME/MEMO/RMAIL/CMAIL/WMAIL)로는 이미 직접 입력 가능했지만
     // GO 접두 형태는 메뉴/게시판만 매칭하고 CMD_META로 안 넘어가 빠져 있었다(사용자 지적).
-    if (normalized === 'MAIL' || normalized === 'MEMO' || normalized === 'ME') {
+    // [LOG_ID: 20260828_1700] ME/MEMO are inbox shortcuts, matching the
+    // global command router and RMAIL. MAIL remains the top-level mail menu.
+    if (normalized === 'MAIL') {
       if (typeof refs.showMemoMenu === 'function') {
         await refs.showMemoMenu();
         return true;
       }
+    }
+    if (normalized === 'MEMO' || normalized === 'ME') {
       if (typeof refs.showMemoList === 'function') {
         state._memoBox = 'inbox';
         await refs.showMemoList();
@@ -126,11 +139,14 @@ export function createMenuNavigationActions(deps) {
       }
     }
 
+    // [LOG_ID: 20260828_1715] Historical aliases must reach the same menu and
+    // board resolver as their canonical target (for example WORD -> PLAZA).
+    const navigationTarget = normalized || target;
     const currentMenuNode = state.screen === 'main'
       ? state.menuTree
       : getMenuNodeByKey(state.boardMenuPath);
-    const localTargetNode = resolveLocalMenuNodeTarget(target, currentMenuNode);
-    const targetNode = localTargetNode || resolveAnyMenuNodeTarget(target);
+    const localTargetNode = resolveLocalMenuNodeTarget(navigationTarget, currentMenuNode);
+    const targetNode = localTargetNode || resolveAnyMenuNodeTarget(navigationTarget);
     if (targetNode) {
       const contextNode = localTargetNode ? currentMenuNode : getMenuParentNode(targetNode);
       await executeMenuNodeAction(
@@ -142,7 +158,7 @@ export function createMenuNavigationActions(deps) {
     }
 
     const contextBoards = state.screen === 'board-select' ? state.boardMenuEntries : state.boards;
-    const targetBoard = resolveBoardTarget(target, contextBoards) || resolveBoardTarget(target, state.boards);
+    const targetBoard = resolveBoardTarget(navigationTarget, contextBoards) || resolveBoardTarget(navigationTarget, state.boards);
     if (!targetBoard || typeof refs.showPostList !== 'function') {
       return false;
     }

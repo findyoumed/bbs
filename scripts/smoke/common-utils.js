@@ -20,6 +20,9 @@ const TEST_ROUTES = [
     '/pds',
     '/service/weather',
     '/service/news',
+    // [LOG_ID: 20260828_1845] GUIDE 건의하기의 직접 URL도 메뉴 트리·게스트
+    // 보호 흐름을 거치므로, 새로고침 시 화면이 깨지지 않는지 순회에 포함한다.
+    '/guide/tosysop',
     '/chat',
     '/memo',
     '/myinfo',

@@ -109,7 +109,8 @@ async function runMobileSmokeTests() {
       { name: '전체 메뉴 안내', path: 'http://localhost:3199/index' },
       { name: '도움말', path: 'http://localhost:3199/help' },
       { name: '이용 내역', path: 'http://localhost:3199/history' },
-      { name: '여론광장(투표) 목록', path: 'http://localhost:3199/agora' },
+      // [LOG_ID: 20260828_2000] AGORA는 메뉴 컨테이너, 투표 목록은 하위 VOTE 경로다.
+      { name: '여론광장(투표) 목록', path: 'http://localhost:3199/agora/vote' },
       { name: '토론의 광장', path: 'http://localhost:3199/forum' },
       { name: '내 정보(게스트 안내)', path: 'http://localhost:3199/myinfo' },
       { name: '쪽지함(게스트 안내)', path: 'http://localhost:3199/memo' },

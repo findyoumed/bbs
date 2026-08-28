@@ -2,7 +2,8 @@
 
 const BaseRouter = require('./BaseRouter');
 
-// [LOG_ID: 20260720_2300] GUIDE '건의하기' — 게시판 대신 시삽에게 이메일을 발송한다.
+// [LOG_ID: 20260828_1630] GUIDE '건의하기' stores a durable internal memo
+// before attempting optional external email delivery.
 class ContactRouter extends BaseRouter {
   get routes() {
     return [
@@ -24,10 +25,6 @@ class ContactRouter extends BaseRouter {
 
   async sendToSysop() {
     const { mailService, memoRepository } = this.deps;
-    if (!mailService || typeof mailService.sendToSysop !== 'function') {
-      this.error(503, '이메일 발송 서비스가 준비되지 않았습니다.');
-    }
-
     if (!memoRepository || typeof memoRepository.createMemo !== 'function') {
       this.error(503, 'Sysop memo storage is not configured.');
     }
@@ -45,16 +42,33 @@ class ContactRouter extends BaseRouter {
       saveToSent: false
     }, context);
 
-    const result = await mailService.sendToSysop({
-      subject: body.subject,
-      content: body.content,
-      fromUserId: context.userId
-    });
+    // [LOG_ID: 20260828_1630] Internal memo persistence is authoritative;
+    // external Resend delivery is best-effort and must not discard the memo.
+    let result = null;
+    let emailDeliveryWarning = null;
+    if (!mailService || typeof mailService.sendToSysop !== 'function') {
+      emailDeliveryWarning = 'External email service is not configured.';
+    } else {
+      try {
+        result = await mailService.sendToSysop({
+          subject: body.subject,
+          content: body.content,
+          fromUserId: context.userId
+        });
+      } catch (error) {
+        // The internal memo is already durable; do not turn a Resend outage
+        // into a failed suggestion submission. Keep details in server logs.
+        emailDeliveryWarning = 'External email delivery failed.';
+        console.warn('[ContactSysop] Internal memo saved but external email failed:', error?.message || error);
+      }
+    }
 
     return this.send(200, {
-      ...result,
+      ...(result || {}),
       memoId: internalMemo?.id || null,
-      internalMemoSaved: Boolean(internalMemo?.id)
+      internalMemoSaved: Boolean(internalMemo?.id),
+      emailSent: Boolean(result?.id),
+      emailDeliveryWarning
     });
   }
 }

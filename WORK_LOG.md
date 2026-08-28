@@ -1,3 +1,43 @@
+## [2026-08-28 20:45] 하이텔·나우누리 SOS 긴급 명령 연결
+
+**LOG_ID: 20260828_2045**
+목표: 3사 명령어 비교 자료에 있는 `SOS [메시지]`를 현재 서비스의 시삽 연락 기능과 연결한다.
+변경 파일: `public/js/core/contactSysopScreen.js`, `public/js/core/commandRouterGlobalNavigation.js`, `public/js/core/appFactoryHandlers.js`, `public/js/core/commandService.js`, `scripts/smoke-command-parity.js`, `scripts/smoke-full-traversal.js`, `docs/hitel_upgrade_plan.txt`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) SOS 메타데이터와 전역 라우팅 추가 2) 기존 시삽 편집기에 긴급 제목·메시지 prefill 3) 사용자의 Ctrl+S 확인 전에는 발송하지 않도록 유지 4) 게스트 차단 5) 단위·브라우저 회귀 검증 추가.
+실행: `node --check` 수정 파일 전수; `npm run smoke:command-parity`; `npm run smoke:full-traversal`; `npm run loop:verify`; `npm run check`; `npm test`; `git diff --check`
+기대: 원전 긴급 연락 명령을 현재 내부 쪽지/외부 메일 보존 경로로 안전하게 사용할 수 있다.
+결과: ✅ 인증 사용자 SOS 편집기 prefill·게스트 보호·기존 건의 흐름·전체 완료 게이트 10/10·Supabase `liveReady: true` 검증 통과.
+
+## [2026-08-28 20:30] 하이텔 개발 계획서와 실제 구현 상태 동기화
+
+**LOG_ID: 20260828_2030**
+목표: `docs/hitel_upgrade_plan.txt`의 과거 Phase 서술과 현재 코드가 다르게 보이는 문제를 해소해, 학습 자료와 실제 구현 상태를 정확히 구분한다.
+변경 파일: `docs/hitel_upgrade_plan.txt`, `WORK_LOG.md`
+수행 작업: PT/PR/작은공지·손님 배너·전자우편·ST·LS/LD/KW·SET HOME·/TO의 현재 구현을 코드와 검증 결과로 대조하고, 사용자 결정으로 제외한 CAP은 재도입하지 않는다는 상태 동기화 절을 계획서 끝에 추가했다.
+실행: `npm run loop:verify`; `npm run smoke:full-traversal`; `node scripts/smoke-mobile-viewports.js`; `npm run check`
+기대: 이후 개발자가 계획서의 초기 현황 문장과 실제 미구현 기능을 혼동하지 않는다.
+결과: ✅ 현재 구현 상태와 검증 근거를 별도 절로 기록했다. 기능 코드는 변경하지 않았다.
+
+## [2026-08-28 20:00] AGORA 부모 메뉴와 투표 목록 URL 정합성 보완
+
+**LOG_ID: 20260828_2000**
+목표: `legacy/hanulso.mnu`의 AGORA 컨테이너/VOTE 하위 메뉴 의미와 직접 URL 새로고침 결과를 일치시킨다.
+변경 파일: `public/js/core/routingUrlBuilder.js`, `public/js/core/routingStateRestorer.js`, `scripts/smoke-mobile-viewports.js`, `scripts/smoke-full-traversal.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) `/agora`를 여론광장 `board-select` 컨테이너로 복원 2) 투표 목록 URL을 `/agora/vote`로 분리 3) `/agora/create`와 `/agora/:voteId` 보존 4) Chromium 직접 새로고침 회귀 검증과 모바일 smoke 경로 갱신.
+실행: `node --check public/js/core/routingUrlBuilder.js`; `node --check public/js/core/routingStateRestorer.js`; `node --check scripts/smoke-mobile-viewports.js`; `node --check scripts/smoke-full-traversal.js`; `npm run smoke:full-traversal`; `node scripts/smoke-mobile-viewports.js`; `npm run loop:verify`; `npm test`; `npm run check`; `git diff --check`
+기대: 원전 메뉴 계층과 주소/화면 상태가 일치하고 기존 투표 기능은 변하지 않는다.
+결과: ✅ `/agora` 컨테이너 및 `/agora/vote` 목록 검증 통과, 모바일 3종·전체 순회·loop 10/10·단위 테스트·Supabase liveReady=true, 콘솔/page 오류 없음. `smoke:mobile-viewports` npm script는 존재하지 않아 동일 스크립트를 직접 실행했다.
+
+## [2026-08-28 20:15] AGORA GO 명령 계약 회귀 보강
+
+**LOG_ID: 20260828_2015**
+목표: 원전 메뉴 계층에 맞춘 `GO AGORA` 부모 메뉴와 `GO VOTE` 하위 기능의 의미가 이후 수정에서도 유지되도록 회귀 계약을 고정한다.
+변경 파일: `legacy/hanulso.mnu`, `scripts/smoke-go-ansi.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 원전 메뉴 주석의 오래된 최상위 설명을 현재 부모/자식 URL 의미로 동기화하고, 기존 메뉴 노드 실행 경로를 사용하는 GO AGORA/GO VOTE harness와 `/agora` 컨테이너·`/agora/vote` 목록 라우팅 소스 계약을 함께 검증했다.
+실행: `node --check scripts/smoke-go-ansi.js`; `npm run smoke:go-ansi`; `npm run loop:verify`
+기대: 부모/자식 메뉴 의미가 GO 명령과 직접 URL에서 동시에 보존된다.
+결과: ✅ GO/ANSI smoke 통과, 완료 게이트 10/10 통과.
+
 ## [2026-08-11 17:46] [자료정리] 이미지 실물 텍스트/시각 요소 1:1 대조를 통한 ref_images 5개 카테고리 정밀 분류 완료
 
 **LOG_ID: 20260811_1746**
@@ -2563,3 +2603,311 @@ Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
 수행 작업: 나우누리 2개, 천리안 6개, 유니텔 3개, 하이텔 계열 1개의 원본 URL을 직접 다운로드하고 이미지 내용을 육안 확인했다.
 검증: Sharp 해상도 메타데이터와 원본 URL manifest 기록 확인.
 결과: ✅ 검증 폴더에 12개 종료 공지 이미지 보관(160×100 미만 0개)
+
+## [2026-08-27 15:05] ANSI·GO·키보드 액션 및 오류 영역 통합 점검
+
+**LOG_ID: 20260827_1505**
+목표: 기존 서비스 기능을 보존하면서 ANSI/CSI 처리 범위, GO 역사 별칭, 클릭 영역의 키보드 접근성, 힌트·오류 영역 분리, Nurie NRE 참고자료 카탈로그를 보강한다.
+변경 파일: `public/js/core/ansiRenderUtils.js`, `public/js/core/appEvents.js`, `public/js/core/terminalHintMarkup.js`, `public/js/core/terminalFeedback.js`, `public/js/core/terminalHintFooter.js`, `public/js/core/postWriteView.js`, `public/js/core/contactSysopScreen.js`, `public/js/core/commandRouterBrowse.js`, `public/js/core/commandRouterPostView.js`, `public/js/core/myInfoRenderer.js`, `public/js/core/signupEmailForm.js`, `public/js/core/signupFlowUi.js`, `public/js/core/signupModule.js`, `public/index.html`, `public/style.css`, `package.json`, `scripts/loop-verify.js`, `scripts/smoke-go-ansi.js`, `docs/NURIE_NRE_CATALOG.md`
+수행 작업:
+1) CSI 커서 이동·지우기·삽입/삭제·스크롤·저장/복원과 비-CSI ESC 무시, 자동 줄바꿈/스크롤을 공통 렌더러에 적용
+2) HITEL.MNU에서 확인한 `tojung`, `biorym`, `gunghap`을 기존 canonical GO 라우트로 연결하고 회귀 스모크 추가
+3) 명령 토큰·가입/삭제 확인·내 정보 메뉴에 role/tabindex/Enter·Space 실행을 제공하고 포커스 스타일을 추가
+4) 전용 `#terminal-error` 행을 추가하여 검증/저장 오류가 지속 힌트바를 덮지 않도록 분리
+5) Nurie `.NRE` 4종의 크기·SHA-256·적용 범위를 `docs/NURIE_NRE_CATALOG.md`에 기록(누리에15 중복 제외)
+검증: `node --check` 수정 JS 전수, `npm run smoke:go-ansi`, `npm run smoke:command-parity`, `npm run smoke:menu-wiring`
+결과: ✅ 신규·기존 스모크 및 문법 검사 통과
+
+## [2026-08-27 15:58] 브라우저 전체 순회 점검
+
+**LOG_ID: 20260827_1558**
+목표: 핵심 화면의 브라우저 로딩·라우팅·대화실 진입을 실제 Playwright 순회로 확인한다.
+실행: `npm run smoke:full-traversal`
+결과: ⚠️ Supabase 드라이버 실행은 `jynbmavtipserkozlgwt.supabase.co` DNS `ENOTFOUND`로 502가 발생했다. 메모리 드라이버로 재실행한 결과 화면/API 대부분은 통과했으나 채팅 대화실 진입 대기에서 1건 timeout이 발생했다. 이번 변경 범위와 무관한 환경 연결·기존 채팅 테스트 조건으로 판단하여 코드는 추가 변경하지 않았다.
+
+## [2026-08-27 16:10] docs 전체 자료 학습 범위 catalog화
+
+**LOG_ID: 20260827_1610**
+목표: docs와 Nurie 자료를 직접 확인 범위·기존 OCR 요약 범위·추가 원본 검토 필요 범위로 구분하여, 학습되지 않은 자료를 추측 근거로 사용하지 않도록 한다.
+변경 파일: `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 프로젝트 규칙, 01410 UI, 하이텔·나우누리 복원/명령 자료, 사용자 가이드, Nurie 메뉴·소스·NRE, OCR PDF·영상·이미지 보관 범위를 유형별로 정리하고 반영 전 판단 규칙을 명시했다.
+결과: ✅ 개발 기준으로 학습된 자료와 구간별 재검토가 필요한 원본을 구분 완료
+
+## [2026-08-28 14:35] Supabase 프로젝트 복구 및 실연결 검증
+
+**LOG_ID: 20260828_1435**
+목표: `.env`에 설정된 Supabase 프로젝트의 연결 실패 원인을 확인하고 복구 후 애플리케이션 저장소 연결을 검증한다.
+변경 파일: 없음(원격 Supabase 프로젝트 상태만 복구)
+수행 작업: 1) Supabase 프로젝트 `jynbmavtipserkozlgwt` 상태가 `INACTIVE`임을 확인했다. 2) 프로젝트 복구를 실행하고 DNS 및 REST 응답 회복을 확인했다. 3) 원격 DB에 boards/posts/members/memos/attachments/user_activities 테이블과 기존 데이터가 존재함을 SQL로 확인했다. 4) PostgREST 스키마 캐시 갱신 후 실시간 점검을 재실행했다.
+실행: `npm run check`, `npm run smoke:full-traversal`, `npm run loop:verify`
+기대: Supabase 드라이버가 실제 원격 저장소를 사용하고 핵심 API/화면 검증이 통과한다.
+결과: ✅ `npm run check` liveReady=true, 전체 저장소 Supabase 연결 성공; 전체 순회 통과; 완료 게이트 10/10 통과
+## [2026-08-28 15:00] 학습 자료 기반 역사 GO 별칭 및 UI 회귀 검증 확장
+
+**LOG_ID: 20260828_1500**
+목표: Nurie/HITEL.MNU에서 확인된 명령어만 현재 서비스의 canonical 화면으로 연결하고, 클릭·키보드·오류/힌트바 분리 계약을 자동 회귀 검증한다.
+변경 파일: `public/js/core/historicalGoAliases.js`, `public/js/core/menuNavigationActions.js`, `scripts/smoke-go-ansi.js`, `WORK_LOG.md`
+수행 작업: 1) `unse`를 운세(FORTUNE), `puzzle`을 15퍼즐(16P)로 연결 2) 미지원 `comics`는 임의 경로를 만들지 않음 3) native hotspot 버튼, Enter/Space 토큰 활성화, 전용 `terminal-error` 행과 힌트 행 순서를 smoke 계약으로 고정
+실행: `node --check scripts/smoke-go-ansi.js`; `node --check public/js/core/menuNavigationActions.js`; `npm run smoke:go-ansi`
+기대: 검증된 역사 별칭과 기존 상호작용 동작을 보존하면서 잘못된 GO 대상은 이동하지 않는다.
+결과: ✅ GO alias·ANSI/CSI·키보드 토큰·상호작용 계약 smoke 통과
+추가 검증: `npm run loop:verify` 10/10 통과, `npm run smoke:full-traversal` 통과, `npm run check` liveReady=true. `npm test`는 코드 오류가 아니라 저장소에 `archive/dev-only/tests/unit` 디렉터리가 없어 테스트 러너 초기화 단계에서 중단됨.
+## [2026-08-28 16:00] 단위 테스트 러너 저장소 구조 정합성 보완
+
+**LOG_ID: 20260828_1600**
+목표: `npm test`가 존재하지 않는 보관용 테스트 경로 때문에 시작 전에 실패하지 않도록 현재 저장소의 실제 단위 테스트 위치를 사용한다.
+변경 파일: `scripts/run-unit-tests.js`, `WORK_LOG.md`
+수행 작업: `archive/dev-only/tests/unit`가 있으면 기존 경로를 우선 사용하고, 없으면 `scripts/*.test.js`를 실행하도록 안전한 fallback을 추가했다. 테스트 파일이 전혀 없을 때의 오류 메시지도 실제 탐색 경로를 표시하도록 정리했다.
+실행: `node --check scripts/run-unit-tests.js`; `npm test`; `npm run loop:verify`; `npm run smoke:full-traversal`
+기대: 저장소에 존재하는 테스트가 표준 명령으로 실행되고 기존 서비스 회귀 검증은 변하지 않는다.
+결과: ✅ `npm test` 통과(BaseRepository 1건), 완료 게이트 10/10 통과, 전체 순회 통과
+## [2026-08-28 16:30] 시삽 건의 내부 쪽지 보존 및 외부 메일 실패 처리
+
+**LOG_ID: 20260828_1630**
+목표: 시삽 건의가 외부 이메일 발송 상태와 관계없이 Supabase 내부 쪽지함에 보존되고, 사용자가 실제 결과를 알 수 있도록 한다.
+변경 파일: `src/server/routeHandlers/contactRoutes.js`, `public/js/core/contactSysopScreen.js`, `scripts/smoke/memo-tests.js`, `scripts/smoke-full-traversal.js`, `WORK_LOG.md`
+수행 작업: 1) 내부 쪽지를 먼저 저장 2) Resend 실패를 502 전체 실패로 전환하지 않고 `emailSent=false` 경고 응답으로 반환 3) 화면에서 내부 저장 성공과 외부 메일 실패를 구분해 안내 4) 성공·실패 라우터 harness 회귀 검증 추가
+실행: `npm test`; `npm run smoke:full-traversal`; `npm run loop:verify`; `npm run check`
+기대: 시삽 건의 내용은 내부 수신함에 남고 외부 메일 장애가 사용자 입력을 잃게 만들지 않는다.
+결과: ✅ 단위 테스트 통과, 전체 순회 통과, 완료 게이트 10/10 통과, Supabase liveReady=true
+추가 검증: 외부 메일 성공·Resend 실패·메일 서비스 미설정 3개 경로의 내부 저장 보존을 harness로 확인했다. `npm test`, `npm run loop:verify`, `npm run smoke:full-traversal`, `npm run check` 모두 통과(`liveReady=true`).
+## [2026-08-28 17:00] PC통신 메일 명령 의미 정합성 보완
+
+**LOG_ID: 20260828_1700**
+목표: HITEL/NOW_MENU 원전의 전자우편 흐름에 맞춰 `ME`, `MEMO`, `RMAIL`, `CMAIL`, `MAIL`의 이동 의미를 일관되게 유지한다.
+변경 파일: `public/js/core/menuNavigationActions.js`, `scripts/smoke-go-ansi.js`, `WORK_LOG.md`
+수행 작업: `GO ME`와 `GO MEMO`를 받은쪽지함(`inbox`)으로 통일하고 `GO RMAIL`과 같은 결과를 보장했다. `GO MAIL`은 전자우편 대문 메뉴, `GO CMAIL`은 보낸쪽지함으로 유지했다. 각 분기와 상자 상태를 GO smoke에 추가했다.
+실행: `node --check public/js/core/menuNavigationActions.js`; `node --check scripts/smoke-go-ansi.js`; `npm run smoke:command-parity`; `npm run smoke:go-ansi`; `npm run loop:verify`; `npm run smoke:full-traversal`; `npm run check`
+기대: PC통신 사용자가 익숙한 ME/RMAIL 받은편지함 흐름과 MAIL/CMAIL 메뉴·보낸함 흐름이 혼동 없이 동작한다.
+결과: ✅ 명령 parity 통과, 완료 게이트 10/10 통과, 전체 순회 통과, Supabase liveReady=true
+## [2026-08-28 17:15] PC통신 서비스 간 GO 별칭 호환 보완
+
+**LOG_ID: 20260828_1715**
+목표: 천리안 명령 자료와 현재 01410 메뉴 트리를 대조해 실제 대응 대상이 있는 명령만 호환한다.
+변경 파일: `public/js/core/historicalGoAliases.js`, `public/js/core/menuNavigationActions.js`, `scripts/smoke-go-ansi.js`, `WORK_LOG.md`
+수행 작업: 천리안 `GO WORD`를 현재 실제 게시판 `PLAZA(열린광장)`으로 연결하고, 별칭이 canonical 대상 검색까지 전달되도록 메뉴·게시판 resolver 입력을 정규화했다. 대상이 없는 `BLUEHOUSE`, `ELF` 등은 추가하지 않았다.
+실행: `npm run smoke:go-ansi`; `npm run smoke:command-parity`; `npm run loop:verify`; `npm run smoke:full-traversal`; `npm run check`
+기대: 3사 명령어 차이를 존중하면서 현재 서비스에 존재하는 기능만 안전하게 연결한다.
+결과: ✅ GO/명령 parity 통과, 완료 게이트 10/10 통과, 전체 순회 통과, Supabase liveReady=true
+## [2026-08-28 17:30] 나우누리 한글 GO 및 3사 게시판 별칭 확장
+
+**LOG_ID: 20260828_1730**
+목표: 3사 명령어 자료에 기록된 한국어·천리안 게시판 이동 명령을 현재 실제 메뉴 대상과 연결한다.
+변경 파일: `public/js/core/historicalGoAliases.js`, `public/js/core/menuNavigationActions.js`, `scripts/smoke-go-ansi.js`, `WORK_LOG.md`
+수행 작업: 나우누리 `GO 유머란`을 실제 `HUMOR(우스개)` 게시판으로, 천리안 `GO WORD`를 `PLAZA(열린광장)`으로 연결했다. 별칭의 canonical 값이 메뉴·게시판 검색 단계까지 전달되도록 보완했다.
+실행: `node --check public/js/core/historicalGoAliases.js`; `node --check public/js/core/menuNavigationActions.js`; `node --check scripts/smoke-go-ansi.js`; `npm run smoke:go-ansi`; `npm run loop:verify`; `npm run smoke:full-traversal`; `npm run check`
+기대: 원전별 별칭 차이를 살리면서 현재 서비스에 존재하는 게시판으로만 안전하게 이동한다.
+결과: ✅ GO smoke 통과, 완료 게이트 10/10 통과, 전체 순회 통과, Supabase liveReady=true
+## [2026-08-28 18:00] 01410 대문 작은공지 복원
+
+**LOG_ID: 20260828_1800**
+목표: 01410 원전의 초기 화면처럼 최신 공지를 한 줄로 보여주고 `(GO NOTICE)`로 공지사항에 진입하게 한다.
+변경 파일: `public/js/core/menuNavigation.js`, `scripts/smoke-go-ansi.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) 기존 ANSI 작은공지 빌더와 핫스팟 경로를 확인 2) `/api/boards/notice?page=1&pageSize=1` 최신 제목 조회 추가 3) 30초 캐시·in-flight 공유·실패 시 비차단 폴백 적용 4) 대문 빌더에 제목 전달 및 상호작용 계약 smoke 보강
+실행: `node --check public/js/core/menuNavigation.js`; `node --check scripts/smoke-go-ansi.js`; `npm run smoke:go-ansi`
+기대: 대문에서 공지 제목이 80x24 고정폭 한 줄로 보이고 기존 GO NOTICE 클릭/키보드 동작이 유지된다.
+결과: ✅ 문법 검사 및 GO/ANSI·상호작용 smoke 통과. 전체 게이트는 다음 단계에서 실행한다.
+## [2026-08-28 18:05] 작은공지 회귀 검증 완료
+
+**LOG_ID: 20260828_1805**
+목표: 작은공지 복원 후 기존 명령·화면·Supabase 흐름에 회귀가 없는지 확인한다.
+변경 파일: `WORK_LOG.md`
+수행 작업: `npm run loop:verify`, `npm run check`, `npm test`, `npm run smoke:full-traversal` 및 루트 HTTP 200 응답을 재검증했다.
+실행: 완료 게이트 10/10, Supabase liveReady=true, 단위 테스트 통과, 전체 순회 통과, 루트 HTTP 200
+기대: 최신 공지 조회가 실패해도 대문을 막지 않으며 기존 기능은 모두 유지된다.
+결과: ✅ 모든 검증 통과. 전체 순회는 예상된 PDS 404 한 건을 처리된 경로로 확인했으며 콘솔 오류 없이 종료했다.
+## [2026-08-28 18:15] 원전 계획서 상태 동기화 및 대문 클릭 실측
+
+**LOG_ID: 20260828_1815**
+목표: 작은공지 기능의 실제 브라우저 동작을 확인하고 원전 계획서의 오래된 미완료 표기를 현재 코드와 맞춘다.
+변경 파일: `docs/hitel_upgrade_plan.txt`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) Chromium으로 `/` 렌더 결과에서 `[작은공지] 게시판 개편 안내...(GO NOTICE)` 확인 2) GO NOTICE 핫스팟 1개 생성 확인 3) 클릭 후 `/notice` 이동 확인 4) 계획서 P1-4/U-2와 학습 카탈로그 반영 상태 갱신
+실행: 임시 Playwright 브라우저 실측 — 공지 문장·핫스팟·공지사항 이동 모두 통과
+기대: 문서와 실제 구현 상태가 일치하고, 작은공지 클릭 동작이 사용자 화면에서 재현된다.
+결과: ✅ 브라우저 실측 통과. 임시 검증 스크립트는 제거했고 기존 코드·데이터는 보존했다.
+## [2026-08-28 18:30] 대문 핫스팟 브라우저 회귀 검증 편입
+
+**LOG_ID: 20260828_1830**
+목표: 원전 번호 선택을 보완하는 대문의 마우스 핫스팟이 좌표 겹침·라우팅 누락으로 죽지 않도록 실제 클릭을 전체 순회에 편입한다.
+변경 파일: `scripts/smoke-full-traversal.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 루트 화면을 핫스팟마다 재로드한 뒤 12개 버튼을 순서대로 클릭하고, 각 클릭의 URL 또는 `data-screen` 전환을 확인했다. `(GO NOTICE)`는 `/notice` 도착까지 별도 확인했다.
+실행: `node --check scripts/smoke-full-traversal.js`; `npm run smoke:full-traversal`
+기대: 메뉴 11개와 작은공지 링크가 모두 실제 브라우저 클릭으로 동작하고 콘솔/page 오류가 없다.
+결과: ✅ 12개 핫스팟 클릭 검증 통과. 전체 순회도 콘솔 오류 없이 통과했다.
+## [2026-08-28 18:45] 건의하기 직접 경로 회귀 coverage 추가
+
+**LOG_ID: 20260828_1845**
+목표: 사용자가 주소창에 직접 여는 `/guide/tosysop` 경로가 새로고침·게스트 보호 상황에서도 빈 화면이나 브라우저 오류로 끝나지 않게 한다.
+변경 파일: `scripts/smoke/common-utils.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 공통 Playwright 순회 경로에 `/guide/tosysop`를 추가하고, 기존 로그인 보호 및 터미널 렌더 조건을 그대로 검증했다.
+실행: `node --check scripts/smoke/common-utils.js`; `npm run smoke:full-traversal`
+기대: 건의하기 직접 경로가 안전하게 가이드 화면으로 복귀하고 전체 순회에서 회귀가 잡힌다.
+결과: ✅ 신규 경로 포함 전체 순회 통과, 콘솔/page 오류 없음. 게스트 보호 로직은 변경하지 않았다.
+## [2026-08-28 19:00] 시삽 건의 편집기 브라우저 회귀 검증 추가
+
+**LOG_ID: 20260828_1900**
+목표: 로그인 사용자의 건의하기 편집기가 실제 클릭 진입 후에도 제목·내용 검증을 본문 안에서 처리하고 하단 힌트바를 보존하는지 자동 확인한다.
+변경 파일: `scripts/smoke-full-traversal.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 별도 Playwright 페이지에서 QA 회원 상태를 주입하고 GUIDE의 건의하기 핫스팟을 클릭했다. 제목/내용 입력 필드와 전송 힌트를 확인한 뒤 빈 제목으로 Ctrl+S를 실행해 본문 인라인 오류·제목 포커스·힌트 보존을 검증했다.
+실행: `node --check scripts/smoke-full-traversal.js`; `npm run smoke:full-traversal`
+기대: 오류 문구가 `#cmd-hint`를 덮지 않고 편집기 본문에 남으며, 실제 클릭 진입이 유지된다.
+결과: ✅ `Verified authenticated contact editor and inline validation.` 및 전체 순회 통과, 콘솔/page 오류 없음.
+## [2026-08-28 19:30] 하위 메뉴 핫스팟 전수 실측
+
+**LOG_ID: 20260828_1930**
+목표: 대문뿐 아니라 GUIDE/BBS/GAME/LOG 하위 메뉴의 번호 영역도 실제 클릭으로 이동되는지 확인한다.
+변경 파일: `WORK_LOG.md`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`
+수행 작업: Chromium에서 5개 메뉴를 열어 현재 렌더된 40개 핫스팟을 수집하고, 각 메뉴를 재로드한 뒤 같은 순번을 클릭해 URL 또는 화면 상태 전환을 확인했다. AGORA는 빈 투표 목록이라 핫스팟이 없었고, 게스트 건의하기와 외부 OAuth 이동은 의도된 결과로 확인했다.
+실행: 임시 Playwright 하위 메뉴 클릭 probe
+기대: 실제 존재하는 메뉴 기능은 모두 마우스로 선택 가능하고, 빈 기능을 새로 만들지 않는다.
+결과: ✅ 40/40 전환 성공. 실패·콘솔 오류 없음. 임시 probe는 제거했다.
+## [2026-08-28 21:10] 원전 긴 형태 명령어·목록 직접 동작 호환성 보완
+
+**LOG_ID: 20260828_2110**
+목표: 하이텔·나우누리·천리안 명령어 자료에 기록된 긴 형태 명령을 현재 서비스의 canonical 라우터와 일치시킨다.
+변경 파일: `public/js/core/commandNormalizer.js`, `public/js/core/commandRouterBrowse.js`, `public/js/core/commandRouterMemo.js`, `scripts/smoke-command-parity.js`, `docs/hitel_upgrade_plan.txt`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) PREV/MAIN/QUIT/NEXT/BACK/WRITE/ANSWER/READ 정규화 2) 게시판 R/READ·RE/ANSWER 번호 처리 3) 쪽지함 R/READ 번호 및 S/SEND 아이디 처리 4) 기존 인증·작성·읽기 경로 재사용 5) 회귀 테스트 추가.
+실행: `node --check` 수정 파일; `npm run smoke:command-parity`; `npm run smoke:full-traversal`; `npm run loop:verify`; `npm run check`; `npm test`; `git diff --check`
+기대: 원전 긴 형태 입력이 단축 명령과 동일하게 동작하고, 게스트 보호 및 기존 화면 흐름이 변하지 않는다.
+결과: ✅ 완료 — 명령 패리티·전체 브라우저 경로·완료 게이트 10/10·Supabase `liveReady: true`·단위 테스트·diff 검증 통과.
+
+## [2026-08-28 17:20] 쪽지 목록의 원전 FW 전달 명령 보완
+
+**LOG_ID: 20260828_1720**
+목표: 원전 전자우편 명령 `FW 번호 아이디`를 쪽지 목록에서도 사용할 수 있게 하되, 기존 읽기 화면 전달·쪽지 작성·저장 경로는 재사용한다.
+변경 파일: `public/js/core/commandRouterMemo.js`, `scripts/smoke-command-parity.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/hitel_upgrade_plan.txt`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 목록 번호로 대상 쪽지를 찾는 `FW` 분기 추가 2) 전달 헤더·본문을 기존 `_forwardMemoContent` 형식으로 채움 3) 지정 수신자와 기존 `showMemoWrite` 흐름으로 이동 4) 없는 번호는 목록에 남도록 처리 5) 읽기 화면 `FW`는 기존 동작을 유지.
+실행: `node --check public/js/core/commandRouterMemo.js`; `node --check scripts/smoke-command-parity.js`; `npm run smoke:command-parity`; `npm run smoke:full-traversal`; `npm run loop:verify`; `npm run check`; `npm test`; `git diff --check`
+기대: `FW 3 friend2` 입력이 3번 쪽지를 friend2에게 전달하는 작성 화면으로 이동하고, 별도 전송 경로를 만들지 않는다.
+결과: ✅ 완료 — 명령 패리티·전체 브라우저 순회·loop:verify 10/10·Supabase `liveReady: true`·단위 테스트·diff 검증 통과.
+
+## [2026-08-28 16:55] 게임 입력 오류의 본문 인라인 표시 통일
+
+**LOG_ID: 20260828_1655**
+목표: 바이오리듬·운세·토정비결·궁합·MBTI의 잘못된 입력이 하단 명령 힌트바를 덮지 않도록 건의/쪽지 편집기와 같은 본문 인라인 오류 행으로 통일한다.
+변경 파일: `public/js/core/amusementScreens.js`, `public/style.css`, `scripts/smoke-full-traversal.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/hitel_upgrade_plan.txt`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 게임 입력 검증 경로에서 `setHint()` 직접 호출을 제거하고 `game-inline-validation` 행을 추가 2) 성공·단계 전환 시 이전 오류 행을 정리 3) 다섯 게임 경로의 실제 브라우저 입력과 힌트 불변 여부를 전체 순회에 추가.
+실행: `node --check public/js/core/amusementScreens.js`; `node --check scripts/smoke-full-traversal.js`; `npm run smoke:full-traversal`; `npm run loop:verify`; `npm run check`; `npm test`; `git diff --check`
+기대: 잘못된 게임 입력은 본문에 남고 `#cmd-hint`는 기존 명령 안내를 유지한다.
+결과: ✅ 완료 — 다섯 게임 검증 브라우저 테스트 및 전체 순회 통과, loop:verify 10/10, Supabase `liveReady: true`, 단위 테스트·diff 검증 통과.
+
+## [2026-08-28 22:05] 원전 GO 호환성 카탈로그와 BLUEHOUSE 연결
+
+**LOG_ID: 20260828_2205**
+목표: 3사 공통 및 통신사별 GO 키워드를 현재 메뉴 트리와 대조하고, 실제 대응 화면이 확인된 명령만 연결한다.
+변경 파일: `public/js/core/historicalGoAliases.js`, `scripts/smoke-go-ansi.js`, `docs/PC통신_GO_호환성_카탈로그.md`, `docs/PC통신_자료_학습카탈로그.md`, `docs/hitel_upgrade_plan.txt`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) `GO BLUEHOUSE`를 기존 `/guide/tosysop` 건의하기 화면에 연결 2) 공통 `GO CHAT/HUMOR`의 canonical 메뉴 동작을 회귀 검증 3) PGF/ANC/JUBU/BARUN/SUMMER/ELF/GMF/VG/SF/CHOLCD는 동등 화면 부재를 확인해 보류 목록으로 기록 4) DN 프로토콜·ABSENT 구현 상태를 계획서에 동기화 5) 보류 명령이 임의 게시판으로 이동하지 않는 회귀 검증 추가.
+실행: `node --check public/js/core/historicalGoAliases.js`; `node --check scripts/smoke-go-ansi.js`; `npm run smoke:go-ansi`; `npm run loop:verify`; `npm run check`; `npm test`; `npm run smoke:full-traversal`; `git diff --check`
+기대: 원전 명령어의 의미를 보존하면서 현재 서비스에 없는 기능을 성공한 것처럼 가장하지 않는다.
+결과: ✅ 완료 — GO/ANSI smoke, Chromium 전체 순회(콘솔 오류 없음), loop:verify 10/10, Supabase `liveReady: true`, 단위 테스트, diff 검증 통과.
+
+## [2026-08-29 09:00] 대화실 내부 GO 전역 이동 보완
+
+**LOG_ID: 20260829_0900**
+목표: 원전의 “어느 화면에서든 GO” 의미가 활성 대화실에서도 유지되도록 명령 입력 우선순위를 보완한다.
+변경 파일: `public/js/core/commandRouterChat.js`, `scripts/smoke/chat-tests.js`, `scripts/smoke-full-traversal.js`, `docs/PC통신_GO_호환성_카탈로그.md`, `docs/hitel_upgrade_plan.txt`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) 일반 `GO 코드`와 `/GO 코드`를 기존 전역 GO resolver로 전달 2) 성공한 이동 후에만 기존 대화실 leave 통지 실행 3) 미지원 대상은 방을 유지하며 `이동할 메뉴를 찾지 못했습니다.` 안내 4) plain/slash/미지원 3개 경로를 모듈 harness로 검증.
+실행: `node --check public/js/core/commandRouterChat.js`; `node --check scripts/smoke/chat-tests.js`; `node --check scripts/smoke-full-traversal.js`; `npm run smoke:full-traversal`; 후속 전체 게이트.
+기대: 대화실에서 GO가 채팅 메시지로 오발송되지 않고, 실패한 이동 때문에 방을 잃지 않는다.
+결과: ✅ 완료 — Chromium 전체 순회와 채팅실 GO 모듈 harness 통과, 콘솔/page 오류 없음. 후속 loop:verify 10/10·Supabase `liveReady: true`·단위 테스트·diff 검증 통과.
+## [2026-08-28 21:25] 회원·자료실 긴 형태 명령어 별칭 연결
+
+**LOG_ID: 20260828_2125**
+목표: 원전 명령어 자료의 `FINGER`, `INFO`, `FL`을 현재 서비스의 검증된 canonical 흐름과 연결한다.
+변경 파일: `public/js/core/commandNormalizer.js`, `scripts/smoke-command-parity.js`, `docs/hitel_upgrade_plan.txt`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) FINGER→PF 2) INFO→HI 3) PDS 목록 FL→L 4) 패리티 회귀 검증 추가.
+실행: `node --check` 수정 파일; `npm run smoke:command-parity`; 전체 검증 게이트.
+기대: 기존 프로필·내정보·자료실 목록 로직을 보존하면서 원전 긴 형태 입력을 지원한다.
+결과: ✅ 완료 — 명령 패리티·전체 브라우저 경로·완료 게이트 10/10·Supabase `liveReady: true`·단위 테스트·diff 검증 통과.
+## [2026-08-29 10:35] Historical chat-room list shortcuts
+
+**LOG_ID: 20260829_1035**
+목표: PC통신 명령어 문서에 기록된 활성 채팅실 `/l`·`/list`를 현재 채팅 라우터에서 사용할 수 있게 연결.
+변경 파일: `public/js/core/commandRouterChat.js`, `scripts/smoke-command-parity.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/hitel_upgrade_plan.txt`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 기존 `/p`의 방 나가기·로비 복귀 경로 재사용 2) `/l`·`/list`가 일반 채팅 메시지로 전송되지 않도록 라우팅 3) 방 나가기 API와 로비 렌더링 횟수 회귀 테스트 추가.
+실행: `node --check public/js/core/commandRouterChat.js`; `node --check scripts/smoke-command-parity.js`; `npm run smoke:command-parity`
+기대: 활성 채팅실에서 `/l` 또는 `/list` 입력 시 방을 나가고 채팅방 목록으로 정확히 복귀.
+결과: ✅ 집중 검증 완료. 전체 게이트는 다음 단계에서 재실행.
+
+## [2026-08-29 11:10] Historical WHO/U member lookup
+
+**LOG_ID: 20260829_1110**
+목표: PC통신 공통 명령어 `WHO 또는 U` 중 누락된 `U` 접속자 조회를 기존 화면 의미와 충돌 없이 연결.
+변경 파일: `public/js/core/commandRouterGlobalNavigation.js`, `scripts/smoke-command-parity.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/hitel_upgrade_plan.txt`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 메인·일반 화면에서 `U`를 접속자 조회로 라우팅 2) 게시판 목록의 글쓰기와 글 보기의 첨부파일 목록 의미는 보존 3) 명령어 회귀 테스트 추가.
+실행: `node --check public/js/core/commandRouterGlobalNavigation.js`; `node --check scripts/smoke-command-parity.js`; `npm run smoke:command-parity`
+기대: `U`가 화면 문맥에 맞는 역사적 공통 명령으로 동작하고 기존 게시판 로컬 명령은 변하지 않음.
+결과: ✅ 집중 검증 완료. 전체 게이트는 다음 단계에서 재실행.
+## [2026-08-29 11:35] Historical post-list A reply shortcut
+
+**LOG_ID: 20260829_1135**
+목표: 게시판 목록에서 문서에 명시된 `A 번호` 답글 명령 누락을 보완.
+변경 파일: `public/js/core/commandRouterBrowse.js`, `scripts/smoke-command-parity.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/hitel_upgrade_plan.txt`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 목록 화면에서 `A 번호`를 기존 답글 대상 해석기로 연결 2) `ANSWER` 정규화 및 `RE` 경로 유지 3) 글 보기 화면의 `A` 이전글 이동은 변경하지 않음 4) 선택 게시글 보존 회귀 테스트 추가.
+실행: `node --check public/js/core/commandRouterBrowse.js`; `node --check scripts/smoke-command-parity.js`; `npm run smoke:command-parity`
+기대: `A 번호`가 현재 목록의 해당 글에 답글 작성 화면을 열고, 비로그인 보호와 기존 입력 흐름을 그대로 사용.
+결과: ✅ 집중 검증 완료. 전체 게이트는 다음 단계에서 재실행.
+## [2026-08-29 12:05] Command-help parity for historical aliases
+
+**LOG_ID: 20260829_1205**
+목표: 실제 라우터에서 지원하는 PC통신 명령 별칭이 도움말에서 누락되거나 잘못 설명되지 않도록 정합성 보완.
+변경 파일: `public/js/core/commandService.js`, `scripts/smoke-command-parity.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/hitel_upgrade_plan.txt`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 문맥별 `A` 동작 설명 추가 2) `WHO` 도움말에 `U` 별칭 추가 3) `FW 번호 아이디` 목록 전달 형식 안내 4) 메타데이터 회귀 assertion 추가.
+실행: `node --check public/js/core/commandService.js`; `node --check scripts/smoke-command-parity.js`; `npm run smoke:command-parity`
+기대: 도움말의 명령 형식과 실제 화면 라우터가 같은 사용자 경험을 제공.
+결과: ✅ 집중 검증 완료. 전체 게이트는 다음 단계에서 재실행.
+## [2026-08-29 12:40] Chat-room footer discoverability
+
+**LOG_ID: 20260829_1240**
+목표: 활성 채팅실에서 실제로 동작하는 역사 명령 `/L`·`/W`를 힌트바에서 발견하고 클릭할 수 있게 노출.
+변경 파일: `public/js/core/commandFooterText.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/hitel_upgrade_plan.txt`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 채팅실 카테고리에 `/L:목록`, `/W:참여자` 토큰 추가 2) 기존 채팅 라우터의 방 나가기·참여자 조회 경로 재사용 3) 방 만들기·상태판 토큰은 유지.
+실행: 전체 검증 게이트 예정.
+기대: 힌트바에서 클릭 또는 키보드로 `/L`·`/W`를 실행하면 각각 방 목록·참여자 목록이 열린다.
+결과: 구현 완료, 전체 검증 진행 중.
+## [2026-08-29 13:10] Recent-post filter discoverability
+
+**LOG_ID: 20260829_1310**
+목표: 이미 구현된 `NEW/NW` 새글 필터를 게시판 목록 힌트바에서 발견하고 클릭할 수 있게 보완.
+변경 파일: `public/js/core/commandFooterText.js`, `scripts/smoke-command-parity.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `WORK_LOG.md`
+수행 작업: 1) 일반 게시판·통합 자료실 목록에 `새글(NEW)` 토큰 추가 2) 기존 `recent=3` 라우팅은 그대로 재사용 3) 두 footer 카테고리의 명령 노출 회귀 assertion 추가.
+실행: `node --check public/js/core/commandFooterText.js`; `node --check scripts/smoke-command-parity.js`; `npm run smoke:command-parity`
+기대: 힌트바의 `새글(NEW)` 클릭/키보드 동작이 기존 `NEW/NW` 입력과 동일하게 최근 3일 글 목록을 연다.
+결과: ✅ 집중 검증 완료. 전체 게이트는 다음 단계에서 재실행.
+## [2026-08-29 13:45] Nownuri CHATIN compatibility
+
+**LOG_ID: 20260829_1345**
+목표: 나우누리 원전 `CHATIN` 대화실 진입 명령을 현재 서비스의 기존 대화실 로비와 정합시킴.
+변경 파일: `public/js/core/commandNormalizer.js`, `public/js/core/commandService.js`, `public/js/core/commandRouterGlobalNavigation.js`, `public/js/core/appFactoryHandlers.js`, `scripts/smoke-command-parity.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) `CHATIN`을 canonical `CHAT`으로 정규화 2) 기존 대화실 로비 renderer를 전역 라우터에 주입 3) 게스트 로그인 보호 유지 4) 채팅방 일반 문장이 먼저 처리되는지 보존 5) 명령·도움말·로비 재사용 parity assertion 추가.
+실행: `node --check public/js/core/commandNormalizer.js`; `node --check public/js/core/commandService.js`; `node --check public/js/core/commandRouterGlobalNavigation.js`; `node --check public/js/core/appFactoryHandlers.js`; `node --check scripts/smoke-command-parity.js`; `npm run smoke:command-parity`
+기대: 로그인 사용자가 `CHAT` 또는 `CHATIN`을 입력하면 동일한 대화실 로비로 이동하고, 활성 방의 일반 문장 처리에는 변화가 없다.
+결과: ✅ 집중 검증 완료. 전체 게이트는 다음 단계에서 재실행.
+## [2026-08-29 14:10] Numeric F list positioning
+
+**LOG_ID: 20260829_1410**
+목표: 3사 공통 원전의 게시판 목록 `F 번호` 직접 위치 이동을 현재 서비스에 연결.
+변경 파일: `public/js/core/commandNormalizer.js`, `public/js/core/commandService.js`, `scripts/smoke-command-parity.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 목록 화면에서 숫자 인자가 붙은 `F`만 `LS 번호`로 정규화 2) 기존 번호 위치 조회·오류 처리를 재사용 3) 단독 `F` 페이징과 글보기 `F`는 보존 4) 도움말 설명과 parity assertion 보강.
+실행: `node --check public/js/core/commandNormalizer.js`; `node --check public/js/core/commandService.js`; `node --check scripts/smoke-command-parity.js`; `npm run smoke:command-parity`
+기대: 게시판 목록에서 `F 번호`가 해당 번호의 페이지를 열고, 단독 `F`는 계속 다음 페이지로 이동.
+결과: ✅ 집중 검증 완료. 전체 게이트는 다음 단계에서 재실행.
+## [2026-08-29 14:30] Nownuri GO CHATIN alias
+
+**LOG_ID: 20260829_1430**
+목표: 나우누리 원전 메뉴 코드 `CHATIN`의 `GO CHATIN` 진입을 현재 대화실 로비와 정합시킴.
+변경 파일: `public/js/core/historicalGoAliases.js`, `scripts/smoke-go-ansi.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) `CHATIN → CHAT` canonical GO 별칭 추가 2) 기존 메뉴 액션·대화실 로비 renderer 재사용 3) GO/ANSI 회귀 테스트에 `GO CHATIN` 경로 추가.
+실행: `node --check public/js/core/historicalGoAliases.js`; `node --check scripts/smoke-go-ansi.js`; `npm run smoke:go-ansi`
+기대: `GO CHATIN`과 `GO CHAT`이 동일한 대화실 로비를 열고, 다른 미지원 GO 대상의 보류 정책은 변하지 않는다.
+결과: ✅ 집중 검증 완료. 전체 게이트는 다음 단계에서 재실행.
+
+## [2026-08-28 17:52] 공통 채팅 점유수 계약 정합성 보완
+
+**LOG_ID: 20260828_1752**
+목표: 새로운 기능 추가 없이 공통 채팅 흐름의 회원·세션 점유수 계산을 메모리와 Supabase 드라이버에서 동일하게 유지.
+변경 파일: `src/server/ChatRoomRepositoryMemory.js`, `scripts/smoke-chat-counts.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 공통 smoke에서 동일 인증 회원의 두 세션이 정원 초과로 거부되는 문제 재현 2) 메모리 참여자에 정규화된 `authUserId` 보존 3) 실제 AuthBridge 컨텍스트와 같은 인증 UUID를 smoke fixture에 명시 4) 채팅·게시판·메뉴·렌더러·보안·복구 검증 재실행.
+실행: `node --check src/server/ChatRoomRepositoryMemory.js`; `node --check scripts/smoke-chat-counts.js`; `node scripts/smoke-chat-counts.js`; `node scripts/smoke-boards.js`; `node scripts/smoke-menu-wiring.js`; `node scripts/smoke-renderer-ui.js`; `node scripts/smoke-security-escape.js`; `node scripts/smoke-password-recovery.js`
+기대: 인증 회원의 다중 세션은 1명으로, 게스트 세션은 각각 1명으로 계산되고 기존 방 정원·퇴장 규칙은 그대로 유지.
+결과: ✅ 집중 검증 및 전체 게이트 완료. `loop:verify` 10/10, `npm run check` `liveReady: true`, `npm test`, 전체 브라우저 순회, `git diff --check` 통과.

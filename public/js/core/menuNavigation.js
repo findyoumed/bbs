@@ -181,6 +181,37 @@ export function createMenuNavigation(deps) {
     return state._bootstrapPromise;
   }
 
+  // [LOG_ID: 20260828_1800] 하이텔 원전의 초기 화면은 최신 공지를
+  // "작은공지" 한 줄로 보여주고 `(GO NOTICE)`로 바로 이동할 수 있었다.
+  // 대문 메뉴 자체를 막지 않도록 실패 시 null을 반환하며, 짧은 캐시와
+  // in-flight 공유로 메뉴 재진입 때 불필요한 요청을 반복하지 않는다.
+  function preloadLatestNotice() {
+    const cached = state._latestNoticeCache;
+    if (cached && (Date.now() - cached.at) < 30 * 1000) {
+      return Promise.resolve(cached.text);
+    }
+    if (state._latestNoticePromise) {
+      return state._latestNoticePromise;
+    }
+
+    const request = apiFetch('/api/boards/notice?page=1&pageSize=1', { silent: true })
+      .then((result) => {
+        const title = String(result?.items?.[0]?.title || '').trim();
+        return title ? `[작은공지] ${title}` : null;
+      })
+      .catch(() => null)
+      .then((text) => {
+        state._latestNoticeCache = { at: Date.now(), text };
+        return text;
+      })
+      .finally(() => {
+        state._latestNoticePromise = null;
+      });
+
+    state._latestNoticePromise = request;
+    return request;
+  }
+
   async function showMain(fromHistory = false) {
     // [LOG_ID: 20260713_1010] SET HOME 환경 변수가 설정되어 있을 경우 초기 진입 시 해당 게시판/메뉴로 즉시 이동
     const homeTarget = String(state.envVars?.HOME || '').trim();
@@ -218,7 +249,10 @@ export function createMenuNavigation(deps) {
 
     // [LOG_ID: 20260804_1114] 게시판, 메뉴, 통계를 한 번의 서버 병렬 조회로 받아
     // 초기 화면의 HTTP/serverless 왕복을 줄인다. 개별 로더는 딥링크 경로에서 계속 사용한다.
-    const bootstrap = await preloadBootstrap();
+    const [bootstrap, noticeText] = await Promise.all([
+      preloadBootstrap(),
+      preloadLatestNotice()
+    ]);
     hydrateBoards(bootstrap?.boards);
     const menuTree = hydrateMenuTree(bootstrap?.menu);
     const stats = bootstrap?.stats || {};
@@ -248,9 +282,6 @@ export function createMenuNavigation(deps) {
     if (!fromHistory && window.location.pathname !== '/') {
       void updateURL();
     }
-
-    // [LOG_ID: 20260720_2323] 작은공지 라인 사용 안 함 — 항상 null
-    const noticeText = null;
 
     // [LOG_ID: 20260707_2300] footer는 본문 스트리밍이 끝나고 새 내용이 준비된 뒤에만 드러난다.
     const rendered = await renderAnsiScreenWithTopbarSequential({

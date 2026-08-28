@@ -3,6 +3,7 @@
 const {
   buildSystemMessage,
   createHttpError,
+  maybeUuid,
   normalizeMaxUser,
   normalizeRoomSecret,
   normalizeRoomText,
@@ -95,6 +96,11 @@ class MemoryChatRoomRepository {
     const now = new Date().toISOString();
     const participant = {
       sessionKey,
+      // [LOG_ID: 20260828_1752] Keep the Supabase Auth UUID beside the app user id so
+      // multiple browser sessions for one authenticated member consume one room slot.
+      // The memory driver is used by local/dev and smoke environments, so it must obey
+      // the same hybrid occupancy contract as the Supabase driver.
+      authUserId: maybeUuid(context.authUserId) || '',
       userId: normalizeText(context.userId, 'guest').toLowerCase(), // [LOG: 20260731_1755] toLowerCase 추가
       nickName: normalizeText(context.nickName, '손님'),
       joinedAt: existing?.joinedAt || now,

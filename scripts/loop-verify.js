@@ -28,6 +28,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const CHECKS = [
   { name: 'boards', file: 'smoke-boards.js' },
   { name: 'command-parity', file: 'smoke-command-parity.js' },
+  { name: 'go-ansi', file: 'smoke-go-ansi.js' },
   { name: 'menu-wiring', file: 'smoke-menu-wiring.js' },
   { name: 'signup-ime', file: 'smoke-signup-ime.mjs' },
   { name: 'renderer-ui', file: 'smoke-renderer-ui.js' },

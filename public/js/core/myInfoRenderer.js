@@ -166,6 +166,9 @@ export function createMyInfoRenderer(deps) {
 
         const yesChoice = document.createElement('span');
         yesChoice.className = 'cmd-token cmd-clickable ansi-action-text';
+        yesChoice.setAttribute('role', 'button');
+        yesChoice.tabIndex = 0;
+        yesChoice.setAttribute('aria-label', 'Y');
         yesChoice.dataset.cmd = 'y';
         yesChoice.dataset.tip = 'y';
         yesChoice.textContent = 'Y';
@@ -175,6 +178,9 @@ export function createMyInfoRenderer(deps) {
 
         const noChoice = document.createElement('span');
         noChoice.className = 'cmd-token cmd-clickable ansi-action-text';
+        noChoice.setAttribute('role', 'button');
+        noChoice.tabIndex = 0;
+        noChoice.setAttribute('aria-label', 'N');
         noChoice.dataset.cmd = 'n';
         noChoice.dataset.tip = 'n';
         noChoice.textContent = 'n';
@@ -196,11 +202,11 @@ export function createMyInfoRenderer(deps) {
             { label: '권한 레벨', value: user.level || 1 }
         ])}
             <div class="myinfo-help">
-              <div class="myinfo-menu-item" data-cmd="1"><span class="myinfo-menu-code">1.</span><span>닉네임 변경(NICK)</span></div>
-              <div class="myinfo-menu-item" data-cmd="2"><span class="myinfo-menu-code">2.</span><span>이메일 변경(EMAIL)</span></div>
-              <div class="myinfo-menu-item" data-cmd="3"><span class="myinfo-menu-code">3.</span><span>비밀번호 변경(PW)</span></div>
-              <div class="myinfo-menu-item" data-cmd="4"><span class="myinfo-menu-code">4.</span><span>회원 탈퇴(DELETE)</span></div>
-              <div class="myinfo-menu-item" data-cmd="5"><span class="myinfo-menu-code">5.</span><span>로그아웃(LOGOUT)</span></div>
+              <div class="myinfo-menu-item" role="button" tabindex="0" data-cmd="1"><span class="myinfo-menu-code">1.</span><span>닉네임 변경(NICK)</span></div>
+              <div class="myinfo-menu-item" role="button" tabindex="0" data-cmd="2"><span class="myinfo-menu-code">2.</span><span>이메일 변경(EMAIL)</span></div>
+              <div class="myinfo-menu-item" role="button" tabindex="0" data-cmd="3"><span class="myinfo-menu-code">3.</span><span>비밀번호 변경(PW)</span></div>
+              <div class="myinfo-menu-item" role="button" tabindex="0" data-cmd="4"><span class="myinfo-menu-code">4.</span><span>회원 탈퇴(DELETE)</span></div>
+              <div class="myinfo-menu-item" role="button" tabindex="0" data-cmd="5"><span class="myinfo-menu-code">5.</span><span>로그아웃(LOGOUT)</span></div>
             </div>
           </div>`;
     }

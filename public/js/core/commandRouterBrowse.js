@@ -157,6 +157,9 @@ export function createBrowseCommandHandler(deps) {
 
     const yesChoice = document.createElement('span');
     yesChoice.className = 'cmd-token cmd-clickable';
+    yesChoice.setAttribute('role', 'button');
+    yesChoice.tabIndex = 0;
+    yesChoice.setAttribute('aria-label', 'Y');
     yesChoice.dataset.cmd = 'Y';
     yesChoice.dataset.tip = '예(Y)';
     yesChoice.textContent = 'Y';
@@ -166,6 +169,9 @@ export function createBrowseCommandHandler(deps) {
 
     const noChoice = document.createElement('span');
     noChoice.className = 'cmd-token cmd-clickable';
+    noChoice.setAttribute('role', 'button');
+    noChoice.tabIndex = 0;
+    noChoice.setAttribute('aria-label', 'N');
     noChoice.dataset.cmd = 'N';
     noChoice.dataset.tip = '아니오(N)';
     noChoice.textContent = 'n';
@@ -566,6 +572,40 @@ export function createBrowseCommandHandler(deps) {
       }
 
       // [LOG_ID: 20260718_1900] 제목 검색: LT/GL/SUBJ [검색어]
+      // [LOG_ID: 20260828_2110] Historical R/READ and RE forms from a list.
+      const readMatch = rawCmd.match(/^R\s+(.+)$/i);
+      if (readMatch) {
+        const targetPost = resolveVisiblePostTarget(readMatch[1]);
+        if (!targetPost) {
+          setHint(UI_TEXT.POST_NOT_FOUND);
+          setPrompt('>>');
+          return true;
+        }
+        await showPostView(targetPost.boardId || state.board.id, targetPost.localId ?? targetPost.id);
+        return true;
+      }
+
+      // [LOG_ID: 20260829_1135] The historical board guide accepts RE, A,
+      // and ANSWER for replying from a list. ANSWER is normalized to RE;
+      // keep A as an additional list-local spelling without changing its
+      // post-view previous-article meaning.
+      const replyMatch = rawCmd.match(/^(?:RE|A)\s+(.+)$/i);
+      if (replyMatch) {
+        if (state.user?.isGuest) {
+          setHint(UI_TEXT.LOGIN_REQUIRED);
+          setPrompt('>>');
+          return true;
+        }
+        const targetPost = resolveVisiblePostTarget(replyMatch[1]);
+        if (!targetPost) {
+          setHint(UI_TEXT.POST_NOT_FOUND);
+          setPrompt('>>');
+          return true;
+        }
+        showPostWrite('reply', targetPost);
+        return true;
+      }
+
       const ltMatch = cmd.match(/^(?:LT|GL|SUBJ)\s+(.+)$/i);
       if (ltMatch) {
         await showPostList(state.board.id, 1, {

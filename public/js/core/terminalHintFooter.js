@@ -37,6 +37,13 @@ export function createTerminalHintFooter(deps) {
     esc
   });
 
+  function clearTerminalError() {
+    const errorEl = document.getElementById('terminal-error');
+    if (!errorEl) return;
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+  }
+
   if (cmdPromptRendererEl && cmdInput) {
     cmdPromptRendererEl.addEventListener('mousedown', (event) => {
       // [LOG: 20260615_1621] Clicking the input-rendered prompt should behave like clicking the old label.
@@ -267,6 +274,7 @@ export function createTerminalHintFooter(deps) {
 
   function setHint(text) {
     syncScreenContext();
+    clearTerminalError();
 
     const outputListener = typeof getOutputListener === 'function' ? getOutputListener() : null;
     if (outputListener) {

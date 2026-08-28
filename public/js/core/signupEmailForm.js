@@ -291,6 +291,9 @@ export function createSignupEmailHandler(deps) {
 
     const defaultChoice = document.createElement('span');
     defaultChoice.className = 'cmd-token cmd-clickable signup-confirm-default-choice';
+    defaultChoice.setAttribute('role', 'button');
+    defaultChoice.tabIndex = 0;
+    defaultChoice.setAttribute('aria-label', 'N');
     defaultChoice.dataset.signupChoice = 'n';
     defaultChoice.dataset.tip = 'n';
     defaultChoice.textContent = 'n';

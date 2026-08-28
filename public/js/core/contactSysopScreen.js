@@ -15,6 +15,7 @@ export function createContactSysopScreen(deps) {
     esc,
     screenEl,
     setHint,
+    showError,
     setPrompt,
     setReady,
     showBoardSelect,
@@ -106,11 +107,16 @@ export function createContactSysopScreen(deps) {
       if (titleEl) titleEl.disabled = true;
       if (bodyEl) bodyEl.disabled = true;
 
-      await apiFetch('/api/contact-sysop', {
+      const result = await apiFetch('/api/contact-sysop', {
         method: 'POST',
         body: JSON.stringify({ subject, content })
       });
       flow.sending = false;
+      if (result?.emailSent === false) {
+        deps.showToast?.('쪽지가 내부 쪽지함에 저장되었습니다. 외부 이메일은 발송되지 않았습니다.', 3500, 'warning');
+        await cancelContactSysop();
+        return true;
+      }
       deps.showToast?.('건의글이 시삽에게 전달되었습니다.', 2000, 'success');
       await cancelContactSysop();
       return true;
@@ -118,7 +124,9 @@ export function createContactSysopScreen(deps) {
       flow.sending = false;
       if (titleEl) titleEl.disabled = false;
       if (bodyEl) bodyEl.disabled = false;
-      setHint(`발송 실패: ${String(error?.message || '알 수 없는 오류입니다.')}`);
+      const message = `발송 실패: ${String(error?.message || '알 수 없는 오류입니다.')}`;
+      if (typeof showError === 'function') showError(message);
+      else setHint(message);
       return false;
     }
   }
@@ -418,7 +426,7 @@ export function createContactSysopScreen(deps) {
     return true;
   }
 
-  async function showContactSysop(fromHistory = false) {
+  async function showContactSysop(fromHistory = false, initialDraft = {}) {
     if (state.user?.isGuest) {
       setHint('건의하기는 로그인 후 이용하실 수 있습니다.');
       setPrompt('내용 >>');
@@ -431,8 +439,10 @@ export function createContactSysopScreen(deps) {
     if (!fromHistory) updateURL();
 
     state._contactSysopFlow = {
-      subject: '',
-      bodyLines: [],
+      subject: String(initialDraft?.subject || '').slice(0, 60),
+      bodyLines: Array.isArray(initialDraft?.bodyLines)
+        ? initialDraft.bodyLines.map((line) => String(line))
+        : (initialDraft?.body ? String(initialDraft.body).split('\n') : []),
       sending: false
     };
     state._terminalInputHandler = handleContactSysopRawInput;
