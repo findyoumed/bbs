@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { assert } = require('./lib/scriptUtils');
+const { loadBrowserHarnessModule } = require('./smoke/common-utils');
 
 function readProjectFile(relativePath) {
   return fs.readFileSync(path.join(__dirname, '..', relativePath), 'utf8');
@@ -10,6 +11,48 @@ function readProjectFile(relativePath) {
 
 function assertIncludes(content, fragment, message) {
   assert(content.includes(fragment), message);
+}
+
+function verifyHintAccessibilityState() {
+  const { createTerminalHintLayout } = loadBrowserHarnessModule(
+    path.join(__dirname, '..', 'public/js/core/terminalHintLayout.js'),
+    new Map()
+  );
+  const classes = new Set(['has-cmd-tokens']);
+  const attrs = new Map();
+  const entry = (top) => ({
+    hidden: false,
+    dataset: {},
+    classList: { contains: (name) => name === 'cmd-entry', remove() {}, add() {} },
+    querySelector: () => null,
+    getBoundingClientRect: () => ({ top })
+  });
+  const entries = [entry(0), entry(24)];
+  const list = {
+    children: entries,
+    querySelectorAll: () => []
+  };
+  const hintEl = {
+    dataset: { hintExpandable: 'false' },
+    classList: {
+      contains: (name) => classes.has(name),
+      add: (name) => classes.add(name),
+      remove: (name) => classes.delete(name)
+    },
+    querySelector: () => null,
+    querySelectorAll: () => [list],
+    setAttribute: (name, value) => attrs.set(name, String(value)),
+    removeAttribute: (name) => attrs.delete(name)
+  };
+  const layout = createTerminalHintLayout({ hintEl });
+  layout.trimHintEntriesToFit();
+  assert(hintEl.dataset.hintExpandable === 'true', 'overflow hint should become expandable');
+  assert(attrs.get('role') === 'button' && attrs.get('tabindex') === '0', 'expandable hint should be keyboard focusable');
+  assert(attrs.get('aria-expanded') === 'false', 'collapsed hint should expose aria-expanded=false');
+  layout.toggleHintExpansion();
+  assert(attrs.get('aria-expanded') === 'true', 'expanded hint should expose aria-expanded=true');
+  layout.toggleHintExpansion();
+  assert(attrs.get('aria-expanded') === 'false', 'collapsed hint should restore aria-expanded=false');
 }
 
 function main() {
@@ -40,7 +83,10 @@ function main() {
   assertIncludes(terminalHintLayout, 'function toggleHintExpansion()', 'hint expansion logic should exist');
   assertIncludes(terminalHintLayout, 'applyHiddenCommandsToHelpToken', 'overflow should route hidden commands to the help(H) token tooltip');
   assertIncludes(terminalHintLayout, '이 화면의 다른 명령', 'overflow hint tooltip should describe hidden commands');
+  assertIncludes(terminalHintLayout, 'aria-expanded', 'expandable hints should expose expanded state');
+  assertIncludes(terminalHintFooter, "event.target !== hintEl", 'hint bar keyboard toggle should not intercept child command tokens');
   assert(!terminalHintLayout.includes(".filter((e) => e.hidden = false)"), 'hint expansion should not contain assignment bug');
+  verifyHintAccessibilityState();
 
   assertIncludes(appFactory, "createAppFactoryServices({", 'appFactory should compose the services module');
   assertIncludes(appFactoryServices, "hintEl: document.getElementById('cmd-hint')", 'appFactory services should wire cmd-hint');

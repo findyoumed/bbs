@@ -250,7 +250,10 @@ export function createTerminalHintMarkup(deps) {
 
     source = source.replace(/번호\/명령\(([^)]*)\)/g, (_, inner) => {
       const tokens = [];
-      const tokenPattern = /([A-Z0-9]{1,8})(?::([^\s,()]+))?/g;
+      // Active chat-room shortcuts use slash-prefixed commands (`/L`, `/W`,
+      // `/Z`). Keep the optional slash as part of the command token so the
+      // footer can render it as a real clickable data-cmd target.
+      const tokenPattern = /(\/?[A-Z0-9]{1,8})(?::([^\s,()]+))?/g;
       let match;
       while ((match = tokenPattern.exec(inner)) !== null) {
         tokens.push({ cmd: match[1].toUpperCase(), label: match[2] || '' });
@@ -287,7 +290,10 @@ export function createTerminalHintMarkup(deps) {
     // [LOG_ID: 20260808_1237] 작성 화면 단축 힌트 항목(Ctrl+S, Escape, Tab, 전송, 취소 등)에 마우스 호버링 및 클릭 핫스팟 부여
     source = source.replace(/\b(Ctrl\+S|Escape|Tab)\b/gi, (match) => {
       const normalizedCmd = match.toUpperCase();
-      return stash(`<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(match)}" data-cmd-fill="${esc(normalizedCmd)}" data-tip="${esc(match)}">${esc(match)}</span>`);
+      const actionAttr = normalizedCmd === 'TAB'
+        ? 'data-cmd-focus-next="true"'
+        : `data-cmd-fill="${esc(normalizedCmd)}"`;
+      return stash(`<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(match)}" ${actionAttr} data-tip="${esc(match)}">${esc(match)}</span>`);
     });
 
     source = source.replace(/([가-힣A-Za-z0-9_]+):\s*(Ctrl\+S|Escape|Tab)/gi, (match, label, cmd) => {

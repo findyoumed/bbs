@@ -19,6 +19,21 @@
 | `GO MAIL` | `/memo` | 전자우편 최상위 메뉴 |
 | `GO ME`, `GO MEMO`, `GO RMAIL` | `/memo/inbox` | 받은 쪽지함 |
 | `GO CMAIL` | `/memo/sent` | 보낸 쪽지함 |
+| `GO CHATIN` | `/chat` | Nurie historical alias; current chat lobby target |
+| `GO CHATTING` | `/chat` | Nurie `HITEL.MNU`의 최상위 `(11) 채팅` 코드와 현재 CHAT 로비가 일치 |
+| `GO BLUEHS` | `/guide/tosysop` | Nurie `HITEL.MNU`의 `bluehs`(시삽/건의) 코드와 현재 시삽 건의 화면이 일치 |
+
+### HITEL.MNU·Nurie 샘플 대조 메모
+
+`nurie/HITEL.MNU`와 `nurie15/HITEL.MNU`는 동일한 601개 고유 GO 코드(660개
+항목)를 보존한다. 이 수치는 각 줄 끝의 `:[A-Za-z0-9_]+` 토큰만 세어 산출한
+것이며, 콜론 뒤 한글 설명/매개변수(`gldown 1` 등)를 포함하는 679/607식 raw
+카운트는 GO 코드 수가 아니므로 제외한다. 현재 메뉴 트리에 없는 코드는 임의의 게시판으로 연결하지 않고
+보류한다. 두 파일에서 실제 현재 기능과 안전하게 대응되는 추가 후보는
+`chatting → CHAT`, `bluehs → TOSYSOP`이며, `rmail/wmail/cmail`은 이미
+직접 라우팅 분기가 있어 별칭을 중복 등록하지 않는다. `ANSI1.NRE`~`ANSI4.NRE`는
+메뉴 DB가 아니라 화면 샘플이며, `ANSI1.NRE`의 `GO,HI,Z,X` 힌트와 `@[` CSI
+전송 표식을 렌더러 smoke에서 검증한다.
 
 ## 의도적으로 보류한 명령
 

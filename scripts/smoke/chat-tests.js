@@ -573,6 +573,19 @@ async function verifyPlaywrightChatFlow(page, errors) {
             return screenText.includes(expectedMessage);
         }, smokeMessage, { timeout: config.TIMEOUT });
 
+        // `/Z` is a room-only replay command. It must be discoverable in the
+        // footer and execute through the same click delegation as other hints.
+        const replayToken = page.locator('#cmd-hint [data-cmd="/Z"]');
+        if (await replayToken.count() < 1) {
+            errors.push('Chat room footer did not expose the clickable /Z replay token.');
+        } else {
+            await replayToken.click();
+            await page.waitForFunction((expectedMessage) => {
+                const screenText = document.getElementById('terminal-screen')?.textContent || '';
+                return screenText.includes(expectedMessage);
+            }, smokeMessage, { timeout: config.TIMEOUT });
+        }
+
         const roomUrl = page.url();
         await page.goto(roomUrl, { waitUntil: 'networkidle' });
         await page.waitForTimeout(1000);

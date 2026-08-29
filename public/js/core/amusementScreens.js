@@ -226,19 +226,23 @@ export function createAmusementScreens(deps) {
   // [LOG_ID: 20260811_1126] 혈액형 입력/결과 화면 전역 클릭 위임으로 A, B, O, AB 핫스팟 클릭 100% 동작 보장
   if (typeof window !== 'undefined' && !window._bloodHotspotDelegated) {
     window._bloodHotspotDelegated = true;
-    document.addEventListener('click', (e) => {
+    const activateBloodHotspot = (e) => {
       const target = e.target?.closest('.blood-hotspot');
-      if (target) {
-        const val = target.getAttribute('data-val');
-        if (val && ['A', 'B', 'O', 'AB'].includes(val.toUpperCase())) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (cmdInput) {
-            cmdInput.value = val.toUpperCase();
-          }
-          showBloodResult(val.toUpperCase());
-        }
+      if (!target) return;
+      const val = target.getAttribute('data-val');
+      if (!val || !['A', 'B', 'O', 'AB'].includes(val.toUpperCase())) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (cmdInput) {
+        cmdInput.value = val.toUpperCase();
       }
+      showBloodResult(val.toUpperCase());
+    };
+    document.addEventListener('click', activateBloodHotspot, true);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (!e.target?.closest?.('.blood-hotspot')) return;
+      activateBloodHotspot(e);
     }, true);
   }
 
@@ -277,17 +281,9 @@ export function createAmusementScreens(deps) {
 
     const hotspots = mock.querySelectorAll('.blood-hotspot');
     hotspots.forEach(el => {
-      const handler = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const val = el.getAttribute('data-val');
-        if (cmdInput) {
-          cmdInput.value = val;
-        }
-        await showBloodResult(val);
-      };
-      el.addEventListener('click', handler);
-      el.addEventListener('mousedown', handler);
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', `혈액형 ${el.getAttribute('data-val') || ''}`);
     });
 
     realRenderer.parentNode.insertBefore(mock, realRenderer);
@@ -322,17 +318,9 @@ export function createAmusementScreens(deps) {
 
     const hotspots = targetLine.querySelectorAll('.blood-hotspot');
     hotspots.forEach(el => {
-      const handler = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const val = el.getAttribute('data-val');
-        if (cmdInput) {
-          cmdInput.value = val;
-        }
-        await showBloodResult(val);
-      };
-      el.addEventListener('click', handler);
-      el.addEventListener('mousedown', handler);
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', `혈액형 ${el.getAttribute('data-val') || ''}`);
     });
   }
 

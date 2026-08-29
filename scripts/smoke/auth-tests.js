@@ -10,6 +10,120 @@ const {
     loadBrowserHarnessModule
 } = require('./common-utils');
 
+async function verifyUnreadMemoToastCoverage(errors) {
+    console.log('?뵍 Checking deferred unread-memo toast coverage...');
+    const originalFetch = globalThis.fetch;
+    const originalWindow = globalThis.window;
+
+    try {
+        const moduleCache = new Map();
+        const { createAuthService } = loadBrowserHarnessModule(
+            path.join(__dirname, '../..', 'public/js/core/authService.js'),
+            moduleCache
+        );
+        const state = {
+            user: { userId: 'guest', isGuest: true },
+            token: '',
+            envVars: { MSG: 'ON' },
+            menuLookup: {},
+            menuParents: {}
+        };
+        const toasts = [];
+        let unreadCalls = 0;
+        globalThis.window = {
+            location: {
+                assign(pathname) {
+                    this.assigned = pathname;
+                }
+            }
+        };
+        globalThis.fetch = async () => ({
+            async json() {
+                return { user: { userId: 'member', isGuest: false } };
+            }
+        });
+
+        const authService = createAuthService({
+            apiFetch: async (requestPath) => {
+                if (requestPath === '/api/memos/unread/count') {
+                    unreadCalls += 1;
+                    return { count: 1 };
+                }
+                return null;
+            },
+            showToast: (text, duration, level, options) => toasts.push({ text, duration, level, options }),
+            state,
+            updateUserInfo() {},
+            getAuthLeafRoutePath: (name) => `/log/${name}`,
+            isPasswordResetRoutePath: () => false,
+            showPasswordReset: async () => {}
+        });
+
+        state._deferUnreadMemoNotification = true;
+        await authService.refreshUser();
+        if (!state._pendingUnreadMemoNotification || toasts.length !== 0) {
+            errors.push('Unread memo toast was not deferred during initial auth rendering');
+        }
+        state._deferUnreadMemoNotification = false;
+        await authService.flushUnreadMemoNotification();
+        if (toasts.length !== 1 || !toasts[0].options?.onClick) {
+            errors.push('Deferred unread memo toast was not shown after initial render');
+        } else {
+            toasts[0].options.onClick({ preventDefault() {} });
+            if (globalThis.window.location.assigned !== '/memo') {
+                errors.push('Unread memo toast click did not navigate to /memo');
+            }
+        }
+
+        // SIGNED_IN can trigger a listener refresh while doLogin also performs
+        // an explicit refresh. Both transitions must share one unread request.
+        state.user = { userId: 'guest', isGuest: true };
+        state._unreadMemoNotificationUserKey = '';
+        toasts.length = 0;
+        unreadCalls = 0;
+        await Promise.all([authService.refreshUser(), authService.refreshUser()]);
+        if (unreadCalls !== 1 || toasts.length !== 1) {
+            errors.push(`Concurrent auth refreshes duplicated unread notification (calls=${unreadCalls}, toasts=${toasts.length})`);
+        }
+
+        // Also cover the slower SIGNED_IN listener finishing after the main
+        // screen flush; the transition key must still suppress a second call.
+        let sessionCalls = 0;
+        globalThis.fetch = async () => {
+            sessionCalls += 1;
+            const delay = sessionCalls === 1 ? 25 : 5;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            return {
+                async json() {
+                    return { user: { userId: 'member', isGuest: false } };
+                }
+            };
+        };
+        state.user = { userId: 'guest', isGuest: true };
+        state._unreadMemoNotificationUserKey = '';
+        state._deferUnreadMemoNotification = true;
+        toasts.length = 0;
+        unreadCalls = 0;
+        const delayedRefresh = authService.refreshUser();
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        const fastRefresh = authService.refreshUser();
+        await fastRefresh;
+        state._deferUnreadMemoNotification = false;
+        await authService.flushUnreadMemoNotification();
+        await delayedRefresh;
+        if (unreadCalls !== 1 || toasts.length !== 1) {
+            errors.push(`Late auth refresh duplicated unread notification (calls=${unreadCalls}, toasts=${toasts.length})`);
+        }
+    } catch (error) {
+        errors.push(`Unread memo toast harness failed: ${error.message}`);
+    } finally {
+        if (typeof originalFetch === 'undefined') delete globalThis.fetch;
+        else globalThis.fetch = originalFetch;
+        if (typeof originalWindow === 'undefined') delete globalThis.window;
+        else globalThis.window = originalWindow;
+    }
+}
+
 async function verifyAuthRecoveryCoverage(errors) {
     console.log('🔐 Checking auth recovery route coverage via module harness...');
 
@@ -675,5 +789,6 @@ async function verifyAuthEntryRouteCoverage(errors) {
 
 module.exports = {
     verifyAuthRecoveryCoverage,
-    verifyAuthEntryRouteCoverage
+    verifyAuthEntryRouteCoverage,
+    verifyUnreadMemoToastCoverage
 };

@@ -31,7 +31,7 @@ if (typeof window !== 'undefined') {
 const refs = {};
 
 const {
-  initTooltips, initAuth, preloadBootstrap, restoreStateFromURL, restoreTheme, updateURL, showMain, showPasswordReset, renderInitError, guestUser, forceExit
+  initTooltips, initAuth, flushUnreadMemoNotification, preloadBootstrap, restoreStateFromURL, restoreTheme, updateURL, showMain, showPasswordReset, renderInitError, guestUser, forceExit
 } = initApp({ state, refs });
 
 // [LOG_ID: 20260719_1600] 천리안 원전 6.4.7 ENV "자동접속 차단시간"(SET IDLE [분]) 재현.
@@ -145,6 +145,7 @@ async function init() {
     } else {
       await showMain();
     }
+    await flushUnreadMemoNotification?.();
   } catch (e) {
     // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.error 주석 처리
     // console.error('초기 화면 렌더 실패:', e.message);

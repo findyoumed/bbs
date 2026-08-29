@@ -68,6 +68,16 @@ export function createTerminalHintFooter(deps) {
       }
       toggleHintExpansion();
     });
+    hintEl.addEventListener('keydown', (event) => {
+      if (event.target !== hintEl || !['Enter', ' '].includes(event.key)) {
+        return;
+      }
+      if (hintEl.dataset.hintExpandable !== 'true' && !hintEl.classList.contains('is-expanded')) {
+        return;
+      }
+      event.preventDefault();
+      toggleHintExpansion();
+    });
   }
 
   function scheduleHintTrim(attempt = 0) {

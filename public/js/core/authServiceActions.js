@@ -232,6 +232,8 @@ export function createAuthServiceActions(deps) {
 
     state.token = '';
     state.user = guestUser();
+    state._unreadMemoNotificationUserKey = '';
+    state._pendingUnreadMemoNotification = false;
     updateUserInfo();
   }
 

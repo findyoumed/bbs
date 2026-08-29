@@ -643,6 +643,10 @@ Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
 기대: 편지 작성 옵션에서 비밀 편지 항목이 완전히 제거되고 1~4번 4종류로 정돈되어 동작한다.
 결과: ✅ 완료
 
+참고: 이 기록은 당시 사용자 결정(비밀 속성 제거)에 따른 상태다. 이후 2026-08-29
+원전 호환성 점검에서 하이텔 길라잡이의 3속성 조합(비밀·답장요망·지연) 8종을
+다시 지원하기로 결정하여 `memoScreens.js`와 최신 스모크가 1~8을 기준으로 한다.
+
 ## [2026-08-08 12:49] [UI/UX 수정] 대화형 편지 작성 모드 뷰포트 예산(최신 15줄) 슬라이싱 적용 및 스크롤바/잘림 현상 100% 제거
 
 **LOG_ID: 20260808_1249**
@@ -2911,3 +2915,136 @@ Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
 실행: `node --check src/server/ChatRoomRepositoryMemory.js`; `node --check scripts/smoke-chat-counts.js`; `node scripts/smoke-chat-counts.js`; `node scripts/smoke-boards.js`; `node scripts/smoke-menu-wiring.js`; `node scripts/smoke-renderer-ui.js`; `node scripts/smoke-security-escape.js`; `node scripts/smoke-password-recovery.js`
 기대: 인증 회원의 다중 세션은 1명으로, 게스트 세션은 각각 1명으로 계산되고 기존 방 정원·퇴장 규칙은 그대로 유지.
 결과: ✅ 집중 검증 및 전체 게이트 완료. `loop:verify` 10/10, `npm run check` `liveReady: true`, `npm test`, 전체 브라우저 순회, `git diff --check` 통과.
+
+## [2026-08-29 01:28] Supabase 채팅 회원 smoke 컨텍스트 정합성 보완
+
+**LOG_ID: 20260829_0128**
+목표: 공통 Supabase 채팅 흐름의 인증 회원 점유수·참여자 persistence smoke가 실제 AuthBridge 컨텍스트를 정확히 재현.
+변경 파일: `scripts/smoke-chat-members-supabase.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) Supabase smoke에서 게스트 정원 초과(409) 재현 2) 프로필 fixture가 `authUserId`를 누락한 원인 확인 3) 프로필 UUID를 `userId`와 `authUserId`에 함께 전달 4) 인증 다중 세션·게스트 정원·참여자 행 정리 재검증.
+실행: `node --check scripts/smoke-chat-members-supabase.js`; `npm run smoke:chat-members-supabase`; `npm run build`; `npm run check`; `npm run qa:final`; `npm run loop:verify`
+기대: 인증 회원의 두 세션은 한 자리로 계산되고, 게스트는 남은 자리를 사용하며, 방 종료 후 참여자 행이 정리된다.
+결과: ✅ Supabase smoke 및 전체 완료 게이트 통과. `smoke:full-traversal`도 콘솔/page 오류 없이 완료했으며, 기존 런타임 라우팅·저장소 코드는 변경하지 않음.
+
+## [2026-08-29 10:42] 쪽지 작성기 브라우저 공통 흐름 회귀 검증
+
+**LOG_ID: 20260829_1042**
+목표: 쪽지 작성의 실제 DOM 상호작용을 module/HTTP harness만이 아니라 Chromium에서 검증.
+변경 파일: `scripts/smoke-full-traversal.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) `/memo`에서 실제 `W` 명령으로 편지쓰기 진입 2) 받는 사람 Enter→제목, 제목 Enter→내용 포커스 확인 3) 입력 행 클릭 포커스 위임 확인 4) 빈 내용 오류가 본문 인라인에 표시되고 `Ctrl+S` 힌트를 유지하는지 확인.
+실행: `node --check scripts/smoke-full-traversal.js`; `npm run smoke:full-traversal`; `npm run loop:verify`; `npm run build`; `npm run check`; `npm run qa:final`; `git diff --check`
+기대: 기존 쪽지 저장·라우팅 동작은 그대로 두고, 가장 빈번한 작성 입력 흐름의 브라우저 회귀를 자동 검출.
+결과: ✅ 실제 브라우저 순회에서 쪽지 작성 흐름 통과. `loop:verify` 24/24, build/check/qa 통과.
+
+## [2026-08-29 10:46] 쪽지 목록 클릭→읽기 브라우저 회귀 검증
+
+**LOG_ID: 20260829_1046**
+목표: 쪽지 목록에서 실제 행을 클릭해 읽기 화면으로 전환되는 공통 흐름을 브라우저에서 검증.
+변경 파일: `scripts/smoke-full-traversal.js`, `artifacts/task.md`, `artifacts/implementation_plan.md`, `artifacts/walkthrough.md`, `docs/PC통신_자료_학습카탈로그.md`, `WORK_LOG.md`
+수행 작업: 1) 격리된 Chromium 페이지에 결정적 테스트 쪽지 응답 주입 2) `RMAIL` 목록 진입 3) 쪽지 행 핫스팟 클릭 후 `memo-view` 전환 확인 4) 기존 편지쓰기 Enter·클릭·인라인 오류 검증 유지.
+실행: `node --check scripts/smoke-full-traversal.js`; `npm run smoke:full-traversal`; `npm run loop:verify`; `git diff --check`
+기대: 목록 클릭→읽기와 작성 입력 흐름이 데이터베이스 변경 없이 자동 회귀 검증된다.
+결과: ✅ 전체 브라우저 순회와 `loop:verify` 24/24 통과. 쪽지 저장·라우팅 런타임은 변경하지 않음.
+
+## [2026-08-29 11:28] 힌트바 Tab 동작 및 Supabase 스키마 재현성 보강
+
+**LOG_ID: 20260829_1128**
+목표: 힌트바의 `Tab` 클릭이 명령 입력창에 `TAB`을 채우지 않고 편집기 다음 필드로 이동하게 하며, 신규 Supabase 환경에서도 메모·채팅 저장소가 사용하는 스키마 계약을 재현.
+변경 파일: `public/js/core/appEvents.js`, `public/js/core/terminalHintMarkup.js`, `scripts/smoke-full-traversal.js`, `scripts/check-supabase-ready.js`, `supabase/migrations/0023_memo_archive_flags.sql`, `supabase/migrations/0024_chat_member_identity_constraint.sql`, `docs/NURIE_NRE_CATALOG.md`, 관련 artifacts/docs.
+수행 작업: 1) Tab 전용 focus action 도입 2) 직전 편집 필드 보존으로 토큰 클릭 후 다음 칸 이동 3) 메모 보관 플래그 컬럼·채팅 upsert 유니크 인덱스 migration 추가 4) NRE 인코딩·지원 범위 문서 정정.
+실행: `node --check`; `npm run smoke:full-traversal`; `npm run check`; `npm run smoke:chat-members-supabase`; `npm run loop:verify`; `git diff --check`.
+기대: 물리 Tab·힌트 클릭/키보드 활성화가 동일한 편집 이동을 수행하고, 새 DB migration replay에서 런타임 컬럼·충돌 키가 누락되지 않는다.
+결과: ✅ 브라우저 Tab 회귀, Supabase readiness/live probe, 채팅 회원 persistence smoke, `loop:verify` 24/24 통과. 원격 스키마는 이미 동작 중이며 새 migration은 재생성 환경 정합성을 보강한다.
+
+## [2026-08-29 11:45] 혈액형 핫스팟 키보드 parity 및 click harness 복구
+
+**LOG_ID: 20260829_1145**
+목표: 혈액형 선택 핫스팟의 마우스·키보드 동작을 통합하고, 실행 전 모듈 로딩에서 중단되던 click-fill 회귀 harness를 복구.
+변경 파일: `public/js/core/amusementScreens.js`, `scripts/smoke-full-traversal.js`, `scripts/smoke-click-fill-command.mjs`, 관련 artifacts/docs.
+수행 작업: 1) A/B/O/AB에 role·tabindex·aria-label 부여 2) 전역 click/keydown 위임으로 Enter·Space 실행 3) per-element mousedown/click 중복 핸들러 제거 4) file URL ESM import·timer/input stub·비동기 경계 보완.
+실행: `node scripts/smoke-click-fill-command.mjs`; `node --check public/js/core/amusementScreens.js`; `npm run smoke:full-traversal`.
+기대: 혈액형 선택은 어떤 입력 방식에서도 한 번만 실행되고, 독립 click-fill 회귀 검증이 실제 assertion까지 도달한다.
+결과: ✅ click-fill harness, 혈액형 Chromium 회귀, 전체 브라우저 순회 통과. 기존 PDS fixture의 예상 404 warning 외 console/page 오류 없음.
+
+## [2026-08-29 12:18] 고정 sysop 수신자 키보드 parity 보강
+
+**LOG_ID: 20260829_1218**
+목표: readonly `sysop` 수신자 필드가 직접 클릭뿐 아니라 Enter·ArrowDown·Tab으로도 제목 입력으로 이어지도록 공통 편집 흐름을 완성.
+변경 파일: `public/js/core/contactSysopScreen.js`, `scripts/smoke-full-traversal.js`, `artifacts/task.md`, `WORK_LOG.md`.
+수행 작업: target keydown handler 추가, cleanup 시 listener 제거, Chromium에서 클릭·Enter 포커스 회귀 확인.
+실행: `node --check`; `npm run smoke:full-traversal`; `npm run smoke:go-ansi`; `npm run loop:verify`; `npm run check`; `git diff --check`.
+기대: 고정 수신자 편집 화면도 마우스·키보드 입력 경로가 동일하게 제목 필드로 진행된다.
+결과: ✅ 브라우저·ANSI/NRE·Supabase readiness·전체 24개 완료 게이트 통과.
+
+## [2026-08-29 12:05] 고정 sysop 수신자 및 NRE 변환 경계 검증
+
+**LOG_ID: 20260829_1205**
+목표: `/guide/tosysop`의 readonly `sysop` 필드 직접 클릭 흐름과 Nurie `.NRE` 참고 파일의 `@[`→`ESC[` 변환 경계를 회귀 검증.
+변경 파일: `public/js/core/contactSysopScreen.js`, `scripts/smoke-full-traversal.js`, `scripts/smoke-go-ansi.js`, 관련 artifacts/docs.
+수행 작업: 1) 고정 수신자 클릭 시 제목 포커스 이동 2) 네 샘플의 sentinel·CSI 파싱·ESC 누출 여부 확인 3) 레거시 인코딩과 Nurie 전용 확장은 의도적 범위 밖으로 문서화.
+실행: `node --check`; `npm run smoke:go-ansi`; `npm run smoke:full-traversal`; `npm run loop:verify`; `npm run check`; `git diff --check`.
+기대: 수신자 클릭은 편집 흐름을 막지 않고, NRE 참고 검증은 원본 교체에도 안전하게 변환 계약을 지킨다.
+
+## [2026-08-29 14:20] 채팅방 슬래시 명령 힌트바 클릭 복구
+
+**LOG_ID: 20260829_1420**
+목표: 이미 동작하는 채팅방 `/L`, `/W`, `/Z` 명령이 하단 힌트바에서도 실제 클릭 가능한 토큰으로 노출되도록 한다.
+변경 파일: `public/js/core/commandFooterText.js`, `public/js/core/terminalHintMarkup.js`, `scripts/smoke/chat-tests.js`, `scripts/smoke-command-parity.js`, 관련 artifacts/docs.
+수행 작업: 1) 채팅방 전용 `/Z:다시보기` 토큰 추가 2) 힌트바 `번호/명령(...)` 파서가 선택적 `/` 접두사를 보존하도록 수정 3) Chromium에서 `/Z` 클릭 후 대화 재출력 확인.
+실행: `npm run smoke:command-parity`; `npm run smoke:full-traversal`; `npm run loop:verify`; `git diff --check`.
+결과: ✅ 슬래시 명령 클릭 회귀와 전체 24개 완료 게이트 통과. 전역 `Z` 명령은 기존처럼 노출·활성화하지 않는다.
+
+## [2026-08-29 15:00] 쪽지 명령 도움말·모바일 힌트 정합성 점검
+
+**LOG_ID: 20260829_1500**
+목표: 쪽지 명령 별칭의 실제 라우팅을 도움말에 반영하고, 모바일 힌트바의 토큰 축약 정책이 의도대로 복구 가능한지 확인한다.
+변경 파일: `public/js/core/commandService.js`, `docs/USER_GUIDE_www-bbs.txt`, `docs/명령어_한국어_매핑.txt`, `artifacts/task.md`, 관련 smoke.
+수행 작업: 1) ME/MEMO/RMAIL=받은편지함, MAIL=메뉴, CMAIL=보낸편지함으로 메타 설명 정정 2) 전자우편·시삽 건의 사용자 가이드 추가 3) 390/360/320px에서 힌트 확장·토큰 클릭 경로 확인.
+실행: `npm run smoke:command-parity`; `npm run smoke:ui-layout`; `npm run smoke:ui-geometry`; `node scripts/smoke-mobile-viewports.js`; `npm run loop:verify`.
+결과: ✅ 명령·모바일 회귀 검증 통과. 모바일에서 숨겨진 토큰은 한 줄 정책에 따라 H 도움말과 힌트바 확장으로 접근 가능하며, 런타임 결함은 재현되지 않았다.
+
+## [2026-08-29 16:00] 축약 힌트바 키보드 접근성 보강
+
+**LOG_ID: 20260829_1600**
+목표: 모바일 한 줄 정책으로 숨겨진 명령이 있는 경우, 힌트바 자체도 키보드·보조기기에서 확장 가능하도록 한다.
+변경 파일: `public/js/core/terminalHintLayout.js`, `public/js/core/terminalHintFooter.js`, `scripts/smoke-ui-layout.js`, `artifacts/task.md`.
+수행 작업: 오버플로 상태에만 힌트바 `role=button`·`tabindex=0`·`aria-expanded`를 부여하고, Enter/Space로 확장·축소하도록 추가했다. 토큰 자식 요소의 클릭·키보드 이벤트는 그대로 위임한다.
+실행: `npm run smoke:ui-layout`; `npm run smoke:command-parity`; `npm run smoke:full-traversal`; `npm run loop:verify`; `git diff --check`.
+결과: ✅ 모바일·브라우저·24개 완료 게이트 통과. 일반 힌트가 버튼으로 오인되지 않도록 비확장 상태에서는 접근성 속성을 제거한다.
+
+추가 검증: `smoke-ui-layout.js`에 합성 오버플로 목록을 주입해 축약→확장→축소 시
+`role`, `tabindex`, `aria-expanded` 상태가 각각 `button/0/false → true → false`로
+전이되는지 결정적으로 확인했다.
+
+## [2026-08-29 16:45] 운영 보안 경계 및 배포 전 검사
+
+**LOG_ID: 20260829_1645**
+목표: Supabase 공개 RPC·CORS·Auth 설정을 임의 변경하지 않고 현재 운영 경계와 배포 준비 상태를 확인한다.
+수행 작업: CORS allowlist 분기와 service-role 서버 전용 저장소 구성을 읽기 전용 확인하고, 단위 테스트와 Vercel 자산 검증을 실행했다.
+실행: `npm test`; `npm run build`; 기존 Supabase readiness·security smoke 결과 대조.
+결과: ✅ 단위 테스트와 빌드 smoke 통과. 공개 RPC 권한 회수·함수 search_path·Auth 비밀번호 보호·운영 CORS 도메인은 외부 정책 승인 후 적용할 보류 항목으로 유지한다.
+
+## [2026-08-29] 다음 세션 재개용 기준선 정리
+
+**LOG_ID: 20260829_HANDOFF**
+목표: 현재까지의 구현·자료 감사·검증 결과와 다음 작업의 경계를 한 곳에서 재개 가능하도록 정리.
+완료: 실제 `nurie/HITEL.MNU` 대조 후 `GO CHATTING`·`GO BLUEHS`만 추가하고 GO/ANSI smoke에 근거를 고정했다. `docs/ref_images`와 `docs/종료공지`는 중복/축소본 4개를 제거한 뒤 총 35개(각 15개/20개), 160×100 미만 0개로 인벤토리화했다.
+검증: `npm test`, `npm run build`, `npm run check`(`liveReady: true`), `npm run qa:final`, `npm run loop:verify`(24/24), `npm run smoke:full-traversal` 모두 통과. 순회 중 `/api/boards/pds/posts/44` 404는 기존 fixture에 대한 예상 warning이며 새 콘솔 오류는 없었다.
+재개 순서: (1) `git status --short`/diff 확인 (2) `npm run loop:verify` 기준선 확인 (3) 레거시 GO·입력 parity 중 실제 누락만 수정 (4) 관련 smoke와 전체 게이트 재실행. 원전과 동등 화면이 없는 메뉴는 만들지 않는다.
+승인 대기: Supabase 공개 RPC EXECUTE 권한, 함수 `search_path`, Auth 유출 비밀번호 보호, 운영 CORS allowlist는 외부 동작 변경이므로 운영 승인 전에는 읽기 전용 상태로 유지한다. 현재 워크트리는 누적 변경을 보존해야 하며 reset/광범위 삭제/무단 커밋을 하지 않는다.
+
+## [2026-08-29] PC통신 이미지 자산 중복·출처 감사
+
+**LOG_ID: 20260829_assets_catalog_audit**
+목표: `docs/ref_images`와 `docs/종료공지`를 실제 파일 기준으로 재검사해 명확한 중복과 초소형 자산을 정리하고, 이후 검증 가능한 인벤토리와 출처 상태를 남긴다.
+변경 파일: `docs/ref_images/README.md`, `docs/종료공지/README.md`, `docs/PC통신_자료_학습카탈로그.md`, 중복 이미지 4개.
+수행 작업: 1) SHA-256 및 32×32 회색조 비교로 동일 파일·동일 화면의 축소/재인코딩본을 확인 2) 더 큰 보존본을 남기고 `chol2.jpg`, `hitel3.jpg`, `nownuri1.gif`, `종료공지/nownuri01.jpg` 제거 3) 모든 잔여 파일의 픽셀 크기·바이트·SHA-256 앞 16자리를 README에 기록 4) 직접 URL이 없는 기존 수집본은 추측하지 않고 미기록 상태로 명시.
+검증: 잔여 이미지 35개(`ref_images` 15개, `종료공지` 20개), 초소형(160×100 미만) 0개, 폴더 간 SHA-256 중복 0개. Sharp 메타데이터와 SHA-256 재검사 완료.
+결과: ✅ 중복·초소형 문제를 최소 정리했고, 각 이미지의 재현 가능한 파일 인벤토리와 출처 불확실성 표시를 추가했다. 이미지 원본 링크가 보존되지 않은 파일은 새 URL을 추측해 채우지 않았다.
+## [2026-08-29] HITEL.MNU and Nurie NRE GO compatibility audit
+
+- Compared `nurie/HITEL.MNU` and `nurie15/HITEL.MNU` (660 entries, 601 unique GO codes).
+- Added only safe aliases backed by existing destinations: `GO CHATTING` -> `/chat` and `GO BLUEHS` -> `/guide/tosysop`.
+- Kept `GO Z` removed on ordinary screens per the current product decision.
+- Added source and ANSI/NRE regression assertions to `scripts/smoke-go-ansi.js`.
+- Verification: `node --check` (changed JS), `npm run smoke:go-ansi`, `npm run smoke:command-parity`, `npm test`, `git diff --check`.

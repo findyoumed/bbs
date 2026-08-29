@@ -192,3 +192,38 @@
 - The memory participant record now retains the normalized Auth UUID, matching the Supabase driver and shared hybrid occupancy summary.
 - The smoke fixture now supplies the same `authUserId` field that the live AuthBridge context provides.
 - Focused chat-count, board, menu, renderer, security, recovery, syntax, and existing release checks pass after the change.
+
+## 2026-08-29 Supabase chat-member smoke alignment
+
+- The Supabase chat-member smoke reproduced a capacity error because its profile fixture supplied only `userId`; live `AuthBridge` contexts also provide `authUserId`.
+- The fixture now carries the profile UUID in both fields, so the test exercises the authenticated member persistence path instead of the guest path.
+- Repository behavior was unchanged; the focused smoke now passes with one authenticated occupant across two sessions, one guest occupant, and clean member-row removal. The full browser traversal also completed without console/page errors.
+
+## 2026-08-29 Browser memo-editor coverage
+
+- Full traversal now opens the existing `/memo` screen in an isolated Chromium page, applies the QA-authenticated state, and enters the editor through the real `W` command.
+- It verifies recipient Enter → subject, subject Enter → body, row-click focus delegation, and empty-body inline validation without replacing the `Ctrl+S` hint.
+- The scenario passed without changing memo persistence, routing, or production UI code.
+
+## 2026-08-29 Browser memo-list selection coverage
+
+- The isolated browser page now supplies one in-memory received memo response and enters the existing `RMAIL` list.
+- Clicking the generated memo hotspot is asserted to open `memo-view`; no Supabase row is created or changed.
+- The same page then re-enters `W` and preserves the Enter/click/inline-validation assertions.
+
+## 2026-08-29 Hint-bar Tab and schema reproducibility
+
+- The visible `Tab` hint now carries a dedicated focus action. The browser regression confirms that clicking it from the subject field moves to the body field and does not fill `TAB` into `#cmd-input`.
+- Added idempotent Supabase migrations for `memos.receiver_archived`/`sender_archived` and the `chat_room_members(room_id, user_id)` upsert key; readiness now checks both migration files.
+- Corrected the Nurie `.NRE` catalog to document its `@[` sentinel/legacy encoding and intentionally unsupported Nurie-specific extensions.
+
+## 2026-08-29 Blood hotspot and click harness coverage
+
+- Blood-type choices now expose `role="button"`/`tabindex="0"` on both input and result screens; delegated click, Enter, and Space activation share one path.
+- Removed the old per-element mousedown handler that could invoke the same result twice.
+- Repaired `smoke-click-fill-command.mjs` to import the actual ES modules through file URLs and provide the browser timer/input stubs they require.
+
+## 2026-08-29 Fixed sysop recipient and NRE smoke
+
+- Clicking the readonly `sysop` recipient now advances to the subject field; full traversal asserts the final focused element.
+- `smoke-go-ansi.js` reads all four Nurie samples, converts `@[` to `ESC[`, verifies every converted sentinel is parsed, and checks that supported CSI is consumed without claiming Nurie-only extensions.

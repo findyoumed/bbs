@@ -93,6 +93,31 @@ async function probeMemoRepository(repository) {
   }
 }
 
+async function probeMemoArchiveColumns(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { ok: true, skipped: true, reason: 'supabase credentials are not configured' };
+  }
+
+  const table = env.SUPABASE_MEMOS_TABLE || 'memos';
+  const client = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false }
+  });
+  const { error } = await client
+    .from(table)
+    .select('id,receiver_archived,sender_archived')
+    .limit(1);
+
+  if (error) {
+    return { ok: false, error: error.message || 'memo archive columns are unavailable' };
+  }
+
+  return {
+    ok: true,
+    table,
+    columns: ['receiver_archived', 'sender_archived']
+  };
+}
+
 async function probeAttachmentRepository(repository) {
   try {
     const attachments = await repository.list('plaza', 0);
@@ -375,6 +400,11 @@ async function main() {
     'RSS_CACHE_TABLE'
   ];
 
+  const migrationFiles = fs.readdirSync(path.join(rootDir, 'supabase/migrations'))
+    .filter((name) => /^\d+_.+\.sql$/i.test(name))
+    .sort()
+    .map((name) => `supabase/migrations/${name}`);
+
   const files = [
     'server.js',
     'src/server/BoardRepository.js',
@@ -384,14 +414,7 @@ async function main() {
     'src/server/MenuResolver.js',
     'src/server/createRequestHandler.js',
     'src/server/RssCacheStore.js',
-    'supabase/migrations/0001_initial_schema.sql',
-    'supabase/migrations/0002_attachment_storage_columns.sql',
-    'supabase/migrations/0003_memo_schema_alignment.sql',
-    'supabase/migrations/0004_members_table_bootstrap.sql',
-    'supabase/migrations/0005_members_attachments_rls.sql',
-    'supabase/migrations/0006_security_hardening.sql',
-    'supabase/migrations/0007_chat_room_repository_alignment.sql',
-    'supabase/migrations/0008_rss_cache.sql'
+    ...migrationFiles
   ];
 
   const repository = createBoardRepositoryFromEnv(process.env);
@@ -432,6 +455,7 @@ async function main() {
       boards: await probeBoardRepository(repository),
       members: await probeMemberRepository(memberRepository),
       memos: await probeMemoRepository(memoRepository),
+      memoArchiveColumns: await probeMemoArchiveColumns(process.env),
       attachments: await probeAttachmentRepository(attachmentRepository),
       chatRooms: await probeChatRoomRepository(chatRoomRepository),
       rssCache: await probeRssCacheStore(rssCacheStore),

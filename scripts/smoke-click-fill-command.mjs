@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 
 function assert(condition, message) {
   if (!condition) {
@@ -10,12 +11,26 @@ function assert(condition, message) {
 function createCmdInput() {
   return {
     value: '',
+    disabled: false,
     focused: false,
     selectionStart: 0,
     selectionEnd: 0,
     events: [],
+    listeners: new Map(),
     focus() {
       this.focused = true;
+    },
+    select() {
+      this.selectionStart = 0;
+      this.selectionEnd = this.value.length;
+      this.focused = true;
+    },
+    addEventListener(type, handler) {
+      if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+      this.listeners.get(type).add(handler);
+    },
+    removeEventListener(type, handler) {
+      this.listeners.get(type)?.delete(handler);
     },
     setSelectionRange(start, end) {
       this.selectionStart = start;
@@ -23,6 +38,7 @@ function createCmdInput() {
     },
     dispatchEvent(event) {
       this.events.push(event.type);
+      for (const handler of this.listeners.get(event.type) || []) handler(event);
       return true;
     }
   };
@@ -42,7 +58,9 @@ function createTarget(dataset, matchedAttr) {
 }
 
 globalThis.window = {
-  matchMedia: () => ({ matches: true })
+  matchMedia: () => ({ matches: true }),
+  setTimeout,
+  clearTimeout
 };
 Object.defineProperty(globalThis, 'navigator', {
   configurable: true,
@@ -52,13 +70,9 @@ Object.defineProperty(globalThis, 'navigator', {
   }
 });
 
-const interactionSource = fs.readFileSync(path.resolve('public/js/core/interactionHandlers.js'), 'utf8')
-  .replace(
-    "import { isMobileDevice } from './uiUtils.js';",
-    'function isMobileDevice() { return false; }'
-  );
-const moduleUrl = `data:text/javascript;base64,${Buffer.from(interactionSource).toString('base64')}`;
-const { createInteractionHandlers } = await import(moduleUrl);
+const { createInteractionHandlers } = await import(
+  pathToFileURL(path.resolve('public/js/core/interactionHandlers.js')).href
+);
 
 const calls = {
   commands: [],
@@ -168,6 +182,7 @@ handleGlobalClick({
 });
 assert(cmdInput.value === '', `topbar home click should not show T: ${cmdInput.value}`);
 assert(calls.commands.at(-1) === 'T', 'topbar home click did not execute immediately');
+await Promise.resolve();
 
 cmdInput.value = '';
 cmdInput.events = [];
@@ -226,16 +241,14 @@ globalThis.document = {
 };
 globalThis.window = {
   addEventListener() {},
-  getSelection: () => ({ toString: () => '' })
+  getSelection: () => ({ toString: () => '' }),
+  setTimeout,
+  clearTimeout
 };
 
-const appEventsSource = fs.readFileSync(path.resolve('public/js/core/appEvents.js'), 'utf8')
-  .replace(
-    "import { bindCommandInputEvents } from './appEventsCommandInput.js';",
-    'function bindCommandInputEvents() { return { moveCaretToEnd: () => {} }; }'
-  );
-const appEventsUrl = `data:text/javascript;base64,${Buffer.from(appEventsSource).toString('base64')}`;
-const { bindAppEvents } = await import(appEventsUrl);
+const { bindAppEvents } = await import(
+  pathToFileURL(path.resolve('public/js/core/appEvents.js')).href
+);
 
 const hintMarkupSource = fs.readFileSync(path.resolve('public/js/core/terminalHintMarkup.js'), 'utf8')
   .replace(

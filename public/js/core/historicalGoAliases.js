@@ -22,7 +22,13 @@ export const HISTORICAL_GO_ALIASES = Object.freeze({
   // 시삽 건의하기 화면으로 의미가 보존되는 검증된 대응 경로다.
   BLUEHOUSE: 'TOSYSOP',
   // Nownuri menu code: CHATIN (대화참여) uses the existing chat lobby.
-  CHATIN: 'CHAT'
+  CHATIN: 'CHAT',
+  // HITEL.MNU: (11) 채팅 메뉴 is exposed as `chatting`; the current
+  // service uses the canonical CHAT lobby for the same destination.
+  CHATTING: 'CHAT',
+  // HITEL.MNU: 여론/청와대 건의 메뉴 uses `bluehs`; TOSYSOP is the
+  // current service's equivalent suggestion/contact screen.
+  BLUEHS: 'TOSYSOP'
 });
 
 export function resolveHistoricalGoAlias(target, normalize = null) {

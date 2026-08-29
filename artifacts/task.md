@@ -228,3 +228,198 @@ Exit criteria: both direct `CHATIN` and `GO CHATIN` preserve the same existing c
 - [x] Run `loop:verify`, Supabase readiness, unit tests, full browser traversal, and diff checks
 
 Exit criteria: memory and Supabase chat drivers use the same authenticated-user occupancy semantics, and the common-flow smoke checks pass without adding a parallel feature path.
+
+## Current iteration: 2026-08-29 01:28
+
+- [x] Re-run the Supabase-backed chat member persistence smoke
+- [x] Reproduce the fixture mismatch where the selected profile omitted `authUserId`
+- [x] Align the profile fixture with the AuthBridge request context without changing runtime routing
+- [x] Verify authenticated multi-session occupancy and member-row cleanup
+
+Exit criteria: the Supabase common-flow smoke represents an authenticated member correctly and passes the same occupancy contract as production requests.
+
+## Current iteration: 2026-08-29 01:42
+
+- [x] Reproduce the `/memo` → `W` editor flow in a real Chromium page
+- [x] Verify Enter and row-click focus transitions for recipient, subject, and body
+- [x] Verify empty-body validation stays inline and preserves the command hint
+- [x] Add the scenario to full traversal and rerun the release gates
+
+Exit criteria: the common memo editor interaction is covered by browser regression checks without changing memo persistence or routing behavior.
+
+## Current iteration: 2026-08-29 10:46
+
+- [x] Add a browser fixture for one received memo without writing to Supabase
+- [x] Verify the memo-list hotspot click opens the memo-view screen
+- [x] Keep the existing keyboard/editor assertions and rerun full traversal
+- [x] Rerun the 24-check loop gate
+
+Exit criteria: both the common memo-list click and memo-editor keyboard flows are covered by a deterministic browser regression path.
+
+## Current iteration: 2026-08-29 11:28
+
+- [x] Fix hint-bar `Tab` token so it performs editor focus movement instead of filling `TAB` into the command line
+- [x] Preserve the last editor field when the browser focuses the clickable hint token before dispatch
+- [x] Add migration coverage for memo archive flags and chat member upsert identity
+- [x] Correct the Nurie `.NRE` catalog to document `@[`/encoding conversion and unsupported Nurie extensions
+- [x] Run focused browser, Supabase, and full loop verification after the changes
+
+Exit criteria: clicking or keyboard-activating `Tab` follows the same next-field behavior as the physical Tab key, and fresh Supabase schemas contain the columns/indexes used by runtime repositories.
+
+## Current iteration: 2026-08-29 11:45
+
+- [x] Add role/tabindex semantics and Enter/Space activation for blood-type hotspots
+- [x] Remove duplicate blood hotspot mousedown/click activation paths
+- [x] Repair the click-fill command harness to import real ES modules and model required browser stubs
+- [x] Add browser regression coverage for blood hotspot keyboard activation
+- [x] Run the repaired harness and full browser traversal
+
+Exit criteria: blood-type choices support mouse and keyboard activation without duplicate navigation, and the click-fill regression harness runs instead of failing during module loading.
+
+## Current iteration: 2026-08-29 12:05
+
+- [x] Make the readonly `sysop` recipient field advance to the subject on direct click
+- [x] Add a permanent browser assertion for that fixed-recipient click path
+- [x] Add read-only `.NRE` sentinel conversion coverage to the ANSI smoke
+- [x] Keep legacy byte decoding and Nurie-only extensions outside the web renderer claim
+- [x] Rerun the full 24-check loop after the final NRE assertion
+
+Exit criteria: fixed-recipient mouse flow and the documented `.NRE` conversion boundary are regression-tested without changing mail routing or adding a runtime NRE loader.
+
+## Current iteration: 2026-08-29 12:18
+
+- [x] Add Enter/ArrowDown/Tab handling to the readonly `sysop` recipient field
+- [x] Verify direct recipient click and Enter both advance to the subject
+- [x] Confirm NRE sentinel parsing and all release gates remain green
+
+Exit criteria: the fixed recipient has mouse and keyboard parity, and NRE reference checks do not broaden runtime support claims.
+
+## Current iteration: 2026-08-29 12:45
+
+- [x] Reproduce the authenticated startup toast race where the first render clears the notification
+- [x] Defer unread memo notification until the initial screen/footer render completes
+- [x] Add module smoke coverage for toast visibility handoff and `/memo` click navigation
+- [x] Hold the same notification window across interactive login before returning to the main screen
+- [x] Run the full traversal and release gates
+
+Exit criteria: an authenticated user with unread memos can see, hover, focus, and activate the toast after startup without changing memo or Supabase data.
+
+## Current iteration: 2026-08-29 13:10
+
+- [x] Audit GO and hint-bar parity against the recovered Nownuri menu-index behavior
+- [x] Resolve hierarchical numeric paths such as `GO 1 3` and `GO 1.3` through `door` values
+- [x] Preserve flat numeric GO compatibility such as `GO 13`
+- [x] Add GO smoke coverage for GUIDE/HELP and GAME/SCRAMBLE paths
+- [x] Run `smoke:go-ansi`, `loop:verify`, and full browser traversal
+
+Exit criteria: hierarchical menu indices no longer collapse into an unrelated flat command, while existing aliases and flat numeric GO commands remain compatible.
+
+## Current iteration: 2026-08-29 13:25
+
+- [x] Add a read-only readiness probe for `receiver_archived`/`sender_archived`
+- [x] Confirm the configured activity repository uses Supabase `user_activities`
+- [x] Confirm remote memo archive columns through the service-role REST probe
+- [x] Make readiness enumerate every numbered migration instead of a partial hard-coded list
+- [x] Confirm the `(room_id, user_id)` unique index through Supabase SQL metadata
+- [x] Confirm remote migration history; deployed history uses timestamped names and does not include local 0023/0024 names
+
+Exit criteria: runtime readiness reports the schema fields required by memo archiving, and Supabase SQL metadata confirms the chat-member uniqueness contract despite remote migration-name drift.
+
+## Current iteration: 2026-08-29 12:25
+
+- [x] Reconcile the historical Hitel eight-type mail matrix with the compose flow
+- [x] Add secret/reply-required/delayed combinations 1-8 without changing the memo schema
+- [x] Encode the selected flags in the existing title tag and preserve delayed/reply handling
+- [x] Add a deterministic smoke assertion for all eight type flags and tags
+- [x] Run build, Supabase readiness, full traversal, qa:final, and loop:verify
+
+Exit criteria: memo composition exposes all eight documented letter types, and all existing browser, API, and readiness gates remain green.
+
+## Current iteration: 2026-08-29 13:40
+
+- [x] Audit Supabase advisor findings against the server-only service-role architecture
+- [x] Confirm anonymous Data API reads are blocked by RLS/no-policy tables
+- [x] Reconcile command guides with current context-sensitive routing (TOP, chat `/Z`, SET/CAP, PRINT/XX/EAR)
+- [x] Correct stale command and source-path references in the project documentation
+- [x] Run `npm run check`, `npm run loop:verify`, syntax checks, and `git diff --check`
+- [ ] Obtain an operations decision before changing public RPC grants, function `search_path`, password protection, or CORS origins
+
+Exit criteria: documentation matches current behavior, runtime remains green, and security changes that could affect external clients are isolated as an explicit follow-up decision.
+
+## Current iteration: 2026-08-29 14:05
+
+- [x] Expose the already-working chat-room `/Z` replay command in the active-room footer
+- [x] Keep global `Z` removed so unsupported ordinary-screen input is unchanged
+- [x] Add command-parity coverage for the new room-only footer token
+- [x] Re-run the command smoke and full 24-check loop
+
+Exit criteria: chat-room replay is discoverable and clickable without broadening `Z` into a global command.
+
+## Current iteration: 2026-08-29 14:20
+
+- [x] Reproduce the missing chat footer `/Z` token in the browser traversal
+- [x] Extend the hint-bar directive parser to retain optional slash prefixes
+- [x] Verify `/L`, `/W`, and `/Z` remain clickable chat-room actions
+- [x] Add browser regression coverage for `/Z` replay and rerun full traversal
+- [x] Add ANSI/hint smoke assertions for `/L`, `/W`, and `/Z` data-cmd targets
+
+Exit criteria: slash-prefixed active-room shortcuts render as interactive tokens and replay does not leak into ordinary-screen global commands.
+
+## Current iteration: 2026-08-29 15:00
+
+- [x] Reconcile ME/MEMO/RMAIL help metadata with inbox routing
+- [x] Document MAIL, CMAIL, WMAIL, TO, and sysop-contact command contexts
+- [x] Verify 390/360/320px route coverage and hint expansion behavior
+- [x] Confirm hidden mobile tokens remain reachable after hint expansion
+- [x] Run command-parity and UI layout/geometry smoke checks
+
+Exit criteria: user-facing command help matches the existing memo/chat routes, and mobile hint trimming remains intentional and recoverable.
+
+## Current iteration: 2026-08-29 16:00
+
+- [x] Expose expandable hint state through `role=button`, `tabindex`, and `aria-expanded`
+- [x] Add Enter/Space keyboard toggling for the hint bar without intercepting child command tokens
+- [x] Keep semantics cleared when a new non-expandable hint replaces the footer
+- [x] Add static and synthetic-overflow UI smoke assertions and rerun browser traversal
+
+Exit criteria: mobile users and keyboard users can discover and expand trimmed hints without changing existing token actions.
+
+## Current iteration: 2026-08-29 16:45
+
+- [x] Recheck CORS allowlist behavior and Supabase service-role boundary without changing production settings
+- [x] Run the repository unit suite (`npm test`)
+- [x] Run the Vercel asset/build smoke (`npm run build`)
+- [x] Keep public RPC grants, Auth password protection, and production origins as explicit approval items
+
+Exit criteria: operational checks are evidenced while no external database permission or deployment setting is changed implicitly.
+
+## Current iteration: 2026-08-29 assets catalog audit
+
+- [x] Enumerate every image in `docs/ref_images` and `docs/종료공지` with Sharp dimensions and SHA-256
+- [x] Remove the four verified duplicate/downsized copies while retaining the larger or canonical notice copy
+- [x] Confirm no remaining image is below the 160×100 minimum
+- [x] Add per-folder inventory READMEs with provenance status and source-page links where known
+- [x] Update `docs/PC통신_자료_학습카탈로그.md` with the audited counts and provenance boundary
+
+Exit criteria: image archives contain 35 unique, readable files and their audit evidence is documented without inventing missing original URLs.
+## Current iteration: 2026-08-29 — HITEL.MNU/NRE GO candidate audit
+
+- [x] Compare both Nurie `HITEL.MNU` copies and count unique GO candidates
+- [x] Add only proven safe aliases (`CHATTING`, `BLUEHS`) to the existing router
+- [x] Keep ordinary-screen `Z` disabled per user decision
+- [x] Add source-backed GO and NRE/ANSI smoke assertions
+- [x] Update the GO compatibility catalog and work log
+- [x] Run syntax, GO/ANSI, command-parity, unit, and diff checks
+
+Exit criteria: historical candidates without a current destination remain documented as deferred; no speculative routes are introduced.
+
+## 다음 세션 인수인계 (2026-08-29)
+
+- [x] `HITEL.MNU` 양본과 `.NRE` 샘플 대조 완료
+- [x] 근거가 확인된 `GO CHATTING`·`GO BLUEHS`만 기존 라우터에 추가
+- [x] 참고 이미지 중복 4개 제거, `ref_images` 15개·`종료공지` 20개 인벤토리 작성
+- [x] 기준선 전체 검증: unit/build/check/qa/full-traversal/loop(24/24)
+- [ ] Supabase 운영 보안 변경은 명시적 승인 후 별도 적용
+
+재개 시 첫 명령: `npm run loop:verify`
+그 다음 `git status --short`와 위 카탈로그를 읽고, 실제 재현되는 누락만 작은 변경으로 처리한다. 현재 작업 트리는 의도적으로 dirty하며 기존 변경을 초기화하지 않는다.

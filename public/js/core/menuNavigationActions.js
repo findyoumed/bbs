@@ -44,6 +44,30 @@ export function createMenuNavigationActions(deps) {
 
     const target = command.slice(2).trim();
     if (!target) return false;
+
+    // Nurie/Nownuri accepted hierarchical numeric indices (for example
+    // `GO 1 3` or `GO 1.3`). Resolve the path from TOP before the historical
+    // alias normalizer removes separators and turns it into the flat `13`.
+    const numericSegments = target.split(/[.\s]+/).filter(Boolean);
+    if (numericSegments.length > 1 && numericSegments.every((segment) => /^\d+$/.test(segment))) {
+      let parentNode = state.menuTree || getMenuNodeByKey('top');
+      let targetNode = null;
+      for (const segment of numericSegments) {
+        targetNode = getMenuChildren(parentNode).find((node) => String(node?.door || '').trim() === segment) || null;
+        if (!targetNode) break;
+        parentNode = targetNode;
+      }
+      if (targetNode && parentNode === targetNode && numericSegments.length > 0) {
+        const parent = getMenuParentNode(targetNode) || state.menuTree;
+        await executeMenuNodeAction(
+          targetNode,
+          getMenuNodeKey(parent) || 'top',
+          getMenuNodeTitle(parent || state.menuTree)
+        );
+        return true;
+      }
+    }
+
     const normalized = resolveHistoricalGoAlias(target, normalizeSearchKey);
     // [LOG_ID: 20260720_2320] GL은 PDS(자료실)의 별칭 — GO GL도 자료실로 이동
     if (normalized === 'GL') return await executeGoCommand('GO PDS');

@@ -293,7 +293,10 @@ export function createContactSysopScreen(deps) {
     }
 
     const onTargetRowClick = (event) => {
-      if (event.target !== targetEl) safeFocus(subjectEl);
+      // 수신자는 시삽으로 고정된 readonly 필드다. 필드 자체를 눌러도
+      // 편집할 수 없으므로 제목 입력으로 이어지게 해 키보드/마우스 흐름을
+      // 동일하게 유지한다.
+      safeFocus(subjectEl);
     };
     const onSubjectRowClick = (event) => {
       if (event.target !== subjectEl) safeFocus(subjectEl);
@@ -310,6 +313,7 @@ export function createContactSysopScreen(deps) {
       targetRowEl?.removeEventListener('click', onTargetRowClick);
       subjectRowEl?.removeEventListener('click', onSubjectRowClick);
       bodyRowEl?.removeEventListener('click', onBodyRowClick);
+      targetEl?.removeEventListener('keydown', onTargetKey);
       subjectEl.removeEventListener('keydown', onSubjectKey);
       bodyEl.removeEventListener('keydown', onBodyKey);
       cmdInput?.removeEventListener('keydown', onCmdKey);
@@ -334,6 +338,16 @@ export function createContactSysopScreen(deps) {
         e.preventDefault();
         safeFocus(bodyEl);
         bodyEl.setSelectionRange(0, 0);
+      }
+    }
+
+    function onTargetKey(e) {
+      if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) { e.preventDefault(); doSave(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); cancelContactSysop(); return; }
+      if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+        e.preventDefault();
+        safeFocus(subjectEl);
+        subjectEl.setSelectionRange(0, 0);
       }
     }
 
@@ -375,6 +389,7 @@ export function createContactSysopScreen(deps) {
     }
 
     subjectEl.oninput = (e) => { flow.subject = e.target.value; clearInlineValidationError(); };
+    targetEl?.addEventListener('keydown', onTargetKey);
     subjectEl.addEventListener('keydown', onSubjectKey);
 
     bodyEl.oninput = (e) => { flow.bodyLines = e.target.value.split('\n'); clearInlineValidationError(); };

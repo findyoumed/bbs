@@ -12,19 +12,24 @@ import { convertKoreanToEnglish } from './commandNormalizer.js';
 
 // [LOG_ID: 20260713_1620] 하이텔 원전(길라잡이 p.105) 편지 종류 8종 — 비밀/답장요망/지연
 // 3개 속성의 조합. 서버 스키마 변경 없이 제목 앞 대괄호 태그로 인코딩한다.
-const LETTER_TYPES = {
-  1: { label: '일반편지', replyRequired: false, delayed: false },
-  2: { label: '답장요망', replyRequired: true, delayed: false },
-  3: { label: '지연편지', replyRequired: false, delayed: true },
-  4: { label: '답장요망+지연', replyRequired: true, delayed: true }
+export const LETTER_TYPES = {
+  1: { label: '일반편지', secret: false, replyRequired: false, delayed: false },
+  2: { label: '비밀편지', secret: true, replyRequired: false, delayed: false },
+  3: { label: '답장요망', secret: false, replyRequired: true, delayed: false },
+  4: { label: '지연편지', secret: false, replyRequired: false, delayed: true },
+  5: { label: '비밀+답장요망', secret: true, replyRequired: true, delayed: false },
+  6: { label: '비밀+지연', secret: true, replyRequired: false, delayed: true },
+  7: { label: '답장요망+지연', secret: false, replyRequired: true, delayed: true },
+  8: { label: '비밀+답장요망+지연', secret: true, replyRequired: true, delayed: true }
 };
 
-function buildMemoTitleTag(letterType, delayMinutes) {
+export function buildMemoTitleTag(letterType, delayMinutes) {
   const meta = LETTER_TYPES[letterType];
   if (!meta || letterType === 1) {
     return '';
   }
   const parts = [];
+  if (meta.secret) parts.push('비밀');
   if (meta.replyRequired) parts.push('답장요망');
   if (meta.delayed) parts.push(`지연:${Math.max(1, Number(delayMinutes) || 0)}분`);
   return parts.length ? `[${parts.join('·')}] ` : '';
@@ -453,8 +458,8 @@ export function createMemoScreens(deps) {
                 setHint(`보낼 축하카드 번호를 고르세요. (1-${MEMO_CARD_KEYS.length}, 취소: /q)`);
                 setPrompt(`카드 번호 (1-${MEMO_CARD_KEYS.length}) >>`);
             } else if (flow.stage === 'letter_type') {
-                setHint('보낼 편지의 종류 번호를 고르세요. (1-4, 취소: /q)');
-                setPrompt('편지 종류 (1-4) >>');
+                setHint('보낼 편지의 종류 번호를 고르세요. (1-8, 취소: /q)');
+                setPrompt('편지 종류 (1-8) >>');
             } else if (flow.stage === 'delay_minutes') {
                 setHint('지연 시간을 분 단위로 입력하세요. (1-1440, 취소: /q)');
                 setPrompt('지연 시간(분) >>');
@@ -791,7 +796,7 @@ export function createMemoScreens(deps) {
                 for (let i = 1; i <= Object.keys(LETTER_TYPES).length; i += 1) {
                     appendMemoWriteLine(`  ${i}.`, LETTER_TYPES[i].label);
                 }
-                setPrompt('편지 종류 (1-4) >>');
+                setPrompt('편지 종류 (1-8) >>');
                 renderMemoWriteScreen();
             }
         }
@@ -1115,8 +1120,8 @@ export function createMemoScreens(deps) {
             }
             const typeChoice = parseInt(trimmed, 10);
             if (!LETTER_TYPES[typeChoice]) {
-                appendMemoWriteLine('[안내]', '잘못된 선택입니다. 1~4 중 하나를 입력해 주세요.');
-                setPrompt('편지 종류 (1-4) >>');
+                appendMemoWriteLine('[안내]', '잘못된 선택입니다. 1~8 중 하나를 입력해 주세요.');
+                setPrompt('편지 종류 (1-8) >>');
                 renderMemoWriteScreen();
                 return true;
             }

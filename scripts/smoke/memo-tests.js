@@ -675,9 +675,43 @@ async function verifyMemoWriteFormGuard(errors) {
     }
 }
 
+// [LOG_ID: 20260829_1500] Historical Hitel mail types are the full 3-bit
+// combination of secret, reply-required, and delayed delivery (1-8).
+async function verifyMemoLetterTypes(errors) {
+    console.log('✉️  Checking historical memo letter type matrix...');
+    try {
+        const moduleCache = new Map();
+        const { LETTER_TYPES, buildMemoTitleTag } = loadBrowserHarnessModule(
+            path.join(__dirname, '../..', 'public/js/core/memoScreens.js'), moduleCache
+        );
+        const expected = {
+            1: { secret: false, replyRequired: false, delayed: false, tag: '' },
+            2: { secret: true, replyRequired: false, delayed: false, tag: '[비밀] ' },
+            3: { secret: false, replyRequired: true, delayed: false, tag: '[답장요망] ' },
+            4: { secret: false, replyRequired: false, delayed: true, tag: '[지연:30분] ' },
+            5: { secret: true, replyRequired: true, delayed: false, tag: '[비밀·답장요망] ' },
+            6: { secret: true, replyRequired: false, delayed: true, tag: '[비밀·지연:30분] ' },
+            7: { secret: false, replyRequired: true, delayed: true, tag: '[답장요망·지연:30분] ' },
+            8: { secret: true, replyRequired: true, delayed: true, tag: '[비밀·답장요망·지연:30분] ' }
+        };
+        for (const [key, shape] of Object.entries(expected)) {
+            const actual = LETTER_TYPES[Number(key)];
+            if (!actual || actual.secret !== shape.secret || actual.replyRequired !== shape.replyRequired || actual.delayed !== shape.delayed) {
+                errors.push(`[memo types] type ${key} does not match the historical flag matrix`);
+                continue;
+            }
+            const tag = buildMemoTitleTag(Number(key), 30);
+            if (tag !== shape.tag) errors.push(`[memo types] type ${key} tag mismatch: ${tag}`);
+        }
+    } catch (error) {
+        errors.push(`[memo types] harness failed: ${error.message}`);
+    }
+}
+
 module.exports = {
     verifyContactSysopCoverage,
     verifyHttpMemoCoverage,
     verifyMemoWriteCoverage,
-    verifyMemoWriteFormGuard
+    verifyMemoWriteFormGuard,
+    verifyMemoLetterTypes
 };

@@ -65,10 +65,13 @@ function verifyNormalizerParity() {
   assert(String(CMD_META.A.tip || '').includes('A 번호'), 'A help should explain its list reply form');
   assert(String(CMD_META.WHO.tip || '').includes('U'), 'WHO help should expose the U alias');
   assert(String(CMD_META.FW.tip || '').includes('[번호] [아이디]'), 'FW help should explain list forwarding');
+  assert(String(CMD_META.ME.tip || '').includes('받은편지함'), 'ME help should identify the inbox route');
+  assert(String(CMD_META.MEMO.desc || '').includes('받은편지함'), 'MEMO help should identify the inbox route');
 
   const footerUtils = createCommandFooterTextUtils({ state: { user: { isGuest: false } } });
   assert(footerUtils.getCommandFooterText('postList').includes('NEW:새글'), 'post-list footer should expose NEW');
   assert(footerUtils.getCommandFooterText('pdsList').includes('NEW:새글'), 'PDS footer should expose NEW');
+  assert(footerUtils.getCommandFooterText('chat').includes('/Z:다시보기'), 'chat footer should expose room-only replay');
 }
 
 async function verifyQuickMemoFlow() {

@@ -101,6 +101,7 @@ async function runHttpTraversal(errors) {
     await memoTests.verifyContactSysopCoverage(errors);
     await memoTests.verifyMemoWriteCoverage(errors);
     await memoTests.verifyMemoWriteFormGuard(errors);
+    await memoTests.verifyMemoLetterTypes(errors);
     await miscTests.verifyHelpCoverage(errors);
     await miscTests.verifyHistoryCoverage(errors);
     await weatherTests.verifyWeatherCoverage(errors);
@@ -138,8 +139,10 @@ async function runPlaywrightTraversal(browser, errors) {
     // 메뉴를 선택할 수 없다. 원전의 번호 선택을 보완한 마우스 접근성 경로를
     // 실제 브라우저에서 각 항목 한 번씩 실행해 이동 결과까지 회귀 검증한다.
      await verifyTopMenuHotspotClicks(page, errors);
+     await verifyHierarchicalGoCommand(page, errors);
      await verifyAgoraRouteSemantics(page, errors);
      await verifyContactEditorInteraction(page, errors);
+     await verifyMemoEditorInteraction(page, errors);
      await verifyGameInlineValidation(page, errors);
 
     // 2. Traversal Logic (Simplified Crawler)
@@ -189,6 +192,21 @@ async function verifyTopMenuHotspotClicks(page, errors) {
         }
     }
     console.log(`🖱️  Verified ${initialCount} top-menu hotspots by browser click.`);
+}
+
+async function verifyHierarchicalGoCommand(page, errors) {
+    await page.goto(config.BASE_URL, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(350);
+    const commandInput = page.locator('#cmd-input');
+    await commandInput.fill('GO 1 3');
+    await commandInput.press('Enter');
+    await page.waitForTimeout(450);
+    const screen = await page.locator('#terminal-container').getAttribute('data-screen');
+    const url = page.url();
+    if (screen !== 'help' && !url.includes('/help')) {
+        errors.push(`Hierarchical GO 1 3 opened an unexpected target: screen=${screen}, url=${url}`);
+    }
+    console.log('?뱻 Verified hierarchical GO 1 3 menu-door navigation.');
 }
 
 async function verifyAgoraRouteSemantics(page, errors) {
@@ -265,9 +283,22 @@ async function verifyContactEditorInteraction(page, errors) {
 
         const subject = contactPage.locator('#tosysop-ed-subject');
         const body = contactPage.locator('#tosysop-ed-body');
+        const fixedTarget = contactPage.locator('#tosysop-ed-target');
         if (await subject.count() !== 1 || await body.count() !== 1) {
             errors.push('Authenticated contact sysop editor fields were not rendered.');
             return;
+        }
+
+        await fixedTarget.click();
+        const targetClickFocus = await contactPage.evaluate(() => document.activeElement?.id || '');
+        if (targetClickFocus !== 'tosysop-ed-subject') {
+            errors.push(`Fixed sysop recipient click did not advance to subject: ${targetClickFocus}`);
+        }
+        await fixedTarget.focus();
+        await fixedTarget.press('Enter');
+        const targetEnterFocus = await contactPage.evaluate(() => document.activeElement?.id || '');
+        if (targetEnterFocus !== 'tosysop-ed-subject') {
+            errors.push(`Fixed sysop recipient Enter did not advance to subject: ${targetEnterFocus}`);
         }
 
         await subject.fill('');
@@ -285,6 +316,158 @@ async function verifyContactEditorInteraction(page, errors) {
         console.log('✉️  Verified authenticated contact editor and inline validation.');
     } finally {
         await contactPage.close();
+    }
+}
+
+async function verifyMemoEditorInteraction(page, errors) {
+    // [LOG_ID: 20260829_0142] 쪽지 작성은 기존 module/HTTP harness만으로는
+    // 실제 input 포커스 이동과 행 클릭 위임을 검증할 수 없어, 별도 브라우저
+    // 페이지에서 받는 사람·제목·내용의 공통 입력 흐름을 직접 확인한다.
+    const memoPage = await page.context().newPage();
+    memoPage.setDefaultNavigationTimeout(config.TIMEOUT);
+    memoPage.setDefaultTimeout(config.TIMEOUT);
+    memoPage.on('console', (msg) => {
+        if (msg.type() === 'error') errors.push(`[memo editor] ${msg.text()}`);
+    });
+    memoPage.on('pageerror', (error) => {
+        errors.push(`[memo editor] ${error.message}`);
+    });
+
+    try {
+        const fixtureMemo = {
+            id: 9001,
+            senderUserId: 'memo-sender',
+            recipientUserId: 'qa-memo-user',
+            title: '브라우저 목록 클릭 확인',
+            content: '쪽지 목록에서 선택한 본문입니다.',
+            createdAt: new Date().toISOString(),
+            isRead: false
+        };
+        await memoPage.route('**/api/memos**', async (route) => {
+            const pathname = new URL(route.request().url()).pathname;
+            if (pathname.endsWith('/read')) {
+                await route.fulfill({ status: 204, body: '' });
+                return;
+            }
+            if (pathname.endsWith('/9001')) {
+                await route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify(fixtureMemo)
+                });
+                return;
+            }
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify([fixtureMemo])
+            });
+        });
+
+        await memoPage.goto(`${config.BASE_URL}/memo`, { waitUntil: 'networkidle' });
+        await memoPage.waitForTimeout(450);
+        await memoPage.evaluate(() => {
+            window.__debugState.user = {
+                userId: 'qa-memo-user',
+                nickName: 'QA',
+                level: 1,
+                isAdmin: false,
+                isGuest: false,
+                email: ''
+            };
+        });
+
+        const memoMenuInput = memoPage.locator('#cmd-input');
+        await memoMenuInput.fill('RMAIL');
+        await memoMenuInput.press('Enter');
+        await memoPage.waitForSelector('.ansi-hotspot.post-hotspot');
+        await memoPage.locator('.ansi-hotspot.post-hotspot').first().click();
+        await memoPage.waitForSelector('#terminal-container[data-screen="memo-view"]');
+
+        await memoPage.goto(`${config.BASE_URL}/memo`, { waitUntil: 'networkidle' });
+        await memoPage.waitForTimeout(450);
+        await memoPage.evaluate(() => {
+            window.__debugState.user = {
+                userId: 'qa-memo-user',
+                nickName: 'QA',
+                level: 1,
+                isAdmin: false,
+                isGuest: false,
+                email: ''
+            };
+        });
+
+        const commandInput = memoPage.locator('#cmd-input');
+        await commandInput.fill('W');
+        await commandInput.press('Enter');
+        await memoPage.waitForSelector('#memo-ed-target');
+        await memoPage.waitForSelector('#memo-ed-subject');
+        await memoPage.waitForSelector('#memo-ed-body');
+
+        await memoPage.locator('#memo-ed-target').fill('sysop');
+        await memoPage.locator('#memo-ed-target').press('Enter');
+        const afterTargetEnter = await memoPage.evaluate(() => document.activeElement?.id || '');
+
+        await memoPage.locator('#memo-ed-subject').fill('브라우저 공통 흐름 확인');
+        await memoPage.locator('#memo-ed-subject').press('Enter');
+        const afterSubjectEnter = await memoPage.evaluate(() => document.activeElement?.id || '');
+
+        await memoPage.locator('#memo-ed-target-row').click();
+        const afterTargetRowClick = await memoPage.evaluate(() => document.activeElement?.id || '');
+        await memoPage.locator('#memo-ed-subject-row').click();
+        const afterSubjectRowClick = await memoPage.evaluate(() => document.activeElement?.id || '');
+
+        await memoPage.locator('#memo-ed-subject').focus();
+        const tabAction = memoPage.locator('#cmd-hint [data-cmd-focus-next="true"]');
+        if (await tabAction.count() !== 1) {
+            errors.push('Memo Tab hint action token missing or duplicated.');
+        } else {
+            await tabAction.click();
+            const afterTabClick = await memoPage.evaluate(() => ({
+                active: document.activeElement?.id || '',
+                commandValue: document.getElementById('cmd-input')?.value || ''
+            }));
+            if (afterTabClick.active !== 'memo-ed-body') {
+                errors.push(`Memo Tab click focus mismatch: ${JSON.stringify(afterTabClick)}`);
+            }
+            if (afterTabClick.commandValue === 'TAB') {
+                errors.push('Memo Tab click filled the command input instead of moving focus.');
+            }
+        }
+
+        await memoPage.locator('#memo-ed-body').press('Control+s');
+        const emptyBodyResult = await memoPage.evaluate(() => ({
+            inlineError: document.querySelector('.memo-ed-validation')?.textContent || '',
+            hint: document.querySelector('#cmd-hint')?.textContent || '',
+            active: document.activeElement?.id || ''
+        }));
+
+        if (afterTargetEnter !== 'memo-ed-subject') {
+            errors.push(`Memo target Enter focus mismatch: ${afterTargetEnter}`);
+        }
+        if (afterSubjectEnter !== 'memo-ed-body') {
+            errors.push(`Memo subject Enter focus mismatch: ${afterSubjectEnter}`);
+        }
+        if (afterTargetRowClick !== 'memo-ed-target') {
+            errors.push(`Memo target row click focus mismatch: ${afterTargetRowClick}`);
+        }
+        if (afterSubjectRowClick !== 'memo-ed-subject') {
+            errors.push(`Memo subject row click focus mismatch: ${afterSubjectRowClick}`);
+        }
+        if (!emptyBodyResult.inlineError.includes('내용을 입력해주세요')) {
+            errors.push(`Memo empty-body validation missing: ${JSON.stringify(emptyBodyResult)}`);
+        }
+        if (!emptyBodyResult.hint.includes('Ctrl+S')) {
+            errors.push(`Memo validation overwrote command hint: ${JSON.stringify(emptyBodyResult)}`);
+        }
+        if (emptyBodyResult.active !== 'memo-ed-body') {
+            errors.push(`Memo empty-body validation focus mismatch: ${emptyBodyResult.active}`);
+        }
+        console.log('✉️  Verified memo list click, editor Enter/click focus, Tab action, and inline validation.');
+    } catch (error) {
+        errors.push(`Memo editor browser flow failed: ${error.message}`);
+    } finally {
+        await memoPage.close();
     }
 }
 
@@ -340,7 +523,23 @@ async function verifyGameInlineValidation(page, errors) {
                 errors.push(`Game validation rendered outside a screen body on ${testCase.route}.`);
             }
         }
-        console.log('🎮 Verified game validation stays inline and preserves the command hint.');
+
+        await gamePage.goto(`${config.BASE_URL}/game/blood`, { waitUntil: 'networkidle' });
+        await gamePage.waitForSelector('.blood-hotspot[data-val="A"]');
+        const bloodHotspotState = await gamePage.evaluate(() => {
+            const hotspot = document.querySelector('.blood-hotspot[data-val="A"]');
+            return {
+                role: hotspot?.getAttribute('role') || '',
+                tabIndex: hotspot?.tabIndex ?? -1
+            };
+        });
+        if (bloodHotspotState.role !== 'button' || bloodHotspotState.tabIndex < 0) {
+            errors.push(`Blood hotspot keyboard semantics missing: ${JSON.stringify(bloodHotspotState)}`);
+        }
+        await gamePage.locator('.blood-hotspot[data-val="A"]').focus();
+        await gamePage.locator('.blood-hotspot[data-val="A"]').press('Enter');
+        await gamePage.waitForSelector('#terminal-container[data-screen="blood-result"]');
+        console.log('🎮 Verified game validation and blood hotspot keyboard parity.');
     } finally {
         await gamePage.close();
     }
@@ -386,6 +585,7 @@ async function main() {
         await pdsTests.verifyUnifiedPdsCoverage(errors);
         await boardTests.verifyBoardNavigationSemantics(errors);
         await authTests.verifyAuthRecoveryCoverage(errors);
+        await authTests.verifyUnreadMemoToastCoverage(errors);
     } catch (err) {
         console.error('❌ Traversal failed:', err.message);
         errors.push(err.message);

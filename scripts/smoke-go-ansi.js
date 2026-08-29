@@ -26,6 +26,56 @@ function verifyAnsiCsiSubset() {
   assert(ansiToHTML('A\x1bZB').rows[0] === 'AB', 'unsupported ESC sequences must not leak control characters');
 }
 
+function verifyNurieNreSamples() {
+  // Nurie .NRE files use an ASCII `@[` sentinel in place of ESC[. Convert only
+  // that transport marker here; legacy Korean byte decoding and Nurie-specific
+  // graphics extensions remain intentionally outside the web renderer scope.
+  const supported = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'P', 'S', 'T', '@', 'd', 'f', 'm', 'r', 's', 'u']);
+  for (const name of ['ANSI1.NRE', 'ANSI2.NRE', 'ANSI3.NRE', 'ANSI4.NRE']) {
+    const raw = fs.readFileSync(path.join(__dirname, '..', 'nurie', name), 'latin1');
+    const sentinelCount = (raw.match(/@\[/g) || []).length;
+    assert(sentinelCount > 0, `${name} should contain Nurie @ [ transport sentinels`);
+    const stream = raw.replace(/@\[/g, '\x1b[');
+    const result = ansiToHTML(stream);
+    assert(result.rowCount > 0 && result.rows.length === result.rowCount, `${name} should render rows after sentinel conversion`);
+    const csiPattern = /\x1b\[([0-?]*)(?:[ -\/]*)([@-~])/g;
+    let parsedCount = 0;
+    let supportedCount = 0;
+    let match;
+    while ((match = csiPattern.exec(stream)) !== null) {
+      parsedCount += 1;
+      if (!/^[=>?]/.test(match[1]) && supported.has(match[2])) {
+        supportedCount += 1;
+      }
+    }
+    assert(parsedCount === sentinelCount, `${name} should parse every converted @ [ sentinel`);
+    assert(supportedCount > 0, `${name} should exercise at least one supported CSI command`);
+    assert(!result.html.includes('\x1b'), `${name} converted CSI should not leak ESC into HTML`);
+  }
+}
+
+function verifyHistoricalMenuAliasSources() {
+  const menuPath = path.join(__dirname, '..', 'nurie', 'HITEL.MNU');
+  const menu = fs.readFileSync(menuPath, 'utf8');
+  const menu15 = fs.readFileSync(path.join(__dirname, '..', 'nurie15', 'HITEL.MNU'), 'utf8');
+  const extractCodes = (source) => [...source.matchAll(/:([A-Za-z0-9_]+)\s*$/gm)]
+    .map((match) => match[1].toLowerCase());
+  const codes = extractCodes(menu);
+  const codes15 = extractCodes(menu15);
+  assert(codes.length === 660 && new Set(codes).size === 601,
+    'nurie/HITEL.MNU should contain 660 valid GO entries and 601 unique codes');
+  assert(codes15.length === codes.length && new Set(codes15).size === new Set(codes).size,
+    'nurie15/HITEL.MNU should preserve the same valid GO code counts');
+  for (const candidate of ['chatting', 'bluehs', 'rmail', 'wmail', 'cmail']) {
+    assert(new RegExp(`:${candidate}\\s*$`, 'im').test(menu), `HITEL.MNU should retain the ${candidate} GO candidate`);
+  }
+  // The Nurie ANSI sample exposes the shared historical command footer
+  // (including GO/HI/Z/X); it is a renderer fixture rather than a second
+  // menu database, so only assert the transport text is present here.
+  const ansi1 = fs.readFileSync(path.join(__dirname, '..', 'nurie', 'ANSI1.NRE'), 'latin1');
+  assert(/GO,HI,Z,X/i.test(ansi1), 'ANSI1.NRE should contain the historical GO footer hint');
+}
+
 async function verifyHistoricalGoAliases() {
   const calls = [];
   const state = { screen: 'main', menuTree: null, boards: [] };
@@ -41,13 +91,25 @@ async function verifyHistoricalGoAliases() {
     showContactSysop: async () => calls.push('contact-sysop'),
     showChatLobby: async () => calls.push('chat-lobby'),
     showVoteList: async () => calls.push('vote-list'),
+    showHelp: async () => calls.push('help'),
+    showScramble: async () => calls.push('scramble'),
     showPostList: async (boardId) => calls.push(`post-list:${boardId}`)
+  };
+  state.menuTree = {
+    type: 'menu', go: 'top', children: [
+      { type: 'menu', go: 'guide', door: '1', name: 'GUIDE', children: [
+        { type: 'help', go: 'help', door: '3', name: 'HELP' }
+      ] },
+      { type: 'menu', go: 'game', door: '9', name: 'GAME', children: [
+        { type: 'scramble', go: 'scramble', door: '13', name: 'SCRAMBLE' }
+      ] }
+    ]
   };
   const nav = createMenuNavigationActions({
     cmdInput: null,
     getBoardKey: () => '',
     getBoardMenuPath: () => 'top',
-    getMenuChildren: () => [],
+    getMenuChildren: (node) => node?.children || [],
     getMenuNodeByKey: () => null,
     getMenuNodeKey: (node) => node?.go || node?.id || '',
     getMenuNodeTitle: (node) => node?.name || '',
@@ -117,8 +179,23 @@ async function verifyHistoricalGoAliases() {
   assert(await nav.executeGoCommand('GO CHATIN') === true, 'Nownuri GO CHATIN must resolve the existing chat target');
   assert(calls.join(',') === 'chat-lobby', 'GO CHATIN must navigate to the chat lobby');
   calls.length = 0;
+  assert(await nav.executeGoCommand('GO CHATTING') === true, 'HITEL GO CHATTING must resolve the existing chat target');
+  assert(calls.join(',') === 'chat-lobby', 'GO CHATTING must navigate to the chat lobby');
+  calls.length = 0;
   assert(await nav.executeGoCommand('GO BLUEHOUSE') === true, 'GO BLUEHOUSE must map to the existing sysop-contact screen');
   assert(calls.join(',') === 'contact-sysop', 'GO BLUEHOUSE must preserve the suggestion/inquiry intent');
+  calls.length = 0;
+  assert(await nav.executeGoCommand('GO BLUEHS') === true, 'HITEL GO BLUEHS must map to the existing sysop-contact screen');
+  assert(calls.join(',') === 'contact-sysop', 'GO BLUEHS must preserve the suggestion/inquiry intent');
+  calls.length = 0;
+  assert(await nav.executeGoCommand('GO 1 3') === true, 'hierarchical GO with spaces must resolve menu doors');
+  assert(calls.join(',') === 'help', 'GO 1 3 must target GUIDE/HELP instead of flat GO 13');
+  calls.length = 0;
+  assert(await nav.executeGoCommand('GO 1.3') === true, 'hierarchical GO with a dot must resolve menu doors');
+  assert(calls.join(',') === 'help', 'GO 1.3 must target GUIDE/HELP');
+  calls.length = 0;
+  assert(await nav.executeGoCommand('GO 9 13') === true, 'nested GAME GO path must resolve menu doors');
+  assert(calls.join(',') === 'scramble', 'GO 9 13 must target GAME/SCRAMBLE');
   for (const unsupported of ['PGF', 'ANC', 'JUBU', 'BARUN', 'SUMMER', 'ELF', 'GMF', 'VG', 'SF', 'CHOLCD']) {
     assert(await nav.executeGoCommand(`GO ${unsupported}`) === false, `GO ${unsupported} must remain unresolved until an equivalent service exists`);
   }
@@ -133,6 +210,10 @@ function verifyKeyboardHintTokens() {
   const token = markup.renderHintMarkup('{{GO|GO}}');
   assert(token.includes('role="button"'), 'hint command tokens must expose button semantics');
   assert(token.includes('tabindex="0"'), 'hint command tokens must be reachable with Tab');
+  const roomTokens = markup.renderHintMarkup('번호/명령(/L:목록 /W:참여자 /Z:다시보기)');
+  assert(roomTokens.includes('data-cmd="/L"'), 'slash-prefixed footer commands must retain /L');
+  assert(roomTokens.includes('data-cmd="/W"'), 'slash-prefixed footer commands must retain /W');
+  assert(roomTokens.includes('data-cmd="/Z"'), 'slash-prefixed footer commands must retain /Z');
 }
 
 function verifyInteractionContracts() {
@@ -160,6 +241,8 @@ function verifyInteractionContracts() {
 
 (async () => {
   verifyAnsiCsiSubset();
+  verifyNurieNreSamples();
+  verifyHistoricalMenuAliasSources();
   await verifyHistoricalGoAliases();
   verifyKeyboardHintTokens();
   verifyInteractionContracts();

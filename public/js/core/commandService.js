@@ -5,8 +5,8 @@
  * [LOG: 20260617_1005] Restore command service factory and priority-ranked matching.
  * [LOG_ID: 20260714_1700] 스크립팅(IF/WHILE/FOR/FUNC/...)·가상파일시스템(FILES/CAT/CP/...)
  * 명령 전부 제거 — 1990년대 PC통신에 없던 기능이고 도움말(HELP_TAB_KEYS)에도 노출되지
- * 않아 실사용자가 쓸 일이 없다는 사용자 판단. SET/UNSET/ENV는 SET LEVEL/HOME/THEME/
- * PROMPT 같은 실제 사이트 기능의 기반이라 유지.
+ * 않아 실사용자가 쓸 일이 없다는 사용자 판단. SET/UNSET/ENV도 현재 서비스 범위에서
+ * 제거되어 CMD_META에 등록하지 않는다.
  */
 
 export const CMD_META = {
@@ -123,13 +123,11 @@ export const CMD_META = {
   LOGOUT: { label: '종료', tip: 'Q, EXIT', priority: 1, cat: 'NAV', desc: '로그아웃하고 메인 화면으로 이동합니다.' },
 
   // Messaging & Chat
-  // [LOG_ID: 20260721_1800] MAIL/RMAIL/CMAIL도 원전(NOW_MENU.DAT) "11.전자우편" 메뉴의 진입
-  // 명령들로 실제 전부 같은 쪽지함 화면을 열지만(commandRouterGlobalNavigation.js), CMD_META
-  // 항목을 다 만들면 /help의 명령 칸(고정 폭)에서 잘려 보인다 — ME/MEMO만 항목으로 두고
-  // 나머지는 tip 문구로 안내한다(기능은 그대로 전부 동작). CMAIL이라는 이름 때문에 아래
-  // CM(발송취소)과 헷갈리기 쉬운데, 실제로 CMAIL은 CM과 무관하게 쪽지함을 그냥 연다.
-  ME: { label: '쪽지', tip: 'ME, MEMO (별칭: MAIL, RMAIL, CMAIL)', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
-  MEMO: { label: '쪽지', tip: 'ME, MEMO (별칭: MAIL, RMAIL, CMAIL)', login: true, priority: 30, cat: 'MEMO', desc: '나의 쪽지함을 확인합니다.' },
+  // [LOG_ID: 20260829_1450] MAIL/RMAIL/CMAIL은 같은 전자우편 계열이지만
+  // 라우팅 대상이 다르다. ME/MEMO/RMAIL은 받은편지함, MAIL은 전자우편
+  // 메뉴, CMAIL은 보낸편지함으로 안내해 실제 동작과 도움말을 일치시킨다.
+  ME: { label: '쪽지', tip: 'ME, MEMO, RMAIL (받은편지함)', login: true, priority: 30, cat: 'MEMO', desc: '받은편지함을 확인합니다.' },
+  MEMO: { label: '쪽지', tip: 'ME, MEMO, RMAIL (받은편지함)', login: true, priority: 30, cat: 'MEMO', desc: '받은편지함을 확인합니다.' },
   WMAIL: { label: '쪽지쓰기', tip: 'WMAIL', login: true, priority: 30, cat: 'MEMO', desc: '새 쪽지 쓰기 화면을 바로 엽니다.' },
   TO: { label: '한줄쪽지', tip: 'TO [아이디] [한줄메시지]', login: true, priority: 31, cat: 'MEMO', prefill: true, desc: '별도의 쓰기 화면 없이 상대에게 한 줄 쪽지를 바로 보냅니다.' },
   SOS: { label: '시삽 긴급연락', tip: 'SOS [메시지]', login: true, priority: 31, cat: 'MEMO', prefill: true, cmdPrefill: 'SOS ', desc: '시삽에게 긴급 건의를 작성하고 전송 전 확인합니다.' },

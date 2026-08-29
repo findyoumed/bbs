@@ -54,7 +54,9 @@ export const CMD_ORDER = {
   // [LOG_ID: 20260829_1240] Historical active-room shortcuts are real click
   // targets now: `/L` returns to the room list and `/W` shows participants.
   // Keep them in the chat-room footer so discoverability matches behavior.
-  chat: ['P', 'T', 'GO', 'O:방만들기', '/L:목록', '/W:참여자', 'ST:상황판', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
+  // `/Z` is another active-room-only shortcut; it is intentionally kept out of
+  // global CMD_META because ordinary screens do not implement Z.
+  chat: ['P', 'T', 'GO', 'O:방만들기', '/L:목록', '/W:참여자', '/Z:다시보기', 'ST:상황판', 'H'], // [LOG: 20260609_1135] HI(내정보) 삭제
   // [LOG_ID: 20260718_1700] O(방만들기)는 CMD_META에서 login:true라 게스트 힌트바에선
   // 의도적으로 숨는다(로그인 시 노출). 원본의 "참여(번호)"는 힌트바 토큰이 아니라 프롬프트가
   // 안내한다 — 토큰 파서(terminalHintMarkup)는 ASCII 명령만 받으므로 한글 토큰은 못 쓴다.

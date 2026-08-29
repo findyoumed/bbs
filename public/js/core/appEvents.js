@@ -27,15 +27,27 @@ export function bindAppEvents(deps) {
 
   const { handleGlobalClick, shouldAutoFocusCommandInput } = interactionHandlers;
   const { moveCaretToEnd } = bindCommandInputEvents(deps);
+  let lastEditorField = null;
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (target === cmdInput || target?.matches?.('#terminal-screen input, #terminal-screen textarea, #terminal-screen select')) {
+      lastEditorField = target;
+    }
+  }, true);
 
   function getCommandClickAction(target) {
     // [LOG_ID: 20260723_2310] GO 등 prefill 토큰도 이 캡처 단계 리스너의 셀렉터에 없으면
     // getCommandClickAction이 null을 반환해 그냥 지나치긴 하지만(버블 단계로 넘어감), 실제
     // 기기에서 손가락이 토큰과 바로 옆 쉼표(.cmd-sep) 경계를 살짝 벗어나 짚었을 때의 히트테스트
     // 차이 등 재현하기 어려운 변수를 없애기 위해, 이 1차 캡처 리스너에서부터 명시적으로 인식한다.
-    const commandToken = target?.closest?.('[data-cmd-execute], [data-cmd-fill], [data-cmd-prefill], [data-cmd], [data-signup-choice]');
+    const commandToken = target?.closest?.('[data-cmd-execute], [data-cmd-fill], [data-cmd-prefill], [data-cmd-focus-next], [data-cmd], [data-signup-choice]');
     if (!commandToken || commandToken.closest?.('[data-external-url]')) {
       return null;
+    }
+
+    if (commandToken.dataset.cmdFocusNext !== undefined) {
+      return { kind: 'focus-next' };
     }
 
     if (commandToken.dataset.cmdPrefill) {
@@ -79,10 +91,43 @@ export function bindAppEvents(deps) {
     return isCommandPending() || isExecutionLocked(state);
   }
 
+  function focusNextEditorField() {
+    const fields = Array.from(document.querySelectorAll(
+      '#terminal-screen input:not([disabled]), #terminal-screen textarea:not([disabled]), #terminal-screen select:not([disabled])'
+    ));
+    if (cmdInput && !cmdInput.disabled && !fields.includes(cmdInput)) {
+      fields.push(cmdInput);
+    }
+    if (fields.length === 0) {
+      return false;
+    }
+
+    const currentIndex = fields.indexOf(document.activeElement === cmdInput
+      ? cmdInput
+      : (fields.includes(document.activeElement) ? document.activeElement : lastEditorField));
+    const next = fields[(currentIndex + 1 + fields.length) % fields.length];
+    try {
+      next.focus({ preventScroll: true });
+    } catch (_) {
+      next.focus();
+    }
+    if (next === cmdInput && typeof next.select === 'function') {
+      next.select();
+    } else if (typeof next.setSelectionRange === 'function') {
+      const end = next.value?.length || 0;
+      next.setSelectionRange(end, end);
+    }
+    return true;
+  }
+
   function executeCommandFromClick(action) {
     if (isCommandExecutionLocked()) {
       // [LOG: 20260617_1035] Swallow command clicks while a submitted line is waiting.
       return true;
+    }
+
+    if (action?.kind === 'focus-next') {
+      return focusNextEditorField();
     }
 
     // [LOG_ID: 20260723_2310] prefill(GO 등)은 실행하지 않고 입력줄만 채운다 — 인자가 꼭 필요한

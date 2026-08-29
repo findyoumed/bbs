@@ -253,3 +253,70 @@ Exit criteria: `GO CHATIN` and `GO CHAT` invoke the same existing chat-lobby rou
 4. Align the smoke fixture with the real request context and rerun focused plus release checks.
 
 Exit criteria: one authenticated member using multiple sessions consumes one room slot in every driver, while guest sessions retain one slot each.
+
+## Supabase chat-member smoke contract (2026-08-29)
+
+1. Run the Supabase member persistence smoke against the configured project.
+2. Trace the capacity failure to the profile fixture and compare it with `AuthBridge` output.
+3. Supply the Auth UUID explicitly in the fixture; leave repository and production routing unchanged.
+4. Re-run the focused smoke and the release verification gates.
+
+Exit criteria: the test exercises authenticated persistence, hybrid occupancy, and cleanup using the same context shape as the live application.
+
+## Browser memo-editor regression (2026-08-29)
+
+1. Open the existing memo menu in a separate browser page and set the QA session fixture.
+2. Enter the editor through the existing `W` command.
+3. Assert Enter and row-click focus transitions plus inline empty-body validation.
+4. Run full traversal and all release gates; leave memo persistence and routing untouched.
+
+Exit criteria: the most common memo compose interaction is verified in Chromium, not only through HTTP/module harnesses.
+
+## Browser memo-list selection coverage (2026-08-29)
+
+1. Intercept one deterministic memo-list response in the isolated browser page.
+2. Enter the existing `RMAIL` list and click the generated memo hotspot.
+3. Assert that the existing memo-view route opens, then run the editor focus checks.
+4. Keep the fixture in-memory and rerun full traversal plus the 24-check loop gate.
+
+Exit criteria: memo list click-to-read and memo compose keyboard flows are both covered without database writes or runtime feature changes.
+
+## Hint-bar Tab action and Supabase schema reproducibility (2026-08-29)
+
+1. Map the visible `Tab` hint to a dedicated focus action instead of the nonexistent `TAB` command.
+2. Preserve the previously focused editor field when a clickable token receives browser focus before its click handler runs.
+3. Add idempotent migrations for memo archive flags and the chat participant upsert conflict key.
+4. Correct the Nurie `.NRE` catalog's encoding and renderer-scope claims without adding a runtime loader.
+5. Run focused browser/Supabase checks and the full loop gate.
+
+Exit criteria: the clickable `Tab` hint moves through the active editor fields, and a fresh migration replay produces the schema contracts used by memo and chat persistence.
+
+## Blood hotspot keyboard parity and click harness repair (2026-08-29)
+
+1. Reproduce the blood-type hotspot keyboard gap and duplicate activation path.
+2. Add button semantics and a single delegated click/keyboard activation path.
+3. Repair the standalone click-fill harness's ESM imports and browser stubs.
+4. Add permanent browser assertions and rerun the full verification gate.
+
+Exit criteria: blood-type input/result choices work with mouse, Enter, and Space, and the standalone click-fill harness completes its assertions.
+
+## Fixed sysop recipient and NRE conversion smoke (2026-08-29)
+
+1. Verify that clicking the readonly sysop recipient follows the existing subject-field flow.
+2. Add a read-only smoke that converts Nurie's `@[` transport marker to `ESC[` and checks supported CSI consumption.
+3. Assert every converted sentinel parses while allowing documented Nurie-specific extensions to remain unsupported.
+4. Run browser, ANSI, Supabase, and full loop gates.
+
+Exit criteria: `/guide/tosysop` fixed-recipient interaction and the `.NRE` reference boundary are both backed by repeatable checks.
+
+## 다음 세션 재개 지점 (2026-08-29)
+
+현재 안전한 코드·자료 정리 단계는 완료되었다. 다음 세션은 아래 순서로 재개한다.
+
+1. 먼저 `git status --short`와 `git diff --stat`를 확인한다. 현재 워크트리는 사용자·에이전트의 누적 변경을 보존한 상태이므로 `reset`, 광범위한 삭제, 무단 커밋을 하지 않는다.
+2. 최신 근거는 `docs/PC통신_GO_호환성_카탈로그.md`, `docs/PC통신_자료_학습카탈로그.md`, `docs/ref_images/README.md`, `docs/종료공지/README.md`다. `GO CHATTING`, `GO BLUEHS`는 실제 `HITEL.MNU`와 현재 화면이 일치해 반영됐고, 나머지 동등 화면 없는 코드는 보류 상태다.
+3. 코드 변경 전 `npm run loop:verify`를 기준선으로 실행한다. 변경 후에는 최소 `node --check`, 관련 smoke, `npm run build`, `npm run check`, `npm run qa:final`, `npm run smoke:full-traversal`을 다시 실행한다.
+4. 다음 기능 후보는 (a) 추가 레거시 GO 코드를 실제 화면과 대조하는 작업, (b) 전 화면 키보드·마우스·힌트/오류 회귀 점검이다. 기능이 없는 원전 메뉴를 새로 만들지 않는다.
+5. Supabase 공개 RPC 권한 회수, 함수 `search_path`, Auth 유출 비밀번호 보호, 운영 CORS allowlist는 외부 동작을 바꾸므로 사용자 운영 승인을 받은 뒤 별도 단계로 적용한다. 승인 전에는 읽기 전용 점검만 한다.
+
+최신 기준선 결과: `npm test` 통과, `npm run build` 통과, `npm run check`에서 `liveReady: true`, `npm run qa:final` 통과, `npm run loop:verify` 24/24 통과, `npm run smoke:full-traversal` 콘솔 오류 없이 통과(기존 PDS fixture 404 warning 1건은 예상 범위).

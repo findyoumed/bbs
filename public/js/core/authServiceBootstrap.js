@@ -249,7 +249,9 @@ export function createAuthServiceBootstrap(deps) {
   } = deps;
 
   async function initAuth() {
-    state.authConfig = (await apiFetch('/api/auth/config')) || { enabled: false };
+    state._deferUnreadMemoNotification = true;
+    try {
+      state.authConfig = (await apiFetch('/api/auth/config')) || { enabled: false };
 
     if (state.authConfig.enabled && window.supabase) {
       state.supabase = window.supabase.createClient(
@@ -279,7 +281,10 @@ export function createAuthServiceBootstrap(deps) {
       bindAuthStateChangeListener(state, refreshUser, showPasswordReset);
     }
 
-    await refreshUser();
+      await refreshUser();
+    } finally {
+      state._deferUnreadMemoNotification = false;
+    }
   }
 
   return {

@@ -23,6 +23,10 @@ async function selectFirstProfile(client) {
 
   return {
     userId: data.id,
+    // [LOG_ID: 20260829_0128] AuthBridge contexts carry the app user id and the
+    // Supabase Auth UUID separately. Supplying only userId makes the smoke user
+    // look like a guest, so its second session is incorrectly counted toward room capacity.
+    authUserId: data.id,
     nickName: data.nickname || data.username || data.name || '회원'
   };
 }

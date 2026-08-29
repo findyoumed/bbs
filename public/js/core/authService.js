@@ -9,6 +9,8 @@ export function createAuthService(deps) {
     updateUserInfo
   } = deps;
 
+  let unreadNotificationPromise = null;
+
   function guestUser() {
     return { userId: 'guest', nickName: '손님', level: 1, isAdmin: false, isGuest: true };
   }
@@ -17,7 +19,7 @@ export function createAuthService(deps) {
   // 도착 여부를 알려준다(하이텔 길라잡이 p.94: 접속 시 새 편지 도착 여부 확인이 환경설정 항목일
   // 만큼 보편적 경험). 서버 GET /api/memos/unread/count 는 이미 있었으나 클라이언트가 한 번도
   // 호출하지 않던 것을 연결. 0통이거나 조회 실패면 침묵한다.
-  async function notifyUnreadMemos() {
+  async function fetchUnreadMemoNotification() {
     if (typeof apiFetch !== 'function' || state.user?.isGuest !== false) {
       return;
     }
@@ -41,6 +43,25 @@ export function createAuthService(deps) {
     } catch (error) {
       // 접속 알림은 부가 기능 — 실패는 조용히 넘긴다.
     }
+  }
+
+  async function notifyUnreadMemos() {
+    if (unreadNotificationPromise) return unreadNotificationPromise;
+    unreadNotificationPromise = fetchUnreadMemoNotification();
+    try {
+      await unreadNotificationPromise;
+    } finally {
+      unreadNotificationPromise = null;
+    }
+  }
+
+  // Initial auth runs before the first screen is rendered. Keep its unread
+  // notification until the terminal footer is mounted so the first
+  // render cannot erase a toast before it becomes visible.
+  async function flushUnreadMemoNotification() {
+    if (!state._pendingUnreadMemoNotification) return;
+    state._pendingUnreadMemoNotification = false;
+    await notifyUnreadMemos();
   }
 
   async function refreshUser() {
@@ -67,8 +88,26 @@ export function createAuthService(deps) {
       // [LOG_ID: 20260712_1940] 손님→회원 전환(로그인 완료 또는 부팅 시 세션 복원) 시점에만
       // 전자사서함(새 쪽지)을 확인한다. 로그아웃(회원→손님)에는 발동하지 않는다.
       if (!isGuest) {
-        void notifyUnreadMemos();
+        const notificationUserKey = String(
+          state.user?.userId || state.user?.id || state.token || 'member'
+        );
+        // Supabase SIGNED_IN and the explicit login refresh can both observe
+        // the same guest→member transition. Record the transition identity so
+        // a late listener completion cannot issue a second unread request.
+        if (state._unreadMemoNotificationUserKey !== notificationUserKey) {
+          state._unreadMemoNotificationUserKey = notificationUserKey;
+          if (state._deferUnreadMemoNotification) {
+            state._pendingUnreadMemoNotification = true;
+          } else {
+            void notifyUnreadMemos();
+          }
+        }
+      } else {
+        state._unreadMemoNotificationUserKey = '';
+        state._pendingUnreadMemoNotification = false;
       }
+    } else if (isGuest) {
+      state._unreadMemoNotificationUserKey = '';
     }
     updateUserInfo();
   }
@@ -87,6 +126,7 @@ export function createAuthService(deps) {
   return {
     ...authActions,
     guestUser,
+    flushUnreadMemoNotification,
     initAuth,
     refreshUser
   };

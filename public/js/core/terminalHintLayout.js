@@ -3,6 +3,24 @@ export function createTerminalHintLayout(deps) {
 
   let hintExpanded = false;
 
+  function syncHintAccessibility() {
+    if (!hintEl) {
+      return;
+    }
+    const expandable = hintEl.dataset.hintExpandable === 'true';
+    if (expandable || hintExpanded) {
+      hintEl.setAttribute('role', 'button');
+      hintEl.setAttribute('tabindex', '0');
+      hintEl.setAttribute('aria-expanded', hintExpanded ? 'true' : 'false');
+      hintEl.setAttribute('aria-label', hintExpanded ? '추가 명령 숨기기' : '추가 명령 표시');
+      return;
+    }
+    hintEl.removeAttribute('role');
+    hintEl.removeAttribute('tabindex');
+    hintEl.removeAttribute('aria-expanded');
+    hintEl.removeAttribute('aria-label');
+  }
+
   function resetHintExpansion() {
     hintExpanded = false;
     if (!hintEl) {
@@ -10,6 +28,7 @@ export function createTerminalHintLayout(deps) {
     }
     hintEl.classList.remove('is-expanded');
     hintEl.dataset.hintExpandable = 'false';
+    syncHintAccessibility();
   }
 
   function syncHintEntrySeparators(listEl) {
@@ -110,6 +129,7 @@ export function createTerminalHintLayout(deps) {
 
     applyHiddenCommandsToHelpToken(hiddenEntries);
     hintEl.dataset.hintExpandable = hasOverflow ? 'true' : 'false';
+    syncHintAccessibility();
   }
 
   function setHintExpanded(expanded) {
@@ -140,6 +160,7 @@ export function createTerminalHintLayout(deps) {
     });
     // 전부 펼쳤으니 도움말(H) tooltip은 원래 설명으로 복원.
     applyHiddenCommandsToHelpToken([]);
+    syncHintAccessibility();
     return true;
   }
 

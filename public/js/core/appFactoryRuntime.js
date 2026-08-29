@@ -99,15 +99,22 @@ export function initializeAppFactoryRuntime(deps) {
       }
       try {
         services.terminalUiCore.setBusy(true);
+        // Auth state listeners and the explicit login refresh can complete
+        // before showMain() starts. Hold unread notifications across that
+        // transition so the screen render cannot erase the toast.
+        state._deferUnreadMemoNotification = true;
         await services.authService.doLogin(userId, password);
         await screens.showMain();
+        state._deferUnreadMemoNotification = false;
         services.terminalUiCore.showToast(UI_TEXT.LOGIN_SUCCESS, 2000, 'success');
+        await services.authService.flushUnreadMemoNotification?.();
       } catch (error) {
         const messageEl = document.getElementById('l-error');
         if (messageEl) {
           messageEl.textContent = error.message || '로그인에 실패했습니다.';
         }
       } finally {
+        state._deferUnreadMemoNotification = false;
         services.terminalUiCore.setBusy(false);
       }
     },
@@ -316,6 +323,7 @@ export function initializeAppFactoryRuntime(deps) {
 
   return {
     guestUser: services.authService.guestUser,
+    flushUnreadMemoNotification: services.authService.flushUnreadMemoNotification,
     initAuth: services.authService.initAuth,
     initTooltips: services.terminalUiCore.initTooltips,
     renderInitError: services.terminalUiCore.renderInitError,
