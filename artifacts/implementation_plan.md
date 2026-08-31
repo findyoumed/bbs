@@ -313,10 +313,37 @@ Exit criteria: `/guide/tosysop` fixed-recipient interaction and the `.NRE` refer
 
 현재 안전한 코드·자료 정리 단계는 완료되었다. 다음 세션은 아래 순서로 재개한다.
 
-1. 먼저 `git status --short`와 `git diff --stat`를 확인한다. 현재 워크트리는 사용자·에이전트의 누적 변경을 보존한 상태이므로 `reset`, 광범위한 삭제, 무단 커밋을 하지 않는다.
+1. 먼저 `git status --short`와 `git log -1 --oneline`을 확인한다. 현재 기준 `main` 워크트리는 깨끗하며, 이후 변경이 생기면 사용자 변경을 보존하고 `reset`, 광범위한 삭제, 무단 커밋을 하지 않는다.
 2. 최신 근거는 `docs/PC통신_GO_호환성_카탈로그.md`, `docs/PC통신_자료_학습카탈로그.md`, `docs/ref_images/README.md`, `docs/종료공지/README.md`다. `GO CHATTING`, `GO BLUEHS`는 실제 `HITEL.MNU`와 현재 화면이 일치해 반영됐고, 나머지 동등 화면 없는 코드는 보류 상태다.
 3. 코드 변경 전 `npm run loop:verify`를 기준선으로 실행한다. 변경 후에는 최소 `node --check`, 관련 smoke, `npm run build`, `npm run check`, `npm run qa:final`, `npm run smoke:full-traversal`을 다시 실행한다.
 4. 다음 기능 후보는 (a) 추가 레거시 GO 코드를 실제 화면과 대조하는 작업, (b) 전 화면 키보드·마우스·힌트/오류 회귀 점검이다. 기능이 없는 원전 메뉴를 새로 만들지 않는다.
 5. Supabase 공개 RPC 권한 회수, 함수 `search_path`, Auth 유출 비밀번호 보호, 운영 CORS allowlist는 외부 동작을 바꾸므로 사용자 운영 승인을 받은 뒤 별도 단계로 적용한다. 승인 전에는 읽기 전용 점검만 한다.
 
 최신 기준선 결과: `npm test` 통과, `npm run build` 통과, `npm run check`에서 `liveReady: true`, `npm run qa:final` 통과, `npm run loop:verify` 24/24 통과, `npm run smoke:full-traversal` 콘솔 오류 없이 통과(기존 PDS fixture 404 warning 1건은 예상 범위).
+
+## 모바일 터치·라우트 회귀 확장 (2026-08-31)
+
+1. 기존 390/360/320px 레이아웃 검사에 실제 입력 화면(`/game/blood`, `/game/compat`, `/game/tojeong`, `/game/bio`)을 포함한다.
+2. 각 viewport에서 TOP 메뉴 핫스팟, 혈액형 선택 터치, 쪽지 작성 진입·받는 사람 Enter 이동을 Playwright touch로 검증한다.
+3. 모바일 검사를 `npm run smoke:mobile`로 재실행할 수 있게 하되, 빠른 24개 loop gate에는 포함하지 않아 기존 게이트 시간을 변경하지 않는다.
+4. 모바일 smoke 실패 시 해당 viewport·route·interaction 단계만 수정하고 데스크톱 전체 회귀를 다시 확인한다.
+
+Exit criteria: 390/360/320px에서 31개 핵심 경로가 가로·세로 클리핑 없이 로드되고, 대표 터치·입력 흐름이 모두 통과한다.
+
+## 모바일 텍스트 넘침 보정 (2026-08-31)
+
+1. Playwright Range 측정으로 문서 `scrollWidth`에 드러나지 않는 내부 텍스트 넘침까지 확인한다.
+2. 320px에서 재현된 혈액형·토정비결 안내문의 색상 span `white-space: pre` 상속 문제를 모바일 범위에서만 `pre-wrap`/`overflow-wrap:anywhere`로 보정한다.
+3. 게시물·뉴스·쪽지·약관·도움말·시삽 건의·작성 화면의 자유 텍스트 컨테이너에는 `min-width:0`과 줄바꿈 규칙을 적용한다. ANSI 고정폭 데스크톱 레이아웃은 변경하지 않는다.
+4. 접근성용 clip 라벨과 ANSI 장식 구분선은 검사 대상에서 제외해 오탐을 막고, 실제 한글·영문·숫자 텍스트만 게이트로 삼는다.
+
+Exit criteria: 390/360/320px 31개 경로에서 가시 텍스트의 viewport 외부 확장이 0건이고, `npm run smoke:mobile` 및 기존 전체 게이트가 통과한다.
+
+## 모바일 터치 타깃·힌트 parity 보강 (2026-08-31)
+
+1. 혈액형 semantic span과 회원가입 선택 버튼의 실제 박스 크기를 측정해 24px 미만이면 모바일 범위에서만 확대한다.
+2. 힌트 토큰의 coarse-pointer pseudo hitbox가 인접 토큰을 가로막지 않도록 좁은 viewport에서 토큰 자체의 박스만 이벤트를 받게 한다.
+3. 시삽 건의 validation이 실제 `tosysop-ed-subject` 입력을 찾아 제목 필드에 오류를 표시·포커스하도록 렌더러 ID를 일치시킨다.
+4. smoke에 accessible name, touch target, TOSYSOP/게시글/게임 입력 parity를 추가하되 서버 데이터 저장이나 외부 메일 발송은 수행하지 않는다.
+
+Exit criteria: 390/360/320px에서 24px 미만 visible control·이름 없는 control·힌트 토큰 intercept·입력 포커스 오류가 0건이며, 기존 전체 게이트가 통과한다.

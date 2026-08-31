@@ -64,6 +64,10 @@
 - `npm run check`: 저장소 드라이버와 필수 파일 검증
 - `npm run qa:final`: 서버·핵심 파일·기본 API 검증
 - `npm run loop:verify`: 결정적 주요 기능 스모크 테스트 일괄 실행
+- `npm run smoke:mobile`: 390/360/320px 핵심 경로의 레이아웃·터치·편집기 흐름 검증
+
+모바일 화면을 수정한 경우 `smoke:mobile`을 `loop:verify`와 함께 실행한다. 모바일 검사는
+브라우저를 실제 touch 모드로 실행하며, 빠른 24개 loop gate에는 포함하지 않는다.
 
 ---
 

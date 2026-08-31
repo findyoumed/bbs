@@ -1922,6 +1922,9 @@ body[data-print-view="true"] .ansi-screen {
         right: -2px;
         top: -8px;
         bottom: -8px;
+        /* Keep the enlarged visual hit area from intercepting an adjacent
+           token on a wrapped line. The token's own box remains clickable. */
+        pointer-events: none;
     }
 }
 
@@ -2109,6 +2112,17 @@ body[data-print-view="true"] .ansi-screen {
         overflow-x: auto;
     }
 
+    /* [LOG_ID: 20260831_1015] ansiToHTML가 생성한 내부 색상 span도 모바일 줄바꿈을
+       상속해야 한다. .ansi-line만 pre-wrap으로 바꾸면 .ansi-fg-*가 white-space:pre를
+       유지해 320px 화면에서 긴 안내 문장이 오른쪽에서 잘린다. 공백 보존은 유지하되
+       긴 한글·URL·토큰은 줄 안에서 쪼개어 화면 밖으로 나가지 않게 한다. */
+    .ansi-screen .ansi-line,
+    .ansi-screen .ansi-line > span {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-all;
+    }
+
     /* [LOG_ID: 20260726_2200] 여기서 max-width:100%로 컨테이너만 화면 끝까지 늘렸었는데, 실제
        렌더되는 텍스트(글자 수 기준 44칸 — ansiHLine 구분선, wrapAnsiText 줄바꿈 모두 포함)는
        이 폰트에서 여전히 약 330px만 차지해(Range.getBoundingClientRect()로 실측, 393px
@@ -2126,6 +2140,46 @@ body[data-print-view="true"] .ansi-screen {
         max-width: 44ch;
         margin: 0 auto;
         padding: 0 4px;
+    }
+
+    /* [LOG_ID: 20260831_1015] Keep free-form text inside narrow mobile
+       screens. ANSI menu rows remain fixed-column; these screens contain
+       titles, article bodies, memo text, and policy/help prose that may carry
+       long user supplied tokens or URLs. */
+    body[data-screen="post-view"] .ansi-screen-body,
+    body[data-screen="news-view"] .ansi-screen-body,
+    body[data-screen="memo-view"] .ansi-screen-body,
+    body[data-screen="policy"] .ansi-screen-body,
+    body[data-screen="help"] .ansi-screen-body,
+    body[data-screen="contact-sysop"] .ansi-screen-body,
+    body[data-screen="post-write"] .ansi-screen-body,
+    body[data-screen="memo-write"] .ansi-screen-body {
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    body[data-screen="post-view"] .ansi-line,
+    body[data-screen="news-view"] .ansi-line,
+    body[data-screen="memo-view"] .ansi-line,
+    body[data-screen="policy"] .ansi-line,
+    body[data-screen="help"] .ansi-line,
+    body[data-screen="contact-sysop"] .ansi-line,
+    body[data-screen="post-write"] .ansi-line,
+    body[data-screen="memo-write"] .ansi-line {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .post-body,
+    .news-article-image-frame,
+    .news-article-video-frame,
+    .tosysop-ed-body-wrapper,
+    .memo-ed-body-wrapper {
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
 
     /* [LOG_ID: 20260726_2200] myinfo는 위 20260722_2400 주석대로 44칸 고정폭 ANSI 격자가 아니라
@@ -2193,6 +2247,19 @@ body[data-print-view="true"] .ansi-screen {
         min-height: 24px;
     }
 
+    /* [LOG_ID: 20260831_1100] Blood-type choices are semantic spans rather
+       than .ansi-hotspot buttons. Give them the same compact touch target
+       without changing their ANSI text color or line flow. */
+    .blood-hotspot {
+        min-width: 24px;
+        min-height: 24px;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+        box-sizing: border-box;
+    }
+
     /* [LOG_ID: 20260725_1530] 원래 풋터 힌트바(#cmd-hint)의 탭 타겟 확대용이었는데 셀렉터가
        `.cmd-token` 전체를 잡아, 문장 중간에 끼워 넣는 삭제 확인 Y/N 토큰(postview/myinfo/signup의
        "정말 삭제하시겠습니까? (Y/N)" 등, cmd-prompt 라벨 안)까지 32px 높이의 chip 박스로 부풀려
@@ -2213,6 +2280,14 @@ body[data-print-view="true"] .ansi-screen {
     .ansi-screen,
     .ansi-line {
         font-size: 10px;
+    }
+
+    /* Keep adjacent hint tokens independently tappable on very narrow phones.
+       Their 32px vertical target remains intact, but the coarse-pointer
+       pseudo hitbox must not extend horizontally into the next token. */
+    #cmd-hint .cmd-token::after {
+        left: 0;
+        right: 0;
     }
 }
 

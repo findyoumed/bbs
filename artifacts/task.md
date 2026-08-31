@@ -422,4 +422,32 @@ Exit criteria: historical candidates without a current destination remain docume
 - [ ] Supabase 운영 보안 변경은 명시적 승인 후 별도 적용
 
 재개 시 첫 명령: `npm run loop:verify`
-그 다음 `git status --short`와 위 카탈로그를 읽고, 실제 재현되는 누락만 작은 변경으로 처리한다. 현재 작업 트리는 의도적으로 dirty하며 기존 변경을 초기화하지 않는다.
+그 다음 `git status --short`와 위 카탈로그를 읽고, 실제 재현되는 누락만 작은 변경으로 처리한다. 현재 기준 `main` 워크트리는 깨끗하며, 이후 사용자 변경이 생기면 초기화하지 않는다.
+
+## 모바일 대응 확장 (2026-08-31)
+
+- [x] 모바일 smoke에 혈액형·궁합·토정비결·바이오리듬 실제 입력 경로 추가
+- [x] 390/360/320px에서 TOP 메뉴·혈액형 선택·쪽지 작성 터치 흐름 검증
+- [x] 모바일 전용 실행 명령 `npm run smoke:mobile` 추가
+- [x] 기존 빠른 `loop:verify` 24개 항목과 모바일 브라우저 검사를 분리
+
+검증 결과: `npm run smoke:mobile` 31개 경로 × 3 viewport, 터치 상호작용 3종 모두 통과. 다음 UI 변경부터 모바일 smoke를 별도 필수 게이트로 실행한다.
+
+## 모바일 텍스트 넘침 보정 (2026-08-31)
+
+- [x] 내부 색상 span까지 모바일 `pre-wrap`/`overflow-wrap:anywhere` 적용
+- [x] 자유 텍스트 화면의 `min-width:0`·줄바꿈 규칙 보강
+- [x] Range 기반 가시 텍스트 overflow 검사 추가(접근성 clip·ANSI 장식선 오탐 제외)
+- [x] 390/360/320px 31개 경로에서 텍스트 외부 확장 0건 확인
+
+검증 결과: 실제 320px에서 재현된 혈액형·토정비결 안내문 잘림을 수정했고, `npm run smoke:mobile`이 0 오류로 통과했다.
+
+## 모바일 터치·힌트 parity 보강 (2026-08-31)
+
+- [x] 혈액형 선택지 모바일 터치 박스 24×24px 이상 확보
+- [x] 회원가입 선택 버튼 모바일 높이 32px 확보 및 긴 라벨 줄바꿈
+- [x] 힌트 토큰 pseudo hitbox의 인접 토큰 intercept 방지
+- [x] 시삽 건의 제목 validation 입력 ID 불일치 수정
+- [x] accessible name·touch target·TOSYSOP/게시글/게임 입력 smoke 추가
+
+검증 결과: `npm run smoke:mobile`에서 390/360/320px 31개 경로, 텍스트 overflow, vertical clip, touch target, 접근성 이름, 대표 입력 흐름이 모두 통과했다.

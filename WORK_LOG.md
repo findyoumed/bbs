@@ -3031,7 +3031,31 @@ Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
 완료: 실제 `nurie/HITEL.MNU` 대조 후 `GO CHATTING`·`GO BLUEHS`만 추가하고 GO/ANSI smoke에 근거를 고정했다. `docs/ref_images`와 `docs/종료공지`는 중복/축소본 4개를 제거한 뒤 총 35개(각 15개/20개), 160×100 미만 0개로 인벤토리화했다.
 검증: `npm test`, `npm run build`, `npm run check`(`liveReady: true`), `npm run qa:final`, `npm run loop:verify`(24/24), `npm run smoke:full-traversal` 모두 통과. 순회 중 `/api/boards/pds/posts/44` 404는 기존 fixture에 대한 예상 warning이며 새 콘솔 오류는 없었다.
 재개 순서: (1) `git status --short`/diff 확인 (2) `npm run loop:verify` 기준선 확인 (3) 레거시 GO·입력 parity 중 실제 누락만 수정 (4) 관련 smoke와 전체 게이트 재실행. 원전과 동등 화면이 없는 메뉴는 만들지 않는다.
-승인 대기: Supabase 공개 RPC EXECUTE 권한, 함수 `search_path`, Auth 유출 비밀번호 보호, 운영 CORS allowlist는 외부 동작 변경이므로 운영 승인 전에는 읽기 전용 상태로 유지한다. 현재 워크트리는 누적 변경을 보존해야 하며 reset/광범위 삭제/무단 커밋을 하지 않는다.
+승인 대기: Supabase 공개 RPC EXECUTE 권한, 함수 `search_path`, Auth 유출 비밀번호 보호, 운영 CORS allowlist는 외부 동작 변경이므로 운영 승인 전에는 읽기 전용 상태로 유지한다. 이 기록 직후 변경은 `cfbb1a9` 커밋에 반영되어 현재 `main` 워크트리는 깨끗하다. 이후에도 reset/광범위 삭제/무단 커밋을 하지 않는다.
+
+## [2026-08-31] 모바일 화면·터치 회귀 범위 확장
+
+**LOG_ID: 20260831_0900**
+목표: 모바일에서 레이아웃만 통과하는 기존 검사에 실제 터치·입력 흐름을 추가하고, 누락됐던 게임 입력 화면도 같은 viewport에서 검증.
+변경 파일: `scripts/smoke-mobile-viewports.js`, `package.json`, `artifacts/implementation_plan.md`, `artifacts/task.md`.
+수행 작업: 390/360/320px에 혈액형·궁합·토정비결·바이오리듬 경로를 추가하고, TOP 메뉴 터치, 혈액형 선택 터치, 쪽지 작성 진입 및 받는 사람 Enter 이동을 검증하는 `verifyMobileTouchInteractions()`를 추가했다. 모바일 smoke는 `npm run smoke:mobile`로 독립 실행하며 기존 빠른 loop gate 시간은 변경하지 않았다.
+검증: `node --check scripts/smoke-mobile-viewports.js`; `npm run smoke:mobile` — 31개 경로×3 viewport, 0 오류. 혈액형 semantic span이 일반 메뉴 button과 다른 구현임을 확인해 `.blood-hotspot`으로 검증했다.
+결과: ✅ 320px까지 가로·세로 클리핑과 대표 터치 흐름 모두 통과. 모바일에서만 재현되는 신규 UI 결함은 발견되지 않았다.
+
+## [2026-08-31] 모바일 텍스트 가로 넘침 보정
+
+**LOG_ID: 20260831_1015**
+재현: 320px에서 `/game/blood` 안내문 색상 span이 329px, `/game/tojeong` 안내문이 322px까지 확장했지만 상위 `overflow-x:hidden` 때문에 문서 scrollWidth에는 나타나지 않았다.
+원인: `.ansi-line`만 줄바꿈해도 내부 `.ansi-fg-*` span이 `white-space: pre`를 유지했다.
+변경: 모바일 미디어쿼리에서 `.ansi-screen .ansi-line`과 직계 span을 `pre-wrap`/`overflow-wrap:anywhere`로 보정하고, 게시물·뉴스·쪽지·약관·도움말·시삽 건의·작성 화면의 자유 텍스트 컨테이너에 `min-width:0`과 줄바꿈을 적용했다. smoke에 Range 기반 가시 텍스트 overflow 검사를 추가했으며 접근성 clip 라벨·ANSI 구분선은 제외했다.
+검증: `node --check scripts/smoke-mobile-viewports.js`, `npm run smoke:mobile` — 390/360/320px 31개 경로와 TOP·혈액형·쪽지 터치 흐름, 텍스트 외부 확장 0건. `npm run loop:verify` 기준선 24/24도 통과했다.
+
+## [2026-08-31] 모바일 터치 타깃·힌트 parity 보강
+
+**LOG_ID: 20260831_1630**
+발견: 320px에서 혈액형 선택 span이 10.7×17.7px, 회원가입 선택 버튼이 19.5px 높이였고, 시삽 건의 힌트의 Ctrl+S/Escape pseudo hitbox가 서로 겹쳐 SEND 터치를 가로막을 수 있었다. 또한 `submitContactSysop()`이 존재하지 않는 `tosysop-ed-title`을 조회해 제목 누락 validation 포커스가 비어 있었다.
+변경: 모바일 혈액형 선택지를 24×24px, 회원가입 선택 버튼을 32px 이상으로 확대하고 긴 라벨 줄바꿈을 허용했다. coarse-pointer 힌트 pseudo hitbox는 pointer interception을 막도록 조정했다. 시삽 건의 제목 조회 ID를 `tosysop-ed-subject`로 수정했다. 모바일 smoke에 accessible name·touch target 검사와 TOSYSOP/게시글/게임 입력 parity를 추가했다.
+검증: 단일 `npm run smoke:mobile` 실행에서 390/360/320px 31개 경로, 텍스트·세로 clipping, touch target, 접근성 이름, TOP·혈액형·쪽지·시삽 건의·게시글·게임 흐름이 모두 통과했다. `npm run build`, `npm run check`, `npm run loop:verify`(24/24)도 통과했다.
 
 ## [2026-08-29] PC통신 이미지 자산 중복·출처 감사
 

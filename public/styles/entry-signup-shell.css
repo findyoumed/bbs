@@ -345,6 +345,21 @@
         font-size: 11px;
     }
 
+    /* Keep signup choices comfortably tappable on narrow screens while
+       preserving the compact terminal-style list. */
+    .entry-signup-method {
+        width: 100%;
+        max-width: 100%;
+        min-height: 32px;
+        padding: 5px 6px;
+        box-sizing: border-box;
+    }
+
+    .entry-signup-method-copy {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
     .entry-signup-row {
         gap: 4px;
     }

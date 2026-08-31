@@ -85,7 +85,9 @@ export function createContactSysopScreen(deps) {
     const flow = state._contactSysopFlow;
     if (!flow) return false;
 
-    const titleEl = typeof document !== 'undefined' ? document.getElementById('tosysop-ed-title') : null;
+    // The rendered field is `tosysop-ed-subject`; keeping this lookup in sync
+    // ensures validation focuses the subject field on both desktop and mobile.
+    const titleEl = typeof document !== 'undefined' ? document.getElementById('tosysop-ed-subject') : null;
     const bodyEl = typeof document !== 'undefined' ? document.getElementById('tosysop-ed-body') : null;
 
     const subject = String(titleEl ? titleEl.value : flow.subject || '').trim();

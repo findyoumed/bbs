@@ -79,6 +79,10 @@ async function runMobileSmokeTests() {
       { name: '게시판 목록 (열린광장)', path: 'http://localhost:3199/board/plaza' },
       { name: '오락실 메인', path: 'http://localhost:3199/game' },
       { name: '오목 게임', path: 'http://localhost:3199/game/omok' },
+      { name: '혈액형 진단', path: 'http://localhost:3199/game/blood' },
+      { name: '궁합 보기', path: 'http://localhost:3199/game/compat' },
+      { name: '토정비결', path: 'http://localhost:3199/game/tojeong' },
+      { name: '바이오리듬', path: 'http://localhost:3199/game/bio' },
       // [LOG_ID: 20260725_2330] 실제 라우트 세그먼트(routingStateRestorer.js의 game() 핸들러)는
       // othello/baseball/puzzle15가 아니라 oth/base/16p다 — 잘못된 경로 3개가 매번 조용히
       // 초기화면으로 폴백해(routingStateRestorer.js의 !sub 아닌 fallthrough → showMain) 이
@@ -183,12 +187,125 @@ async function runMobileSmokeTests() {
           const cmdInput = document.getElementById('cmd-input');
           const footerRect = footer?.getBoundingClientRect() || null;
           const cmdInputRect = cmdInput?.getBoundingClientRect() || null;
+
+          // Text can be clipped by a fixed-width child without increasing the
+          // document scrollWidth (for example #terminal-screen has overflow-x:hidden).
+          // Inspect text-node client rects as well, while explicitly allowing only
+          // components that intentionally provide horizontal scrolling. The
+          // generic .ansi-screen must remain visible to this check: its mobile
+          // overflow-x:auto fallback would otherwise hide real text overflow.
+          const overflowAllowed = (node) => {
+            let element = node?.parentElement || node;
+            while (element && element !== document.documentElement) {
+              if (element.matches?.('.post-table, [data-mobile-overflow-allowed="true"]')) {
+                return true;
+              }
+              element = element.parentElement;
+            }
+            return false;
+          };
+
+          const textOverflow = [];
+          const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+          let textNode;
+          while ((textNode = walker.nextNode())) {
+            const value = textNode.nodeValue?.replace(/\s+/g, ' ').trim();
+            // Box-drawing separators are intentional ANSI decoration rather
+            // than readable content; they may be wider than a phone while the
+            // surrounding text remains fully usable. Keep the check focused on
+            // letters/numbers (including Hangul) that users need to read.
+            if (!value || !/[A-Za-z0-9가-힣]/.test(value) || overflowAllowed(textNode)) continue;
+            const parent = textNode.parentElement;
+            if (!parent || /^(SCRIPT|STYLE|TEMPLATE|NOSCRIPT)$/.test(parent.tagName)) continue;
+            if (parent.closest('[aria-hidden="true"]')) continue;
+            const parentStyle = getComputedStyle(parent);
+            if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden') continue;
+
+            const range = document.createRange();
+            range.selectNodeContents(textNode);
+            let explicitlyClipped = false;
+            for (let ancestor = parent; ancestor && ancestor !== document.documentElement; ancestor = ancestor.parentElement) {
+              const ancestorStyle = getComputedStyle(ancestor);
+              // Accessibility-only labels use clip: rect(...) to hide their long
+              // text while retaining a 1x1px focus/announcement target. Their
+              // Range still reports the intrinsic text width, so do not treat it
+              // as visible overflow.
+              if (ancestorStyle.clip !== 'auto' || ancestorStyle.clipPath !== 'none') {
+                explicitlyClipped = true;
+                break;
+              }
+            }
+            if (explicitlyClipped) {
+              range.detach?.();
+              continue;
+            }
+            for (const rect of range.getClientRects()) {
+              if (rect.width <= 0 || rect.height <= 0) continue;
+              const outsideLeft = rect.left < -1.5;
+              const outsideRight = rect.right > window.innerWidth + 1.5;
+              if (outsideLeft || outsideRight) {
+                textOverflow.push({
+                  tag: parent.tagName.toLowerCase(),
+                  id: parent.id || '',
+                  className: typeof parent.className === 'string' ? parent.className : '',
+                  text: value.slice(0, 80),
+                  left: Math.round(rect.left * 10) / 10,
+                  right: Math.round(rect.right * 10) / 10
+                });
+                break;
+              }
+            }
+            range.detach?.();
+            if (textOverflow.length >= 8) break;
+          }
+
+          // Visible keyboard/touch controls should expose an accessible name.
+          // The read-only prompt renderer is a visual clone (tabindex=-1), so
+          // it is intentionally excluded from this check.
+          const unnamedControls = [...document.querySelectorAll(
+            'button, [role="button"], input:not([type="hidden"]), textarea, select, a[href]'
+          )]
+            .filter((el) => {
+              const style = getComputedStyle(el);
+              const rect = el.getBoundingClientRect();
+              return style.display !== 'none'
+                && style.visibility !== 'hidden'
+                && rect.width > 0
+                && rect.height > 0
+                && el.tabIndex !== -1;
+            })
+            .filter((el) => {
+              const labelledBy = el.getAttribute('aria-labelledby')
+                ?.split(/\s+/)
+                .map((id) => document.getElementById(id)?.textContent || '')
+                .join(' ')
+                .trim();
+              const labelFor = el.id
+                ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent?.trim()
+                : '';
+              const accessibleName = el.getAttribute('aria-label')
+                || labelledBy
+                || labelFor
+                || (el.innerText || el.textContent || '').trim()
+                || el.getAttribute('title')
+                || el.getAttribute('placeholder');
+              return !accessibleName;
+            })
+            .slice(0, 8)
+            .map((el) => ({
+              tag: el.tagName.toLowerCase(),
+              id: el.id || '',
+              className: typeof el.className === 'string' ? el.className : ''
+            }));
+
           return {
             scrollWidth: document.documentElement.scrollWidth,
             innerWidth: window.innerWidth,
             innerHeight: window.innerHeight,
             footerBottom: footerRect ? footerRect.bottom : null,
-            cmdInputBottom: cmdInputRect ? cmdInputRect.bottom : null
+            cmdInputBottom: cmdInputRect ? cmdInputRect.bottom : null,
+            textOverflow,
+            unnamedControls
           };
         });
 
@@ -206,6 +323,32 @@ async function runMobileSmokeTests() {
           continue;
         }
 
+        if (geometry.textOverflow.length > 0) {
+          const first = geometry.textOverflow[0];
+          const details = geometry.textOverflow
+            .slice(0, 3)
+            .map(item => `${item.tag}${item.id ? `#${item.id}` : ''}: "${item.text}" (${item.left}..${item.right})`)
+            .join('; ');
+          console.error(`  (Text outside mobile viewport: ${details})`);
+          errors.push({
+            type: 'text-horizontal-overflow',
+            viewport: vp.label,
+            message: `${route.name}: ${geometry.textOverflow.length} text node(s) extend beyond ${geometry.innerWidth}px (first: ${first.text})`
+          });
+          continue;
+        }
+
+        if (geometry.unnamedControls.length > 0) {
+          const first = geometry.unnamedControls[0];
+          console.error(`  (Interactive control has no accessible name: ${first.tag}#${first.id}.${first.className})`);
+          errors.push({
+            type: 'unnamed-control',
+            viewport: vp.label,
+            message: `${route.name}: ${first.tag}#${first.id || '(no-id)'} has no accessible name`
+          });
+          continue;
+        }
+
         // 하단 명령창/힌트바가 뷰포트 아래로 밀려 잘리지 않는지(세로 높이 문제) 함께 확인한다.
         const footerClipped = geometry.footerBottom !== null && geometry.footerBottom > geometry.innerHeight + 1;
         const cmdInputClipped = geometry.cmdInputBottom !== null && geometry.cmdInputBottom > geometry.innerHeight + 1;
@@ -219,8 +362,59 @@ async function runMobileSmokeTests() {
           continue;
         }
 
+        // Interactive controls need a compact but usable touch target. Keep
+        // this check focused on controls whose visual box is the hit area;
+        // command tokens intentionally use a larger pseudo-element hit area.
+        const undersizedTargets = await page.evaluate(() => {
+          const selector = [
+            '.ansi-hotspot',
+            '.blood-hotspot',
+            '.entry-signup-method',
+            '.bbs-btn',
+            '.myinfo-menu-item',
+            '.terminal-notification-row.is-interactive'
+          ].join(',');
+          return [...document.querySelectorAll(selector)]
+            .filter((el) => {
+              const style = getComputedStyle(el);
+              const rect = el.getBoundingClientRect();
+              return style.display !== 'none'
+                && style.visibility !== 'hidden'
+                && rect.width > 0
+                && rect.height > 0
+                && (rect.width < 24 || rect.height < 24);
+            })
+            .slice(0, 8)
+            .map((el) => {
+              const rect = el.getBoundingClientRect();
+              return {
+                tag: el.tagName.toLowerCase(),
+                id: el.id || '',
+                className: typeof el.className === 'string' ? el.className : '',
+                width: Math.round(rect.width * 10) / 10,
+                height: Math.round(rect.height * 10) / 10,
+                label: el.getAttribute('aria-label') || (el.textContent || '').trim().slice(0, 40)
+              };
+            });
+        });
+        if (undersizedTargets.length > 0) {
+          const first = undersizedTargets[0];
+          console.error(`  (Interactive target below 24px: ${first.tag}.${first.className} ${first.width}x${first.height})`);
+          errors.push({
+            type: 'touch-target-size',
+            viewport: vp.label,
+            message: `${route.name}: interactive target ${first.label || first.className} is ${first.width}x${first.height}px`
+          });
+          continue;
+        }
+
         console.log('OK');
       }
+
+      // [LOG_ID: 20260831_0900] 기존 모바일 smoke는 레이아웃만 확인해
+      // 터치 click이 실제 라우팅·게임 선택·편집기 포커스로 이어지는지 검증하지
+      // 않았다. 각 viewport에서 대표적인 터치 흐름을 한 번씩 실행한다.
+      await verifyMobileTouchInteractions(page, vp.label, errors);
 
       await context.close();
     }
@@ -236,6 +430,224 @@ async function runMobileSmokeTests() {
 
   } finally {
     serverProcess.kill();
+  }
+}
+
+async function verifyMobileTouchInteractions(page, viewportLabel, errors) {
+  const reportFailure = (message) => {
+    console.error(`  ❌ [Mobile Interaction] ${message}`);
+    errors.push({ type: 'touch-interaction', viewport: viewportLabel, message });
+  };
+
+  try {
+    await page.goto('http://localhost:3199/', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(450);
+    const topHotspot = page.locator('.ansi-hotspot-layer button').first();
+    if (await topHotspot.count() === 0) {
+      reportFailure('TOP 화면에 터치 가능한 메뉴 핫스팟이 없습니다.');
+    } else {
+      const beforeUrl = page.url();
+      await topHotspot.tap();
+      await page.waitForTimeout(450);
+      const screen = await page.locator('#terminal-container').getAttribute('data-screen');
+      if (page.url() === beforeUrl && screen === 'main') {
+        reportFailure('TOP 메뉴 핫스팟 터치가 화면 전환으로 이어지지 않았습니다.');
+      }
+    }
+
+    await page.goto('http://localhost:3199/game/blood', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(450);
+    // 혈액형 입력은 프롬프트 안의 semantic span(.blood-hotspot)으로
+    // 구현되어 있고, 일반 메뉴처럼 .ansi-hotspot-layer button을 쓰지 않는다.
+    const bloodButtons = page.locator('.blood-hotspot');
+    if (await bloodButtons.count() < 4) {
+      reportFailure(`혈액형 선택 핫스팟 수가 부족합니다: ${await bloodButtons.count()}`);
+    } else {
+      await bloodButtons.first().tap();
+      await page.waitForTimeout(350);
+      const screen = await page.locator('#terminal-container').getAttribute('data-screen');
+      if (screen !== 'blood-result') {
+        reportFailure(`혈액형 선택 터치 후 결과 화면이 아닙니다: ${screen || 'unknown'}`);
+      }
+    }
+
+    // [LOG_ID: 20260831_0900] 실제 모바일 편집기의 터치 포커스와
+    // Enter 이동을 대표 쪽지 작성 흐름으로 확인한다. 테스트 사용자만
+    // window.__debugState에 주입하며 서버 데이터는 쓰지 않는다.
+    await page.goto('http://localhost:3199/memo', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(450);
+    await page.evaluate(() => {
+      if (window.__debugState) {
+        window.__debugState.user = {
+          userId: 'qa-mobile-user',
+          nickName: 'QA Mobile',
+          level: 1,
+          isAdmin: false,
+          isGuest: false
+        };
+      }
+    });
+    const commandInput = page.locator('#cmd-input');
+    if (await commandInput.count() !== 1) {
+      reportFailure('모바일 쪽지 화면에 명령 입력창이 없습니다.');
+      return;
+    }
+    await commandInput.tap();
+    await commandInput.fill('W');
+    await commandInput.press('Enter');
+    // The narrowest viewport can defer layout while the keyboard-safe mobile
+    // styles settle. Wait for the actual editor fields instead of relying on a
+    // fixed delay, while keeping a bounded failure for a real routing defect.
+    await page.waitForSelector('#memo-ed-target', { state: 'attached', timeout: 2500 }).catch(() => {});
+    await page.waitForTimeout(150);
+    const target = page.locator('#memo-ed-target');
+    const subject = page.locator('#memo-ed-subject');
+    const body = page.locator('#memo-ed-body');
+    if (await target.count() !== 1 || await subject.count() !== 1 || await body.count() !== 1) {
+      reportFailure('모바일 쪽지 작성기의 입력 필드가 모두 렌더링되지 않았습니다.');
+      return;
+    }
+    await target.tap();
+    const focusedTarget = await page.evaluate(() => document.activeElement?.id || '');
+    if (focusedTarget !== 'memo-ed-target') {
+      reportFailure(`받는 사람 터치 포커스가 잘못되었습니다: ${focusedTarget || 'none'}`);
+    }
+    await target.press('Enter');
+    const focusedSubject = await page.evaluate(() => document.activeElement?.id || '');
+    if (focusedSubject !== 'memo-ed-subject') {
+      reportFailure(`받는 사람 Enter 이동이 잘못되었습니다: ${focusedSubject || 'none'}`);
+    }
+    console.log(`  ✓ [Mobile Interaction] ${viewportLabel}: TOP·혈액형·쪽지 터치 흐름 통과`);
+    // [LOG_ID: 20260831_1630] Mobile WMAIL editor: verify touch focus,
+    // Enter/Tab navigation, and SEND hint without issuing an external request.
+    await page.goto('http://localhost:3199/guide', { waitUntil: 'domcontentloaded' });
+    // Supabase-backed bootstrap can take longer than the fixed route settle
+    // delay on a cold mobile test server. Wait for the actual menu screen so
+    // the following tap tests the rendered control rather than a loading gap.
+    await page.waitForFunction(
+      () => document.body.dataset.screen === 'board-select',
+      { timeout: 3500 }
+    ).catch(() => {});
+    await page.waitForTimeout(150);
+    await page.evaluate(() => {
+      if (window.__debugState) {
+        window.__debugState.user = {
+          userId: 'qa-mobile-contact',
+          nickName: 'QA Mobile',
+          level: 1,
+          isAdmin: false,
+          isGuest: false
+        };
+      }
+    });
+    const contactButton = page.locator('.ansi-hotspot-layer button[aria-label*="TOSYSOP"]').first();
+    if (await contactButton.count() !== 1) {
+      reportFailure('Mobile GUIDE contact button is missing.');
+    } else {
+      await contactButton.tap();
+      await page.waitForSelector('#tosysop-ed-target', { state: 'attached', timeout: 2500 }).catch(() => {});
+      const contactTarget = page.locator('#tosysop-ed-target');
+      const contactSubject = page.locator('#tosysop-ed-subject');
+      const contactBody = page.locator('#tosysop-ed-body');
+      if (await contactTarget.count() !== 1 || await contactSubject.count() !== 1 || await contactBody.count() !== 1) {
+        reportFailure('Mobile contact editor fields did not render.');
+      } else {
+        await contactTarget.tap();
+        const targetFocus = await page.evaluate(() => document.activeElement?.id || '');
+        await contactSubject.press('Enter');
+        const bodyFocus = await page.evaluate(() => document.activeElement?.id || '');
+        await contactBody.press('Tab');
+        const commandFocus = await page.evaluate(() => document.activeElement?.id || '');
+        // The recipient is fixed to sysop and readonly; tapping its row is
+        // intentionally routed to the editable subject field.
+        if (targetFocus !== 'tosysop-ed-subject' || bodyFocus !== 'tosysop-ed-body' || commandFocus !== 'cmd-input') {
+          reportFailure(`Mobile contact Enter/Tab focus mismatch: ${targetFocus}/${bodyFocus}/${commandFocus}`);
+        }
+        const sendToken = page.locator('#cmd-hint [data-cmd="SEND"]').first();
+        if (await sendToken.count() !== 1) {
+          reportFailure('Mobile contact SEND hint token is missing.');
+        } else {
+          const hintBeforeSend = await page.locator('#cmd-hint').textContent();
+          await sendToken.tap();
+          await page.waitForTimeout(180);
+          const sendResult = await page.evaluate(() => ({
+            validation: document.querySelector('.tosysop-ed-validation')?.textContent || '',
+            hint: document.querySelector('#cmd-hint')?.textContent || '',
+            active: document.activeElement?.id || ''
+          }));
+          if (!sendResult.validation || sendResult.hint !== hintBeforeSend || sendResult.active !== 'tosysop-ed-subject') {
+            reportFailure(`Mobile contact SEND hint action failed: ${JSON.stringify(sendResult)}`);
+          }
+        }
+      }
+    }
+
+    // [LOG_ID: 20260831_1630] Board post-write command entry and P cancel
+    // are exercised on the real mobile route without creating a persistent post.
+    await page.goto('http://localhost:3199/board/plaza', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(450);
+    await page.evaluate(() => {
+      if (window.__debugState) {
+        window.__debugState.user = {
+          userId: 'qa-mobile-post',
+          nickName: 'QA Mobile',
+          level: 1,
+          isAdmin: false,
+          isGuest: false
+        };
+      }
+    });
+    const postCommandInput = page.locator('#cmd-input');
+    await postCommandInput.tap();
+    await postCommandInput.fill('W');
+    await postCommandInput.press('Enter');
+    await page.waitForTimeout(350);
+    if (await page.locator('#terminal-container').getAttribute('data-screen') !== 'post-write') {
+      reportFailure('Mobile board W command did not enter post-write.');
+    } else {
+      await postCommandInput.fill('1');
+      await postCommandInput.press('Enter');
+      await page.waitForTimeout(120);
+      await postCommandInput.fill('Mobile test title');
+      await postCommandInput.press('Enter');
+      await page.waitForTimeout(120);
+      await postCommandInput.fill('Mobile test body');
+      await postCommandInput.press('Enter');
+      await page.waitForTimeout(120);
+      const cancelToken = page.locator('#cmd-hint [data-cmd="P"]').first();
+      if (await cancelToken.count() !== 1) {
+        reportFailure('Mobile post-write cancel hint token is missing.');
+      } else {
+        await cancelToken.tap();
+        await page.waitForTimeout(250);
+        const postScreen = await page.locator('#terminal-container').getAttribute('data-screen');
+        if (postScreen === 'post-write') {
+          reportFailure('Mobile post-write P hint did not cancel the editor.');
+        }
+      }
+    }
+
+    // [LOG_ID: 20260831_1630] Game command input must accept a touch-focused
+    // Enter and keep validation inline instead of replacing the hint footer.
+    await page.goto('http://localhost:3199/game/bio', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(450);
+    const gameInput = page.locator('#cmd-input');
+    const gameHintBefore = await page.locator('#cmd-hint').textContent();
+    await gameInput.tap();
+    await gameInput.fill('19900230');
+    await gameInput.press('Enter');
+    await page.waitForTimeout(220);
+    const gameResult = await page.evaluate(() => ({
+      error: document.querySelector('.game-inline-validation')?.textContent || '',
+      hint: document.querySelector('#cmd-hint')?.textContent || '',
+      screen: document.querySelector('#terminal-container')?.getAttribute('data-screen') || ''
+    }));
+    if (!gameResult.error || gameResult.hint !== gameHintBefore || gameResult.screen !== 'bio-input') {
+      reportFailure(`Mobile game input/validation failed: ${JSON.stringify(gameResult)}`);
+    }
+
+  } catch (error) {
+    reportFailure(error.message || String(error));
   }
 }
 
