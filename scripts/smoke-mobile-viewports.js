@@ -441,8 +441,20 @@ async function verifyMobileTouchInteractions(page, viewportLabel, errors) {
 
   try {
     await page.goto('http://localhost:3199/', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(450);
-    const topHotspot = page.locator('.ansi-hotspot-layer button').first();
+    // Cold mobile bootstrap can render the shell before TOP hotspots are
+    // mounted. Wait for the actual interactive node instead of sampling a
+    // fixed delay and reporting a false missing-control failure.
+    // A cold bootstrap on the narrowest viewport can leave the shell in its
+    // loading state for several seconds.  Waiting for both the rendered MAIN
+    // screen and its actual hotspot avoids reporting a missing touch control
+    // when the page simply has not finished hydration yet.
+    await page.waitForFunction(
+      () => document.body.dataset.screen === 'main'
+        && Boolean(document.querySelector('.ansi-hotspot-layer button, .ansi-hotspot-layer [role="button"], .ansi-hotspot')),
+      { timeout: 12000 }
+    ).catch(() => {});
+    await page.waitForTimeout(150);
+    const topHotspot = page.locator('.ansi-hotspot-layer button, .ansi-hotspot-layer [role="button"], .ansi-hotspot').first();
     if (await topHotspot.count() === 0) {
       reportFailure('TOP 화면에 터치 가능한 메뉴 핫스팟이 없습니다.');
     } else {
@@ -540,7 +552,9 @@ async function verifyMobileTouchInteractions(page, viewportLabel, errors) {
         };
       }
     });
-    const contactButton = page.locator('.ansi-hotspot-layer button[aria-label*="TOSYSOP"]').first();
+    const contactButton = page.locator(
+      '.ansi-hotspot[aria-label*="TOSYSOP"], .ansi-hotspot-layer button[aria-label*="TOSYSOP"]'
+    ).first();
     if (await contactButton.count() !== 1) {
       reportFailure('Mobile GUIDE contact button is missing.');
     } else {
@@ -646,9 +660,144 @@ async function verifyMobileTouchInteractions(page, viewportLabel, errors) {
       reportFailure(`Mobile game input/validation failed: ${JSON.stringify(gameResult)}`);
     }
 
+    // Long user supplied values are not present in deterministic seed data on
+    // every environment, so exercise the rendered post/news/memo containers
+    // with a fixture that has both Hangul and an unbroken URL.  This catches
+    // fixed-width children that document.scrollWidth alone can miss.
+    await verifyMobileLongTextFlows(page, viewportLabel, errors);
+
   } catch (error) {
     reportFailure(error.message || String(error));
   }
+}
+
+async function verifyMobileLongTextFlows(page, viewportLabel, errors) {
+  const reportFailure = (message) => {
+    console.error(`  [Mobile Long Text] ${message}`);
+    errors.push({ type: 'mobile-long-text', viewport: viewportLabel, message });
+  };
+
+  const checkFixture = async (route, expectedScreen, label) => {
+    let postReadRoute;
+    if (route) {
+      // The post detail API normally uses view=1 and increments the hit count.
+      // Rewrite this deterministic smoke request to view=0 so mobile layout
+      // coverage remains read-only against a live Supabase-backed server.
+      if (route === '/plaza/23') {
+        postReadRoute = async (requestRoute) => {
+          const requestUrl = new URL(requestRoute.request().url());
+          requestUrl.searchParams.set('view', '0');
+          await requestRoute.continue({ url: requestUrl.toString() });
+        };
+        await page.route('**/api/boards/plaza/posts/23*', postReadRoute);
+      }
+      try {
+        await page.goto(`http://localhost:3199${route}`, { waitUntil: 'domcontentloaded' });
+      } finally {
+        if (postReadRoute) await page.unroute('**/api/boards/plaza/posts/23*', postReadRoute);
+      }
+    }
+    await page.waitForFunction(
+      (screen) => document.body.dataset.screen === screen,
+      expectedScreen,
+      { timeout: 3500 }
+    ).catch(() => {});
+    await page.waitForTimeout(300);
+
+    const result = await page.evaluate(() => {
+      const body = document.querySelector('.ansi-screen-body');
+      if (!body) return { missing: true, screen: document.body.dataset.screen || '' };
+
+      const fixture = document.createElement('div');
+      fixture.className = 'ansi-line mobile-long-text-fixture';
+      fixture.dataset.mobileLongTextFixture = 'true';
+      const span = document.createElement('span');
+      span.className = 'ansi-fg-white';
+      span.textContent = [
+        '한글 긴 본문 줄바꿈 점검 ',
+        'https://example.com/path/',
+        'A'.repeat(180),
+        ' 마지막 문장'
+      ].join('');
+      fixture.appendChild(span);
+      body.appendChild(fixture);
+
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      const rects = [...range.getClientRects()]
+        .filter((rect) => rect.width > 0 && rect.height > 0)
+        .map((rect) => ({ left: rect.left, right: rect.right, width: rect.width }));
+      const fixtureRect = fixture.getBoundingClientRect();
+      const output = {
+        screen: document.body.dataset.screen || '',
+        viewport: window.innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+        bodyWidth: body.getBoundingClientRect().width,
+        fixtureWidth: fixtureRect.width,
+        fixtureScrollWidth: fixture.scrollWidth,
+        fixtureClientWidth: fixture.clientWidth,
+        rects
+      };
+      fixture.remove();
+      range.detach?.();
+      return output;
+    });
+
+    if (result.missing) {
+      reportFailure(`${label}: .ansi-screen-body is missing on ${route} (${result.screen || 'unknown screen'})`);
+      return;
+    }
+    if (result.screen !== expectedScreen) {
+      reportFailure(`${label}: expected ${expectedScreen} but rendered ${result.screen || 'unknown screen'}`);
+      return;
+    }
+
+    const overflowingRects = result.rects.filter((rect) => (
+      rect.left < -1.5 || rect.right > result.viewport + 1.5
+    ));
+    const fixtureOverflow = result.fixtureScrollWidth > result.fixtureClientWidth + 1.5;
+    if (result.scrollWidth > result.viewport + 1.5 || overflowingRects.length > 0 || fixtureOverflow) {
+      reportFailure(`${label}: injected long text overflowed (${JSON.stringify({
+        viewport: result.viewport,
+        scrollWidth: result.scrollWidth,
+        fixtureScrollWidth: result.fixtureScrollWidth,
+        fixtureClientWidth: result.fixtureClientWidth,
+        rects: result.rects.slice(0, 3)
+      })})`);
+    } else {
+      console.log(`  [Mobile Long Text] ${viewportLabel}: ${label} wrapped within ${result.viewport}px`);
+    }
+  };
+
+  // Direct post detail route ensures the post-view renderer is covered even
+  // when the list fixture does not contain a long title/body.
+  await checkFixture('/plaza/23', 'post-view', 'post-view');
+
+  // Open a real news article through its command flow; direct article URLs
+  // require transient metadata that is intentionally not hard-coded here.
+  await page.goto('http://localhost:3199/service/news', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(450);
+  const newsInput = page.locator('#cmd-input');
+  await newsInput.fill('1');
+  await newsInput.press('Enter');
+  await page.waitForTimeout(850);
+  await newsInput.fill('1');
+  await newsInput.press('Enter');
+  await page.waitForFunction(
+    () => document.body.dataset.screen === 'news-view',
+    { timeout: 3500 }
+  ).catch(() => {});
+  await page.waitForTimeout(300);
+  const newsScreen = await page.evaluate(() => document.body.dataset.screen || '');
+  if (newsScreen === 'news-view') {
+    await checkFixture(null, 'news-view', 'news-view');
+  } else {
+    reportFailure(`news-view: article command flow did not reach news-view (${newsScreen || 'unknown screen'})`);
+  }
+
+  // Guest memo view still renders the same narrow body container. Injecting
+  // through that renderer path covers long memo bodies without persisting data.
+  await checkFixture('/memo/1', 'memo-view', 'memo-view');
 }
 
 runMobileSmokeTests().catch((err) => {

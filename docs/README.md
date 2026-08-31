@@ -68,6 +68,8 @@
 
 모바일 화면을 수정한 경우 `smoke:mobile`을 `loop:verify`와 함께 실행한다. 모바일 검사는
 브라우저를 실제 touch 모드로 실행하며, 빠른 24개 loop gate에는 포함하지 않는다.
+모바일 smoke에는 직접 게시글·뉴스·쪽지 화면에 긴 한글/URL fixture를 주입하는 read-only 줄바꿈 검사도 포함된다.
+좁은 화면 회귀에는 intrinsic-size 이미지·동영상, 긴 `<pre>` 줄바꿈, 짧은 viewport의 hint/footer 표시 검사도 포함된다. UI 변경 후 `npm run smoke:mobile`을 실행한다.
 
 ---
 

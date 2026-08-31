@@ -2112,6 +2112,43 @@ body[data-print-view="true"] .ansi-screen {
         overflow-x: auto;
     }
 
+    /* Long preformatted snippets (for example pasted URLs or code blocks)
+       must reflow on phones. #terminal-screen clips its own overflow, so a
+       native <pre> could otherwise be visually truncated without increasing
+       document.scrollWidth. */
+    .ansi-screen pre {
+        max-width: 100%;
+        box-sizing: border-box;
+        margin-inline: 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    /* Attachment and article media may arrive without the news-specific
+       classes (notably in PDS/detail content). Keep intrinsic dimensions from
+       widening the terminal frame on narrow devices. */
+    .ansi-screen img,
+    .ansi-screen video {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        object-fit: contain;
+    }
+
+    .ansi-screen table:not(.post-table) {
+        width: 100%;
+        max-width: 100%;
+        table-layout: fixed;
+    }
+
+    .ansi-screen table:not(.post-table) th,
+    .ansi-screen table:not(.post-table) td {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
     /* [LOG_ID: 20260831_1015] ansiToHTML가 생성한 내부 색상 span도 모바일 줄바꿈을
        상속해야 한다. .ansi-line만 pre-wrap으로 바꾸면 .ansi-fg-*가 white-space:pre를
        유지해 320px 화면에서 긴 안내 문장이 오른쪽에서 잘린다. 공백 보존은 유지하되
@@ -3676,4 +3713,17 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
     overflow: hidden !important;
     display: flex;
     flex-direction: column;
+}
+
+/* [LOG_ID: 20260831_1200] Short desktop viewports (for example a desktop
+   browser with an on-screen keyboard) cannot fit the fixed 24-row screen and
+   command footer at their normal minimum height. Let the ANSI screen scroll
+   in that case so the hint bar and focused command input stay visible. */
+@media (min-width: 769px) and (max-height: 700px) {
+    #terminal-screen {
+        min-height: 0 !important;
+        max-height: calc(100dvh - 104px) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
 }

@@ -451,3 +451,22 @@ Exit criteria: historical candidates without a current destination remain docume
 - [x] accessible name·touch target·TOSYSOP/게시글/게임 입력 smoke 추가
 
 검증 결과: `npm run smoke:mobile`에서 390/360/320px 31개 경로, 텍스트 overflow, vertical clip, touch target, 접근성 이름, 대표 입력 흐름이 모두 통과했다.
+
+## 직접 URL·긴 데이터 회귀 확장 (2026-08-31)
+
+- [x] `/guide/tosysop`, `/memo/write`, `/board/plaza/2` 직접 경로 인증 가드·복원 확인
+- [x] 게시글·뉴스·쪽지 긴 한글/URL fixture read-only 검사 추가
+- [x] 390/360/320px 내부 Range·scrollWidth overflow 0건 확인
+- [x] 1024/1280/1600px ANSI·hover·click 데스크톱 회귀 확인
+
+검증 결과: 실제 런타임 수정은 불필요했고, 추가 회귀 검사를 `scripts/smoke-mobile-viewports.js`에 반영했다.
+
+## Current iteration: mobile media and short viewport stability (2026-08-31)
+
+- [x] Keyboard-visible hint/footer/input geometry audit
+- [x] PDS/news/post media, preformatted blocks, and table overflow audit
+- [x] Minimal fixes for reproduced CSS and smoke readiness defects only
+- [x] 390/360/320 mobile and short desktop viewport verification
+- [x] `npm run build`, `npm run check`, `npm run qa:final`, `npm run loop:verify`
+
+Exit criteria: 0 mobile smoke errors and 24/24 loop checks.

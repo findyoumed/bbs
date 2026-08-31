@@ -347,3 +347,22 @@ Exit criteria: 390/360/320px 31개 경로에서 가시 텍스트의 viewport 외
 4. smoke에 accessible name, touch target, TOSYSOP/게시글/게임 입력 parity를 추가하되 서버 데이터 저장이나 외부 메일 발송은 수행하지 않는다.
 
 Exit criteria: 390/360/320px에서 24px 미만 visible control·이름 없는 control·힌트 토큰 intercept·입력 포커스 오류가 0건이며, 기존 전체 게이트가 통과한다.
+
+## 직접 URL·긴 데이터 회귀 확장 (2026-08-31)
+
+1. `/guide/tosysop`, `/memo/write`, `/board/plaza/2` 직접 URL의 인증 가드와 화면 복원을 확인한다.
+2. 게시글·뉴스·쪽지 본문에 한글+긴 URL fixture를 주입해 내부 Range와 문서 폭을 측정한다.
+3. 게시글 조회 fixture는 `view=0`으로 재작성해 Supabase 조회수 등 외부 상태를 변경하지 않는다.
+4. 데스크톱 1024/1280/1600px에서 ANSI 80열·hover·click 회귀를 별도로 확인한다.
+
+Exit criteria: 직접 URL의 의도된 가드가 유지되고, 390/360/320px 긴 텍스트 overflow 0건 및 데스크톱 회귀 0건을 확인한다.
+
+## Mobile media, preformatted text, and short viewport pass (2026-08-31)
+
+- [x] 320/360/390px PDS·상세 화면의 intrinsic-width `img`/`video`와 긴 `<pre>` overflow 재현
+- [x] 모바일 media sizing 및 pre 줄바꿈 추가, `.post-table` 의도된 가로 스크롤 보존
+- [x] 320px TOP smoke readiness 경쟁 조건을 MAIN + mounted hotspot 대기로 보정
+- [x] 높이 700px 이하 desktop에서 hint/footer/input이 보이도록 본문 스크롤 fallback 추가
+- [x] mobile, build, Supabase readiness, QA, UI-focused, syntax, diff, loop gate 실행
+
+Exit criteria: 지원 viewport에서 예상치 못한 가로 overflow/긴 텍스트·media clipping이 없고 전체 게이트가 녹색이다.

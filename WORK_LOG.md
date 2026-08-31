@@ -3057,6 +3057,13 @@ Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
 변경: 모바일 혈액형 선택지를 24×24px, 회원가입 선택 버튼을 32px 이상으로 확대하고 긴 라벨 줄바꿈을 허용했다. coarse-pointer 힌트 pseudo hitbox는 pointer interception을 막도록 조정했다. 시삽 건의 제목 조회 ID를 `tosysop-ed-subject`로 수정했다. 모바일 smoke에 accessible name·touch target 검사와 TOSYSOP/게시글/게임 입력 parity를 추가했다.
 검증: 단일 `npm run smoke:mobile` 실행에서 390/360/320px 31개 경로, 텍스트·세로 clipping, touch target, 접근성 이름, TOP·혈액형·쪽지·시삽 건의·게시글·게임 흐름이 모두 통과했다. `npm run build`, `npm run check`, `npm run loop:verify`(24/24)도 통과했다.
 
+## [2026-08-31] 직접 URL·긴 데이터 회귀 확장
+
+**LOG_ID: 20260831_1800**
+점검: 직접 `/guide/tosysop`, `/memo/write`, `/board/plaza/2` 경로를 390/360/320/1280px에서 확인했다. 게스트 직접 접근은 기존 인증 가드에 따라 guide/로그인 안내로 복원되며, 로그인 상태의 TOSYSOP·쪽지·게시글 흐름은 정상이다.
+변경: `smoke-mobile-viewports.js`에 게시글·뉴스·쪽지 화면용 한글+180자 URL fixture를 추가하고 Range rect, fixture scrollWidth, 문서 scrollWidth를 검사했다. 게시글 조회 API는 `view=0`으로 rewrite해 외부 조회수 상태를 변경하지 않는다. TOP hotspot 초기 렌더 대기는 실제 hotspot mount를 기다리도록 보강하고 TOSYSOP selector는 실제 `.ansi-hotspot` DOM을 지원한다.
+검증: `npm run smoke:mobile` 단독 실행에서 390/360/320px 31개 경로와 긴 텍스트 3화면 모두 통과(overflow 0건). 데스크톱 1024/1280/1600px renderer/UI geometry/hover/click smoke도 통과했고 수정 파일은 smoke 스크립트뿐이다.
+
 ## [2026-08-29] PC통신 이미지 자산 중복·출처 감사
 
 **LOG_ID: 20260829_assets_catalog_audit**
@@ -3065,6 +3072,12 @@ Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
 수행 작업: 1) SHA-256 및 32×32 회색조 비교로 동일 파일·동일 화면의 축소/재인코딩본을 확인 2) 더 큰 보존본을 남기고 `chol2.jpg`, `hitel3.jpg`, `nownuri1.gif`, `종료공지/nownuri01.jpg` 제거 3) 모든 잔여 파일의 픽셀 크기·바이트·SHA-256 앞 16자리를 README에 기록 4) 직접 URL이 없는 기존 수집본은 추측하지 않고 미기록 상태로 명시.
 검증: 잔여 이미지 35개(`ref_images` 15개, `종료공지` 20개), 초소형(160×100 미만) 0개, 폴더 간 SHA-256 중복 0개. Sharp 메타데이터와 SHA-256 재검사 완료.
 결과: ✅ 중복·초소형 문제를 최소 정리했고, 각 이미지의 재현 가능한 파일 인벤토리와 출처 불확실성 표시를 추가했다. 이미지 원본 링크가 보존되지 않은 파일은 새 URL을 추측해 채우지 않았다.
+
+## [2026-08-31] Mobile media/pre wrapping and short-viewport regression pass
+
+**LOG_ID: 20260831_1900**
+재현: 320/360/390px PDS·상세 화면에서 클래스 없는 대형 `img`/`video`가 고유 폭을 유지했고, 긴 native `pre`가 터미널 프레임에 잘릴 수 있었다. 모바일 전용 media 크기 제한과 `pre-wrap`/`overflow-wrap:anywhere`를 추가했으며, 기존 `.post-table` 내부 가로 스크롤은 유지했다. 짧은 desktop 창(1280x540, 1600x640)에서 footer가 화면 아래로 내려가는 문제에는 700px 이하 화면에서 본문 스크롤 fallback을 추가했다. 320px TOP smoke 오탐은 cold bootstrap readiness 경쟁 조건으로 확인해 MAIN 화면과 hotspot mount를 기다리도록 변경했다.
+검증: `npm run smoke:mobile` (31 routes x 390/360/320, touch·long-text) 0 errors; `npm run build`, `npm run check` (`liveReady: true`), `npm run qa:final`, `npm run loop:verify` (24/24), focused UI geometry/renderer/layout smokes, `node --check`, `git diff --check` 통과.
 ## [2026-08-29] HITEL.MNU and Nurie NRE GO compatibility audit
 
 - Compared `nurie/HITEL.MNU` and `nurie15/HITEL.MNU` (660 entries, 601 unique GO codes).
