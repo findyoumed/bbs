@@ -366,3 +366,118 @@ Exit criteria: 직접 URL의 의도된 가드가 유지되고, 390/360/320px 긴
 - [x] mobile, build, Supabase readiness, QA, UI-focused, syntax, diff, loop gate 실행
 
 Exit criteria: 지원 viewport에서 예상치 못한 가로 overflow/긴 텍스트·media clipping이 없고 전체 게이트가 녹색이다.
+
+## Interaction parity and inline validation closure (2026-09-01)
+
+- [x] 화면별 GO/ME/P/R/WMAIL/TOSYSOP 라우팅 및 기존 보류 명령 audit
+- [x] 포커스 가능한 hotspot의 Enter/Space/Tab, accessible name, touch target, hint overlap audit
+- [x] 게시글/PDS/쪽지/시삽/게임 입력의 오류 표시 위치 audit
+- [x] Space 전역 리다이렉트와 게시글 편집 stale fallback의 재현·최소 수정
+- [x] mobile/desktop browser, build, Supabase readiness, QA, loop gate 검증
+
+Exit criteria: 클릭·Enter·Space 동작이 일치하고, 폼 오류가 힌트바 명령 안내를 덮지 않으며 전체 게이트가 녹색이다.
+
+## Supabase 영구 저장·모바일 실오류 점검 (2026-09-01)
+
+- [x] Supabase repositories와 `user_activities`를 read-only probe로 확인
+- [x] 공개 테이블/RLS/RPC 보안 경계와 migration drift를 변경 없이 기록
+- [x] 320/360/390px 및 짧은 landscape에서 hint/footer/input/touch hotspot 점검
+- [x] 재현된 hint clipping·hotspot overlap·뉴스 readiness 경쟁 조건만 최소 수정
+- [x] mobile/build/check/qa/loop/unit/syntax/diff 전체 게이트 실행
+
+Exit criteria: Supabase live readiness가 확인되고, 모바일·데스크톱 회귀 없이 0 오류 검증이 완료된다. 운영 보안 설정 변경은 별도 승인 후 진행한다.
+
+## Supabase 운영 보안 감사 (2026-09-01)
+
+- [x] SECURITY DEFINER RPC의 실행 권한과 auth/amount 검증 여부 확인
+- [x] RLS·GRANT·대상 테이블 접근 경계와 migration drift 확인
+- [x] `members.password`, Auth metadata 권한 원천, auth_user_id 연결 상태 확인
+- [x] service_role·publishable key·CORS·개발 관리자 헤더·오류 응답 점검
+- [x] 위험도·영향·권고 변경·롤백·승인 필요 여부 문서화
+- [ ] 사용자 승인 전 SQL/RLS/RPC/Auth/비밀번호 데이터 변경 보류
+
+승인 후 후보 순서: (1) 미사용 RPC revoke 또는 함수 내부 권한·양수 검증, (2) AuthBridge 권한 원천을 app_metadata/회원 레코드로 제한, (3) sysop 자격 확인 후 평문 제거·scrypt/Auth 전환, (4) 계정 열거 방지 응답·CORS allowlist·auth_user_id 정합성 수정, (5) migration history 정리. 각 단계는 백업·롤백·smoke 검증을 포함한다.
+
+## 모바일·데스크톱 사용성 통합 Goal (2026-09-01)
+
+- [x] 모바일·API·Supabase agents 병렬 read-only audit
+- [x] 쪽지/unread/시삽 내부 저장 및 외부 메일 실패 계약 확인
+- [x] 320/360/390px 및 짧은 landscape 직접 URL·터치·overflow 점검
+- [x] root 최종 `smoke:mobile` 및 전체 verification gate 실행
+- [ ] 보안 Advisor backlog는 운영 승인 후 별도 Goal로 적용
+
+결과: 이번 Goal에서 새 런타임 결함은 재현되지 않았고 기존 최소 수정과 smoke 보강 상태가 모든 게이트에서 유지됐다.
+
+## Auth identity hardening (app-only Phase A, 2026-09-01)
+
+1. `AuthBridge`는 editable `user_metadata`를 권한·이메일 검증 원천으로 사용하지 않고, `app_metadata`, immutable Auth subject, 확인된 allowlist 이메일만 신뢰한다.
+2. `AuthMemberProfileService`는 `auth_user_id` 일치 또는 확인된 이메일 일치 없이는 기존 회원을 병합하지 않으며, 충돌 시 Auth subject를 canonical userId로 사용한다.
+3. 신규 회원 seed에 `authUserId`를 포함해 이후 세션의 1:1 연결을 보강한다.
+4. `smoke-auth-bridge`에 위조 metadata·Auth subject 충돌·legacy 이메일 입양 경계를 고정한다.
+
+이번 단계는 코드·스모크만 변경했다. RPC/RLS/권한, 평문 비밀번호, CORS, 원격 migration/회원 데이터는 운영 승인과 백업 후 별도 Goal에서 처리한다.
+
+## Password recovery privacy hardening (app-only Phase B, 2026-09-01)
+
+1. 복구 성공 응답은 `success`만 반환해 내부 회원 ID와 resolved email을 제거한다.
+2. 알려진 계정·알 수 없는 계정의 lookup/validation/conflict 결과는 동일한 성공 응답으로 정규화한다.
+3. provider throttling·설정 장애는 숨기지 않고 재시도 가능한 실패로 유지한다.
+4. `smoke-auth-privacy`를 완료 게이트에 포함해 응답 shape를 고정한다(현재 loop 25/25).
+
+## Supabase privilege hardening (remote migrations 0025–0027, 2026-09-01)
+
+1. 애플리케이션에서 호출하지 않는 public SECURITY DEFINER RPC의 공개 실행 권한을 제거하고 `service_role`만 유지한다.
+2. `set_post_local_id()` search path를 `pg_catalog, public`으로 고정한다.
+3. RLS가 이미 활성화된 서버 전용 테이블에서 anon/authenticated table grants를 제거해 이중 방어를 만든다.
+4. 함수 ACL·REST 거부·service-role readiness·Auth trigger 존재·Security Advisor를 변경 직후 확인한다.
+
+현재 남은 운영 작업은 Auth Dashboard의 leaked-password protection 활성화와 sysop legacy credential 회전이다. Supabase 조직 조회 결과 현재 plan은 Free이며, 공식 Auth 문서상 leaked-password protection은 Pro 이상에서만 제공된다. 따라서 요금제 업그레이드/권한 확인 없이는 Dashboard 설정을 완료할 수 없다. 두 항목은 계정 잠금·사용자 통지 가능성이 있어 별도 자격 확인 후 진행한다.
+
+## Sysop credential representation (2026-09-01)
+
+`migrate:sysop-password`가 기존 sysop credential의 평문 저장만 scrypt 형식으로 변경한다. 값 자체를 출력하거나 새 비밀번호로 교체하지 않아 로그인 자격은 유지된다. 원격 확인 결과 legacy plaintext 0건, scrypt 1건이다. 남은 leaked-password protection은 Supabase Auth Dashboard 설정으로 처리한다.
+
+## CORS origin allowlist (2026-09-01)
+
+로컬 `.env`에 `BBS_ALLOWED_ORIGINS`를 명시해 개발 서버의 OPTIONS wildcard를 제거했다. 운영/Vercel에서는 실제 배포 origin만 동일 변수에 등록하고, 등록하지 않은 origin은 ACAO를 받지 않도록 유지한다.
+
+다음 운영 단계는 공개 RPC 실행 권한·RLS, sysop credential 회전, CORS allowlist, Auth-member linkage 및 migration drift이며, 백업과 명시적 승인 이후에만 원격 변경한다.
+
+## Public member projection hardening (app-only Phase C, 2026-09-01)
+
+1. 비로그인 회원 상세·디렉터리 응답은 화면에 필요한 5개 필드만 whitelist한다.
+2. 개인 정보(생일·성별·최근 접속·부재 사유)와 내부 식별자(PK/Auth UUID)는 익명 응답에서 제거한다.
+3. userId 로그인 resolver에 필요한 이메일만 해당 검색 경로에서 제한적으로 유지하고, 본인·관리자 응답 계약은 보존한다.
+4. projection 및 password recovery shape smoke를 `loop:verify` 25개 게이트에 포함한다.
+
+## Production CORS fail-closed guard (2026-09-01)
+
+운영 또는 Vercel 런타임에서 `BBS_ALLOWED_ORIGINS`가 누락되면 preflight에 wildcard ACAO를 내보내지 않는다. 개발 환경은 기존 fallback을 보존하고, 운영 배포 전에는 `http://localhost:3000`과 실제 서비스 origin을 환경별로 분리해 등록한다. 보안 경계 smoke에 누락 설정 회귀 검사를 포함한다.
+
+`npm run check`도 동일한 운영 누락을 오류로 보고하므로 배포 전 readiness 게이트에서 설정 실수를 차단한다.
+
+`BBS_ALLOWED_ORIGINS`는 HTTP/HTTPS scheme과 host/port만 허용하고 wildcard·credentials·path·비웹 scheme은 무시한다. trailing slash는 표준 origin으로 정규화해 운영 설정 오타가 허용 범위를 넓히지 않도록 한다.
+
+`NODE_ENV`도 trim/lowercase 후 production 여부를 판정해 `Production` 같은 표기 차이로 fail-closed 경계가 우회되지 않도록 한다.
+
+운영 연결 정보가 없는 상태에서도 설정 누락을 줄일 수 있도록 비밀값 없는 `.env.example`을 제공한다. 실제 키·비밀번호는 복사 후 각 환경의 secret store에서 주입한다.
+
+모바일 overflow와 힌트바/레이아웃 회귀가 빠지지 않도록 `smoke-ui-geometry` 및 `smoke-ui-layout`을 `loop:verify` 완료 게이트에 포함한다.
+
+의존성 점검에서 고위험 libvips 취약점이 보고된 `sharp`는 `0.35.4` 이상으로 고정하고, 이미지 변환 smoke와 `npm audit --omit=dev`를 배포 전 확인 항목으로 유지한다.
+
+Supabase Performance Advisor에서 동일 정의로 확인된 `chat_rooms` 중복 인덱스는 canonical 인덱스를 보존한 채 migration 0028로 정리하고, 원격 인덱스와 채팅 계약을 재검증한다.
+
+`sharp 0.35.4`와 현재 Supabase 클라이언트 지원 정책에 맞는 Node `>=22.0.0`을 package manifest에 명시해 로컬·Vercel 런타임 차이로 인한 이미지 처리 실패를 예방한다.
+
+비밀번호 재설정 redirect allowlist 회귀가 누락되지 않도록 `smoke-password-recovery`를 package script 및 완료 게이트에 포함한다.
+
+CORS 경계 smoke는 guard 상태뿐 아니라 실제 preflight 응답의 ACAO 헤더까지 검사해 운영 fail-closed 계약을 고정한다.
+
+Vercel build smoke는 의존성 요구 조건과 package manifest가 어긋나지 않도록 Node `>=22.0.0` 엔진 pin을 검증한다.
+
+또한 build를 실행한 실제 Node runtime major가 22 이상인지 함께 검사해 manifest와 실행 환경이 불일치하는 회귀를 차단한다.
+
+## Consolidated status
+
+코드·원격 migration·의존성·모바일/라우트 검증은 완료됐다. 실제 www-bbs 배포 프로젝트 식별 후 Vercel 환경변수를 등록하는 운영 작업이 남아 있다. leaked-password protection은 현재 Supabase Free plan에서 제공되지 않아 Pro 이상 업그레이드 후 별도 처리한다.

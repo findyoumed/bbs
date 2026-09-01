@@ -47,8 +47,12 @@ const CHECKS = [
   { name: 'menu-wiring', file: 'smoke-menu-wiring.js' },
   { name: 'signup-ime', file: 'smoke-signup-ime.mjs' },
   { name: 'renderer-ui', file: 'smoke-renderer-ui.js' },
+  { name: 'ui-geometry', file: 'smoke-ui-geometry.js' },
+  { name: 'ui-layout', file: 'smoke-ui-layout.js' },
   { name: 'chat-rooms', file: 'smoke-chat-rooms.js' },
   { name: 'auth-bridge', file: 'smoke-auth-bridge.js' },
+  { name: 'auth-privacy', file: 'smoke-auth-privacy.js' },
+  { name: 'password-recovery', file: 'smoke-password-recovery.js' },
   { name: 'vercel-ready', file: 'smoke-vercel-ready.js' },
   { name: 'qa:final', file: 'final-qa-report.js' }
 ];

@@ -120,9 +120,19 @@ class AuthRouter extends BaseRouter {
         this.error(503, '비밀번호 찾기 기능이 설정되지 않았습니다.');
       }
 
-      return this.send(200, { success: true, userId: member.userId, email: resolvedEmail });
+      // Do not echo the resolved member ID/email.  The caller only needs the
+      // success bit; returning both fields made this endpoint an unnecessary
+      // account-enumeration and email-disclosure primitive.
+      return this.send(200, { success: true });
     } catch (error) {
-      if ([400, 404, 409, 429, 503].includes(Number(error?.status))) {
+      // Keep the forgot-password contract intentionally generic for expected
+      // lookup/identity failures.  A caller must not learn whether an ID,
+      // email, or legacy member row exists. Operational throttling/provider
+      // failures remain visible so the UI can ask the user to retry later.
+      if ([400, 404, 409].includes(Number(error?.status))) {
+        return this.send(200, { success: true });
+      }
+      if ([429, 503].includes(Number(error?.status))) {
         return this.send(200, { success: false, message: error.message || '요청을 처리하지 못했습니다.' });
       }
       throw error;
@@ -447,3 +457,6 @@ async function handleAuthRoutes(deps) {
 }
 
 module.exports = handleAuthRoutes;
+// Expose the router class for deterministic contract smokes without starting
+// an HTTP server or calling the external mail provider.
+module.exports.AuthRouter = AuthRouter;

@@ -2423,8 +2423,11 @@ body[data-print-view="true"] .ansi-screen {
     }
 
     #terminal-wrapper {
-        height: 100vh;
-        min-height: 100vh;
+        /* The landscape body rule adds 4px top/bottom padding. Subtract it
+           from the wrapper height so the footer and command input stay inside
+           the visual viewport on 320/360px-tall devices. */
+        height: calc(100dvh - 8px);
+        min-height: calc(100dvh - 8px);
         max-width: 100%;
     }
 
@@ -2485,7 +2488,20 @@ body[data-print-view="true"] .ansi-screen {
         font-size: 8px;
     }
 
+    /* Keep the command hint available even on keyboard-height landscape
+       viewports.  It uses the compact sizing from the surrounding landscape
+       rules and horizontal scrolling for long token lists, so restoring it
+       does not push the prompt/input below the viewport. */
     #cmd-hint {
+        display: block !important;
+        max-height: 2.4em;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        scrollbar-width: none;
+    }
+
+    #cmd-hint::-webkit-scrollbar {
         display: none;
     }
 

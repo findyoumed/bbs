@@ -13,9 +13,12 @@ async function waitForServer(port = 3199, timeoutMs = 15000) {
         const req = http.get(`http://localhost:${port}/api/health`, (res) => {
           if (res.statusCode === 200) resolve();
           else reject(new Error(`Status ${res.statusCode}`));
+          res.resume();
         });
         req.on('error', reject);
-        req.setTimeout(500);
+        req.setTimeout(500, () => {
+          req.destroy(new Error('Health check timed out'));
+        });
       });
       return;
     } catch {
@@ -132,6 +135,10 @@ async function runMobileSmokeTests() {
         userAgent: vp.userAgent
       });
       const page = await context.newPage();
+      // Keep a single slow route from leaving the smoke process alive
+      // indefinitely when a local API or external dependency is unavailable.
+      page.setDefaultTimeout(7000);
+      page.setDefaultNavigationTimeout(12000);
 
       page.on('pageerror', (err) => {
         console.error('  ❌ Page Uncaught Error:', err.message);
@@ -776,11 +783,24 @@ async function verifyMobileLongTextFlows(page, viewportLabel, errors) {
   // Open a real news article through its command flow; direct article URLs
   // require transient metadata that is intentionally not hard-coded here.
   await page.goto('http://localhost:3199/service/news', { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(450);
+  // News menu data is loaded asynchronously.  A fixed delay allowed the
+  // narrowest viewport to submit before the shared command input was mounted,
+  // making the second command a false negative.  Wait for the actual ready
+  // screen/input instead of relying on timing.
+  await page.waitForFunction(
+    () => ['news-menu', 'news-list'].includes(document.body.dataset.screen)
+      && document.querySelector('#cmd-input')
+      && !/불러오는 중/.test(document.querySelector('#cmd-hint')?.textContent || ''),
+    { timeout: 8000 }
+  );
   const newsInput = page.locator('#cmd-input');
   await newsInput.fill('1');
   await newsInput.press('Enter');
-  await page.waitForTimeout(850);
+  await page.waitForFunction(
+    () => document.body.dataset.screen === 'news-list'
+      && !/불러오는 중/.test(document.querySelector('#cmd-hint')?.textContent || ''),
+    { timeout: 8000 }
+  );
   await newsInput.fill('1');
   await newsInput.press('Enter');
   await page.waitForFunction(

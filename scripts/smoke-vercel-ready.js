@@ -29,6 +29,10 @@ async function main() {
 
   assert(typeof handler === 'function', 'Vercel API handler should export a function');
   assert(exists('package.json'), 'package.json should exist for Vercel install/build');
+  const packageJson = JSON.parse(readText('package.json'));
+  assert(packageJson.engines?.node === '>=22.0.0', 'package.json should pin Node >=22.0.0 for current Supabase client support');
+  const nodeMajor = Number.parseInt(process.versions.node.split('.')[0], 10);
+  assert(Number.isInteger(nodeMajor) && nodeMajor >= 22, `build runtime must use Node >=22 (current ${process.versions.node})`);
   assert(exists('vercel.json'), 'vercel.json should exist');
 
   // [LOG: 20260417_1104] 통합된 핸들러 및 구조 확인
@@ -59,6 +63,8 @@ async function main() {
     apiHandler: true,
     rewrites: vercelConfig.rewrites.length,
     publicJsReady: true,
+    nodeEngine: packageJson.engines.node,
+    nodeRuntime: process.versions.node,
     vendoredAssets: true,
     sharedCoreFiles
   }, null, 2));

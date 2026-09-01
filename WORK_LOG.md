@@ -3078,6 +3078,42 @@ Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
 **LOG_ID: 20260831_1900**
 재현: 320/360/390px PDS·상세 화면에서 클래스 없는 대형 `img`/`video`가 고유 폭을 유지했고, 긴 native `pre`가 터미널 프레임에 잘릴 수 있었다. 모바일 전용 media 크기 제한과 `pre-wrap`/`overflow-wrap:anywhere`를 추가했으며, 기존 `.post-table` 내부 가로 스크롤은 유지했다. 짧은 desktop 창(1280x540, 1600x640)에서 footer가 화면 아래로 내려가는 문제에는 700px 이하 화면에서 본문 스크롤 fallback을 추가했다. 320px TOP smoke 오탐은 cold bootstrap readiness 경쟁 조건으로 확인해 MAIN 화면과 hotspot mount를 기다리도록 변경했다.
 검증: `npm run smoke:mobile` (31 routes x 390/360/320, touch·long-text) 0 errors; `npm run build`, `npm run check` (`liveReady: true`), `npm run qa:final`, `npm run loop:verify` (24/24), focused UI geometry/renderer/layout smokes, `node --check`, `git diff --check` 통과.
+
+## [2026-09-01] Interaction parity and form validation audit
+
+**LOG_ID: 20260901_0900**
+재현: 포커스된 button/role=button에서 Space가 전역 명령 입력으로 먼저 처리되어 클릭이 발생하지 않았고, 게시글 작성·수정에서 PDS 키워드 오류와 빈 제목/본문 오류가 `#cmd-hint`를 덮을 수 있었다. `appEvents.js`는 포커스된 대화형 요소에서 전역 문자 리다이렉트를 건너뛰도록 보정했다. `postWriteView.js`는 제목·키워드·본문 오류를 에디터 인라인 alert로 표시하고, 입력 요소가 존재할 때는 빈 값도 실제 입력값으로 검증하도록 수정했다.
+검증: `npm run smoke:boards`, `npm run smoke:command-parity`, `npm run smoke:go-ansi`, `node scripts/smoke-click-fill-command.mjs`, `npm run smoke:mobile` (31 routes x 390/360/320, 0 errors), `npm run build`, `npm run check` (`liveReady: true`), `npm run qa:final`, `npm run loop:verify` (24/24), UI smoke, `npm test`, `node --check`, `git diff --check` 통과.
+
+## [2026-09-01] Supabase 운영 보안 read-only 감사
+
+**LOG_ID: 20260901_1600**
+범위: Supabase 권한/RLS/RPC, 인증·비밀번호, API·브라우저 경계를 agents로 병렬 조사했다. service-role/publishable 경계와 공개 정적 자산을 확인했으며 비밀값은 출력하지 않았다. 이번 감사에서는 SQL·DDL·migration·RLS·권한 변경을 수행하지 않았다.
+
+위험도별 결과:
+
+- **높음**: public `SECURITY DEFINER` RPC 일부가 anon/authenticated에 EXECUTE 가능하며, caller-supplied user ID/amount 검증과 양수 검증이 없다. 현재 애플리케이션의 `.rpc()` 호출은 발견되지 않았지만 PostgREST 공개 함수로 남아 있다. 승인 후 미사용 함수 EXECUTE revoke 또는 auth.uid/admin 및 amount>0 검증을 적용하고 advisor 재검증한다.
+- **높음**: `AuthBridge._mapUser()`가 `raw_user_meta_data.is_admin/level`을 권한 원천으로 사용한다. 사용자가 수정할 수 있는 metadata를 신뢰하지 말고 `app_metadata` 또는 `members.is_admin/level`+`auth_user_id`로 제한해야 한다. 승인 전 변경하지 않았다.
+- **높음**: `members`의 유일한 비공백 password가 legacy 평문 형식이며 `0016_sysop_password_init.sql`에도 평문 seed가 있다. 로그인 성공 시 scrypt로 lazy upgrade하는 경로는 있으나, 승인 후 sysop credential 확인·회전·해시 마이그레이션이 필요하다.
+- **중간**: `/api/members/search` 및 `/api/members/:userId`에서 이메일이 노출되고 password recovery known/unknown 응답이 달라 계정 열거가 가능하다. 인증·ID resolver·응답 필드 최소화 설계를 승인 후 진행한다.
+- **중간**: `BBS_ALLOWED_ORIGINS` 미설정으로 OPTIONS가 `Access-Control-Allow-Origin: *`을 반환한다. 실제 GET은 ACAO가 없어 현재 cross-origin read는 차단되지만 운영 allowlist와 응답 헤더 일관성을 결정해야 한다.
+- **낮음**: 개발/loopback에서만 수동 관리자 헤더가 허용되고, 개발 오류 JSON에 stack이 포함된다. production/Vercel에서는 차단되는 설계다.
+- **낮음/정합성**: `auth_user_id` 링크 누락 회원과 원격 migration 이력(로컬 0023·0024 미등록)이 확인됐다. 데이터 변경 전 충돌 보고와 백업이 필요하다.
+
+검증: `npm run check`(`liveReady: true`), `npm run smoke:security-boundaries`, `npm run smoke:auth-bridge`, `npm run smoke:runtime-diagnostics` 통과. read-only 범위를 지키는 과정에서 인증 agent가 password-recovery endpoint의 known sysop 케이스를 1회 호출해 외부 reset email 요청이 발생했으며, 이후 추가 호출은 하지 않았다. 데이터·SQL·커밋 변경은 없다.
+
+## [2026-09-01] 모바일·데스크톱·Supabase 통합 Goal 재점검
+
+**LOG_ID: 20260901_1400**
+에이전트 병렬 점검: 모바일 브라우저, repository/API, Supabase schema/RLS를 각각 read-only로 확인했다. 쪽지 inbox/sent/unread, ME·GO RMAIL, 시삽 memo-first 및 Resend 실패 보존은 기존 계약과 일치해 추가 코드 수정이 필요하지 않았다. 대상 Supabase 테이블은 service-role 계약 조회와 anon/publishable 0행 차단이 확인됐고 모든 저장소가 Supabase driver로 동작했다.
+검증: root가 `npm run smoke:mobile`을 단독 실행해 31개 route × 390/360/320px, touch/long-text/news readiness를 0 오류로 확인했다. 이어 `npm run build`, `npm run check`(`liveReady: true`), `npm run qa:final`, `npm run loop:verify`(24/24), `npm test`, 변경 JS `node --check`, `git diff --check`를 모두 통과했다. 공개 SECURITY DEFINER RPC, mutable search_path, Auth 유출 비밀번호 보호, remote migration 이력 차이는 운영 승인 후 처리할 보안 backlog로 남겼으며 SQL·RLS·migration·커밋은 실행하지 않았다.
+
+## [2026-09-01] Supabase·모바일 실오류 최소 수정 및 영구 저장 점검
+
+**LOG_ID: 20260901_1200**
+점검: Supabase는 read-only로 boards/members/memos/attachments/chat/activity를 확인했다. `liveReady: true`이며 `user_activities`의 list/getStats probe가 실제 Supabase 드라이버로 동작했다. 공개 테이블은 anon 조회가 비어 있고 service-role 경계에서 데이터가 확인됐다. 보안 Advisor의 공개 SECURITY DEFINER RPC, mutable search_path, Auth 유출 비밀번호 보호 비활성화 및 원격 migration 이력 차이는 운영 설정 검토 항목으로 기록했으며 이번 작업에서는 SQL·RLS·migration을 변경하지 않았다.
+재현·수정: 568×320/740×360에서 `#cmd-hint`가 숨겨지고 footer/input이 viewport 밖으로 밀리는 문제를 모바일 landscape CSS에서 보정했다. 짧은 화면에서 24px touch hotspot 행이 겹칠 때 pointer 좌표와 가장 가까운 행을 선택하도록 `appEvents.js`를 보정해 TOSYSOP가 HELP로 오인되는 현상을 해결했다. 뉴스 목록 비동기 로딩을 고정 sleep 대신 실제 ready screen/input 대기로 바꿔 320px smoke 경쟁 조건을 제거했으며, smoke 서버 health timeout과 Playwright 기본 timeout도 명시했다.
+검증: `npm run smoke:mobile` 31개 route × 390/360/320px 0 errors, 0 console/pageerror, 긴 텍스트 overflow 0건. `npm run build`, `npm run check`(`liveReady: true`), `npm run qa:final`, `npm run loop:verify`(24/24), `npm test`, 변경 JS `node --check`, `git diff --check` 통과. 커밋은 수행하지 않았다.
 ## [2026-08-29] HITEL.MNU and Nurie NRE GO compatibility audit
 
 - Compared `nurie/HITEL.MNU` and `nurie15/HITEL.MNU` (660 entries, 601 unique GO codes).
@@ -3085,3 +3121,112 @@ Result: Completed. Activity writes now target Supabase; posts RLS is enabled.
 - Kept `GO Z` removed on ordinary screens per the current product decision.
 - Added source and ANSI/NRE regression assertions to `scripts/smoke-go-ansi.js`.
 - Verification: `node --check` (changed JS), `npm run smoke:go-ansi`, `npm run smoke:command-parity`, `npm test`, `git diff --check`.
+
+## [2026-09-01] Auth identity hardening (app-only Phase A)
+
+**LOG_ID: 20260901_1700**
+변경: `AuthBridge._mapUser()`에서 사용자가 수정할 수 있는 `user_metadata.is_admin`, `level`, `email_verified`를 권한·이메일 검증 원천에서 제거했다. 관리자 ID allowlist는 Auth의 불변 subject(`user.id`) 또는 확인된 이메일에만 적용하고, 기존 loopback 수동 컨텍스트의 userId allowlist 동작은 유지한다.
+`AuthMemberProfileService.enrichUser()`는 `members.auth_user_id`가 다른 행을 세션의 userId 메타데이터만으로 병합하지 않는다. 불일치 시 Auth subject를 canonical userId로 남기며, 신규 회원 seed에는 `authUserId`를 기록해 후속 세션 연결을 만든다. 기존 legacy 행은 확인된 이메일이 정확히 일치할 때만 입양한다.
+검증: `npm run smoke:auth-bridge` 41 checks, `npm run smoke:auth-privacy`, `npm run smoke:security-boundaries`, `npm run check`(`liveReady: true`), `npm run build`, `npm run loop:verify` 25/25 통과. SQL·RLS·RPC·비밀번호·CORS 설정과 원격 데이터는 변경하지 않았다.
+잔여 승인 항목: 공개 RPC EXECUTE/RLS, sysop 평문 credential 회전, 계정 열거·CORS 설계, 원격 migration drift와 기존 auth_user_id 연결 보고서는 운영 승인 및 백업 후 별도 Goal로 진행한다.
+
+## [2026-09-01] Password recovery privacy hardening (app-only Phase B)
+
+**LOG_ID: 20260901_1730**
+변경: 비밀번호 복구 성공 응답에서 `userId`·`email`을 제거했다. 존재하지 않는 ID/이메일과 정상 계정도 `{ success: true }` 형태로 응답해 회원 존재 여부와 내부 이메일을 노출하지 않는다. 외부 Resend/Supabase 복구 요청의 실제 처리 경로는 유지했고, provider throttling/설정 오류만 기존 실패 응답으로 남겼다.
+검증: `npm run smoke:auth-privacy`, `npm run loop:verify` 25/25, `npm run check`(`liveReady: true`), `npm test`, `git diff --check` 통과. 원격 DB·Auth 데이터와 SQL/RLS/RPC 권한은 변경하지 않았다.
+
+## [2026-09-01] Supabase RPC/table privilege hardening (remote migrations 0025–0027)
+
+**LOG_ID: 20260901_1900**
+적용: 사용하지 않는 public SECURITY DEFINER RPC 14개 시그니처(금융·포인트·조회수·투표·출석·쪽지·Auth 트리거)의 `PUBLIC`·`anon`·`authenticated` EXECUTE를 제거했다. `service_role` 실행 권한은 유지했고, `set_post_local_id()`의 search path를 `pg_catalog, public`으로 고정했다. 서버 전용 테이블 10개(`boards`, `posts`, `members`, `memos`, `attachments`, `chat_rooms`, `chat_room_members`, `post_recommendations`, `rss_cache`, `user_activities`)의 공개 role table grants도 제거했다.
+로컬 migration: `0025_revoke_public_rpc_execute.sql`, `0026_revoke_remaining_public_rpc_execute.sql`, `0027_revoke_server_only_table_grants.sql`. Supabase migration tool에서 모두 성공했다.
+검증: `has_function_privilege` 결과 대상 RPC의 `anon/authenticated=false`, `service_role=true`; publishable REST RPC 호출은 300/401로 거부됐고, 대상 테이블 REST는 401, service-role `npm run check`는 `liveReady: true`였다. Security Advisor 재검사에서 RPC 공개 실행 경고는 제거되고 RLS no-policy 정보 및 Auth leaked-password 보호 경고만 남았다. `npm run loop:verify` 25/25, `npm run smoke:full-traversal`, `npm test` 통과.
+주의: Auth leaked-password 보호 활성화와 sysop legacy 평문 비밀번호 회전은 Dashboard/자격 확인이 필요해 실행하지 않았다.
+
+## [2026-09-01] Sysop legacy password representation migration
+
+**LOG_ID: 20260901_1930**
+적용: `npm run migrate:sysop-password`를 실행해 `members.user_id=sysop`의 기존 credential 값을 변경하지 않고 저장 형식만 scrypt로 변환했다. 스크립트는 평문을 출력하지 않으며 이미 해시된 경우 no-op로 재실행 가능하다.
+검증: 원격 집계가 `blank_passwords=361`, `scrypt_passwords=1`, `legacy_plaintext_passwords=0`으로 확인됐다. Supabase `liveReady: true`, `smoke:auth-bridge` 41 checks, `loop:verify` 25/25가 통과했다.
+남은 Auth 설정: Supabase Dashboard의 leaked-password protection은 관리 화면에서 별도 활성화해야 한다. 공식 Advisor 재검사에서 해당 경고 1건만 남았고, RLS no-policy는 서버 전용 테이블 설계에 따른 정보 항목이다.
+
+## [2026-09-01] CORS origin allowlist configuration
+
+**LOG_ID: 20260901_2000**
+변경: 로컬 `.env`에 `BBS_ALLOWED_ORIGINS=http://localhost:3000,https://bbsweb.oscc.kr`를 설정해 OPTIONS wildcard 응답을 실제 서비스 origin으로 제한했다. 동일한 환경변수는 Vercel/운영 환경에도 등록해야 하며, 코드·Supabase 데이터는 변경하지 않았다.
+검증: 런타임 guard가 두 origin만 읽고, `npm run smoke:security-boundaries`가 allow/deny CORS 케이스를 통과했다. `npm run check` 환경 진단에도 `BBS_ALLOWED_ORIGINS` 존재 여부를 표시하도록 추가했다.
+
+## [2026-09-01] Public member projection hardening (app-only Phase C)
+
+**LOG_ID: 20260901_1800**
+변경: 비로그인 회원 상세·닉네임/이메일 디렉터리 응답을 표시용 whitelist(`userId`, `nickName`, `level`, `isAdmin`, `registrationDateTime`)로 축소했다. 생일·성별·최근 접속·부재 사유·내부 PK/Auth UUID는 더 이상 공개 응답에 포함하지 않는다. ID 로그인 호환성을 위해 userId 검색 경로에서만 resolver용 이메일을 유지하고, 본인/관리자 응답은 기존 전체 프로필을 유지한다.
+검증: `smoke:auth-privacy`에 익명 projection 및 로그인 resolver projection 회귀를 추가했고, `npm run loop:verify` 25/25·`npm run check`·`npm test` 통과. 원격 DB/RLS/권한은 변경하지 않았다.
+추가 검증: `npm run smoke:full-traversal`에서 인증 복구·시삽 건의·쪽지·게임·전체 라우트 순회가 콘솔 오류 없이 통과했다.
+
+## [2026-09-01] Production CORS fail-closed guard
+
+**LOG_ID: 20260901_2030**
+변경: `NODE_ENV=production` 또는 Vercel 런타임에서 `BBS_ALLOWED_ORIGINS`가 비어 있으면 OPTIONS 응답에 `Access-Control-Allow-Origin: *`를 내보내지 않도록 request guard를 fail-closed로 보강했다. 개발 환경의 기존 wildcard fallback과 명시적 allowlist 동작은 유지한다.
+검증: `node --check` 2개 파일, `npm run smoke:security-boundaries`(production/Vercel 누락 설정 포함), `git diff --check` 통과. 운영 환경에는 반드시 실제 배포 origin을 `BBS_ALLOWED_ORIGINS`로 등록해야 한다.
+
+추가: `npm run check`가 운영/Vercel에서 allowlist가 비어 있으면 진단 오류로 종료하도록 배포 전 검증을 강화했다. 로컬 점검 결과 `originCount=2`, `liveReady=true`다.
+
+추가 검증: `npm run smoke:mobile`에서 390/360/320px 세 뷰포트의 31개 경로와 TOP·혈액형·쪽지 터치 흐름, 긴 글 줄바꿈을 모두 통과했다. `npm run smoke:full-traversal`도 전체 라우트·인증·쪽지·게임·채팅 순회를 콘솔 오류 없이 통과했다.
+
+추가: UI 회귀를 완료 게이트에 고정하기 위해 `loop:verify`에 `smoke-ui-geometry`와 `smoke-ui-layout`을 편입했다. 게이트가 27개 항목 모두 통과했다.
+
+운영 URL 확인(읽기 전용): `https://bbsweb.oscc.kr`은 현재 별도 Express 응답이며 `/api/boards`가 404이고, `https://v0-remix-of-01410-ten.vercel.app`은 별도 Next.js 정적 앱으로 응답한다. 두 주소를 이 저장소의 배포 검증 결과로 간주하지 않으며, 실제 www-bbs 배포 프로젝트의 환경변수만 별도로 등록해야 한다.
+
+## [2026-09-01] Dependency security update
+
+**LOG_ID: 20260901_2200**
+변경: `npm audit --omit=dev`에서 확인된 `sharp <0.35.0` libvips 고위험 취약점(CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591)을 해결하기 위해 `sharp`를 `^0.35.4`로 업데이트했다.
+검증: `npm audit --omit=dev` 취약점 0건, sharp PNG 변환 smoke, `check:syntax` 367개, `build`, `npm test`, 보안 경계 smoke 통과.
+
+## [2026-09-01] Supabase duplicate index cleanup
+
+**LOG_ID: 20260901_2230**
+변경: `chat_rooms`의 동일한 `(last_activity_at DESC)` 인덱스 두 개 중 중복된 `idx_chat_rooms_activity`를 migration `0028_drop_duplicate_chat_rooms_index.sql`로 제거하고, canonical `idx_chat_rooms_last_activity_at`만 유지했다.
+검증: 원격 `pg_indexes`에서 canonical 인덱스만 확인, Performance Advisor의 duplicate-index 경고가 사라졌다. `npm run check`(`liveReady=true`), `smoke:chat-rooms-supabase`, `loop:verify` 27/27 통과.
+
+## [2026-09-01] Node runtime compatibility pin
+
+**LOG_ID: 20260901_2245**
+변경: Supabase 클라이언트의 Node 20 지원 종료 공지와 `sharp 0.35.4` 요구 조건을 반영해 `package.json` 및 `package-lock.json`의 `engines.node`를 `>=22.0.0`으로 올렸다.
+검증: Node `v24.14.0`에서 build·unit·dependency audit가 통과했고, package-lock 재생성도 변경 없이 완료됐다.
+
+## [2026-09-01] Password recovery redirect regression gate
+
+**LOG_ID: 20260901_2315**
+추가: 기존 `smoke-password-recovery.js`를 package script와 `loop:verify`에 편입했다. 절대/상대 경로 allowlist, 외부 origin, protocol-relative URL, `javascript:` URL, credential 포함 URL 차단과 Supabase 호출 redirect 값을 자동 검증한다.
+검증: `smoke:password-recovery`, `loop:verify` 28/28, `build`, `npm test` 통과.
+
+추가 검증: CORS smoke가 실제 `handleCorsPreflight` 응답까지 확인하도록 보강됐다. 운영 누락 설정은 204 응답에서 ACAO를 내보내지 않고, 허용 origin은 정확히 echo하는지 검증한다.
+
+추가: Vercel build smoke가 `package.json`의 Node `>=22.0.0` pin도 검사하고 결과에 표시하도록 보강했다. 이후 Supabase/sharp 런타임 요구 조건이 manifest에서 빠지는 회귀를 배포 전 차단한다.
+
+추가 검증: 같은 build smoke에서 실제 실행 중인 `process.versions.node`의 major도 22 이상인지 확인하도록 보강했다. manifest만 올리고 로컬/CI가 Node 20으로 실행되는 경우를 배포 전 즉시 실패시킨다.
+
+운영 모드 점검: `NODE_ENV=production npm run check`에서 Supabase live probe와 CORS allowlist 진단이 함께 `ok: true`, `liveReady: true`로 통과했다.
+
+CORS 설정 파서도 HTTP/HTTPS origin의 scheme·host·port만 허용하고 wildcard, credentials, path, 비웹 scheme은 무시하도록 보강했다. trailing slash는 표준 origin으로 정규화하며, 잘못된 운영 환경변수는 production fail-closed 경계를 유지한다. 보안 smoke에 이 입력 조합을 추가했다.
+
+wildcard(`*`)만 운영 allowlist에 넣은 경우에도 파싱 결과가 빈 목록이 되어 `corsFailClosed=true`가 되는지 별도 회귀 케이스로 고정했다.
+
+`NODE_ENV`도 trim/lowercase 후 판정하도록 request guard와 readiness 진단을 통일했다. `Production`처럼 대소문자가 섞인 운영 설정도 fail-closed 경계를 유지한다.
+
+Supabase Auth 운영 로그에서 malformed JWT가 `/user`까지 전달되어 403 `bad_jwt` 경고를 남기는 사례를 확인했다. `AuthBridge`가 upstream `getUser()` 호출 전에 3-part JWT 형태만 빠르게 검사하도록 보강했으며, 서명·claim 검증은 기존 Supabase Auth에 그대로 위임한다. malformed/정상 shape 회귀 케이스를 AuthBridge smoke에 추가했다.
+
+## [2026-09-01] Supabase Realtime integration smoke
+
+`npm run smoke:supabase-realtime`로 실제 Supabase Realtime 채널의 구독, broadcast 수신, presence 동기화, 채널 종료를 확인했다. 첫 시도에서 `SUBSCRIBED`까지 656ms, broadcast payload 수신 및 presence 1명, 정상 `CLOSED` 상태를 기록했으며 전체 결과는 `ok: true`였다. 외부 Supabase/WebSocket 의존성이 있는 검사는 결정적 `loop:verify`에는 넣지 않고 별도 smoke 명령으로 유지한다.
+
+같은 시점에 `npm run qa:final` 및 `npm run loop:verify`를 재실행해 28/28 게이트를 통과했다. 현재 코드·스키마·의존성·모바일 검증은 초록이며, 실제 운영에서 남은 작업은 Supabase Auth Dashboard의 leaked-password protection 활성화와 www-bbs Vercel 프로젝트의 `BBS_ALLOWED_ORIGINS` 등록이다.
+
+Supabase MCP로 프로젝트 조직 요금제를 재확인한 결과 `plan=free`였다. 공식 [Password security 문서](https://supabase.com/docs/guides/auth/password-security)는 leaked-password protection을 Pro 이상 기능으로 명시하므로, 현재 경고는 코드 결함이 아니라 요금제 제한이다. 업그레이드 전에는 Dashboard 토글을 완료할 수 없다.
+
+## [2026-09-01] Safe environment template
+
+**LOG_ID: 20260901_2100**
+추가: 실제 비밀값을 포함하지 않는 `.env.example`을 만들고 `.gitignore` 예외를 등록했다. Supabase·Resend·sysop 메일·CORS 변수의 이름과 개발 기본값만 제공하며, 운영에서는 실제 HTTPS origin을 `BBS_ALLOWED_ORIGINS`에 지정해야 한다.

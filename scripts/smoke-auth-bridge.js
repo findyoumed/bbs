@@ -13,6 +13,8 @@ const {
   syncMemberAuthProfile,
   throwAdminError
 } = require('../src/server/AuthBridgeSync');
+const AuthBridge = require('../src/server/AuthBridge');
+const { AuthMemberProfileService, buildMemberSeed } = require('../src/server/AuthMemberProfileService');
 const { createBridgeError, normalizeAuthEmail } = require('../src/server/AuthBridgeUtils');
 
 const VALID_UUID = '11111111-1111-4111-8111-111111111111';
@@ -87,6 +89,88 @@ async function main() {
   const bridgeError = createBridgeError(409, 'dup');
   check('createBridgeError status', bridgeError.status === 409);
   check('createBridgeError message', bridgeError.message === 'dup');
+
+  // Authorization must not come from user-editable raw user_metadata.  Keep
+  // the identity/display mapping compatible while accepting only server
+  // configuration or trusted app_metadata for elevated context.
+  const bridge = new AuthBridge({ adminUserIds: 'configured-admin' });
+  const forged = bridge._mapUser(makeUser({
+    email: 'forged@example.com',
+    user_metadata: { userId: 'forged', is_admin: true, level: 99 }
+  }));
+  check('raw user_metadata cannot grant admin', forged.isAdmin === false && forged.level === 1);
+  check('raw email verification metadata is ignored', AuthBridge.hasVerifiedAuthEmail(makeUser({
+    user_metadata: { email_verified: true }
+  })) === false);
+  check('server email confirmation remains trusted', AuthBridge.hasVerifiedAuthEmail(makeUser({
+    email_confirmed_at: '2026-01-01T00:00:00.000Z'
+  })) === true);
+  const trusted = bridge._mapUser(makeUser({
+    email: 'trusted@example.com',
+    user_metadata: { userId: 'trusted', is_admin: false, level: 2 },
+    app_metadata: { is_admin: true }
+  }));
+  check('app_metadata admin remains trusted', trusted.isAdmin === true && trusted.level === 99);
+  const configured = bridge._mapUser(makeUser({
+    id: 'configured-admin',
+    email: 'configured@example.com',
+    user_metadata: { userId: 'forged-user-id', level: 1 }
+  }));
+  check('configured Auth subject remains trusted', configured.isAdmin === true && configured.level === 99);
+  const forgedConfigured = bridge._mapUser(makeUser({
+    email: 'forged-configured@example.com',
+    user_metadata: { userId: 'configured-admin' }
+  }));
+  check('raw userId cannot match configured admin allowlist', forgedConfigured.isAdmin === false);
+  check('malformed bearer token is rejected before upstream lookup', AuthBridge.isLikelyJwt('not-a-jwt') === false);
+  check('three-part bearer token passes shape check', AuthBridge.isLikelyJwt('header.payload.signature') === true);
+  const malformedSessionBridge = new AuthBridge({});
+  let malformedLookupCalls = 0;
+  malformedSessionBridge.client = {
+    auth: {
+      async getUser() {
+        malformedLookupCalls += 1;
+        return { data: { user: null }, error: null };
+      }
+    }
+  };
+  const malformedSession = await malformedSessionBridge.getSessionFromRequest({
+    headers: { authorization: 'Bearer malformed-token' }
+  });
+  check('malformed bearer request stays guest', malformedSession.user.isGuest === true);
+  check('malformed bearer request skips upstream lookup', malformedLookupCalls === 0);
+
+  // AuthMemberProfileService must not merge a member row belonging to another
+  // Auth subject, even when editable metadata.userId points at that row.
+  const mismatchService = new AuthMemberProfileService({
+    memberRepository: {
+      async getMember() {
+        return { userId: 'sysop', authUserId: 'trusted-auth', email: 'sysop@example.com', isAdmin: true, level: 99 };
+      },
+      async ensureMember() {
+        throw new Error('ensureMember must not run for an identity conflict');
+      }
+    }
+  });
+  const mismatch = await mismatchService.enrichUser({
+    authUserId: 'attacker-auth', userId: 'sysop', nickName: 'attacker',
+    email: 'attacker@example.com', emailVerified: true, isAdmin: false, level: 1
+  });
+  check('linked member mismatch is not merged', mismatch.isAdmin === false && mismatch.level === 1 && mismatch.userId === 'attacker-auth');
+
+  const matchingService = new AuthMemberProfileService({
+    memberRepository: {
+      async getMember() {
+        return { userId: 'alice', authUserId: VALID_UUID, email: 'a@b.com', isAdmin: false, level: 4 };
+      }
+    }
+  });
+  const matching = await matchingService.enrichUser({
+    authUserId: VALID_UUID, userId: 'alice', nickName: 'Alice',
+    email: 'a@b.com', emailVerified: true, isAdmin: false, level: 1
+  });
+  check('linked member match is merged', matching.level === 4 && matching.email === 'a@b.com');
+  check('new member seed carries auth identity', buildMemberSeed({ authUserId: VALID_UUID, userId: 'alice' }).authUserId === VALID_UUID);
 
   check('extractAuthMemberUserId from userId', extractAuthMemberUserId({ user_metadata: { userId: 'member01' } }) === 'member01');
   check('extractAuthMemberUserId from username', extractAuthMemberUserId({ user_metadata: { username: 'member02' } }) === 'member02');

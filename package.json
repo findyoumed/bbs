@@ -2,6 +2,9 @@
   "name": "www-bbs",
   "private": true,
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "test": "node scripts/run-unit-tests.js",
     "check:syntax": "node scripts/check-syntax.js",
@@ -30,6 +33,9 @@
     "smoke:ui-layout": "node scripts/smoke-ui-layout.js",
     "smoke:rss-services": "node scripts/smoke-rss-services.js",
     "smoke:auth-bridge": "node scripts/smoke-auth-bridge.js",
+    "smoke:auth-privacy": "node scripts/smoke-auth-privacy.js",
+    "smoke:password-recovery": "node scripts/smoke-password-recovery.js",
+    "migrate:sysop-password": "node scripts/migrate-legacy-sysop-password.js",
     "smoke:chat-counts": "node scripts/smoke-chat-counts.js",
     "smoke:chat-members-supabase": "node scripts/smoke-chat-members-supabase.js",
     "smoke:chat-rooms": "node scripts/smoke-chat-rooms.js",
@@ -46,7 +52,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
     "resend": "^6.17.2",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "playwright": "^1.59.1"

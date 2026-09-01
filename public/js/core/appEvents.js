@@ -272,6 +272,17 @@ export function bindAppEvents(deps) {
       }
     }
 
+    // Native buttons/links and custom keyboard controls own Space activation.
+    // Treating Space as printable command input here would move focus to
+    // #cmd-input before the browser's click-on-keyup behavior can fire, so a
+    // focused hotspot (or role=button token) would respond to Enter but not
+    // Space. Let the control and the shared token handler process it.
+    const focusedInteractive = activeEl && activeEl !== document.body
+      && activeEl.matches?.('button, a, [role="button"], [tabindex]');
+    if (focusedInteractive) {
+      return;
+    }
+
     // Ignore modifier combinations
     if (e.ctrlKey || e.altKey || e.metaKey) {
       return;
@@ -321,6 +332,47 @@ export function bindAppEvents(deps) {
       if (el !== hotspot) el.classList.remove('is-tap-selected');
     });
     hotspot.classList.add('is-tap-selected');
+  }
+
+  // [LOG_ID: 20260901_1015] Ultra-short landscape viewports compress ANSI
+  // rows below the 24px touch target. The resulting hotspot boxes overlap,
+  // so browser hit-testing can deliver a tap to the following row. Resolve a
+  // pointer click to the hotspot whose visual row center is nearest the
+  // pointer while preserving the original target for keyboard-triggered
+  // clicks (which do not carry client coordinates).
+  function resolveHotspotClickTarget(target, event) {
+    const hotspot = target?.closest?.('.ansi-hotspot');
+    const x = Number(event?.clientX || 0);
+    const y = Number(event?.clientY || 0);
+    if (!hotspot || (!x && !y)) return target;
+
+    const layer = hotspot.closest?.('.ansi-hotspot-layer');
+    if (!layer) return target;
+
+    const candidates = [...layer.querySelectorAll('.ansi-hotspot')]
+      .filter((candidate) => {
+        const style = getComputedStyle(candidate);
+        const rect = candidate.getBoundingClientRect();
+        return style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && rect.width > 0
+          && rect.height > 0;
+      });
+    if (candidates.length < 2) return target;
+
+    let nearest = hotspot;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const candidate of candidates) {
+      const rect = candidate.getBoundingClientRect();
+      const centerX = rect.left + (rect.width / 2);
+      const centerY = rect.top + (rect.height / 2);
+      const distance = Math.hypot(centerX - x, centerY - y);
+      if (distance < nearestDistance) {
+        nearest = candidate;
+        nearestDistance = distance;
+      }
+    }
+    return nearest;
   }
 
   // [LOG_ID: 20260801_1222] 프로젝트 전역 터미널 포커스 가드 (Focus Guard)
@@ -390,14 +442,15 @@ export function bindAppEvents(deps) {
   }, { capture: true });
 
   document.addEventListener('click', (event) => {
-    const action = getCommandClickAction(event.target);
+    const clickTarget = resolveHotspotClickTarget(event.target, event);
+    const action = getCommandClickAction(clickTarget);
     if (!action) {
       return;
     }
 
     const handled = executeCommandFromClick(action);
     if (handled) {
-      markTapSelectedHotspot(event.target);
+      markTapSelectedHotspot(clickTarget);
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();

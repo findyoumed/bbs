@@ -9,6 +9,9 @@ const { createBoardRepositoryFromEnv } = require('../src/server/BoardRepository'
 const { createChatRoomRepositoryFromEnv } = require('../src/server/ChatRoomRepository');
 const { createMemberRepositoryFromEnv } = require('../src/server/MemberRepository');
 const { createMemoRepositoryFromEnv } = require('../src/server/MemoRepository');
+const { createActivityRepository } = require('../src/server/ActivityRepository');
+const ActivityRepositorySupabase = require('../src/server/ActivityRepositorySupabase');
+const { parseAllowedOrigins } = require('../src/server/httpUtils');
 const { createRssCacheStoreFromEnv } = require('../src/server/RssCacheStore');
 const {
   applyRuntimeRepositoryMeta,
@@ -39,6 +42,19 @@ function fileStatus(relPath) {
 
 function isRequiredEnvKey(key) {
   return key === 'SUPABASE_URL' || key === 'SUPABASE_SERVICE_ROLE_KEY';
+}
+
+function getCorsConfigStatus(env) {
+  const origins = parseAllowedOrigins(env.BBS_ALLOWED_ORIGINS);
+  const vercelRuntime = ['1', 'true'].includes(String(env.VERCEL || '').trim().toLowerCase());
+  const nodeEnv = String(env.NODE_ENV || '').trim().toLowerCase();
+  const production = nodeEnv === 'production' || vercelRuntime;
+  return {
+    production,
+    configured: origins.length > 0,
+    originCount: origins.length,
+    failClosed: production && origins.length === 0
+  };
 }
 
 async function probeBoardRepository(repository) {
@@ -116,6 +132,57 @@ async function probeMemoArchiveColumns(env) {
     table,
     columns: ['receiver_archived', 'sender_archived']
   };
+}
+
+/**
+ * Probe activity persistence with read-only calls. Request tracking is
+ * fire-and-forget, so creating a repository does not prove that its table is
+ * reachable. Return aggregate counts only; never include user/IP values.
+ */
+async function probeActivityRepository(repository) {
+  try {
+    const entries = await repository.list();
+    const stats = await repository.getStats();
+    if (!Array.isArray(entries)) {
+      throw new Error('activity list probe returned a non-array payload');
+    }
+    if (!stats || typeof stats.totalConnections !== 'number') {
+      throw new Error('activity stats probe returned an invalid payload');
+    }
+    const meta = typeof repository.getMeta === 'function' ? repository.getMeta() : {};
+    return {
+      ok: true,
+      entryCount: entries.length,
+      totalConnections: stats.totalConnections,
+      activeMembers: Number(stats.activeMembers || 0),
+      activeGuests: Number(stats.activeGuests || 0),
+      driver: meta.driver || 'unknown',
+      table: meta.table || null
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error.message || 'activity repository probe failed'
+    };
+  }
+}
+
+function createActivityRepositoryForProbe(env) {
+  const hasSupabase = Boolean(env.SUPABASE_URL && (
+    env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY
+  ));
+  // Match RepositoryRegistry: when no explicit activity driver is set,
+  // inherit the configured board/Supabase mode instead of silently probing
+  // an in-memory repository.
+  const requestedDriver = String(env.ACTIVITY_REPOSITORY_DRIVER || (hasSupabase ? 'supabase' : 'memory')).trim().toLowerCase();
+  if (requestedDriver === 'supabase' && hasSupabase) {
+    return new ActivityRepositorySupabase({
+      url: env.SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY,
+      table: env.SUPABASE_ACTIVITY_TABLE || 'user_activities'
+    });
+  }
+  return createActivityRepository();
 }
 
 async function probeAttachmentRepository(repository) {
@@ -391,6 +458,9 @@ async function main() {
     'SUPABASE_POSTS_TABLE',
     'SUPABASE_MEMBERS_TABLE',
     'SUPABASE_MEMOS_TABLE',
+    'ACTIVITY_REPOSITORY_DRIVER',
+    'SUPABASE_ACTIVITY_TABLE',
+    'BBS_ALLOWED_ORIGINS',
     'SUPABASE_ATTACHMENTS_TABLE',
     'SUPABASE_CHAT_ROOMS_TABLE',
     'SUPABASE_CHAT_ROOM_MEMBERS_TABLE',
@@ -420,6 +490,7 @@ async function main() {
   const repository = createBoardRepositoryFromEnv(process.env);
   const memberRepository = createMemberRepositoryFromEnv(process.env);
   const memoRepository = createMemoRepositoryFromEnv(process.env);
+  const activityRepository = createActivityRepositoryForProbe(process.env);
   const attachmentRepository = createAttachmentRepositoryFromEnv(rootDir, process.env);
   const chatRoomRepository = createChatRoomRepositoryFromEnv(process.env, { defaultRoom: false });
   const rssCacheStore = createRssCacheStoreFromEnv(process.env);
@@ -428,8 +499,13 @@ async function main() {
     member: memberRepository,
     memo: memoRepository,
     attachment: attachmentRepository,
-    chatRooms: chatRoomRepository
+    chatRooms: chatRoomRepository,
+    activity: activityRepository
   });
+  const cors = getCorsConfigStatus(process.env);
+  if (cors.failClosed) {
+    diagnostics.errors.push('BBS_ALLOWED_ORIGINS must be configured in production/Vercel environments');
+  }
   const report = {
     requestedDriver: diagnostics.modeLabel,
     effectiveDriver: repository.getMeta().driver,
@@ -447,7 +523,8 @@ async function main() {
       errors: diagnostics.errors.slice(),
       hasSupabaseConfig: diagnostics.hasSupabaseConfig,
       hasPartialSupabaseConfig: diagnostics.hasPartialSupabaseConfig
-    }
+    },
+    cors
   };
 
   if (report.effectiveDriver === 'supabase' && report.package.installed) {
@@ -455,6 +532,7 @@ async function main() {
       boards: await probeBoardRepository(repository),
       members: await probeMemberRepository(memberRepository),
       memos: await probeMemoRepository(memoRepository),
+      activity: await probeActivityRepository(activityRepository),
       memoArchiveColumns: await probeMemoArchiveColumns(process.env),
       attachments: await probeAttachmentRepository(attachmentRepository),
       chatRooms: await probeChatRoomRepository(chatRoomRepository),

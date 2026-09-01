@@ -470,3 +470,127 @@ Exit criteria: historical candidates without a current destination remain docume
 - [x] `npm run build`, `npm run check`, `npm run qa:final`, `npm run loop:verify`
 
 Exit criteria: 0 mobile smoke errors and 24/24 loop checks.
+
+## Current iteration: interaction parity and inline validation (2026-09-01)
+
+- [x] Command router and historical GO alias audit
+- [x] Keyboard/mouse/accessibility hotspot audit at 320/390/1280px
+- [x] Form validation and hint-bar separation audit
+- [x] Fix focused-control Space handling and edit-mode stale-value validation bypass
+- [x] Run targeted smokes, mobile smoke, build/check/QA/loop gates
+
+Exit criteria: 0 interaction regressions and 24/24 loop checks.
+
+## Current iteration: Supabase and mobile stability (2026-09-01)
+
+- [x] Read-only Supabase activity persistence and repository contract probe
+- [x] Mobile short-landscape hint/footer/input geometry and hotspot hit testing
+- [x] Deterministic news readiness in mobile smoke
+- [x] Full verification: mobile 0 errors, build, check, QA, loop 24/24, unit, syntax, diff
+- [ ] Supabase RPC/RLS/Auth operational hardening (requires explicit approval)
+
+Result: application changes remain minimal; no SQL, migration, RLS, package, or secret changes were made.
+
+## Supabase security audit result (2026-09-01)
+
+- [x] Read-only agents completed for database, authentication, and API/browser boundary
+- [x] High-risk public RPC and user_metadata authorization findings documented
+- [x] Legacy sysop password and account enumeration exposure documented
+- [x] CORS wildcard, migration drift, auth_user_id linkage, dev-only headers/stack findings documented
+- [x] Required security/runtime smoke checks passed
+- [ ] Apply hardening only after explicit approval, backup, rollback plan, and post-change verification
+
+## Goal audit result (2026-09-01)
+
+- [x] Mobile/browser, repository/API, Supabase agents completed
+- [x] Root final mobile smoke: 0 errors
+- [x] Build/check/QA/loop/unit/syntax/diff: all passed
+- [x] No new API/UI defect reproduced; existing worktree changes preserved
+- [ ] Security hardening remains approval-gated
+
+## Current iteration: Auth identity hardening (app-only Phase A, 2026-09-01)
+
+- [x] Remove raw `user_metadata` admin/level/email-verification trust
+- [x] Require Auth subject or verified-email match before member profile merge
+- [x] Preserve `authUserId` in newly-created member seeds
+- [x] Canonicalize mismatched Auth sessions to immutable Auth subject
+- [x] Add deterministic AuthBridge/enrichment regression checks
+- [x] Run targeted security, Supabase readiness, build, and loop gates (25/25)
+- [ ] Apply Supabase RPC/RLS/password/CORS/migration changes only after explicit operational approval
+
+Exit criteria: editable Auth metadata cannot grant admin/member identity, existing login behavior remains covered by smoke tests, and no remote database state is changed.
+
+## Current iteration: Password recovery privacy (app-only Phase B, 2026-09-01)
+
+- [x] Remove member ID/email from password-recovery success payload
+- [x] Use the same success response shape for known and unknown identifiers
+- [x] Preserve provider/throttling failure visibility for retry UX
+- [x] Add `smoke:auth-privacy` and include it in `loop:verify`
+- [x] Run loop 25/25, Supabase readiness, unit, and diff gates
+- [ ] Apply database RPC/RLS/password/CORS changes only after explicit operational approval
+
+Exit criteria: password recovery no longer discloses account existence or resolved email through the API response.
+
+## Current iteration: Public member projection (app-only Phase C, 2026-09-01)
+
+- [x] Whitelist anonymous profile/directory fields
+- [x] Remove birthday, sex, last-login, absence, table PK, and Auth UUID from public responses
+- [x] Preserve self/admin full profile and userId-login email resolver compatibility
+- [x] Add projection regression checks to `smoke:auth-privacy`
+- [x] Re-run loop, readiness, unit, and diff gates
+
+Exit criteria: unauthenticated member views expose only fields rendered by the public directory/profile UI.
+
+## Current iteration: Supabase privilege hardening (remote migrations 0025–0027, 2026-09-01)
+
+- [x] Revoke public/anon/authenticated EXECUTE from unused SECURITY DEFINER RPCs
+- [x] Preserve service_role RPC access for controlled server maintenance
+- [x] Pin `set_post_local_id()` search_path to `pg_catalog, public`
+- [x] Revoke redundant public table grants from server-only repositories
+- [x] Verify function privileges, REST denial, service-role readiness, and trigger presence
+- [x] Re-run loop 25/25, full traversal, and unit tests
+- [x] Convert the existing sysop legacy credential to scrypt without changing its value
+- [ ] Enable Auth leaked-password protection in the Supabase Dashboard (Free plan에서는 Pro 이상 업그레이드 필요)
+
+## Current iteration: CORS origin allowlist (2026-09-01)
+
+- [x] Configure local runtime origins for localhost and `bbsweb.oscc.kr`
+- [x] Verify request guards no longer use wildcard with configured environment
+- [x] Fail closed for production/Vercel when the allowlist is missing
+- [x] Make readiness check fail when production/Vercel allowlist is missing
+- [x] Run CORS security smoke
+- [x] Re-run mobile viewport and full traversal regression checks
+- [x] Include UI geometry/layout smoke in the 27-item loop gate
+- [ ] Copy the same allowlist into the production/Vercel environment
+
+참고: 현재 확인한 `bbsweb.oscc.kr`과 `v0-remix-of-01410-ten.vercel.app`은 이 저장소의 API 계약과 일치하지 않는 별도 배포다. 실제 www-bbs Vercel 프로젝트를 연결한 뒤에만 운영 환경변수를 등록한다.
+
+- [x] Add a secret-free `.env.example` with the required runtime variable names
+- [x] Resolve the production dependency audit finding for sharp/libvips
+- [x] Remove the verified duplicate `chat_rooms` index via migration 0028
+- [x] Pin the Node runtime required by sharp 0.35.4
+- [x] Add password-recovery redirect security smoke to the 28-item loop gate
+- [x] Verify actual CORS preflight headers for production fail-closed and allowlisted origins
+- [x] Reject malformed CORS allowlist entries and normalize valid origins
+- [x] Normalize NODE_ENV case before production/Vercel fail-closed decisions
+- [x] Reject obviously malformed bearer tokens before Supabase Auth lookup
+- [x] Verify the Node runtime pin in the Vercel build smoke
+- [x] Verify the actual build-process Node runtime is major 22 or newer
+- [x] Verify Supabase Realtime subscribe, broadcast, presence, and close lifecycle
+
+## Consolidated execution status (2026-09-01)
+
+- [x] Application identity, recovery privacy, and public projection hardening
+- [x] Supabase RPC/table privilege hardening (migrations 0025–0027)
+- [x] Sysop legacy password representation converted to scrypt
+- [x] CORS fail-closed guard and readiness validation
+- [x] Duplicate chat-room index cleanup (migration 0028)
+- [x] Dependency audit clean (`npm audit` reports zero vulnerabilities)
+- [x] Node runtime pinned to `>=22.0.0` for current Supabase client support
+- [x] Supabase Realtime lifecycle smoke passes against the live project
+- [ ] Enable Supabase Auth leaked-password protection in Dashboard (현재 조직 plan=Free라 Pro 이상 업그레이드 필요)
+- [ ] Register `BBS_ALLOWED_ORIGINS` in the actual www-bbs production/Vercel project
+
+Exit criteria: preflight responses are limited to explicitly configured origins in each deployment environment.
+
+Exit criteria: no unused public RPC/table mutation path is callable by anon/authenticated roles, while all server repository flows remain operational.

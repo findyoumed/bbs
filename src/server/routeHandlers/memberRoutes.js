@@ -101,19 +101,29 @@ class MemberRouter extends BaseRouter {
   // 성별·최근 접속시각을 그대로 조회할 수 있었다(개인정보 유출). 클라이언트 어디에도 이
   // 필드들을 화면에 표시하는 곳이 없어(프로필/검색 화면은 닉네임·레벨·가입일만 씀) 기존
   // 기능을 깨지 않고 본인/관리자가 아닌 조회에서만 이 필드들을 제거한다.
-  _toDirectoryMember(member, context, targetUserId) {
+  _toDirectoryMember(member, context, targetUserId, options = {}) {
     if (!member) return member;
     const isSelfOrAdmin = Boolean(context?.isAdmin) || context?.userId === (targetUserId ?? member.userId);
     if (isSelfOrAdmin) return member;
-    // [LOG: 20260724_1242] 아이디 로그인 시 이메일 맵핑 처리가 필수적이므로 email은 비로그인 필터링 대상에서 제외함
+    // ID login still needs the email resolver, so expose only that field when
+    // the caller explicitly used the userId lookup path. Nickname/email
+    // directory lookups and direct profile views never need it.
+    const exposeLoginEmail = options.exposeLoginEmail === true;
     // [LOG_ID: 20260728_2320] birthday/sex/lastLoginDateTime과 정확히 같은 이유(화면 어디서도
     // 안 씀 — buildProfileAnsi는 userId/nickName/level/registrationDateTime만 렌더)로
     // authUserId(Supabase Auth UUID)와 id(members 테이블 내부 PK)도 비로그인 조회에서 새어
     // 나오고 있었다 — 실측 확인: 인증 없는 GET /api/members/sysop이 authUserId까지 그대로
     // 반환. 클라이언트가 쓰지 않는 내부 식별자를 익명 요청에 불필요하게 노출할 이유가 없어
     // 함께 제거한다.
-    const { birthday, sex, lastLoginDateTime, authUserId, id, ...rest } = member;
-    return rest;
+    const { userId, nickName, level, isAdmin, registrationDateTime } = member;
+    return {
+      userId,
+      nickName,
+      level,
+      isAdmin,
+      registrationDateTime,
+      ...(exposeLoginEmail ? { email: member.email || '' } : {})
+    };
   }
 
   async listMembers() {
@@ -153,7 +163,9 @@ class MemberRouter extends BaseRouter {
       this.notFound('회원 정보를 찾을 수 없습니다.');
     }
 
-    member = this._toDirectoryMember(member, context, member.userId);
+    member = this._toDirectoryMember(member, context, member.userId, {
+      exposeLoginEmail: Boolean(userId)
+    });
     if (allowMissing) return this.send(200, { found: true, member });
     return this.send(200, member);
   }
@@ -709,3 +721,6 @@ async function handleMemberRoutes(deps) {
 }
 
 module.exports = handleMemberRoutes;
+// Expose the router class for deterministic privacy projection smokes without
+// starting an HTTP server or touching the member repository.
+module.exports.MemberRouter = MemberRouter;

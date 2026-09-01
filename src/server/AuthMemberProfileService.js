@@ -28,12 +28,42 @@ function mergeMemberProfile(user, member) {
 
 function buildMemberSeed(user) {
   return {
+    // Keep the Supabase Auth identity attached to newly-created member rows.
+    // Without this link a later session could claim the row by mutable metadata.userId.
+    authUserId: user.authUserId,
     userId: user.userId,
     nickName: user.nickName,
     email: user.email,
     level: user.level,
     isAdmin: user.isAdmin
   };
+}
+
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function canUseMemberByIdentity(user, member) {
+  const userAuthUserId = String(user?.authUserId || '').trim();
+  const memberAuthUserId = String(member?.authUserId || '').trim();
+
+  // Manual loopback contexts do not carry a Supabase identity; their existing
+  // userId-based behavior is intentionally preserved by this guard.
+  if (!userAuthUserId) {
+    return true;
+  }
+
+  if (memberAuthUserId) {
+    return memberAuthUserId === userAuthUserId;
+  }
+
+  // Legacy rows without auth_user_id may only be adopted when the verified
+  // Auth email matches exactly.  This keeps old accounts usable while blocking
+  // a forged metadata.userId from importing another member's profile.
+  return user?.emailVerified === true
+    && normalizeEmail(user.email)
+    && normalizeEmail(member.email)
+    && normalizeEmail(user.email) === normalizeEmail(member.email);
 }
 
 function isDuplicateEmailConflict(error) {
@@ -105,7 +135,19 @@ class AuthMemberProfileService {
     try {
       const member = await this.memberRepository.getMember(user.userId);
       if (member) {
-        return mergeMemberProfile(user, member);
+        if (canUseMemberByIdentity(user, member)) {
+          return mergeMemberProfile(user, member);
+        }
+
+        // A row already exists under this userId but belongs to another Auth
+        // identity (or has an unverified/mismatched legacy email). Never fall
+        // through to ensureMember(), which could overwrite that row. Also do
+        // not keep the attacker-controlled metadata userId as the caller's
+        // canonical identity; use the immutable Auth subject instead.
+        return {
+          ...user,
+          userId: String(user.authUserId || user.userId || '').trim()
+        };
       }
 
       if (!user.isGuest) {
@@ -160,6 +202,7 @@ class AuthMemberProfileService {
 
 module.exports = {
   AuthMemberProfileService,
+  canUseMemberByIdentity,
   mergeMemberProfile,
   buildMemberSeed
 };

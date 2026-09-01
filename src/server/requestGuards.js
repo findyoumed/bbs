@@ -12,10 +12,17 @@ const SECURITY_HEADERS = {
 
 function createRequestGuards(env = process.env) {
   const allowedOrigins = parseAllowedOrigins(env.BBS_ALLOWED_ORIGINS);
+  const vercelRuntime = ['1', 'true'].includes(String(env.VERCEL || '').trim().toLowerCase());
+  const nodeEnv = String(env.NODE_ENV || '').trim().toLowerCase();
+  const processNodeEnv = String(process.env.NODE_ENV || '').trim().toLowerCase();
+  const isProduction = nodeEnv === 'production' || vercelRuntime;
+  // Keep the permissive wildcard fallback for local development, but never
+  // emit it from a production deployment whose allowlist was omitted.
+  const corsFailClosed = isProduction && allowedOrigins.length === 0;
   const rateLimitWindow = Number(env.RATE_LIMIT_WINDOW_MS) || 60000;
   // [LOG: 20260428_1600] Increase rate limit during tests to prevent 429 failures in CI/Smoke tests
-  const isTest = (env.NODE_ENV === 'test' || process.env.NODE_ENV === 'test');
-  const isDev = (env.NODE_ENV === 'development' || !env.NODE_ENV); // 기본값 혹은 개발 모드
+  const isTest = (nodeEnv === 'test' || processNodeEnv === 'test');
+  const isDev = (nodeEnv === 'development' || !nodeEnv); // 기본값 혹은 개발 모드
   const rateLimitMax = (isTest || isDev) ? 1000 : (Number(env.RATE_LIMIT_MAX_REQUESTS) || 60);
   const trustProxy = Boolean(env.VERCEL || env.TRUST_PROXY);
   const checkRateLimit = createRateLimiter({
@@ -26,6 +33,7 @@ function createRequestGuards(env = process.env) {
 
   return {
     allowedOrigins,
+    corsFailClosed,
     checkRateLimit
   };
 }
@@ -42,7 +50,9 @@ function handleCorsPreflight(req, res, requestUrl, guards) {
     return false;
   }
 
-  const corsHeaders = buildCorsHeaders(req.headers['origin'] || '', guards.allowedOrigins);
+  const corsHeaders = guards.corsFailClosed
+    ? { Vary: 'Origin' }
+    : buildCorsHeaders(req.headers['origin'] || '', guards.allowedOrigins);
   res.writeHead(204, corsHeaders);
   res.end();
   return true;

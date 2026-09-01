@@ -371,12 +371,34 @@ function parseAllowedOrigins(envValue) {
     .split(',')
     .map((s) => s.trim())
     .filter((origin) => {
-      if (!origin || seen.has(origin)) {
+      if (!origin) {
         return false;
       }
-      seen.add(origin);
+      let normalized;
+      try {
+        const parsed = new URL(origin);
+        // CORS origins are scheme + host + optional port only. Reject
+        // wildcards, credentials, paths, and non-web schemes so a malformed
+        // production env value cannot silently widen or break the policy.
+        if (!['http:', 'https:'].includes(parsed.protocol)
+          || parsed.username
+          || parsed.password
+          || parsed.pathname !== '/'
+          || parsed.search
+          || parsed.hash) {
+          return false;
+        }
+        normalized = parsed.origin;
+      } catch {
+        return false;
+      }
+      if (seen.has(normalized)) {
+        return false;
+      }
+      seen.add(normalized);
       return true;
-    });
+    })
+    .map((origin) => new URL(origin).origin);
 }
 
 const NICK_MIN = 2;

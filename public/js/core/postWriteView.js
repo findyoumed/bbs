@@ -216,7 +216,7 @@ export function createPostWriteView(deps) {
     // 않게 하고, 그래도 전체가 안 맞으면(아주 작은 키보드 여유 공간) 짜부라뜨리는 대신 바깥
     // 래퍼 전체가 스크롤되도록 한다.
     const keywordRow = showKeywordField
-      ? `<div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
+      ? `<div id="bbs-ed-keyword-row" style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
     <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">키워드 :&nbsp;</span>
     <input id="${keywordId}" type="text" autocomplete="off" spellcheck="false" placeholder="검색용 키워드 3개, 공백으로 구분" style="${inputStyle}"/>
   </div>`
@@ -230,15 +230,19 @@ export function createPostWriteView(deps) {
     // 같은 문제가 재발한다.
     const titleMaxLength = Math.max(1, 60 - (editor.selectedHeader ? editor.selectedHeader.length + 3 : 0));
     const bodyHtml = `
+<style>
+  /* Keep field validation in the editor body; #cmd-hint remains command guidance. */
+  .bbs-ed-validation { color:#ffff55 !important; font-family:inherit; white-space:pre-wrap; padding:2px 0; margin:0; flex-shrink:0; }
+</style>
 <div style="display:flex;flex-direction:column;height:100%;overflow-y:auto;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
-  <div style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
+  <div id="bbs-ed-title-row" style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
     <span style="white-space:nowrap;user-select:none;color:#ffffff !important;font-family:inherit;">제 목 :&nbsp;</span>
     <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" maxlength="${titleMaxLength}" style="${inputStyle}"/>
   </div>
   ${keywordRow}
   <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   ${headerLine}
-  <div style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
+  <div id="bbs-ed-body-row" style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
     <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내 용 :</div>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
   </div>
@@ -267,6 +271,23 @@ export function createPostWriteView(deps) {
     bodyEl.value  = editor.bodyLines.join('\n');
     if (keywordEl) keywordEl.value = (editor.keywords || []).join(' ');
 
+    // Validation belongs beside the field that needs attention. The global
+    // command hint stays reserved for save/cancel/navigation instructions.
+    function clearInlineValidationError() {
+      screenEl?.querySelector('.bbs-ed-validation')?.remove();
+    }
+
+    function showInlineValidationError(message, rowId) {
+      clearInlineValidationError();
+      const row = document.getElementById(rowId);
+      if (!row?.parentNode) return;
+      const errorEl = document.createElement('div');
+      errorEl.className = 'bbs-ed-validation';
+      errorEl.setAttribute('role', 'alert');
+      errorEl.textContent = String(message || '입력값을 확인해 주세요.');
+      row.parentNode.insertBefore(errorEl, row);
+    }
+
     // [LOG_ID: 20260725_1212] 선택>> 프롬프트 행은 에디터 진입 후에도 항상 노출 유지
     // — 탭키로 제목→본문→선택>> 이동이 가능하므로 숨기면 내비게이션이 불가능해짐.
     const promptRow = document.getElementById('terminal-prompt-row');
@@ -288,10 +309,13 @@ export function createPostWriteView(deps) {
         cmdInput.style.display = '';
       }
       titleEl.removeEventListener('keydown', onTitleKey);
+      titleEl.removeEventListener('input', clearInlineValidationError);
       bodyEl.removeEventListener('keydown', onBodyKey);
+      bodyEl.removeEventListener('input', clearInlineValidationError);
       if (keywordEl) {
         keywordEl.disabled = false;
         keywordEl.removeEventListener('keydown', onKeywordKey);
+        keywordEl.removeEventListener('input', clearInlineValidationError);
       }
       if (cmdInput) {
         cmdInput.removeEventListener('keydown', onCmdKey);
@@ -315,16 +339,32 @@ export function createPostWriteView(deps) {
       if (keywordEl) {
         keywordParts = keywordEl.value.trim().split(/\s+/).filter(Boolean);
         if (keywordParts.length !== 3) {
-          setHint('자료 검색용 키워드를 공백으로 구분해 정확히 3개 입력하십시오.');
+          showInlineValidationError('자료 검색용 키워드를 공백으로 구분해 정확히 3개 입력하십시오.', 'bbs-ed-keyword-row');
           keywordEl.focus();
           return;
         }
       }
       editor._saving = true;
-      const titleVal = (titleEl && titleEl.value.trim()) || editor.title || '';
-      let lines = (bodyEl && bodyEl.value.trim())
-        ? bodyEl.value.split('\n')
+      // Once the form is rendered, the controls are the source of truth. Do
+      // not fall back to the previous editor state when a user deliberately
+      // clears a field; otherwise edit-mode saves could bypass empty-value
+      // validation and silently retain stale title/body content.
+      const titleVal = titleEl ? titleEl.value.trim() : String(editor.title || '').trim();
+      let lines = bodyEl
+        ? (bodyEl.value.trim() ? bodyEl.value.split('\n') : [])
         : (editor.bodyLines && editor.bodyLines.length ? editor.bodyLines : []);
+      if (!titleVal) {
+        editor._saving = false;
+        showInlineValidationError('제목을 입력하십시오.', 'bbs-ed-title-row');
+        titleEl.focus();
+        return;
+      }
+      if (!lines.join('\n').trim()) {
+        editor._saving = false;
+        showInlineValidationError('내용을 입력하십시오.', 'bbs-ed-body-row');
+        bodyEl.focus();
+        return;
+      }
       if (lines.length > 0 && lines[lines.length - 1].trim() === '.') lines.pop();
       if (keywordParts) {
         editor.keywords = keywordParts;
@@ -435,9 +475,12 @@ export function createPostWriteView(deps) {
     }
 
     titleEl.addEventListener('keydown', onTitleKey);
+    titleEl.addEventListener('input', clearInlineValidationError);
     bodyEl.addEventListener('keydown', onBodyKey);
+    bodyEl.addEventListener('input', clearInlineValidationError);
     if (keywordEl) {
       keywordEl.addEventListener('keydown', onKeywordKey);
+      keywordEl.addEventListener('input', clearInlineValidationError);
     }
     if (cmdInput) {
       cmdInput.addEventListener('keydown', onCmdKey);
