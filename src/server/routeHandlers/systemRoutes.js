@@ -38,15 +38,25 @@ class SystemRouter extends BaseRouter {
   }
 
   async health() {
-    const { boardRepository, authBridge, rssService } = this.deps;
-    const isHealthy = !!boardRepository;
+    const { boardRepository, memberRepository, authBridge, rssService } = this.deps;
+    // Checking only whether a repository object exists reports a false
+    // healthy state when Supabase credentials are rejected at request time.
+    // The member repository has a lightweight table probe implemented by both
+    // memory and Supabase drivers, so use it as the database readiness signal.
+    let memberHealth = { status: memberRepository ? 'ok' : 'error' };
+    if (memberRepository && typeof memberRepository.checkHealth === 'function') {
+      memberHealth = await memberRepository.checkHealth();
+    }
+    const isHealthy = Boolean(boardRepository && memberHealth.status === 'ok');
     
     const status = {
       status: isHealthy ? 'healthy' : 'degraded',
       services: {
         database: {
           status: isHealthy ? 'connected' : 'disconnected',
-          driver: boardRepository?.getMeta?.().driver || 'unknown'
+          driver: boardRepository?.getMeta?.().driver || 'unknown',
+          memberProbe: memberHealth.status,
+          ...(memberHealth.message ? { detail: memberHealth.message } : {})
         },
         auth: {
           status: authBridge ? 'active' : 'inactive',
