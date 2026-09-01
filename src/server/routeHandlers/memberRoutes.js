@@ -370,6 +370,22 @@ class MemberRouter extends BaseRouter {
     const context = await this.getContext();
     const allowMissing = this.requestUrl.searchParams.get('allowMissing') === '1';
 
+    // Guest sessions have no persistent members row. Resolve this stable
+    // public profile before touching Supabase so a members-table outage does
+    // not turn a harmless guest profile request into a 5xx response.
+    if (targetUserId === 'guest') {
+      const guest = {
+        userId: 'guest',
+        nickName: '손님',
+        email: '',
+        level: 1,
+        isAdmin: false
+      };
+      const member = this._toDirectoryMember(guest, context, targetUserId);
+      if (allowMissing) return this.send(200, { found: true, member });
+      return this.send(200, member);
+    }
+
     let member = await memberRepository.getMember(targetUserId);
     if (!member && targetUserId === context?.userId) {
       member = {

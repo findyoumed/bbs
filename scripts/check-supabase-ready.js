@@ -168,9 +168,9 @@ async function probeActivityRepository(repository) {
 }
 
 function createActivityRepositoryForProbe(env) {
-  const hasSupabase = Boolean(env.SUPABASE_URL && (
-    env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY
-  ));
+  // Repository probes are server-side and require service-role credentials.
+  // Publishable/anon keys are client-only and must not enable DB probes.
+  const hasSupabase = Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
   // Match RepositoryRegistry: when no explicit activity driver is set,
   // inherit the configured board/Supabase mode instead of silently probing
   // an in-memory repository.
@@ -178,7 +178,7 @@ function createActivityRepositoryForProbe(env) {
   if (requestedDriver === 'supabase' && hasSupabase) {
     return new ActivityRepositorySupabase({
       url: env.SUPABASE_URL,
-      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
       table: env.SUPABASE_ACTIVITY_TABLE || 'user_activities'
     });
   }

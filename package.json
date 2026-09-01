@@ -46,6 +46,7 @@
     "smoke:vercel-ready": "node scripts/smoke-vercel-ready.js",
     "smoke:full-traversal": "node scripts/smoke-full-traversal.js",
     "smoke:mobile": "node scripts/smoke-mobile-viewports.js",
+    "smoke:production": "node scripts/smoke-production.js",
     "qa:final": "node scripts/final-qa-report.js",
     "loop:verify": "node scripts/loop-verify.js"
   },

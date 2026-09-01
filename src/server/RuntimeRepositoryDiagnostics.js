@@ -1,6 +1,7 @@
 'use strict';
 
 const VALID_DRIVERS = new Set(['memory', 'supabase']);
+const { hasUsableServiceRoleKey } = require('./RepositoryDriverSelection');
 const SUPABASE_HINT_KEYS = [
   'SUPABASE_PUBLISHABLE_KEY',
   'SUPABASE_ANON_KEY',
@@ -55,7 +56,9 @@ function createRuntimeRepositoryDiagnostics(env = {}) {
   const boardDriverValue = normalizedLower(env.BOARD_REPOSITORY_DRIVER);
   const chatRoomDriverValue = normalizedLower(env.CHAT_ROOM_REPOSITORY_DRIVER || env.BOARD_REPOSITORY_DRIVER);
   const hasSupabaseUrl = present(env.SUPABASE_URL);
-  const hasSupabaseServiceRoleKey = present(env.SUPABASE_SERVICE_ROLE_KEY);
+  const hasSupabaseServiceRoleKey = hasUsableServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+  const hasInvalidSupabaseServiceRoleKey = present(env.SUPABASE_SERVICE_ROLE_KEY)
+    && !hasSupabaseServiceRoleKey;
   const hasSupabaseConfig = hasSupabaseUrl && hasSupabaseServiceRoleKey;
   const hasPartialSupabaseConfig = (hasSupabaseUrl || hasSupabaseServiceRoleKey) && !hasSupabaseConfig;
   const warnings = [];
@@ -86,6 +89,10 @@ function createRuntimeRepositoryDiagnostics(env = {}) {
     warnings.push(`Supabase core 설정이 부분만 채워져 있습니다. 누락 키: ${missingKeys.join(', ')}. auto supabase 선택은 비활성화되고 memory/local 경로가 사용됩니다.`);
   }
 
+  if (hasInvalidSupabaseServiceRoleKey) {
+    errors.push('SUPABASE_SERVICE_ROLE_KEY에 publishable/anon 키가 들어 있습니다. 서버 전용 service-role 키를 등록해야 합니다.');
+  }
+
   const danglingSupabaseKeys = SUPABASE_HINT_KEYS.filter((key) => present(env[key]));
   if (danglingSupabaseKeys.length > 0 && !hasSupabaseConfig) {
     warnings.push(`Supabase 관련 보조 설정이 있지만 core 설정이 완전하지 않습니다: ${danglingSupabaseKeys.join(', ')}`);
@@ -95,6 +102,7 @@ function createRuntimeRepositoryDiagnostics(env = {}) {
     modeLabel: requestedModeLabel(boardDriverValue, hasSupabaseConfig),
     hasSupabaseUrl,
     hasSupabaseServiceRoleKey,
+    hasInvalidSupabaseServiceRoleKey,
     hasSupabaseConfig,
     hasPartialSupabaseConfig,
     repositories,

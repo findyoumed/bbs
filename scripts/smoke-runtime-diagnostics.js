@@ -80,10 +80,44 @@ async function main() {
     'invalid chat room driver should fail fast'
   );
 
+  const invalidCredentialError = assertThrows(
+    () => createAppRuntime({
+      rootDir,
+      env: {
+        BOARD_REPOSITORY_DRIVER: 'supabase',
+        SUPABASE_URL: 'https://example.supabase.co',
+        SUPABASE_SERVICE_ROLE_KEY: 'sb_publishable_wrong_slot'
+      },
+      loadEnvFile: false
+    }),
+    /publishable|anon|service-role/i,
+    'publishable key in the service-role slot should fail fast'
+  );
+
+  const legacyAnonJwt = [
+    Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url'),
+    Buffer.from(JSON.stringify({ role: 'anon' })).toString('base64url'),
+    'signature'
+  ].join('.');
+  assertThrows(
+    () => createAppRuntime({
+      rootDir,
+      env: {
+        BOARD_REPOSITORY_DRIVER: 'supabase',
+        SUPABASE_URL: 'https://example.supabase.co',
+        SUPABASE_SERVICE_ROLE_KEY: legacyAnonJwt
+      },
+      loadEnvFile: false
+    }),
+    /publishable|anon|service-role/i,
+    'legacy anon JWT in the service-role slot should fail fast'
+  );
+
   const runtime = createAppRuntime({
     rootDir,
     env: {
-      SUPABASE_URL: 'https://example.supabase.co'
+      SUPABASE_URL: 'https://example.supabase.co',
+      SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_only_smoke'
     },
     loadEnvFile: false
   });
@@ -92,12 +126,18 @@ async function main() {
   assert(runtime.chatRoomRepository.getMeta().driver === 'memory', 'partial supabase config should keep chat room repository in memory');
   assert(runtime.repositoryDiagnostics.hasPartialSupabaseConfig === true, 'partial supabase config should be reported');
   assert(runtime.repositoryDiagnostics.warnings.length > 0, 'partial supabase config should emit warnings');
+  assert(runtime.repositoryDiagnostics.hasSupabaseConfig === false, 'publishable-only config must not enable server supabase repositories');
 
   const systemInfo = await withServer(runtime.requestHandler, async (baseUrl) => {
     // 보안 동작 자체도 함께 잠근다: 익명 요청은 403이어야 한다(20260721_0400).
     await expectForbidden(baseUrl, '/api/system/info');
     return requestJson(baseUrl, '/api/system/info', { headers: ADMIN_HEADERS });
   });
+
+  const guestProfile = await withServer(runtime.requestHandler, async (baseUrl) => (
+    requestJson(baseUrl, '/api/members/guest')
+  ));
+  assert(guestProfile.userId === 'guest', 'guest profile should resolve without a repository lookup');
 
   assert(systemInfo.requestedRepositoryMode === 'auto(memory)', 'system info should expose auto(memory) mode for partial config');
   assert(systemInfo.supabaseReady === false, 'system info should report supabaseReady=false for partial config');
@@ -110,10 +150,12 @@ async function main() {
     ok: true,
     invalidSupabaseError: invalidSupabaseError.code || 'error',
     invalidDriverError: invalidDriverError.code || 'error',
+    invalidCredentialError: invalidCredentialError.code || 'error',
     partialWarningCount: runtime.repositoryDiagnostics.warnings.length,
     requestedRepositoryMode: systemInfo.requestedRepositoryMode,
     boardDriver: systemInfo.repositoryDrivers.board,
-    chatRoomDriver: systemInfo.repositoryDrivers.chatRooms
+    chatRoomDriver: systemInfo.repositoryDrivers.chatRooms,
+    guestProfile: guestProfile.userId
   }, null, 2));
 }
 

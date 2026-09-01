@@ -50,8 +50,9 @@ class RepositoryRegistry {
       component: 'RepositoryRegistry'
     });
 
-    // [LOG_ID: 20260805_1132] SUPABASE_SERVICE_ROLE_KEY 부재/불가 시 SUPABASE_PUBLISHABLE_KEY/SUPABASE_ANON_KEY로 폴백
-    const supabaseKey = this.env.SUPABASE_SERVICE_ROLE_KEY || this.env.SUPABASE_PUBLISHABLE_KEY || this.env.SUPABASE_ANON_KEY;
+    // [LOG_ID: 20260901_0635] Server repositories require the service-role key. Publishable/anon keys
+    // remain client-only credentials and must not be used as a DB fallback.
+    const supabaseKey = this.env.SUPABASE_SERVICE_ROLE_KEY;
 
     // 1. Board Repository
     if (useSupabase) {
