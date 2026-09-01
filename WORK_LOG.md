@@ -3228,7 +3228,7 @@ Supabase MCP로 프로젝트 조직 요금제를 재확인한 결과 `plan=free`
 
 ## [2026-09-01] CORS 대상 도메인 정정
 
-`bbsweb.oscc.kr`은 사용자 프로젝트가 아닌 별도 Express 서비스로 확인했다. 로컬 `.env`에서 해당 origin을 제거하고 localhost만 남겼으며, 운영 등록 대상은 이번에 배포한 `jatseoul/bbs` Vercel 프로젝트의 실제 origin으로 한정한다.
+`bbsweb.oscc.kr`은 사용자 프로젝트가 아닌 별도 Express 서비스로 확인했다. 로컬 `.env`에서 해당 origin을 제거하고 localhost만 남겼으며, 운영 등록 대상은 실제 서비스 origin `https://01410.vercel.app`으로 한정한다.
 
 ## [2026-09-01] 모바일 430px 수락 검증
 

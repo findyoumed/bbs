@@ -563,7 +563,7 @@ Exit criteria: unauthenticated member views expose only fields rendered by the p
 - [x] Include UI geometry/layout smoke in the 27-item loop gate
 - [ ] Copy the same allowlist into the production/Vercel environment
 
-참고: `bbsweb.oscc.kr`과 `v0-remix-of-01410-ten.vercel.app`은 사용자 프로젝트가 아닌 별도 배포다. 실제 `jatseoul/bbs` Vercel 프로젝트의 배포 origin만 운영 환경변수에 등록한다.
+참고: `bbsweb.oscc.kr`과 `v0-remix-of-01410-ten.vercel.app`은 사용자 프로젝트가 아닌 별도 배포다. 실제 서비스 `https://01410.vercel.app`만 운영 환경변수에 등록한다.
 
 - [x] Add a secret-free `.env.example` with the required runtime variable names
 - [x] Resolve the production dependency audit finding for sharp/libvips

@@ -10,7 +10,12 @@ const { sendText, streamFile } = require('../httpUtils');
 class SystemRouter extends BaseRouter {
   get routes() {
     return [
+      // Keep the legacy root probe and expose the same probe through the API
+      // function used by Vercel (`/api/*`). Without the explicit API route,
+      // `/api/health` falls through to static handling and returns a generic
+      // 500 instead of a useful repository status response.
       { method: 'GET', pattern: '/health', handler: 'health' },
+      { method: 'GET', pattern: '/api/health', handler: 'health' },
       { method: 'GET', pattern: '/favicon.ico', handler: 'favicon' },
       { method: 'GET', pattern: /^\/api\/assets\/(.+)$/, handler: 'getAsset' },
       { method: 'GET', pattern: '/api/system/stats', handler: 'getStats' },

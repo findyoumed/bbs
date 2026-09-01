@@ -33,6 +33,12 @@ const checks = [
   { path: '/api/boards/plaza?page=1&pageSize=15', statuses: [200], label: 'plaza listing' },
   { path: '/api/boards/tosysop?page=1&pageSize=15', statuses: [200], label: 'sysop listing' },
   { path: '/api/menu', statuses: [200], label: 'menu resolver' },
+  {
+    path: '/api/health',
+    statuses: [200],
+    label: 'repository health',
+    requiredHeaders: ['x-content-type-options', 'x-frame-options', 'referrer-policy']
+  },
   { path: '/api/auth/session', statuses: [200], label: 'anonymous session' },
   { path: '/memo', statuses: [200], label: 'memo shell' },
   { path: '/guide/tosysop', statuses: [200], label: 'sysop guide shell' },
