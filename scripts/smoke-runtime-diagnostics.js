@@ -139,6 +139,12 @@ async function main() {
   ));
   assert(guestProfile.userId === 'guest', 'guest profile should resolve without a repository lookup');
 
+  const health = await withServer(runtime.requestHandler, async (baseUrl) => (
+    requestJson(baseUrl, '/api/health')
+  ));
+  assert(health.status === 'healthy', 'health probe should report a healthy runtime');
+  assert(health.services?.database?.memberProbe === 'ok', 'health probe should include the member repository result');
+
   assert(systemInfo.requestedRepositoryMode === 'auto(memory)', 'system info should expose auto(memory) mode for partial config');
   assert(systemInfo.supabaseReady === false, 'system info should report supabaseReady=false for partial config');
   assert(systemInfo.supabasePartialConfig === true, 'system info should report partial supabase config');
@@ -155,7 +161,9 @@ async function main() {
     requestedRepositoryMode: systemInfo.requestedRepositoryMode,
     boardDriver: systemInfo.repositoryDrivers.board,
     chatRoomDriver: systemInfo.repositoryDrivers.chatRooms,
-    guestProfile: guestProfile.userId
+    guestProfile: guestProfile.userId,
+    healthStatus: health.status,
+    memberProbe: health.services.database.memberProbe
   }, null, 2));
 }
 
