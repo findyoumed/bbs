@@ -16,6 +16,7 @@ export function createInteractionHandlers(deps) {
   const {
     state,
     handleCmd,
+    showPostView,
     cmdInput,
     moveCaretToEnd,
     setGhostText,
@@ -123,6 +124,28 @@ export function createInteractionHandlers(deps) {
     return true;
   }
 
+  function executePostHotspot(btn) {
+    const value = getClickableCommandValue('postid', btn);
+    const sourceBoardId = String(btn?.dataset?.postBoardId || '').trim();
+    const virtualBoardId = String(state.board?.boardId || state.board?.id || '').trim();
+
+    // Unified PDS rows keep their physical source board because local_id is
+    // only unique within that board. Route the click directly through the
+    // same post-view function used by adjacent navigation while preserving
+    // the pending command-line feedback.
+    if (sourceBoardId && virtualBoardId === 'pds' && typeof showPostView === 'function') {
+      if (isCommandExecutionLocked()) return true;
+      showPendingCommandInput(value);
+      const token = beginCommandExecution(state);
+      const result = showPostView(sourceBoardId, value);
+      trackCommandExecution(state, result, token);
+      clearPendingWhenSettled(result, value);
+      return true;
+    }
+
+    return executeCommand(value);
+  }
+
   function executeSignupChoice(value) {
     if (isCommandExecutionLocked()) {
       // [LOG: 20260617_1035] Signup choices share the same immutable pending command rule.
@@ -180,7 +203,7 @@ export function createInteractionHandlers(deps) {
       executeSignupChoice(getClickableCommandValue('signup-choice', btn));
     },
     'postid': (btn) => {
-      executeCommand(getClickableCommandValue('postid', btn));
+      executePostHotspot(btn);
     },
     'post-row': (btn) => {
       executeCommand(getClickableCommandValue('post-row', btn));

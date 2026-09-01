@@ -466,6 +466,14 @@ export function createPostWriteView(deps) {
     }
 
     function onCmdKey(e) {
+      // Escape must still cancel when focus reaches the shared command input
+      // from the body via Tab, matching the title/body editor handlers.
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cleanup();
+        onCancel();
+        return;
+      }
       if ((e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowUp') {
         e.preventDefault();
         bodyEl.focus();

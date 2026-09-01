@@ -221,6 +221,11 @@ function verifyInteractionContracts() {
   const hotspotSource = read('public/js/core/menuHotspotUtils.js');
   const eventsSource = read('public/js/core/appEvents.js');
   const feedbackSource = read('public/js/core/terminalFeedback.js');
+  const contactSource = read('public/js/core/contactSysopScreen.js');
+  const memoSource = read('public/js/core/memoScreens.js');
+  const postWriteSource = read('public/js/core/postWriteView.js');
+  const postListSource = read('public/js/core/postListView.js');
+  const interactionSource = read('public/js/core/interactionHandlers.js');
   const shellSource = read('public/index.html');
   const navigationSource = read('public/js/core/menuNavigation.js');
   const routeRestorerSource = read('public/js/core/routingStateRestorer.js');
@@ -231,6 +236,11 @@ function verifyInteractionContracts() {
   assert(/event\.key !== ['"]Enter['"][\s\S]*event\.key !== ['"] ['"]/.test(eventsSource), 'interactive tokens must handle Enter and Space');
   assert(/token\.click\(\)/.test(eventsSource), 'keyboard activation must invoke the same click action');
   assert(/terminal-error/.test(feedbackSource) && /tabIndex\s*=\s*0/.test(feedbackSource), 'interactive errors/toasts must use the dedicated error row');
+  assert(/function onCmdKey\(e\)[\s\S]*e\.key === ['"]Escape['"][\s\S]*cancelContactSysop/.test(contactSource), 'contact editor command input must cancel on Escape after Tab focus');
+  assert(/function onCmdKey\(e\)[\s\S]*e\.key === ['"]Escape['"][\s\S]*onCancel/.test(memoSource), 'memo editor command input must cancel on Escape after Tab focus');
+  assert(/function onCmdKey\(e\)[\s\S]*e\.key === ['"]Escape['"][\s\S]*onCancel/.test(postWriteSource), 'post editor command input must cancel on Escape after Tab focus');
+  assert(/dataset\.postBoardId/.test(postListSource), 'post hotspots must preserve the physical source board for merged lists');
+  assert(/function executePostHotspot[\s\S]*showPostView\(sourceBoardId, value\)/.test(interactionSource), 'merged PDS hotspot clicks must open the physical source post');
   assert(/id="terminal-error"[\s\S]*id="cmd-hint"/.test(shellSource), 'error row must precede the hint row');
   assert(/\/api\/boards\/notice\?page=1&pageSize=1/.test(navigationSource), 'main menu must load the latest notice for the small-notice row');
   assert(/buildMainMenuAnsi\(state\.boardMenuTitle, menuEntries, stats, noticeText\)/.test(navigationSource), 'latest notice must be passed to the ANSI main-menu builder');

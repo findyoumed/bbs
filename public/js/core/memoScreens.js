@@ -886,6 +886,15 @@ export function createMemoScreens(deps) {
         }
 
         function onCmdKey(e) {
+            // Escape remains available after Tab moves focus from the body to
+            // the shared command input. Keep cancel parity with all editor
+            // fields instead of leaving the key inert at the boundary.
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                cleanup();
+                onCancel();
+                return;
+            }
             if ((e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowUp') {
                 e.preventDefault();
                 safeFocus(bodyEl);

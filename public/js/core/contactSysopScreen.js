@@ -383,6 +383,15 @@ export function createContactSysopScreen(deps) {
     }
 
     function onCmdKey(e) {
+      // The shared command input owns Enter/Ctrl+S routing, but the contact
+      // editor also promises Escape cancellation after focus moves there via
+      // Tab. Handle it here so the editor keeps the same keyboard parity as
+      // the subject/body fields instead of leaving Escape inert.
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        void cancelContactSysop();
+        return;
+      }
       if ((e.key === 'Tab' && e.shiftKey) || e.key === 'ArrowUp') {
         e.preventDefault();
         safeFocus(bodyEl);

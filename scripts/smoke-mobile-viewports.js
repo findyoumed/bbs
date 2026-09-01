@@ -698,24 +698,32 @@ async function verifyMobileLongTextFlows(page, viewportLabel, errors) {
       // The post detail API normally uses view=1 and increments the hit count.
       // Rewrite this deterministic smoke request to view=0 so mobile layout
       // coverage remains read-only against a live Supabase-backed server.
-      if (route === '/plaza/23') {
+      const plazaPostMatch = route.match(/^\/plaza\/(\d+)$/);
+      if (plazaPostMatch) {
+        const plazaPostId = plazaPostMatch[1];
         postReadRoute = async (requestRoute) => {
           const requestUrl = new URL(requestRoute.request().url());
           requestUrl.searchParams.set('view', '0');
           await requestRoute.continue({ url: requestUrl.toString() });
         };
-        await page.route('**/api/boards/plaza/posts/23*', postReadRoute);
+        await page.route(`**/api/boards/plaza/posts/${plazaPostId}*`, postReadRoute);
       }
       try {
         await page.goto(`http://localhost:3199${route}`, { waitUntil: 'domcontentloaded' });
       } finally {
-        if (postReadRoute) await page.unroute('**/api/boards/plaza/posts/23*', postReadRoute);
+        if (postReadRoute) {
+          const plazaPostId = route.match(/^\/plaza\/(\d+)$/)?.[1];
+          await page.unroute(`**/api/boards/plaza/posts/${plazaPostId}*`, postReadRoute);
+        }
       }
     }
     await page.waitForFunction(
       (screen) => document.body.dataset.screen === screen,
       expectedScreen,
-      { timeout: 3500 }
+      // Supabase-backed direct routes can cold-start on narrow viewports;
+      // keep the assertion bounded without treating a slow render as a
+      // missing screen.
+      { timeout: 8000 }
     ).catch(() => {});
     await page.waitForTimeout(300);
 
@@ -784,9 +792,24 @@ async function verifyMobileLongTextFlows(page, viewportLabel, errors) {
     }
   };
 
-  // Direct post detail route ensures the post-view renderer is covered even
-  // when the list fixture does not contain a long title/body.
-  await checkFixture('/plaza/23', 'post-view', 'post-view');
+  // Resolve a real public plaza post instead of hard-coding a local_id that
+  // may not exist after seed data is refreshed. The detail request remains
+  // read-only via the view=0 route rewrite above.
+  const plazaPostId = await page.evaluate(async () => {
+    try {
+      const response = await fetch('/api/boards/plaza?page=1&pageSize=1');
+      const payload = await response.json();
+      const item = payload?.data?.items?.[0];
+      return String(item?.localId ?? item?.id ?? '').trim();
+    } catch {
+      return '';
+    }
+  });
+  if (plazaPostId) {
+    await checkFixture(`/plaza/${encodeURIComponent(plazaPostId)}`, 'post-view', 'post-view');
+  } else {
+    reportFailure('post-view: no public plaza post was available for the mobile fixture.');
+  }
 
   // Open a real news article through its command flow; direct article URLs
   // require transient metadata that is intentionally not hard-coded here.

@@ -69,7 +69,14 @@ export function createPostListView(deps) {
       if (!lineNode) return;
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'ansi-hotspot post-hotspot';
-      btn.dataset.postid = String(post.localId ?? post.id); btn.setAttribute('aria-label', post.title || '');
+      btn.dataset.postid = String(post.localId ?? post.id);
+      // A virtual PDS list merges physical boards whose local_id values can
+      // repeat. Preserve the source board on the hotspot so a click can load
+      // the exact row instead of resolving the first matching local_id.
+      if (post.boardId && String(post.boardId) !== String(state.board?.id || '')) {
+        btn.dataset.postBoardId = String(post.boardId);
+      }
+      btn.setAttribute('aria-label', post.title || '');
       const rect = lineNode.getBoundingClientRect();
       const topVal = (rect.top - screenRect.top) / scale;
       const heightVal = (rect.height || 16) / scale;
