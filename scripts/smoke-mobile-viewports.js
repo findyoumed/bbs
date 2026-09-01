@@ -60,6 +60,14 @@ async function runMobileSmokeTests() {
         viewport: { width: 390, height: 844 },
         userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1'
       },
+      // Cover the common 430px iPhone/Android width as well as the narrower
+      // fixtures below. This catches breakpoint regressions that 390px can
+      // hide while keeping the same interaction and overflow assertions.
+      {
+        label: 'iPhone 14 Plus (430x932)',
+        viewport: { width: 430, height: 932 },
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1'
+      },
       {
         label: '소형 안드로이드 (360x740)',
         viewport: { width: 360, height: 740 },

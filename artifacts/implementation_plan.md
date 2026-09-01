@@ -481,3 +481,5 @@ Vercel build smoke는 의존성 요구 조건과 package manifest가 어긋나�
 ## Consolidated status
 
 코드·원격 migration·의존성·모바일/라우트 검증은 완료됐다. 실제 www-bbs 배포 프로젝트 식별 후 Vercel 환경변수를 등록하는 운영 작업이 남아 있다. leaked-password protection은 현재 Supabase Free plan에서 제공되지 않아 Pro 이상 업그레이드 후 별도 처리한다.
+
+모바일 수락 기준은 430/390/360/320px 네 폭으로 고정한다. 각 폭에서 31개 경로, 터치 흐름, 긴 텍스트 줄바꿈, footer/input geometry를 `npm run smoke:mobile`로 검증한다.

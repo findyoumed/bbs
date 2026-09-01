@@ -594,3 +594,11 @@ Exit criteria: unauthenticated member views expose only fields rendered by the p
 Exit criteria: preflight responses are limited to explicitly configured origins in each deployment environment.
 
 Exit criteria: no unused public RPC/table mutation path is callable by anon/authenticated roles, while all server repository flows remain operational.
+
+## Current iteration: mobile 430px acceptance (2026-09-01)
+
+- [x] Add the 430x932 viewport to the mobile smoke matrix
+- [x] Verify all 31 routes, touch interactions, long-text wrapping, and footer/input geometry at 430px
+- [x] Preserve the existing 390/360/320px checks
+
+Verification: `npm run smoke:mobile` passed for 430/390/360/320px with 0 errors.

@@ -3230,6 +3230,10 @@ Supabase MCP로 프로젝트 조직 요금제를 재확인한 결과 `plan=free`
 
 `bbsweb.oscc.kr`은 사용자 프로젝트가 아닌 별도 Express 서비스로 확인했다. 로컬 `.env`에서 해당 origin을 제거하고 localhost만 남겼으며, 운영 등록 대상은 이번에 배포한 `jatseoul/bbs` Vercel 프로젝트의 실제 origin으로 한정한다.
 
+## [2026-09-01] 모바일 430px 수락 검증
+
+`scripts/smoke-mobile-viewports.js`에 430x932 viewport를 추가했다. `npm run smoke:mobile`에서 430/390/360/320px 각 31개 경로의 터치, 긴 텍스트 줄바꿈, footer/input geometry가 모두 통과했고 오류는 0건이다.
+
 ## [2026-09-01] Safe environment template
 
 **LOG_ID: 20260901_2100**
