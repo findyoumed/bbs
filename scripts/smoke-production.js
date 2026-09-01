@@ -79,7 +79,14 @@ async function main() {
       const ok = check.statuses.includes(result.status);
       console.log(`  ${ok ? '✓' : '✗'} ${check.label}: ${result.status} ${check.path}`);
       if (!ok) {
-        failures.push(`${check.label} expected ${check.statuses.join('/')} but received ${result.status}`);
+        let detail = '';
+        try {
+          const payload = JSON.parse(result.body);
+          detail = payload?.data?.services?.database?.detail || payload?.message || '';
+        } catch {
+          // Keep the status-only failure when the response is not JSON.
+        }
+        failures.push(`${check.label} expected ${check.statuses.join('/')} but received ${result.status}${detail ? ` (${detail})` : ''}`);
       }
       if (!result.body.trim()) failures.push(`${check.label} returned an empty body`);
       for (const header of check.requiredHeaders || []) {
