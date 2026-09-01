@@ -6,6 +6,10 @@
 .tmp-chrome-cdp/
 archive/
 docs/
+docs/**
+docs/**/*
+*.pdf
+*.mp4
 data/
 supabase/
 tests/
