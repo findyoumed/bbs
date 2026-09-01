@@ -554,7 +554,7 @@ Exit criteria: unauthenticated member views expose only fields rendered by the p
 
 ## Current iteration: CORS origin allowlist (2026-09-01)
 
-- [x] Configure local runtime origins for localhost and `bbsweb.oscc.kr`
+- [x] Configure local runtime origin for localhost only (do not trust unrelated domains)
 - [x] Verify request guards no longer use wildcard with configured environment
 - [x] Fail closed for production/Vercel when the allowlist is missing
 - [x] Make readiness check fail when production/Vercel allowlist is missing
@@ -563,7 +563,7 @@ Exit criteria: unauthenticated member views expose only fields rendered by the p
 - [x] Include UI geometry/layout smoke in the 27-item loop gate
 - [ ] Copy the same allowlist into the production/Vercel environment
 
-참고: 현재 확인한 `bbsweb.oscc.kr`과 `v0-remix-of-01410-ten.vercel.app`은 이 저장소의 API 계약과 일치하지 않는 별도 배포다. 실제 www-bbs Vercel 프로젝트를 연결한 뒤에만 운영 환경변수를 등록한다.
+참고: `bbsweb.oscc.kr`과 `v0-remix-of-01410-ten.vercel.app`은 사용자 프로젝트가 아닌 별도 배포다. 실제 `jatseoul/bbs` Vercel 프로젝트의 배포 origin만 운영 환경변수에 등록한다.
 
 - [x] Add a secret-free `.env.example` with the required runtime variable names
 - [x] Resolve the production dependency audit finding for sharp/libvips

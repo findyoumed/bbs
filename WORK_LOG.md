@@ -3226,6 +3226,10 @@ Supabase Auth 운영 로그에서 malformed JWT가 `/user`까지 전달되어 40
 
 Supabase MCP로 프로젝트 조직 요금제를 재확인한 결과 `plan=free`였다. 공식 [Password security 문서](https://supabase.com/docs/guides/auth/password-security)는 leaked-password protection을 Pro 이상 기능으로 명시하므로, 현재 경고는 코드 결함이 아니라 요금제 제한이다. 업그레이드 전에는 Dashboard 토글을 완료할 수 없다.
 
+## [2026-09-01] CORS 대상 도메인 정정
+
+`bbsweb.oscc.kr`은 사용자 프로젝트가 아닌 별도 Express 서비스로 확인했다. 로컬 `.env`에서 해당 origin을 제거하고 localhost만 남겼으며, 운영 등록 대상은 이번에 배포한 `jatseoul/bbs` Vercel 프로젝트의 실제 origin으로 한정한다.
+
 ## [2026-09-01] Safe environment template
 
 **LOG_ID: 20260901_2100**

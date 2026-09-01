@@ -439,7 +439,7 @@ Exit criteria: Supabase live readiness가 확인되고, 모바일·데스크톱 
 
 ## CORS origin allowlist (2026-09-01)
 
-로컬 `.env`에 `BBS_ALLOWED_ORIGINS`를 명시해 개발 서버의 OPTIONS wildcard를 제거했다. 운영/Vercel에서는 실제 배포 origin만 동일 변수에 등록하고, 등록하지 않은 origin은 ACAO를 받지 않도록 유지한다.
+로컬 `.env`에는 `http://localhost:3000`만 `BBS_ALLOWED_ORIGINS`로 명시해 개발 서버의 OPTIONS wildcard를 제거했다. 운영/Vercel에서는 사용자가 소유한 실제 `jatseoul/bbs` 배포 origin만 동일 변수에 등록하고, 관련 없는 외부 도메인은 허용하지 않는다.
 
 다음 운영 단계는 공개 RPC 실행 권한·RLS, sysop credential 회전, CORS allowlist, Auth-member linkage 및 migration drift이며, 백업과 명시적 승인 이후에만 원격 변경한다.
 
