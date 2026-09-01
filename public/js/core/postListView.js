@@ -67,6 +67,9 @@ export function createPostListView(deps) {
         }
       }
       if (!lineNode) return;
+      // Mobile hotspots use a 24px minimum touch target. Keep the source
+      // ANSI row at the same height so adjacent post hitboxes cannot overlap.
+      lineNode.classList.add('post-hotspot-line');
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'ansi-hotspot post-hotspot';
       btn.dataset.postid = String(post.localId ?? post.id);

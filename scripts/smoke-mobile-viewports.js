@@ -423,6 +423,27 @@ async function runMobileSmokeTests() {
           continue;
         }
 
+        const overlappingPostTargets = await page.evaluate(() => {
+          const rects = [...document.querySelectorAll('.post-hotspot')]
+            .map((el) => el.getBoundingClientRect())
+            .filter((rect) => rect.width > 0 && rect.height > 0)
+            .sort((a, b) => a.top - b.top);
+          let count = 0;
+          for (let i = 1; i < rects.length; i += 1) {
+            if (rects[i].top < rects[i - 1].bottom - 0.5) count += 1;
+          }
+          return count;
+        });
+        if (overlappingPostTargets > 0) {
+          console.error(`  (Adjacent post touch targets overlap: ${overlappingPostTargets} row(s))`);
+          errors.push({
+            type: 'touch-target-overlap',
+            viewport: vp.label,
+            message: `${route.name}: ${overlappingPostTargets} adjacent post touch target(s) overlap`
+          });
+          continue;
+        }
+
         console.log('OK');
       }
 

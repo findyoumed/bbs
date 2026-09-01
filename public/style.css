@@ -2284,6 +2284,12 @@ body[data-print-view="true"] .ansi-screen {
         min-height: 24px;
     }
 
+    /* Keep post rows aligned with the 24px mobile hotspot target. Without
+       this, compact ANSI line-height makes adjacent post buttons overlap. */
+    .ansi-line.post-hotspot-line {
+        min-height: 24px;
+    }
+
     /* [LOG_ID: 20260831_1100] Blood-type choices are semantic spans rather
        than .ansi-hotspot buttons. Give them the same compact touch target
        without changing their ANSI text color or line flow. */
@@ -3257,6 +3263,12 @@ body[data-print-view="true"] .ansi-screen {
     body[data-screen="fortune-result"] .ansi-line,
     body[data-screen="bio-result"] .ansi-line {
         min-height: 1.32em;
+    }
+
+    /* The compact post-list line-height still needs to match the 24px
+       hotspot target on mobile so adjacent post rows never overlap. */
+    body[data-screen="post-list"] .ansi-line.post-hotspot-line {
+        min-height: 24px;
     }
 
     /* [LOG_ID: 20260721_1630] post-view는 원래 위 화면들과 함께 폰트를 더 줄이는 0.025 비율
