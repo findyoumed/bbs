@@ -314,13 +314,23 @@ async function runMobileSmokeTests() {
             }));
 
           return {
+            screen: document.body.dataset.screen || '',
             scrollWidth: document.documentElement.scrollWidth,
             innerWidth: window.innerWidth,
             innerHeight: window.innerHeight,
             footerBottom: footerRect ? footerRect.bottom : null,
             cmdInputBottom: cmdInputRect ? cmdInputRect.bottom : null,
             textOverflow,
-            unnamedControls
+            unnamedControls,
+            postRows: Array.from(document.querySelectorAll('.post-hotspot-line')).map((row) => ({
+              height: row.getBoundingClientRect().height,
+              rectCount: row.getClientRects().length,
+              text: row.textContent?.trim().slice(0, 80) || ''
+            })),
+            separatorRows: Array.from(document.querySelectorAll('.ansi-line--separator')).map((row) => ({
+              height: row.getBoundingClientRect().height,
+              rectCount: row.getClientRects().length
+            }))
           };
         });
 
@@ -365,6 +375,32 @@ async function runMobileSmokeTests() {
         }
 
         // 하단 명령창/힌트바가 뷰포트 아래로 밀려 잘리지 않는지(세로 높이 문제) 함께 확인한다.
+        if (geometry.screen === 'post-list') {
+          const wrappedRows = geometry.postRows.filter((row) => row.rectCount !== 1 || row.height > 26);
+          if (wrappedRows.length > 0) {
+            const first = wrappedRows[0];
+            console.error(`  (Post-list row wrapped on mobile: height=${first.height}, rects=${first.rectCount})`);
+            errors.push({
+              type: 'post-list-row-wrap',
+              viewport: vp.label,
+              message: `${route.name}: ${wrappedRows.length} post-list row(s) wrapped; first=${first.text}`
+            });
+            continue;
+          }
+        }
+
+        const wrappedSeparators = geometry.separatorRows.filter((row) => row.rectCount !== 1 || row.height > 26);
+        if (wrappedSeparators.length > 0) {
+          const first = wrappedSeparators[0];
+          console.error(`  (Separator wrapped on mobile: height=${first.height}, rects=${first.rectCount})`);
+          errors.push({
+            type: 'separator-row-wrap',
+            viewport: vp.label,
+            message: `${route.name}: ${wrappedSeparators.length} horizontal separator row(s) wrapped`
+          });
+          continue;
+        }
+
         const footerClipped = geometry.footerBottom !== null && geometry.footerBottom > geometry.innerHeight + 1;
         const cmdInputClipped = geometry.cmdInputBottom !== null && geometry.cmdInputBottom > geometry.innerHeight + 1;
         if (footerClipped || cmdInputClipped) {

@@ -24,6 +24,11 @@ export function createAnsiEngine(deps) {
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    function isSeparatorRow(text) {
+        const source = String(text || '');
+        return /[\u2500\u2501]/.test(source) && /^[\s\u2500\u2501]+$/.test(source);
+    }
+
     function ansiToHTML(text) {
         // [LOG: 20260709_1040] 클라이언트단 렌더링 초입에서 NFD 자모를 NFC 결합 형태 음절로 정규화하여 자모 분리 렌더링을 방지
         text = String(text || '').normalize('NFC');
@@ -115,7 +120,8 @@ export function createAnsiEngine(deps) {
             }
             flush();
             plainRows.push(plain);
-            lines.push(`<div class="ansi-line">${html || '\u00a0'}</div>`);
+            const lineClass = isSeparatorRow(plain) ? 'ansi-line ansi-line--separator' : 'ansi-line';
+            lines.push(`<div class="${lineClass}">${html || '\u00a0'}</div>`);
         }
         return { html: lines.join(''), rows: plainRows, cols: COLS, rowCount: ROWS };
     }

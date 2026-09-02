@@ -3271,6 +3271,32 @@ body[data-print-view="true"] .ansi-screen {
         min-height: 24px;
     }
 
+    /* Keep fixed-column post rows as one terminal row on narrow screens.
+       The generic mobile ANSI rule allows every color span to wrap, which
+       moves the title span back to column 0 and makes view/page counts appear
+       on separate lines.  Post-list builders already fit titles to 44 cells,
+       so clipping inside the terminal viewport is safer and closer to the
+       original PC통신 list than reflowing the columns. */
+    body[data-screen="post-list"] .ansi-line.post-hotspot-line,
+    body[data-screen="post-list"] .ansi-line.post-hotspot-line > span {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        overflow: hidden !important;
+        text-overflow: clip !important;
+    }
+
+    /* Structural horizontal rules must remain a single terminal row.  The
+       generic mobile ANSI rule intentionally remains wrapping for prose. */
+    .ansi-screen .ansi-line--separator,
+    .ansi-screen .ansi-line--separator > span {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        overflow: hidden !important;
+        text-overflow: clip !important;
+    }
+
     /* [LOG_ID: 20260721_1630] post-view는 원래 위 화면들과 함께 폰트를 더 줄이는 0.025 비율
        그룹이었는데(세로 공간에 맞추려는 목적), ansiHLine()/wrapAnsiText()가 만드는 구분선·본문
        줄바꿈은 모두 "44칸"이라는 고정 글자수를 전제로 한다 — 이 44칸이 화면 폭을 꽉 채우도록

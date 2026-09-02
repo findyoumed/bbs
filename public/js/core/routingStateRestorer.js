@@ -97,6 +97,18 @@ export function createRoutingStateRestorer(deps) {
   }
 
   const routeHandlers = {
+    // Keep the historical deep link used by the guide menu.  The sysop
+    // contact board is exposed from TOP in the current menu tree, but old
+    // clients/bookmarks use /guide/tosysop; routing the alias explicitly
+    // avoids collapsing that URL back to the generic GUIDE screen.
+    async guide(segments) {
+      const leaf = String(segments[1] || '').trim().toLowerCase();
+      if (leaf === 'tosysop' && typeof showContactSysop === 'function') {
+        return await showContactSysop(true);
+      }
+      return await showBoardSelect('guide', '', true);
+    },
+
     async menu(segments) {
       const menuPath = segments[1] || 'top';
       await showBoardSelect(menuPath, '', true);

@@ -255,6 +255,22 @@ async function verifyContactEditorInteraction(page, errors) {
              };
          });
 
+         // Historical clients/bookmarks use /guide/tosysop. Verify that the
+         // deep link restores the authenticated editor instead of collapsing
+         // to the generic GUIDE menu.
+         await contactPage.evaluate(() => {
+             window.history.pushState({}, '', '/guide/tosysop');
+             window.dispatchEvent(new PopStateEvent('popstate'));
+         });
+         await contactPage.waitForTimeout(450);
+         if (await contactPage.locator('#tosysop-ed-subject').count() !== 1
+             || await contactPage.locator('#tosysop-ed-body').count() !== 1) {
+             errors.push('Historical /guide/tosysop deep link did not restore the authenticated contact editor.');
+             return;
+         }
+         await contactPage.keyboard.press('Escape');
+         await contactPage.waitForTimeout(250);
+
          // [LOG_ID: 20260828_2045] 공통 전역 명령에서 SOS를 입력해도
          // 기존 시삽 편집기로 연결되고, 명령 뒤의 긴급 메시지가 본문에 남는지 확인한다.
          const commandInput = contactPage.locator('#cmd-input');

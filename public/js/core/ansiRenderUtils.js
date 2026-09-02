@@ -60,6 +60,14 @@ function isMainStatsLine(text) {
   return source.includes('[nummembers]') || source.includes('[numarticles]');
 }
 
+// A separator is structural terminal chrome, not prose.  Marking it at the
+// renderer boundary lets narrow-screen CSS keep it on one physical row while
+// leaving normal ANSI text free to wrap for readability.
+function isSeparatorRow(text) {
+  const source = String(text || '');
+  return /[\u2500\u2501]/.test(source) && /^[\s\u2500\u2501]+$/.test(source);
+}
+
 // [LOG_ID: 20260720_1545] 오목/오델로 돌(●U+25CF/○U+25CB)이 폰트 원본 글리프 자체가 작아
 // 굵게(bold)만으로는 여전히 잘 안 보인다는 실측 지적(2차) — 폭은 그대로 1칸으로 두되
 // 글자 크기만 CSS로 키운다(.stone, style.css). isWideChar처럼 "2칸으로 세는" 방식이 아니라
@@ -430,7 +438,8 @@ export function ansiToHTML(text) {
     }
 
     plainRows.push(plain);
-    lines.push(`<div class="ansi-line">${html || '\u00a0'}</div>`);
+    const lineClass = isSeparatorRow(plain) ? 'ansi-line ansi-line--separator' : 'ansi-line';
+    lines.push(`<div class="${lineClass}">${html || '\u00a0'}</div>`);
   }
 
   return {
