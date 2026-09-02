@@ -134,3 +134,10 @@
 
 - `ANSI1.NRE`~`ANSI4.NRE`를 읽어 `@[` sentinel을 `ESC[`로 변환하는 참고 경로를 smoke에 고정했다.
 - 각 sentinel이 CSI로 파싱되고 HTML에 ESC가 남지 않는지만 검증하며, CP949/Johab 문자 복원과 Nurie 전용 그래픽 확장은 웹 서비스 지원으로 간주하지 않는다.
+
+## 2026-09-02 핵심 사용자 흐름 브라우저 검증
+
+- 메인 메뉴 클릭, 계층형 `GO`, 게시판·PDS 이동, 쪽지·시삽 건의 작성, 게임 입력을 실제 Chromium 흐름으로 재현했다.
+- 데스크톱 전체 순회(`npm run smoke:full-traversal`)에서 콘솔 오류 없이 통과했으며, 입력 오류는 본문 인라인에 남고 하단 힌트는 보존되는지 확인했다.
+- 모바일 320/360/390/430px touch viewport에서 31개 라우트, TOP·혈액형·쪽지 터치, 작성 화면 Enter/Tab/Escape, 긴 한글·URL 줄바꿈을 검증했다(`npm run smoke:mobile`).
+- 이번 점검에서는 재현 가능한 UI 회귀가 발견되지 않아 런타임 코드는 변경하지 않았다. 이후 동일 흐름은 `npm run loop:verify`와 Production smoke로 재검증한다.
