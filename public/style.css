@@ -3893,6 +3893,47 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
    intentionally dense, so reducing the terminal grid is preferable to
    allowing the body to grow or introducing a hidden scroll viewport. */
 @media (max-width: 1200px) and (max-height: 350px) and (orientation: landscape) {
+    /* [LOG_ID: 20260902_1700] A compact 568x320 viewport used the portrait
+       44ch body cap.  Post-list rows then wrapped into two visual rows and
+       the ANSI hotspot layer kept the screen's intrinsic height above the
+       footer.  Restore an 80-column body for the ultra-short landscape
+       terminal and let the container allocate the remaining viewport height
+       to the screen, preserving the fixed footer without vertical overflow. */
+    #terminal-container {
+        height: 100% !important;
+        flex: 1 1 auto !important;
+    }
+
+    #terminal-screen .ansi-screen,
+    #terminal-screen .ansi-screen-body {
+        width: 100% !important;
+        max-width: 80ch !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    /* The portrait touch-chip size cannot fit a keyboard-height landscape
+       footer.  Keep the hint on one compact line; keyboard focus remains the
+       authoritative action path for this viewport. */
+    #cmd-hint .cmd-token {
+        display: inline !important;
+        min-height: 0 !important;
+        padding: 0 1px !important;
+        margin: 0 !important;
+    }
+
+    /* The one-pixel cursor baseline adjustment used on normal screens would
+       place the cursor fractionally below a 320px viewport. */
+    #cmd-input,
+    #cmd-prompt-renderer {
+        transform: translateY(0) !important;
+    }
+
+    .terminal-cursor {
+        top: 0 !important;
+        height: 1em !important;
+    }
+
     #terminal-container {
         font-size: clamp(7px, calc(100dvh * 0.022), 9px) !important;
         line-height: 1.1 !important;
