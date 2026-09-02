@@ -1,7 +1,7 @@
 'use strict';
 
-const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createSupabaseClient } = require('./createSupabaseClient');
 
 const {
   buildStoredName,
@@ -26,9 +26,7 @@ const ATTACHMENT_META_COLUMNS = 'id, board_id, post_id, user_id, nick_name, file
 class SupabaseAttachmentRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'supabase' });
-    this.client = createClient(options.url, options.serviceRoleKey, {
-      auth: { persistSession: false }
-    });
+    this.client = createSupabaseClient(options);
     this.table = options.table || 'attachments';
     this.maxBytes = Number(options.maxBytes || 1024 * 1024);
   }

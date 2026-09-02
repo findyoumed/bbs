@@ -1,7 +1,7 @@
 'use strict';
 
-const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createSupabaseClient } = require('./createSupabaseClient');
 
 const {
   canAccessMemo,
@@ -16,9 +16,7 @@ const {
 class SupabaseMemoRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'supabase' });
-    this.client = createClient(options.url, options.serviceRoleKey, {
-      auth: { persistSession: false }
-    });
+    this.client = createSupabaseClient(options);
     this.table = options.table || 'memos';
     this.columnMapPromise = null;
   }

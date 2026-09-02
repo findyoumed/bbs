@@ -1,7 +1,7 @@
 'use strict';
 
-const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createSupabaseClient } = require('./createSupabaseClient');
 const { createHttpError } = require('./httpUtils');
 
 // [LOG: 20260622_2301] SupabaseVoteRepository 구현 — Supabase 모드 투표 시스템
@@ -9,9 +9,7 @@ const { createHttpError } = require('./httpUtils');
 class SupabaseVoteRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'supabase' });
-    this.client = createClient(options.url, options.serviceRoleKey, {
-      auth: { persistSession: false }
-    });
+    this.client = createSupabaseClient(options);
     this.table = options.table || 'votes';
     this.recordsTable = options.recordsTable || 'vote_records';
   }

@@ -1,7 +1,7 @@
 'use strict';
 
-const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createSupabaseClient } = require('./createSupabaseClient');
 const { normalizeText } = require('./httpUtils');
 const { describeAction } = require('./activityActionLabels');
 
@@ -15,9 +15,7 @@ class ActivityRepositorySupabase extends BaseRepository {
     super({ ...options, driverName: 'supabase' });
     this.table = options.table || 'user_activities';
     this.ttlMs = Number(options.ttlMs || 1000 * 60 * 30); // Default 30 minutes
-    this.client = createClient(options.url, options.serviceRoleKey, {
-      auth: { persistSession: false }
-    });
+    this.client = createSupabaseClient(options);
   }
 
   getMeta() {

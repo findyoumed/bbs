@@ -1,7 +1,7 @@
 'use strict';
 
-const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createSupabaseClient } = require('./createSupabaseClient');
 const logger = require('./logger');
 const { hasSupabaseConfig } = require('./RepositoryDriverSelection');
 
@@ -16,9 +16,7 @@ function isMissingCacheTableError(error, table) {
 class SupabaseRssCacheStore extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'supabase' });
-    this.client = createClient(options.url, options.serviceRoleKey, {
-      auth: { persistSession: false }
-    });
+    this.client = createSupabaseClient(options);
     this.table = options.table || 'rss_cache';
     this.disabled = false;
   }
@@ -147,6 +145,7 @@ function createRssCacheStoreFromEnv(env = process.env) {
   }
 
   return new SupabaseRssCacheStore({
+    env,
     url: env.SUPABASE_URL,
     serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     table: env.RSS_CACHE_TABLE || 'rss_cache'

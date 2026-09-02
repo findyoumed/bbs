@@ -57,6 +57,7 @@ class RepositoryRegistry {
     // 1. Board Repository
     if (useSupabase) {
       this.register('board', new SupabaseBoardRepository({
+        env: this.env,
         url: this.env.SUPABASE_URL,
         serviceRoleKey: supabaseKey,
         menuFilePath: legacyPaths.menuFilePath,
@@ -75,6 +76,7 @@ class RepositoryRegistry {
     // 2. Member Repository
     if (useSupabase) {
       this.register('member', new SupabaseMemberRepository({
+        env: this.env,
         url: this.env.SUPABASE_URL,
         serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_MEMBERS_TABLE || 'members'
@@ -86,6 +88,7 @@ class RepositoryRegistry {
     // 3. ChatRoom Repository
     if (useSupabase) {
       this.register('chatRooms', new SupabaseChatRoomRepository({
+        env: this.env,
         url: this.env.SUPABASE_URL,
         serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_CHAT_ROOMS_TABLE || 'chat_rooms',
@@ -101,6 +104,7 @@ class RepositoryRegistry {
     // 4. Memo Repository
     if (useSupabase) {
       this.register('memo', new SupabaseMemoRepository({
+        env: this.env,
         url: this.env.SUPABASE_URL,
         serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_MEMOS_TABLE || 'memos'
@@ -112,6 +116,7 @@ class RepositoryRegistry {
     // 5. Attachment Repository
     if (useSupabase && !options.attachmentOptions?.baseDir) {
       this.register('attachment', new SupabaseAttachmentRepository({
+        env: this.env,
         url: this.env.SUPABASE_URL,
         serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_ATTACHMENTS_TABLE || 'attachments',
@@ -126,6 +131,7 @@ class RepositoryRegistry {
 
     if (activityDriver === 'supabase' && useSupabase) {
       this.register('activity', new ActivityRepositorySupabase({
+        env: this.env,
         url: this.env.SUPABASE_URL,
         serviceRoleKey: supabaseKey,
         table: this.env.SUPABASE_ACTIVITY_TABLE || 'user_activities',
@@ -154,12 +160,34 @@ class RepositoryRegistry {
 
   async checkAllHealth() {
     const results = {};
+    const timeoutMs = Number(this.env.HEALTH_CHECK_TIMEOUT_MS) > 0
+      ? Math.min(10000, Math.max(500, Number(this.env.HEALTH_CHECK_TIMEOUT_MS)))
+      : 3000;
     for (const [name, repo] of this.repositories.entries()) {
+      const startedAt = Date.now();
       if (typeof repo.checkHealth === 'function') {
-        results[name] = await repo.checkHealth();
+        try {
+          const healthPromise = Promise.resolve()
+            .then(() => repo.checkHealth())
+            .catch((error) => ({ status: 'error', message: error?.message || 'Health check failed' }));
+          let timer;
+          const timeoutResult = new Promise((resolve) => {
+            timer = setTimeout(() => resolve({
+              status: 'timeout',
+              errorClass: 'timeout',
+              message: `Health check exceeded ${timeoutMs}ms`
+            }), timeoutMs);
+          });
+          results[name] = await Promise.race([healthPromise, timeoutResult]);
+          clearTimeout(timer);
+        } catch (error) {
+          results[name] = { status: 'error', message: error?.message || 'Health check failed' };
+        }
       } else {
         results[name] = { status: 'unknown', message: 'No health check implemented' };
       }
+      results[name] = sanitizeHealthResult(results[name]);
+      results[name].latencyMs = Math.max(0, Date.now() - startedAt);
     }
     return results;
   }
@@ -188,6 +216,20 @@ class RepositoryRegistry {
     }
     return meta;
   }
+}
+
+function sanitizeHealthResult(result = {}) {
+  const normalized = { ...result };
+  if (normalized.status === 'ok') return normalized;
+
+  const status = String(normalized.status || 'error').toLowerCase();
+  normalized.errorClass = normalized.errorClass || (status === 'timeout' ? 'timeout' : 'unavailable');
+  normalized.retryable = true;
+  // `/api/health` is public; do not expose upstream Supabase messages or
+  // connection details that may contain infrastructure identifiers.
+  delete normalized.message;
+  delete normalized.detail;
+  return normalized;
 }
 
 module.exports = RepositoryRegistry;

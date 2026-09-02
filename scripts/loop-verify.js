@@ -28,6 +28,7 @@ const CHECK_TIMEOUT_MS = 120000;
 // 순서대로 실행(각 스모크가 자체 http 서버를 띄우므로 순차 실행으로 포트 충돌을 피한다).
 const CHECKS = [
   { name: 'syntax', file: 'check-syntax.js' },
+  { name: 'api-fetch', file: 'smoke-api-fetch.js' },
   { name: 'security-boundaries', file: 'smoke-security-boundaries.js' },
   { name: 'prefetch-scheduler', file: 'smoke-prefetch-scheduler.js' },
   { name: 'weather-labels', file: 'smoke-weather-labels.js' },
@@ -54,6 +55,7 @@ const CHECKS = [
   { name: 'auth-privacy', file: 'smoke-auth-privacy.js' },
   { name: 'password-recovery', file: 'smoke-password-recovery.js' },
   { name: 'docs-contract', file: 'smoke-docs-contract.js' },
+  { name: 'supabase-resilience', file: 'smoke-supabase-resilience.js' },
   { name: 'vercel-ready', file: 'smoke-vercel-ready.js' },
   { name: 'qa:final', file: 'final-qa-report.js' }
 ];

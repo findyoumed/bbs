@@ -15,6 +15,7 @@ const JSON_BODY_PROMISE = Symbol('jsonBodyPromise');
 function createError(status, message) {
   const error = new Error(message);
   error.status = status;
+  error._isHttpError = true;
   return error;
 }
 

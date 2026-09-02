@@ -2,16 +2,19 @@
 // [LOG: 20260617_1005] [LOG_ID: 20260804_1114] Helper logic moved to apiFetchHelpers.js; public exports stay compatible.
 import {
   ApiError,
+  createNetworkError,
+  createServerError,
   DEFAULT_RETRY_DELAY_MS,
   DEFAULT_TIMEOUT_MS,
   isFiniteNumber,
   isFormDataBody,
   normalizeRetryCount,
   normalizeRetryStatuses,
-  pickErrorMessage,
   readResponsePayload,
+  SAFE_RETRY_METHODS,
   translateErrorMessage,
-  waitWithBackoff
+  waitWithBackoff,
+  fetchWithTimeout
 } from './apiFetchHelpers.js';
 export { ApiError };
 // [LOG_ID: 20260727_0700] HTTP 헤더 값은 ISO-8859-1(Latin-1)만 허용된다 — 한글 닉네임을
@@ -52,10 +55,18 @@ function createBaseHeaders(state, fetchOptions) {
 function reportError(error, context) {
   const { state, silent, onGlobalError, logger, method, path, logPrefix } = context;
   const payloadMessage = error.payload && typeof error.payload === 'object' ? error.payload.message : null;
-  if (!(error.type === 'server' && typeof payloadMessage === 'string' && payloadMessage.trim())) {
+  const hasUsefulPayloadMessage = typeof payloadMessage === 'string'
+    && payloadMessage.trim()
+    && payloadMessage.trim().toLowerCase() !== 'internal server error';
+  if (!(error.type === 'server' && hasUsefulPayloadMessage)) {
     error.message = translateErrorMessage(error);
   }
   state.lastApiError = error;
+  error._reported = true;
+
+  if (error.status === 401 && typeof context.onUnauthorized === 'function') {
+    context.onUnauthorized(error);
+  }
 
   // [LOG: 20260620_1200] silent 요청 시 콘솔/로거/전역 알림을 모두 억제한다.
   // 호출자가 직접 처리하는 예상된 에러(예: 불완전 뉴스 기사 404)의 노이즈를 없앤다.
@@ -72,66 +83,16 @@ function reportError(error, context) {
   }
 }
 
-function createServerError({ path, method, status, payload, attempt, maxAttempts, retryable }) {
-  return new ApiError({
-    path,
-    method,
-    status: Number(status) || 0,
-    payload,
-    message: pickErrorMessage(payload, `서버 오류 ${status}`),
-    type: 'server',
-    attempt,
-    maxAttempts,
-    retryable
-  });
-}
-
-function createNetworkError({ path, method, err, attempt, maxAttempts, retryable, type }) {
-  const isTimeout = err.name === 'AbortError' || err.message?.includes('timeout');
-  const isParseError = err?.name === 'ApiParseError';
-  return new ApiError({
-    path,
-    method,
-    payload: isParseError ? err.rawText || null : null,
-    message: isTimeout ? '요청 시간이 초과되었습니다.' : (err?.message || '네트워크 오류'),
-    type: type || (isTimeout ? 'timeout' : (isParseError ? 'parse' : 'network')),
-    attempt,
-    maxAttempts,
-    retryable
-  });
-}
-
-async function fetchWithTimeout(path, requestOptions, timeout, externalSignal = null) {
-  let timeoutId = null;
-  const controller = new AbortController();
-  const abortFromExternalSignal = () => controller.abort();
-  try {
-    if (externalSignal?.aborted) {
-      abortFromExternalSignal();
-    } else if (externalSignal && typeof externalSignal.addEventListener === 'function') {
-      externalSignal.addEventListener('abort', abortFromExternalSignal, { once: true });
-    }
-    if (timeout > 0) {
-      timeoutId = setTimeout(() => controller.abort(), timeout);
-    }
-    return await fetch(path, { ...requestOptions, signal: controller.signal });
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-    if (externalSignal && typeof externalSignal.removeEventListener === 'function') {
-      externalSignal.removeEventListener('abort', abortFromExternalSignal);
-    }
-  }
-}
-
 export function createApiFetch(deps) {
-  const { state, onActivity, onGlobalError, onLatency, logger, performanceService } = deps;
+  const { state, onActivity, onGlobalError, onLatency, onUnauthorized, logger, performanceService } = deps;
 
-  async function apiFetch(path, options = {}) {
+  async function performApiFetch(path, options = {}) {
     const startTime = performance.now();
     const {
       retry,
       retryDelayMs,
       retryOnStatus,
+      retryUnsafe = false,
       timeout = DEFAULT_TIMEOUT_MS,
       throwOnError = true,
       silent = false,
@@ -143,7 +104,13 @@ export function createApiFetch(deps) {
       logger.info(`API Request: ${method} ${path}`, { method, path, retry });
     }
 
-    const maxAttempts = normalizeRetryCount(retry, method) + 1;
+    // Mutations are never retried implicitly or by a generic `retry` flag:
+    // after a lost response the server may already have committed the write.
+    // A caller must opt in explicitly with retryUnsafe and own idempotency.
+    const retryCount = (!SAFE_RETRY_METHODS.has(method) && retryUnsafe !== true)
+      ? 0
+      : normalizeRetryCount(retry, method);
+    const maxAttempts = retryCount + 1;
     const retryStatuses = normalizeRetryStatuses(retryOnStatus);
     const delayBaseMs = isFiniteNumber(retryDelayMs) ? Math.max(0, Number(retryDelayMs)) : DEFAULT_RETRY_DELAY_MS;
     const baseHeaders = createBaseHeaders(state, fetchOptions);
@@ -169,6 +136,7 @@ export function createApiFetch(deps) {
               method,
               status: res.status,
               payload,
+              requestId: res.headers?.get?.('x-request-id') || '',
               attempt,
               maxAttempts,
               retryable: shouldRetry
@@ -180,7 +148,7 @@ export function createApiFetch(deps) {
               continue;
             }
 
-            reportError(error, { state, silent, onGlobalError, logger, method, path, logPrefix: `API Error (${res.status})` });
+            reportError(error, { state, silent, onGlobalError, onUnauthorized, logger, method, path, logPrefix: `API Error (${res.status})` });
             if (throwOnError) throw error;
             return error;
           }
@@ -196,7 +164,9 @@ export function createApiFetch(deps) {
               await waitWithBackoff(attempt, delayBaseMs);
               continue;
             }
-            reportError(err, { state, silent, onGlobalError, logger, method, path, logPrefix: 'API Error' });
+            if (!err._reported) {
+              reportError(err, { state, silent, onGlobalError, onUnauthorized, logger, method, path, logPrefix: 'API Error' });
+            }
             if (throwOnError) throw err;
             return err;
           }
@@ -206,7 +176,7 @@ export function createApiFetch(deps) {
           if (isCommandCancel) {
             throw createNetworkError({ path, method, err, attempt, maxAttempts, retryable: false, type: 'cancelled' });
           }
-          const shouldRetry = !isParseError && attempt < maxAttempts;
+          const shouldRetry = SAFE_RETRY_METHODS.has(method) && !isParseError && attempt < maxAttempts;
           const error = createNetworkError({ path, method, err, attempt, maxAttempts, retryable: shouldRetry });
 
           if (shouldRetry) {
@@ -215,7 +185,7 @@ export function createApiFetch(deps) {
             continue;
           }
 
-          reportError(error, { state, silent, onGlobalError, logger, method, path, logPrefix: 'API Exception' });
+          reportError(error, { state, silent, onGlobalError, onUnauthorized, logger, method, path, logPrefix: 'API Exception' });
           if (throwOnError) throw error;
           return error;
         }
@@ -239,6 +209,30 @@ export function createApiFetch(deps) {
       if (onLatency) onLatency(duration);
       if (performanceService) performanceService.recordApiLatency(duration, path);
     }
+  }
+
+  // Collapse accidental double-submit clicks while a mutation is unresolved.
+  // The lock is intentionally per browser tab and released as soon as the
+  // request settles; it is not a server-side idempotency guarantee.
+  const mutationLocks = new Map();
+  function apiFetch(path, options = {}) {
+    const method = String(options?.method || 'GET').trim().toUpperCase() || 'GET';
+    if (SAFE_RETRY_METHODS.has(method)) {
+      return performApiFetch(path, options);
+    }
+
+    const body = options?.body;
+    const bodyKey = typeof body === 'string' ? body : '';
+    const explicitKey = String(options?.idempotencyKey || '').trim();
+    const key = explicitKey || `${method}:${path}:${bodyKey}`;
+    const existing = mutationLocks.get(key);
+    if (existing) return existing;
+
+    const request = performApiFetch(path, options).finally(() => {
+      if (mutationLocks.get(key) === request) mutationLocks.delete(key);
+    });
+    mutationLocks.set(key, request);
+    return request;
   }
 
   apiFetch.getLastError = () => state.lastApiError || null;

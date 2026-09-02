@@ -1,6 +1,6 @@
 'use strict';
-const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createSupabaseClient } = require('./createSupabaseClient');
 const { buildSystemMessage, createHttpError, maybeUuid, normalizeMaxUser, normalizeRoomSecret, normalizeRoomText, normalizeSessionKey, normalizeText, publicRoom, summarizeParticipantCounts, roomKeyForNo } = require('./ChatRoomRepositoryShared');
 const { ChatRoomMemberPersistence } = require('./ChatRoomMemberPersistence');
 const { ChatRoomRepositorySupabaseQueries } = require('./ChatRoomRepositorySupabaseQueries');
@@ -8,7 +8,7 @@ const { ChatRoomRepositorySupabaseQueries } = require('./ChatRoomRepositorySupab
 class SupabaseChatRoomRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'supabase' });
-    this.client = createClient(options.url, options.serviceRoleKey, { auth: { persistSession: false } });
+    this.client = createSupabaseClient(options);
     this.table = options.table || 'chat_rooms';
     this.membersTable = options.membersTable || 'chat_room_members';
     this.participantTtlMs = Number(options.participantTtlMs ?? 1000 * 60 * 60 * 6);

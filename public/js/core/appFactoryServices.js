@@ -73,11 +73,25 @@ export function createAppFactoryServices(deps) {
 
   const networkService = createNetworkService();
 
+  const handleAuthExpired = () => {
+    if (state.user?.isGuest !== false || state._authExpiryHandling) return;
+    state._authExpiryHandling = true;
+    state.token = '';
+    state.user = { userId: 'guest', nickName: '손님', level: 1, isAdmin: false, isGuest: true };
+    if (typeof window !== 'undefined' && window.location?.pathname !== '/log/login') {
+      window.location.assign('/log/login');
+    }
+  };
+
   const { apiFetch } = createApiFetch({
     state,
     logger,
     onActivity: (active) => terminalUiCore.setBusy(active),
-    onGlobalError: (error) => terminalUiCore.showToast(error.message, 3000, 'error'),
+    onGlobalError: (error) => {
+      terminalUiCore.showError(error.message);
+      terminalUiCore.showToast(error.message, 3000, 'error');
+    },
+    onUnauthorized: handleAuthExpired,
     onLatency: (ms) => statusManager.setLatency(ms)
   });
 

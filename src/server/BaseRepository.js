@@ -19,6 +19,7 @@ class BaseRepository {
       errors: 0,
       totalDurationMs: 0,
       lastError: null,
+      lastErrorClass: null,
       lastErrorTimestamp: null
     };
   }
@@ -60,11 +61,13 @@ class BaseRepository {
   _throwError(action, error, context = {}) {
     this.metrics.errors++;
     this.metrics.lastError = error?.message || 'Unknown error';
+    const classification = classifyRepositoryError(error);
+    this.metrics.lastErrorClass = classification.type;
     this.metrics.lastErrorTimestamp = new Date().toISOString();
 
     const message = error?.message || 'Unknown error';
     const code = error?.code;
-    const status = error?.status || 502;
+    const status = classification.status;
     
     if (this.logger && typeof this.logger.error === 'function') {
       this.logger.error(`[RepositoryError] ${action} failed: ${message}`, { 
@@ -76,7 +79,7 @@ class BaseRepository {
     }
 
     // If it's already an HTTP error with a status, just rethrow it
-    if (error?.status && error?.message) {
+    if (error?._isHttpError && error?.status && error?.message) {
       throw error;
     }
 
@@ -88,7 +91,7 @@ class BaseRepository {
       throw createHttpError(409, `${action} 중 중복된 데이터가 발견되었습니다.`);
     }
 
-    throw createHttpError(status, `${action} 중 오류가 발생했습니다: ${message}`);
+    throw createHttpError(status, classification.clientMessage(action));
   }
 
   /**
@@ -137,4 +140,39 @@ class BaseRepository {
   }
 }
 
+function classifyRepositoryError(error = {}) {
+  const status = Number(error?.status || error?.statusCode || 0);
+  const code = String(error?.code || '').toUpperCase();
+  const message = String(error?.message || '').toLowerCase();
+
+  if (code === 'SUPABASE_TIMEOUT' || error?.name === 'SupabaseTimeoutError') {
+    return {
+      type: 'timeout',
+      status: 504,
+      clientMessage: (action) => `${action} 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.`
+    };
+  }
+  if (status === 401) {
+    return { type: 'unauthorized', status: 401, clientMessage: (action) => `${action} 권한이 없습니다. 다시 로그인해 주세요.` };
+  }
+  if (status === 403) {
+    return { type: 'forbidden', status: 403, clientMessage: (action) => `${action} 권한이 없습니다.` };
+  }
+  if (status === 409 || code === '23505' || message.includes('duplicate key')) {
+    return { type: 'conflict', status: 409, clientMessage: (action) => `${action} 중복 요청이 감지되었습니다.` };
+  }
+  if (status === 429) {
+    return { type: 'rate-limit', status: 429, clientMessage: (action) => `${action} 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.` };
+  }
+  if (status === 408 || status === 425 || status === 500 || status === 502 || status === 503 || status === 504) {
+    return { type: 'upstream', status, clientMessage: (action) => `${action} 중 저장소 응답이 불안정합니다. 잠시 후 다시 시도해 주세요.` };
+  }
+  if (code === 'ECONNRESET' || code === 'ECONNREFUSED' || code === 'ETIMEDOUT'
+    || message.includes('fetch failed') || message.includes('network') || message.includes('socket')) {
+    return { type: 'network', status: 503, clientMessage: (action) => `${action} 중 데이터 통신망 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.` };
+  }
+  return { type: 'repository', status: status >= 400 ? status : 502, clientMessage: (action) => `${action} 중 오류가 발생했습니다.` };
+}
+
 module.exports = BaseRepository;
+module.exports.classifyRepositoryError = classifyRepositoryError;

@@ -8,6 +8,7 @@
   "scripts": {
     "test": "node scripts/run-unit-tests.js",
     "check:syntax": "node scripts/check-syntax.js",
+    "smoke:api-fetch": "node scripts/smoke-api-fetch.js",
     "smoke:security-boundaries": "node scripts/smoke-security-boundaries.js",
     "smoke:post-read-cache-hardening": "node scripts/smoke-post-read-cache-hardening.js",
     "smoke:prefetch-scheduler": "node scripts/smoke-prefetch-scheduler.js",
@@ -36,6 +37,7 @@
     "smoke:auth-privacy": "node scripts/smoke-auth-privacy.js",
     "smoke:password-recovery": "node scripts/smoke-password-recovery.js",
     "smoke:docs-contract": "node scripts/smoke-docs-contract.js",
+    "smoke:supabase-resilience": "node scripts/smoke-supabase-resilience.js",
     "migrate:sysop-password": "node scripts/migrate-legacy-sysop-password.js",
     "smoke:chat-counts": "node scripts/smoke-chat-counts.js",
     "smoke:chat-members-supabase": "node scripts/smoke-chat-members-supabase.js",

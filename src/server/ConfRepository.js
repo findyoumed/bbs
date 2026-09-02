@@ -8,6 +8,7 @@ const { hasSupabaseConfig, shouldUseSupabaseDriver } = require('./RepositoryDriv
 function createConfRepositoryFromEnv(env = {}) {
   if (shouldUseSupabaseDriver(env.BOARD_REPOSITORY_DRIVER, hasSupabaseConfig(env))) {
     return new SupabaseConfRepository({
+      env,
       url: env.SUPABASE_URL,
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY
     });

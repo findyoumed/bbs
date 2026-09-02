@@ -13,6 +13,7 @@ export class ApiError extends Error {
     this.type = info.type || 'unknown';
     this.path = info.path;
     this.method = info.method;
+    this.requestId = info.requestId || '';
     this.status = info.status || 0;
     this.payload = info.payload || null;
     this.attempt = info.attempt || 1;
@@ -33,6 +34,7 @@ export class ApiError extends Error {
       message: this.message,
       path: this.path,
       method: this.method,
+      requestId: this.requestId,
       status: this.status,
       payload: this.payload,
       attempt: this.attempt,
@@ -40,6 +42,65 @@ export class ApiError extends Error {
       retryable: this.retryable,
       timestamp: this.timestamp
     };
+  }
+}
+
+export function createServerError({ path, method, status, payload, requestId, attempt, maxAttempts, retryable }) {
+  return new ApiError({
+    path,
+    method,
+    requestId,
+    status: Number(status) || 0,
+    payload,
+    message: pickErrorMessage(payload, `서버 오류 ${status}`),
+    type: 'server',
+    attempt,
+    maxAttempts,
+    retryable
+  });
+}
+
+export function createNetworkError({ path, method, err, attempt, maxAttempts, retryable, type }) {
+  const isTimeout = err?._requestTimedOut === true || err?.message?.includes('timeout');
+  const isParseError = err?.name === 'ApiParseError';
+  return new ApiError({
+    path,
+    method,
+    payload: isParseError ? err.rawText || null : null,
+    message: isTimeout ? '요청 시간이 초과되었습니다.' : (err?.message || '네트워크 오류'),
+    type: type || (isTimeout ? 'timeout' : (isParseError ? 'parse' : 'network')),
+    attempt,
+    maxAttempts,
+    retryable
+  });
+}
+
+export async function fetchWithTimeout(path, requestOptions, timeout, externalSignal = null) {
+  let timeoutId = null;
+  let timedOut = false;
+  const controller = new AbortController();
+  const abortFromExternalSignal = () => controller.abort();
+  try {
+    if (externalSignal?.aborted) {
+      abortFromExternalSignal();
+    } else if (externalSignal && typeof externalSignal.addEventListener === 'function') {
+      externalSignal.addEventListener('abort', abortFromExternalSignal, { once: true });
+    }
+    if (timeout > 0) {
+      timeoutId = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, timeout);
+    }
+    return await fetch(path, { ...requestOptions, signal: controller.signal });
+  } catch (error) {
+    if (timedOut && error && typeof error === 'object') {
+      error._requestTimedOut = true;
+    }
+    throw error;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    externalSignal?.removeEventListener?.('abort', abortFromExternalSignal);
   }
 }
 
@@ -130,6 +191,10 @@ export function translateErrorMessage(error) {
   const status = error.status;
   if (status === 401) return '사용 권한이 없습니다. 로그인이 필요합니다.';
   if (status === 403) return '요청하신 작업에 대한 권한이 없습니다.';
+  if (status === 408 || status === 425 || status === 502 || status === 503 || status === 504) {
+    return '서비스 응답이 지연되었습니다. 잠시 후 다시 시도해 주세요.';
+  }
+  if (status === 409) return '요청이 이미 처리되었거나 충돌했습니다. 화면을 새로 확인해 주세요.';
   if (status === 404) return '요청하신 자료를 찾을 수 없습니다.';
   if (status === 429) return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
   if (status >= 500) return '시스템 내부 오류가 발생했습니다. (호스트 응답 없음)';

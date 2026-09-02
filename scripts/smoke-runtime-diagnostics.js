@@ -144,6 +144,8 @@ async function main() {
   ));
   assert(health.status === 'healthy', 'health probe should report a healthy runtime');
   assert(health.services?.database?.memberProbe === 'ok', 'health probe should include the member repository result');
+  assert(health.repositories && typeof health.repositories === 'object', 'health probe should include repository statuses');
+  assert(Number.isFinite(Number(health.repositories.member?.latencyMs)), 'health probe should include member latency');
 
   assert(systemInfo.requestedRepositoryMode === 'auto(memory)', 'system info should expose auto(memory) mode for partial config');
   assert(systemInfo.supabaseReady === false, 'system info should report supabaseReady=false for partial config');

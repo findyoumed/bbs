@@ -141,3 +141,10 @@
 - 데스크톱 전체 순회(`npm run smoke:full-traversal`)에서 콘솔 오류 없이 통과했으며, 입력 오류는 본문 인라인에 남고 하단 힌트는 보존되는지 확인했다.
 - 모바일 320/360/390/430px touch viewport에서 31개 라우트, TOP·혈액형·쪽지 터치, 작성 화면 Enter/Tab/Escape, 긴 한글·URL 줄바꿈을 검증했다(`npm run smoke:mobile`).
 - 이번 점검에서는 재현 가능한 UI 회귀가 발견되지 않아 런타임 코드는 변경하지 않았다. 이후 동일 흐름은 `npm run loop:verify`와 Production smoke로 재검증한다.
+## 2026-09-02 Supabase 장애 복원력 및 입력 안전성
+
+- Supabase 저장소 호출은 공통 fetch 래퍼에서 제한 시간(`SUPABASE_REQUEST_TIMEOUT_MS`)을 적용한다. 시간 초과는 504/`SUPABASE_TIMEOUT`, 네트워크·인증·권한·충돌·요청 제한·상위 서버 오류로 분류되어 사용자에게 안전한 안내만 노출된다.
+- GET/HEAD/OPTIONS 읽기 요청만 제한된 재시도를 허용한다. POST/PUT/PATCH/DELETE 변경 요청은 자동 재시도하지 않으며, 같은 탭에서 동일 변경 요청을 동시에 중복 제출하지 않도록 in-flight 잠금을 사용한다.
+- `/api/health`는 저장소별 상태와 지연 시간만 공개하고 원본 Supabase 오류 세부정보나 비밀값은 반환하지 않는다. 개별 점검도 별도 제한 시간 안에서 종료된다.
+- 브라우저 오류는 본문 전용 `#terminal-error` 행과 명령 힌트바를 분리한다. 전역 오류가 힌트를 덮어쓰지 않으며, 인증 만료(401)는 게스트 예외를 제외하고 로그인 화면으로 복귀한다.
+- `scripts/smoke-api-fetch.js`와 `scripts/smoke-supabase-resilience.js`가 재시도·타임아웃·오류 분류·동시 변경 잠금·health 제한을 fault-injection으로 검증한다. 전체 경로와 320/360/390/430px 모바일 스모크도 함께 실행한다.

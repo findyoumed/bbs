@@ -1,7 +1,7 @@
 'use strict';
 
-const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createSupabaseClient } = require('./createSupabaseClient');
 const { LEVEL_NAME_MAP } = require('./BoardRepositoryAccess');
 const { resolveBoardDefinitions } = require('./BoardDefinitionResolver');
 const readOps = require('./SupabaseBoardRepositoryReadOps');
@@ -25,9 +25,7 @@ class SupabaseBoardRepository extends BaseRepository {
       id: index + 1,
       ...board
     }));
-    this.client = createClient(options.url, options.serviceRoleKey, {
-      auth: { persistSession: false }
-    });
+    this.client = createSupabaseClient(options);
   }
 
   getMeta() {

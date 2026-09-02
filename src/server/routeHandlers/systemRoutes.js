@@ -38,14 +38,19 @@ class SystemRouter extends BaseRouter {
   }
 
   async health() {
-    const { boardRepository, memberRepository, authBridge, rssService } = this.deps;
+    const { boardRepository, memberRepository, authBridge, rssService, registry } = this.deps;
     // Checking only whether a repository object exists reports a false
     // healthy state when Supabase credentials are rejected at request time.
     // The member repository has a lightweight table probe implemented by both
     // memory and Supabase drivers, so use it as the database readiness signal.
-    let memberHealth = { status: memberRepository ? 'ok' : 'error' };
-    if (memberRepository && typeof memberRepository.checkHealth === 'function') {
+    const repositoryHealth = registry && typeof registry.checkAllHealth === 'function'
+      ? await registry.checkAllHealth()
+      : {};
+    let memberHealth = repositoryHealth.member || { status: memberRepository ? 'ok' : 'error' };
+    if (!repositoryHealth.member && memberRepository && typeof memberRepository.checkHealth === 'function') {
+      const startedAt = Date.now();
       memberHealth = await memberRepository.checkHealth();
+      memberHealth.latencyMs = Math.max(0, Date.now() - startedAt);
     }
     const isHealthy = Boolean(boardRepository && memberHealth.status === 'ok');
     
@@ -56,7 +61,10 @@ class SystemRouter extends BaseRouter {
           status: isHealthy ? 'connected' : 'disconnected',
           driver: boardRepository?.getMeta?.().driver || 'unknown',
           memberProbe: memberHealth.status,
-          ...(memberHealth.message ? { detail: memberHealth.message } : {})
+          memberProbeLatencyMs: Number(memberHealth.latencyMs || 0),
+          ...(memberHealth.status !== 'ok'
+            ? { errorClass: memberHealth.errorClass || 'unavailable', retryable: true }
+            : {})
         },
         auth: {
           status: authBridge ? 'active' : 'inactive',
@@ -66,6 +74,7 @@ class SystemRouter extends BaseRouter {
           status: rssService ? 'active' : 'inactive'
         }
       },
+      repositories: repositoryHealth,
       system: {
         uptime: Math.floor(os.uptime()),
         nodeVersion: process.version,

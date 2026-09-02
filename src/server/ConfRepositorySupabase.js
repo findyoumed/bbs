@@ -2,8 +2,8 @@
 
 // [LOG_ID: 20260719_1600] 토론의 광장(CONF) — Supabase 저장소. Memory 드라이버와 동일 의미.
 // 테이블: conf_rooms / conf_agendas / conf_seconds (supabase/migrations/0019_conf_system.sql).
-const { createClient } = require('@supabase/supabase-js');
 const BaseRepository = require('./BaseRepository');
+const { createSupabaseClient } = require('./createSupabaseClient');
 const { createHttpError, normalizeText } = require('./httpUtils');
 // [LOG_ID: 20260731_2200] normalizeText(httpUtils.normalizeText와 완전히 동일한 로직이었다)/normUserId
 // 로컬 복제를 ConfRepositoryShared.js로 통합 — 다른 도메인의 XRepositoryShared.js 관례를 따른다.
@@ -12,7 +12,7 @@ const { normUserId } = require('./ConfRepositoryShared');
 class SupabaseConfRepository extends BaseRepository {
   constructor(options = {}) {
     super({ ...options, driverName: 'supabase' });
-    this.client = createClient(options.url, options.serviceRoleKey, { auth: { persistSession: false } });
+    this.client = createSupabaseClient(options);
     this.roomsTable = options.roomsTable || 'conf_rooms';
     this.agendasTable = options.agendasTable || 'conf_agendas';
     this.secondsTable = options.secondsTable || 'conf_seconds';

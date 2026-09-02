@@ -107,6 +107,68 @@ async function main() {
       let callCount = 0;
       global.fetch = async () => {
         callCount += 1;
+        throw new Error('ambiguous write response');
+      };
+
+      const { apiFetch } = createApiFetch({ state });
+      try {
+        await apiFetch('/api/write-check-explicit', {
+          method: 'POST',
+          body: JSON.stringify({ title: 'test' }),
+          retry: true,
+          retryUnsafe: false,
+          retryDelayMs: 0
+        });
+      } catch {
+        // Expected: unsafe writes must not be repeated after an unknown outcome.
+      }
+      assert(callCount === 1, 'POST retry:true should remain suppressed unless retryUnsafe is explicitly enabled');
+    }
+
+    {
+      const state = { user: { userId: 'member-1', isGuest: false } };
+      let unauthorizedCalls = 0;
+      global.fetch = async () => makeResponse(401, { message: 'Internal Server Error' }, { 'content-type': 'application/json' });
+      const { apiFetch } = createApiFetch({
+        state,
+        onUnauthorized: () => { unauthorizedCalls += 1; }
+      });
+      try {
+        await apiFetch('/api/auth-expired', { silent: true });
+      } catch {
+        // Expected: 401 is surfaced while the auth-expiry hook runs first.
+      }
+      assert(unauthorizedCalls === 1, '401 should invoke the auth-expiry recovery hook even for silent requests');
+      assert(apiFetch.getLastError()?.message === '사용 권한이 없습니다. 로그인이 필요합니다.', 'generic 401 payload should use the safe client message');
+    }
+
+    {
+      const state = {};
+      let callCount = 0;
+      global.fetch = async () => {
+        callCount += 1;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return makeResponse(201, { id: 1 }, { 'content-type': 'application/json' });
+      };
+      const { apiFetch } = createApiFetch({ state });
+      const first = apiFetch('/api/mutation-lock', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'same payload' })
+      });
+      const second = apiFetch('/api/mutation-lock', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'same payload' })
+      });
+      const [firstResult, secondResult] = await Promise.all([first, second]);
+      assert(callCount === 1, 'concurrent identical mutations should share one in-flight request');
+      assert(firstResult?.id === 1 && secondResult?.id === 1, 'mutation lock should return the committed result to both callers');
+    }
+
+    {
+      const state = {};
+      let callCount = 0;
+      global.fetch = async () => {
+        callCount += 1;
         return makeResponse(503, { message: '점검 중입니다.' }, { 'content-type': 'application/json' });
       };
 
@@ -171,7 +233,7 @@ async function main() {
 
     console.log(JSON.stringify({
       ok: true,
-      scenarios: 5,
+      scenarios: 8,
       capturedErrorLogs: capturedErrors.length
     }, null, 2));
   } finally {

@@ -112,6 +112,7 @@ function createAppServices(rootDir, env = process.env) {
       cacheStore: rssCacheStore
     }),
     authBridge: new AuthBridge({
+      env,
       url: env.SUPABASE_URL,
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
       publishableKey: resolvePublishableKey(rootDir, env),

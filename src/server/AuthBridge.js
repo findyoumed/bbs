@@ -1,6 +1,7 @@
 'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
+const { createSupabaseClient } = require('./createSupabaseClient');
 const {
   buildManualRequestIdentity,
   normalizeRequestLevel,
@@ -102,7 +103,7 @@ class AuthBridge {
       memberRepository: this.memberRepository
     });
     this.client = this.url && options.serviceRoleKey
-      ? createClient(this.url, options.serviceRoleKey, { auth: { persistSession: false } })
+      ? createSupabaseClient(options)
       : null;
     this.recoveryClient = this.url && (this.publishableKey || options.serviceRoleKey)
       ? createClient(this.url, this.publishableKey || options.serviceRoleKey, {
