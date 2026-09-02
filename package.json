@@ -35,6 +35,7 @@
     "smoke:auth-bridge": "node scripts/smoke-auth-bridge.js",
     "smoke:auth-privacy": "node scripts/smoke-auth-privacy.js",
     "smoke:password-recovery": "node scripts/smoke-password-recovery.js",
+    "smoke:docs-contract": "node scripts/smoke-docs-contract.js",
     "migrate:sysop-password": "node scripts/migrate-legacy-sysop-password.js",
     "smoke:chat-counts": "node scripts/smoke-chat-counts.js",
     "smoke:chat-members-supabase": "node scripts/smoke-chat-members-supabase.js",

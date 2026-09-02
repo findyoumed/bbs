@@ -57,6 +57,8 @@
 4. 관련 smoke와 `npm run loop:verify`를 실행한다.
 5. Production 배포는 별도 승인 후 수행한다.
 
+문서 계약의 참조 파일과 핵심 검증 항목은 `npm run smoke:docs-contract`로 읽기 전용 점검한다.
+
 ## 근거 자료
 
 - `docs/PC통신_자료_학습카탈로그.md`

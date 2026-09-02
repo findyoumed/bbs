@@ -53,6 +53,7 @@ const CHECKS = [
   { name: 'auth-bridge', file: 'smoke-auth-bridge.js' },
   { name: 'auth-privacy', file: 'smoke-auth-privacy.js' },
   { name: 'password-recovery', file: 'smoke-password-recovery.js' },
+  { name: 'docs-contract', file: 'smoke-docs-contract.js' },
   { name: 'vercel-ready', file: 'smoke-vercel-ready.js' },
   { name: 'qa:final', file: 'final-qa-report.js' }
 ];
