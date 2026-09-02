@@ -139,7 +139,9 @@ export function bindAppEvents(deps) {
         return false;
       }
       cmdInput.value = text;
-      cmdInput.focus();
+      if (shouldAutoFocusCommandInput()) {
+        cmdInput.focus();
+      }
       moveCaretToEnd();
       if (typeof setGhostText === 'function') {
         setGhostText('');

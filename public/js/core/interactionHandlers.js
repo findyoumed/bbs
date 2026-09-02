@@ -63,9 +63,11 @@ export function createInteractionHandlers(deps) {
     }
 
     cmdInput.value = text;
-    // [LOG_ID: 20260723_2300] 이건 사용자가 직접 탭한 결과라, 화면 자동 전환 때 키보드 팝업을
-    // 막는 shouldAutoFocusCommandInput()의 일반 규칙과 무관하게 항상 포커스를 준다.
-    cmdInput.focus();
+    // [LOG_ID: 20260902_0610] Keep the desktop caret behavior, but honor the
+    // shared focus guard so a mobile prefill tap does not open the keyboard.
+    if (shouldAutoFocusCommandInput()) {
+      cmdInput.focus();
+    }
     if (typeof moveCaretToEnd === 'function') {
       moveCaretToEnd();
     }

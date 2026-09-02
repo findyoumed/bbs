@@ -23,7 +23,10 @@ function createRequestGuards(env = process.env) {
   // [LOG: 20260428_1600] Increase rate limit during tests to prevent 429 failures in CI/Smoke tests
   const isTest = (nodeEnv === 'test' || processNodeEnv === 'test');
   const isDev = (nodeEnv === 'development' || !nodeEnv); // 기본값 혹은 개발 모드
-  const rateLimitMax = (isTest || isDev) ? 1000 : (Number(env.RATE_LIMIT_MAX_REQUESTS) || 60);
+  const configuredRateLimitMax = Number(env.RATE_LIMIT_MAX_REQUESTS);
+  const rateLimitMax = configuredRateLimitMax > 0
+    ? configuredRateLimitMax
+    : ((isTest || isDev) ? 1000 : 60);
   const trustProxy = Boolean(env.VERCEL || env.TRUST_PROXY);
   const checkRateLimit = createRateLimiter({
     windowMs: rateLimitWindow,

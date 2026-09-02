@@ -2,6 +2,7 @@
  * commandFooterText.js
  * [LOG: 20260428_2002] Standardized command footer categories and screen mappings.
  */
+import { getCommandMeta } from './commandService.js';
 
 export const CMD_ORDER = {
   top: ['GO', 'LOGIN', 'PF', 'C:바탕색', 'H'], // [LOG: 20260609_1157] WHO(회원정보) 삭제, HI(내정보) 삭제
@@ -134,7 +135,7 @@ export const CMD_ORDER = {
   hangmanPlay: ['0:포기']
 };
 
-const SCREEN_TO_CATEGORY = {
+export const SCREEN_TO_CATEGORY = {
   main: 'top',
   'board-select': 'menu',
   help: 'help',
@@ -190,6 +191,78 @@ const SCREEN_TO_CATEGORY = {
   signup: 'authMenu'
 };
 
+function parseScreenActionToken(token) {
+  const raw = String(token || '').trim();
+  const separator = raw.indexOf(':');
+  const command = (separator >= 0 ? raw.slice(0, separator) : raw).trim().toUpperCase();
+  const label = separator >= 0 ? raw.slice(separator + 1).trim() : '';
+  const meta = getCommandMeta(command);
+  const activation = meta?.fill
+    ? 'fill'
+    : meta?.prefill
+      ? 'prefill'
+      : 'execute';
+  const binding = Object.freeze({
+    attribute: activation === 'fill'
+      ? 'data-cmd-fill'
+      : activation === 'prefill'
+        ? 'data-cmd-prefill'
+        : 'data-cmd',
+    value: activation === 'fill'
+      ? String(meta.fill)
+      : activation === 'prefill'
+        ? String(meta.cmdPrefill || `${command} `)
+        : command
+  });
+  return Object.freeze({
+    command,
+    label,
+    hintToken: raw,
+    meta: meta ? Object.freeze({ ...meta }) : null,
+    activation,
+    binding,
+    click: true,
+    keyboard: true
+  });
+}
+
+function buildScreenActionRegistry() {
+  const registry = {};
+  for (const [screen, category] of Object.entries(SCREEN_TO_CATEGORY)) {
+    const order = Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category] : [];
+    registry[screen] = Object.freeze({
+      screen,
+      category,
+      actions: Object.freeze(order.map(parseScreenActionToken)),
+      dynamic: screen === 'memo-list'
+    });
+  }
+  return Object.freeze(registry);
+}
+
+export const SCREEN_ACTION_REGISTRY = buildScreenActionRegistry();
+
+export function getScreenActionContract(screen) {
+  return SCREEN_ACTION_REGISTRY[String(screen || '').trim()] || null;
+}
+
+export function getScreenActions(screen) {
+  return getScreenActionContract(screen)?.actions.slice() || [];
+}
+
+export function getScreenAction(screen, command) {
+  const normalized = String(command || '').trim().toUpperCase();
+  if (!normalized) return null;
+  return getScreenActions(screen).find((action) => action.command === normalized) || null;
+}
+
+function getStaticCategoryOrder(category) {
+  const contract = Object.values(SCREEN_ACTION_REGISTRY).find((entry) => entry.category === category);
+  return contract
+    ? contract.actions.map((action) => action.hintToken)
+    : (Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category].slice() : []);
+}
+
 export function createCommandFooterTextUtils(deps) {
   const { state } = deps;
   // [LOG: 20260611_1524] Store prompts without trailing spaces; CSS owns the one-cell prompt gap.
@@ -206,7 +279,7 @@ export function createCommandFooterTextUtils(deps) {
   }
 
   function getCommandFooterText(category) {
-    let order = Array.isArray(CMD_ORDER[category]) ? CMD_ORDER[category] : [];
+    let order = getStaticCategoryOrder(category);
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     if (isMobile) {

@@ -42,9 +42,18 @@ const checks = [
   { path: '/api/auth/session', statuses: [200], label: 'anonymous session' },
   { path: '/memo', statuses: [200], label: 'memo shell' },
   { path: '/guide/tosysop', statuses: [200], label: 'sysop guide shell' },
-  { path: '/api/memos', statuses: [401], label: 'memo auth boundary' },
-  { path: '/api/memos/unread', statuses: [401], label: 'unread memo auth boundary' },
-  { path: '/api/members/stats', statuses: [401], label: 'member stats auth boundary' },
+  { path: '/api/memos', statuses: [401], label: 'memo auth boundary', safeResponse: true },
+  { path: '/api/memos/unread/count', statuses: [401], label: 'unread memo count auth boundary', safeResponse: true },
+  { path: '/api/memos/1/read', method: 'POST', body: '{}', statuses: [401], label: 'memo read auth boundary', safeResponse: true },
+  { path: '/api/memos/unread', statuses: [401, 404], label: 'legacy unread memo boundary', safeResponse: true },
+  { path: '/api/members', statuses: [401, 403], label: 'member directory admin boundary', safeResponse: true },
+  { path: '/api/members/absent', statuses: [401], label: 'member absence auth boundary', safeResponse: true },
+  { path: '/api/members/stats', statuses: [401], label: 'member stats auth boundary', safeResponse: true },
+  { path: '/api/boards/plaza/posts', method: 'POST', body: '{}', statuses: [401], label: 'post create auth boundary', safeResponse: true },
+  { path: '/api/contact-sysop', method: 'POST', body: '{}', statuses: [401], label: 'sysop contact auth boundary', safeResponse: true },
+  { path: '/api/chat/rooms', method: 'POST', body: '{}', statuses: [401], label: 'chat room create auth boundary', safeResponse: true },
+  { path: '/api/conf/rooms', method: 'POST', body: '{}', statuses: [401], label: 'conf room create auth boundary', safeResponse: true },
+  { path: '/api/votes', method: 'POST', body: '{}', statuses: [401], label: 'vote create auth boundary', safeResponse: true },
   { path: '/api/members/guest', statuses: [200], label: 'guest profile' },
   { path: '/api/members/search?nickName=__production_smoke_missing__&allowMissing=1', statuses: [200], label: 'member lookup' }
 ];
@@ -58,8 +67,10 @@ async function fetchWithTimeout(url, options = {}) {
       redirect: 'error',
       headers: {
         Accept: 'application/json,text/html;q=0.9',
+        ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(options.headers || {})
       },
+      ...(options.body !== undefined ? { body: options.body } : {}),
       signal: controller.signal
     });
     const body = await response.text();
@@ -75,7 +86,10 @@ async function main() {
   for (const check of checks) {
     const url = `${origin}${check.path}`;
     try {
-      const result = await fetchWithTimeout(url);
+      const result = await fetchWithTimeout(url, {
+        method: check.method,
+        body: check.body
+      });
       const ok = check.statuses.includes(result.status);
       console.log(`  ${ok ? '✓' : '✗'} ${check.label}: ${result.status} ${check.path}`);
       if (!ok) {
@@ -87,6 +101,9 @@ async function main() {
           // Keep the status-only failure when the response is not JSON.
         }
         failures.push(`${check.label} expected ${check.statuses.join('/')} but received ${result.status}${detail ? ` (${detail})` : ''}`);
+      }
+      if (check.safeResponse && /(service[_ -]?role|postgres(?:ql)?:\/\/|unregistered api key|supabase\.co|stack\s*:\s*error)/i.test(result.body)) {
+        failures.push(`${check.label} exposed an upstream/database detail in its client response`);
       }
       if (!result.body.trim()) failures.push(`${check.label} returned an empty body`);
       for (const header of check.requiredHeaders || []) {

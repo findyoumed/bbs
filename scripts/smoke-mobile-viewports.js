@@ -30,12 +30,21 @@ async function waitForServer(port = 3199, timeoutMs = 15000) {
 
 async function runMobileSmokeTests() {
   console.log('🚀 [Mobile Smoke] Starting local test server on port 3199...');
-  const env = { ...process.env, PORT: '3199', NODE_ENV: 'test' };
+  const env = {
+    ...process.env,
+    PORT: '3199',
+    NODE_ENV: 'test',
+    // Seven viewports reload the same API-backed routes in one run. Keep the
+    // test-only bucket from masking layout results with local 429 responses.
+    RATE_LIMIT_MAX_REQUESTS: '10000'
+  };
   const serverProcess = spawn('node', ['server.js'], {
     cwd: path.resolve(__dirname, '..'),
     env,
     stdio: 'ignore'
   });
+
+  let browser = null;
 
   try {
     await waitForServer(3199);
@@ -50,7 +59,7 @@ async function runMobileSmokeTests() {
     if (fs.existsSync(customPath)) {
       launchOptions.executablePath = customPath;
     }
-    const browser = await chromium.launch(launchOptions);
+    browser = await chromium.launch(launchOptions);
 
     // [LOG_ID: 20260725_2200] 뷰포트 1개(iPhone 390x844)만 검사하면 그보다 좁은 실기기(작은
     // 안드로이드)에서만 나타나는 가로 오버플로우를 놓친다 — 폭이 다른 뷰포트 2개를 함께 돈다.
@@ -183,8 +192,6 @@ async function runMobileSmokeTests() {
       for (const route of routesToTest) {
         process.stdout.write(`  Testing ${route.name} (${route.path}) ... `);
         await page.goto(route.path, { waitUntil: 'domcontentloaded' });
-        await page.waitForTimeout(300);
-
         // 모바일 컨테이너 존재 및 가로 폭 오버플로우 체크
         const container = await page.$('#terminal-container');
         if (!container) {
@@ -518,16 +525,17 @@ async function runMobileSmokeTests() {
       await context.close();
     }
 
-    await browser.close();
-
     if (errors.length > 0) {
       console.error(`\n❌ [Mobile Smoke] Failed with ${errors.length} error(s)!`);
-      process.exit(1);
+      throw new Error(`Mobile smoke failed with ${errors.length} error(s)`);
     } else {
       console.log('\n🎉 [Mobile Smoke] ALL MOBILE ROUTES PASSED WITH 0 ERRORS!');
     }
 
   } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
     serverProcess.kill();
   }
 }

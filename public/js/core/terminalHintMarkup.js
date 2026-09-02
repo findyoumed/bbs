@@ -1,11 +1,34 @@
-import { CMD_META } from './commandService.js';
+import { getCommandMeta } from './commandService.js';
+import { getScreenAction } from './screenActionRegistry.js';
 
 export function createTerminalHintMarkup(deps) {
   const { state, esc } = deps;
 
+  function resolveActionBinding(cmd) {
+    const action = getScreenAction(state?.screen, cmd);
+    if (action?.binding) {
+      return action.binding;
+    }
+
+    const normalizedCmd = String(cmd || '').trim().toUpperCase();
+    const meta = getCommandMeta(normalizedCmd) || {};
+    if (meta.fill) {
+      return { attribute: 'data-cmd-fill', value: String(meta.fill) };
+    }
+    if (meta.prefill) {
+      return { attribute: 'data-cmd-prefill', value: String(meta.cmdPrefill || `${normalizedCmd} `) };
+    }
+    return { attribute: 'data-cmd', value: normalizedCmd };
+  }
+
+  function renderActionAttribute(cmd) {
+    const binding = resolveActionBinding(cmd);
+    return `${binding.attribute}="${esc(binding.value)}"`;
+  }
+
   function resolveCommandLabel(cmd, labelOverride = '') {
     const normalizedCmd = String(cmd || '').trim().toUpperCase();
-    return String(labelOverride || CMD_META[normalizedCmd]?.label || normalizedCmd).trim();
+    return String(labelOverride || getCommandMeta(normalizedCmd)?.label || normalizedCmd).trim();
   }
 
   function buildCommandToken(cmd, labelOverride = '') {
@@ -14,7 +37,7 @@ export function createTerminalHintMarkup(deps) {
       return '';
     }
 
-    const meta = CMD_META[normalizedCmd] || {};
+    const meta = getCommandMeta(normalizedCmd) || {};
     const label = String(labelOverride || meta.label || normalizedCmd).trim();
     const defaultLabel = String(meta.label || normalizedCmd).trim();
     const tip = String(
@@ -24,11 +47,7 @@ export function createTerminalHintMarkup(deps) {
     ).trim();
     // [LOG_ID: 20260723_2300] prefill(예: GO)은 클릭 즉시 실행하지 않고 입력줄에 "CMD "만 채워
     // 사용자가 이어서 인자를 타이핑하게 한다 — fill(즉시 실행)과는 다른 별도 속성.
-    const dataAttr = meta.fill
-      ? `data-cmd-fill="${esc(meta.fill)}"`
-      : meta.prefill
-        ? `data-cmd-prefill="${esc(normalizedCmd)} "`
-        : `data-cmd="${esc(normalizedCmd)}"`;
+    const dataAttr = renderActionAttribute(normalizedCmd);
     // [LOG: 20260622_1900] 푸터 토큰 표기는 '라벨(CMD)' 괄호 형식으로 통일(기존 대다수 화면의 표기와 동일).
     const tokenText = normalizedCmd === label.toUpperCase()
       ? esc(label)
@@ -42,22 +61,18 @@ export function createTerminalHintMarkup(deps) {
     const normalizedCmd = String(cmd || '').trim().toUpperCase();
     const visibleLabel = String(label || '').trim();
     if (!normalizedCmd || !visibleLabel) return '';
-    return `<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(visibleLabel)}" data-tip="${esc(visibleLabel)}" data-cmd="${esc(normalizedCmd)}">${esc(visibleLabel)}</span>`;
+    return `<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(visibleLabel)}" data-tip="${esc(visibleLabel)}" ${renderActionAttribute(normalizedCmd)}>${esc(visibleLabel)}</span>`;
   }
 
   function buildParenCommandToken(labelOverride, cmd) {
     const normalizedCmd = String(cmd || '').trim().toUpperCase();
     const label = String(labelOverride || '').trim();
-    if (!normalizedCmd || !label || !CMD_META[normalizedCmd]) {
+    if (!normalizedCmd || !label || !getCommandMeta(normalizedCmd)) {
       return '';
     }
 
-    const meta = CMD_META[normalizedCmd] || {};
-    const dataAttr = meta.fill
-      ? `data-cmd-fill="${esc(meta.fill)}"`
-      : meta.prefill
-        ? `data-cmd-prefill="${esc(normalizedCmd)} "`
-        : `data-cmd="${esc(normalizedCmd)}"`;
+    const meta = getCommandMeta(normalizedCmd) || {};
+    const dataAttr = renderActionAttribute(normalizedCmd);
     const tip = String(meta.tip || `${label}[${normalizedCmd}]`).trim();
 
     return `<span class="cmd-token cmd-clickable" role="button" tabindex="0" aria-label="${esc(tip)}" data-tip="${esc(tip)}" ${dataAttr}>${esc(label)}(${esc(normalizedCmd)})</span>`;
@@ -73,7 +88,7 @@ export function createTerminalHintMarkup(deps) {
 
   function getCommandPriority(cmd) {
     const normalizedCmd = String(cmd || '').trim().toUpperCase();
-    return Number(CMD_META[normalizedCmd]?.priority ?? 50);
+    return Number(getCommandMeta(normalizedCmd)?.priority ?? 50);
   }
 
   function buildCommandEntry(cmd, labelOverride = '') {
@@ -204,8 +219,8 @@ export function createTerminalHintMarkup(deps) {
     if (normalizedCmd === 'H' && state.screen === 'help') return false;
     if (['LOGIN', 'LOG'].includes(normalizedCmd) && !state.user?.isGuest) return false;
 
-    const meta = CMD_META[normalizedCmd];
-    if (meta?.login && state.user?.isGuest && !usesCustomLabel) return false;
+    const meta = getCommandMeta(normalizedCmd);
+    if (meta?.login && state.user?.isGuest && !usesCustomLabel && !meta.contextOnly) return false;
 
     if ((resolvedLabel === '이전글' || resolvedLabel === '다음글') && state.screen !== 'post-view') return false;
 

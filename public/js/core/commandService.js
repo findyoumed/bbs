@@ -159,6 +159,28 @@ export const CMD_META = {
   // [LOG_ID: 20260729_1708] 사용자 요청으로 SET, UNSET, ENV 명령어 제거
 };
 
+// Screen-local actions are intentionally kept out of CMD_META so they do not
+// appear in global help/autocomplete. They still need metadata when a footer
+// renders them as keyboard- and mouse-accessible tokens.
+const contextMeta = (meta) => ({ ...meta, contextOnly: true });
+export const CONTEXT_CMD_META = Object.freeze({
+  I: contextMeta({ label: '받은편지', tip: 'I (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '받은편지함으로 이동합니다.' }),
+  S: contextMeta({ label: '보낸편지', tip: 'S (쪽지함 전용)', login: true, priority: 18, cat: 'MEMO', desc: '보낸편지함으로 이동합니다.' }),
+  SEND: contextMeta({ label: '전송', tip: 'SEND, Ctrl+S', login: true, priority: 32, cat: 'MEMO', desc: '현재 입력 내용을 전송합니다.' }),
+  CHANGE: contextMeta({ label: '변경', tip: 'CHANGE, Enter', login: true, priority: 32, cat: 'AUTH', desc: '현재 입력 내용을 저장하고 변경합니다.' }),
+  ENTER: contextMeta({ label: '확인', tip: 'ENTER', login: true, priority: 32, cat: 'SYS', desc: '현재 입력을 확인하고 다음 단계로 이동합니다.' }),
+  CP: contextMeta({ label: '복사', tip: 'CP', priority: 20, cat: 'SYS', desc: '현재 시스템 로그를 복사합니다.' }),
+  0: contextMeta({ label: '게임끝내기', tip: '0', priority: 1, cat: 'GAME', desc: '현재 행맨 게임을 포기하고 나갑니다.' }),
+  '/L': contextMeta({ label: '목록', tip: '/L', login: true, priority: 20, cat: 'CHAT', desc: '대화방 목록으로 돌아갑니다.' }),
+  '/W': contextMeta({ label: '참여자', tip: '/W', login: true, priority: 20, cat: 'CHAT', desc: '현재 대화방 참여자를 확인합니다.' }),
+  '/Z': contextMeta({ label: '다시보기', tip: '/Z [N]', login: true, priority: 20, cat: 'CHAT', desc: '현재 대화방의 지난 메시지를 다시 봅니다.' })
+});
+
+export function getCommandMeta(cmd) {
+  const normalized = String(cmd || '').trim().toUpperCase();
+  return CMD_META[normalized] || CONTEXT_CMD_META[normalized] || null;
+}
+
 // [LOG_ID: 20260805_1054] 명령 메타데이터는 초기화 후 변경되지 않으므로 같은 접두어의
 // 자동완성 결과를 매 입력 이벤트마다 다시 필터·정렬하지 않도록 제한된 캐시를 사용한다.
 const commandMatchCache = new Map();
@@ -236,9 +258,11 @@ export function createCommandService(deps = {}) {
 
   return {
     CMD_META,
+    CONTEXT_CMD_META,
     getCommandMatches,
     getBestMatch,
     getCommandDesc,
+    getCommandMeta,
     isValidCommand,
     isCommandAvailable
   };
