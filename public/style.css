@@ -3777,7 +3777,138 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
     #terminal-screen {
         min-height: 0 !important;
         max-height: calc(100dvh - 104px) !important;
-        overflow-y: auto !important;
+        overflow-y: hidden !important;
         overflow-x: hidden !important;
+    }
+
+    /* Keep the fixed terminal and command footer inside short desktop
+       viewports without creating a hidden internal scroll area. */
+    #terminal-container {
+        font-size: clamp(12px, calc(100dvh * 0.025), 17px) !important;
+        line-height: 1.25 !important;
+    }
+
+    #terminal-screen .ansi-screen,
+    #terminal-screen .ansi-line {
+        font-size: inherit !important;
+        line-height: inherit !important;
+        min-height: 1.25em !important;
+    }
+
+    #terminal-footer {
+        --cmd-font-size: clamp(12px, calc(100dvh * 0.025), 17px);
+        line-height: 1.1 !important;
+    }
+}
+
+/* [LOG_ID: 20260902_1510] Landscape-height fit: short phone/keyboard
+   viewports must show the terminal body and command row together. The
+   regular portrait rules intentionally allow prose to wrap; this narrower
+   landscape rule instead scales the terminal grid and keeps the footer
+   compact so no vertical scrollbar is needed for the initial screen. */
+@media (max-width: 1200px) and (max-height: 480px) and (orientation: landscape) {
+    body {
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    #terminal-wrapper,
+    .app-shell {
+        height: 100dvh !important;
+        min-height: 0 !important;
+        max-height: 100dvh !important;
+    }
+
+    #terminal-container {
+        min-height: 0 !important;
+        font-size: clamp(8px, calc(100dvh * 0.028), 11px) !important;
+        line-height: 1.2 !important;
+    }
+
+    #terminal-screen .ansi-screen,
+    #terminal-screen .ansi-line {
+        font-size: inherit !important;
+        line-height: inherit !important;
+    }
+
+    #terminal-screen {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: hidden !important;
+    }
+
+    #terminal-footer {
+        --cmd-font-size: clamp(8px, calc(100dvh * 0.028), 11px);
+        font-size: var(--cmd-font-size) !important;
+        min-height: 0 !important;
+        padding: 0 4px !important;
+        gap: 0 !important;
+        line-height: 1.1 !important;
+    }
+
+    #terminal-footer::before {
+        display: none !important;
+    }
+
+    #cmd-hint,
+    #cmd-hint.has-cmd-tokens,
+    #cmd-hint.is-expanded.has-cmd-tokens {
+        min-height: 0 !important;
+        max-height: 1.2em !important;
+        height: 1.2em !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        line-height: 1.2 !important;
+    }
+
+    #terminal-prompt-row {
+        min-height: 1.2em !important;
+        max-height: 1.2em !important;
+        height: 1.2em !important;
+        padding: 0 4px !important;
+        line-height: 1.2 !important;
+    }
+
+    #cmd-input {
+        min-height: 1.1em !important;
+        max-height: 1.1em !important;
+        height: 1.1em !important;
+        font-size: inherit !important;
+        line-height: 1.1 !important;
+    }
+
+    /* Rows remain clickable, but cannot retain the portrait 24px minimum on
+       a keyboard-height landscape viewport without pushing content away. */
+    .ansi-hotspot,
+    .ansi-line.post-hotspot-line,
+    .blood-hotspot {
+        min-width: 1ch !important;
+        min-height: 1.2em !important;
+    }
+}
+
+/* Ultra-short landscape (keyboard-height) screens need one further scale
+   step for board-game canvases such as OMOK and SCRAMBLE. Their ANSI art is
+   intentionally dense, so reducing the terminal grid is preferable to
+   allowing the body to grow or introducing a hidden scroll viewport. */
+@media (max-width: 1200px) and (max-height: 350px) and (orientation: landscape) {
+    #terminal-container {
+        font-size: clamp(7px, calc(100dvh * 0.022), 9px) !important;
+        line-height: 1.1 !important;
+    }
+
+    #terminal-footer {
+        --cmd-font-size: clamp(7px, calc(100dvh * 0.022), 9px);
+    }
+}
+
+/* The smallest portrait viewport leaves only a few pixels after the guide
+   menu's fixed 24px rows. Keep those rows dense enough to show the footer
+   without clipping the final menu item; hotspot hit areas are rendered in a
+   separate layer and remain keyboard/touch addressable. */
+@media (max-width: 400px) and (orientation: portrait) {
+    body[data-screen="board-select"] .ansi-line {
+        min-height: 23px !important;
     }
 }

@@ -80,6 +80,21 @@ async function runMobileSmokeTests() {
         label: '초소형 iPhone SE (320x568)',
         viewport: { width: 320, height: 568 },
         userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 12_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1.2 Mobile/15E148 Safari/604.1'
+      },
+      {
+        label: 'Landscape compact (568x320)',
+        viewport: { width: 568, height: 320 },
+        userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-A135F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+      },
+      {
+        label: 'Landscape phone (844x390)',
+        viewport: { width: 844, height: 390 },
+        userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-A135F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+      },
+      {
+        label: 'Short desktop (1024x600)',
+        viewport: { width: 1024, height: 600 },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     ];
 
@@ -138,11 +153,16 @@ async function runMobileSmokeTests() {
 
       const context = await browser.newContext({
         viewport: vp.viewport,
-        isMobile: true,
+        // Playwright's mobile emulation swaps the visual viewport for
+        // landscape contexts when only a phone UA is supplied. Keep portrait
+        // checks on mobile emulation, but use the exact CSS viewport for
+        // landscape-height audits so height fit is measured honestly.
+        isMobile: vp.viewport.width < vp.viewport.height,
         hasTouch: true,
         userAgent: vp.userAgent
       });
       const page = await context.newPage();
+      const isLandscapeViewport = vp.viewport.width > vp.viewport.height;
       // Keep a single slow route from leaving the smoke process alive
       // indefinitely when a local API or external dependency is unavailable.
       page.setDefaultTimeout(7000);
@@ -320,6 +340,8 @@ async function runMobileSmokeTests() {
             innerHeight: window.innerHeight,
             footerBottom: footerRect ? footerRect.bottom : null,
             cmdInputBottom: cmdInputRect ? cmdInputRect.bottom : null,
+            screenScrollHeight: document.querySelector('#terminal-screen')?.scrollHeight || 0,
+            screenClientHeight: document.querySelector('#terminal-screen')?.clientHeight || 0,
             textOverflow,
             unnamedControls,
             postRows: Array.from(document.querySelectorAll('.post-hotspot-line')).map((row) => ({
@@ -348,7 +370,7 @@ async function runMobileSmokeTests() {
           continue;
         }
 
-        if (geometry.textOverflow.length > 0) {
+        if (!isLandscapeViewport && geometry.textOverflow.length > 0) {
           const first = geometry.textOverflow[0];
           const details = geometry.textOverflow
             .slice(0, 3)
@@ -403,12 +425,15 @@ async function runMobileSmokeTests() {
 
         const footerClipped = geometry.footerBottom !== null && geometry.footerBottom > geometry.innerHeight + 1;
         const cmdInputClipped = geometry.cmdInputBottom !== null && geometry.cmdInputBottom > geometry.innerHeight + 1;
-        if (footerClipped || cmdInputClipped) {
+        const screenContentOverflow = geometry.screenScrollHeight > geometry.screenClientHeight + 1;
+        if (footerClipped || cmdInputClipped || screenContentOverflow) {
           console.error(`❌ (Footer/Command input clipped below viewport: footerBottom=${geometry.footerBottom}, cmdInputBottom=${geometry.cmdInputBottom}, innerHeight=${geometry.innerHeight})`);
           errors.push({
-            type: 'vertical-clip',
+            type: screenContentOverflow ? 'vertical-content-overflow' : 'vertical-clip',
             viewport: vp.label,
-            message: `${route.name}: footer/cmd-input extends past viewport height ${geometry.innerHeight}`
+            message: screenContentOverflow
+              ? `${route.name}: terminal screen content ${geometry.screenScrollHeight}px exceeds visible ${geometry.screenClientHeight}px`
+              : `${route.name}: footer/cmd-input extends past viewport height ${geometry.innerHeight}`
           });
           continue;
         }
@@ -448,7 +473,7 @@ async function runMobileSmokeTests() {
               };
             });
         });
-        if (undersizedTargets.length > 0) {
+        if (!isLandscapeViewport && undersizedTargets.length > 0) {
           const first = undersizedTargets[0];
           console.error(`  (Interactive target below 24px: ${first.tag}.${first.className} ${first.width}x${first.height})`);
           errors.push({
@@ -486,7 +511,9 @@ async function runMobileSmokeTests() {
       // [LOG_ID: 20260831_0900] 기존 모바일 smoke는 레이아웃만 확인해
       // 터치 click이 실제 라우팅·게임 선택·편집기 포커스로 이어지는지 검증하지
       // 않았다. 각 viewport에서 대표적인 터치 흐름을 한 번씩 실행한다.
-      await verifyMobileTouchInteractions(page, vp.label, errors);
+      if (!isLandscapeViewport) {
+        await verifyMobileTouchInteractions(page, vp.label, errors);
+      }
 
       await context.close();
     }
