@@ -1,0 +1,62 @@
+1
+cls
+write   îwØ•∑Å ∑°üq∑e?>>
+input s1
+cls
+writeln Ãa∂° «iúÛ                                         (∏·) ≠•ë©∑°
+writeln -------------------------------------------------------------
+writeln Ãa∂°«iúÛ∑Å ºw∑• [s1]∑e/ìe ¥·ìaêi îiÃó∑° Ãaù°¶Å»· ï°∏Â∏w∑i §hìe
+writeln îa.
+writeln ãaìe ¶Å–a∑• √©õb∑°,ÆÅ≠A£°üi ïAùaàaª°†e îa≥aú·ª°â° îiÃó∑°µ¡ îw    
+writeln Ø•†e ¨i¥aêqìeîa.
+writeln ãañâ∑e åwÃÅói∑Å °w≠°∑• 'àó∂b'∑i ¿aª°–aã°∂·–Å âi Åüi –eîa.....
+writeln â¡µe íÅàa ∑°ã©àı∑•àa?
+writeln -------------------------------------------------------------
+write   µE»·üi íÅüa≠A∂a.
+readkey
+2
+writeln Power club action game
+wirteln --------------------------------------------------------------
+writeln ‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä
+writeln ‘ÄCOMMAND LINE                    ‘Ä
+writeln ‘Ä1>Ãa∂°«iúÛ â∑∑•ÃÂ√° 3>â∑ÆÅï°    ‘Ä
+writeln ‘Ä2>§a∑°ú·Øa «¢       4>ãs≠°√°ã°  ‘Ä
+writeln ‘Ä5>Ãa∂°«iúÛ â∑∑•«¢   6>ãb–eüAâ∑ÆÅ‘Ä
+writeln ‘Ä7>ßaùA∑• Øa…A£°ê·   8>êeï°ª©    ‘Ä
+writeln ‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä‘Ä
+writeln âb Å —¡°e 
+writeln €£€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€§
+writeln €¢[s1]                        îiÃó∑°              €¢
+writeln €¶€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€•
+writeln [s1]∑Å †i≥q : ñ·ª©úÅ?                      
+writeln -------------------------------------------------------------  
+write   [s1]ì±,°wùw∑i.>> 
+input s1
+if s1==1 then goto 3
+if s1==2 then goto 3
+if s1==3 then goto 3
+if s1==4 then goto 3
+if s1==5 then goto 3
+if s1==6 then goto 3
+if s1==7 then goto 3
+else goto 2
+3
+random 12
+if i0>=5 then goto 5
+else goto 4
+4
+delay 1000
+writeln [s1]:∂Å∂Å∂Å∂Å∂Å∂Å∂Å∂Å∂Å∂Å∂Å∂Å∂Å~~~~~~∂Ç!
+writeln îwØ•∑e ÃÅ§Å–ñØsì°îa.
+write   ¥eëw”° àa≠A∂a.
+readkey
+stop
+5 
+delay 400
+writeln ®·§·§·§·§·§·§·§·§·§·§·§·§·§·§·§·§·§·§·§·§·§·~~~~~!
+writeln ®‚~~~~~~!
+writeln îiÃó∑°:∑a¥b~~~~!
+writeln îwØ•∑e Øwü°–ñØsì°îa.
+write   ¥eëw”° âÅ≠A∂a.
+readkey
+stop

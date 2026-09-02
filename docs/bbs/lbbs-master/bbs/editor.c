@@ -1,0 +1,361 @@
+/*
+ * LBBS -- The Lightweight Bulletin Board System
+ *
+ * Copyright (C) 2023, Naveen Albert
+ *
+ * Naveen Albert <bbs@phreaknet.org>
+ *
+ * This program is free software, distributed under the terms of
+ * the GNU General Public License Version 2. See the LICENSE file
+ * at the top of the source tree.
+ */
+
+/*! \file
+ *
+ * \brief Terminal editor: editor, paging, navigation, etc.
+ *
+ * \author Naveen Albert <bbs@phreaknet.org>
+ */
+
+#include "include/bbs.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h> /* use isspace (for rtrim) */
+#include <math.h>
+
+#include "include/node.h"
+#include "include/term.h"
+#include "include/editor.h"
+#include "include/utils.h" /* use bbs_str_count */
+
+int bbs_line_editor(struct bbs_node *node, const char *restrict instr, char *restrict buf, size_t len)
+{
+	char *tmp, *ptr = buf;
+	int otherdata = 0, nlflag = 0;
+
+	bbs_node_clear_screen(node);
+	bbs_node_writef(node, "%s%s LINE EDITOR - %sENTER 2x to process/abort%s\n", COLOR(COLOR_PRIMARY), BBS_SHORTNAME, COLOR(COLOR_SECONDARY), COLOR_RESET);
+	if (instr) {
+		bbs_node_writef(node, "%s%s%s\n", COLOR(TERM_COLOR_WHITE), instr, COLOR_RESET);
+	}
+
+	for (;;) {
+		int c;
+		bbs_node_buffer(node);
+		/* Read until we get 2 newlines */
+		for (;;) {
+			size_t res = (size_t) bbs_node_read_line(node, MIN_MS(5), ptr, len);
+			if (res <= 0) {
+				return -1;
+			}
+			res = strlen(ptr); /* Use length of string, not raw bytes of input read */
+			if (res == 0) {
+				nlflag++;
+			} else {
+				nlflag = 0;
+				otherdata++;
+			}
+			ptr += res;
+			len -= res;
+			if (len <= 2) { /* Room for LF and NUL */
+				/* Truncation */
+				bbs_node_writef(node, "%sBuffer is full, aborting%s\n", COLOR(TERM_COLOR_RED), COLOR_RESET);
+				NEG_RETURN(bbs_node_wait_key(node, MIN_MS(2)));
+				return 0;
+			}
+			*ptr = '\n';
+			ptr += 1;
+			len -= 1;
+			*ptr = '\0';
+			/* In most cases, users will finish typing a sentence and hit ENTER.
+			 * i.e. Every readline ends in a LF.
+			 * However, we only care about cases where all we got was an ENTER, and that was it.
+			 * The edge case is if the user presses ENTER immediately, without typing anything else.
+			 * In this case, one fewer ENTER will be required, and the editor would quit after only one ENTER.
+			 * To prevent this, we only abort when nlflag is 1, if the user has previously input other data.
+			 */
+			if (nlflag == 2 || (nlflag == 1 && otherdata)) {
+				break;
+			}
+		}
+		/* This loop should run nflag + 1 times */
+		do {
+			/* Rewind the buffer slightly, null terminating the extra newline */
+			*ptr-- = '\0';
+			len++;
+		} while (nlflag--);
+		bbs_debug(3, "Line editing finished: %s\n", buf);
+		bbs_node_writef(node, "%sProcess? [YNC]%s\n", COLOR(TERM_COLOR_RED), COLOR_RESET);
+		bbs_node_unbuffer(node);
+		c = bbs_node_tread(node, MIN_MS(1));
+		if (c <= 0) {
+			return -1; /* if tpoll/tread return 0, we return -1 */
+		} else if (tolower(c) == 'y') {
+			break;
+		} else if (tolower(c) != 'c') {
+			bbs_node_writef(node, "%sAborted%s\n", COLOR(TERM_COLOR_RED), COLOR_RESET);
+			return 1;
+		}
+		ptr = strchr(buf, '\0'); /* Since we called rtrim, find the end of the buffer so far as we're concerned. */
+		/* len will be smaller than it really is now, which is fine (as long as it's not bigger) */
+	}
+
+	tmp = buf; /* rtrim wants a pointer */
+	rtrim(tmp); /* Trim all trailing whitespace */
+	return 0;
+}
+
+/* #define DEBUG_PAGING */
+
+#define PAGE_COLS(node) (node->cols ? node->cols : 80)
+#define PAGE_ROWS(node) (node->rows ? node->rows : 24)
+
+/*!
+ * \internal
+ * \brief Wait for input from the user to continue paging
+ * \param node
+ * \param pginfo
+ * \param ms
+ * \param s
+ * \param eff_height
+ * \retval -1 error occured, abort
+ * \retval 0 Return to the application to continue paging
+ * \retval 1 Timeout occured (return)
+ * \retval 2 User quit paging (return)
+ */
+static int page_wait_for_input(struct bbs_node *node, struct pager_info *pginfo, int ms, const char *restrict s, unsigned int eff_height)
+{
+	for (;;) {
+		ssize_t res;
+		char buf[5];
+
+		NEG_RETURN(bbs_node_writef(node, s ? ":" : "EOF:")); /* Input prompt */
+		res = bbs_node_poll_read(node, ms, buf, 5); /* Any key shouldn't be more than 5 characters (some keys involve escape sequences) */
+		if (res >= 0) {
+			NEG_RETURN(bbs_node_writef(node, "\r")); /* Overwrite : */
+			/* If the next line is just a newline, then we won't actually end up "deleting" the : in this manner.
+			 * To workaround that, we could write "\r \r" which would space over the : and then go back to the beginning of the line again.
+			 * However, to be more efficient, since most lines won't be empty, we can simply detect empty lines and do this only then.
+			 */
+		}
+		if (res < 0) {
+			return -1;
+		} else if (!res) {
+			return 1; /* Timeout */
+		}
+		/* These options are similar to those used by more(1) and less(1) */
+		switch (buf[0]) {
+			case '\n': /* ENTER = 1 more line */
+				pginfo->want++;
+				break;
+			case ' ': /* SPACE = 1 entire page */
+				pginfo->want += eff_height;
+				break;
+			case 'q': /* Quit */
+			case 'Q':
+				return 2;
+			case 'g': /* Jump to end of file */
+			case 'G':
+				pginfo->want += 999999; /* Hopefully we don't encounter any files this long, let alone INT_MAX lines long */
+				break;
+			default: /* Ignore */
+				NEG_RETURN(bbs_node_ring_bell(node));
+				continue; /* Continue the for loop */
+		}
+		if (!s) { /* Wait for explicit quit */
+			NEG_RETURN(bbs_node_ring_bell(node));
+			continue; /* Continue the for loop */
+		}
+		break;
+	}
+	return 0;
+}
+
+int bbs_pager(struct bbs_node *node, struct pager_info *pginfo, int ms, const char *restrict s, size_t len)
+{
+	/* Retrieve the terminal dimensions each time, because they could change at any time */
+	unsigned int eff_width = PAGE_COLS(node);
+	/* Subtract 1 each for header + footer, if present, plus our own footer */
+	unsigned int eff_height = PAGE_ROWS(node) - (pginfo->header ? 1 : 0) - (pginfo->footer ? 1 : 0) - 1;
+
+	if (!pginfo->line) {
+		/* First invocation! Clear the screen and switch to non-canonical mode (with echo off). */
+		NEG_RETURN(bbs_node_clear_screen(node));
+		NEG_RETURN(bbs_node_reset_color(node));
+		bbs_node_unbuffer(node);
+
+		/* Print any header */
+		if (pginfo->header) {
+			/* If it has a newline, don't add another one */
+			NEG_RETURN(bbs_node_writef(node, strchr(pginfo->header, '\n') ? "%s" : "%s\n", pginfo->header));
+		}
+		pginfo->want = eff_height; /* Start by printing the effective height number of rows */
+	}
+	/* Do we have lines pending to spill out to the screen? */
+#ifdef DEBUG_PAGING
+	if (s) {
+		bbs_debug(8, "Paged line[%lu]: %s\n", len, s);
+	}
+#endif
+	if (pginfo->want > 0 && s) {
+		size_t left;
+		int ends_in_newline;
+#ifdef DEBUG_PAGING
+		int iter = 0;
+#endif
+		int newlines, lines_eff = 1;
+		newlines = bbs_str_count(s, '\n');
+		ends_in_newline = s[len - 1] == '\n' ? 1 : 0;
+		if (newlines) {
+			/* The LF isn't necessarily at the end of the line, this could mean there are multiple lines of input. */
+			newlines -= ends_in_newline; /* If on of the LFs is at the end, it doesn't count (so long as we be sure not to print out own LF at the end) */
+			if (newlines) {
+				/* If more than 1 LF, then the caller has really violated the contract of the pager. ONE LINE AT A TIME! */
+				bbs_warning("Input line contains line feeds! Please fix this!\n");
+				/* Manually compensate. Add the number of unaccounted LFs. */
+				lines_eff += newlines;
+			}
+		}
+		if (len > eff_width) {
+			/* The line is longer than the terminal width, so if we just spill it out as is, it will wrap automatically.
+			 * That's fine, but we need to know how many rows this will actually use up on the user's terminal. */
+			int actual_lines = (int) ((len + (eff_width - 1)) / eff_width); /* Round up, without using the ceil function to avoid expensive floating point division */
+			lines_eff += (actual_lines - 1); /* Subtract 1 because actual_lines includes the first line, so don't double count that. */
+		}
+
+		/* Print out a chunk, outputting a single line at a time.
+		 *
+		 * We do it this way because the actual line to page might take up more rows on the screen than we have available,
+		 * so we can't just dump them all out. Instead, we need to just draw out the lines we can,
+		 * then wait for paging to continue before drawing the rest.
+		 *
+		 * Note that in the case of lines that are too long for a row, we do not "rewrap" them,
+		 * so there may be odd-looking line breaks in the middle of outputted lines where the real line break occurs.
+		 * This likely won't happen if the input files are wrapped at 80 columns, since most terminals are at least this wide. */
+		if (lines_eff > (int) pginfo->want) {
+			bbs_debug(1, "%d effective rows exceeds %ld permitted, doing partial draw initially\n", lines_eff, pginfo->want);
+		}
+
+		left = len;
+		do {
+			size_t rowlen = MIN(eff_width, left);
+			const char *preformat = "";
+			const char *endl = bbs_str_line_ending(s);
+
+			/* If there is a line ending before the end of the row, then this row stops there. */
+			if (endl && (size_t) (endl - s) < rowlen) {
+				rowlen = (size_t) (endl - s);
+			}
+#ifdef DEBUG_PAGING
+			bbs_debug(8, "Row[%d] len=%lu, width=%d, rowlen=%lu, left=%lu, effective=%d, want=%lu\n", iter, len, eff_width, rowlen, left, lines_eff, pginfo->want);
+			bbs_dump_mem((unsigned const char*) s, rowlen);
+#endif
+			/* If we didn't actually know the real terminal size (node->cols == node->rows == 0),
+			 * then we actually need to force wrapping at 80 columns, since there's
+			 * no guarantee this is the real width. We just assumed it by default.
+			 * Otherwise, on wide terminals, we may take up fewer lines on the screen than we thought we used.
+			 */
+			if ((endl && s == endl) || *s == '\t') {
+				/* This line is just a line ending, or starts with a tab;
+				 * in either case, we need to explicitly overwrite the prompt. */
+				preformat = "\r ";
+			} else if (*s == ' ') {
+				/* XXX For some reason, on simple lines with several leading spaces,
+				 * when paging line by line (but not screen by screen), the : prompt will persist unless we do this.
+				 * CR SP in general is inappropriate and doesn't work properly.
+				 * I don't know why this works or why this is even needed in the first place,
+				 * and there may be other cases that need this fix, too, but doing it for every line is overly heavyhanded. */
+#ifdef DEBUG_PAGING
+				bbs_debug(9, "Resetting line, since it starts with a space\n");
+#endif
+				preformat = TERM_RESET_LINE;
+			}
+			if (left > rowlen) {
+				NEG_RETURN(bbs_node_writef(node, "%s%.*s\n", preformat, (int) rowlen, s));
+			} else {
+				/* This is the last part of the line, so if it doesn't contain a line ending, add a trailing LF. */
+				ends_in_newline = s[left - 1] == '\n' ? 1 : 0;
+				NEG_RETURN(bbs_node_writef(node, ends_in_newline ? "%s%s" : "%s%s\n", preformat, s)); /* Print the (rest of the) line */
+			}
+			/* Advance to the next row of output */
+			s += rowlen;
+			left -= rowlen;
+			if (s == endl) {
+				/* We don't count the line ending for display purposes, since it doesn't take up a column,
+				 * but it is part of the input string and we need to advance past it. */
+				if (*endl == '\r') {
+					s++; /* CR */
+					left--;
+					endl++;
+				}
+				if (*endl == '\n') {
+					s++; /* LF */
+					left--;
+				}
+			}
+			pginfo->line++; /* Increment our effective line count */
+			if (!--pginfo->want && left) {
+				/* We don't have any more rows available right now, but there is still stuff left to print.
+				 * We need to wait for paging input here before continuing.
+				 * This typically happens on smaller terminals where the user pages just 1 line,
+				 * but the line is longer than will fit on one row. */
+				int waitres;
+				bbs_debug(3, "No more rows available, waiting for paging input to finish (%lu chars left this line)\n", left);
+				waitres = page_wait_for_input(node, pginfo, ms, s, eff_height);
+				if (waitres) {
+					return waitres;
+				}
+				/* Now, we have been given permission to draw additional row(s),
+				 * so we can continue writing out the rest of the line. */
+			}
+#ifdef DEBUG_PAGING
+			iter++;
+#endif
+		} while (left > 0);
+		if (pginfo->want) {
+			return 0; /* Keep going, display the next line immediately. */
+		} /* else, continue to paging */
+	}
+
+	/* XXX pager_info.footer is currently ignored and not used. Should we draw a footer on the : prompt line? */
+
+	/* Actual paging is now required. */
+	return page_wait_for_input(node, pginfo, ms, s, eff_height);
+}
+
+int bbs_node_term_browse(struct bbs_node *node, const char *filename)
+{
+	FILE *fp;
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t nbytes;
+	struct pager_info pginfo;
+	int res = 0;
+
+	fp = fopen(filename, "r");
+	if (!fp) {
+		bbs_error("File does not exist: %s\n", filename);
+		return -1;
+	}
+
+	memset(&pginfo, 0, sizeof(pginfo));
+	pginfo.header = "Browse File";
+
+	while ((nbytes = getline(&line, &len, fp)) != -1) {
+		/* line includes the line ending, if present in the file */
+		res = bbs_pager(node, &pginfo, MIN_MS(5), line, (size_t) nbytes);
+		if (res) {
+			break; /* Stop if anything exceptional happens */
+		}
+	}
+	fclose(fp);
+	if (line) {
+		free(line); /* Free the last line */
+	}
+	if (!res) {
+		res = bbs_pager(node, &pginfo, MIN_MS(5), NULL, 0);
+	}
+	return res < 0 ? -1 : 0;
+}

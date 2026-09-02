@@ -1,0 +1,7 @@
+[tools]
+node = "22"
+python = "3"
+
+[env]
+NODE_ENV = 'production'
+_.python.venv = { path = ".venv", create = true }

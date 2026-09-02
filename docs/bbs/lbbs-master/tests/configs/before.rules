@@ -1,0 +1,167 @@
+
+RULE
+MATCH DIRECTION IN
+MATCH SIZE <= 70
+# This is redundant and doesn't really make sense... but the condition should match if the previous one did
+MATCH NOT SIZE > 1000000
+ACTION MOVETO Junk
+ACTION EXIT # Stop processing all rules
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 1
+ACTION MOVETO Trash
+ACTION RETURN # Stop processing all rules in this file
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER From EQUALS Some string here
+ACTION MOVETO Trash
+ACTION BREAK # Stop processing the current rule (redundant)
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 2
+ACTION REJECT
+ACTION EXIT
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 3
+ACTION BOUNCE This is a custom bounce message
+ACTION DISCARD
+ACTION EXIT
+ENDRULE
+
+RULE
+TEST DIRECTION IN
+IF RETVAL == 1
+	MATCH HEADER Subject EQUALS Test Subject 4
+	TEST HEADER Subject EQUALS Not equal to this
+	IF NOT RETVAL == 0
+		ACTION MOVETO Trash
+		ACTION DISCARD
+	ENDIF
+	ACTION NOOP These actions should execute
+	ACTION MOVETO Junk
+ENDIF
+COMMENT
+	ACTION NOOP This should not execute
+	ACTION MOVETO Trash
+	ACTION DISCARD
+ENDCOMMENT
+ACTION NOOP This should be visible
+ACTION RETURN # Stop processing this rules file
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER SUBJECT EQUALS Test Subject 5 # Header names are case-insensitive
+MATCH HEADER Cc LIKE ^[A-Za-z0-9._%+-]+@example\.org$ # regex
+ACTION DISCARD
+ACTION EXIT
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER X-Drop-Message EXISTS
+ACTION DISCARD
+ACTION EXIT
+ENDRULE
+
+# Move message to a folder, but only if this guy's the exclusive recipient (well, excluding Bcc that is)
+RULE
+MATCH DIRECTION IN
+MATCH HEADER To CONTAINS exclusive@bbs.example.com
+MATCH RECIPIENTCOUNT == 1
+ACTION MOVETO Trash
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 6
+# false returns 1, true returns 0
+ACTION EXEC false
+IF RETVAL == 1
+	ACTION DISCARD
+ENDIF
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 7
+MATCH MAILFROM EQUALS external@example.net
+ACTION DISCARD
+ACTION EXIT
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 8
+MATCH MAILFROM EQUALS external@example.net
+ACTION REDIRECT <testuser2@bbs.example.com>
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 9
+MATCH MAILFROM EQUALS external@example.net
+ACTION REDIRECT <testuser2@bbs.example.com>
+ACTION REDIRECT <testuser@bbs.example.com>
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 10
+ACTION EXEC echo "Temp file is ${MAILFILE}"
+IF RETVAL == 0
+	ACTION DISCARD
+ENDIF
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 11
+MATCH FILE .fake
+ACTION DISCARD
+ENDRULE
+
+# Variables may be set outside of normal rules
+RULE
+ACTION SET foobar 42
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 12
+MATCH VAR foobar EXISTS
+MATCH VAR foobar EQUALS 42
+MATCH NOT VAR foobar EQUALS 43
+MATCH NOT VAR foobar42 EXISTS
+ACTION DISCARD
+ENDRULE
+
+# Variables should persist between rules
+RULE
+MATCH DIRECTION IN
+MATCH HEADER Subject EQUALS Test Subject 12
+MATCH VAR foobar EQUALS 42
+ACTION DISCARD
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER To CONTAINS nobounce@bbs.example.com
+ACTION REJECT This is a bounce message that should go to testuser instead
+ENDRULE
+
+RULE
+MATCH DIRECTION IN
+MATCH HEADER To CONTAINS nobounce2@bbs.example.com
+MATCH HEADER Subject EQUALS Another message which won't reach the original recipient
+ACTION REJECT This is a bounce message that should go to testuser instead
+ENDRULE

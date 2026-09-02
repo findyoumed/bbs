@@ -1,0 +1,178 @@
+10
+writeln                        é«¡Ñ¡ Ver 2.0                   (¸á) ˆw¸åÑ¡     
+writeln ˆñ¬‚ ¤åÑ¡ [=10F131238123[=15F      
+writeln 1996 By Kang Jun-Ho
+writeln Ñe¸ ·¡ ¤á¸å·e [=10F®Á´á¶Á´á[=15F·³“¡”a.
+writeln ·¡ Ïa¡‹aœ‘·e ­¥‘©·¡ Ë±µA¬á ¹A¸bĞ–¯s“¡”a.
+writeln  g·e ·¡¶w ¦Èb—aŸ³“¡”a.
+writeln -------------------------------------------
+write   «¡«¡ Ñ¡Â‰ ‹¡“w·i ¬a¶wĞa¯¡‰V¯s“¡Œa?(y/n)
+input s1
+if s1==y then goto 20
+if s1==n then goto 9999
+else goto 10
+20
+writeln ¬a¶wĞaa“e «¡«¡ Ñ¡Â‰ ¤åÑ¡Ÿi °áº¯³¯¡¶a.
+writeln 1. 012  2. 015  
+write   ¬åÈ‚(1,2)>
+input s1
+if s1==1 then goto 30
+if s1==2 then goto 40
+else goto 20
+30
+writeln Û£Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¤
+writeln Û¢012 ¬á§¡¯a µA µ¡¯¥ˆõ·i ÑÅµwĞs“¡”a !!!                       Û¢
+writeln Û¢¤h·i¦…·¡ Îaº… ÒA¶¥ ·¡¯¡¡e 1, ·q¬÷ÒA¶¥ ·¡¯¡¡e 2, ¢…¸aÒA¶¥ ·¡ Û¢
+writeln Û¢¯¡¡e 3 ·i ’‰œáº­A¶a.                                       Û¢
+writeln Û¢ˆq¬aĞs“¡”a.                                                 Û¢
+writeln Û¢                                   ¬á¶‰ ·¡•· É·¯¥ (º)      Û¢
+writeln Û¦Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¥
+write    ¬åÈ‚(1,2,3)>
+input s1
+if s1==1 then goto 50
+if s1==2 then goto 60
+if s1==3 then goto 80
+else goto 30
+40
+writeln Û£Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¤
+writeln Û¢015 ¬á§¡¯aµA µ¡¯¥ˆõ·i ÑÅµwĞ¶a.                     Û¢
+writeln Û¢¸áÓ aœ ·¡•·É·¯¥µA¬á“e ·©¸÷œ·· ¯¡¦…aŸi ¤h´a¶a.  Û¢
+writeln Û¢¦…”w = 10 ¶¥                                        Û¢
+writeln Û¢ˆq¬aĞs“¡”a.                                         Û¢
+writeln Û¢1.·©¤e ÒA¶¥2.·q¬÷ÒA¶¥3.¢…¸aÒA¶¥                     Û¢
+writeln Û¢            [=10F  aœ ·¡•· É·¯¥ (º)[=15F       Û¢                 
+writeln Û¦Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¡Û¥
+write    ¬åÈ‚Ğ º¯³¯¡¶a!>
+input s1
+if s1==1 then goto 90
+if s1==2 then goto 100
+if s1==3 then goto 110
+else goto 40
+50
+writeln Àa­A” ¬á§¡¯a !! [=19F012[=15FµA¬á »¡¶¥Ğa“e ‰×µb ¬á§¡¯a!!
+writeln ˆwbĞs“¡”a!![=4F¸s·q[=15F·i ¤w»¡ Ğº““¡”a!!
+writeln 21 ­A‹¡“e [=10F¬á¶‰ ·¡•· É·¯¥[=15F‰Á ĞqA !!
+writeln ---------------------------------------------------------------
+write   Ñ¡Â‰Ğa¯© «¡«¡ ¤åÑ¡Ÿi °áº¯³¯¡¶a.>012-    
+input s1
+writeln ˆq¬aĞs“¡”a.Ñe¸ ¸s·q ¤w»¡•¡“e [=4F90%[=15F ·³“¡”a.
+writeln Ñ¡Â‰·i ĞiŒa¶a?
+write   Ñ¡Â‰(y,n)>
+input s1
+if s1==y then goto 120
+if s1==n then goto 9999
+else goto 50
+60
+writeln Àa­A” ¬á§¡¯a !! ¸s·q·i ¤w»¡Ğ º…”a !! 012 µA¬á »¡¶¥Ğa“e ·q¬÷
+writeln ¬á§¡¯a œa¡e ¡¡—eˆõ·¡ ¨aŸa‰A !!
+writeln ·¡¹A¦Èá [=10F012[=15F·q¬÷ ¬á§¡¯aŸi ¬a¶w Ğs¯¡”a !! 
+writeln --------------------------------------------------------------
+writeln ·q¬÷·i  a·¡Ça¡ Ğ´¡ –A“e•A  a·¡ÇaŸi ´i´a¥³“¡”a...............
+writeln VY XDR CODE -V140 -¸a•·ˆq»¡-­E¬á¯a......... VTS CODE BAND
+delay 500
+writeln  éË¡Ñw·a¡ ŠaÁAĞ–¯s“¡”a.
+delay 300
+writeln  å¸á Ñ¡Â‰Ğº¯© «¡«¡ ¤åÑ¡Ÿi °áº¯³¯¡¶a.‹a”a·q·e..........
+writeln  i·i Ğº¯³¯¡¶a.(30Á¡ˆe)”a Ğa¯¡¡e 012 œa‰¡ °áº¯³¯¡¶a.
+writeln --------------------------------------------------------------
+write   Ñ¡Â‰ ¤åÑ¡.>012-
+input s1
+writeln ----------------------
+write   ·q¬÷ ‘¢·q.>
+input s1
+if s1==012 then goto 70
+else goto 60
+70
+write   Ñ¡Â‰ ĞiŒa¶a?(y,n)>
+if s1==y then goto 120
+if s1==n then goto 9999
+else goto 70
+80
+writeln ¸s·q ¤w»¡, éË¡ ¯¡¯aÉQ ¬a¶w.¢…¸a ¬á§¡¯a!!!
+writeln ·¡¹A¦Èá a“e[=10F012 ¢…¸a¬á§¡¯a[=15F´¡!
+writeln ·¡¹A¦Èá 012 !! ¢…¸a ¬á§¡¯a !!
+writeln  å¸á «¡«¡ ¤åÑ¡Ÿi ³a¯¥Ò ¢…¸aŸi °áº­A¶a.(&^%!..¢…¸a ¹A¶A)
+writeln ”a ³a¯¡¡e 012 Ÿi °áº­A¶a.
+writeln ---------------------------------------------------------
+write   Ñ¡Â‰¤åÑ¡.>012-
+input s1
+writeln ------------
+write   ¢…¸a ¬á§¡¯a.>
+input s1
+if s1==012 then goto 70
+else goto 80
+90
+writeln aœÉI· ‰×µb ¬á§¡¯a !!!
+writeln ˆwbĞe ¸s·q ¤w»¡ !!!
+writeln
+writeln
+writeln                     ·¡¹A¦Èá 015 aœÉI !!
+writeln ---------------------------------------------------------
+write   Ñ¡Â‰¤åÑ¡>015-
+input s1
+writeln Ñ¡Â‰ ¤h·a¯© ¤åÑ¡Ÿi °áº­A¶a.
+write   ¸åÑÁ¤åÑ¡>
+input s1
+writeln [=10FaœÉI[=15F· µÅ¥bĞe «¡«¡ Ñ¡Â‰ ‹¡“w·i ¬a¶wĞ–¯s“¡”a.
+writeln Ñ¡Â‰·i ĞiŒa¶a?
+write   ¬åÈ‚(y,n)>
+input s1
+if s1==y then goto 120
+if s1==n then goto 9999
+else goto 90
+100
+writeln ·q¬÷ ‰·»¡. 
+writeln aœÉI ·q¬÷ ¬á§¡¯a ÒA¶¥—i·e 96.01.01i ˆ—¯¥–A´ö¯s“¡”a.
+writeln Àbµ¡ ´ô·a¯¡‹©........
+writeln ·¡ ¸÷¥¡·¡¶wa“e ¦…”w 30 ¶¥ ·³“¡”a.
+writeln                         ·¡¹A¦Èá 015 aœÉI !!
+writeln -------------------------------------------------------
+write   Ñ¡Â‰¤åÑ¡>015-      
+input s1
+writeln  a·¡ÇaŸi ¸a•· ¹¡¸÷ Ğa‰¡ ·¶¯s“¡”a.
+writeln VMX W WIT WIT voice...................auto select........ok!      
+writeln 30Á¡ ´eµA  iĞi ¶w·i ”a Ğa¯¡‰¡ ”a Ğa¯¡¡e vœa‰¡ °áº­A¶a.
+writeln ------------------------------------------------------------
+write   ·q¬÷(µÅa:v)>
+input s1
+if s1==v then goto 120
+else goto 100
+110
+writeln [=10FaœÉI[=15FµA¬á ¬a¶wĞa“e ÂAÀñ”e VTS ¤w¯¢·i ·¡¶wĞa“e ¢…
+writeln ¸a ¬á§¡¯aµA µ¡­v¯s“¡”a.
+writeln ·¡ ¸÷¥¡ ·¡¶wa“e ¦…”w 50¶¥ ·³“¡”a.
+writeln ---------------------------------------------------------
+writeln              [=10F 0 1 5 aœÉI !![=15F
+write  Ñ¡Â‰ ¤åÑ¡>015-
+input s1
+writeln ¢…¸aŸi ¿¢´áº­A¶a.”a ³a¯¡¡e aœ¸÷¥¡É·¯¥ ·¡œa‰¡ °áº¯¡‹¡ ¤aœs
+writeln “¡”a.
+write   ¢…¸a(µÅa:aœ¸÷¥¡É·¯¥)>
+input s1
+if s1==aœ¸÷¥¡É·¯¥ then goto 120
+else goto 110
+120
+random 12
+if i0>=5 then goto 130
+else goto 140
+130
+delay 800
+writeln ^;%;%%%%%^%^%^%^%311111111111111111111111111111111111111111111
+delay 500
+writeln ¸s·q·a¡ Ñ¡Â‰·i ¯©ÌĞaµv¯s“¡”a.
+write   Ñ¡Â‰ ¸¯¡•¡(y,n)>
+input s1
+if s1==y then goto 20
+if s1==n then goto 9999
+else goto 130
+140
+writeln «¡«¡ Ñ¡Â‰ ¬÷‰· !!! »¡‹qŒa»¡ ­¥‘©·¡ µv¯s“¡”a.
+write   ENTER Ç¡Ÿi ’‰œáº­A¶a.
+readkey
+stop
+9999
+writeln ·¡¶wĞ º­a¬á ˆq¬aĞs“¡”a.
+writeln ­¥‘©·¡ µv¯s“¡”a.                                                              
+write   ENTER Ç¡Ÿi ’Ÿa­A¶a.
+readkey
+stop

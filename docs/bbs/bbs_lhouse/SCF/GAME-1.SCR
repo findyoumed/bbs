@@ -1,0 +1,322 @@
+10
+cls
+i0:=0
+random 3
+writeln
+writeln      [=14FŸFŸFŸFŸF [=10Fàa∂· , §a∂· , •° [=14FŸGŸGŸGŸG
+writeln
+writeln
+writeln  [=14F⁄A [=11F- [=15F¢Ç  [=14F⁄B [=11F- [=15Fø°  [=14F⁄C [=11F- [=15F®a   [=14F⁄` [=11F- [=15F®aπa êaàq
+writeln
+writeln
+write  [=15F§Â—°üi ¨Â»Ç –a≠A∂a ( è{êÅã° : [=14FP[=15F )[=13F Ÿ— [=15F
+input s2
+if s2==1 then goto 551
+if s2==2 then goto 552
+if s2==3 then goto 553
+if s2==P then goto 10000
+if s2==p then goto 10000
+else goto 10
+551
+s1:=0
+goto 555
+552
+s1:=1
+goto 555
+553
+s1:=2
+goto 555
+555
+if s1==0 then goto 0
+if s1==1 then goto 1
+if s1==2 then goto 2
+else stop
+0
+writeln [10;5H[=10F          ________
+writeln [11;5H        /          \ _
+writeln [12;5H               / \ _\  \
+writeln [13;5H              /\______ /
+writeln [14;5H             / /       \
+writeln [15;5H          __/  \______ /
+writeln [16;5H               /       \
+writeln [17;5H               \_____  /
+writeln [18;5H               /      \
+writeln [19;5H        \______\_____ /
+writeln [20;5H
+goto 100
+1
+writeln [10;5H[=14F    ________
+writeln [11;5H  /          \____________
+writeln [12;5H         / \ _\            \
+writeln [13;5H        /       __________ /_
+writeln [14;5H       /                      \
+writeln [15;5H    __/   ___________________ /
+writeln [16;5H         /       \
+writeln [17;5H         \_____  /
+writeln [18;5H         /      \
+writeln [19;5H  \______\_____ /
+writeln [20;5H
+goto 100
+2
+writeln [10;5H[=11F    ________
+writeln [11;5H  /          \____________
+writeln [12;5H         / \ _\            \
+writeln [13;5H        /         _________/_
+writeln [14;5H       /                      \
+writeln [15;5H    __/           ___________ /
+writeln [16;5H                             \
+writeln [17;5H                 ___________ /
+writeln [18;5H                         \
+writeln [19;5H  \______________________/
+writeln [20;5H
+goto 100
+
+100
+writeln [21;37H[=10F⁄f[=14F⁄c[=15F
+delay 1000
+if i0==0 then goto 880
+if i0==1 then goto 881
+if i0==2 then goto 882
+else goto 10
+
+880
+writeln [10;41H[=10F               ________
+writeln [11;41H           _ /          \
+writeln [12;41H         /  /_ / \
+writeln [13;41H         \ ______/\
+writeln [14;41H         /       \ \
+writeln [15;41H         \ ______/  \__
+writeln [16;41H         /       \
+writeln [17;41H         \  _____/
+writeln [18;41H          /      \
+writeln [19;41H          \ _____/______/
+writeln [20;41H
+goto 8888
+881
+writeln [10;40H[=14F                      ________
+writeln [11;40H       _____________/          \
+writeln [12;40H     /             /_ / \
+writeln [13;40H    _\ ________          \
+writeln [14;40H  /                       \
+writeln [15;40H  \ ____________________   \__
+writeln [16;40H                /       \
+writeln [17;40H                \  _____/
+writeln [18;40H                 /      \
+writeln [19;40H                 \ _____/______/
+writeln [20;40H
+goto 8888
+882
+writeln [10;40H[=11F                      ________
+writeln [11;40H       _____________/          \
+writeln [12;40H     /             /_ / \
+writeln [13;40H    _\___________        \
+writeln [14;40H  /                       \
+writeln [15;40H  \ ___________            \__
+writeln [16;40H   /
+writeln [17;40H   \ ___________
+writeln [18;40H       /
+writeln [19;40H       \_______________________/
+writeln [20;40H
+goto 8888
+
+8888
+writeln [22;8H[=3F[63;3G[=15F[63;1G[1;3G[23;10HƒÒœA»· :
+if s1==i0 then goto 1000
+if s1==0 then goto 1100
+if s1==1 then goto 1200
+if s1==2 then goto 1300
+else goto 10
+
+1100
+if i0==2 then goto 777
+if i0==1 then goto 444
+else goto 10
+
+1200
+if i0==0 then goto 777
+if i0==2 then goto 444
+else goto 10
+
+1300
+if i0==1 then goto 777
+if i0==0 then goto 444
+else goto 10
+
+1000
+random 9
+if i0==0 then goto 1001
+if i0==1 then goto 1002
+if i0==2 then goto 1003
+if i0==3 then goto 1004
+if i0==4 then goto 1005
+if i0==5 then goto 1006
+if i0==6 then goto 1007
+if i0==7 then goto 1008
+if i0==8 then goto 1009
+else goto 10
+1001
+write [23;19H¥aì°? ß°ã°îaì° !
+goto 9999
+1002
+write [23;19Hß°ã•àÈ •°ì°, êÅ IQµ¡ ß°Øu–aäÖ...
+goto 9999
+1003
+write [23;19H∑a~~  à{∑eàÈ êÅîaì°...
+goto 9999
+1004
+write [23;19H∑° –·»iàq... ô° ß°ã°îaì°...
+goto 9999
+1005
+write [23;19HπA§i, à{∑eà· êÅª° †ià·úa !
+goto 9999
+1006
+write [23;19H¥aì°, ô° à{∑eàÈ...
+goto 9999
+1007
+write [23;19H¥° !  ≠• ´°öâ¥· πvêa ?  µ· à{∑eàÈ êÅì° ?
+goto 9999
+1008
+write [23;19H∞wñó∑°ê° ?  à{∑eà· êÅª°†a !
+goto 9999
+1009
+write [23;19Hà{∑eà· êÅª° †iúaì°åe !
+goto 9999
+9999
+input
+goto 10
+
+777
+random 15
+if i0==0 then goto 7771
+if i0==1 then goto 7772
+if i0==2 then goto 7773
+if i0==3 then goto 7774
+if i0==4 then goto 7775
+if i0==5 then goto 7776
+if i0==6 then goto 7777
+if i0==7 then goto 7778
+if i0==8 then goto 7779
+if i0==9 then goto 77710
+if i0==10 then goto 77711
+if i0==11 then goto 77712
+if i0==12 then goto 77713
+if i0==13 then goto 77714
+if i0==14 then goto 77715
+else goto 10
+7771
+write [23;19HêÂ, êi °µ ∑°âa !!!
+goto 999
+7772
+write [23;19HµbØ° êe ¿Â∏Å¥°... êÂ, §a•° !
+goto 999
+7773
+write [23;19H¥ÂπA –e§Â ∑°âa •©úÅ ?
+goto 999
+7774
+write [23;19H∑A√°∂• îaØ° îaëa¥° âVäÖ !
+goto 999
+7775
+write [23;19H”a”a”a... §a•° !
+goto 999
+7776
+write [23;19HêÅ IQàa 80∑•ïA, êa –e…A ª°îaì°...
+goto 999
+7777
+write [23;19Hª°ª°ü° •¢ï° ¥Ùìe ëa¨‚...
+goto 999
+7778
+write [23;19Hì° IQàa °y∑°ì° ?  ñÅ∏aü° úaâ° ?
+goto 999
+7779
+write [23;19H§a•° à{∑e ëa¨‚ !
+goto 999
+77710
+write [23;19HÆÅ∫Ö êx¥a¨· °µ ë©âVîa !
+goto 999
+77711
+write [23;19H¨b¨b.. ß©°e πa∫â ÆÅï° ∑∂ìeïA.
+goto 999
+77712
+write [23;19H∑° ã°´q !  ¥·†·ì°.....
+goto 999
+77713
+write [23;19H–a !  –a !  –a !
+goto 999
+77714
+write [23;19HêÅ IQ òaúa µ©ùa°e †È¥ˆîa !
+goto 999
+77715
+write [23;19HµbØ°... êÂ ¥eï· !!!
+goto 999
+999
+input
+goto 10
+
+444
+random 15
+if i0==0 then goto 4441
+if i0==1 then goto 4442
+if i0==2 then goto 4443
+if i0==3 then goto 4444
+if i0==4 then goto 4445
+if i0==5 then goto 4446
+if i0==6 then goto 4447
+if i0==7 then goto 4448
+if i0==8 then goto 4449
+if i0==9 then goto 44410
+if i0==10 then goto 44411
+if i0==11 then goto 44412
+if i0==12 then goto 44413
+if i0==13 then goto 44414
+if i0==14 then goto 44415
+else goto 10
+4441
+write [23;19Hì°, ìxâA êñª° ?...
+goto 99
+4442
+write [23;19Hì°àa ¶â¨w–Å¨· –e§Â πa ∫Öîa.
+goto 99
+4443
+write [23;19H£°√°âVëA... πa ∫Åìe †xï° ∑∂¥·¥°ª°...
+goto 99
+4444
+write [23;19H∑q.. ∂a§ÂµE ì°àa ¢°êâª° ¥iâVîa. îaØ° –Å•°∏a !
+goto 99
+4445
+write [23;19HêÅàa µ· πvª° ? –e§Âî·...
+goto 99
+4446
+write [23;19H¥aæÅäÅü°... îaØ° –Å•°∏a !
+goto 99
+4447
+write [23;19HãaúÅ, ê· ∏iêvîa.
+goto 99
+4448
+write [23;19H∑°ã°°e îaê° ?
+goto 99
+4449
+write [23;19HºaØ¢ !  ª©ÆÅï° ∑∂ª°...
+goto 99
+44410
+write [23;19H∂Å–a–a.. –e§Â ∂ï¥· •÷∑q. πaï° »Åµe ØaúÛâA...
+goto 99
+44411
+write [23;19Hπ± πa∫Å°e ¥gñAêa ?
+goto 99
+44412
+write [23;19H–e§Â ∑°ã•àÈ àaª°â°, ©±êÅîaì°...
+goto 99
+44413
+write [23;19H–e§Â øq∑e πa∫â ÆÅï° ∑∂ìeà· ¥aì°âV¥·...
+goto 99
+44414
+write [23;19H∑a~~ ª°îaì°... ∑a”a”a”z
+goto 99
+44415
+write [23;19Hô° πvîa. ∑°πE îaØ°ìe ¥e πa¥°ª°...
+goto 99
+99
+input
+goto 10
+10000
+stop

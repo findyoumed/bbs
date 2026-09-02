@@ -1,0 +1,80 @@
+^Instructions
+%N%T
+ |0BObjectives of The Clans
+
+ |0CBasically, the object is to destroy the competition.  There's no "goal"
+ as in other games so you can continue playing as much as you want.  The
+ leaders will change, the alliances will change, and your clan will see
+ several new members, but the object will always be to become the top clan
+ in the game.  If your sysop has hooked up the game to an InterBBS league,
+ then the object may be to strengthen your village and attack other villages
+ in the league.  There are also quests to be completed!  The main ways of
+ achieving success are these:
+
+ * Defeat monsters in the dungeons to collect gold and followers.
+ * Complete quests.
+ * Increase the size of your empire.
+ * Annihilate enemy clans in empire wars and loot their land and gold.
+ * Create alliances with other clans.
+ * Become ruler of the village.
+
+ |15Good luck on your journey!
+%N
+^END
+
+^Newbies
+ |0BWelcome, new player!|0C
+
+ You will find clans very self-explanatory and easy to play as help is
+ displayed for most new options you will encounter.  Remember that this
+ game is played on many levels and never stop strategizing!
+^END
+
+^Colours
+ |0CUse pipe codes (|) for colours.  Simply type the pipe code and then a two
+ digit value representing the number:  |xx (where xx is the two digit value).
+ Example | %B15 for |15white|0C.  TG ` codes can be used as well.  Use `xy
+ where x is the background colour (0 to 7) and y is the foreground colour
+ (between 0 and F hexadecimal).
+^END
+
+
+^Clan Symbol
+ |0BClan Symbol|0C
+
+ This symbol is not required and really does nothing on its own.  However, you
+ may find it useful as a way of showing your alliances with other clans.  For
+ instance, if you and 3 other clans are all allied one another, you may wish
+ to pick a common symbol for each of the clans in the alliance.  This way,
+ other clans will immediately know which clans are associated with each other.
+
+ The symbol can be almost any string of up to 20 characters.  You may use
+ pipe (|) codes or TG-style ` codes for colours.  Examples:
+
+  `01[`19KiLL`01]`07   `08\`04/`0C^`01\`08/`07  `04[`0CVGA`07i`04]   `02[`0AKoR`02]
+
+^END
+
+^Individual Colours
+ |0C01 |01Blue    |0C05 |05Magenta     |0C09 |09Blue    |0C13 |13Magenta
+ |0C02 |02Green   |0C06 |06Brown       |0C10 |10Green   |0C14 |14Yellow
+ |0C03 |03Cyan    |0C07 |07Grey        |0C11 |11Cyan    |0C15 |15White
+ |0C04 |04Red     |0C08 |08Dark Grey   |0C12 |12Red
+^END
+
+
+^Beta Note
+%C
+|0CBugs, comments, suggestions?
+
+|0Bwebpage:             |14http://clans.bbsdev.net/
+|0Bsupport bbs:         |14bbsdev.net
+
+|0CThe following features are under consideration:
+
+        |0B* |0Cvillage council
+        |0B* |0Cvillage schemes (port town, farming town, etc.)
+        |0B* |0Cland (for businesses, farms, etc.) for individual clans
+
+^PAUSE
+^END

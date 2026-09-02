@@ -1,0 +1,382 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  ubuntu-latest:
+    runs-on: ubuntu-24.04
+    name: Ubuntu 24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          sudo sed -i 's/azure\.//' /etc/apt/sources.list
+          sudo ./scripts/install_prereq.sh 1
+      - name: Build LBBS
+        run: |
+          sudo make modcheck
+          sudo make -j$(nproc) || sudo make NOISY_BUILD=1
+          sudo make install
+          sudo make samples
+          sudo make tests
+      - name: Run tests
+        run: |
+          sudo scripts/run_tests.sh
+  ubuntu-stable:
+    runs-on: ubuntu-22.04
+    name: Ubuntu 22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          sudo sed -i 's/azure\.//' /etc/apt/sources.list
+          sudo ./scripts/install_prereq.sh 1
+      - name: Build LBBS
+        run: |
+          sudo make modcheck
+          sudo make -j$(nproc) || sudo make NOISY_BUILD=1
+          sudo make install
+          sudo make samples
+          sudo make tests
+      - name: Run tests
+        run: |
+          sudo IGNORE_LIBBFD_MEMORY_LEAK_BUGS=1 scripts/run_tests.sh
+  without-optimization:
+    runs-on: ubuntu-24.04
+    name: Ubuntu 24.04, without optimization
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          sudo sed -i 's/azure\.//' /etc/apt/sources.list
+          sudo ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          sudo sed -i 's/-O3/-O0/' Makefile
+          sudo make modcheck
+          sudo make -j$(nproc) || sudo make NOISY_BUILD=1
+          sudo make install
+          sudo make samples
+          sudo make tests
+      - name: Run unit tests
+        run: |
+          sudo scripts/run_tests.sh test_unit
+      - name: Install service
+        run: |
+          sudo adduser -c "BBS" bbs --disabled-password --shell /usr/sbin/nologin --gecos ""
+          # Remove the bbs.log from test suite executions since that is owned by root
+          sudo rm /var/log/lbbs/bbs.log
+          sudo make service
+  with-sanitizer:
+    runs-on: ubuntu-24.04
+    name: Ubuntu 24.04, under Address Sanitizer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          sudo sed -i 's/azure\.//' /etc/apt/sources.list
+          sudo ./scripts/install_prereq.sh 1
+      - name: Build LBBS
+        run: |
+          sudo make modcheck
+          sudo make -j$(nproc) NO_OPTIMIZE=1 ADDRESS_SANITIZER=1 || sudo make NO_OPTIMIZE=1 ADDRESS_SANITIZER=1 NOISY_BUILD=1
+          sudo make install
+          sudo make samples
+          sudo make tests
+      - name: Run tests
+        run: |
+          sudo ASAN_RUN=1 scripts/run_tests.sh
+  debian-13:
+    runs-on: ubuntu-24.04
+    name: Debian 13
+    container: debian:13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          IGNORE_LIBBFD_MEMORY_LEAK_BUGS=1 scripts/run_tests.sh test_unit
+      - name: Run mail stress tests
+        run: |
+          # Different failure modes/bottlenecks are tested with low debug vs high
+          # This test with low BBS debug is also very quick (compared to w/ high debug)
+          tests/test -ttest_mail_stress -dddddddddd -D -x
+          # This test is very intensive so for efficiency, we don't run it
+          # in the bottleneck test paths and instead run it at the end here
+          NO_VALGRIND=1 scripts/run_tests.sh test_mail_stress
+  debian-12:
+    runs-on: ubuntu-24.04
+    name: Debian 12
+    container: debian:12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          IGNORE_LIBBFD_MEMORY_LEAK_BUGS=1 scripts/run_tests.sh test_unit
+  debian-11:
+    runs-on: ubuntu-24.04
+    name: Debian 11
+    container: debian:11
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          IGNORE_LIBBFD_MEMORY_LEAK_BUGS=1 scripts/run_tests.sh test_unit
+  debian-10:
+    runs-on: ubuntu-24.04
+    name: Debian 10
+    container: debian:10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          sed -i 's|deb.debian.org/debian buster main|archive.debian.org/debian buster main|g' /etc/apt/sources.list
+          sed -i 's|deb.debian.org/debian buster-updates main|archive.debian.org/debian buster-updates main|g' /etc/apt/sources.list
+          sed -i 's|deb.debian.org/debian-security buster/updates main|archive.debian.org/debian-security buster/updates main|g' /etc/apt/sources.list
+          cat /etc/apt/sources.list
+          ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          scripts/run_tests.sh test_unit
+  alpine-linux:
+    runs-on: ubuntu-24.04
+    name: Alpine Linux
+    container: alpine:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make modconfig
+          rm modules/mod_test_backtrace.c # Causes invalid read of size 8 in getframeaddr (in /usr/lib/libexecinfo.so.1)
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run unit tests
+        run: |
+          scripts/run_tests.sh test_unit
+  fedora-42:
+    runs-on: ubuntu-24.04
+    name: Fedora 42
+    container: fedora:42
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          INSTALL_LIBOPENARC=0 ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make modconfig
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          scripts/run_tests.sh test_unit
+  fedora-40:
+    runs-on: ubuntu-24.04
+    name: Fedora 40
+    container: fedora:40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          INSTALL_LIBOPENARC=0 ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make modconfig
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          IGNORE_LIBBFD_MEMORY_LEAK_BUGS=1 scripts/run_tests.sh test_unit
+  rocky-9:
+    runs-on: ubuntu-24.04
+    name: Rocky Linux 9.3
+    container: rockylinux:9.3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          INSTALL_LIBOPENARC=0 ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make modconfig
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          IGNORE_LIBBFD_MEMORY_LEAK_BUGS=1 scripts/run_tests.sh test_unit
+  rocky-8:
+    runs-on: ubuntu-24.04
+    name: Rocky Linux 8.9
+    container: rockylinux:8.9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          INSTALL_LIBOPENARC=0 ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make modconfig
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          IGNORE_LIBBFD_MEMORY_LEAK_BUGS=1 scripts/run_tests.sh test_unit
+  opensuse:
+    runs-on: ubuntu-24.04
+    name: openSUSE Tumbleweed
+    container: opensuse/tumbleweed
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          INSTALL_LIBETPAN=0 ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make modconfig
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          scripts/run_tests.sh test_unit
+  archlinux:
+    runs-on: ubuntu-24.04
+    name: Arch Linux
+    container: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs
+        run: |
+          INSTALL_LIBOPENARC=0 ./scripts/install_prereq.sh
+      - name: Build LBBS
+        run: |
+          make modcheck
+          make modconfig
+          make -j$(nproc) || make NOISY_BUILD=1
+          make install
+          make samples
+          make tests
+      - name: Run basic tests
+        run: |
+          tests/test -ttest_menus -ddddddddd -DDDDDDDDDD -x
+      - name: Run unit tests
+        run: |
+          scripts/run_tests.sh test_unit
+  freebsd-14:
+    runs-on: ubuntu-24.04
+    name: FreeBSD
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prereqs and build LBBS
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          copyback: false
+          run: |
+            INSTALL_LIBETPAN=0 INSTALL_LIBDISCORD=0 ./scripts/install_prereq.sh
+            gmake modcheck
+            gmake modconfig
+            gmake -j$(nproc) bbs
+            gmake -j$(nproc) doors
+            gmake -j$(nproc) io
+            gmake -j$(nproc) modules
+            gmake -j$(nproc) nets
+            gmake -j$(nproc)
+            gmake install
+            gmake samples
+            gmake tests
+            gmake install || gmake install NOISY_BUILD=1

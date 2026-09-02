@@ -1,0 +1,27 @@
+; —w” ¯aÇaŸ³Ëa Ìa·© CALC.SCF
+;
+; ¯aÇaŸ³Ëa Ïa¡‹aœ‘ : ‰¬e‹¡
+;
+; µ¹A ¹A¸b : ˆw¸µw
+
+cls
+writeln [7m —w” HOST  µ¥œa·¥ ‰¬e‹¡ [27m (CALC.SCF)
+writeln
+10
+  write ·³b, aˆq(P) : __________________________________________________[50D
+input s1
+if s1==p then call end
+if s1==P then call end
+i1:=[s1]
+writeln
+writeln ·³b --> [s1]
+writeln ‰i‰Á --> [i1]
+writeln
+goto 10
+
+; ¹·a Ë¥
+procedure end
+writeln ‰¬e‹¡Ÿi ¹·aĞs“¡”a.
+writeln
+stop
+

@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# WWIV Build Script for RushFan
+#
+
+export WORKSPACE=${HOME}/git/wwiv
+export BUILD_NUMBER=2112
+pushd ${WORKSPACE}
+./builds/jenkins/wwiv/build "$@" || echo "Build FAILED!"
+popd >/dev/null

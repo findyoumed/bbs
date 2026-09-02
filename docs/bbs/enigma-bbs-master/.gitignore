@@ -1,0 +1,23 @@
+#	Don't check in SSH keys!
+*.pem
+
+#	Exclude User-Customized Directories
+config/
+db/
+drop/
+file_base/
+logs/
+mail/
+node_modules/
+docs/_site/
+docs/.sass-cache/
+docs/.jekyll-cache/
+
+#   Ignore Web Assets not included with enigma-bbs
+www/*
+www/assets/*
+!www/otp_register_template.html
+!www/reset_password.template.html
+
+#   Runtime Environment
+.venv

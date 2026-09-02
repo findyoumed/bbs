@@ -1,0 +1,61 @@
+/* Local sysop chat module (GUI Borland C++ Builder Project for Win32) */
+
+/****************************************************************************
+ * @format.tab-size 4		(Plain Text/Source Code File Header)			*
+ * @format.use-tabs true	(see http://www.synchro.net/ptsc_hdr.html)		*
+ *																			*
+ * Copyright Rob Swindell - http://www.synchro.net/copyright.html			*
+ *																			*
+ * This program is free software; you can redistribute it and/or			*
+ * modify it under the terms of the GNU General Public License				*
+ * as published by the Free Software Foundation; either version 2			*
+ * of the License, or (at your option) any later version.					*
+ * See the GNU General Public License for more details: gpl.txt or			*
+ * http://www.fsf.org/copyleft/gpl.html										*
+ *																			*
+ * For Synchronet coding style and modification guidelines, see				*
+ * http://www.synchro.net/source.html										*
+ *																			*
+ * Note: If this box doesn't appear square, then you need to fix your tabs.	*
+ ****************************************************************************/
+
+//---------------------------------------------------------------------------
+
+#ifndef MainFormUnitH
+#define MainFormUnitH
+//---------------------------------------------------------------------------
+#include <Classes.hpp>
+#include <Controls.hpp>
+#include <StdCtrls.hpp>
+#include <Forms.hpp>
+#include <ExtCtrls.hpp>
+#include "..\nodedefs.h"
+//---------------------------------------------------------------------------
+class TMainForm : public TForm
+{
+__published:	// IDE-managed Components
+    TMemo *Local;
+    TSplitter *Splitter1;
+    TMemo *Remote;
+    TTimer *InputTimer;
+    TTimer *Timer;
+    void __fastcall FormShow(TObject *Sender);
+    void __fastcall FormClose(TObject *Sender, TCloseAction &Action);
+    void __fastcall LocalKeyPress(TObject *Sender, char &Key);
+    void __fastcall InputTimerTick(TObject *Sender);
+    void __fastcall TimerTick(TObject *Sender);
+    void __fastcall FormCreate(TObject *Sender);
+    void __fastcall LocalEnter(TObject *Sender);
+private:	// User declarations
+public:		// User declarations
+    __fastcall TMainForm(TComponent* Owner);
+    bool __fastcall TMainForm::ToggleChat(bool on);
+    int     in;
+    int     out;
+    int     nodedab;
+    node_t  node;
+};
+//---------------------------------------------------------------------------
+extern PACKAGE TMainForm *MainForm;
+//---------------------------------------------------------------------------
+#endif

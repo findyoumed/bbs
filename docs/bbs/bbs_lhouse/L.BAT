@@ -1,0 +1,2 @@
+@AUTORUN S X B %1 %2
+@INDEX

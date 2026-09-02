@@ -1,0 +1,21 @@
+writeln
+writeln [7m –ó∂Ö ∏sã° [27m (LUCK.SCF)
+writeln
+writeln µ°ìi [∑°üq]([¥a∑°ó°]) ì±∑Å –ó∂Ö∑e...
+writeln
+random 2
+if i0<>0 then goto 10
+else goto 20
+
+10
+writeln –ó∂Ö∑≥ì°îa.
+i2:=[∏ÒÆÅ]
+i1:=[∏ÒÆÅ]+1
+set_score i1
+writeln
+writeln ∏ÒÆÅ [4m[i2] + 1 --> [i1][24m  ¬Ç–a–sì°îa.
+stop
+
+20
+writeln –ó∂Ö∑° ¥ÙØsì°îa.
+stop

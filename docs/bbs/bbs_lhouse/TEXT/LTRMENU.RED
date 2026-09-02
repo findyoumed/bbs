@@ -1,0 +1,3 @@
+[A[K>>
+[K°wùw(H,LS,DD,F,B,A,N,=,-,G,P,M,MEMO,NEW,PF,SI,TM,T,CH,X,BYE,Z)
+[K°AìA(M), °¢ù¢(P), ∑°ï∑(=,-)

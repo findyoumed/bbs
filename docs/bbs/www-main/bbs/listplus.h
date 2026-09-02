@@ -1,0 +1,106 @@
+/**************************************************************************/
+/*                                                                        */
+/*                              WWIV Version 5.x                          */
+/*             Copyright (C)1998-2022, WWIV Software Services             */
+/*                                                                        */
+/*    Licensed  under the  Apache License, Version  2.0 (the "License");  */
+/*    you may not use this  file  except in compliance with the License.  */
+/*    You may obtain a copy of the License at                             */
+/*                                                                        */
+/*                http://www.apache.org/licenses/LICENSE-2.0              */
+/*                                                                        */
+/*    Unless  required  by  applicable  law  or agreed to  in  writing,   */
+/*    software  distributed  under  the  License  is  distributed on an   */
+/*    "AS IS"  BASIS, WITHOUT  WARRANTIES  OR  CONDITIONS OF ANY  KIND,   */
+/*    either  express  or implied.  See  the  License for  the specific   */
+/*    language governing permissions and limitations under the License.   */
+/*                                                                        */
+/**************************************************************************/
+#ifndef __INCLUDED_LISTPLUS_H__
+#define __INCLUDED_LISTPLUS_H__
+
+#include "bbs/common.h"
+#include "sdk/wwivcolors.h"
+
+extern int foundany;
+struct uploadsrec;
+
+// This is the place the first file will be printed, which defaults to line
+// 3, if you modify the file listing header, this will need to be changed
+// depending on where the file will need to start after your modification
+static constexpr int FIRST_FILE_POS = 3;
+
+// Defines for the sysop commands
+static constexpr int SYSOP_DELETE = 1;
+static constexpr int SYSOP_RENAME = 2;
+static constexpr int SYSOP_MOVE = 3;
+
+#pragma pack(push, 1)
+
+struct listplus_config {
+  uint8_t unused_at_head[12]; // was: long fi, lssm, sent;
+
+  // Side menu colors  (fore+(back<<4))
+  int16_t normal_highlight, normal_menu_item, current_highlight, current_menu_item;
+
+  // Foreground only
+  int16_t tagged_color, file_num_color;
+
+  // Color for 'found' text when searching
+  int16_t found_fore_color, found_back_color;
+
+  // What file you are on, its color (fore+(back<<4))
+  int16_t current_file_color;
+
+  // if set to 0, will use the users info, otherwise it will show up to
+  // this variable, no more
+  int16_t max_screen_lines_to_show;
+
+  // If users extended description setting is lower than this, it will force
+  // this amount to show (good for people who leave it at 0)
+  int16_t show_at_least_extended;
+
+  // Toggles
+  unsigned int edit_enable : 1;
+  unsigned int request_file : 1;
+  unsigned int colorize_found_text : 1;
+  unsigned int search_extended_on : 1;
+
+  unsigned int simple_search : 1;
+  unsigned int no_configuration : 1;
+  unsigned int check_exist : 1;
+  unsigned int xxxxxxxxxxxxxxxxx : 9;
+
+  int16_t forced_config;
+};
+
+#pragma pack(pop)
+
+extern listplus_config lp_config;
+
+void printtitle_plus();
+int first_file_pos();
+void print_searching(search_record* search_rec);
+int listfiles_plus(int type);
+int lp_add_batch(const std::string& file_name, int dn, int fs);
+int printinfo_plus(uploadsrec* upload_record, int filenum, int marked, int LinesLeft,
+                   search_record* search_rec);
+int print_extended(const std::string& file_name, int numlist, int indent,
+                        wwiv::sdk::Color color, search_record* search_rec);
+void show_fileinfo(uploadsrec* upload_record);
+int check_lines_needed(uploadsrec* upload_record);
+int prep_search_rec(search_record* r, int type);
+int calc_max_lines();
+void load_lp_config();
+void save_lp_config();
+void sysop_configure();
+short SelectColor(int which);
+void config_file_list();
+void do_batch_sysop_command(int mode, const std::string& file_name);
+int search_criteria(search_record* sr);
+void view_file(const std::string& aligned_file_name);
+int lp_try_to_download(const std::string& file_mask, int dn);
+void download_plus(const std::string& file_name);
+void request_file(const std::string& file_name);
+
+#endif // __INCLUDED_LISTPLUS_H__

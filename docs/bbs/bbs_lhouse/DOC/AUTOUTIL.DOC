@@ -1,0 +1,183 @@
+  €£€®€°€°€°€°€°€°€¡€£€°€®€°€¡€£€°€°€°€¡€£€°€®€°€¡€£€°€°€°€¡€£€°€°€°€¡
+  €ß€•            €≠€¢  €¢  €≠€¢      €≠€¢  €¢  €≠€¢    €°€π€¢    €°€π
+  €¢ Light House  €≠€¢      €≠€¢  €¢  €≠€¢      €≠‘≥      €≠€¢      €≠
+  €¢  Host User   €≠€¢  €¢  €≠€¢      €≠€¢      €≠‘√‘ƒ    €≠€¢    €°€π
+  €¢   Manual     €≠€¶€°€™€°€√€¶€°€°€°€√€¶€°€°€°€√€¶€°€°€°€√€¶€°€°€°€√
+  €¢ for LH 3.xx  €≈€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€¡
+  €¢                                                                  €≠
+  €¢                   1 .  ówîÅ ∑AÀ©∑°úe ¢Å¥ı∑©åa?                   €≠
+  €¢                   2 .  ówîÅ ∑AÀ©∑Å π∑üA                          €≠
+  €¢                   3 .  AUTO RUN                                  €≠
+  €¢                   4 .  AUTO WRITE                                €≠
+  €¢                   5 .  AUTO UP                                   €≠
+  €¢                   6 .  INDEX BACKUP                              €≠
+  €¢                   7 .  LH CHECK                                  €≠
+  €¢                   8 .  ECV                                       €≠
+  €¢                                                                  €≠
+  €¶€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€√
+
+
+     ⁄A)  ówîÅ ∑AÀ©∑°úe ¢Å¥ı∑©åa?
+
+        ówîÅ —°ØaÀaìe •°îa ∑Aπaói∑i Õe–aâA –aã° ∂·–aµa
+        µaú·àaª° ówîÅ ∑AÀ©∑i πAâ∑–sì°îa.
+        ówîÅ∑AÀ©∑i –a°e µaú·§Â §e•¢–Å¥° –i∑©∑i –e§ÂµA è{êâÆÅ
+        ∑∂∑a°a,  RUN TIME ERROR ï° µÅ§w–iÆÅ ∑∂Øsì°îa.
+        ô°–e µaú·àaª° ∑w∂w∑aù° •°îa êa∑e ∂Öµw∑i –iÆÅ ∑∂Øsì°îa.
+        2.x §·∏ÂµA¨·ìe ∑° ówîÅ ∑AÀ©∑i ∏aï∑∑AÀ©∑°úa –aµv∑aêa
+        3.x ¶Å»·ìe ówîÅ ∑AÀ©∑°úa –aâVØsì°îa.
+
+                     
+     ⁄B)  ówîÅ ∑AÀ©∑Å π∑üA
+
+           1. AUTO RUN      (AUTORUN.EXE)
+
+              RUN TIME ERROR §i¨ó–a°e LOG ó°ùB…°ü°∑Å RUNTIME.LOG µA
+              µAú·àa êe Ø°àbâ¡ ∑°∑Aüi ∏b¨˜–e“Å îaØ° ówîÅüi Ø©–óØ°≈a
+              ∏Â—¡ îÅã°üi –aâA –sì°îa.
+
+           2. AUTO WRITE    (AUTOW.EXE)
+
+              îaÆÅ∑Å ãi∑i ∂Öµw∏aàa ù°ƒÈ ∏Û≠¢∑i –Å¨· ∑©∑©∑° ∞·∫Å¥·¥°
+              –iàı∑i ï°Øa¨wµA¨· –eå·§ÂµA ówù¢∑i –Å∫ìì°îa.
+              πA°¢∑e "∏aï∑ówù¢ : [—¡∑©°w]" ∑aù° §aéÛì°îa.
+              ∂Öµw∏aàa ∏Û≠¢–Å¨· πA°¢†e àeîe”° §aéÅ¥· ∫Å°e ñSì°îa.
+
+           3. AUTO UPLOAD   (AUTOUP.EXE)
+
+              îaÆÅ∑Å ∏aûaüi ∂Öµw∏aàa ù°ƒÈ ∏Û≠¢∑i –Å¨· ∑©∑©∑° ówù¢–Å¥°
+              –iàı∑i ï°Øa¨wµA¨· –eå·§ÂµA ówù¢∑i –Å∫ìì°îa.
+              πA°¢∑e "∏aï∑ówù¢ : [—¡∑©°w]" ∑aù° §aé·â°
+              ãi∑Å êÅ∂w∑e ¿ıºÅ∫âµA µ©ü•¥a∑°ó°, ñÅ§ÂºÅ ∫âµA —¡∑©°w∑°
+              ¿aùÅîÅù° ∑≥ùbñSì°îa.
+              ∂Öµw∏aàa ∏Û≠¢–Å¨· πA°¢â¡ ã°»a œ©∂a–e ¨a–w∑i àeîe”°
+              §aéÅ¥· ∫Å°e ñSì°îa.
+
+           4. INDEX BACKUP  (INDEX.EXE)
+           
+              ówîÅ úÂ»a∑± µAú·∫ó âAØ°Ãe, ∏aûaØ©∑Å ∑•ïBØa —¡∑© ≠•¨w µA
+              ú·àa ∑∂Øsì°îa. ∑° µAú·üi §wª° –aã° ∂·–aµa ∏aûaØ© ∑•ïBØa
+              —¡∑©∑i §Ç¥Û Ø°≈a∫Åìe ∑AÀ©ü°À°àa §·∏Â 3.0 ¶Å»· πAâ∑ñSì°îa.
+              úÂ»a∑± µAú· §i¨óØ° REC —¡∑©∑i ã°π• DAT —¡∑©ù° —¬∏w∏a†e 
+              §aé° ∫Å°e ñSì°îa.
+              
+           5. LH CHECK      (LCHECK.EXE)
+           
+              âAØ°Ãe, ∏aûaØ©∑Å úÂ»a∑± µAú· †iâ°ï° ówîÅ ∫ó∂a ∑•ïBØa —¡
+              ∑© òÅ¢ÖµA ¨óã°ìe µAú·àa ∑∂Øsì°îa. ∑°úÂ µAú·ói∑Å ¨w»Åüi
+              ¡A«a –aìeâA ∑° LH CHECK ∑≥ì°îa. ≠•¨wñE ∑•ïBØa —¡∑©∑e
+              ≠•¨w µa¶Åów∑i ¥i ÆÅ ∑∂Øsì°îa.
+              
+        
+     ⁄C)  AUTO RUN
+     
+        ¨a∂w§Û∑e ¥a∫Å àeîe–sì°îa.
+        ówîÅ ó°ùB…°ü° µA¨· AUTORUN.EXE üi Ø©–óØ°«°°e
+        ∏aï∑∑aù° µAú· àÒ¨Ç“Å LHOUSE.EXE àa Ø©–ó ñSì°îa.
+        
+        †e¥¢ ô¢à{∑e µAú·àa âÅ≠¢ §e•¢ñEîa°e, ESC «°üi íâú·¨·
+        ∏˜ª° Ø°«© ÆÅ ∑∂Øsì°îa.
+        
+     
+     ⁄D)  AUTO WRITE
+     
+        AUTOW [∏aûa§w§Â—°] [∏aûaó°ùB…°ü°] [—¡∑©π°àÂ]              
+        ∑°ú˝âA ∑≥ùb Ø°«°°e ñSì°îa.                                
+        ∏aûa§w §Â—°ìe °AìA ≠U¥ÛµA¨· ¨È∏˜ñE §Â—°üi õu–a°a          
+        ∏aûa ó°ùB…°ü°ìe ówù¢ñI ∏aûaàa ∑∂ìe ó°ùB…°ü°üi †i–sì°îa.   
+        —¡∑© π°àÂ∑e —¬∏w∏aüi õu–aìeïA * àa àaìw–sì°îa.            
+        ó°ùB…°ü°∑Å ∏Â¡A —¡∑©∑i ówù¢ –a≠a°e *.* –a°e ñSì°îa.       
+                                             
+        µÅ)  AUTOW 42000 C:\WAITPDS *.TXT                         
+                                                                      
+             42000 §wµA C:\WAITPDS µA ∑∂ìe *.TXT —¡∑©∑i           
+             °°ñÅ ówù¢ Ø°«≥ì°îa.                                  
+
+
+     ⁄E)  AUTO UPLOAD
+
+        AUTOUP [∏aûa§w§Â—°] [∏aûaó°ùB…°ü°] [—¡∑©π°àÂ] [µ≥≠e]     
+        ∑°ú˝âA ∑≥ùb Ø°«°°e ñSì°îa.                               
+        ∏aûa§w §Â—°ìe °AìA ≠U¥ÛµA¨· ¨È∏˜ñE §Â—°üi õu–a°a         
+        ∏aûa ó°ùB…°ü°ìe ówù¢ñI ∏aûaàa ∑∂ìe ó°ùB…°ü°üi †i–sì°îa.  
+        —¡∑© π°àÂ∑e —¬∏w∏aüi õu–aìeïA * àa àaìw–sì°îa.           
+        ó°ùB…°ü°∑Å ∏Â¡A —¡∑©∑i ówù¢ –a≠a°e *.* –a°e ñSì°îa.       
+        µ≥≠e∑e îe /M –aêa ™Ö∑≥ì°îa.                               
+        /M ∑e MOVE üi õu–Å¨· ∏aûaüi µ´âa¨· ówù¢ Ø°«≥ì°îa.         
+        ªb ∏aûaó°ùB…°ü° ∑Å ∏aûaìe °°ñÅ ª°∂°ª≥ì°îa.                
+        ∫Å∑Å–i∏Ò∑e /M ∑Å µ≥≠e∑i ¶à∑°°e ówù¢ –aìe ∏aûaØ©µA        
+        à{∑e ∑°üq∑Å ∏aûaàa ∑∂∑a°e RUN TIME ERROR àa êsì°îa.       
+                                                                  
+        µÅ)  AUTOUP 42000 C:\WAITPDS *.RAR                        
+                                                                  
+             42000 §wµA C:\WAITPDS µA ∑∂ìe *.RAR —¡∑©∑i           
+             °°ñÅ ówù¢ Ø°«≥ì°îa.                                  
+                                                                  
+        µÅ)  AUTOUP 42000 C:\WAITPDS *.RAR /M                     
+                                                                  
+             42000 §wµA C:\WAITPDS µA ∑∂ìe *.RAR —¡∑©∑i           
+             °°ñÅ µ´âa¨· ówù¢ Ø°«≥ì°îa. C:\WAITPDS∑Å ∏aûaìe      
+             ∏Â¶Å ª°∂°ª°âA ñSì°îa.                                
+        
+     
+     ⁄F)  INDEX BACKUP
+     
+        ¨a∂w§Û∑e àeîe –sì°îa.
+
+        ówîÅ ó°ùB…°ü°µA¨· INDEX üi Ø©–ó Ø°«°°e ∏aï∑∑aù°
+        âAØ°Ãe, ∏aûaØ©∑Å ∑•ïBØa —¡∑©∑° §Ç¥Û ñSì°îa.
+        
+        “ÅµA úÂ»a∑± µAú· §i¨óØ°µE ∑° §Ç¥Û REC —¡∑©∑i
+        —¬∏w°w DAT ù° §aéÂñ· ¨a∂w –aØ°°e ñSì°îa.
+        
+
+     ⁄G)  LH CHECK
+       
+        ówîÅ ó°ùB…°ü°µA¨· LCHECK.EXE üi Ø©–ó Ø°«°Ø°°e
+        ∑•ïBØa Ãa∑©∑Å ≠•¨w µa¶Åüi àÒ¨a –sì°îa.
+        
+        3.0 ¶Å»· πAâ∑–aìe œaù°ãaúë∑aù° Õ•ÀaÃa∑©, ∑A∏·ïA∑°»· Ãa∑©,
+        °AìA ïA∑°»· Ãa∑©, PDS_MENU.DAT, BBS_MENU.DAT, POST_MENU.DAT
+        üi àÒ¨a–sì°îa.
+        
+        àÒ¨aï°∫ó ∑A∏· ïA∑°»· Ãa∑©∑° ≠•¨wñA¥ˆ∑i âw∂ÅµAìe
+        `USER.DAT file is Destroied!' úaìe °AØ°ª°üi ¬âùb–sì°îa.
+        ∑°¨w∑° ¥Ù∑i âw∂ÅµAìe `-- OK.' àa ¬âùbñA°a LHOUSE.INF üi
+        àÒ¨a–sì°îa.
+        LHOUSE.INF Ãa∑©µAìe ∏Â¡A “A∂•ÆÅ, ∏Â¡A ∏Û≠¢ÆÅ ∏˜•°àa ã°ù¢
+        ñA¥· ∑∂Øsì°îa.
+        ∏Â¡A “A∂•ÆÅüi ∑™¥·óiµa¨· ¥|¨· USER.DAT ówµA¨· ƒa∂Ö»·–ñîÂ
+        ∏Â¡A “A∂•ÆÅµ¡ îaüi âw∂Å LHOUSE.INF Ãa∑©∑i ª°∂Åâ° LHOUSE.EXE
+        üi Ø©–ó–i àı∑i ∂aäÅ–sì°îa.
+
+        ówîÅµA¨·ìe LHOUSE.INF Ãa∑©∑° ¥Ùâ° USER.DAT Ãa∑©∑Å ∂wú∑∑° 0 ∑°
+        ¥aì© âw∂Å ∏Â¡A “A∂•ÆÅüi ∏aï∑∏‚∑aù° ƒa∂Ö»·–aâ° ∏Â¡A ∏Û≠¢ÆÅüi
+        ∂Öµw∏a∑Å ∑±∑Åù° ∑≥ùb–aµa ¨Åù°∂Ö LHOUSE.INF üi ¨ó¨˜Ø°≈a∫ìì°îa.
+
+        ∂·∑Å ∏b¥Û∑° è{êa°e âAØ°Ãe, ∏aûaØ©, â∑àÅÕeª° °AìA∑Å ó°ùB…°ü°µA
+        ¨ó¨˜ñAìe BBS_MENU.DAT, PDS_MENU.DAT, POST_MEN.DAT ∑•ïBØa
+        Ãa∑©ói∑Å ≠•¨wµa¶Åüi àÒ¨a–sì°îa.
+        Ãa≠•ñA¥ˆ∑i âw∂Å `BBS_MENU.DAT file is Destroied!' úaìe °AØ°ª°üi
+        ¬âùb–sì°îa.
+        ô° BBS_NUM.DAT µA ∏·∏wñA¥· ∑∂ìe ∏Â¡A ∏aûa ÆÅµ¡ BBS_MENU.DAT üi
+        ∏a¡A∏‚∑aù° ƒa∂Ö»·–e ∑•ïBØa ∏aûa ÆÅàa îaüi âw∂Å
+        `Index Unidentify!' úaìe °AØ°ª°üi ¬âùb–aâ° BBS_NUM.DAT Ãa∑©∑i
+        ÆÅ∏˜–i àı∑i ∂aäÅ–sì°îa.
+                     
+
+     ⁄H)  ECV
+
+        ECV ìe ówîÅµA¨· °¢ù¢ â≈ü°µA ≥a∑°ìe ∑•ïBØa Ãa∑©
+        BBS_MENU.DAT, PDS_MENU.DAT, POST_MEN.DAT ów Ãa∑©∑i
+        ∑©§e µAó°»·µA¨· ¶âú·¨· Õeª≥–i ÆÅ ∑∂ìe …BØaÀa(ASCII) —w»Åù°
+        §aé°∫Åâ°, Õeª≥–e “Å îaØ° ∑•ïBØa Ãa∑©ù° §aé°∫Åìe œaù°ãaúë∑≥ì°îa.
+
+        •• œaù°ãaúë∑e •e—≈–aâ°∏a –aìe °AìA∑Å ó°ùB…°ü°µA¨· Ø©–óñA¥·¥° –sì°îa.
+        †e¥¢ 21000 §Â âAØ°Ãe∑Å BBS_MENU.DAT ∑•ïBØaüi …BØaÀa Ãa∑©ù° §aéâùa°e
+        21000 §Â ó°ùB…°ü°µA ói¥·àe ¨w»ÅµA¨· Ø©–ó –Å∫Å≠a¥° –sì°îa.
+
+          ECV 1  :  INDEX -> ASCII
+          ECV 2  :  ASCII -> INDEX
+
+        ∂·µ¡à{∑° ¥i†xìe µ≥≠e∑i ¨Â»Ç–Å¨· Ø©–ó –aØ°°e ñSì°îa.
+

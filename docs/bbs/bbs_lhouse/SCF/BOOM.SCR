@@ -1,0 +1,624 @@
+1
+    cls
+    writeln                ‘∞‘±‘≤   [=13Fª°[=12FûA[=11F¿x[=10Fã°   [=15F‘≤‘±‘∞
+    writeln
+    writeln                                   ver 1.5
+    writeln                             πA∏b : ã±π∑“A
+    writeln              
+    writeln                ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞
+    writeln                ‘∞‘±‘≤‘€  [=13F°A  ìA  [=15F‘€‘≤‘±‘∞
+    writeln                ‘∞                      ‘∞
+    writeln                ‘∞   [=2F1. [=15FâA∑± Ø°∏b!!     ‘∞
+    writeln                ‘∞                      ‘∞
+    writeln                ‘∞   [=2F2. [=15Fï°∂ë†i          ‘∞
+    writeln                ‘∞                      ‘∞
+    writeln                ‘∞   [=2F3. [=15F…∑â¡∏a µiúq     ‘∞
+    writeln                ‘∞                      ‘∞
+    writeln                ‘∞   [=2Fp. [=15F®aπa êaàaã°     ‘∞
+    writeln                ‘∞                      ‘∞
+    writeln                ‘∞   [=13Fª°[=12FûA[=11F¿x[=10Fã° [=9Fver [=14F1.5[=15F   ‘∞
+    writeln                ‘∞                      ‘∞
+    writeln                ‘∞‘±‘≤‘€‘∞‘±‘≤‘€‘∞‘±‘≤‘€‘∞
+    writeln
+    write                  [=11F∑≥ùb–a≠A∂a.[=15F>>
+    input s1
+    if s1==1 then goto 10
+    if s1==2 then goto 110
+    if s1==3 then goto 120
+    if s1==p then goto 50
+    if s1==P then goto 50
+    else goto 1
+    
+10
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘≤‘±‘∞‘≤‘±‘∞
+    writeln       <<                                    >>
+    writeln       << îwØ•∑e ª°ãq [=13Fª°[=12FûA[=15Fàqµ¢µA àh—vØsì°îa. >>
+    writeln       << êÅ∑© îwØ•∑e ¨a—w∑i îw–sì°îa.       >>
+    writeln       << ∑° âµµA¨· ®iü° ®aπa êaàa¥° –sì°îa. >>
+    writeln       << ãaú˝ª° ¥g∑a°e îwØ•∑e ∫Ç∑iàı∑≥ì°îa. >>
+    writeln       << ∏a ®iü° ¬â§i–sØ°îa!!               >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write   [=13F¥·ó°ù° àaâVØsì°åa? [=11Fï∑,¨·,êq,¶Ç [=10F>>[=15F
+    input s1
+    if s1==ï∑ then goto 20
+    if s1==¨· then goto 20
+    if s1==êq then goto 25
+    if s1==¶Ç then goto 20
+    else goto 10
+    
+20
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << ∑a¥u!! [=13Fª°[=12FûA[=15Fîu !!                   >>
+    writeln       << ∑°úÂ [=13Fª°[=12FûA[=15Füi §l∑a≠väÖ∂a..           >>
+    writeln       << ãaú·êa †aª°†b ã°“Aàa ∑∂Øsì°îa!!    >>
+    writeln       << §aù° [=14Fï©°W∑° [=15F!!                     >>
+    writeln       << ∏aØ•∑Å ¢ÅâA†e«q∑Å ï©∑i µ©ùaëΩ∑a°e..>>
+    writeln       << ∫Çª° ¥gâV∫a..                      >>
+    writeln       << ª°ãq [=14Fï©°W∑°[=15Fàa 10àÅ ∑∂Øsì°îa!!      >>
+    writeln       << ∑° ∫ó –aêaìe îwØ•∑Å ¡A∫óâ¡ à{Øsì°îa>>
+    writeln       << Ø•∫ó”° ¨óàb–aØ°â° â°üa≠A∂a.        >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=11F1 ~ 10 [=13Fâ©úa•°≠A∂a. [=10F>>[=15F
+    input i2
+    if i2==1 then goto 25
+    if i2==2 then goto 40
+    if i2==3 then goto 25
+    if i2==4 then goto 40
+    if i2==5 then goto 40
+    if i2==6 then goto 25
+    if i2==7 then goto 40
+    if i2==8 then goto 40
+    if i2==9 then goto 40
+    if i2==10 then goto 25
+    else goto 20
+    
+25
+
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << ∑q. îÅîe–Å...                      >>
+    writeln       << ãaú·êa §wØ±∑e ãq¢â.                >>
+    writeln       << µ·ê°? µaã°ìe [=13Fª°[=12FûA[=15F§{∑°ì°åe.         >>
+    writeln       << ¥aª¢ [=13Fª°[=12FûA[=15Fìe †g∫a...                >>
+    writeln       << ∏i ¨Â»Ç–aØ°ã©..                    >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=13F¥·ó°ù° àaâVØsì°åa? [=11Fï∑,¨·,êq,¶Ç [=10F>>[=15F
+    input s3
+    if s3==ï∑ then goto 40
+    if s3==¨· then goto 40
+    if s3==êq then goto 40
+    if s3==¶Ç then goto 30
+    else goto 25
+    
+30
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << îwØ•∑e ∂Ö∑° πΩäÖ∂a..               >>
+    writeln       << ãa ã°≠Aù° è{åaª° àa•°≠A∂a.         >>
+    writeln       << ãaü°â° [=12F•¢ä•[=15F–aêa ¨a•°Ø°∫a.          >>
+    writeln       << —¢Ø° ¥sì°åa? îw¿Ò∑° ñIª°..         >>
+    writeln       << ∑q. ãaúÅï° ¥aª¢ [=13Fª°[=12FûA[=15Fìe êq¥a∑∂∫a.   >>
+    writeln       << ∏i ¨Â»Ç–a≠A∂a. Ø•∫ó”°..            >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln       
+    write         [=13F¥·ó°ù° àaâVØsì°åa? [=11Fï∑,¨·,êq,¶Ç [=10F>>[=15F
+    input s2
+    if s2==ï∑ then goto 55
+    if s2==¨· then goto 40
+    if s2==êq then goto 40
+    if s2==¶Ç then goto 40
+    else goto 30
+    
+40
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >> 
+    writeln       << [=13Fª°[=12FûA[=15Füi §l¥väÖ∂a.                   >>
+    writeln       << “Å~ ã°“Aìe ¥ÙØsì°îa.               >>
+    writeln       << îaØ° ï°∏Â–Å •°≠A∂a.                >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=11FîaØ° ï°∏Â–aØ°âVØsì°åa? [=13F[Y/N] [=10F>>[=15F
+    input s3
+    if s3==Y then goto 1
+    if s3==y then goto 1
+    if s3==N then goto 50
+    if s3==n then goto 50
+    else goto 40
+    
+50  
+    cls
+    writeln
+    writeln      [=13F‘ê‘ê‘ê‘ê‘ê‘ê‘ê [=15FGOOD BYE ~~ HAPPY NEW YEAR !! [=13F‘ë‘ë‘ë‘ë‘ë‘ë‘ë[=15F
+    writeln
+    writeln       ¥eëw”° àa≠A∂a..
+    writeln       ¥|∑aù° êaµ© ¨Å §·πeï° ã°îÅ–aØ°â°∂a.
+    writeln       [=11F§aúq≠°œaÀa[=15Füi ã°¥‚–Å ∫Å≠A∂a.
+    writeln       ¥eëw”° àaØ≥Ø°µ°.
+    writeln       
+    writeln     [=13F‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü‘û‘ü
+    writeln
+    delay 1000
+    stop
+    
+55
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << ª°ãq îwØ•¥|µA [=13Fª°[=12FûA[=15Fàa ∑∂Øsì°îa.     >>
+    writeln       << ∑°∫ó [=10F3àÅ[=15Fìe [=13Fª•ºa[=15F∑°â° [=10F1àÅ[=15Fìe [=13Fàaºa[=15F!!   >>
+    writeln       << ãaü±∑i •°Ø°â° Ãeîe–a≠A∂a..         >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=10F[Enter][=15Füi ∑≥ùb–aØ°°e ãaü±∑° êaµ≥ì°îa.
+    input s1
+    goto 56
+    
+56
+    cls
+    writeln
+    writeln                          [=9F‘†‘°‘§‘¢[=15F
+    writeln                          @|‘Ô‘Ô|@
+    writeln                           | -- |
+    writeln                            \--/
+    writeln                      [=11F‘⁄‘≠‘≠‘û‘û‘≠‘≠‘ø
+    writeln                      ‘≥            ‘≥
+    writeln                      ‘≥ ‘≥      ‘≥ ‘≥
+    writeln                      ‘≥ ‘≥      ‘≥ ‘≥
+    writeln                      ‘≥ ‘≥      ‘≥ ‘≥
+    writeln                       ‘€‘›       ‘€‘›
+    writeln                      [=3F‘¢‘¢        ‘¢‘¢
+    writeln                         [=15F‘√‘ƒ‘ƒ‘ƒ‘¥
+    writeln                         ‘≥      ‘≥
+    writeln     [=15F(1)                 ‘≥  ‘≥  ‘≥                (4)
+    writeln                         ‘≥  ‘≥  ‘≥
+    writeln   [=11F‘á‘á‘á                [=15F‘≥  ‘≥  ‘≥             [=14FŸmŸmŸmŸmŸm
+    writeln [=11F‘á‘á  ‘á‘á              [=15F‘≥  ‘≥  ‘≥               [=14FŸf  Ÿf
+    writeln   [=11F‘á‘á‘á             [=1F‘€‘€‘€‘›‘ﬁ‘€‘€‘€          [=14FŸmŸmŸmŸmŸm
+    writeln
+    writeln
+    writeln             [=15F(2)                    (3)
+    writeln        
+    writeln          [=12F‘∞‘∞‘∞‘∞                [=13FŸlŸ}Ÿ}Ÿ}
+    writeln          [=12F‘∞‘∞‘∞‘∞                [=13FŸuŸkŸîŸî[=15F
+    writeln                     
+    write       [=10Fâ°üaØ°µ° [=2F1 ,2 ,3 ,4 [=14F>>[=15F
+    input i7
+    if i7==1 then goto 40
+    if i7==2 then goto 40
+    if i7==3 then goto 40
+    if i7==4 then goto 60
+    else goto 56                     
+
+60
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << ∑°¥°~ ∏˜†i îÅîe–aäÖ∂a..            >>
+    writeln       << µaã°åaª° µ°îaì°...                 >>
+    writeln       << ª•ºa. •¢ä•–aêa ¨a•°≠A∂a..          >>
+    writeln       << îw¿ÒñIàı à{∑e µÅàq∑°..             >>
+    writeln       << ≥iïA¥Ùìe †i∑e ∑°πA ãa†e!!          >>
+    writeln       << [=13Fª°[=12FûA[=15Fìe †g∑° êq¥v∑aì°åe∂a.          >>
+    writeln       << ¬âäÅàa àaåsØsì°îa.                 >>
+    writeln       << ¥·¨· àaØ°∫a~                       >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=13F¥·ó°ù° àaØ°âVØsì°åa? [=11Fï∑,¨·,êq,¶Ç [=10F>>[=15F
+    input s4
+    if s4==ï∑ then goto 75
+    if s4==¨· then goto 70
+    if s4==êq then goto 70
+    if s4==¶Ç then goto 70
+    else goto 60
+    
+70
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << ∑°úÂ [=13Fª°[=12FûA[=15Füi §l∑a≠väÖ∂a..           >>
+    writeln       << µ°~ ê·¢Å ¥aåsîw!!                  >>
+    writeln       << ãaú˝îa°e îaØ° –e§Â ã°“Aüi ∫Å∫a.    >>
+    writeln       << îwØ•∑Å §i £ªµAìe [=13Fª°[=12FûA[=15Fàa ∑∂Øsì°îa.  >>
+    writeln       << ãaü°â° ñâùAµAìe [=10Fï©°W∑°[=15Fàa †g∑° ∑∂∫a.>>
+    writeln       << –e [=14F20àÅ [=15F∏˜ï°.                      >>
+    writeln       << ãa ∫ó –aêaìe îwØ•∑i ¨iü©ÆÅàa ∑∂∫a. >>
+    writeln       << ∂Ö∑° πΩîa°e..¥·ó° –e§Â ∏i –Å•°≠A∂a.>>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=13F1 ~ 20 [=11Fâ©úa•°≠A∂a. [=10F>>[=15F
+    input i3
+    if i3==1 then goto 40
+    if i3==2 then goto 75
+    if i3==3 then goto 40
+    if i3==4 then goto 40
+    if i3==5 then goto 40
+    if i3==6 then goto 75
+    if i3==7 then goto 40
+    if i3==8 then goto 75
+    if i3==9 then goto 40
+    if i3==10 then goto 40
+    if i3==11 then goto 75
+    if i3==12 then goto 40
+    if i3==13 then goto 40
+    if i3==14 then goto 75
+    if i3==15 then goto 40
+    if i3==16 then goto 40
+    if i3==17 then goto 75
+    if i3==18 then goto 40
+    if i3==19 then goto 75
+    if i3==20 then goto 40
+    else goto 70
+
+75
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << …∑â¡!!                             >>
+    writeln       << ô° –e â°ß°üi êÒ∑a≠vØsì°îa.         >>
+    writeln       << ãeïA ∑°âA ∂≈∑©..?                  >>
+    writeln       << •°¡°¨·îÂ •°¡°•wµAâA...             >>
+    writeln       << àÈü°îaì°..                         >>
+    writeln       << ãaú·êa!! ¨iã©∑e ∑∂Øsì°îa!!         >>
+    writeln       << ª°ãq îwØ•¥|µAìe [=10Fï©°W∑°[=15F(∑b, ô°!!).. >>
+    writeln       << [=13F15àÅ[=15Fàa êaúe”°(?) ∑∂Øsì°îa.         >>
+    writeln       << ãa ∫ó –aêaìe...                    >>
+    writeln       << •°¡°•w∑i ¢âü°√© ÆÅ ∑∂Øsì°îa.       >>
+    writeln       << ∏i ¨Â»Ç–a≠A∂a..                    >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=13F1 ~ 15 [=11Fâ©úa•°≠A∂a. [=10F>>[=15F
+    input i5
+    if i5==1 then goto 40
+    if i5==2 then goto 40  
+    if i5==3 then goto 40
+    if i5==4 then goto 76
+    if i5==5 then goto 76
+    if i5==6 then goto 40
+    if i5==7 then goto 40
+    if i5==8 then goto 40
+    if i5==9 then goto 76
+    if i5==10 then goto 40
+    if i5==11 then goto 76
+    if i5==12 then goto 76
+    if i5==13 then goto 40
+    if i5==14 then goto 40
+    if i5==15 then goto 40
+    else goto 75
+
+76
+    cls
+    writeln       
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << µaã°åaª° µ°ìaúaâ°..                >>
+    writeln       << îwØ•∑e ¢Å¿‚ ª°¡a ∑∂îa!!            >>
+    writeln       << ª°ãq∑e [=10F”AØ¢∑Å Ø°àe[=15F!!               >>
+    writeln       << âA∑±(?)∑°êa ªiã°°e¨· Æ·ï°ù¢!!      >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=10F[Enter][=15Füi íÅüa°e âA∑±∑° Ø°∏bñSì°îa.
+    input s1
+    goto 77
+    
+77
+        random 1000
+        cls
+        writeln
+        writeln    ‘∞‘±‘≤ âA∑± ≠¢µA âA∑±!! Æï∏a †x¬Åã°!! ‘∞‘±‘≤
+        writeln
+        writeln                                   πA∏b : ã±π∑“A
+        writeln 
+        writeln     ## âA∑±∑i ãa†e–aâ° Øº∑iòÖ
+        writeln                         [=13FÆï∏a 0[=15F∑i íÅüa≠A∂a. ## 
+        writeln  
+        writeln
+        write      [=11Fâ©úa•°≠A∂a~ [=10F>> [=15F[____][5D
+        input i1
+        if i1==0 then goto 82
+        if i1>>i0 then goto 78
+        if i1<<i0 then goto 79
+        if i1==i0 then goto 81
+        else goto 77
+
+78
+        cls
+        writeln
+        writeln      ‘∞‘±‘≤ î· [=13F∏b∑e Æï∏a[=15F∑≥ì°îa. ‘∞‘±‘≤
+        writeln
+        delay 2000
+        goto 77
+
+79
+        cls
+        writeln
+        writeln      ‘∞‘±‘≤ î· [=13F«e Æï∏a[=15F∑≥ì°îa.   ‘∞‘±‘≤
+        writeln
+        delay 2000
+        goto 77
+81
+        cls
+        writeln
+        writeln         ‘∞‘±‘≤ [=12F†x¥vØsì°îa!!! [=15F‘∞‘±‘≤
+        writeln
+
+82
+        cls
+        writeln
+        writeln            [=11F‘Ø[=12F‘Ø[=11F‘Ø [=10FGOOD BYE~ [=11F‘Æ[=12F‘Æ[=11F‘Æ[=15F
+        writeln
+        delay 2000
+        goto 140
+        
+80
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << óaó°¥· [=9F¬âäÅ[=15Fåaª° µ÷Øsì°îa.          >>
+    writeln       << ¬Ç–aóaü≥ì°îa.                      >>
+    writeln       << ãaú·êa ¥aª¢ êeâ≈∑° –aêa êq¥a∑∂∫a.  >> 
+    writeln       << ∑° ¢Ö∑i µaìeàı!!                   >>
+    writeln       << ¥|µA [=11FµiÆA[=15Fàa [=14F40àÅ [=15F∑∂Øsì°îa.         >>
+    writeln       << ∑° ∫óµA ¢Ö∑i µiÆÅ ∑∂ìe [=11FµiÆA[=15Fàa ∑∂∫a.>>
+    writeln       << –e§Â ∏i â©úa •°≠A∂a.               >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=13F1 ~ 40 [=11Fâ©úa•°≠A∂a. [=10F>>[=15F
+    input i4
+    if i4==6 then goto 150
+    if i4==9 then goto 150
+    if i4==15 then goto 150
+    if i4==21 then goto 150
+    if i4==24 then goto 150
+    if i4==28 then goto 150
+    if i4==34 then goto 150
+    if i4==36 then goto 150
+    if i4==39 then goto 150
+    else goto 90
+    
+90
+    cls
+    writeln
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+    writeln       <<                                    >>
+    writeln       << ∑°úÈÆÅàa!! â°ª°üi ¥|µA ñÅâ°..      >>
+    writeln       << îwØ•∑e [=11FµiÆA[=15Füi ∏i°µè°¥·¨·..         >>
+    writeln       << [=4Fàq∏Â[=15F∑° ïˆ¥·∂a.                     >>
+    writeln       << ∫Ç¥ˆâV∫a?                          >>
+    writeln       << ∏˜†i ¥aÆÛëA∂a~                     >>
+    writeln       <<                                    >>
+    writeln       ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+    writeln
+    write         [=11FîaØ° ï°∏Â –aØ°âVØsì°åa? [=12F[Y/N] [=10F>>[=15F
+    input s5
+    if s5==Y then goto 1
+    if s5==y then goto 1
+    if s5==N then goto 50
+    if s5==n then goto 50
+    else goto 90
+    
+100
+    cls
+    writeln
+    writeln       [=11F‘ê[=13F‘ê[=11F‘ê[=13F‘ê[=11F‘ê[=13F‘ê [=15F¬Ç–a–sì°îa!! [=11F‘ë[=13F‘ë[=11F‘ë[=13F‘ë[=11F‘ë[=13F‘ë[=15F
+    writeln     
+    writeln                  ∏˜†i îÅîe–aäÖ∂a.
+    writeln           ª•ºaûÅ µ°ìi [=12F•¢ä•[=15F–aêa ¨a•°≠A∂a..
+    writeln               ç¢!! ∑°ób∑° ∑∂∑ià·µÅ∂a..
+    writeln             ¥a¢ÅÀe ∏˜†i ¬Ç–a óaü≥ì°îa.
+    writeln
+    write        [=13FîwØ•∑Å ∑°üq∑e ¢Å¥ı∑≥ì°åa? [=10F>>[=15F
+    input s6
+    writeln              [=11F[s6][=15Fì± ∏˜†i îÅîe–aØ≥ì°îa.
+    writeln                  ¬Ç–a óaü≥ì°îa.
+    writeln         ¥|∑aù° êaµ© [=13F¨Å§·πe[=15Fï° ã°îÅ –aØ°ã©..
+    writeln
+    write        [Enter]üi √°Ø≥Ø°µ°.
+    input s1
+    goto 105
+
+105
+    cls
+    writeln
+    writeln      îwØ•∑Å [=10F∑°üq[=15F∑e [=13Fª°[=12FûA[=11F¿x[=10Fã° [=15F…∑â¡∏a ã°ù¢µA ã°ù¢ñI àı∑≥ì°îa.
+    writeln
+    writeln      ª©¢ÖµA ¨˜Ø©”° îÅîs–Å ∫ÅØ≥Ø°µ°.
+    writeln
+    assign tuser.us
+    write        îwØ•∑Å [=10F∑°üq[=15F∑e ¢Å¥ı∑≥ì°åa? >>
+    input s1
+    friteln [s1]
+    close
+    delay 1000
+    writeln
+    writeln      ∑≥ùb ñA¥ˆØsì°îa. [=14F…∑â¡∏a µiúq[=15F∑aù° —¬∑•–Å •°Ø≥Ø°µ°.
+    writeln
+    write        [=13F¿·∑q¶Å»· îaØ° –aâVØsì°åa? [=13F[Y/N] [=10F>>[=15F
+    input s7
+    if s7==Y then goto 1
+    if s7==y then goto 1
+    if s7==N then goto 50
+    if s7==n then goto 50
+    else goto 100
+    
+110
+    cls
+    writeln      €Æ€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€Ø
+    writeln      €¢                                                €¢
+    writeln      €¢  [=13Fª°[=12FûA[=11F¿x[=10Fã° [=15Fver 1.5                              €¢
+    writeln      €¢                                                €¢
+    writeln      €¢  πA∏b∏a : [=11Fã±π∑“A [=13F(civace)[=15F                      €¢
+    writeln      €¢                                                €¢
+    writeln      €¢  ¥eëw–a≠A∂a.                                   €¢
+    writeln      €¢                                                €¢
+    writeln      €¢  [=13Fª°[=12FûA[=11F¿x[=10Fã° [=15FâA∑±∑Å πA∏b∏a∑• [=11Fã±π∑“A[=15F∑≥ì°îa.        €¢
+    writeln      €¢                                                €¢
+    writeln      €¢  [=13Fª°[=12FûA[=15F¿xìe âA∑±∑aù° à·∑Å †·óaµ¡ à{∫a?           €¢
+    writeln      €¢                                                €¢
+    writeln      €¢  ∏Å£°∑∂âA ªiã°Ø°ã©...                          €¢
+    writeln      €¢                                                €¢
+    writeln      €¢  âA∑±µA §·ãaêa ¢ÖπA∏Ò.                         €¢
+    writeln      €¢                                                €¢
+    writeln      €¢  àÅ¨Â–i∏Ò∑° ∑∂∑a°e êa∂ÅíÅü° ¥a∑°ó° [=13Fcivace[=15Fù°..  €¢
+    writeln      €¢                                                €¢
+    writeln      €¢  âÅ≠¢ §·πe¥Û âÅ“B∫ó.                           €¢
+    writeln      €¢                                                €¢
+    writeln      €±€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€∞
+    writeln
+    write        [=10F[Enter][=15Füi √°Ø≥Ø°µ°..
+    input s8
+    goto 1
+
+120
+    cls
+    writeln
+    writeln      €Æ€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€Ø
+    writeln      €¢                                              €¢
+    writeln      €¢          [=13Fª°[=12FûA[=11F¿x[=10Fã° [=15F…∑â¡∏a µiúq..              €¢
+    writeln      €¢                                              €¢
+    writeln      €±€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€∞
+    writeln
+    write         [=13F…∑â¡∏a µiúq –aØ°âVØsì°åa? [=10F[y/N] [=15F: [ ][2D
+    input s9
+    if s9==y then goto 130
+    if s9==Y then goto 130
+    if s9==n then goto 1
+    if s9==N then goto 1
+    else goto 120
+
+130
+   cls
+   writeln
+   print tuser.us
+   writeln
+   write  [=10F[Enter][=15Füi íâú· ∫Å≠A∂a...
+   input s1
+   goto 1
+
+140
+   cls
+   writeln
+   writeln        ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+   writeln        <<                                    >>
+   writeln        << Æ·¥ˆ∑aì° îaØ° àa¥°∫a?              >>
+   writeln        << ∑°πA à·∑Å îa µ•àı à{∑eïA∂a..       >>
+   writeln        << ®iü° ¬â§i–sØ°îa.                   >>
+   writeln        << π°Ø±–Å¨· â°üa≠A∂a..                >>
+   writeln        <<                                    >>
+   writeln        ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+   writeln
+   write      [=11F¥·ó°ù° àaØ°âVØsì°åa? [=13Fï∑,¨·,êq,¶Ç [=10F>>[=15F
+   input s4
+   if s4==ï∑ then goto 40
+   if s4==¨· then goto 80
+   if s4==êq then goto 40
+   if s4==¶Ç then goto 40
+   else goto 140
+   
+150
+   cls
+   writeln
+   writeln        ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+   writeln        <<                                    >>
+   writeln        << ”A~ óaó°¥· ¨˜â∑!!                  >>
+   writeln        << îwØ•∑e ¨i¥vØsì°îa.                 >>
+   writeln        << ... ¥u!!  ∏·àı∑e!!                 >>
+   writeln        << îwØ•∑Å ¥|µAìe ∑° [=11Fàqµ¢∑i ª°«°ìe..   [=15F>>
+   writeln        << [=13Fù°•µ[=15F∑° ∑∂Øsì°îa!!                  >>
+   writeln        << ñâùAµAìe òÈ¥·πa∑∂ìe [=10FÆÅüA»e[=15F∑° –aêa. >>
+   writeln        << [=13Fù°•µ[=15F∑Å ¥¢∏ÒµA [=10FÆÅüA»e[=15F∑i îÂª°°e!!    >>
+   writeln        << îwØ•∑e ∏a∑A∑Å °±∑°...ñSì°îa.       >>
+   writeln        << [=14F¥¢∏Ò[=15F∑i ∏i ¿x¥a •°≠A∂a..            >>
+   writeln        <<                                    >>
+   writeln        ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+   writeln
+   write          [=10F[Enter][=15Füi íÅüa°e ãaü±∑° êaµ≥ì°îa.
+   input s1
+   goto 151
+   
+151
+   cls
+   writeln
+   writeln                     
+   writeln                [=15F(8) [=13FŸv [=3F‘∞‘∞‘∞‘∞‘∞
+   writeln                       [=1F| ‘û  ‘û | [=13FŸw [=15F(2)
+   writeln                       [=1F|   ‘ñ   |
+   writeln                       ‘¿‘ƒ‘ƒ‘ƒ‘Ÿ
+   writeln                          [=3F‘±‘± [=13FŸw [=15F(7)
+   writeln         [=15F(1) [=13FŸv  [=12FŸÀŸÀ[=10F‘€‘€‘€‘€‘€‘€‘€[=12FŸÀŸÀ
+   writeln                 [=12FŸÀŸÀ[=10F‘€‘€‘€‘€‘€‘€‘€[=12FŸÀŸÀ
+   writeln                 ŸÀ  [=10F‘€‘€‘€‘€‘€‘€‘€  [=12FŸÀ
+   writeln                 ŸÀ  [=10F‘€‘€‘€[=15F(9)[=10F‘€‘€‘› [=12FŸÀ [=13FŸw [=15F(6)
+   writeln                 [=12FŸÀ  [=10F‘€‘€‘€‘€‘€‘€‘€  [=12FŸÀ
+   writeln                 ŸÃ  [=10F‘€‘€‘€‘€‘€‘€‘€  [=12FŸÃ
+   writeln                 [=2F‘Ô  [=10F‘€‘€‘€‘€‘€‘€‘€  [=2F‘ı
+   writeln                       [=14FŸ∆Ÿ∆Ÿ∆Ÿ∆Ÿ∆
+   writeln                       Ÿ∆Ÿ∆Ÿ∆Ÿ∆Ÿ∆ [=13FŸw [=15F(5)
+   writeln                     [=10F‘€‘€‘€‘€‘€‘€‘€
+   writeln                     ‘€‘€‘€‘€‘€‘€‘€ [=13FŸw [=15F(4)
+   writeln                     [=10F‘€‘€‘€‘€‘€‘€‘€
+   writeln                      [=9FŸlŸlŸlŸlŸlŸl
+   writeln                      ŸlŸlŸlŸlŸlŸl [=13FŸw [=15F(3)
+   writeln
+   writeln
+   write    [=11FÆï∏aüi â°üa≠A∂a. [=13F1 ~ 9 [=10F>> [=15F[_][2D
+   input i9
+   if i9==1 then goto 160
+   if i9==2 then goto 100
+   if i9==3 then goto 160
+   if i9==4 then goto 160
+   if i9==5 then goto 100
+   if i9==6 then goto 160
+   if i9==7 then goto 100
+   if i9==8 then goto 160
+   if i9==9 then goto 160
+   
+160
+   cls
+   writeln
+   writeln        ‘∞‘±‘≤‘∞‘±‘≤   [=11F°A  [=12F≠A  [=13Fª°   [=15F‘∞‘±‘≤‘∞‘±‘≤
+   writeln        <<                                    >>
+   writeln        << –‚!! Àiùvîa!!                      >>
+   writeln        << îwØ•∑e [=13Fù°•µ[=15F∑Å [=10FùA∑°πa ¡∑[=15F(^^;)µA..   >>
+   writeln        << †x¥a ∫Ç¥ˆîa!!                      >>
+   writeln        << ã°“Aìe ¥ÙØsì°îa.                   >>
+   writeln        <<                                    >>
+   writeln        ‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±‘≤‘∞‘±
+   writeln
+   write          [=11FîaØ° ï°∏Â –aâVØsì°åa? [=13F[Y/N] [=10F>>[=15F
+   input s2
+   if s2==Y then goto 1
+   if s2==y then goto 1
+   if s2==N then goto 50
+   if s2==n then goto 50
+   else goto 160         
+

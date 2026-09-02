@@ -1,0 +1,53 @@
+^New: Full Quest Campaign!
+|10New: Full Quest Campaign!
+|06-------------------------
+|1014 new quests|02 have been added, bringing the total to |1020|02.  The quests
+form a full campaign with branching paths, player choices, and a finale
+that will test even the strongest clans.
+
+|10How to start:|02  Talk to the villagers!  Many NPCs have stories to tell
+and favours to ask.  Some quests are available right away, while others
+unlock only after you have proven yourself.
+
+|10Hints:|02
+ |14*|02 Completing one quest often leads to the next.  Pay attention to
+   what the NPCs tell you after you return victorious.
+ |14*|02 A certain historian knows more than he lets on about ancient evils.
+ |14*|02 The orcs are not the only threat lurking in these mines . . .
+ |14*|02 The mightiest weapon in the game cannot be bought.  It must be
+   earned.
+^END
+
+^What's New Since v0.93
+|10What's new in v0.94 to v0.97b2
+|06-------------------------------
+|02The Clans has been modernized substantially since its original DOS/Windows
+release:
+
+- Ported to FreeBSD, Linux, and modern Windows (MinGW/MSVC); DOS-era
+  dependencies such as SHARE.EXE removed
+- Numerous bug fixes: memory leaks, buffer overflows, IBBS packet
+  handling, serialization, and combat edge cases resolved
+- Build system overhauled: GNUmakefile with automated dependencies,
+  Visual Studio project files, and installer targets for Unix and Windows
+- DevKit expanded: quest scripting test tool (qtest), improved langcomp
+  and ecomp, and an integration test suite
+- Help files corrected: stale references to removed mechanics (farms,
+  approval/popularity, old command-line options) updated
+- Dictatorship government type removed; democracy is now the only option
+^END
+
+^Coming Soon
+|14Here are some features which may or may not appear in The Clans.  They
+are being considered, however:|06
+
+ * Roaming NPCs.  NPCs that travel from village to village (in a league)
+ * Village Scenarios.  Sysop will choose from a list of village scenarios
+   such as a port town, prairie village, etc.  Each type of village will
+   have some unique races and classes and other options.  This will help
+   vary villages from BBS to BBS in leagues.
+ * If a user is online and someone tries to play, the waiting party may
+   play a really cheap game and also be able to send a message to the
+   person that is in the game playing.
+ * New races, classes, and equipment.
+^END

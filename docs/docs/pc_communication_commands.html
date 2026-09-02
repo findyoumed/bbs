@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PC통신 명령어 완전 정리</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Nanum+Gothic:wght@400;700;800&family=Black+Han+Sans&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --panel: #0f1525;
+    --border: #1e3a5f;
+    --ht: #00bfff;
+    --nn: #00ff99;
+    --cl: #ff9500;
+    --common: #cc88ff;
+    --text: #c8d8e8;
+    --muted: #5577aa;
+    --code-bg: #070b14;
+    --glow-ht: 0 0 8px #00bfff66;
+    --glow-nn: 0 0 8px #00ff9966;
+    --glow-cl: 0 0 8px #ff950066;
+    --glow-cm: 0 0 8px #cc88ff66;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nanum Gothic', sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  header {
+    background: linear-gradient(135deg, #050c1a 0%, #0a1832 50%, #050c1a 100%);
+    border-bottom: 2px solid var(--border);
+    padding: 36px 40px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--ht), var(--nn), var(--cl), transparent);
+    animation: hline 3s ease-in-out infinite alternate;
+  }
+  @keyframes hline { 0%{opacity:.4} 100%{opacity:1} }
+
+  .header-top { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:2px; margin-bottom:10px; }
+
+  h1 { font-family:'Black Han Sans',sans-serif; font-size:32px; color:#fff; letter-spacing:-1px; margin-bottom:8px; text-shadow:0 0 20px rgba(0,191,255,.4); }
+
+  .header-sub { font-size:13px; color:var(--muted); font-family:'Share Tech Mono',monospace; }
+
+  .badge-row { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  .badge { font-family:'Share Tech Mono',monospace; font-size:11px; padding:4px 12px; border-radius:2px; letter-spacing:1px; font-weight:bold; }
+  .badge-ht { background:rgba(0,191,255,.15); color:var(--ht); border:1px solid var(--ht); }
+  .badge-nn { background:rgba(0,255,153,.12); color:var(--nn); border:1px solid var(--nn); }
+  .badge-cl { background:rgba(255,149,0,.12); color:var(--cl); border:1px solid var(--cl); }
+  .badge-cm { background:rgba(204,136,255,.12); color:var(--common); border:1px solid var(--common); }
+
+  .legend {
+    background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--common);
+    margin:24px 40px 0; padding:14px 20px; display:flex; gap:24px; flex-wrap:wrap; align-items:center; border-radius:2px;
+  }
+  .legend-label { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:1px; }
+  .legend-item { display:flex; align-items:center; gap:8px; font-size:12px; }
+  .dot { width:10px; height:10px; border-radius:50%; }
+  .dot-ht { background:var(--ht); }
+  .dot-nn { background:var(--nn); }
+  .dot-cl { background:var(--cl); }
+  .dot-cm { background:var(--common); }
+
+  .tabs { display:flex; gap:0; margin:28px 40px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .tab { font-family:'Share Tech Mono',monospace; font-size:12px; letter-spacing:1px; padding:10px 20px; cursor:pointer; color:var(--muted); border:1px solid transparent; border-bottom:none; background:transparent; transition:all .2s; margin-bottom:-1px; user-select:none; }
+  .tab:hover { color:var(--text); }
+  .tab.active-ht { color:var(--ht); border-color:var(--border); border-bottom-color:var(--bg); background:var(--panel); }
+  .tab.active-nn { color:var(--nn); border-color:var(--border); border-bottom-color:var(--bg); background:var(--panel); }
+  .tab.active-cl { color:var(--cl); border-color:var(--border); border-bottom-color:var(--bg); background:var(--panel); }
+  .tab.active-cm { color:var(--common); border-color:var(--border); border-bottom-color:var(--bg); background:var(--panel); }
+
+  .container { padding:28px 40px 60px; }
+  .panel-content { display:none; }
+  .panel-content.active { display:block; }
+
+  .section { margin-bottom:32px; background:var(--panel); border:1px solid var(--border); border-radius:3px; overflow:hidden; }
+  .section-header { padding:14px 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border); }
+  .section-icon { font-size:16px; width:28px; text-align:center; }
+  .section-title { font-family:'Black Han Sans',sans-serif; font-size:16px; letter-spacing:.5px; flex:1; }
+  .section-note { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:1px; }
+  .section-body { padding:20px; }
+
+  .ht .section-header { border-left:3px solid var(--ht); }
+  .ht .section-title { color:var(--ht); }
+  .nn .section-header { border-left:3px solid var(--nn); }
+  .nn .section-title { color:var(--nn); }
+  .cl .section-header { border-left:3px solid var(--cl); }
+  .cl .section-title { color:var(--cl); }
+  .cm .section-header { border-left:3px solid var(--common); }
+  .cm .section-title { color:var(--common); }
+  .diff-section .section-header { border-left:3px solid #ff6666; }
+  .diff-section .section-title { color:#ff6666; }
+
+  .prompt-box {
+    background:var(--code-bg); border:1px solid var(--border); border-radius:2px;
+    padding:14px 16px; margin-bottom:14px; font-family:'Share Tech Mono',monospace;
+    font-size:12px; line-height:2; white-space:pre; overflow-x:auto;
+  }
+
+  .p-ht { color:var(--ht); }
+  .p-nn { color:var(--nn); }
+  .p-cl { color:var(--cl); }
+  .p-cm { color:var(--common); }
+  .p-muted { color:var(--muted); }
+  .p-white { color:#e0f0ff; }
+  .p-yellow { color:#ffdd66; }
+  .p-dim { color:#3a5070; }
+
+  .cmd-block { margin-bottom:22px; padding-bottom:22px; border-bottom:1px solid rgba(30,58,95,.5); }
+  .cmd-block:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+
+  .cmd-name { font-family:'Share Tech Mono',monospace; font-size:15px; font-weight:bold; margin-bottom:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+  .cmd-tag { font-size:10px; padding:2px 8px; border-radius:2px; letter-spacing:1px; }
+  .tag-ht { background:rgba(0,191,255,.15); color:var(--ht); border:1px solid rgba(0,191,255,.3); }
+  .tag-nn { background:rgba(0,255,153,.1); color:var(--nn); border:1px solid rgba(0,255,153,.3); }
+  .tag-cl { background:rgba(255,149,0,.1); color:var(--cl); border:1px solid rgba(255,149,0,.3); }
+  .tag-cm { background:rgba(204,136,255,.1); color:var(--common); border:1px solid rgba(204,136,255,.3); }
+  .tag-diff { background:rgba(255,80,80,.12); color:#ff6666; border:1px solid rgba(255,80,80,.3); font-size:10px; padding:2px 8px; border-radius:2px; letter-spacing:1px; }
+
+  .cmd-desc { color:var(--text); font-size:13px; margin-bottom:10px; line-height:1.6; }
+
+  .compare-row { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .compare-cell { flex:1; min-width:200px; background:var(--code-bg); border-radius:2px; padding:12px 14px; border:1px solid var(--border); }
+  .compare-label { font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:1px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+  .compare-label.ht { color:var(--ht); }
+  .compare-label.nn { color:var(--nn); }
+  .compare-label.cl { color:var(--cl); }
+  .compare-cmd { font-family:'Share Tech Mono',monospace; font-size:13px; margin-bottom:4px; }
+  .compare-example { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--muted); }
+
+  .tip { background:rgba(204,136,255,.07); border:1px solid rgba(204,136,255,.25); border-radius:2px; padding:12px 16px; font-size:12px; color:#aabbcc; margin-top:10px; }
+  .tip::before { content:'💡 '; }
+
+  .access-info { margin-bottom:28px; }
+  .access-title { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; margin-bottom:10px; }
+  hr.divider { border:none; border-top:1px solid var(--border); margin:4px 0 12px; }
+
+  .cursor { display:inline-block; width:8px; height:13px; background:currentColor; margin-left:2px; vertical-align:middle; animation:blink 1s step-end infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .go-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; margin-top:10px; }
+  .go-item { background:var(--code-bg); border:1px solid var(--border); padding:8px 12px; font-family:'Share Tech Mono',monospace; font-size:12px; border-radius:2px; display:flex; gap:10px; align-items:center; }
+  .go-cmd { min-width:120px; }
+  .go-desc { color:var(--muted); font-size:11px; }
+
+  .sub-label { font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1px; margin-bottom:8px; margin-top:14px; }
+
+  @media(max-width:700px){
+    header,.legend,.tabs,.container{padding-left:16px;padding-right:16px;}
+    .legend{margin-left:16px;margin-right:16px;}
+    .tabs{margin-left:16px;margin-right:16px;}
+    .compare-row{flex-direction:column;}
+    h1{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">▶ PC통신 명령어 완전 정리 / 1990s KOREA PC COMMUNICATION</div>
+  <h1>하이텔 · 나우누리 · 천리안</h1>
+  <div class="header-sub">3대 PC통신 서비스 명령어 — 기능별 완전 정리 / 접속부터 로그아웃까지</div>
+  <div class="badge-row">
+    <span class="badge badge-ht">HiTEL 하이텔</span>
+    <span class="badge badge-nn">NOWNURI 나우누리</span>
+    <span class="badge badge-cl">CHOLLIAN 천리안</span>
+    <span class="badge badge-cm">3사 공통</span>
+  </div>
+</header>
+
+<div class="legend">
+  <span class="legend-label">범례</span>
+  <div class="legend-item"><span class="dot dot-ht"></span> 하이텔</div>
+  <div class="legend-item"><span class="dot dot-nn"></span> 나우누리</div>
+  <div class="legend-item"><span class="dot dot-cl"></span> 천리안</div>
+  <div class="legend-item"><span class="dot dot-cm"></span> 3사 공통</div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active-cm" onclick="switchTab(this,'compare','active-cm')">🔀 기능별 3사 비교</div>
+  <div class="tab" onclick="switchTab(this,'hitel','active-ht')">📺 하이텔 전체</div>
+  <div class="tab" onclick="switchTab(this,'nownuri','active-nn')">💚 나우누리 전체</div>
+  <div class="tab" onclick="switchTab(this,'chollian','active-cl')">🟠 천리안 전체</div>
+</div>
+
+<div class="container">
+
+<!-- ===== 기능별 비교 ===== -->
+<div class="panel-content active" id="panel-compare">
+
+  <!-- 01 접속 -->
+  <div class="section cm">
+    <div class="section-header"><span class="section-icon">📡</span><span class="section-title">01. 접속 및 로그인</span><span class="section-note">CONNECT & LOGIN</span></div>
+    <div class="section-body">
+      <p class="cmd-desc">모뎀으로 통신사 서버에 전화를 걸어 접속한 뒤 아이디와 암호를 입력합니다. 하이텔과 나우누리는 같은 망(01410)을 공유했고 천리안은 독자 망(01420)을 사용했습니다. 접속 후 나타나는 프롬프트 모양이 3사 모두 다릅니다.</p>
+      <div class="compare-row">
+        <div class="compare-cell"><div class="compare-label ht">▶ 하이텔</div><div class="compare-cmd p-ht">ATDT 01410</div><div class="compare-example">모뎀 전화 → 하이텔 선택</div></div>
+        <div class="compare-cell"><div class="compare-label nn">▶ 나우누리</div><div class="compare-cmd p-nn">ATDT 01410</div><div class="compare-example">동일 번호 → 나우누리 선택</div></div>
+        <div class="compare-cell"><div class="compare-label cl">▶ 천리안</div><div class="compare-cmd p-cl">ATDT 01420</div><div class="compare-example">천리안 전용 독자 번호</div></div>
+      </div>
+      <div class="prompt-box"><span class="p-muted">▼ 하이텔 접속 후 프롬프트</span>
+<span class="p-ht">HiTEL 2.0  /  반갑습니다. 하이텔입니다.</span>
+ID: <span class="p-yellow">myid</span>   PW: <span class="p-yellow">******</span>
+<span class="p-ht">[HiTEL] Command: </span><span class="cursor p-ht"></span>
+
+<span class="p-muted">▼ 나우누리 접속 후 프롬프트</span>
+<span class="p-nn">나 우 누 리 에 오신것을 환영합니다</span>
+나우누리 아이디: <span class="p-yellow">myid</span>   암호: <span class="p-yellow">******</span>
+<span class="p-nn">[나우누리] 명령어: </span><span class="cursor p-nn"></span>
+
+<span class="p-muted">▼ 천리안 접속 후 프롬프트</span>
+<span class="p-cl">천 리 안 PC-Serve  /  천리안 서비스에 오신것을 환영합니다.</span>
+아이디: <span class="p-yellow">myid</span>   암호: <span class="p-yellow">******</span>
+<span class="p-cl">[천리안] >> </span><span class="cursor p-cl"></span></div>
+      <div class="tip">하이텔은 "Command:", 나우누리는 "명령어:" (한글 최초), 천리안은 ">>" 기호. 프롬프트 생김새가 통신사를 구분하는 가장 쉬운 방법이었습니다.</div>
+    </div>
+  </div>
+
+  <!-- 02 이동 GO -->
+  <div class="section cm">
+    <div class="section-header"><span class="section-icon">🧭</span><span class="section-title">02. 이동 명령어 — GO / P / M / Q / BYE</span><span class="section-note">NAVIGATION</span></div>
+    <div class="section-body">
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">go [키워드]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">가장 핵심적인 명령어. 어느 화면에서든 go 뒤에 키워드를 입력하면 해당 서비스나 게시판으로 바로 이동합니다. 키워드는 통신사마다 다른 것이 있습니다.</p>
+
+        <div class="sub-label" style="color:var(--common);">▶ 3사 공통 go 키워드</div>
+        <div class="go-grid">
+          <div class="go-item"><span class="go-cmd p-cm">go humor</span><span class="go-desc">유머란 (3사 동일)</span></div>
+          <div class="go-item"><span class="go-cmd p-cm">go chat</span><span class="go-desc">대화방 (3사 동일)</span></div>
+          <div class="go-item"><span class="go-cmd p-cm">go mail</span><span class="go-desc">전자우편 (3사 동일)</span></div>
+          <div class="go-item"><span class="go-cmd p-cm">go bluehouse</span><span class="go-desc">청와대 신문고 (3사 동일)</span></div>
+        </div>
+
+        <div class="sub-label" style="color:var(--ht);">▶ 하이텔 주요 go 키워드</div>
+        <div class="go-grid">
+          <div class="go-item"><span class="go-cmd p-ht">go plaza</span><span class="go-desc">자유/시사 게시판</span></div>
+          <div class="go-item"><span class="go-cmd p-ht">go humor</span><span class="go-desc">유머란</span></div>
+          <div class="go-item"><span class="go-cmd p-ht">go pgf</span><span class="go-desc">PC게임 동호회</span></div>
+          <div class="go-item"><span class="go-cmd p-ht">go anc</span><span class="go-desc">애니메이션 동호회</span></div>
+          <div class="go-item"><span class="go-cmd p-ht">go jubu</span><span class="go-desc">주부 동호회</span></div>
+          <div class="go-item"><span class="go-cmd p-ht">go barun</span><span class="go-desc">바른통신 동호회</span></div>
+          <div class="go-item"><span class="go-cmd p-ht">go summer</span><span class="go-desc">여름 이벤트</span></div>
+          <div class="go-item"><span class="go-cmd p-ht">go chat / mail / bluehouse</span><span class="go-desc">공통</span></div>
+        </div>
+
+        <div class="sub-label" style="color:var(--nn);">▶ 나우누리 주요 go 키워드</div>
+        <div class="go-grid">
+          <div class="go-item"><span class="go-cmd p-nn">go plaza</span><span class="go-desc">자유/시사 게시판</span></div>
+          <div class="go-item"><span class="go-cmd p-nn">go humor</span><span class="go-desc">유머란</span></div>
+          <div class="go-item"><span class="go-cmd p-nn">go elf</span><span class="go-desc">에뮬레이터 동호회 ★</span></div>
+          <div class="go-item"><span class="go-cmd p-nn">go gmf</span><span class="go-desc">PC게임 동호회</span></div>
+          <div class="go-item"><span class="go-cmd p-nn">go vg</span><span class="go-desc">콘솔게임 동호회</span></div>
+          <div class="go-item"><span class="go-cmd p-nn">go sf</span><span class="go-desc">SF·소설 게시판</span></div>
+          <div class="go-item"><span class="go-cmd p-nn">go anc</span><span class="go-desc">애니메이션 동호회</span></div>
+          <div class="go-item"><span class="go-cmd p-nn">go chat / mail / bluehouse</span><span class="go-desc">공통</span></div>
+        </div>
+
+        <div class="sub-label" style="color:var(--cl);">▶ 천리안 주요 go 키워드</div>
+        <div class="go-grid">
+          <div class="go-item"><span class="go-cmd p-cl">go word</span><span class="go-desc">시사/자유 게시판 ★</span></div>
+          <div class="go-item"><span class="go-cmd p-cl">go humor</span><span class="go-desc">유머란</span></div>
+          <div class="go-item"><span class="go-cmd p-cl">go cholcd</span><span class="go-desc">천리안 CD 신청</span></div>
+          <div class="go-item"><span class="go-cmd p-cl">go chat / mail / bluehouse</span><span class="go-desc">공통</span></div>
+        </div>
+        <div class="tip">나우누리 go elf는 나우누리 역사상 최초로 단독 go 키워드를 부여받은 동호회. 원래는 go pgf 55처럼 번호까지 입력해야 들어갈 수 있었습니다. 천리안의 시사/자유 게시판은 go word 이며, 하이텔의 go plaza와 같은 역할을 합니다.</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">p &nbsp;/&nbsp; prev</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">현재 화면에서 상위 메뉴(이전 화면)로 돌아갑니다.</p>
+        <div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">p</span>   <span class="p-muted">← 하이텔</span>
+<span class="p-nn">[유머란] 명령어: </span><span class="p-white">p</span>   <span class="p-muted">← 나우누리</span>
+<span class="p-cl">[word] >> </span><span class="p-white">p</span>   <span class="p-muted">← 천리안</span></div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">m &nbsp;/&nbsp; main</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">어느 화면에서든 메인(첫) 화면으로 한 번에 이동합니다.</p>
+        <div class="prompt-box"><span class="p-nn">[자료실] 명령어: </span><span class="p-white">m</span>
+<span class="p-muted">→ 나우누리 메인 화면으로 이동</span></div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">q &nbsp;/&nbsp; quit</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">현재 서비스를 종료하거나 로그아웃합니다.</p>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">bye &nbsp;/&nbsp; logout</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">통신사 서버에서 완전히 로그아웃하고 모뎀 연결을 끊습니다. 분당 요금이 부과되던 시대라 bye를 치는 순간이 중요했습니다.</p>
+        <div class="prompt-box"><span class="p-ht">[HiTEL] Command: </span><span class="p-white">bye</span>
+<span class="p-muted">→ 접속 종료. 모뎀 끊김. 요금 부과 중단.</span></div>
+        <div class="tip">당시에는 분당 요금이 부과됐습니다. 읽을 글을 메모장에 복사해 두고 빨리 bye를 치는 게 생활 요령이었습니다.</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">숫자 입력 (1, 2, 3...)</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">메인 메뉴나 서비스 목록 화면에서 번호를 직접 입력해 해당 항목을 선택합니다.</p>
+        <div class="prompt-box"><span class="p-ht">[HiTEL] Command: </span><span class="p-white">1</span>
+<span class="p-muted">→ 메뉴 1번 항목 선택</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 목록 -->
+  <div class="section cm">
+    <div class="section-header"><span class="section-icon">📋</span><span class="section-title">03. 게시판 — 목록 보기</span><span class="section-note">LIST</span></div>
+    <div class="section-body">
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">l &nbsp;/&nbsp; list</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">게시판의 글 목록을 출력합니다. 번호를 함께 쓰면 그 번호부터 목록을 보여줍니다.</p>
+        <div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">l</span>          <span class="p-muted">← 최신 글 목록</span>
+<span class="p-ht">[프라자] Command: </span><span class="p-white">l 500</span>      <span class="p-muted">← 500번부터 목록</span>
+<span class="p-nn">[유머란] 명령어: </span><span class="p-white">l 50</span>       <span class="p-muted">← 50번부터 목록</span>
+<span class="p-cl">[word] >> </span><span class="p-white">list</span>           <span class="p-muted">← 천리안, list도 가능</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 읽기 -->
+  <div class="section cm">
+    <div class="section-header"><span class="section-icon">📖</span><span class="section-title">04. 게시판 — 글 읽기 / 이전·다음 / 번호 이동 / 새글</span><span class="section-note">READ & NAVIGATE</span></div>
+    <div class="section-body">
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">r [번호] &nbsp;/&nbsp; read [번호]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">지정한 번호의 글을 읽습니다. 번호 없이 r만 치면 다음 글로 이동합니다.</p>
+        <div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">r 1024</span>
+<span class="p-nn">[유머란] 명령어: </span><span class="p-white">r 5432</span>
+<span class="p-cl">[word] >> </span><span class="p-white">r 888</span>   <span class="p-muted">또는</span>   <span class="p-cl">[word] >> </span><span class="p-white">read 888</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">n &nbsp;/&nbsp; next</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">다음 번호 글로 이동합니다.</p>
+        <div class="prompt-box"><span class="p-ht">[글 읽는 중] Command: </span><span class="p-white">n</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">b &nbsp;/&nbsp; back</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">이전 번호 글로 돌아갑니다.</p>
+        <div class="prompt-box"><span class="p-nn">[글 읽는 중] 명령어: </span><span class="p-white">b</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">f [번호]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">특정 번호 글 위치로 바로 이동합니다. 오래된 글을 빠르게 찾을 때 사용했습니다.</p>
+        <div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">f 2000</span>
+<span class="p-muted">→ 2000번 글 위치로 바로 이동</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">new &nbsp;/&nbsp; nw</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">지난번 접속 이후 새로 올라온 글만 골라서 보여줍니다. 자주 방문하는 게시판에서 빠르게 새 글만 확인할 때 사용했습니다.</p>
+        <div class="prompt-box"><span class="p-cl">[word] >> </span><span class="p-white">new</span>
+<span class="p-muted">→ 마지막 접속 이후 새 글만 출력</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 쓰기 수정 삭제 답글 -->
+  <div class="section cm">
+    <div class="section-header"><span class="section-icon">✍️</span><span class="section-title">05. 게시판 — 글쓰기 / 답글 / 수정 / 삭제</span><span class="section-note">WRITE / REPLY / EDIT / DELETE</span></div>
+    <div class="section-body">
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">w &nbsp;/&nbsp; write</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">새 글을 작성합니다. 제목과 내용을 입력한 후 Ctrl+Z (또는 /end)로 저장합니다.</p>
+        <div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">w</span>
+
+<span class="p-muted">제목: </span><span class="p-yellow">오늘 있었던 웃긴 일</span>
+<span class="p-muted">내용 입력 (Ctrl+Z 로 저장, Ctrl+C 로 취소):</span>
+<span class="p-white">오늘 버스에서 정말 황당한 일이...</span>
+<span class="p-dim">^Z</span>
+<span class="p-muted">→ 글이 저장되었습니다. (1025번)</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">re [번호] &nbsp;/&nbsp; a [번호] &nbsp;/&nbsp; answer [번호]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">특정 글에 답글(리플)을 답니다. re, a, answer 모두 사용 가능했습니다.</p>
+        <div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">re 5432</span>
+<span class="p-muted">→ 5432번 글에 답글 작성</span>
+
+<span class="p-cl">[word] >> </span><span class="p-white">re 888</span>
+<span class="p-muted">→ 천리안도 re 동일</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">e [번호] &nbsp;/&nbsp; edit [번호]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">자신이 작성한 글을 수정합니다. 다른 사람 글은 수정 불가.</p>
+        <div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">e 1024</span>
+<span class="p-muted">→ 1024번 글 수정 (본인 글만 가능)</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">d [번호] &nbsp;/&nbsp; delete [번호]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">자신의 글을 삭제합니다. 삭제 전 확인 메시지가 나옵니다.</p>
+        <div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">d 5432</span>
+<span class="p-muted">삭제하시겠습니까? (y/n): </span><span class="p-yellow">y</span>
+<span class="p-muted">→ 글이 삭제되었습니다.</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">h &nbsp;/&nbsp; help</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">현재 화면에서 사용 가능한 명령어 목록과 도움말을 출력합니다.</p>
+        <div class="prompt-box"><span class="p-cl">[word] >> </span><span class="p-white">help</span>
+<span class="p-muted">→ 사용 가능한 명령어 목록 출력</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 검색 -->
+  <div class="section diff-section">
+    <div class="section-header"><span class="section-icon">🔍</span><span class="section-title">06. 게시판 — 검색 【3사 명령어 다름!】</span><span class="section-note">SEARCH</span></div>
+    <div class="section-body">
+      <p class="cmd-desc">제목 검색과 내용 검색 명령어가 하이텔·나우누리와 천리안이 완전히 다릅니다.</p>
+      <div class="cmd-block">
+        <div class="cmd-name">
+          <span class="p-ht">gl [검색어]</span><span class="cmd-tag tag-ht">하이텔</span>
+          <span class="cmd-tag tag-nn">나우누리</span>
+          &nbsp;|&nbsp;
+          <span class="p-cl">subj [검색어]</span><span class="cmd-tag tag-cl">천리안</span>
+        </div>
+        <p class="cmd-desc">게시글 <strong>제목</strong>으로 검색합니다. 하이텔·나우누리는 gl (get list의 약자), 천리안은 subj를 씁니다.</p>
+        <div class="compare-row">
+          <div class="compare-cell"><div class="compare-label ht">▶ 하이텔 / 나우누리</div><div class="compare-cmd p-ht">gl 대통령</div><div class="compare-example">제목에 "대통령" 포함된 글 검색</div></div>
+          <div class="compare-cell"><div class="compare-label cl">▶ 천리안</div><div class="compare-cmd p-cl">subj 대통령</div><div class="compare-example">제목에 "대통령" 포함된 글 검색</div></div>
+        </div>
+        <div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">gl 선거</span>
+<span class="p-nn">[유머란] 명령어: </span><span class="p-white">gl 군대</span>
+<span class="p-cl">[word] >> </span><span class="p-white">subj 선거</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name">
+          <span class="p-ht">ga [검색어]</span><span class="cmd-tag tag-ht">하이텔</span>
+          <span class="cmd-tag tag-nn">나우누리</span>
+          &nbsp;|&nbsp;
+          <span class="p-cl">body [검색어]</span><span class="cmd-tag tag-cl">천리안</span>
+        </div>
+        <p class="cmd-desc">게시글 <strong>본문 내용</strong>까지 포함해서 검색합니다. 제목 검색보다 시간이 더 걸렸습니다. 하이텔·나우누리는 ga, 천리안은 body를 씁니다.</p>
+        <div class="compare-row">
+          <div class="compare-cell"><div class="compare-label ht">▶ 하이텔 / 나우누리</div><div class="compare-cmd p-ht">ga 대통령</div><div class="compare-example">본문 포함 전체 검색</div></div>
+          <div class="compare-cell"><div class="compare-label cl">▶ 천리안</div><div class="compare-cmd p-cl">body 대통령</div><div class="compare-example">본문 전체 검색</div></div>
+        </div>
+        <div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">ga 선거</span>
+<span class="p-cl">[word] >> </span><span class="p-white">body 선거</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 07 자료실 -->
+  <div class="section diff-section">
+    <div class="section-header"><span class="section-icon">💾</span><span class="section-title">07. 자료실 — 파일 다운로드 / 업로드 / 검색 【3사 다름!】</span><span class="section-note">FILE TRANSFER</span></div>
+    <div class="section-body">
+      <p class="cmd-desc">파일 다운로드 명령어가 3사 모두 다릅니다. 특히 나우누리의 <strong>tr</strong>은 전설적인 명령어로 유저 유입의 핵심 원인이 됐습니다.</p>
+      <div class="cmd-block">
+        <div class="cmd-name">
+          <span class="p-ht">dl [번호]</span><span class="cmd-tag tag-ht">하이텔</span>
+          &nbsp;&nbsp;
+          <span class="p-nn">tr [번호]</span><span class="cmd-tag tag-nn">나우누리 ★전설</span>
+          &nbsp;&nbsp;
+          <span class="p-cl">get [번호]</span><span class="cmd-tag tag-cl">천리안</span>
+        </div>
+        <p class="cmd-desc">자료실에서 파일을 다운로드합니다. 나우누리의 tr(transfer)은 속도와 안정성으로 유명해졌고, 이 명령어 하나 때문에 하이텔·천리안 유저들이 나우누리로 대거 이동했습니다.</p>
+        <div class="compare-row">
+          <div class="compare-cell"><div class="compare-label ht">▶ 하이텔</div><div class="compare-cmd p-ht">dl 1234</div><div class="compare-example">1234번 파일 다운로드</div></div>
+          <div class="compare-cell"><div class="compare-label nn">▶ 나우누리 (전설의 tr)</div><div class="compare-cmd p-nn">tr 1234</div><div class="compare-example">1234번 파일 다운로드</div></div>
+          <div class="compare-cell"><div class="compare-label cl">▶ 천리안</div><div class="compare-cmd p-cl">get 1234</div><div class="compare-example">1234번 파일 다운로드</div></div>
+        </div>
+        <div class="prompt-box"><span class="p-nn">[자료실] 명령어: </span><span class="p-white">tr 1234</span>
+<span class="p-muted">파일명: starcraft_tip.zip  (2,048KB)
+전송방식: Zmodem / Xmodem / Ymodem 선택 → </span><span class="p-yellow">z</span>
+<span class="p-muted">▓▓▓▓▓▓▓▓▓░░░░░░░ 58%  전송 중...</span></div>
+        <div class="tip">전송 방식은 Zmodem이 가장 빠르고 안정적이었습니다. 도중에 끊겨도 Zmodem은 이어받기가 됐습니다.</div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name">
+          <span class="p-ht">ul</span><span class="cmd-tag tag-ht">하이텔</span>
+          <span class="cmd-tag tag-nn">나우누리</span>
+          &nbsp;|&nbsp;
+          <span class="p-cl">put &nbsp;/&nbsp; ul</span><span class="cmd-tag tag-cl">천리안</span>
+        </div>
+        <p class="cmd-desc">자료실에 파일을 올립니다. 천리안은 put도 사용 가능했습니다.</p>
+        <div class="prompt-box"><span class="p-ht">[자료실] Command: </span><span class="p-white">ul</span>
+<span class="p-muted">파일명 입력: game_tip.txt
+설명 입력: 스타크래프트 테란 빌드 오더
+→ 파일 전송 시작...</span>
+
+<span class="p-cl">[자료실] >> </span><span class="p-white">put</span>   <span class="p-muted">← 천리안 고유 표현</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">fl &nbsp;/&nbsp; list</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">자료실의 파일 목록을 출력합니다.</p>
+        <div class="prompt-box"><span class="p-ht">[자료실] Command: </span><span class="p-white">fl</span>
+<span class="p-cl">[자료실] >> </span><span class="p-white">list</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name">
+          <span class="p-ht">s [검색어]</span><span class="cmd-tag tag-ht">하이텔</span>
+          <span class="cmd-tag tag-nn">나우누리</span>
+          &nbsp;|&nbsp;
+          <span class="p-cl">find [검색어]</span><span class="cmd-tag tag-cl">천리안</span>
+        </div>
+        <p class="cmd-desc">자료실에서 파일명이나 설명으로 파일을 검색합니다.</p>
+        <div class="compare-row">
+          <div class="compare-cell"><div class="compare-label ht">▶ 하이텔 / 나우누리</div><div class="compare-cmd p-ht">s 스타크래프트</div></div>
+          <div class="compare-cell"><div class="compare-label cl">▶ 천리안</div><div class="compare-cmd p-cl">find 스타크래프트</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 08 채팅 -->
+  <div class="section diff-section">
+    <div class="section-header"><span class="section-icon">💬</span><span class="section-title">08. 채팅(대화방) 명령어 【방 만들기·귓속말 3사 다름】</span><span class="section-note">CHAT</span></div>
+    <div class="section-body">
+      <p class="cmd-desc">go chat 으로 대화방에 들어간 뒤 사용합니다. 방 입장·나가기·목록은 동일하지만 새 방 만들기 명령어와 귓속말 명령어가 3사 모두 다릅니다.</p>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">방번호 입력</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">원하는 번호의 채팅방에 입장합니다. 하이텔 77번 방은 당시 전국구 명소였습니다.</p>
+        <div class="prompt-box"><span class="p-ht">[대화방] Command: </span><span class="p-white">77</span>   <span class="p-muted">← 하이텔 전설의 77번방</span>
+<span class="p-nn">[대화방] 명령어: </span><span class="p-white">1</span>
+<span class="p-cl">[채팅] >> </span><span class="p-white">1</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">/l &nbsp;/&nbsp; /list</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">현재 열려있는 대화방 목록과 각 방의 인원수를 보여줍니다.</p>
+        <div class="prompt-box"><span class="p-ht">[대화방] Command: </span><span class="p-white">/l</span>
+<span class="p-muted">  1번방: 자유대화 (12명)
+  77번방: 그냥대화 (34명)</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">/w &nbsp;/&nbsp; /who</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">현재 같은 대화방에 있는 사람들의 아이디 목록을 봅니다.</p>
+        <div class="prompt-box"><span class="p-nn">[방 안] 명령어: </span><span class="p-white">/w</span>
+<span class="p-muted">→ 현재 방 참여자 목록 출력</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">/q &nbsp;/&nbsp; /quit</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">대화방에서 나옵니다.</p>
+        <div class="prompt-box"><span class="p-cl">[방 안] >> </span><span class="p-white">/q</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name">
+          <span class="p-ht">/create [이름]</span><span class="cmd-tag tag-ht">하이텔</span>
+          &nbsp;|&nbsp;
+          <span class="p-nn">/c [이름]</span><span class="cmd-tag tag-nn">나우누리</span>
+          &nbsp;|&nbsp;
+          <span class="p-cl">/open [이름]</span><span class="cmd-tag tag-cl">천리안</span>
+          <span class="cmd-tag tag-diff">3사 전부 다름!</span>
+        </div>
+        <p class="cmd-desc">새 대화방을 직접 만듭니다. 이 명령어가 3사 모두 다릅니다.</p>
+        <div class="compare-row">
+          <div class="compare-cell"><div class="compare-label ht">▶ 하이텔</div><div class="compare-cmd p-ht">/create 우리들방</div></div>
+          <div class="compare-cell"><div class="compare-label nn">▶ 나우누리</div><div class="compare-cmd p-nn">/c 우리들방</div></div>
+          <div class="compare-cell"><div class="compare-label cl">▶ 천리안</div><div class="compare-cmd p-cl">/open 우리들방</div></div>
+        </div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name">
+          <span class="p-ht">say [아이디] [내용]</span><span class="cmd-tag tag-ht">하이텔</span>
+          <span class="cmd-tag tag-nn">나우누리</span>
+          &nbsp;|&nbsp;
+          <span class="p-cl">whisper [아이디] [내용]</span><span class="cmd-tag tag-cl">천리안</span>
+          <span class="cmd-tag tag-diff">천리안 다름!</span>
+        </div>
+        <p class="cmd-desc">특정 상대에게만 보이는 귓속말을 보냅니다. 하이텔·나우누리는 say, 천리안은 whisper를 씁니다.</p>
+        <div class="compare-row">
+          <div class="compare-cell"><div class="compare-label ht">▶ 하이텔 / 나우누리</div><div class="compare-cmd p-ht">say friend1 지금 몇 번 방이야?</div></div>
+          <div class="compare-cell"><div class="compare-label cl">▶ 천리안</div><div class="compare-cmd p-cl">whisper friend1 지금 어디야?</div></div>
+        </div>
+        <div class="prompt-box"><span class="p-nn">[방 안] 명령어: </span><span class="p-white">say friend1 ㅋㅋ 방금 그 말 진짜냐?</span>
+<span class="p-muted">→ friend1에게만 보이는 귓속말 전송</span>
+
+<span class="p-cl">[방 안] >> </span><span class="p-white">whisper friend1 지금 어디야 ㅋ</span>
+<span class="p-muted">→ 천리안 귓속말</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 09 메일 -->
+  <div class="section cm">
+    <div class="section-header"><span class="section-icon">✉️</span><span class="section-title">09. 전자우편(메일) 명령어</span><span class="section-note">E-MAIL</span></div>
+    <div class="section-body">
+      <p class="cmd-desc">go mail 로 들어간 뒤 사용합니다. 기본 구조는 3사 모두 같고 천리안은 긴 명령어 형태를 선호합니다.</p>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">l &nbsp;/&nbsp; list</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">받은 메일 목록을 출력합니다.</p>
+        <div class="prompt-box"><span class="p-ht">[메일] Command: </span><span class="p-white">l</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">r [번호] &nbsp;/&nbsp; read [번호]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">해당 번호의 메일을 읽습니다.</p>
+        <div class="prompt-box"><span class="p-nn">[메일] 명령어: </span><span class="p-white">r 3</span>
+<span class="p-cl">[메일] >> </span><span class="p-white">read 2</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">s [아이디] &nbsp;/&nbsp; send [아이디]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">지정한 아이디에게 메일을 보냅니다.</p>
+        <div class="prompt-box"><span class="p-ht">[메일] Command: </span><span class="p-white">s friend1</span>
+<span class="p-muted">제목: </span><span class="p-yellow">안녕 잘 지내?</span>
+<span class="p-muted">내용: </span><span class="p-white">오랜만이야! 연락하자.</span>
+<span class="p-dim">^Z</span>
+<span class="p-muted">→ 메일이 발송되었습니다.</span>
+
+<span class="p-cl">[메일] >> </span><span class="p-white">send friend1</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">d [번호] &nbsp;/&nbsp; delete [번호]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">해당 번호의 메일을 삭제합니다.</p>
+        <div class="prompt-box"><span class="p-nn">[메일] 명령어: </span><span class="p-white">d 3</span>
+<span class="p-cl">[메일] >> </span><span class="p-white">delete 2</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">fw [번호] [아이디]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">받은 메일을 다른 사람에게 전달(forward)합니다.</p>
+        <div class="prompt-box"><span class="p-ht">[메일] Command: </span><span class="p-white">fw 3 friend2</span>
+<span class="p-muted">→ 3번 메일을 friend2에게 전달</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10 기타 -->
+  <div class="section cm">
+    <div class="section-header"><span class="section-icon">⚙️</span><span class="section-title">10. 회원 조회 / 내 정보 / 환경 설정 / 기타</span><span class="section-note">SETTINGS & INFO</span></div>
+    <div class="section-body">
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">who &nbsp;/&nbsp; u</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">현재 해당 통신사에 접속 중인 이용자 수와 목록을 보여줍니다.</p>
+        <div class="prompt-box"><span class="p-ht">[HiTEL] Command: </span><span class="p-white">who</span>
+<span class="p-muted">→ 현재 하이텔 접속자 수 및 아이디 목록</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">finger [아이디]</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">특정 아이디의 가입 정보, 최근 접속 일시 등을 조회합니다.</p>
+        <div class="prompt-box"><span class="p-nn">[나우누리] 명령어: </span><span class="p-white">finger friend1</span>
+<span class="p-muted">아이디: friend1
+이름: 홍길동
+가입일: 1995.03.12
+마지막 접속: 1997.07.04 23:11</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">info</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">내 계정 정보, 총 이용 시간, 이번 달 예상 요금 등을 확인합니다. 요금 폭탄 방지를 위해 수시로 확인했습니다.</p>
+        <div class="prompt-box"><span class="p-cl">[천리안] >> </span><span class="p-white">info</span>
+<span class="p-muted">아이디: myid
+가입일: 1994.06.01
+이번달 접속시간: 32시간 14분
+이번달 예상요금: 12,800원</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">set</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">개인 환경 설정. 화면 줄 수(보통 24줄), 색상, 자동 로그인 등을 조정합니다.</p>
+        <div class="prompt-box"><span class="p-ht">[HiTEL] Command: </span><span class="p-white">set</span>
+<span class="p-muted">화면 줄 수 (현재: 24): </span><span class="p-yellow">24</span>
+<span class="p-muted">색상 사용 여부 (y/n): </span><span class="p-yellow">y</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-cm">cls</span><span class="cmd-tag tag-cm">3사 공통</span></div>
+        <p class="cmd-desc">화면 전체를 깨끗하게 지웁니다. DOS의 cls와 같은 기능.</p>
+        <div class="prompt-box"><span class="p-cl">[천리안] >> </span><span class="p-white">cls</span></div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-name"><span class="p-ht">sos [메시지]</span><span class="cmd-tag tag-ht">하이텔</span><span class="cmd-tag tag-nn">나우누리</span></div>
+        <p class="cmd-desc">시스템 관리자(시삽)에게 긴급 메시지를 전송합니다. 접속 오류, 요금 이의 등에 사용했습니다.</p>
+        <div class="prompt-box"><span class="p-ht">[HiTEL] Command: </span><span class="p-white">sos 접속이 자꾸 끊깁니다 도와주세요</span>
+<span class="p-muted">→ 관리자에게 긴급 메시지 전송</span></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panel-compare -->
+
+<!-- ===== 하이텔 탭 ===== -->
+<div class="panel-content" id="panel-hitel">
+  <div class="access-info">
+    <div class="access-title">▶ 접속 정보</div><hr class="divider">
+    <div class="prompt-box"><span class="p-muted">모뎀 접속: </span><span class="p-ht">ATDT 01410</span>
+<span class="p-muted">프롬프트: </span><span class="p-ht">[HiTEL] Command:</span>
+<span class="p-muted">특징: 영어 Command 프롬프트. 나우누리·에듀넷·유니텔과 접속번호 공유.</span></div>
+  </div>
+
+  <div class="section ht"><div class="section-header"><span class="section-icon">🧭</span><span class="section-title">이동 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">go [키워드]</span></div><p class="cmd-desc">서비스·게시판으로 바로 이동.</p><div class="go-grid"><div class="go-item"><span class="go-cmd p-ht">go plaza</span><span class="go-desc">자유/시사 게시판</span></div><div class="go-item"><span class="go-cmd p-ht">go humor</span><span class="go-desc">유머란</span></div><div class="go-item"><span class="go-cmd p-ht">go pgf</span><span class="go-desc">PC게임 동호회</span></div><div class="go-item"><span class="go-cmd p-ht">go anc</span><span class="go-desc">애니메이션 동호회</span></div><div class="go-item"><span class="go-cmd p-ht">go jubu</span><span class="go-desc">주부 동호회</span></div><div class="go-item"><span class="go-cmd p-ht">go barun</span><span class="go-desc">바른통신 동호회</span></div><div class="go-item"><span class="go-cmd p-ht">go summer</span><span class="go-desc">여름 이벤트</span></div><div class="go-item"><span class="go-cmd p-ht">go bluehouse</span><span class="go-desc">청와대 신문고</span></div><div class="go-item"><span class="go-cmd p-ht">go chat</span><span class="go-desc">대화방</span></div><div class="go-item"><span class="go-cmd p-ht">go mail</span><span class="go-desc">전자우편</span></div></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">p / prev</span></div><p class="cmd-desc">이전 메뉴로 돌아가기.</p><div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">p</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">m / main</span></div><p class="cmd-desc">메인 화면으로 바로 이동.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">q / quit</span></div><p class="cmd-desc">현재 서비스 종료.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">bye / logout</span></div><p class="cmd-desc">완전 로그아웃. 모뎀 연결 끊김.</p><div class="prompt-box"><span class="p-ht">[HiTEL] Command: </span><span class="p-white">bye</span>
+<span class="p-muted">안녕히 가십시오. 또 오세요.</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">숫자 (1, 2, 3...)</span></div><p class="cmd-desc">메뉴 번호 직접 선택.</p></div>
+  </div></div>
+
+  <div class="section ht"><div class="section-header"><span class="section-icon">📋</span><span class="section-title">게시판 명령어 전체</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">l [번호]</span></div><p class="cmd-desc">글 목록 보기. 번호 지정 가능.</p><div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">l</span>
+<span class="p-ht">[프라자] Command: </span><span class="p-white">l 500</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">r [번호]</span></div><p class="cmd-desc">글 읽기.</p><div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">r 1024</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">n</span></div><p class="cmd-desc">다음 글 이동.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">b</span></div><p class="cmd-desc">이전 글 이동.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">f [번호]</span></div><p class="cmd-desc">특정 번호 글 위치로 이동.</p><div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">f 2000</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">new / nw</span></div><p class="cmd-desc">새로 올라온 글만 보기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">w / write</span></div><p class="cmd-desc">새 글 쓰기. Ctrl+Z로 저장.</p><div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">w</span>
+<span class="p-muted">제목: </span><span class="p-yellow">오늘 있었던 일</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">re [번호] / a [번호]</span></div><p class="cmd-desc">답글 달기.</p><div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">re 1024</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">e [번호] / edit</span></div><p class="cmd-desc">내 글 수정.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">d [번호] / delete</span></div><p class="cmd-desc">내 글 삭제.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">gl [검색어]</span></div><p class="cmd-desc">제목 검색 (get list).</p><div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">gl 대통령</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">ga [검색어]</span></div><p class="cmd-desc">내용 전체 검색.</p><div class="prompt-box"><span class="p-ht">[프라자] Command: </span><span class="p-white">ga 대통령</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">h / help</span></div><p class="cmd-desc">도움말.</p></div>
+  </div></div>
+
+  <div class="section ht"><div class="section-header"><span class="section-icon">💾</span><span class="section-title">자료실 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">fl</span></div><p class="cmd-desc">자료 목록 보기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">r [번호]</span></div><p class="cmd-desc">자료 정보 읽기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">dl [번호] / download</span></div><p class="cmd-desc">파일 다운로드.</p><div class="prompt-box"><span class="p-ht">[자료실] Command: </span><span class="p-white">dl 1234</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">ul / upload</span></div><p class="cmd-desc">파일 올리기.</p><div class="prompt-box"><span class="p-ht">[자료실] Command: </span><span class="p-white">ul</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">s [검색어] / search</span></div><p class="cmd-desc">자료 검색.</p><div class="prompt-box"><span class="p-ht">[자료실] Command: </span><span class="p-white">s 스타크래프트</span></div></div>
+  </div></div>
+
+  <div class="section ht"><div class="section-header"><span class="section-icon">💬</span><span class="section-title">채팅 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">방번호</span></div><p class="cmd-desc">방 입장. 77번방은 하이텔 전설.</p><div class="prompt-box"><span class="p-ht">[대화방] Command: </span><span class="p-white">77</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">/l</span></div><p class="cmd-desc">방 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">/w</span></div><p class="cmd-desc">접속자 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">/q</span></div><p class="cmd-desc">방 나가기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">/create [이름]</span></div><p class="cmd-desc">새 방 만들기.</p><div class="prompt-box"><span class="p-ht">[대화방] Command: </span><span class="p-white">/create 우리들방</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">say [아이디] [내용]</span></div><p class="cmd-desc">귓속말.</p><div class="prompt-box"><span class="p-ht">[방 안] Command: </span><span class="p-white">say friend1 지금 몇 번 방이야?</span></div></div>
+  </div></div>
+
+  <div class="section ht"><div class="section-header"><span class="section-icon">✉️</span><span class="section-title">메일 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">l</span></div><p class="cmd-desc">받은 메일 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">r [번호]</span></div><p class="cmd-desc">메일 읽기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">s [아이디]</span></div><p class="cmd-desc">메일 보내기.</p><div class="prompt-box"><span class="p-ht">[메일] Command: </span><span class="p-white">s friend1</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">d [번호]</span></div><p class="cmd-desc">메일 삭제.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">fw [번호] [아이디]</span></div><p class="cmd-desc">메일 전달.</p></div>
+  </div></div>
+
+  <div class="section ht"><div class="section-header"><span class="section-icon">⚙️</span><span class="section-title">기타 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">who / u</span></div><p class="cmd-desc">현재 접속자 조회.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">finger [아이디]</span></div><p class="cmd-desc">회원 정보 조회.</p><div class="prompt-box"><span class="p-ht">[HiTEL] Command: </span><span class="p-white">finger friend1</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">info</span></div><p class="cmd-desc">내 정보 및 요금 확인.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">set</span></div><p class="cmd-desc">환경 설정.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">sos [메시지]</span></div><p class="cmd-desc">관리자 긴급 연락.</p><div class="prompt-box"><span class="p-ht">[HiTEL] Command: </span><span class="p-white">sos 접속이 자꾸 끊깁니다</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-ht">cls</span></div><p class="cmd-desc">화면 지우기.</p></div>
+  </div></div>
+</div><!-- /panel-hitel -->
+
+<!-- ===== 나우누리 탭 ===== -->
+<div class="panel-content" id="panel-nownuri">
+  <div class="access-info">
+    <div class="access-title">▶ 접속 정보</div><hr class="divider">
+    <div class="prompt-box"><span class="p-muted">모뎀 접속: </span><span class="p-nn">ATDT 01410 (하이텔 망 공유, 나우누리 선택)</span>
+<span class="p-muted">프롬프트: </span><span class="p-nn">[나우누리] 명령어:</span>
+<span class="p-muted">특징: 우리말 명령어 프롬프트 최초. 우리말 서비스명. tr 명령어로 전국구 유명세.</span></div>
+  </div>
+
+  <div class="section nn"><div class="section-header"><span class="section-icon">🧭</span><span class="section-title">이동 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">go [키워드]</span></div><p class="cmd-desc">서비스·게시판으로 바로 이동. 우리말 키워드도 지원.</p><div class="go-grid"><div class="go-item"><span class="go-cmd p-nn">go plaza</span><span class="go-desc">자유/시사 게시판</span></div><div class="go-item"><span class="go-cmd p-nn">go humor</span><span class="go-desc">유머란</span></div><div class="go-item"><span class="go-cmd p-nn">go elf</span><span class="go-desc">에뮬레이터 동호회 ★최초 단독</span></div><div class="go-item"><span class="go-cmd p-nn">go gmf</span><span class="go-desc">PC게임 동호회</span></div><div class="go-item"><span class="go-cmd p-nn">go vg</span><span class="go-desc">콘솔게임 동호회</span></div><div class="go-item"><span class="go-cmd p-nn">go sf</span><span class="go-desc">SF·소설 게시판</span></div><div class="go-item"><span class="go-cmd p-nn">go anc</span><span class="go-desc">애니메이션 동호회</span></div><div class="go-item"><span class="go-cmd p-nn">go bluehouse</span><span class="go-desc">청와대 신문고</span></div><div class="go-item"><span class="go-cmd p-nn">go chat</span><span class="go-desc">대화방</span></div><div class="go-item"><span class="go-cmd p-nn">go mail</span><span class="go-desc">전자우편</span></div></div><div class="tip">go elf는 나우누리 최초로 단독 go 키워드를 부여받은 동호회. 우리말 키워드 go 유머란 처럼 한글도 지원했습니다.</div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">p</span></div><p class="cmd-desc">이전 메뉴로.</p><div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">p</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">m</span></div><p class="cmd-desc">메인으로.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">q</span></div><p class="cmd-desc">종료.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">bye</span></div><p class="cmd-desc">로그아웃.</p></div>
+  </div></div>
+
+  <div class="section nn"><div class="section-header"><span class="section-icon">📋</span><span class="section-title">게시판 명령어 전체</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">l [번호]</span></div><p class="cmd-desc">글 목록 보기.</p><div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">l</span>
+<span class="p-nn">[유머란] 명령어: </span><span class="p-white">l 50</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">r [번호]</span></div><p class="cmd-desc">글 읽기.</p><div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">r 5432</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">n</span></div><p class="cmd-desc">다음 글.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">b</span></div><p class="cmd-desc">이전 글.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">f [번호]</span></div><p class="cmd-desc">번호로 바로 이동.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">new / nw</span></div><p class="cmd-desc">새로 올라온 글만 보기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">w</span></div><p class="cmd-desc">새 글 쓰기.</p><div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">w</span>
+<span class="p-muted">제목: </span><span class="p-yellow">오늘 군대에서 있었던 일</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">re [번호]</span></div><p class="cmd-desc">답글 달기.</p><div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">re 5432</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">e [번호]</span></div><p class="cmd-desc">내 글 수정.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">d [번호]</span></div><p class="cmd-desc">내 글 삭제.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">gl [검색어]</span></div><p class="cmd-desc">제목 검색.</p><div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">gl 군대</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">ga [검색어]</span></div><p class="cmd-desc">내용 전체 검색.</p><div class="prompt-box"><span class="p-nn">[유머란] 명령어: </span><span class="p-white">ga 군대</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">help</span></div><p class="cmd-desc">도움말.</p></div>
+  </div></div>
+
+  <div class="section nn"><div class="section-header"><span class="section-icon">💾</span><span class="section-title">자료실 — 전설의 tr 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">tr [번호]</span><span class="cmd-tag tag-nn">★ 전설 명령어</span></div><p class="cmd-desc">파일 다운로드(transfer). 나우누리가 "자료 공유가 잘 된다"는 소문의 주인공. 이 명령어 때문에 하이텔·천리안 유저들이 나우누리로 대거 이동했습니다.</p><div class="prompt-box"><span class="p-nn">[자료실] 명령어: </span><span class="p-white">tr 1234</span>
+<span class="p-muted">파일명: starcraft_tip.zip  (2,048KB)
+전송방식: Zmodem / Xmodem 선택 → </span><span class="p-yellow">z</span>
+<span class="p-muted">▓▓▓▓▓▓▓▓▓▓░░░░░░ 64%  전송 중...</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">ul</span></div><p class="cmd-desc">파일 업로드.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">fl</span></div><p class="cmd-desc">자료 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">s [검색어]</span></div><p class="cmd-desc">파일 검색.</p><div class="prompt-box"><span class="p-nn">[자료실] 명령어: </span><span class="p-white">s 게임공략</span></div></div>
+  </div></div>
+
+  <div class="section nn"><div class="section-header"><span class="section-icon">💬</span><span class="section-title">채팅 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">방번호</span></div><p class="cmd-desc">방 입장.</p><div class="prompt-box"><span class="p-nn">[대화방] 명령어: </span><span class="p-white">77</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">/l</span></div><p class="cmd-desc">방 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">/w</span></div><p class="cmd-desc">접속자 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">/q</span></div><p class="cmd-desc">방 나가기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">/c [이름]</span></div><p class="cmd-desc">새 방 만들기.</p><div class="prompt-box"><span class="p-nn">[대화방] 명령어: </span><span class="p-white">/c 우리들방</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">say [아이디] [내용]</span></div><p class="cmd-desc">귓속말.</p><div class="prompt-box"><span class="p-nn">[방 안] 명령어: </span><span class="p-white">say friend1 ㅋㅋ 진짜냐?</span></div></div>
+  </div></div>
+
+  <div class="section nn"><div class="section-header"><span class="section-icon">✉️</span><span class="section-title">메일 · 기타 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">l</span></div><p class="cmd-desc">받은 메일 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">r [번호]</span></div><p class="cmd-desc">메일 읽기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">s [아이디]</span></div><p class="cmd-desc">메일 보내기.</p><div class="prompt-box"><span class="p-nn">[메일] 명령어: </span><span class="p-white">s friend1</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">d [번호]</span></div><p class="cmd-desc">메일 삭제.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">fw [번호] [아이디]</span></div><p class="cmd-desc">메일 전달.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">who</span></div><p class="cmd-desc">접속자 조회.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">finger [아이디]</span></div><p class="cmd-desc">회원 정보 조회.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">info</span></div><p class="cmd-desc">내 정보·요금 확인.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">set</span></div><p class="cmd-desc">환경 설정.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">sos [메시지]</span></div><p class="cmd-desc">관리자 긴급 연락.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">cls</span></div><p class="cmd-desc">화면 지우기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-nn">bye</span></div><p class="cmd-desc">로그아웃.</p></div>
+  </div></div>
+</div><!-- /panel-nownuri -->
+
+<!-- ===== 천리안 탭 ===== -->
+<div class="panel-content" id="panel-chollian">
+  <div class="access-info">
+    <div class="access-title">▶ 접속 정보</div><hr class="divider">
+    <div class="prompt-box"><span class="p-muted">모뎀 접속: </span><span class="p-cl">ATDT 01420 (천리안 전용 독자망)</span>
+<span class="p-muted">프롬프트: </span><span class="p-cl">[천리안] >></span>
+<span class="p-muted">특징: 독자망. >> 프롬프트. subj/body/get/whisper/open 등 독자 명령어 체계.</span></div>
+  </div>
+
+  <div class="section cl"><div class="section-header"><span class="section-icon">🧭</span><span class="section-title">이동 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">go [키워드]</span></div><p class="cmd-desc">서비스·게시판으로 이동. go word가 핵심 시사 게시판.</p><div class="go-grid"><div class="go-item"><span class="go-cmd p-cl">go word</span><span class="go-desc">시사/자유 게시판 ★</span></div><div class="go-item"><span class="go-cmd p-cl">go humor</span><span class="go-desc">유머란</span></div><div class="go-item"><span class="go-cmd p-cl">go cholcd</span><span class="go-desc">천리안 CD 신청</span></div><div class="go-item"><span class="go-cmd p-cl">go bluehouse</span><span class="go-desc">청와대 신문고</span></div><div class="go-item"><span class="go-cmd p-cl">go chat</span><span class="go-desc">대화방</span></div><div class="go-item"><span class="go-cmd p-cl">go mail</span><span class="go-desc">전자우편</span></div></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">p</span></div><p class="cmd-desc">이전 메뉴로.</p><div class="prompt-box"><span class="p-cl">[천리안] >> </span><span class="p-white">p</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">m</span></div><p class="cmd-desc">메인으로.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">q</span></div><p class="cmd-desc">종료.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">bye</span></div><p class="cmd-desc">로그아웃.</p></div>
+  </div></div>
+
+  <div class="section cl"><div class="section-header"><span class="section-icon">📋</span><span class="section-title">게시판 명령어 전체</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">l / list</span></div><p class="cmd-desc">글 목록 보기.</p><div class="prompt-box"><span class="p-cl">[word] >> </span><span class="p-white">list</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">r [번호] / read</span></div><p class="cmd-desc">글 읽기.</p><div class="prompt-box"><span class="p-cl">[word] >> </span><span class="p-white">r 888</span>   <span class="p-muted">또는</span>   <span class="p-cl">[word] >> </span><span class="p-white">read 888</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">n</span></div><p class="cmd-desc">다음 글.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">b</span></div><p class="cmd-desc">이전 글.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">new</span></div><p class="cmd-desc">새로 올라온 글만 보기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">w / write</span></div><p class="cmd-desc">새 글 쓰기.</p><div class="prompt-box"><span class="p-cl">[word] >> </span><span class="p-white">w</span>
+<span class="p-muted">제목: </span><span class="p-yellow">오늘 뉴스 보셨나요</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">re [번호]</span></div><p class="cmd-desc">답글 달기.</p><div class="prompt-box"><span class="p-cl">[word] >> </span><span class="p-white">re 888</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">e [번호]</span></div><p class="cmd-desc">내 글 수정.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">d [번호] / delete</span></div><p class="cmd-desc">내 글 삭제.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">subj [검색어]</span><span class="cmd-tag tag-diff">천리안 고유!</span></div><p class="cmd-desc">제목 검색. 하이텔의 gl에 해당하는 천리안 전용 명령어.</p><div class="prompt-box"><span class="p-cl">[word] >> </span><span class="p-white">subj 선거</span>
+<span class="p-muted">→ 제목에 "선거" 포함된 글 목록</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">body [검색어]</span><span class="cmd-tag tag-diff">천리안 고유!</span></div><p class="cmd-desc">내용 전체 검색. 하이텔의 ga에 해당.</p><div class="prompt-box"><span class="p-cl">[word] >> </span><span class="p-white">body 선거</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">help</span></div><p class="cmd-desc">도움말.</p></div>
+  </div></div>
+
+  <div class="section cl"><div class="section-header"><span class="section-icon">💾</span><span class="section-title">자료실 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">list / fl</span></div><p class="cmd-desc">자료 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">get [번호]</span><span class="cmd-tag tag-diff">천리안 고유!</span></div><p class="cmd-desc">파일 다운로드. 나우누리 tr, 하이텔 dl에 해당.</p><div class="prompt-box"><span class="p-cl">[자료실] >> </span><span class="p-white">get 333</span>
+<span class="p-muted">→ 333번 파일 다운로드 시작</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">put / ul</span></div><p class="cmd-desc">파일 업로드. put은 천리안 고유 표현.</p><div class="prompt-box"><span class="p-cl">[자료실] >> </span><span class="p-white">put</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">find [검색어]</span></div><p class="cmd-desc">파일 검색.</p><div class="prompt-box"><span class="p-cl">[자료실] >> </span><span class="p-white">find 게임</span></div></div>
+  </div></div>
+
+  <div class="section cl"><div class="section-header"><span class="section-icon">💬</span><span class="section-title">채팅 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">방번호</span></div><p class="cmd-desc">방 입장.</p><div class="prompt-box"><span class="p-cl">[채팅] >> </span><span class="p-white">1</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">/l / /list</span></div><p class="cmd-desc">방 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">/w / /who</span></div><p class="cmd-desc">접속자 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">/q / /quit</span></div><p class="cmd-desc">방 나가기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">/open [이름]</span><span class="cmd-tag tag-diff">천리안 고유!</span></div><p class="cmd-desc">새 방 만들기. 하이텔 /create, 나우누리 /c에 해당.</p><div class="prompt-box"><span class="p-cl">[채팅] >> </span><span class="p-white">/open 우리동네방</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">whisper [아이디] [내용]</span><span class="cmd-tag tag-diff">천리안 고유!</span></div><p class="cmd-desc">귓속말. 하이텔·나우누리의 say에 해당.</p><div class="prompt-box"><span class="p-cl">[방 안] >> </span><span class="p-white">whisper friend1 지금 어디야 ㅋ</span></div></div>
+  </div></div>
+
+  <div class="section cl"><div class="section-header"><span class="section-icon">✉️</span><span class="section-title">메일 · 기타 명령어</span></div><div class="section-body">
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">list</span></div><p class="cmd-desc">받은 메일 목록.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">read [번호]</span></div><p class="cmd-desc">메일 읽기.</p><div class="prompt-box"><span class="p-cl">[메일] >> </span><span class="p-white">read 2</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">send [아이디]</span></div><p class="cmd-desc">메일 보내기.</p><div class="prompt-box"><span class="p-cl">[메일] >> </span><span class="p-white">send friend1</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">delete [번호]</span></div><p class="cmd-desc">메일 삭제.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">who</span></div><p class="cmd-desc">접속자 조회.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">finger [아이디]</span></div><p class="cmd-desc">회원 정보 조회.</p><div class="prompt-box"><span class="p-cl">[천리안] >> </span><span class="p-white">finger friend1</span></div></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">info</span></div><p class="cmd-desc">내 정보·요금 확인.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">set</span></div><p class="cmd-desc">환경 설정.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">cls</span></div><p class="cmd-desc">화면 지우기.</p></div>
+    <div class="cmd-block"><div class="cmd-name"><span class="p-cl">bye</span></div><p class="cmd-desc">로그아웃.</p></div>
+  </div></div>
+</div><!-- /panel-chollian -->
+
+</div><!-- /container -->
+
+<script>
+function switchTab(el, panelId, activeClass) {
+  document.querySelectorAll('.tab').forEach(t => t.className = 'tab');
+  el.className = 'tab ' + activeClass;
+  document.querySelectorAll('.panel-content').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + panelId).classList.add('active');
+}
+</script>
+</body>
+</html>

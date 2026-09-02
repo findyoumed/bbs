@@ -1,0 +1,340 @@
+10
+cls
+write [01;06H[=10F—e∏Å àaù°,≠Aù° 10¢ÖπA≥¢ §cµA¥ÙØsì°îa . [=14F®aüeØ°∑©µA µ≈¨˜–aâVØsì°îa .[=15F
+write [02;03H€£€°€®€°‘¬€°€®€°€®€°€®€°€®€°€®€°€®€°€®€°‘“€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°‘ƒ‘ø
+write [03;03H€¢‘±€¢1 ‘≥  €¢  €¢‘±€¢13€¢‘±€¢‘±€¢15€¢  ‘∫      [=13F¨Â    »Ç    —¡    °e[=15F      ‘≥
+write [04;03H€ß€°‘≈‘ƒ‘≈€°€´€°€´€°€´€°€´€°€´€°€´€°‘≈‘ƒ‘◊‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘ƒ‘¥
+write [05;03H€¢‘±€¢  ‘≥‘±€¢‘±€¢16€¢  €¢12€¢‘±€¢  €¢‘±‘∫[=14F[àaù°][=15F                          ‘≥
+write [06;03H€ß€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°‘∂  1, 2, 3, 4, 5, 6, 7, 8, 9,10  €¢
+write [07;03H€¢2 €¢  €¢‘±€¢16€¢‘±€¢‘±€¢  €¢‘±€¢  €¢‘±‘∫ [=8F11,12,13,14,15,16[=15F              €¢
+write [08;03H€ß€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°‘∂                                €¢
+write [09;03H€¢  €¢‘±€¢13€¢  €¢‘±€¢14€¢  €¢11€¢  €¢‘±‘∫[=14F[≠Aù°][=15F                          €¢
+write [10;03H€ß€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°‘∂  1, 2, 3, 4, 5, 6, 7, 8, 9,10  €¢
+write [11;03H€¢  €¢‘±€¢‘±€¢12€¢  €¢  €¢‘±€¢  €¢‘±€¢8 ‘∫ [=8F11,12,13,14,15,16[=15F              €¢
+write [12;03H€ß€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°‘∂                                €¢
+write [13;03H€¢3 €¢3 €¢‘±€¢  €¢‘±€¢11€¢9 €¢  €¢‘±€¢  ‘∫[=14F[®aπaêaàaã°][=11F  ===>  [=12FP[=15F           €¢
+write [14;03H€ß€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°‘∂                                ‘≥
+write [15;03H€¢‘±€¢4 €¢4 €¢‘±€¢6 €¢‘±€¢  €¢‘±€¢10€¢  ‘Ã‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘Õ‘æ  
+write [16;03H€ß€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°‘∂ [=14F(1)àaù° , (2)≠Aù° [=12F>>[=15F
+write [17;03H€¢‘±€¢‘±€¢  €¢‘±€¢  €¢‘±€¢9 €¢  €¢  €¢‘±‘∫ 
+write [18;03H€ß€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°‘∂ [=11F§Â—°üi ¨Â»Ç–a≠A∂a [=12F>>[=15F
+write [19;03H€¢‘±€¢5 €¢  €¢  €¢  €¢7 €¢‘±€¢‘±€¢8 €¢  ‘∫
+write [20;03H€ß€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°€´€°‘∂ [=10F¢Ö–wµA îÅ–e îs∑i ∏‚¥·∫Å≠A∂a[=15F
+write [21;03H€¢6 €¢  €¢‘±€¢‘±€¢‘±€¢7 €¢  €¢  €¢  €¢‘±‘∫ [=12F>>[=15F
+write [22;03H€¶€°€™€°€™€°€™€°€™€°€™€°€™€°€™€°€™‘ƒ‘¡‘ƒ‘Ω
+write [23;01H[=11F€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°[=15F
+write [24;01H[=14F¢Ö–w [=12F:[=15F
+write [26;01H[=11F€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°€°[=15F
+
+20
+s1:
+s2:
+s3:
+write [21;48H[20X
+write [24;08H[70X
+write [25;08H[70X
+write [18;66H[16X
+write [16;66H[16X
+input s1
+if s1==1 then goto 100
+if s1==2 then goto 1000
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 20
+
+100
+write [18;66H[16X
+input s2
+if s2==1 then goto 110
+if s2==2 then goto 120
+if s2==3 then goto 130
+if s2==4 then goto 140
+if s2==5 then goto 150
+if s2==6 then goto 160
+if s2==7 then goto 170
+if s2==8 then goto 180
+if s2==9 then goto 190
+if s2==10 then goto 200
+if s2==p then goto 10000
+if s2==P then goto 10000
+if s2==ÖA then goto 10000
+
+else goto 100
+
+110
+write [24;08Hàaù°¢ÖπA 1 ) îiÃó∑°∑Å √•¿‚ ...?
+write [21;48H[20X
+input s3
+if s3==∂Åú˜∑° then goto 112
+else goto 20
+
+112
+write [03;09H[=10F∂Å
+write [03;13H[=10Fú˜
+write [03;17H[=10F∑°[=15F
+goto 20
+
+120
+write [24;08Hàaù°¢ÖπA 2 ) ¥a°Aü°ƒa ...?
+write [21;48H[20X
+input s3
+if s3==£°äÇ then goto 122
+else goto 20
+
+122
+write [07;05H[=10F£°
+write [07;09H[=10FäÇ[=15F
+goto 20
+
+130
+write [24;08Hàaù°¢ÖπA 3 ) ¨a¢â∑i â≈¿i–q , µw—¡¿iµw∑i ‘â‘â–aîa .
+write [21;48H[20X
+input s3
+if s3==äÅâw then goto 132
+else goto 20
+
+132
+write [13;05H[=10FäÅ
+write [13;09H[=10Fâw[=15F
+goto 20
+
+140
+write [24;08Hàaù°¢ÖπA 4 ) √°¥aüi îc∑iòÅ œ©∂a–eï°äÅ ...?
+write [21;48H[20X
+input s3
+if s3==√°≠© then goto 142
+else goto 20
+
+142
+write [15;09H[=10F√°
+write [15;13H[=10F≠©[=15F
+goto 20
+
+150
+write [24;08Hàaù°¢ÖπA 5 ) π∑∑°∂âü°ëA çπ∑°œ°ëA ¨Åói∑Åâ°–∑ ...πA°¢ ...?
+write [21;48H[20X
+input s3
+if s3==¨·∂â∑Å¿eàa then goto 152
+else goto 20
+
+152
+write [19;09H[=10F¨·
+write [19;13H[=10F∂â
+write [19;17H[=10F∑Å
+write [19;21H[=10F¿e
+write [19;25H[=10Fàa[=15F
+goto 20
+
+160
+write [24;08Hàaù°¢ÖπA 6 ) ¥°äÅ‘â‘â , ë∑äÅ‘â‘â , ¬ÇäÅ‘â‘â ...
+write [21;48H[20X
+input s3
+if s3==âwã° then goto 162
+else goto 20
+
+162
+write [21;05H[=10Fâw
+write [21;09H[=10Fã°[=15F
+goto 20
+
+170
+write [24;08Hàaù°¢ÖπA 7 ) X-RAY üi ø¢ã°∂·–aµa ói¥·àaìe âµ ...?
+write [21;48H[20X
+input s3
+if s3==§w¨a¨ÂØ© then goto 172
+else goto 20
+
+172
+write [21;25H[=10F§w
+write [21;29H[=10F¨a
+write [21;33H[=10F¨Â
+write [21;37H[=10FØ©[=15F
+goto 20
+
+180
+write [24;08Hàaù°¢ÖπA 8 ) ¨aâ¡,ÆÅ§b,§Å,òiã°,•¢Æó¥a ów∑i ...?
+write [21;48H[20X
+input s3
+if s3==â¡∑© then goto 182
+else goto 20
+
+182
+write [19;37H[=10Fâ¡
+write [19;41H[=10F∑©[=15F
+goto 20
+
+190
+write [24;08Hàaù°¢ÖπA 9 ) îaüe–b¨ó •°îa °°§Ò∑°ñAìe –b¨ó ...?
+write [21;48H[20X
+input s3
+if s3==°°§Ò¨ó then goto 192
+else goto 20
+
+192
+write [17;29H[=10F°°
+write [17;33H[=10F§Ò
+write [17;37H[=10F¨ó[=15F
+goto 20
+
+200
+write [24;08Hàaù°¢ÖπA 10 ) –bäaüi îaì°ùa°e ∑°àı∑i êÅ¥°–a∫a ...?
+write [21;48H[20X
+input s3
+if s3==–bß° then goto 202
+else goto 20
+
+202
+write [15;37H[=10F–b
+write [15;41H[=10Fß°[=15F
+goto 20
+
+1000
+write [18;66H[16X
+input s2
+if s2==1 then goto 1110
+if s2==2 then goto 1120
+if s2==3 then goto 1130
+if s2==4 then goto 1140
+if s2==5 then goto 1150
+if s2==6 then goto 1160
+if s2==7 then goto 1170
+if s2==8 then goto 1180
+if s2==9 then goto 1190
+if s2==10 then goto 1200
+if s2==p then goto 10000
+if s2==P then goto 10000
+if s2==ÖA then goto 10000
+else goto 1000
+
+1110
+write [24;08H≠Aù°¢ÖπA 1 ) Õeª°êa ≠°Õ°üi •°êâòÅ àaìe âµ ...?
+write [21;48H[20X
+input s3
+if s3==∂Å¡AäÇ then goto 1112
+else goto 20
+
+1112
+write [03;09H[=10F∂Å
+write [05;09H[=10F¡A
+write [07;09H[=10FäÇ[=15F
+goto 20
+
+1120
+write [24;08H≠Aù°¢ÖπA 2 ) ¥a°Aü°ƒa∑Å ¬ÇäÅâwã° ...?
+write [21;48H[20X
+input s3
+if s3==£°Ø¢¬ÇäÅ then goto 1122
+else goto 20
+
+1122
+write [07;05H[=10F£°
+write [09;05H[=10FØ¢
+write [11;05H[=10F¬Ç
+write [13;05H[=10FäÅ[=15F
+goto 20
+
+1130
+write [24;08H≠Aù°¢ÖπA 3 ) ¨a¢â∑Å°°Øs , ∑°âµ ‘â‘â–e§Â πΩîa .
+write [21;48H[20X
+input s3
+if s3==âw√° then goto 1132
+else goto 20
+
+1132
+write [13;09H[=10Fâw
+write [15;09H[=10F√°[=15F
+goto 20
+
+1140
+write [24;08H≠Aù°¢ÖπA 4 ) ≠°êa¢ÅµA µiùa∑∂ìe ∏b∑e §w∂â ...?
+write [21;48H[20X
+input s3
+if s3==≠©§w∂â then goto 1142
+else goto 20
+
+1142
+write [15;13H[=10F≠©
+write [17;13H[=10F§w
+write [19;13H[=10F∂â[=15F
+goto 20
+
+1150
+write [24;08H≠Aù°¢ÖπA 5 ) “A∑Åêa ∏ÅÃe–iòÅ ãi∑i ∏b¨˜–aìe ¨aúq ...?
+write [21;48H[20X
+input s3
+if s3==¨·ã° then goto 1152
+else goto 20
+
+1152
+write [19;09H[=10F¨·
+write [21;09H[=10Fã°[=15F
+goto 20
+
+1160
+write [24;08H≠Aù°¢ÖπA 6 ) ‘âúq‘â∑©â¡üi •°êìØ°îa ...! 
+write [21;48H[20X
+input s3
+if s3==•°úq¿e then goto 1162
+else goto 20
+
+1162
+write [15;21H[=10F•°
+write [17;21H[=10Fúq
+write [19;21H[=10F¿e[=15F
+goto 20
+
+1170
+write [24;08H≠Aù°¢ÖπA 6 ) ¿Ç∑i îq¥aàaª°â° îaì°ìe •°òaü° ...?
+write [21;48H[20X
+input s3
+if s3==àa§w then goto 1172
+else goto 20
+
+1172
+write [19;25H[=10Fàa
+write [21;25H[=10F§w[=15F
+goto 20
+
+1180
+write [24;08H≠Aù°¢ÖπA 8 ) à·ªµπ∑äa ...?
+write [21;48H[20X
+input s3
+if s3==¨a∑°ß° then goto 1182
+else goto 20
+
+1182
+write [11;41H[=10F¨a
+write [13;41H[=10F∑°
+write [15;41H[=10Fß°[=15F
+goto 20
+
+1190
+write [24;08H≠Aù°¢ÖπA 9 ) ëA•e∑Åã©∑°ìe à{∑aêa ¨·ù°§eîÅ∑Å ßµ¨Â∑Å ã©∑°ìe à{ª°¥g∑e
+write [25;08H             ï°—w∑e ¢Å¥ı∑•ª°∂a ...?
+write [21;48H[20X
+input s3
+if s3==†aüq°° then goto 1192
+else goto 20
+
+1192
+write [13;29H[=10F†a
+write [15;29H[=10Füq
+write [17;29H[=10F°°[=15F
+goto 20
+
+1200
+write [24;08H≠Aù°¢ÖπA 10 ) –b¨óói∑Å ∏i°µ∑°êa ¨wîq∑i –aìe âµ ...?
+write [21;48H[20X
+input s3
+if s3==–b¨óâ¡Ø© then goto 1202
+else goto 20
+
+1202
+write [15;37H[=10F–b
+write [17;37H[=10F¨ó
+write [19;37H[=10Fâ¡
+write [21;37H[=10FØ©[=15F
+goto 20
+
+10000
+stop

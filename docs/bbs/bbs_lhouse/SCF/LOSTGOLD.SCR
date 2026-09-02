@@ -1,0 +1,625 @@
+1
+cls
+s1:=
+writel[1;1H   ÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄ
+writel[2;1H[=14F   #### [=15F —w”¶w ¯aÇaŸ³Ëa ‰A·±[=2F ·°´á¤áŸ¥ Ñ×‹q·iÀx´a¬á V1.0(¥AÈa¤á¹e)[=14F ####[=15F
+writel[3;1H   ÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄÔÄ
+writel[4;1H                                    Script language game by ‹±   ­©
+writel[5;1H                                         [=14F          NowID : roora10
+writel[6;1H  [=13F                ·°´á¤áŸ¥ Ñ×‹q·iÀx´a¬á  ¬a¶w ¬é¡w¬á[=15F
+writel[7;1H
+writel[8;1H     ‰A·±¯¡¸bµA —i´áˆa¡e ¹A·© ¶áµA ¡ww´á ¤aˆa aµ³“¡”a..
+writel[9;1H     ‹aŸ¡‰¡ ‹a£»µA Ğ¬é·¡ aµ¡ºa..¶áµA ¡ww´á ¤aµA¬á Ğa‰¡¯¼·eˆõ
+writel[10;1H     ·i ‰©œa¬á ¬åÈ‚Ğaµa ¡A­A»¡ˆa aµ¡“e•A¡ Ğa¯¡¡e –S“¡”a..
+writel[11;1H     ‹©·iÀx´aˆa¬á Ñ×‹q·i Àx“eˆõ·³“¡”a!!
+writel[12;1H     ‹©·¡ ¹± ¥¢¸sĞa¡e¬á•¡ ”e®…Ğs“¡”a..ÆÆ...
+writel[13;1H     ¢ ¥¡¢‰·i Àx·a­A¶a!
+writel[14;1H
+writel[15;1H [=2F            ˆ¤i¸a·  i..[=15F
+writel[16;1H
+writel[17;1H  ĞaĞu..¸á· –¤å¼ ¸bÎ‘·³“¡”a!! ¸i  e—i´ö“e»¡ ¡¡Ÿa‰V‘A¶a..
+writel[18;1H  aŸq•A¡  e—i´ö“e•A.... qµA —a¯©º‰ £¨¯s“¡”a..
+writel[19;1H  ·¡ˆá  e—e”a‰¡ ĞaµA 6¯¡ˆeĞ¬á 14·©•·´e  e—i´ö¯s“¡”a..
+writel[20;1H  ˆá· 80µa¯¡ˆe...‹a  eÇq ¹Aˆa  g·e ‘¡b·i Ê¸aĞ–¯s“¡”a..
+writel[21;1H  ‹aœá“¡ ·¡ ‹i·i ‰¡Áa¬á ¸a‹¡ˆa  e—i´ö”a“eˆõÀáœñ ¥¡·¡a‰¡
+writel[22;1H  Ğa»¡“e  a­a¶a...ÒÒ....¸á•¡ ·A¡wĞ¹a´¡ºa....
+writel[23;1H  Óq...”a·qµE ”á¶‚ ¸£¶“e‰A·±·i  e—i•¡¢ ‘¡bĞa‰V¯s“¡”a..
+writel[24;1H  ¯¥¬åĞe ´a·¡—¡´áˆa ·¶·a¡e roora10´|·a¡ ¡A·©º­A¶a
+writel[25;1H
+writel[26;1H    [=15G[=0F ¢…· : 051-514-8231    ¬a¬éBBS : EPST BBS(051-518-7021)19200[=15F[=1G
+input s1
+2
+cls
+writel[2;1H[=14F         <<<  ·°´á¤áŸ¥  Ñ×‹q·i Àx´a¬á º‰ˆáŸ¡  >>>[=15F
+writel[3;1H
+writel[4;1H  ˜“e 1895‘e...´á˜å ‘·¦(‹a¯¡”µA ‘·¦ˆa ·¶´öa??)ˆa ‘¥·i ˆi‰¡
+writel[5;1H  ·¶´ö”a...‹a ‘·¦“e ‘¥·i ˆi”aˆa ¢¡ˆa ˆéŸ¡“e‰A ·¶‹©œ Ìa¥Ö”á“¡
+writel[6;1H[=4F  ¥¡¢‰ ¬w¸a[=15Fµv”a! ‹a´eµA“e ®  g·e Ñ×‹q—i·¡ —i´á·¶´ö”a..
+writel[7;1H  ‹a ‘·¦“e ‹a ¬w¸aŸi »³µA”a ¢¢ ®‘‰a–´ö”a..
+writel[8;1H  ¡y·©·¡ ´e–A¬á ‹a ¬w¸a·¡´¡‹¡“e  a·iµA ”aÌá»¡‰A –A´ö‰¡
+writel[9;1H  ‹a ¬w¸aŸi ‘¡Ÿ¡“e ¬aœq·e “i´á e ˆv”a..
+writel[10;1H  ‹aœ¬á ‹a“e ‰i¯±Ğ–”a..·¡ ¬w¸aŸi ¬e­¢µA ®‘‰a–Ÿ¡œa‰¡..
+writel[11;1H  ‘·¦“e ‹a ¬w¸aŸi ¬e­¢ ‹¼·e‰µ ˜w­¢µA ¢ˆ´á–‰¡
+writel[12;1H  ‹a ‹eÀáµA [=2F·A¬á[=15FŸi ¢ˆ·e–á ¸a¬i·i Ğ–”a....
+writel[13;1H [=13F ‹a¡¦Èá 100‘eÒ.. 1995‘e.[=15F
+writel[14;1H [=11F ‹±£¥Àé(º·¥‰·)[=15F·e Ã¥Š—i‰Á ¬eµA a¢Ÿi ¯±·aœá ˆv”aˆa
+writel[15;1H  ¶µeÓ¡ ˜w­¢µA¬á ¹··¡Ÿi ¤i‰eĞa‰A –E”a...
+writel[16;1H [=6F '·¡ ‹i·i ¥¡“e¬aœqµA‰A ¦Èb ¹± Ğa·³¯¡”á.. »¡ˆa¶a..¥¡¢‰¬w¸a
+writel[17;1H  Ÿi ¤i‰eĞ–´öˆá—eµ...‹e•A •¡–‚ĞeÉA ¨•‹©Œa¥Á ‹a ¬w¸aŸi
+writel[18;1H  XXXXµA ®‘Äa–•³aµ....‹aˆõ¹± Àx´aˆa»¡‰¡µ...Ğa·¡­¡..'[=15F
+writel[19;1H  ¶w·e ¶áµÁ ˆ{´v”a.. £¥Àé·e Ñ¢¯¡a ¯¼´ö»¡ e
+writel[20;1H  £»¹a´¡ ¥¥¸å·¡»¡...Ğa“e ¬—ˆbµA ‹a ¥¡¢‰·i Àx´aa¬ö”a!!!
+writel[22;1H[=15G[=1F      ´a¢Ç¡a ’Ÿa¯¡¡e ‰A·±·i ¯¡¸bĞs“¡”a![=15F[=1G
+input s1
+3
+cls
+writel[1;1H[=14F         <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H   µa‹¡“e[=2F ¬é´b¬e[=15F· ¬e º—Èâ·³“¡”a..
+writel[3;1H   £¥Àé·e »¡‹q ´á—¡Ÿi ˆa´¡–Aa...‰¡£¥º—·³“¡”a..
+writel[4;1H   ´á—¡Ÿi ˆa´¡[=4F ¥¡¢‰[=15F·i Àx“e»¡.. ´a­A¶a??
+writel[5;1H   [=14F•·½¢[=15F·a¡“e ˆa»¡¡µĞs“¡”a..
+writel[6;1H  [=2F ¬á½¢[=15F·a¡“e Çe a¢ˆa ·¶¯s“¡”a..
+writel[7;1H [=12F  q½¢[=15F·a¡“e Çe ‹©·¡ ·¶¯s“¡”a..
+writel[8;1H [=13F  ¦‚½¢[=15F·a¡“e ÉEËaÁ¥·¡ ·¶¯s“¡”a..[=15F
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H   [=14F (1)[=15F •· [=14F (2)[=15F ¬á [=14F (3)[=15F q [=14F (4)[=15F ¦‚        Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 4
+if s1==2 then goto 5
+if s1==3 then goto 9
+if s1==4 then goto 23
+if s1==help then goto 9999
+if s1==HELP then goto 9999
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 3
+4
+writel[15;3H[=4F ˆa»¡ ¡µĞs“¡”a!!!![=15F
+delay 1000
+goto 3
+5
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H £¥Àé:´õ?? a¢¸g´a..Ça‹¥ ÇaŠ…..­¡a¢ˆ{·e•A..
+writel[3;1H      ´a“¡!! ¢¡œa‰¡ ¸âÑa·¶”a...¢¡»¡??
+writel[4;1H  [=2F  '¥¡¢‰·e µa‹¡¬á ´aº ˜é´á»¥‰µ·¡ ·¶”a...
+writel[5;1H     q½¢·a¡ ˆa´¡ Ğe”a!!µa‹¥ »¥¼a ´ô”a!'[=15F
+writel[6;1H £¥Àé:Óq...®¬wĞ..´a¢œ•¡..
+writel[7;1H[=14F •·½¢[=15F·a¡ ‹©·¡ ·¶¯s“¡”a..
+writel[8;1H [=12F‹a¶AµA ‹©·¡ ´ô¯s“¡”a![=15F
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H  [=14F(1)[=15F •· [=14F (2)[=15F ®¬‚Ğa‹¡                  Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 6
+if s1==2 then goto 7
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 5
+6
+goto 3
+7
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H £¥Àé:´u!! ¢¥ˆa ·¶”a!!
+writel[3;1H      ·¡ˆå ¢¡»¡?? ·q...·q...·a..·a...
+writel[4;1H      ´z~~~~ ™··¡”a!!! µú~
+writel[5;1H
+writel[6;1H
+writel[7;1H
+writel[8;1H
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H  [=14F(1)[=15F •·                                Í¡‹¡ : [=4FP[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 8
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 7
+8
+goto 3
+9
+cls
+writel[1;1H[=14F         <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ´á—¡¡ ˆa“e ‹©·¡»¡?? Óq..·¡‹©˜aœaˆa¡e
+writel[3;1H          a·i·¡ aµ¡‰V“e•A???
+writel[4;1H         Ğe¤å ˆa¥¡»¡¢¡...
+writel[5;1H         Ñ¢¯¡ [=4F•¡–‚[=15F·¡ aµ¡“eˆå ´a“¡‰V»¡???
+writel[6;1H
+writel[7;1H
+writel[8;1H
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H [=14F (1)[=15F  a·i¡ˆa”a  [=14F (2) [=15F¦‚       Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 10
+if s1==2 then goto 3
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 9
+10
+writel[15;3H ´z!!! ˆw•¡”a!!! ·¡œå!!
+delay 2000
+goto 11
+11
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ·a...Ğe¤å e ¬iaº¡··~
+writel[3;1H         a •¥ ´ô”e  i·¡µa~
+writel[4;1H
+writel[5;1H  ˆw•¡ : ÇaÇa...¢¡? ¬iaº¡?? £¡ÁvŠ…..
+writel[6;1H         ¨iŸ¡ º‚‹¡¯°·a¡e ˆa»¥ˆá ”a ‘Á!!
+writel[7;1H
+writel[8;1H  £¥Àé :[=4F ´á¼á»¡? ´á¼á»¡? ´á¼á»¡? ´á¼á»¡?[=15F
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H [=14F (1)[=15F °a¶”a [=14F(2)[=15F º”a[=14F (3)[=15F •¡ wˆa”a       Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 12
+if s1==2 then goto 21
+if s1==3 then goto 22
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 11
+12
+random 3
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : Óa..¼a¯¢—i..µ¡“i·e Ó± ´e³ia‰¡ Ğ–“e•A..
+writel[3;1H         ¡±¹± Î‰´á´¡ ‰V”a...
+writel[4;1H
+writel[5;1H  ˆw•¡ : ·¡ ¼a¯¢·¡ £¡Áva?? ´e–A‰VŠ…..­¥¹± ¥Áº¸a
+writel[6;1H
+writel[8;1H      [=2F 1[=15FµA¬á[=2F 3[=15Fº—µA ‰¡Ÿa­A¶a~ :
+input s1
+if s1==1 then goto 13
+if s1==2 then goto 14
+if s1==3 then goto 15
+else goto 12
+13
+s1:=1
+goto 16
+14
+s1:=2
+goto 16
+15
+s1:=3
+goto 16
+16
+if i0==s1 then goto 18
+else goto 17
+17
+s1:=0
+cls
+writel[1;1H   [=14F      <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ·a...[=2F®•¸a[=15F e ¸i‰©œv´á•¡ ·¡‰v“e•A..·a..
+writel[3;1H         µa‹¡¬á º‚”a“¡..‘·¦ˆa ÑÁa‰V“e•A..
+writel[4;1H        [=14F ¥¡¢‰[=15F•¡ ¡µÀx‰¡.. Œ¡”b~
+writel[5;1H  ˆw•¡ : ¼a¯¢..¥¡¢‰ˆ{·e­¡Ÿ¡Ğa‘A...
+input s1
+goto 10000
+18
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : [=2FĞaĞu!! [=15F¼a¯¢—i ¥iˆá ´a“¡Š…..
+writel[3;1H         °q•¡ ¡µĞa“e ‘±—i·¡ ¢ šá´á¶a,šá´á..
+writel[4;1H
+writel[5;1H  ˆw•¡ : ·a·a...¼a¯¢...°q e ¤¶¶¡??
+writel[6;1H         ·a...º‚“e”a...[=4FŒ¡”b...[=15F
+writel[7;1H  [=14Fq½¢[=15F·a¡“e  a·i·¡·¶¯s“¡”a
+writel[8;1H  [=2F¦‚½¢[=15F·a¡“e Àá·q·¶”å‰µ·³“¡”a..
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H [=14F (1)[=15F q [=14F(2)[=15F ¦‚                      Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 19
+if s1==2 then goto 3
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 18
+19
+cls
+writel[1;1H  [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ˆ¤i¸aˆa ´a»¢ ´e e—i´ö•A¶a..
+writel[3;1H         ”a  e—i´á´¡ –IÉE•A.. [=14F ­©“± [=15F ¸i  e—a­A¶a~
+writel[4;1H
+writel[5;1H
+writel[6;1H  [=14F ¦‚½¢[=15F ·a¡“e Àá·q·¶”å‰µ·³“¡”a..
+writel[7;1H
+writel[8;1H
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H  [=14F (1)[=15F  ¦‚                                   Í¡‹¡ :[=4F  P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 3
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 19
+20
+cls
+writel[1;1H   [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ˆ¤i¸aˆa ´a»¢ ´e e—i´ö•A¶a..
+writel[3;1H         ”a  e—i´á´¡ –IÉE•A.. [=14F  ­©“±[=15F   ¸i  e—a­A¶a~
+writel[4;1H
+writel[5;1H
+writel[6;1H  [=15Fq½¢[=15F·a¡“e Àá·q·¶”å‰µ·³“¡”a..
+writel[7;1H
+writel[8;1H
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H  [=14F(1)[=15F q                                   Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 3
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 20
+21
+s1:=
+cls
+writel[1;1H  [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  ˆw•¡ : ¼a¯¡·¢~ »¥¸b ‹aœé ˆõ·¡»¡..ÒÒ•...
+writel[3;1H         ´a“¡»¡..·¡”¡ ¥¡¡e  a·i¬aœqĞeÉA  iĞi»¡•¡ ¡©œa..
+writel[4;1H         ÀáŸ¡Ğ´¡ ‰V´á...·¡µU!! ÌâÌâ!!
+writel[5;1H
+writel[6;1H  £¥Àé : ·a...Ã¡¬aĞe‘±..•¥ º¶“e•A•¡ Ì”a“¡...a«e‘±..
+writel[7;1H
+writel[8;1H
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+goto 10000
+22
+s1:=
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H £¥Àé:µAµU!! •¡ wˆa‰¡ ¥¡“eˆá´¡!
+writel[3;1H      Ò”a”a”a”a”a”b(šá“e ­¡Ÿ¡)
+writel[4;1H
+writel[5;1H ˆw•¡:ĞaĞu. šá´á¥Ö¸a ¥a‚·¡»¡ ÒÒ•...ˆa ¸s·aœá ˆa¬á
+writel[6;1H      º‚·©Œa? “¡ˆa º‚·iœ?
+writel[7;1H
+writel[8;1H £¥Àé:´a..µ..ˆaºa..¢¡..ĞaĞu...¢¡..·¡œåˆõ Œa»¡..ĞaĞu..Ìâ..´â
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+goto 10000
+23
+s1:=
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  ¸÷Ñ : ´a~~ µÖŠa £¥Àé´a~ aÃ± ¸iµÖ´á~
+writel[3;1H         ¤s e—i‰¡ ·¶“eº—·¡ ´öˆá—e..˜b  xÁa¬á µÖ‘A??
+writel[4;1H
+writel[5;1H  £¥Àé : ĞaĞu...·¡‰A Àå¬—µe¦…·¡œeˆõ..ÒÒ..
+writel[6;1H         ´a!! ´Á—i´a ·¡Ÿ¡ ”aµÁ¥Á..ˆa ½¢»¡Ÿi ¤i‰e
+writel[7;1H         Ğ–“e•A... ·¡ˆõ¥Á..
+writel[8;1H  Ğ¬é : £¥Àé· Ã¥Š—i·e ”a ¥¡œá ¡¡·¥”a
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+24
+s1:=
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ¥Á..¯¥‹¡Ğa»¡?? Óq..´á˜ ¶Ÿ¡ Àx·aœá ˆa¥©Œa?
+writel[3;1H  Àé»¥ : ·a...e ´e–A‰V´á...ˆóa..·a...»¥¼iŒa?
+writel[4;1H  ÑeÈ : ·q.. e´¢µA »¥¼aœa¡e...Àx·a¡e ¦¸a–A‰V“eˆé???´¡~
+writel[5;1H  ¸÷Ñ : Ó¡Ó¡..e µa¸aœa¬á  i·¡»¡..´eˆa¡e ´e–IŒa?
+writel[6;1H  £¥Àé : ´e•á..’Šœa•¡ ¨a¹a¬å ´e•á..”aˆa´¡Ğ..
+writel[7;1H         ·¡œå·©·e Ğe¤å³¢ ”a ‰c´á¥Á´¡Ğ!!
+writel[8;1H  Àé»¥,ÑeÈ,¸÷Ñ : ‹aœ..ˆa´¡‰V”a...
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+25
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ·¡¹A ¯i¯i Â‰¤iĞ¥©Œa? ´¡´¡!! ¨iŸ¡ ·©´áa
+writel[3;1H
+writel[4;1H  Àé»¥ : ´¡´a...¥¡¢‰Àx·a¡e  õ»¥ ´aÌaËaa ¬a´¡‰V”a..
+writel[5;1H  ¸÷Ñ : ‹aœ..¨iŸ¡ ˆa¸a...»±·i À—‰a´¡»¡..
+writel[6;1H  ÑeÈ : ¨iœw¨iœwˆa¸aˆa¸a
+writel[7;1H  £¥Àé : ´á...‹e•A....´á—¡¦Èá Àx´a¥©Œa?? ´á“a½¢·a¡
+writel[8;1H         ˆa»¡??
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H [=14F (1)[=15F ¦‚ [=14F(2)[=15F •·[=14F (3)[=15F ¬á       Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 26
+if s1==2 then goto 39
+if s1==3 then goto 41
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 25
+26
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H ‹a· ¥¡‹¡¹½·e ®œ·¡”a..Àq¬•¡ ·¶‰¡..¥¡‹¡¹½”a..
+writel[3;1H ÑeÈ“e ’…Ã¡´ô·¡ Å¡˜b»¡Ÿi Ò§¥”a..
+writel[4;1H Àé»¥·e ´aº »¥»¥Ğe Îa¸÷·a¡ ¥¡¢‰·i Àx‰¡ ·¶”a..
+writel[5;1H £¥Àé : ´á?? µa‹¡ ·¡¬wĞe ½¢»¡ˆa ·¶”a!!
+writel[6;1H
+writel[7;1H ¤a”bµA“e ½¢»¡ˆa ·¶”a.....’œı‰¡ µ¡œ–A¥¡·¡“e..
+writel[8;1H
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H [=14F (1)[=15F º“”a [=14F(2)[=15F ¦‚[=14F (3)[=15F q[=14F (4)[=15F •·[=14F (5)[=15F ¬á       Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 43
+if s1==2 then goto 28
+if s1==3 then goto 27
+if s1==4 then goto 27
+if s1==5 then goto 45
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 26
+27
+writel[15;3H[=4F ˆa»¡ ¡µĞs“¡”a!!!![=15F
+delay 1000
+goto 26
+28
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ´a´b!! ˆw•¡”a!
+writel[3;1H         ·a...Ğe¤å e ¬iaº¡··~
+writel[4;1H         a •¥ ´ô”e  i·¡µa~
+writel[5;1H  ˆw•¡ : ÇaÇa...¢¡? ¬iaº¡?? £¡ÁvŠ…..
+writel[6;1H         ¨iŸ¡ º‚‹¡¯°·a¡e ˆa»¥ˆá ”a ‘Á!!
+writel[7;1H
+writel[8;1H  £¥Àé :[=4F ´á¼á»¡? ´á¼á»¡? ´á¼á»¡? ´á¼á»¡?[=15F
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H [=14F (1)[=15F °a¶”a [=14F(2)[=15F º”a[=14F (3)[=15F •¡ wˆa”a       Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 29
+if s1==2 then goto 36
+if s1==3 then goto 37
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 11
+29
+random 3
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : Óa..¼a¯¢—i..µ¡“i·e Ó± ´e³ia‰¡ Ğ–“e•A..
+writel[3;1H         ¡±¹± Î‰´á´¡ ‰V”a...
+writel[4;1H
+writel[5;1H  ˆw•¡ : ·¡ ¼a¯¢·¡ £¡Áva?? ´e–A‰VŠ…..­¥¹± ¥Áº¸a
+writel[6;1H
+writel[8;1H      [=2F 1[=15FµA¬á[=2F 3[=15Fº—µA ‰¡Ÿa­A¶a~ :
+input s1
+if s1==1 then goto 30
+if s1==2 then goto 31
+if s1==3 then goto 32
+else goto 29
+30
+s1:=1
+goto 33
+31
+s1:=2
+goto 33
+32
+s1:=3
+goto 33
+33
+if i0==s1 then goto 35
+else goto 34
+34
+s1:=0
+cls
+writel[1;1H   [=14F      <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ·a...[=2F®•¸a[=15F e ¸i‰©œv´á•¡ ·¡‰v“e•A..·a..
+writel[3;1H         µa‹¡¬á º‚”a“¡..‘·¦ˆa ÑÁa‰V“e•A..
+writel[4;1H        [=14F ¥¡¢‰[=15F•¡ ¡µÀx‰¡.. Œ¡”b~
+writel[5;1H  ˆw•¡ : ¼a¯¢..¥¡¢‰ˆ{·e­¡Ÿ¡Ğa‘A...
+input s1
+goto 10000
+35
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : [=2FĞaĞu!! [=15F¼a¯¢—i ¥iˆá ´a“¡Š…..
+writel[3;1H         °q•¡ ¡µĞa“e ‘±—i·¡ ¢ šá´á¶a,šá´á..
+writel[4;1H
+writel[5;1H  ˆw•¡ : ·a·a...¼a¯¢...°q e ¤¶¶¡??
+writel[6;1H         ·a...º‚“e”a...[=4FŒ¡”b...[=15F
+writel[7;1H  [=14Fq½¢[=15F·a¡“e ¶‰ÀwĞe ®œ·³“¡”a
+writel[8;1H  [=2F¦‚½¢[=15F·a¡“e ‹©·¡ aµ³“¡”a..
+writel[9;1H -Command line---------------------------------------------------
+writel[10;1H [=14F (1)[=15F ¦‚ [=14F(2)[=15F q                      Í¡‹¡ :[=4F P[=15F
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+if s1==1 then goto 26
+if s1==2 then goto 38
+if s1==p then goto 10000
+if s1==P then goto 10000
+else goto 35
+36
+s1:=
+cls
+writel[1;1H  [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  ˆw•¡ : ¼a¯¡·¢~ »¥¸b ‹aœé ˆõ·¡»¡..ÒÒ•...
+writel[3;1H         ´a“¡»¡..·¡”¡ ¥¡¡e  a·i¬aœqĞeÉA  iĞi»¡•¡ ¡©œa..
+writel[4;1H         ÀáŸ¡Ğ´¡ ‰V´á...·¡µU!! ÌâÌâ!!
+writel[5;1H
+writel[6;1H  £¥Àé : ·a...Ã¡¬aĞe‘±..•¥ º¶“e•A•¡ Ì”a“¡...a«e‘±..
+writel[7;1H
+writel[8;1H
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+goto 10000
+37
+s1:=
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H £¥Àé:µAµU!! •¡ wˆa‰¡ ¥¡“eˆá´¡!
+writel[3;1H      Ò”a”a”a”a”a”b(šá“e ­¡Ÿ¡)
+writel[4;1H
+writel[5;1H ˆw•¡:ĞaĞu. šá´á¥Ö¸a ¥a‚·¡»¡ ÒÒ•...ˆa ¸s·aœá ˆa¬á
+writel[6;1H      º‚·©Œa? “¡ˆa º‚·iœ?
+writel[7;1H
+writel[8;1H £¥Àé:´a..µ..ˆaºa..¢¡..ĞaĞu...¢¡..·¡œåˆõ Œa»¡..ĞaĞu..Ìâ..´â
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+goto 10000
+38
+writel[15;3H[=4F  b”aŸe ‰©¡¢·³“¡”a....[=15F
+delay 1000
+goto 35
+39
+s1:=
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : µa‹¥ ´á—¡»¡?? Óq...
+writel[3;1H         ¹¡¶wĞa‰¡ ¹½‘A..´¡~~
+writel[4;1H
+writel[5;1H  Àé»¥ : ‹aœ~~ ¹¡µ¡Èa~~
+writel[6;1H         ÀåŠ‚·¡”a ÀåŠ‚!! ĞaĞa!!
+writel[7;1H  ÑeÈ : ´Á..´Á..´Á—i´a...¸á..¸á‹©¥Á..
+writel[8;1H         ·a~~´a~~~´b~~~~~~
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+40
+cls
+writel[2;1H ·a...´â¶‰Ğa”a...¤‘ĞeÉA ¢‰aº‚”a“¡..
+delay 2000
+goto 10000
+41
+s1:=
+cls
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : µa‹¥ ´á—¡»¡?? Óq...
+writel[3;1H         ¹¡¶wĞa‰¡ ¹½‘A..´¡~~
+writel[4;1H
+writel[5;1H  Àé»¥ : ‹aœ~~ ¹¡µ¡Èa~~
+writel[6;1H         ÀåŠ‚·¡”a ÀåŠ‚!! ĞaĞa!!
+writel[7;1H  ÑeÈ : ´Á..´Á..´Á—i´a...¸á..¸á‹©¥Á..
+writel[8;1H         ·a~~´a~~~´b~~~~~~
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+42
+cls
+writel[2;1H ·a...´â¶‰Ğa”a...¤‘ĞeÉA ¢‰aº‚”a“¡..
+delay 2000
+goto 10000
+43
+s1:=
+cls
+writel[1;1H                   -----------------------------------
+writel[2;1H                   -  ¥¡¢‰·i Àx‰¡·¶”a¡e ·¡‹i·i ¸i ·ª -
+writel[3;1H                   -  ´áœa..¥¡¢‰·e ·¡‹eÀáµA ·¶”a..   -
+writel[4;1H                   -  µa‹¡/--\ ½¢·a¡ 2¤åˆeÒ        -
+writel[5;1H                   -  ¬á½¢|   \----\ ½¢·a¡ 4¤åˆa¬á  -
+writel[6;1H                   -  q /          \_ ·a¡ 2¤åˆa‰¡  -
+writel[7;1H                 / -  ”a |             \ ¡e Çea¢ˆa -
+writel[8;1H                /  -  ·¶·i\____        |  º¶áŸi ¬iÍa-\
+writel[9;1H               /   -  ¥¡´aœa!!! \_____/              -  \
+writel[10;1H              /   /-                                 -\   \
+writel[11;1H             /   / -                              /\ - \   \
+writel[12;1H            |   /  /\              ¥¡¢‰º·¥ ¤‚   |\ \-  \   \
+writel[13;1H            |   |/_/ |                           \ \|\  \   |
+writel[14;1H            |        -                            \   \/    |
+writel[15;1H            |       /  Â¯¥ : ¥¡¢‰¬w¸a ‹eÀáµA ¶áĞñ \        |
+writel[16;1H             \      |          Ğeˆõ·¡  g”a!          \      \
+writel[17;1H              \     |---------------------------------|      \
+writel[18;1H              /     /                                  \      \
+writel[19;1H             /     /                                    \      \
+writel[20;1H            /     /                                      \      \
+writel[21;1H           /     /                                        \      \
+writel[22;1H          /     /         /------------------\             \      \
+writel[23;1H         /     /         /   /-\  <-˜‘É·      \             \      \
+writel[24;1H        /     /         /    \-/               \             \      \
+writel[25;1H
+writel[26;1H
+input s1
+44
+cls
+s1:=
+writel[1;1H [=14F        <<  ·°´á¤áŸ¥ Ñ×‹q·i Àx´a¬á >>[=15F
+writel[2;1H  £¥Àé : ´á..´á¼á»¡..¹··¡ ˆa¶…•Aˆa ¿¸´á¹v¸g´a....
+writel[3;1H
+writel[4;1H  Àé»¥ : ¹E¸w!! ”a Ëiv´á..
+writel[5;1H
+writel[6;1H  £¥Àé : ´a¡..‹aœ•¡ ¶w‹¡Ÿi ·°´á¬å ´e•á..
+writel[7;1H         {Œa»¡ Àx´a¥¡¸a!!
+writel[8;1H
+writel[9;1H -Command line---------------------------------------------------
+writel[11;1H ----------------------------------------------------------------
+writel[12;1H ¡ww >>
+input s1
+goto 26
+45
+goto 11111
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+9999
+s1:=
+cls
+writel[2;1H ¶…µw¸a : ·a...§¡£©Ç¡Ÿi ´i´a”a“¡..ÇaÇa...
+writel[3;1H          ÒÒ...µa‹¡ »¡•¡Ÿi ‰·ˆĞ?? i´á..
+writel[4;1H          ÆÆ..´a»¢ £¡µÅ¬÷·¡‹¡ ˜¢…µA..
+writel[5;1H          ÒÒ...Óq..¸áµA‰A ¡A·©º¡¶a~
+writel[6;1H          ·¡ˆá §¡£©Ç¡ Àx´v”a‰¡..
+input s1
+goto 3
+10000
+s1:=
+cls
+writel[3;5H [=14FÍ¡‹¡[=15FĞa¡e ´e–A“e•A.....
+writel[4;5H [=2F{¯¡‰V¯s“¡Œa? (Y/N) :[=15F
+input s1
+if s1==y then goto 10001
+if s1==Y then goto 10001
+if s1==n then goto 2
+if s1==N then goto 2
+else goto 10000
+10001
+stop
+11111
+s1:=
+cls
+writel[2;1H  ¶aˆå ¯¡ĞñÌe·¡œa¬á ·¡Œa»¥ ¡µ e—i´ö‘A¶w...
+writel[3;1H  ÑAÑA..¹Aˆa ·¡Œa»¡  e—a“e•A 2·©ˆévµ¡¶w.
+writel[4;1H  ’ˆa ·¡ ‹i·i ·ª·a¯©˜¿q·¡¡e »¡‹q•¡ ¸á“e
+writel[5;1H  ¶aˆé  e—i‰¡ ·¶·i¡µA¶a..
+input s1
+goto 10000
+
