@@ -97,6 +97,16 @@ export function createRoutingStateRestorer(deps) {
   }
 
   const routeHandlers = {
+    // Resolve the short contact-editor URL before the generic board fallback.
+    // `/tosysop` is also a board key, so without this explicit handler a
+    // refresh incorrectly opens the public post list instead of the editor.
+    async tosysop() {
+      if (typeof showContactSysop === 'function') {
+        return await showContactSysop(true);
+      }
+      return await showMain(true);
+    },
+
     // Keep the historical deep link used by the guide menu.  The sysop
     // contact board is exposed from TOP in the current menu tree, but old
     // clients/bookmarks use /guide/tosysop; routing the alias explicitly

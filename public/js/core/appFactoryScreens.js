@@ -101,7 +101,7 @@ export function createAppFactoryScreens(deps) {
     startOAuthLogin: authService.startOAuthLogin,
     refs
   });
-  const { handleHistoryBack, preloadBootstrap, showMain, showBoardSelect, getBoardSelectTitle, jumpToContent } = menuNav;
+  const { handleHistoryBack, preloadBootstrap, preloadLatestNotice, showMain, showBoardSelect, getBoardSelectTitle, jumpToContent } = menuNav;
 
   const serviceScreens = createServiceScreens({
     ...screenDeps,
@@ -134,6 +134,7 @@ export function createAppFactoryScreens(deps) {
     ...screenDeps,
     getAuthLeafRoutePath: menuService.getAuthLeafRoutePath,
     getBoardSelectTitle,
+    preloadLatestNotice,
     showBoardSelect,
     showMain,
     handleLoginIdSubmit: (userId) => refs.handleLoginIdSubmit(userId),
@@ -153,7 +154,9 @@ export function createAppFactoryScreens(deps) {
   const contactSysopScreens = createContactSysopScreen({
     ...screenDeps,
     apiFetch,
-    showBoardSelect
+    showBoardSelect,
+    // Guests selecting GUIDE → TOSYSOP should enter the login flow.
+    showLogin: authScreens.showLogin
   });
   // [LOG_ID: 20260713_2100] GUIDE 화면 이용약관/개인정보처리방침 뷰어.
   const policyScreens = createPolicyScreens({

@@ -80,6 +80,7 @@ async function verifyWeatherCoverage(errors) {
         };
         const screenEl = createHarnessScreenEl();
         const pushedUrls = [];
+        const weatherBuilderCalls = [];
 
         const env = createHarnessBrowserGlobals({ innerWidth: 1280, pathname: '/service/weather/11', search: '?page=2' });
         globalThis.window = env.window;
@@ -97,7 +98,9 @@ async function verifyWeatherCoverage(errors) {
             applyCommandFooter: async () => {},
             buildWeatherLocalAnsi: () => ({ text: 'LOCAL WEATHER', pageNo: 1, pageCount: 1 }),
             buildWeatherMenuAnsi: () => ({ text: 'WEATHER MENU', regionStartLine: 4, half: 1 }),
-            buildWeatherAnsi: (_data, pageNo = 1) => ({
+            buildWeatherAnsi: (data, pageNo = 1) => {
+                weatherBuilderCalls.push({ data, pageNo });
+                return ({
                 text: `PC통신동호회 01410                 1993-04-29 04:27:00
 WEATHER       서울                                   (${String(pageNo).padStart(2, '0')}/03)
 ────────────────────────────────────────────────────────────────────────────────
@@ -106,7 +109,8 @@ Weather page ${pageNo}
 `,
                 pageNo,
                 pageCount: 3
-            }),
+                });
+            },
             cmdInput: { focus() {} },
             getCommandFooterText: () => '',
             getMenuNodeByKey: () => ({ footer: 'WEATHER' }),
@@ -154,6 +158,38 @@ Weather page ${pageNo}
         }
         if (pushedUrls[pushedUrls.length - 1] !== '/service/weather/11?page=2') {
             errors.push('Weather pagination did not request /service/weather/11?page=2 when navigating to the next page');
+        }
+
+        state.serviceData = {
+            regionDoor: 'local',
+            region: 'local',
+            items: [],
+            menuItems: [],
+            localWeather: {
+                city: 'local',
+                days: [{ day: '2026-04-29', weather: 'clear', high: '22', low: '12', rainProbability: '0%' }],
+                items: Array.from({ length: 12 }, (_, index) => ({
+                    day: index < 10 ? '04/29' : '04/30',
+                    hour: `${String(index % 24).padStart(2, '0')}h`,
+                    weather: 'clear',
+                    temperature: '20',
+                    rainProbability: '0%',
+                    windDirection: 'N',
+                    windSpeed: '1'
+                }))
+            }
+        };
+        await showWeatherView('local', { pageNo: 1 });
+        await showWeatherView('local', { pageNo: 2 });
+        const localCall = weatherBuilderCalls[weatherBuilderCalls.length - 1];
+        if (!localCall || localCall.data?.items?.length !== 12) {
+            errors.push('Local weather did not pass hourly items to the shared weather renderer');
+        }
+        if (Number(state.serviceData?.pageCount || 1) < 2 || Number(state.serviceData?.pageNo || 1) !== 2) {
+            errors.push('Local weather did not expose the same paginated hourly flow as regional weather');
+        }
+        if (buildURLForState() !== '/service/weather/local?page=2') {
+            errors.push(`Local weather URL builder did not keep page query for page 2 (got ${buildURLForState()})`);
         }
 
         let restoreArgs = null;

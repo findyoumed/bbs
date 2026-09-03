@@ -224,12 +224,32 @@ function measureHotspotBounds(screenNode, lineNode, hotspot) {
 
   const rawLeft = Math.min(...textRects.map((rect) => rect.left)) - screenRect.left;
   const rawRight = Math.max(...textRects.map((rect) => rect.right)) - screenRect.left;
-  const rawTop = lineRect.top - screenRect.top;
+  // Keep the minimum touch target centred on the rendered ANSI row.  When a
+  // short viewport compresses line-height below the touch target, top-aligning
+  // the button shifts its centre into the following row (NEWS could therefore
+  // activate WEATHER).  Centre alignment preserves the visible label as the
+  // click target while still retaining the larger hit area.
+  const rawLineCenter = (lineRect.top + (lineRect.height / 2)) - screenRect.top;
   
   const left = rawLeft / scaleX;
-  const top = rawTop / scaleY;
   const width = Math.max(8, (rawRight - rawLeft) / scaleX);
-  const height = Math.max(lineRect.height / scaleY, 16);
+  const lineHeight = lineRect.height / scaleY;
+  const nextLine = lineNode.nextElementSibling?.classList?.contains('ansi-line')
+    ? lineNode.nextElementSibling.getBoundingClientRect()
+    : null;
+  const previousLine = lineNode.previousElementSibling?.classList?.contains('ansi-line')
+    ? lineNode.previousElementSibling.getBoundingClientRect()
+    : null;
+  const rowSpacing = nextLine
+    ? (nextLine.top - lineRect.top) / scaleY
+    : previousLine
+      ? (lineRect.top - previousLine.top) / scaleY
+      : lineHeight;
+  // Keep normal rows at a comfortable touch height, but never let a minimum
+  // target overlap its neighbouring row when a short viewport compresses the
+  // ANSI grid.  Overlap is what made a NEWS click land on WEATHER/GAME.
+  const height = Math.min(Math.max(lineHeight, 16), Math.max(lineHeight, rowSpacing));
+  const top = (rawLineCenter / scaleY) - (height / 2);
 
   return { left, top, width, height };
 }
@@ -309,6 +329,10 @@ export function renderMenuHotspots(screenNode, hotspots) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'ansi-hotspot';
+    // Keep the source ANSI row on the overlay so capture-phase click handling
+    // can disambiguate enlarged touch targets when compressed viewports make
+    // adjacent rows overlap vertically.
+    button.dataset.hotspotRow = String(hotspot.row);
     if (hotspot.nodeKey) button.dataset.nodeKey = hotspot.nodeKey;
     if (hotspot.boardId) button.dataset.boardId = hotspot.boardId;
     if (hotspot.menuPath) button.dataset.menuPath = hotspot.menuPath;

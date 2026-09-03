@@ -168,6 +168,24 @@ async function verifyTopMenuHotspotClicks(page, errors) {
         return;
     }
 
+    // Compact landscape layouts compress ANSI rows below the default touch
+    // target height.  Verify the NEWS label itself still activates NEWS rather
+    // than the neighbouring GAME/WEATHER row in that overlap-prone viewport.
+    await page.setViewportSize({ width: 480, height: 320 });
+    await page.goto(config.BASE_URL, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(350);
+    const compactNews = page.locator(`${hotspotSelector}[aria-label*="NEWS"]`).first();
+    if (await compactNews.count()) {
+        await compactNews.click();
+        await page.waitForTimeout(450);
+        if (!page.url().includes('/service/news')) {
+            errors.push(`Compact NEWS hotspot opened an unexpected route: ${page.url()}`);
+        }
+    } else {
+        errors.push('Compact NEWS hotspot is missing');
+    }
+    await page.setViewportSize({ width: 1366, height: 768 });
+
     for (let index = 0; index < initialCount; index += 1) {
         await page.goto(config.BASE_URL, { waitUntil: 'networkidle' });
         await page.waitForTimeout(350);
@@ -189,6 +207,9 @@ async function verifyTopMenuHotspotClicks(page, errors) {
         }
         if (label === '이동: GO NOTICE' && !url.includes('/notice')) {
             errors.push(`GO NOTICE hotspot opened an unexpected route: ${url}`);
+        }
+        if (label === '뉴스 (NEWS)' && !url.includes('/service/news')) {
+            errors.push(`NEWS hotspot opened an unexpected route: ${url}`);
         }
     }
     console.log(`🖱️  Verified ${initialCount} top-menu hotspots by browser click.`);

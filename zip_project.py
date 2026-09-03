@@ -74,18 +74,19 @@ def zip_project(output_filename=None):
     print(f"Creating {output_filename}...")
 
     # [LOG: 20260805_1748] 압축 진행 상황(진행률 및 추가 파일명) 콘솔 출력 추가
+    # [LOG: 20260903_1223] rglob → os.walk 교체: 무시 폴더를 진입 전에 차단해 대용량 폴더(docs/ 등) 순회 생략
     # 3. Collect files to include
     target_files = []
-    for file_path in root_dir.rglob("*"):
-        if file_path.is_file():
-            ignored = False
-            for p in [file_path] + list(file_path.parents):
-                if is_ignored(p, all_patterns):
-                    ignored = True
-                    break
-            
+    for dirpath, dirs, files in os.walk(root_dir):
+        dir_path = Path(dirpath)
+
+        # 무시 대상 폴더는 순회 자체를 건너뜀 (핵심 최적화: docs/ 68,296개 파일 건너뜀)
+        dirs[:] = [d for d in dirs if not is_ignored(dir_path / d, all_patterns)]
+
+        for filename in files:
+            file_path = dir_path / filename
             # [LOG: 20260411_1252] .env 및 zip_project.py 파일 강제 포함
-            if not ignored or file_path.name in [".env", "zip_project.py"]:
+            if not is_ignored(file_path, all_patterns) or filename in [".env", "zip_project.py"]:
                 target_files.append(file_path)
 
     total_files = len(target_files)

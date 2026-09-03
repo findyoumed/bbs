@@ -19,6 +19,7 @@ export function createContactSysopScreen(deps) {
     setPrompt,
     setReady,
     showBoardSelect,
+    showLogin,
     showMain,
     state,
     updateURL
@@ -455,9 +456,13 @@ export function createContactSysopScreen(deps) {
   async function showContactSysop(fromHistory = false, initialDraft = {}) {
     if (state.user?.isGuest) {
       setHint('건의하기는 로그인 후 이용하실 수 있습니다.');
-      setPrompt('내용 >>');
-      setReady?.(true);
-      await showBoardSelect('guide', '서비스 안내');
+      if (typeof showLogin === 'function') {
+        await showLogin(fromHistory);
+      } else {
+        setPrompt('로그인 >>');
+        setReady?.(true);
+        await showBoardSelect('guide', '서비스 안내');
+      }
       return;
     }
 

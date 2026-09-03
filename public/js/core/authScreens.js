@@ -12,6 +12,7 @@ export function createAuthScreens(deps) {
     handlePasswordResetCancel,
     handlePasswordResetSubmit,
     mountPromptRow,
+    preloadLatestNotice,
     restorePromptRow,
     screenEl,
     setFooterVisibility,
@@ -156,6 +157,7 @@ export function createAuthScreens(deps) {
         `<div class="entry-auth-head">'PC통신동호회 01410'에 오신 것을 환영합니다!!<br>ID가 없는 분은 '손님' 혹은 'GUEST'를 입력하십시오.</div>` +
         // [LOG: 20260622_1600] 풋터(terminal-footer)가 이미 프롬프트 위 가로 구분선을 그리므로, 본문 entry-divider는
         // 빈 transcript 위에서 풋터 선과 겹쳐 "가로줄 2개"로 보였다. 중복 제거 — 비밀번호 재설정 화면과 동일하게 풋터 선만 사용.
+        `<div id="login-small-notice" class="entry-login-small-notice" hidden></div>` +
         `<div id="login-transcript" class="entry-login-transcript"></div>` +
         `<div id="login-prompt-host" class="entry-login-prompt-host" data-login-prompt-host></div>` +
         renderAuthField({
@@ -182,6 +184,29 @@ export function createAuthScreens(deps) {
     const loginPasswordRow = loginPasswordEl?.closest('.entry-auth-row') || null;
     const loginTranscriptEl = document.getElementById('login-transcript');
     const loginPromptHost = document.getElementById('login-prompt-host');
+    const loginSmallNoticeEl = document.getElementById('login-small-notice');
+    const renderLoginSmallNotice = async () => {
+      if (!loginSmallNoticeEl || typeof preloadLatestNotice !== 'function') return;
+      const noticeText = await preloadLatestNotice();
+      if (!noticeText || state.screen !== 'login' || !document.body.contains(loginSmallNoticeEl)) return;
+      const title = String(noticeText).replace(/^\[작은공지\]\s*/, '').trim();
+      loginSmallNoticeEl.textContent = `[작은공지] ${title}........(GO NOTICE)`;
+      loginSmallNoticeEl.hidden = false;
+      loginSmallNoticeEl.setAttribute('role', 'button');
+      loginSmallNoticeEl.setAttribute('tabindex', '0');
+      loginSmallNoticeEl.setAttribute('aria-label', '이동: GO NOTICE');
+      const openNotice = () => {
+        if (state.screen === 'login') window.location.assign('/notice');
+      };
+      loginSmallNoticeEl.addEventListener('click', openNotice);
+      loginSmallNoticeEl.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openNotice();
+        }
+      });
+    };
+    void renderLoginSmallNotice().catch(() => {});
     const setLoginPromptVisible = (isVisible) => {
       const promptRow = document.getElementById('terminal-prompt-row');
       if (!promptRow) return;

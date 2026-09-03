@@ -362,6 +362,61 @@ export function bindAppEvents(deps) {
       });
     if (candidates.length < 2) return target;
 
+    // On short/mobile viewports the overlay keeps a minimum touch height,
+    // while the ANSI rows themselves may compress below that height.  The
+    // resulting overlap lets the browser hit-test a neighbouring row.  Use
+    // the rendered text row as the source of truth whenever the overlay
+    // carries its row metadata; this keeps clicking the visible NEWS label on
+    // NEWS even if the GAME/WEATHER touch targets overlap it.
+    const lineNodes = [...(layer.parentElement?.querySelectorAll?.('.ansi-line') || [])];
+    if (lineNodes.length) {
+      const lineRects = lineNodes.map((lineNode) => lineNode.getBoundingClientRect());
+      const targetRow = Number(hotspot.dataset.hotspotRow);
+      const targetLineRect = Number.isInteger(targetRow) ? lineRects[targetRow] : null;
+      // MouseEvent coordinates are integer-rounded in some browsers.  If the
+      // browser already hit the hotspot whose text row is under the pointer,
+      // keep that target (with a small edge tolerance) instead of allowing a
+      // neighbouring row's center to win by a fraction of a pixel.
+      if (targetLineRect && y >= targetLineRect.top - 1 && y <= targetLineRect.bottom + 1) {
+        return hotspot;
+      }
+      let nearestRow = null;
+      let nearestRowDistance = Number.POSITIVE_INFINITY;
+      lineRects.forEach((rect, row) => {
+        if (rect.width <= 0 || rect.height <= 0) return;
+        const nextRect = lineRects[row + 1];
+        // Prefer the visual row's top boundary over enlarged overlay bounds.
+        // This removes the one-pixel ambiguity at the top of a compressed row
+        // where nearest-center selection could still choose the preceding row.
+        if (y >= rect.top && (!nextRect || y < nextRect.top)) {
+          nearestRow = row;
+          nearestRowDistance = 0;
+          return;
+        }
+        const distance = Math.abs((rect.top + (rect.height / 2)) - y);
+        if (distance < nearestRowDistance) {
+          nearestRow = row;
+          nearestRowDistance = distance;
+        }
+      });
+      if (nearestRow !== null) {
+        const rowCandidates = candidates.filter((candidate) => (
+          Number(candidate.dataset.hotspotRow) === nearestRow
+        ));
+        if (rowCandidates.length === 1) {
+          return rowCandidates[0];
+        }
+        if (rowCandidates.length > 1) {
+          return rowCandidates.reduce((nearest, candidate) => {
+            const rect = candidate.getBoundingClientRect();
+            const distance = Math.abs((rect.left + (rect.width / 2)) - x);
+            if (!nearest) return { candidate, distance };
+            return distance < nearest.distance ? { candidate, distance } : nearest;
+          }, null)?.candidate || target;
+        }
+      }
+    }
+
     let nearest = hotspot;
     let nearestDistance = Number.POSITIVE_INFINITY;
     for (const candidate of candidates) {

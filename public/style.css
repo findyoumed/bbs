@@ -1732,6 +1732,35 @@ body[data-screen="news-view"] #terminal-screen {
 }
 
 /* [LOG_ID: 20260710_1203] PR 갈무리(전체 보기) 모드일 때 터미널 레이아웃 높이 제한을 풀고 세로로 늘어나게 하여 브라우저 창 스크롤로 기사를 전체 확인하게 함 */
+/* [LOG_ID: 20260903_1315] Keep NEWS typography unchanged while matching the
+   original Coroke rhythm: a little more breathing room after the topbar,
+   slightly taller list rows, and a clear divider before commands. Scope this
+   to the desktop news list so the 80-column/mobile layouts remain untouched. */
+@media (min-width: 769px) and (min-height: 650px) {
+    body[data-screen="news-list"] .retro-topbar--ansi {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    body[data-screen="news-list"] .retro-topbar--ansi .retro-topbar-row1,
+    body[data-screen="news-list"] .retro-topbar--ansi .retro-topbar-row2 {
+        margin-bottom: 6px;
+    }
+
+    body[data-screen="news-list"] .ansi-screen-body {
+        padding-top: 4px;
+    }
+
+    body[data-screen="news-list"] .ansi-screen-body > .ansi-line {
+        line-height: 1.45;
+        min-height: 25px;
+    }
+
+    body[data-screen="news-list"] #terminal-footer {
+        padding-top: 4px;
+    }
+}
+
 html[data-print-view="true"] {
     height: auto !important;
     overflow-y: auto !important;
@@ -3286,6 +3315,30 @@ body[data-print-view="true"] .ansi-screen {
         text-overflow: clip !important;
     }
 
+    /* News rows are also fixed-column ANSI records (number, headline, date).
+       Keep the three columns on one terminal row on narrow screens; allowing
+       the date span to wrap makes its last digit appear as a fake extra row. */
+    body[data-screen="news-list"] .ansi-line:not(.ansi-line--separator),
+    body[data-screen="news-list"] .ansi-line:not(.ansi-line--separator) > span {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        overflow: hidden !important;
+        text-overflow: clip !important;
+    }
+
+    /* The chat lobby uses the same fixed-column records for users and rooms.
+       Clamp each record to one terminal row so a long room subject cannot
+       push the following rows out of alignment on phones. */
+    body[data-screen="chat-lobby"] .ansi-line:not(.ansi-line--separator),
+    body[data-screen="chat-lobby"] .ansi-line:not(.ansi-line--separator) > span {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        overflow: hidden !important;
+        text-overflow: clip !important;
+    }
+
     /* Structural horizontal rules must remain a single terminal row.  The
        generic mobile ANSI rule intentionally remains wrapping for prose. */
     .ansi-screen .ansi-line--separator,
@@ -3941,6 +3994,25 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
 
     #terminal-footer {
         --cmd-font-size: clamp(7px, calc(100dvh * 0.022), 9px);
+    }
+}
+
+/* [LOG_ID: 20260903_1420] Portrait mobile alignment pass. Menu screens use a
+   centred 44-column body, while prose screens (HELP/POLICY) and MYINFO used
+   full-width/extra-padding exceptions. Those different anchors made the
+   first character visibly jump when navigating between screens. Keep one
+   centred body width and one horizontal inset for every ANSI screen; the
+   existing wrapping rules still protect long prose and URLs. */
+@media (max-width: 768px) and (orientation: portrait) {
+    #terminal-screen .ansi-screen-body,
+    #terminal-screen .ansi-screen-body[data-screen-kind="myinfo"] {
+        width: min(44ch, calc(100% - 8px));
+        max-width: min(44ch, calc(100% - 8px));
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 1px;
+        padding-right: 1px;
+        box-sizing: border-box;
     }
 }
 

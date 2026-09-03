@@ -86,6 +86,13 @@ function toKoreanCity(city, region) {
   return CITY_KO[city] || CITY_KO[region] || city || region || '알 수 없음';
 }
 
+function windDirectionFromDegrees(value) {
+  const degrees = Number(value);
+  if (!Number.isFinite(degrees)) return '';
+  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return directions[Math.round(degrees / 45) % directions.length];
+}
+
 function createWeatherFetchOptions(timeoutMs = 5000) {
   const options = {
     headers: { 'User-Agent': 'OldDOS-BBS Web RSS Fetcher' }
@@ -195,7 +202,7 @@ class RssWeatherService extends RssServiceBase {
           result = { unavailable: true, message: '위치 확인 불가' };
         } else {
           // 2) 현재 날씨 + 5일 예보
-          const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current=weather_code,temperature_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia/Seoul&forecast_days=5`;
+          const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current=weather_code,temperature_2m&hourly=weather_code,temperature_2m,precipitation_probability,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia/Seoul&forecast_days=5`;
           const wxRes = await this.fetchImpl(wxUrl, createWeatherFetchOptions());
           if (!wxRes?.ok) {
             result = { unavailable: true, message: '날씨 조회 실패' };
@@ -203,6 +210,7 @@ class RssWeatherService extends RssServiceBase {
             const wx = JSON.parse(await wxRes.text());
 
             const current = wx?.current || {};
+            const hourly = wx?.hourly || {};
             const d = wx?.daily || {};
             const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
             const todayKey = getKstDateKey();
@@ -215,12 +223,27 @@ class RssWeatherService extends RssServiceBase {
                 rainProbability: d.precipitation_probability_max?.[i] != null ? `${d.precipitation_probability_max[i]}%` : ''
               };
             });
+            const items = (hourly.time || []).map((timestamp, i) => {
+              const value = String(timestamp || '');
+              const dayKey = value.slice(0, 10);
+              const timeMatch = value.match(/T(\d{2}):/);
+              return {
+                day: formatKstForecastDay(dayKey, todayKey, WEEKDAYS),
+                hour: timeMatch ? `${timeMatch[1]}\uC2DC` : '',
+                weather: WMO_WEATHER[hourly.weather_code?.[i]] || '?????놁쓬',
+                temperature: hourly.temperature_2m?.[i] != null ? String(Math.round(hourly.temperature_2m[i])) : '',
+                rainProbability: hourly.precipitation_probability?.[i] != null ? `${hourly.precipitation_probability[i]}%` : '',
+                windDirection: windDirectionFromDegrees(hourly.wind_direction_10m?.[i]),
+                windSpeed: hourly.wind_speed_10m?.[i] != null ? String(Math.round(hourly.wind_speed_10m[i])) : ''
+              };
+            });
             result = {
               city: toKoreanCity(geo.city, geo.regionName),
               region: CITY_KO[geo.regionName] || geo.regionName || '',
               weather: WMO_WEATHER[current.weather_code] ?? '알 수 없음',
               temperature: current.temperature_2m != null ? String(Math.round(current.temperature_2m)) : '',
-              days
+              days,
+              items
             };
           }
         }

@@ -227,6 +227,7 @@ async function runMobileSmokeTests() {
         const geometry = await page.evaluate(() => {
           const footer = document.getElementById('terminal-footer');
           const cmdInput = document.getElementById('cmd-input');
+          const terminalScreen = document.getElementById('terminal-screen');
           const footerRect = footer?.getBoundingClientRect() || null;
           const cmdInputRect = cmdInput?.getBoundingClientRect() || null;
 
@@ -347,8 +348,9 @@ async function runMobileSmokeTests() {
             innerHeight: window.innerHeight,
             footerBottom: footerRect ? footerRect.bottom : null,
             cmdInputBottom: cmdInputRect ? cmdInputRect.bottom : null,
-            screenScrollHeight: document.querySelector('#terminal-screen')?.scrollHeight || 0,
-            screenClientHeight: document.querySelector('#terminal-screen')?.clientHeight || 0,
+            screenScrollHeight: terminalScreen?.scrollHeight || 0,
+            screenClientHeight: terminalScreen?.clientHeight || 0,
+            screenOverflowY: terminalScreen ? getComputedStyle(terminalScreen).overflowY : '',
             textOverflow,
             unnamedControls,
             postRows: Array.from(document.querySelectorAll('.post-hotspot-line')).map((row) => ({
@@ -432,7 +434,11 @@ async function runMobileSmokeTests() {
 
         const footerClipped = geometry.footerBottom !== null && geometry.footerBottom > geometry.innerHeight + 1;
         const cmdInputClipped = geometry.cmdInputBottom !== null && geometry.cmdInputBottom > geometry.innerHeight + 1;
-        const screenContentOverflow = geometry.screenScrollHeight > geometry.screenClientHeight + 1;
+        // Long-form screens such as HELP intentionally use an internal
+        // vertical scroller on short phones. It is safe as long as the
+        // scroller is exposed; hidden overflow indicates clipped UI.
+        const screenContentOverflow = geometry.screenScrollHeight > geometry.screenClientHeight + 1
+          && !['auto', 'scroll'].includes(geometry.screenOverflowY);
         if (footerClipped || cmdInputClipped || screenContentOverflow) {
           console.error(`❌ (Footer/Command input clipped below viewport: footerBottom=${geometry.footerBottom}, cmdInputBottom=${geometry.cmdInputBottom}, innerHeight=${geometry.innerHeight})`);
           errors.push({

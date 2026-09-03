@@ -205,9 +205,14 @@ export function createWeatherScreens(deps) {
         };
       }
 
-      if (!fromHistory) { updateURL(); pushHistory(); }
-
-      const localResult = buildWeatherLocalAnsi(state.serviceData?.localWeather);
+      const local = state.serviceData?.localWeather || {};
+      const localResult = buildWeatherAnsi({
+        region: local.city || local.region || state.serviceData?.region || '',
+        items: local.items || local.hourly || [],
+        daily: local.days || local.daily || [],
+        unavailable: !!local.unavailable,
+        message: local.message || ''
+      }, requestedPageNo);
       state.serviceData.pageNo = localResult.pageNo;
       state.serviceData.pageCount = localResult.pageCount;
 

@@ -249,10 +249,11 @@ export function createMenuNavigation(deps) {
 
     // [LOG_ID: 20260804_1114] 게시판, 메뉴, 통계를 한 번의 서버 병렬 조회로 받아
     // 초기 화면의 HTTP/serverless 왕복을 줄인다. 개별 로더는 딥링크 경로에서 계속 사용한다.
-    const [bootstrap, noticeText] = await Promise.all([
-      preloadBootstrap(),
-      preloadLatestNotice()
-    ]);
+    // The historical "small notice" is rendered on the login screen.  The
+    // main menu remains focused on menu entries for both guest and member
+    // sessions; the login screen consumes preloadLatestNotice() directly.
+    const bootstrap = await preloadBootstrap();
+    const noticeText = null;
     hydrateBoards(bootstrap?.boards);
     const menuTree = hydrateMenuTree(bootstrap?.menu);
     const stats = bootstrap?.stats || {};
@@ -438,6 +439,7 @@ export function createMenuNavigation(deps) {
     getBoardSelectTitle,
     handleHistoryBack,
     preloadBootstrap,
+    preloadLatestNotice,
     resolveAnyMenuNodeTarget,
     resolveLocalMenuNodeTarget,
     resolveBoardTarget,
