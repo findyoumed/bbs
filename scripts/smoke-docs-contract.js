@@ -13,8 +13,14 @@ const path = require('path');
 const projectRoot = path.resolve(__dirname, '..');
 
 function read(relativePath) {
-  const absolutePath = path.join(projectRoot, relativePath);
-  if (!fs.existsSync(absolutePath)) {
+  const candidates = [
+    path.join(projectRoot, relativePath),
+    // Reference bundles may be kept under docs/bbs to keep the repository
+    // root focused on the web service; both layouts are valid.
+    path.join(projectRoot, 'docs', 'bbs', relativePath)
+  ];
+  const absolutePath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!absolutePath) {
     throw new Error(`missing file: ${relativePath}`);
   }
   return fs.readFileSync(absolutePath, 'utf8');

@@ -67,6 +67,9 @@ def zip_project(output_filename=None):
     all_patterns.append((root_dir, output_filename))
     # [LOG: 20260805_1749] docs/ 폴더 용량 문제로 압축 제외 추가
     all_patterns.append((root_dir, "docs/"))
+    # [LOG: 20260902_1804] AI 관련 대용량 폴더 및 파이썬 캐시 제외
+    for ignore_dir in [".gemini/", ".claude/", ".agents/", ".codex/", "artifacts/", "__pycache__/"]:
+        all_patterns.append((root_dir, ignore_dir))
 
     print(f"Creating {output_filename}...")
 

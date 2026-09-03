@@ -3944,6 +3944,36 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
     }
 }
 
+/* [LOG_ID: 20260903_1100] Desktop content-flow prompt layout.
+   The reference Coroke terminal places the command row immediately after the
+   rendered body.  On wide screens the old 24-row minimum left a large empty
+   gap before the footer, making the input look detached from the page content.
+   Keep the fixed wrapper as a scroll boundary for long lists, but let the
+   screen and footer size themselves to the rendered content.  Mobile and
+   compact-landscape rules retain their existing sizing contracts. */
+@media (min-width: 769px) {
+    body {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+
+    #terminal-wrapper {
+        overflow: visible !important;
+    }
+
+    #terminal-container {
+        height: auto !important;
+        max-height: none !important;
+    }
+
+    #terminal-screen {
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+    }
+}
+
 /* The smallest portrait viewport leaves only a few pixels after the guide
    menu's fixed 24px rows. Keep those rows dense enough to show the footer
    without clipping the final menu item; hotspot hit areas are rendered in a

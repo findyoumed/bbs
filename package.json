@@ -54,6 +54,7 @@
     "smoke:vercel-ready": "node scripts/smoke-vercel-ready.js",
     "smoke:full-traversal": "node scripts/smoke-full-traversal.js",
     "smoke:mobile": "node scripts/smoke-mobile-viewports.js",
+    "smoke:command-flow": "node scripts/smoke-command-flow.js",
     "smoke:production": "node scripts/smoke-production.js",
     "smoke:vercel-env": "node scripts/smoke-vercel-env-contract.js",
     "smoke:supabase-security": "node scripts/smoke-supabase-security-contract.js",

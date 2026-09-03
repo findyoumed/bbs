@@ -21,7 +21,9 @@ const SECRET_PATTERNS = [
   { name: 'supabase-service-role', regex: /(?:^|[\s"'=:(])sb_secret_[A-Za-z0-9_-]{20,}(?=$|[\s"'%),;])/ },
   { name: 'resend-api-key', regex: /(?:^|[\s"'=:(])re_[A-Za-z0-9_-]{24,}(?=$|[\s"'%),;])/ },
   { name: 'jwt-secret', regex: /(?:^|[\s"'=:(])eyJ[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}(?=$|[\s"'%),;])/ },
-  { name: 'database-credential-url', regex: /(?:postgres(?:ql)?|mysql):\/\/[^\s:@/]+:[^\s@/]+@[^\s/]+/i }
+  // Ignore documentation placeholders such as `:[비밀번호]@` and
+  // `<password>` while still catching a concrete credential in a tracked URL.
+  { name: 'database-credential-url', regex: /(?:postgres(?:ql)?|mysql):\/\/[^\s:@/]+:(?!\[|<|\$|your\b|password\b|비밀번호\b)[^\s@/]+@[^\s/]+/i }
 ];
 
 function trackedFiles() {

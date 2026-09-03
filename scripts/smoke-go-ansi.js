@@ -11,6 +11,19 @@ const { loadBrowserHarnessModule } = require('./smoke/common-utils');
 
 const coreDir = path.join(__dirname, '..', 'public/js/core');
 const moduleCache = new Map();
+
+function resolveReferencePath(relativePath) {
+  const projectRoot = path.join(__dirname, '..');
+  const candidates = [
+    path.join(projectRoot, relativePath),
+    path.join(projectRoot, 'docs', 'bbs', relativePath)
+  ];
+  const match = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!match) {
+    throw new Error(`missing reference file: ${relativePath}`);
+  }
+  return match;
+}
 const { ansiToHTML } = loadBrowserHarnessModule(path.join(coreDir, 'ansiRenderUtils.js'), moduleCache);
 const { createTerminalHintMarkup } = loadBrowserHarnessModule(path.join(coreDir, 'terminalHintMarkup.js'), moduleCache);
 const { createMenuNavigationActions } = loadBrowserHarnessModule(path.join(coreDir, 'menuNavigationActions.js'), moduleCache);
@@ -32,7 +45,7 @@ function verifyNurieNreSamples() {
   // graphics extensions remain intentionally outside the web renderer scope.
   const supported = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'P', 'S', 'T', '@', 'd', 'f', 'm', 'r', 's', 'u']);
   for (const name of ['ANSI1.NRE', 'ANSI2.NRE', 'ANSI3.NRE', 'ANSI4.NRE']) {
-    const raw = fs.readFileSync(path.join(__dirname, '..', 'nurie', name), 'latin1');
+    const raw = fs.readFileSync(resolveReferencePath(path.join('nurie', name)), 'latin1');
     const sentinelCount = (raw.match(/@\[/g) || []).length;
     assert(sentinelCount > 0, `${name} should contain Nurie @ [ transport sentinels`);
     const stream = raw.replace(/@\[/g, '\x1b[');
@@ -55,9 +68,9 @@ function verifyNurieNreSamples() {
 }
 
 function verifyHistoricalMenuAliasSources() {
-  const menuPath = path.join(__dirname, '..', 'nurie', 'HITEL.MNU');
+  const menuPath = resolveReferencePath(path.join('nurie', 'HITEL.MNU'));
   const menu = fs.readFileSync(menuPath, 'utf8');
-  const menu15 = fs.readFileSync(path.join(__dirname, '..', 'nurie15', 'HITEL.MNU'), 'utf8');
+  const menu15 = fs.readFileSync(resolveReferencePath(path.join('nurie15', 'HITEL.MNU')), 'utf8');
   const extractCodes = (source) => [...source.matchAll(/:([A-Za-z0-9_]+)\s*$/gm)]
     .map((match) => match[1].toLowerCase());
   const codes = extractCodes(menu);
@@ -72,7 +85,7 @@ function verifyHistoricalMenuAliasSources() {
   // The Nurie ANSI sample exposes the shared historical command footer
   // (including GO/HI/Z/X); it is a renderer fixture rather than a second
   // menu database, so only assert the transport text is present here.
-  const ansi1 = fs.readFileSync(path.join(__dirname, '..', 'nurie', 'ANSI1.NRE'), 'latin1');
+  const ansi1 = fs.readFileSync(resolveReferencePath(path.join('nurie', 'ANSI1.NRE')), 'latin1');
   assert(/GO,HI,Z,X/i.test(ansi1), 'ANSI1.NRE should contain the historical GO footer hint');
 }
 

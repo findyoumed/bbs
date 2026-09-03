@@ -34,6 +34,7 @@ const CHECKS = [
   { name: 'secret-scan', file: 'smoke-secret-scan.js' },
   { name: 'rate-limit-config', file: 'smoke-rate-limit-config.js' },
   { name: 'mobile-cleanup', file: 'smoke-mobile-cleanup-contract.js' },
+  { name: 'command-flow', file: 'smoke-command-flow.js' },
   { name: 'prefetch-scheduler', file: 'smoke-prefetch-scheduler.js' },
   { name: 'weather-labels', file: 'smoke-weather-labels.js' },
   { name: 'weather-date-kst', file: 'smoke-weather-date-kst.js' },
