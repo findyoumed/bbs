@@ -112,30 +112,22 @@ class SystemRouter extends BaseRouter {
 
   async getBootstrap() {
     const {
-      activityRepository,
       assetStatsCache,
       boardRepository,
-      memberRepository,
-      menuResolver,
-      runtimeConfig
+      menuResolver
     } = this.deps;
-    // [LOG_ID: 20260804_1114] These reads are independent. Combining them removes
-    // two HTTP/serverless round trips while retaining parallel repository work.
-    const [boards, stats] = await Promise.all([
-      boardRepository.listBoards(),
-      this.buildAssetDynamicData(
-        boardRepository,
-        memberRepository,
-        activityRepository,
-        runtimeConfig,
-        assetStatsCache
-      )
-    ]);
+
+    // The TOP screen does not render the dynamic counters.  Waiting for four
+    // Supabase aggregate queries here made a cold first visit wait on data it
+    // could not yet show.  Keep a warm snapshot when one exists, but make the
+    // initial shell depend only on the board list and static menu tree.
+    const boards = await boardRepository.listBoards();
+    const stats = assetStatsCache?.data || {};
     return this.sendCached(200, {
       boards,
       menu: menuResolver.getTree(),
       stats
-    }, 10);
+    }, 60);
   }
 
   async getAuthConfig() {

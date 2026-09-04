@@ -31,11 +31,11 @@ function createResponse() {
   };
 }
 
-function createDependencies() {
+function createDependencies(pathname = '/api/bootstrap') {
   return {
-    req: { method: 'GET', url: '/api/bootstrap' },
+    req: { method: 'GET', url: pathname },
     res: createResponse(),
-    requestUrl: new URL('http://localhost/api/bootstrap'),
+    requestUrl: new URL(`http://localhost${pathname}`),
     assetStatsCache,
     boardRepository: {
       async listBoards() {
@@ -71,11 +71,19 @@ function createDependencies() {
   };
 }
 
-async function requestBootstrap() {
-  const dependencies = createDependencies();
+async function requestSystem(pathname) {
+  const dependencies = createDependencies(pathname);
   await handleSystemRoutes(dependencies);
   assert.strictEqual(dependencies.res.statusCode, 200);
   return JSON.parse(dependencies.res.body);
+}
+
+function requestBootstrap() {
+  return requestSystem('/api/bootstrap');
+}
+
+function requestStats() {
+  return requestSystem('/api/system/stats');
 }
 
 function resetStatsCalls() {
@@ -90,16 +98,23 @@ function assertSingleStatsRefresh() {
 
 (async () => {
   const [first, second] = await Promise.all([requestBootstrap(), requestBootstrap()]);
-  assertSingleStatsRefresh();
-  assert.strictEqual(first.data.stats.numarticles, '120');
+  assert.deepStrictEqual(first.data.stats, {});
   assert.deepStrictEqual(first.data.stats, second.data.stats);
+  assert.deepStrictEqual(statsCalls, {
+    members: 0,
+    activeUsers: 0,
+    totalPosts: 0,
+    todayPosts: 0
+  }, 'bootstrap must not wait on hidden dynamic counters');
 
   assetStatsCache.expiresAt = 0;
   resetStatsCalls();
-  await Promise.all([requestBootstrap(), requestBootstrap()]);
+  const [firstStats, secondStats] = await Promise.all([requestStats(), requestStats()]);
   assertSingleStatsRefresh();
+  assert.strictEqual(firstStats.data.numarticles, '120');
+  assert.deepStrictEqual(firstStats.data, secondStats.data);
 
-  console.log(JSON.stringify({ ok: true, coldRefreshes: 1, staleRefreshes: 1 }));
+  console.log(JSON.stringify({ ok: true, bootstrapCounterQueries: 0, statsRefreshes: 1 }));
 })().catch((error) => {
   console.error(error.stack || error.message);
   process.exitCode = 1;

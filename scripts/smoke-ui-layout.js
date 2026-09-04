@@ -79,6 +79,7 @@ function main() {
 
   assertIncludes(terminalUiCore, "createTerminalHintFooter({", 'terminal UI core should compose the hint footer module');
   assertIncludes(terminalHintFooter, 'scheduleHintTrim', 'hint footer module should reschedule trimming after render');
+  assertIncludes(terminalHintFooter, "if (String(supportedHint).trim())", 'standard command footers should not wait for an unused legacy asset request');
   assertIncludes(terminalHintLayout, 'function trimHintEntriesToFit()', 'hint trimming logic should exist');
   assertIncludes(terminalHintLayout, 'function toggleHintExpansion()', 'hint expansion logic should exist');
   assertIncludes(terminalHintLayout, 'applyHiddenCommandsToHelpToken', 'overflow should route hidden commands to the help(H) token tooltip');

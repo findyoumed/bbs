@@ -425,6 +425,14 @@ export function createTerminalHintFooter(deps) {
         const parsedSupported = parseCommandFooter(supportedHint, supportedHint);
         setPrompt(parsedSupported.prompt || '');
         setHint(parsedSupported.hint || '');
+
+        // Standard screens already have an in-memory, action-aware footer.
+        // The legacy asset was fetched afterwards but its parsed value was
+        // overwritten by supportedHint below, so a cold /api/assets request
+        // unnecessarily delayed the first interactive TOP screen.
+        if (String(supportedHint).trim()) {
+          return;
+        }
       }
 
       let rawText = '';
