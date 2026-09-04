@@ -168,16 +168,49 @@ export function createMenuNavigation(deps) {
     return aliasNode;
   }
 
-  // [LOG_ID: 20260804_1405] Share one in-flight public bootstrap request
-  // between the eager startup preload and the eventual screen renderer.
+  async function loadStaticBootstrapShell() {
+    const response = await fetch('/bootstrap-shell.json', { cache: 'force-cache' });
+    if (!response.ok) {
+      throw new Error(`bootstrap shell ${response.status}`);
+    }
+    const payload = await response.json();
+    if (!payload || !payload.menu || !Array.isArray(payload.boards)) {
+      throw new Error('bootstrap shell payload is invalid');
+    }
+    return payload;
+  }
+
+  // Share one in-flight public bootstrap request between the eager startup
+  // preload and the eventual screen renderer. The static shell prevents a
+  // cold Vercel Function from delaying the public TOP terminal.
   function preloadBootstrap() {
     if (state._bootstrapPromise) {
       return state._bootstrapPromise;
     }
-    state._bootstrapPromise = apiFetch('/api/bootstrap').catch((error) => {
-      state._bootstrapPromise = null;
-      throw error;
-    });
+
+    state._bootstrapPromise = loadStaticBootstrapShell()
+      .then((shell) => {
+        state._bootstrapSource = 'static-shell';
+        state._bootstrapRefreshPromise = apiFetch('/api/bootstrap', { silent: true })
+          .then((liveBootstrap) => {
+            state._bootstrapLiveData = liveBootstrap;
+            // The static shell is intentionally small and deterministic. Once
+            // the live repository is available, replace its board index so an
+            // immediately-following GO or menu action sees current boards.
+            if (Array.isArray(liveBootstrap?.boards)) {
+              hydrateBoards(liveBootstrap.boards);
+            }
+            return liveBootstrap;
+          })
+          .catch(() => null);
+        return shell;
+      })
+      .catch(async () => {
+        state._bootstrapPromise = null;
+        const liveBootstrap = await apiFetch('/api/bootstrap');
+        state._bootstrapSource = 'live-api';
+        return liveBootstrap;
+      });
     return state._bootstrapPromise;
   }
 

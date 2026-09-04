@@ -133,19 +133,28 @@ async function init() {
     // auth setup, so start both network paths together.
     void preloadBootstrap().catch(() => {});
     // [LOG: 20260416_2233] 병목 제거: 인증 초기화를 먼저 수행하여 중복 렌더링 방지
+    let authReady = Promise.resolve();
     try {
-      await initAuth();
+      authReady = initAuth().catch(() => null);
     } catch (authError) {
       // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
       // console.warn('인증 초기화 실패 (손님 모드 지속):', authError.message);
     }
 
     if (window.location.pathname !== '/') {
+      await authReady;
       await restoreStateFromURL();
+      await flushUnreadMemoNotification?.();
     } else {
       await showMain();
+      void authReady.then(async () => {
+        const input = document.getElementById('cmd-input');
+        if (!state.user?.isGuest && state.screen === 'main' && !String(input?.value || '').trim()) {
+          await showMain(true);
+        }
+        await flushUnreadMemoNotification?.();
+      });
     }
-    await flushUnreadMemoNotification?.();
   } catch (e) {
     // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.error 주석 처리
     // console.error('초기 화면 렌더 실패:', e.message);

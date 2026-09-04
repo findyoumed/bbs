@@ -41,6 +41,7 @@ async function main() {
 
   assert(exists('legacy/txt/top.txt'), 'legacy top.txt should be vendored');
   assert(exists('legacy/hanulso.mnu'), 'legacy hanulso.mnu should be vendored');
+  assert(exists('public/bootstrap-shell.json'), 'public bootstrap shell should be generated for cold-start TOP rendering');
   assert(exists('public/js/app.js'), 'public/js/app.js should exist (단일 파일 엔트리)');
   assert(/<script\s[^>]*src="\/js\/app\.js"[^>]*><\/script>/i.test(indexHtml), 'public/index.html should load /js/app.js as the browser entry');
   assert(appJs.includes('updateURL'), 'public/js/app.js should contain updateURL (History API)');

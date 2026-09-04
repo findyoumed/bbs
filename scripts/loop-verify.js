@@ -41,6 +41,7 @@ const CHECKS = [
   { name: 'weather-ip', file: 'smoke-weather-ip.js' },
   { name: 'boards', file: 'smoke-boards.js' },
   { name: 'bootstrap-concurrency', file: 'smoke-bootstrap-concurrency.js' },
+  { name: 'bootstrap-shell', file: 'smoke-bootstrap-shell.js' },
   { name: 'post-navigation', file: 'smoke-post-navigation.js' },
   { name: 'post-read-dedupe', file: 'smoke-post-read-dedupe.js' },
   { name: 'post-read-cache-hardening', file: 'smoke-post-read-cache-hardening.js' },
