@@ -58,27 +58,27 @@ def zip_project(output_filename=None):
     
     all_patterns = []
 
-    # 1. Find all .gitignore files and parse them
-    for gitignore_file in root_dir.rglob(".gitignore"):
-        all_patterns.extend(parse_gitignore(gitignore_file))
-    
-    # 2. Add some default ignores if not present
+    # [LOG: 20260904_1750] 1. 기본 무시 폴더 추가 (node_modules/ 포함)
     all_patterns.append((root_dir, ".git/"))
     all_patterns.append((root_dir, output_filename))
     # [LOG: 20260805_1749] docs/ 폴더 용량 문제로 압축 제외 추가
     all_patterns.append((root_dir, "docs/"))
     # [LOG: 20260902_1804] AI 관련 대용량 폴더 및 파이썬 캐시 제외
-    for ignore_dir in [".gemini/", ".claude/", ".agents/", ".codex/", "artifacts/", "__pycache__/"]:
+    for ignore_dir in ["node_modules/", ".gemini/", ".claude/", ".agents/", ".codex/", "artifacts/", "__pycache__/"]:
         all_patterns.append((root_dir, ignore_dir))
 
     print(f"Creating {output_filename}...")
 
     # [LOG: 20260805_1748] 압축 진행 상황(진행률 및 추가 파일명) 콘솔 출력 추가
     # [LOG: 20260903_1223] rglob → os.walk 교체: 무시 폴더를 진입 전에 차단해 대용량 폴더(docs/ 등) 순회 생략
-    # 3. Collect files to include
+    # [LOG: 20260904_1750] rglob 제외: os.walk 내부에서 .gitignore 파싱으로 변경하여 전체 스캔 방지
+    # 2. Collect files to include
     target_files = []
     for dirpath, dirs, files in os.walk(root_dir):
         dir_path = Path(dirpath)
+
+        if ".gitignore" in files:
+            all_patterns.extend(parse_gitignore(dir_path / ".gitignore"))
 
         # 무시 대상 폴더는 순회 자체를 건너뜀 (핵심 최적화: docs/ 68,296개 파일 건너뜀)
         dirs[:] = [d for d in dirs if not is_ignored(dir_path / d, all_patterns)]
@@ -94,11 +94,13 @@ def zip_project(output_filename=None):
 
     count = 0
     # [LOG: 20260417_1050] metadata_encoding 제거 (쓰기 모드에서 지원 안됨)
+    # [LOG: 20260904_1751] 콘솔 출력 병목 해결 (100개 단위로만 출력)
     with zipfile.ZipFile(output_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
         for index, file_path in enumerate(target_files, 1):
             arcname = str(file_path.relative_to(root_dir)).replace(os.sep, "/")
             zipf.write(file_path, arcname)
-            print(f"[{index}/{total_files}] Added: {arcname}")
+            if index % 100 == 0 or index == total_files:
+                print(f"[{index}/{total_files}] Added: {arcname}")
             count += 1
 
     print(f"Done! {count} files added to {output_filename}.")
