@@ -437,9 +437,11 @@ async function verifyMemoEditorInteraction(page, errors) {
         const commandInput = memoPage.locator('#cmd-input');
         await commandInput.fill('W');
         await commandInput.press('Enter');
-        await memoPage.waitForSelector('#memo-ed-target');
-        await memoPage.waitForSelector('#memo-ed-subject');
-        await memoPage.waitForSelector('#memo-ed-body');
+        await memoPage.waitForSelector('#memo-ed-target', { state: 'attached' });
+        // WMAIL follows Coroke-style progressive disclosure: subject appears
+        // after recipient Enter and body appears after subject Enter.
+        await memoPage.waitForSelector('#memo-ed-subject', { state: 'attached' });
+        await memoPage.waitForSelector('#memo-ed-body', { state: 'attached' });
 
         await memoPage.locator('#memo-ed-target').fill('sysop');
         await memoPage.locator('#memo-ed-target').press('Enter');

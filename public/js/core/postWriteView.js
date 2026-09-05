@@ -147,6 +147,12 @@ export function createPostWriteView(deps) {
 
   function renderBbsEditor(editor, onSave, onCancel) {
     editor.stage = 'bbs-form';
+    // Coroke keeps the first screen focused on the title and opens the
+    // multiline writer only after the title is committed.  Keep both fields
+    // in the DOM (the existing smoke/API harness relies on their stable IDs),
+    // but mirror that visual sequence for new posts.
+    const bodyInitiallyVisible = editor.mode === 'edit'
+      || Boolean(String(editor.title || '').trim() && Array.isArray(editor.bodyLines) && editor.bodyLines.length);
     const boardCode = String(state.board?.id || state.board?.boardId || 'BBS').toUpperCase();
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const titleId = 'bbs-ed-title';
@@ -240,14 +246,16 @@ export function createPostWriteView(deps) {
     <input id="${titleId}" type="text" autocomplete="off" spellcheck="false" maxlength="${titleMaxLength}" style="${inputStyle}"/>
   </div>
   ${keywordRow}
+  <div id="bbs-ed-write-instruction" style="color:#ffffff !important;font-size:inherit !important;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;">
+    ${bodyInitiallyVisible
+      ? '글을 작성한 후 마지막 줄 첫 칸에 마침표(.)를 찍고 Enter를 누르면 저장합니다.'
+      : '제목을 입력한 후 Enter를 누르면 본문을 작성합니다.'}
+  </div>
   <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   ${headerLine}
-  <div id="bbs-ed-body-row" style="display:flex;flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
+  <div id="bbs-ed-body-row" style="display:${bodyInitiallyVisible ? 'flex' : 'none'};flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
     <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내 용 :</div>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
-  </div>
-  <div style="color:#ffffff !important;font-size:inherit !important;border-top:1px dashed #333;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;flex-shrink:0;">
-    저장: Ctrl+S 또는 마지막 줄에 . 후 Enter
   </div>
 </div>`;
 
@@ -255,6 +263,7 @@ export function createPostWriteView(deps) {
 
     const titleEl = document.getElementById(titleId);
     const bodyEl  = document.getElementById(bodyId);
+    const bodyRowEl = document.getElementById('bbs-ed-body-row');
     const keywordEl = showKeywordField ? document.getElementById(keywordId) : null;
     if (!titleEl || !bodyEl) return;
 
@@ -362,6 +371,7 @@ export function createPostWriteView(deps) {
       if (!lines.join('\n').trim()) {
         editor._saving = false;
         showInlineValidationError('내용을 입력하십시오.', 'bbs-ed-body-row');
+        revealBodyStage();
         bodyEl.focus();
         return;
       }
@@ -403,8 +413,18 @@ export function createPostWriteView(deps) {
 
     // [LOG_ID: 20260726_1745] 키워드 입력창이 있으면(PDS 신규 글/답글) 제목→키워드→본문 순으로,
     // 없으면 기존과 동일하게 제목→본문 순으로 이동한다.
+    function revealBodyStage() {
+      editor._corokeStage = 'body';
+      if (bodyRowEl) bodyRowEl.style.display = 'flex';
+      const instructionEl = document.getElementById('bbs-ed-write-instruction');
+      if (instructionEl) {
+        instructionEl.textContent = '글을 작성한 후 마지막 줄 첫 칸에 마침표(.)를 찍고 Enter를 누르면 저장합니다.';
+      }
+    }
+
     function focusFieldAfterTitle() {
       const target = keywordEl || bodyEl;
+      if (target === bodyEl) revealBodyStage();
       target.focus();
       if (target === bodyEl) bodyEl.setSelectionRange(0, 0);
       else target.select();
@@ -425,6 +445,7 @@ export function createPostWriteView(deps) {
       if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault();
         bodyEl.focus();
+        revealBodyStage();
         bodyEl.setSelectionRange(0, 0);
         return;
       }

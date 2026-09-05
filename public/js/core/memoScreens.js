@@ -529,8 +529,15 @@ export function createMemoScreens(deps) {
           overscroll-behavior: none !important;
         `;
 
+        const subjectInitiallyVisible = Boolean(flow.cardMode || String(flow.target || state._memoTarget || '').trim());
+        const bodyInitiallyVisible = Boolean(
+            flow.cardMode
+            ? (Array.isArray(flow.bodyLines) && flow.bodyLines.length)
+            : (String(flow.subject || '').trim() || (Array.isArray(flow.bodyLines) && flow.bodyLines.length))
+        );
+
         const subjectRowHtml = hasSubjectField ? `
-  <div id="memo-ed-subject-row" class="memo-ed-row">
+  <div id="memo-ed-subject-row" class="memo-ed-row" style="display:${subjectInitiallyVisible ? 'flex' : 'none'};">
     <label for="${subjectId}" class="memo-ed-label">제    목 :&nbsp;</label>
     <input id="${subjectId}" type="text" autocomplete="off" spellcheck="false" maxlength="60" placeholder="" style="${inputStyle}"/>
   </div>` : '';
@@ -607,8 +614,15 @@ export function createMemoScreens(deps) {
     <input id="${targetId}" type="text" autocomplete="off" spellcheck="false" placeholder="" style="${inputStyle}"/>
   </div>
   ${subjectRowHtml}
-  <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
-  <div id="memo-ed-body-row" class="memo-ed-body-wrapper">
+  <div id="memo-ed-write-instruction" style="color:#ffffff !important;font-size:inherit !important;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;">
+    ${bodyInitiallyVisible
+        ? '내용을 작성한 후 마지막 줄 첫 칸에 마침표(.)를 찍고 Enter를 누르면 다음 단계로 이동합니다.'
+        : subjectInitiallyVisible
+            ? '제목을 입력한 후 Enter를 누르면 내용을 작성합니다.'
+            : '받는 사람을 입력한 후 Enter를 누르면 제목을 입력합니다.'}
+  </div>
+  <div id="memo-ed-separator" style="display:${bodyInitiallyVisible ? 'block' : 'none'};color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
+  <div id="memo-ed-body-row" class="memo-ed-body-wrapper" style="display:${bodyInitiallyVisible ? 'flex' : 'none'};">
     <label for="${bodyId}" class="memo-ed-label" style="padding-bottom:4px;">내    용 :</label>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
   </div>
@@ -644,6 +658,25 @@ export function createMemoScreens(deps) {
         setHint('전송: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Escape  |  이동: Tab/화살표');
         setPrompt('선택 >>');
         setReady?.(true);
+
+        function setWriteInstruction(text) {
+            const instructionEl = document.getElementById('memo-ed-write-instruction');
+            if (instructionEl) instructionEl.textContent = text;
+        }
+
+        function revealSubjectStage() {
+            if (!subjectRowEl) return;
+            subjectRowEl.style.display = 'flex';
+            setWriteInstruction('제목을 입력한 후 Enter를 누르면 내용을 작성합니다.');
+        }
+
+        function revealBodyStage() {
+            if (subjectRowEl) subjectRowEl.style.display = 'flex';
+            if (bodyRowEl) bodyRowEl.style.display = 'flex';
+            const separatorEl = document.getElementById('memo-ed-separator');
+            if (separatorEl) separatorEl.style.display = 'block';
+            setWriteInstruction('내용을 작성한 후 마지막 줄 첫 칸에 마침표(.)를 찍고 Enter를 누르면 다음 단계로 이동합니다.');
+        }
 
         function safeFocus(el) {
             if (!el || typeof el.focus !== 'function') return;
@@ -749,6 +782,7 @@ export function createMemoScreens(deps) {
             }
             if (!bodyVal) {
                 showInlineValidationError('내용을 입력해주세요.', 'memo-ed-body-row');
+                revealBodyStage();
                 bodyEl.focus();
                 return;
             }
@@ -830,9 +864,11 @@ export function createMemoScreens(deps) {
                 e.preventDefault();
                 e.stopPropagation();
                 if (subjectEl) {
+                    revealSubjectStage();
                     safeFocus(subjectEl);
                     subjectEl.setSelectionRange(0, 0);
                 } else {
+                    revealBodyStage();
                     safeFocus(bodyEl);
                     bodyEl.setSelectionRange(0, 0);
                 }
@@ -846,6 +882,7 @@ export function createMemoScreens(deps) {
             if (isForwardFieldKey(e)) {
                 e.preventDefault();
                 e.stopPropagation();
+                revealBodyStage();
                 safeFocus(bodyEl);
                 bodyEl.setSelectionRange(0, 0);
             } else if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
@@ -912,10 +949,12 @@ export function createMemoScreens(deps) {
             e.preventDefault();
             e.stopPropagation();
             if (e.target === targetEl && subjectEl) {
+                revealSubjectStage();
                 safeFocus(subjectEl);
                 subjectEl.setSelectionRange(0, 0);
                 return;
             }
+            revealBodyStage();
             safeFocus(bodyEl);
             bodyEl.setSelectionRange(0, 0);
         }

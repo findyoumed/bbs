@@ -155,9 +155,9 @@ export function createMenuNavigationActions(deps) {
       }
     }
     if (normalized === 'WMAIL') {
-      if (typeof refs.showMemoList === 'function' && typeof refs.showMemoWrite === 'function') {
-        state._memoBox = 'inbox';
-        await refs.showMemoList();
+      // WMAIL is a direct editor entry in the historical clients. The editor
+      // performs its own auth/URL setup, so avoid an unnecessary inbox fetch.
+      if (typeof refs.showMemoWrite === 'function') {
         await refs.showMemoWrite();
         return true;
       }

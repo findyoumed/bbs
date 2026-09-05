@@ -460,16 +460,16 @@ export function createGlobalNavigationCommandHandler(deps) {
     }
 
     // [LOG_ID: 20260713_1160] 나우누리 편지쓰기(WMAIL) 명령어 배선 추가
-    // [LOG_ID: 20260801_1035] WMAIL을 단순 화면 띄우기가 아닌 쪽지함 메뉴 이동 후 글쓰기가 실행되도록 개선
+    // [LOG_ID: 20260905_1200] Coroke/Nurie처럼 WMAIL은 목록을 경유하지 않고
+    // 편지쓰기 세션으로 바로 진입한다. 쓰기 화면은 자체적으로 접근 권한을
+    // 확인하고 URL/초기 단계를 설정하므로 받은쪽지 목록을 먼저 조회할 이유가 없다.
     if (cmd === 'WMAIL') {
       if (state.user?.isGuest) {
         setHint('쪽지 기능은 로그인 후 사용하실 수 있습니다.');
         setDefaultPrompt();
         return true;
       }
-      if (typeof showMemoList === 'function' && typeof showMemoWrite === 'function') {
-        state._memoBox = 'inbox';
-        await showMemoList();
+      if (typeof showMemoWrite === 'function') {
         await showMemoWrite();
         return true;
       }

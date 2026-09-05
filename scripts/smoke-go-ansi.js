@@ -171,6 +171,9 @@ async function verifyHistoricalGoAliases() {
   assert(await nav.executeGoCommand('GO CMAIL') === true, 'GO CMAIL must open the sent memo box');
   assert(calls.join(',') === 'memo-list:sent' && state._memoBox === 'sent', 'GO CMAIL must target sent memos');
   calls.length = 0;
+  assert(await nav.executeGoCommand('GO WMAIL') === true, 'GO WMAIL must open the memo writer directly');
+  assert(calls.join(',') === 'memo-write', 'GO WMAIL must not fetch the inbox before opening the writer');
+  calls.length = 0;
   assert(await nav.executeGoCommand('GO AGORA') === true, 'GO AGORA must open the top-level agora menu');
   assert(calls.join(',') === 'menu:agora', 'GO AGORA must target the AGORA menu container');
   calls.length = 0;

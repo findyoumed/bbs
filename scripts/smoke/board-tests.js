@@ -207,12 +207,20 @@ async function verifyBoardPostWriteHarness(errors, options) {
                 this._html = String(value || '');
                 elements.delete('bbs-ed-title');
                 elements.delete('bbs-ed-body');
+                elements.delete('bbs-ed-body-row');
 
                 if (this._html.includes('id="bbs-ed-title"')) {
                     elements.set('bbs-ed-title', new FakeElement('bbs-ed-title'));
                 }
                 if (this._html.includes('id="bbs-ed-body"')) {
                     elements.set('bbs-ed-body', new FakeElement('bbs-ed-body'));
+                }
+                if (this._html.includes('id="bbs-ed-body-row"')) {
+                    const row = new FakeElement('bbs-ed-body-row');
+                    row.style.display = /id="bbs-ed-body-row"[^>]*display:none/.test(this._html)
+                        ? 'none'
+                        : 'flex';
+                    elements.set('bbs-ed-body-row', row);
                 }
             }
         });
@@ -961,6 +969,14 @@ async function verifyBoardPostWriteHarness(errors, options) {
             if (!titleInput || !bodyInput) {
                 errors.push(`Board write restore submit path did not expose title/body inputs at /board/${boardId}/write`);
             } else {
+                const bodyRow = createSubmitHarness.document.getElementById('bbs-ed-body-row');
+                if (bodyRow?.style.display !== 'none') {
+                    errors.push(`Board write did not start in the Coroke title-only stage at /board/${boardId}/write`);
+                }
+                titleInput.dispatchKeydown({ key: 'Enter' });
+                if (bodyRow?.style.display !== 'flex') {
+                    errors.push(`Board write title Enter did not reveal the Coroke body stage at /board/${boardId}/write`);
+                }
                 const submitTitle = `board harness create ${postId}`;
                 const submitBody = `board harness create body ${postId}`;
                 await saveBbsEditor(createSubmitHarness, { title: submitTitle, body: submitBody });

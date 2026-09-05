@@ -101,6 +101,7 @@ export function createContactSysopScreen(deps) {
     }
     if (!content) {
       showInlineValidationError('내용을 입력해주세요.', 'tosysop-ed-body-row');
+      flow._revealBodyStage?.();
       if (bodyEl) bodyEl.focus();
       return false;
     }
@@ -143,6 +144,7 @@ export function createContactSysopScreen(deps) {
     const subjectId = 'tosysop-ed-subject';
     const bodyId    = 'tosysop-ed-body';
     const sep = '─'.repeat(isMobile ? 40 : 76);
+    const bodyInitiallyVisible = Array.isArray(flow.bodyLines) && flow.bodyLines.length > 0;
 
     const inputStyle = `
       flex: 1;
@@ -245,8 +247,13 @@ export function createContactSysopScreen(deps) {
     <label for="${subjectId}" class="tosysop-ed-label">제    목 :&nbsp;</label>
     <input id="${subjectId}" type="text" autocomplete="off" spellcheck="false" maxlength="60" placeholder="" style="${inputStyle}" autofocus />
   </div>
-  <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
-  <div id="tosysop-ed-body-row" class="tosysop-ed-body-wrapper">
+  <div id="tosysop-ed-write-instruction" style="color:#ffffff !important;font-size:inherit !important;padding:4px 0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;user-select:none;font-family:inherit;">
+    ${bodyInitiallyVisible
+      ? '내용을 작성한 후 마지막 줄 첫 칸에 마침표(.)를 찍고 Enter를 누르면 전송합니다.'
+      : '제목을 입력한 후 Enter를 누르면 내용을 작성합니다.'}
+  </div>
+  <div id="tosysop-ed-separator" style="display:${bodyInitiallyVisible ? 'block' : 'none'};color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
+  <div id="tosysop-ed-body-row" class="tosysop-ed-body-wrapper" style="display:${bodyInitiallyVisible ? 'flex' : 'none'};">
     <label for="${bodyId}" class="tosysop-ed-label" style="padding-bottom:4px;">내    용 :</label>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
   </div>
@@ -281,6 +288,16 @@ export function createContactSysopScreen(deps) {
     setHint('전송: Ctrl+S 또는 마지막 줄에 . 후 Enter  |  취소: Escape  |  이동: Tab/화살표');
     setPrompt('선택 >>');
     setReady?.(true);
+    function revealBodyStage() {
+      if (bodyRowEl) bodyRowEl.style.display = 'flex';
+      const separatorEl = document.getElementById('tosysop-ed-separator');
+      if (separatorEl) separatorEl.style.display = 'block';
+      const instructionEl = document.getElementById('tosysop-ed-write-instruction');
+      if (instructionEl) {
+        instructionEl.textContent = '내용을 작성한 후 마지막 줄 첫 칸에 마침표(.)를 찍고 Enter를 누르면 전송합니다.';
+      }
+    }
+    flow._revealBodyStage = revealBodyStage;
     // [LOG_ID: 20260811_1130] WMAIL 편지쓰기와 동일한 일반 힌트바를 유지한다.
     // 공용 SEND/P/H footer를 덧씌우면 수신자만 다른 편지쓰기 화면이라는 기준에서 벗어난다.
     // [LOG_ID: 20260810_1510] 행에는 hover 커서만 있었고 클릭 시 포커스를 옮기는
@@ -322,6 +339,7 @@ export function createContactSysopScreen(deps) {
       cmdInput?.removeEventListener('keydown', onCmdKey);
       if (state._contactSysopFlow?._editorCleanup === editorCleanup) {
         state._contactSysopFlow._editorCleanup = null;
+        state._contactSysopFlow._revealBodyStage = null;
       }
     };
     flow._editorCleanup = editorCleanup;
@@ -339,6 +357,7 @@ export function createContactSysopScreen(deps) {
       if (e.key === 'Escape') { e.preventDefault(); cancelContactSysop(); return; }
       if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault();
+        revealBodyStage();
         safeFocus(bodyEl);
         bodyEl.setSelectionRange(0, 0);
       }

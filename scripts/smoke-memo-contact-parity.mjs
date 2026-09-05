@@ -99,12 +99,22 @@ async function verifyGuestBoundaries(page) {
 async function verifyMemoEditor(page, calls) {
   await openAuthenticated(page, '/memo/write');
   await page.waitForSelector('#memo-ed-target');
+  const initialMemoStages = await page.evaluate(() => ({
+    subject: getComputedStyle(document.getElementById('memo-ed-subject-row')).display,
+    body: getComputedStyle(document.getElementById('memo-ed-body-row')).display
+  }));
+  assert(initialMemoStages.subject === 'none' && initialMemoStages.body === 'none',
+    `memo editor should start in recipient-only stage: ${JSON.stringify(initialMemoStages)}`);
   await page.fill('#memo-ed-target', 'sysop');
   await page.locator('#memo-ed-target').press('Enter');
   assert(await page.evaluate(() => document.activeElement?.id) === 'memo-ed-subject', 'memo target Enter should focus subject');
+  assert(await page.evaluate(() => getComputedStyle(document.getElementById('memo-ed-subject-row')).display) === 'flex',
+    'memo target Enter should reveal subject stage');
   await page.fill('#memo-ed-subject', 'Parity subject');
   await page.locator('#memo-ed-subject').press('Enter');
   assert(await page.evaluate(() => document.activeElement?.id) === 'memo-ed-body', 'memo subject Enter should focus body');
+  assert(await page.evaluate(() => getComputedStyle(document.getElementById('memo-ed-body-row')).display) === 'flex',
+    'memo subject Enter should reveal body stage');
   await page.fill('#memo-ed-body', 'Parity body');
   await page.locator('#memo-ed-body').press('Tab');
   assert(await page.evaluate(() => document.activeElement?.id) === 'cmd-input', 'memo body Tab should focus command input');
@@ -134,11 +144,15 @@ async function verifyContactEditor(page, calls) {
   await openAuthenticated(page, '/guide/tosysop');
   await page.waitForSelector('#tosysop-ed-target');
   assert(await page.inputValue('#tosysop-ed-target') === 'sysop', 'sysop recipient must stay fixed');
+  assert(await page.evaluate(() => getComputedStyle(document.getElementById('tosysop-ed-body-row')).display) === 'none',
+    'sysop contact should start before the body stage');
   await page.locator('#tosysop-ed-target').click();
   assert(await page.evaluate(() => document.activeElement?.id) === 'tosysop-ed-subject', 'target click should focus subject');
   await page.fill('#tosysop-ed-subject', 'Contact parity');
   await page.locator('#tosysop-ed-subject').press('Enter');
   assert(await page.evaluate(() => document.activeElement?.id) === 'tosysop-ed-body', 'contact subject Enter should focus body');
+  assert(await page.evaluate(() => getComputedStyle(document.getElementById('tosysop-ed-body-row')).display) === 'flex',
+    'contact subject Enter should reveal body stage');
   await page.fill('#tosysop-ed-body', 'Contact body');
   const hint = page.locator('#cmd-hint');
   await hint.waitFor();
@@ -149,6 +163,62 @@ async function verifyContactEditor(page, calls) {
   assert(calls.contact.length === 1, `contact send should issue one POST, got ${calls.contact.length}`);
   assert(calls.contact[0].subject === 'Contact parity' && calls.contact[0].content === 'Contact body',
     `contact POST payload mismatch: ${JSON.stringify(calls.contact[0])}`);
+}
+
+async function verifyMobileEditorGeometry(browser) {
+  // The general mobile traversal covers guest shells, while these protected
+  // editors only exist after authentication. Check their real DOM geometry at
+  // the two narrowest supported portrait widths so staged rows cannot push a
+  // field or the shared hint rail outside the viewport.
+  for (const viewport of [
+    { width: 320, height: 568, label: 'iPhone SE' },
+    { width: 390, height: 844, label: 'iPhone 14' }
+  ]) {
+    const context = await browser.newContext({
+      viewport: { width: viewport.width, height: viewport.height },
+      isMobile: true,
+      hasTouch: true
+    });
+    const page = await context.newPage();
+    try {
+      await installApiStubs(page, { memo: [], contact: [] });
+      for (const pathname of ['/memo/write', '/guide/tosysop']) {
+        await openAuthenticated(page, pathname);
+        await page.waitForSelector(pathname === '/memo/write' ? '#memo-ed-target' : '#tosysop-ed-target');
+        const geometry = await page.evaluate(() => {
+          const body = document.body;
+          const root = document.documentElement;
+          const visibleText = [...document.querySelectorAll(
+            '.ansi-screen-body, #terminal-footer, #cmd-hint, #terminal-prompt-row'
+          )]
+            .filter((el) => {
+              const style = getComputedStyle(el);
+              const rect = el.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0;
+            })
+            .map((el) => {
+              const rect = el.getBoundingClientRect();
+              return { id: el.id, left: rect.left, right: rect.right };
+            });
+          return {
+            viewport: window.innerWidth,
+            scrollWidth: Math.max(root.scrollWidth, body.scrollWidth),
+            contentWidth: root.clientWidth,
+            visibleText
+          };
+        });
+        assert(geometry.scrollWidth <= geometry.contentWidth + 1,
+          `${viewport.label} ${pathname} overflowed horizontally: ${JSON.stringify(geometry)}`);
+        const outside = geometry.visibleText.filter((item) =>
+          item.left < -1.5 || item.right > geometry.viewport + 1.5
+        );
+        assert(outside.length === 0,
+          `${viewport.label} ${pathname} content rail escaped viewport: ${JSON.stringify(outside)}`);
+      }
+    } finally {
+      await context.close();
+    }
+  }
 }
 
 async function verifyToastAndMobile(browser) {
@@ -223,6 +293,7 @@ async function main() {
       await verifyGuestBoundaries(page);
       await verifyMemoEditor(page, calls);
       await verifyContactEditor(page, calls);
+      await verifyMobileEditorGeometry(browser);
       await verifyToastAndMobile(browser);
     } finally {
       await context.close();
@@ -231,6 +302,7 @@ async function main() {
       'guest memo/contact login boundary',
       'memo click/Enter/Tab/empty validation/send',
       'fixed sysop contact click/Enter/send',
+      'authenticated editor geometry at 320/390px',
       'mobile horizontal overflow guard'
     ] }, null, 2));
   } finally {
