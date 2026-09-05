@@ -75,7 +75,8 @@ export function createBoardAnsiBuilders(deps) {
       const fitTitle = fitCell(titleOnly, remaining).trim();
       const dotCount = Math.max(2, remaining - displayWidth(fitTitle));
       const formattedNotice = `${prefix}${fitTitle}${'.'.repeat(dotCount)}${goToken}`;
-      parts.push(ansiColor(11) + formattedNotice + ANSI_RESET);
+      // Small notices follow the global white-foreground terminal contract.
+      parts.push(ansiColor(15) + formattedNotice + ANSI_RESET);
     }
 
 
@@ -622,7 +623,8 @@ export function createBoardAnsiBuilders(deps) {
       const fitTitle = fitCell(titleOnly, remaining).trim();
       const dotCount = Math.max(2, remaining - displayWidth(fitTitle));
       const formattedNotice = `${prefix}${fitTitle}${'.'.repeat(dotCount)}${goToken}`;
-      parts.push(ansiColor(11) + formattedNotice + ANSI_RESET);
+      // Small notices follow the global white-foreground terminal contract.
+      parts.push(ansiColor(15) + formattedNotice + ANSI_RESET);
     }
 
     return parts.join('\n');

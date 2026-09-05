@@ -338,7 +338,7 @@ export function createAmusementScreens(deps) {
         if (!errEl) {
           errEl = document.createElement('div');
           errEl.className = 'blood-error-msg';
-          errEl.style.cssText = 'color: #ff6; font-family: inherit; font-size: inherit; white-space: pre; padding: 0; margin: 0;';
+          errEl.style.cssText = 'color: #ffffff; font-family: inherit; font-size: inherit; white-space: pre; padding: 0; margin: 0;';
           host.parentNode.insertBefore(errEl, host);
         }
         errEl.textContent = '혈액형은 A, B, O, AB 중에서 입력하세요.';

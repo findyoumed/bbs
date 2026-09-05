@@ -238,7 +238,7 @@ export function createPostWriteView(deps) {
     const bodyHtml = `
 <style>
   /* Keep field validation in the editor body; #cmd-hint remains command guidance. */
-  .bbs-ed-validation { color:#ffff55 !important; font-family:inherit; white-space:pre-wrap; padding:2px 0; margin:0; flex-shrink:0; }
+  .bbs-ed-validation { color:#ffffff !important; font-family:inherit; white-space:pre-wrap; padding:2px 0; margin:0; flex-shrink:0; }
 </style>
 <div style="display:flex;flex-direction:column;height:100%;overflow-y:auto;min-height:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#ffffff !important;background:transparent;box-sizing:border-box;">
   <div id="bbs-ed-title-row" style="display:flex;align-items:center;padding:2px 0;gap:0;flex-shrink:0;">
@@ -251,7 +251,7 @@ export function createPostWriteView(deps) {
       ? '글을 작성한 후 마지막 줄 첫 칸에 마침표(.)를 찍고 Enter를 누르면 저장합니다.'
       : '제목을 입력한 후 Enter를 누르면 본문을 작성합니다.'}
   </div>
-  <div style="color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
+  <div style="color:#ffffff;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   ${headerLine}
   <div id="bbs-ed-body-row" style="display:${bodyInitiallyVisible ? 'flex' : 'none'};flex-direction:column;flex:1;margin-top:4px;min-height:4.4em;">
     <div style="color:#ffffff !important;padding-bottom:4px;user-select:none;font-family:inherit;flex-shrink:0;">내 용 :</div>

@@ -15,6 +15,9 @@ function assertIncludes(content, fragment, message) {
 function main() {
   const indexHtml = readProjectFile('public/index.html');
   const retroCss = readProjectFile('public/styles/retro-terminal.css');
+  const styleCss = readProjectFile('public/style.css');
+  const authCss = readProjectFile('public/styles/entry-auth.css');
+  const boardBuilders = readProjectFile('public/js/core/ansiBoardBuilders.js');
   const appEvents = readProjectFile('public/js/core/appEvents.js');
   const terminalUiCore = readProjectFile('public/js/core/terminalUiCore.js');
   const terminalInputUi = readProjectFile('public/js/core/terminalInputUi.js');
@@ -31,6 +34,19 @@ function main() {
   assertIncludes(retroCss, '.terminal-dialog-box--large {', 'large terminal dialog styling should exist');
   assertIncludes(retroCss, '.bbs-notification {', 'notification styling should exist');
   assertIncludes(retroCss, '.scroll-bottom-indicator {', 'scroll guardian styling should exist');
+
+  // The terminal deliberately uses a single white foreground. Keep the
+  // pre-login small notice and inline feedback from regressing to ANSI accent
+  // colors while preserving reverse-video controls (which use black text on
+  // a white background for contrast).
+  assert(/\.entry-login-small-notice\s*\{[^}]*color:\s*#ffffff\s*!important/i.test(authCss),
+    'pre-login small notice should use the white foreground');
+  assert(/\.terminal-notification-row\.level-(?:error|warn|success)\s*\{[^}]*color:\s*#ffffff\s*!important/si.test(styleCss),
+    'terminal notification levels should use the white foreground');
+  assert(!/\.entry-login-small-notice\s*\{[^}]*#ffff(?:00|55)/i.test(authCss),
+    'pre-login small notice should not use yellow text');
+  assert((boardBuilders.match(/ansiColor\(15\) \+ formattedNotice/g) || []).length >= 2,
+    'main and NowNuri small notices should emit the white ANSI foreground');
 
   assertIncludes(appEvents, "document.getElementById('shortcut-helper')", 'appEvents should control the shortcut helper');
   assertIncludes(appEvents, "e.key === 'Escape'", 'shortcut helper should react to Escape');

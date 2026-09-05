@@ -473,7 +473,7 @@ a {
 }
 
 .ws-tab.is-active {
-    color: var(--ansi-yellow);
+    color: #ffffff;
     opacity: 1;
     font-weight: bold;
     border: 1px solid rgba(255, 255, 0, 0.3);
@@ -497,13 +497,13 @@ a {
 }
 
 .hud-location {
-    color: var(--ansi-yellow);
+    color: #ffffff;
     min-width: 60px;
     text-align: center;
 }
 
 .hud-vfs {
-    color: var(--ansi-green);
+    color: #ffffff;
     font-weight: bold;
 }
 
@@ -513,25 +513,25 @@ a {
 }
 
 .hud-latency.is-fast {
-    color: var(--ansi-green);
+    color: #ffffff;
 }
 
 .hud-latency.is-medium {
-    color: var(--ansi-yellow);
+    color: #ffffff;
 }
 
 .hud-latency.is-slow {
-    color: var(--ansi-red);
+    color: #ffffff;
 }
 
 .hud-clock {
     font-family: 'DungGeunMo', monospace;
-    color: var(--ansi-cyan);
+    color: #ffffff;
     min-width: 70px;
 }
 
 .hud-memo {
-    color: var(--ansi-red);
+    color: #ffffff;
     font-weight: bold;
     /* [LOG: 20260706] 부드러운 페이드 펄스 → 하드 블링크(step-end).
        ANSI blink 속성(SGR 5)처럼 딱딱 켜지고 꺼진다. 새 쪽지 알림의 PC통신 감성. */
@@ -643,17 +643,17 @@ a {
 }
 
 .bbs-notification.level-error {
-    color: #ff5555;
+    color: #ffffff;
     border-color: #ff5555;
 }
 
 .bbs-notification.level-success {
-    color: #55ff55;
+    color: #ffffff;
     border-color: #55ff55;
 }
 
 .bbs-notification.level-info {
-    color: #55ffff;
+    color: #ffffff;
     border-color: #55ffff;
 }
 
@@ -827,7 +827,7 @@ a {
 
 .palette-group-header {
     background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
     font-size: 12px;
     padding: 4px 12px;
     text-transform: uppercase;
@@ -861,19 +861,17 @@ a {
 }
 
 .palette-item-key {
-    color: #55ffff;
-    /* ANSI Cyan-ish */
+    color: #ffffff;
     font-weight: bold;
     min-width: 6ch;
 }
 
 .palette-item-label {
-    color: #ffff55;
-    /* ANSI Yellow-ish */
+    color: #ffffff;
 }
 
 .palette-item-desc {
-    color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
     font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
@@ -891,7 +889,7 @@ a {
 .palette-item.is-empty {
     text-align: center;
     padding: 40px 20px;
-    color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
 }
 
 .palette-footer {
@@ -903,7 +901,7 @@ a {
 
 .palette-hint {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
 }
 
 @media (max-width: 768px) {
@@ -971,7 +969,7 @@ a {
 .shortcut-helper-title {
     font-size: 1.2em;
     font-weight: bold;
-    color: var(--ansi-yellow);
+    color: #ffffff;
     text-align: center;
     border-bottom: 1px solid var(--color);
     padding-bottom: 10px;
@@ -1018,7 +1016,7 @@ a {
 }
 
 .column-title {
-    color: var(--ansi-yellow);
+    color: #ffffff;
     font-weight: bold;
     font-size: 0.9em;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -1029,7 +1027,7 @@ a {
 .shortcut-helper-footer {
     text-align: center;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
     margin-top: 10px;
 }
 
@@ -1148,7 +1146,7 @@ a {
 }
 
 .suggestion-quick-hint .hint-label {
-    color: var(--ansi-yellow);
+    color: #ffffff;
     font-weight: bold;
     background: rgba(255, 255, 0, 0.15);
     padding: 1px 6px;
@@ -1156,17 +1154,17 @@ a {
 }
 
 .suggestion-quick-hint .hint-sep {
-    color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
 }
 
 .suggestion-quick-hint .hint-tip {
-    color: var(--ansi-cyan);
+    color: #ffffff;
     font-family: 'DungGeunMo', monospace;
     font-size: 0.9em;
 }
 
 .suggestion-quick-hint .hint-desc {
-    color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
     font-size: 0.85em;
     margin-left: 4px;
     white-space: nowrap;

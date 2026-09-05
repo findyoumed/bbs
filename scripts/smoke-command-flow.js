@@ -176,8 +176,12 @@ async function main() {
       const loginNotice = loginPage.locator('#login-small-notice');
       await loginNotice.waitFor({ state: 'visible', timeout: 3000 });
       const loginNoticeText = await loginNotice.innerText();
+      const loginNoticeColor = await loginNotice.evaluate((node) => getComputedStyle(node).color);
       if (!loginNoticeText.includes('GO NOTICE')) {
         failures.push('pre-login login screen did not render GO NOTICE');
+      }
+      if (loginNoticeColor !== 'rgb(255, 255, 255)') {
+        failures.push(`pre-login small notice foreground is ${loginNoticeColor}, expected white`);
       }
     } catch (error) {
       failures.push(`pre-login login screen notice failed: ${error.message}`);

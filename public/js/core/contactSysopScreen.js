@@ -230,7 +230,7 @@ export function createContactSysopScreen(deps) {
     overflow: hidden !important;
   }
   .tosysop-ed-validation {
-    color: #ffff55 !important;
+    color: #ffffff !important;
     font-family: inherit;
     white-space: pre-wrap;
     padding: 2px 0;
@@ -252,7 +252,7 @@ export function createContactSysopScreen(deps) {
       ? '내용을 작성한 후 마지막 줄 첫 칸에 마침표(.)를 찍고 Enter를 누르면 전송합니다.'
       : '제목을 입력한 후 Enter를 누르면 내용을 작성합니다.'}
   </div>
-  <div id="tosysop-ed-separator" style="display:${bodyInitiallyVisible ? 'block' : 'none'};color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
+  <div id="tosysop-ed-separator" style="display:${bodyInitiallyVisible ? 'block' : 'none'};color:#ffffff;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   <div id="tosysop-ed-body-row" class="tosysop-ed-body-wrapper" style="display:${bodyInitiallyVisible ? 'flex' : 'none'};">
     <label for="${bodyId}" class="tosysop-ed-label" style="padding-bottom:4px;">내    용 :</label>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>

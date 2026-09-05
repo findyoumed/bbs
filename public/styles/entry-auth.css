@@ -180,7 +180,8 @@
 /* The historical small notice belongs to the pre-login screen. Keep it
    visually attached to the login transcript and keyboard/click reachable. */
 .entry-login-small-notice {
-    color: #ffff00;
+    /* All terminal copy uses the project-wide white foreground. */
+    color: #ffffff !important;
     cursor: pointer;
     margin: 4px 0;
     white-space: pre-wrap;

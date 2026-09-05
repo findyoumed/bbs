@@ -600,7 +600,7 @@ export function createMemoScreens(deps) {
   /* [LOG_ID: 20260811_1546] 필수 입력 오류는 하단 힌트바가 아닌
      해당 입력 행 바로 위에 표시해 전송·취소 안내를 보존한다. */
   .memo-ed-validation {
-    color: #ffff55 !important;
+    color: #ffffff !important;
     font-family: inherit;
     white-space: pre-wrap;
     padding: 2px 0;
@@ -621,7 +621,7 @@ export function createMemoScreens(deps) {
             ? '제목을 입력한 후 Enter를 누르면 내용을 작성합니다.'
             : '받는 사람을 입력한 후 Enter를 누르면 제목을 입력합니다.'}
   </div>
-  <div id="memo-ed-separator" style="display:${bodyInitiallyVisible ? 'block' : 'none'};color:#555;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
+  <div id="memo-ed-separator" style="display:${bodyInitiallyVisible ? 'block' : 'none'};color:#ffffff;font-size:inherit;line-height:inherit;letter-spacing:0;white-space:pre;user-select:none;margin:2px 0;flex-shrink:0;">${sep}</div>
   <div id="memo-ed-body-row" class="memo-ed-body-wrapper" style="display:${bodyInitiallyVisible ? 'flex' : 'none'};">
     <label for="${bodyId}" class="memo-ed-label" style="padding-bottom:4px;">내    용 :</label>
     <textarea id="${bodyId}" spellcheck="false" autocomplete="off" style="${textareaStyle}"></textarea>
