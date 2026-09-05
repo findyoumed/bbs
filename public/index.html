@@ -14,6 +14,11 @@
     <link rel="dns-prefetch" href="https://jynbmavtipserkozlgwt.supabase.co">
     <link rel="preconnect" href="https://jynbmavtipserkozlgwt.supabase.co" crossorigin>
 
+    <!-- [LOG_ID: 20260905_0100] Start the public TOP shell while the module
+         graph is downloading so the first terminal frame is not serialized
+         behind JavaScript startup or a cold API function. -->
+    <link rel="preload" href="/bootstrap-shell.json" as="fetch" type="application/json" crossorigin>
+
     <!-- [LOG: 20260426_1410] 테마 로딩 초고속 동기화: 자바스크립트 실행 즉시 스타일 주입 (플리커 완전 차단) -->
     <style>
         /* [LOG: 20260426_1640] 최우선순위 배경색: 브라우저 기본 흰색 노출 방지 */

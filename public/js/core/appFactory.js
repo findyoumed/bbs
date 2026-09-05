@@ -22,7 +22,6 @@ import { bindAppEvents } from './appEvents.js';
 import { createRoutingModule } from './routingModule.js';
 import { createTerminalUiCore } from './terminalUiCore.js';
 import { createTerminalStatusManager } from './terminalStatusManager.js';
-import { createCommandPalette } from './commandPalette.js';
 import { createCommandDispatcher } from './commandDispatcher.js';
 import { createSystemLogger } from './systemLogger.js';
 import { createNetworkService } from './networkService.js';
@@ -375,7 +374,6 @@ export function initApp(deps) {
     UI_TEXT,
     bindAppEvents,
     createCommandDispatcher,
-    createCommandPalette,
     createInteractionHandlers,
     createRoutingModule,
     refs,

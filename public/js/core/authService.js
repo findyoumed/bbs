@@ -1,6 +1,3 @@
-import { createAuthServiceActions } from './authServiceActions.js';
-import { createAuthServiceBootstrap } from './authServiceBootstrap.js';
-
 export function createAuthService(deps) {
   const {
     apiFetch,
@@ -10,6 +7,61 @@ export function createAuthService(deps) {
   } = deps;
 
   let unreadNotificationPromise = null;
+  let authActionsPromise = null;
+  let authBootstrapPromise = null;
+  let authInitializationPromise = null;
+
+  // Authentication actions and recovery handling are not needed to render the
+  // public TOP screen. Keep their implementations out of the initial module
+  // graph, while exposing stable async facades to every existing caller.
+  function loadAuthActions() {
+    if (!authActionsPromise) {
+      authActionsPromise = import('./authServiceActions.js').then((module) => module.createAuthServiceActions({
+        ...deps,
+        guestUser,
+        refreshUser
+      }));
+    }
+    return authActionsPromise;
+  }
+
+  function callAuthAction(name, args) {
+    const needsAuthBootstrap = [
+      'doLogin',
+      'doSignup',
+      'requestPasswordReset',
+      'startOAuthLogin',
+      'updatePasswordByRecovery'
+    ].includes(name) && !state.supabase;
+    const authReady = needsAuthBootstrap
+      ? Promise.resolve(initAuth()).catch(() => null)
+      : Promise.resolve();
+    return authReady.then(() => loadAuthActions()).then((actions) => {
+      const action = actions?.[name];
+      if (typeof action !== 'function') {
+        throw new Error(`Authentication action is unavailable: ${name}`);
+      }
+      return action(...args);
+    });
+  }
+
+  function initAuth() {
+    if (!authInitializationPromise) {
+      if (!authBootstrapPromise) {
+        authBootstrapPromise = import('./authServiceBootstrap.js').then((module) => module.createAuthServiceBootstrap({
+          ...deps,
+          refreshUser
+        }));
+      }
+      authInitializationPromise = authBootstrapPromise
+        .then((bootstrap) => bootstrap.initAuth())
+        .catch((error) => {
+          authInitializationPromise = null;
+          throw error;
+        });
+    }
+    return authInitializationPromise;
+  }
 
   function guestUser() {
     return { userId: 'guest', nickName: '손님', level: 1, isAdmin: false, isGuest: true };
@@ -112,19 +164,16 @@ export function createAuthService(deps) {
     updateUserInfo();
   }
 
-  const { initAuth } = createAuthServiceBootstrap({
-    ...deps,
-    refreshUser
-  });
-
-  const authActions = createAuthServiceActions({
-    ...deps,
-    guestUser,
-    refreshUser
-  });
-
   return {
-    ...authActions,
+    doLogin: (...args) => callAuthAction('doLogin', args),
+    doLogout: (...args) => callAuthAction('doLogout', args),
+    doSignup: (...args) => callAuthAction('doSignup', args),
+    precheckSignup: (...args) => callAuthAction('precheckSignup', args),
+    requestPasswordReset: (...args) => callAuthAction('requestPasswordReset', args),
+    resolveMemberEmail: (...args) => callAuthAction('resolveMemberEmail', args),
+    searchMember: (...args) => callAuthAction('searchMember', args),
+    startOAuthLogin: (...args) => callAuthAction('startOAuthLogin', args),
+    updatePasswordByRecovery: (...args) => callAuthAction('updatePasswordByRecovery', args),
     guestUser,
     flushUnreadMemoNotification,
     initAuth,

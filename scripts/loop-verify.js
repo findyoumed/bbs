@@ -42,6 +42,7 @@ const CHECKS = [
   { name: 'boards', file: 'smoke-boards.js' },
   { name: 'bootstrap-concurrency', file: 'smoke-bootstrap-concurrency.js' },
   { name: 'bootstrap-shell', file: 'smoke-bootstrap-shell.js' },
+  { name: 'startup-performance', file: 'performance-startup.js', args: ['--assert'] },
   { name: 'post-navigation', file: 'smoke-post-navigation.js' },
   { name: 'post-read-dedupe', file: 'smoke-post-read-dedupe.js' },
   { name: 'post-read-cache-hardening', file: 'smoke-post-read-cache-hardening.js' },
@@ -72,7 +73,7 @@ const CHECKS = [
 function runCheck(check) {
   const scriptPath = path.join(projectRoot, 'scripts', check.file);
   const startedAt = Date.now();
-  const result = spawnSync(process.execPath, [scriptPath], {
+  const result = spawnSync(process.execPath, [scriptPath, ...(check.args || [])], {
     cwd: projectRoot,
     encoding: 'utf8',
     // 출력을 캡처(콘솔로 스트리밍하지 않음) — 실패 항목만 증거를 뒤에 모아 출력한다.

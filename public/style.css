@@ -36,7 +36,9 @@
     unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F;
     font-weight: normal;
     font-style: normal;
-    font-display: block;
+    /* Show fallback glyphs immediately on slow/mobile networks; the local
+       WOFF2 replaces them when ready without blocking the ANSI frame. */
+    font-display: swap;
 }
 @font-face {
     font-family: 'BbsHybridFont';
@@ -45,7 +47,7 @@
     unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F;
     font-weight: bold;
     font-style: normal;
-    font-display: block;
+    font-display: swap;
 }
 
 @font-face {
@@ -54,7 +56,7 @@
          url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
     font-style: normal;
-    font-display: block;
+    font-display: swap;
 }
 @font-face {
     font-family: 'BbsPrimaryFont';
@@ -62,7 +64,7 @@
          url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: bold;
     font-style: normal;
-    font-display: block;
+    font-display: swap;
 }
 
 @font-face {
@@ -71,7 +73,7 @@
          url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: normal;
     font-style: normal;
-    font-display: block;
+    font-display: swap;
 }
 @font-face {
     font-family: 'BbsHintFont';
@@ -79,7 +81,7 @@
          url('/fonts/DungGeunMo.woff') format('woff');
     font-weight: bold;
     font-style: normal;
-    font-display: block;
+    font-display: swap;
 }
 
 @font-face {
@@ -4004,15 +4006,53 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
    centred body width and one horizontal inset for every ANSI screen; the
    existing wrapping rules still protect long prose and URLs. */
 @media (max-width: 768px) and (orientation: portrait) {
+    /* Keep every visible mobile surface on the same content rail. The ANSI
+       body is capped at 44 columns; the footer and inline game prompts must
+       use that exact rail instead of expanding to the viewport edges. */
+    #terminal-container {
+        /* 44 columns at the regular 12px mobile terminal font. Store the
+           resolved pixel rail so children with the 17px topbar font do not
+           recalculate 44ch to a wider, different rail. */
+        --mobile-content-rail: min(330px, calc(100% - 8px));
+    }
+
     #terminal-screen .ansi-screen-body,
     #terminal-screen .ansi-screen-body[data-screen-kind="myinfo"] {
-        width: min(44ch, calc(100% - 8px));
-        max-width: min(44ch, calc(100% - 8px));
+        width: var(--mobile-content-rail);
+        max-width: var(--mobile-content-rail);
         margin-left: auto;
         margin-right: auto;
         padding-left: 1px;
         padding-right: 1px;
         box-sizing: border-box;
+    }
+
+    #terminal-screen .retro-topbar--ansi .retro-topbar-row1,
+    #terminal-screen .retro-topbar--ansi .retro-topbar-row2,
+    #terminal-screen .retro-topbar--ansi .retro-topbar-hr,
+    #terminal-screen .game-prompt-host {
+        width: var(--mobile-content-rail);
+        max-width: var(--mobile-content-rail);
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+    }
+
+    #terminal-screen .game-prompt-host {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    #terminal-screen .game-prompt-host #terminal-prompt-row {
+        width: 100%;
+    }
+
+    #terminal-footer {
+        /* Use the viewport unit here: a percentage inside the inherited
+           custom property would be resolved against each footer child and
+           can be rejected by older mobile CSS parsers. */
+        padding-left: max(4px, calc((100vw - 330px) / 2)) !important;
+        padding-right: max(4px, calc((100vw - 330px) / 2)) !important;
     }
 }
 
@@ -4053,5 +4093,63 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
 @media (max-width: 400px) and (orientation: portrait) {
     body[data-screen="board-select"] .ansi-line {
         min-height: 23px !important;
+    }
+}
+
+/* [LOG_ID: 20260905_0410] Desktop content-rail alignment. The terminal
+   wrapper can remain 800px wide while the ANSI screen is capped by its
+   80-column font size. Header rows and the footer previously kept separate
+   widths, so the horizontal rules and command line did not share the body
+   edges at 1024px/1366px and diverged again at the 20px large-screen scale.
+   Use the rendered ANSI screen rail as the single desktop reference. */
+@media (min-width: 769px) {
+    #terminal-screen .ansi-screen {
+        width: min(100%, calc(80ch + 32px));
+        max-width: calc(80ch + 32px);
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+    }
+
+    #terminal-screen .retro-topbar--ansi {
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+    }
+
+    #terminal-screen .retro-topbar--ansi .retro-topbar-row1,
+    #terminal-screen .retro-topbar--ansi .retro-topbar-row2 {
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+    }
+
+    #terminal-screen .retro-topbar--ansi .retro-topbar-hr {
+        width: calc(100% - 32px);
+        max-width: none;
+        margin-left: 16px;
+        margin-right: 16px;
+        box-sizing: border-box;
+    }
+
+    /* Game prompts are mounted as a sibling of .ansi-screen rather than
+       inside its body. Give them the body's 80-column content width so the
+       prompt does not expand back to the full 800px terminal wrapper. */
+    #terminal-screen .game-prompt-host {
+        width: min(calc(100% - 32px), 80ch);
+        max-width: min(calc(100% - 32px), 80ch);
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 0;
+        padding-right: 0;
+        box-sizing: border-box;
+    }
+
+    #terminal-footer {
+        width: min(100%, calc(80ch + 32px));
+        max-width: calc(80ch + 32px);
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
     }
 }

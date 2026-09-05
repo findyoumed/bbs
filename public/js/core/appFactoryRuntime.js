@@ -4,7 +4,6 @@ export function initializeAppFactoryRuntime(deps) {
     UI_TEXT,
     bindAppEvents,
     createCommandDispatcher,
-    createCommandPalette,
     createInteractionHandlers,
     createRoutingModule,
     refs,
@@ -261,13 +260,6 @@ export function initializeAppFactoryRuntime(deps) {
     setGhostText: services.terminalUiCore.setGhostText,
     setSuggestions: services.terminalUiCore.setSuggestions
   });
-  const commandPalette = createCommandPalette({
-    state,
-    terminalUiCore: services.terminalUiCore,
-    handleCmd,
-    soundService: services.soundService
-  });
-
   bindAppEvents({
     cmdInput: services.cmdInput,
     handleCmd,
@@ -279,8 +271,7 @@ export function initializeAppFactoryRuntime(deps) {
     interruptRendering: services.terminalUiCore.interruptRendering,
     saveHistory: services.settingsService.saveHistory,
     jumpToContent: screens.jumpToContent,
-    interactionHandlers,
-    commandPalette
+    interactionHandlers
   });
 
   let hasLoggedSystemInfo = false;

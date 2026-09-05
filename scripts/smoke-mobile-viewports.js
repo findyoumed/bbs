@@ -104,6 +104,16 @@ async function runMobileSmokeTests() {
         label: 'Short desktop (1024x600)',
         viewport: { width: 1024, height: 600 },
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      {
+        label: 'Desktop (1366x768)',
+        viewport: { width: 1366, height: 768 },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      {
+        label: 'Large desktop (1920x1080)',
+        viewport: { width: 1920, height: 1080 },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     ];
 
@@ -172,6 +182,7 @@ async function runMobileSmokeTests() {
       });
       const page = await context.newPage();
       const isLandscapeViewport = vp.viewport.width > vp.viewport.height;
+      const isDesktopViewport = vp.viewport.width >= 1024;
       // Keep a single slow route from leaving the smoke process alive
       // indefinitely when a local API or external dependency is unavailable.
       page.setDefaultTimeout(7000);
@@ -230,6 +241,83 @@ async function runMobileSmokeTests() {
           const terminalScreen = document.getElementById('terminal-screen');
           const footerRect = footer?.getBoundingClientRect() || null;
           const cmdInputRect = cmdInput?.getBoundingClientRect() || null;
+          const railSelectors = [
+            '#terminal-screen .ansi-screen-body',
+            '#terminal-screen .retro-topbar--ansi .retro-topbar-row1',
+            '#terminal-screen .retro-topbar--ansi .retro-topbar-row2',
+            '#terminal-screen .retro-topbar--ansi .retro-topbar-hr',
+            '#terminal-screen .ansi-line--separator',
+            '#terminal-screen .game-prompt-host',
+            '#terminal-footer #terminal-prompt-row',
+            '#terminal-footer #cmd-hint'
+          ];
+          const railCandidates = railSelectors
+            .flatMap((selector) => Array.from(document.querySelectorAll(selector)).map((element) => ({ selector, element })))
+            .filter(({ element }) => {
+              if (!element) return false;
+              const style = getComputedStyle(element);
+              const rect = element.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden'
+                && rect.width > 0 && rect.height > 0;
+            })
+            .map(({ selector, element }) => {
+              const rect = element.getBoundingClientRect();
+              const computed = getComputedStyle(element);
+              // At large desktop sizes the terminal canvas is intentionally
+              // scaled with a CSS transform (for example 800 CSS px rendered
+              // as 1000 device px).  getBoundingClientRect() is already in
+              // rendered pixels, while computed padding is in CSS pixels;
+              // convert the inset before comparing rails.
+              const scaleX = element.offsetWidth > 0
+                ? rect.width / element.offsetWidth
+                : 1;
+              const isDesktopRailBox = window.innerWidth >= 1024 && (
+                element.matches('.ansi-screen-body')
+                || selector.includes('retro-topbar-row1')
+                || selector.includes('retro-topbar-row2')
+              );
+              const leftInset = isDesktopRailBox
+                ? Number.parseFloat(computed.paddingLeft || '0') * scaleX
+                : 0;
+              const rightInset = isDesktopRailBox
+                ? Number.parseFloat(computed.paddingRight || '0') * scaleX
+                : 0;
+              return {
+                selector: element.matches('.ansi-screen-body') ? '.ansi-screen-body' : selector,
+                left: rect.left + leftInset,
+                right: rect.right - rightInset,
+                width: rect.width - leftInset - rightInset
+              };
+            });
+          const railReference = railCandidates[0] || null;
+          const footerDivider = (() => {
+            if (!footer || !footerRect) return null;
+            const style = getComputedStyle(footer, '::before');
+            if (style.display === 'none' || style.visibility === 'hidden') return null;
+            const footerBox = getComputedStyle(footer);
+            const footerScaleX = footer.offsetWidth > 0
+              ? footerRect.width / footer.offsetWidth
+              : 1;
+            const paddingLeft = Number.parseFloat(footerBox.paddingLeft || '0') * footerScaleX;
+            const paddingRight = Number.parseFloat(footerBox.paddingRight || '0') * footerScaleX;
+            const left = footerRect.left + paddingLeft;
+            // The pseudo-element uses width:100%, which is returned as the
+            // unresolved percentage by some browsers. Its containing block is
+            // the footer content box, so derive the used width from padding.
+            const width = footerRect.width - paddingLeft - paddingRight;
+            return Number.isFinite(width) && width > 0
+              ? { left, right: left + width, width }
+              : null;
+          })();
+          const railMisalignment = railReference
+            ? railCandidates.filter((item) => (
+              Math.abs(item.left - railReference.left) > 1.5
+              || Math.abs(item.right - railReference.right) > 1.5
+            )).concat(footerDivider && (
+              Math.abs(footerDivider.left - railReference.left) > 1.5
+              || Math.abs(footerDivider.right - railReference.right) > 1.5
+            ) ? [{ selector: '#terminal-footer::before', ...footerDivider }] : [])
+            : [];
 
           // Text can be clipped by a fixed-width child without increasing the
           // document scrollWidth (for example #terminal-screen has overflow-x:hidden).
@@ -348,6 +436,9 @@ async function runMobileSmokeTests() {
             innerHeight: window.innerHeight,
             footerBottom: footerRect ? footerRect.bottom : null,
             cmdInputBottom: cmdInputRect ? cmdInputRect.bottom : null,
+            railCandidates,
+            footerDivider,
+            railMisalignment,
             screenScrollHeight: terminalScreen?.scrollHeight || 0,
             screenClientHeight: terminalScreen?.clientHeight || 0,
             screenOverflowY: terminalScreen ? getComputedStyle(terminalScreen).overflowY : '',
@@ -379,6 +470,23 @@ async function runMobileSmokeTests() {
           continue;
         }
 
+        if ((!isLandscapeViewport || isDesktopViewport) && geometry.railMisalignment.length > 0) {
+          const details = geometry.railMisalignment
+            .map((item) => `${item.selector} ${item.left.toFixed(1)}..${item.right.toFixed(1)}`)
+            .join('; ');
+          console.error(`  (Mobile content rail misaligned: ${details})`);
+          errors.push({
+            type: 'content-width-misalignment',
+            viewport: vp.label,
+            message: `${route.name}: visible content rails do not share the same left/right edge (${details})`
+          });
+          continue;
+        }
+
+        const isMobilePortrait = !isLandscapeViewport && !isDesktopViewport;
+        // Text must remain inside the viewport on portrait mobile and on
+        // desktop alike. Landscape phone layouts intentionally permit a
+        // horizontal terminal rail, so they keep the legacy exception.
         if (!isLandscapeViewport && geometry.textOverflow.length > 0) {
           const first = geometry.textOverflow[0];
           const details = geometry.textOverflow
@@ -406,7 +514,7 @@ async function runMobileSmokeTests() {
         }
 
         // 하단 명령창/힌트바가 뷰포트 아래로 밀려 잘리지 않는지(세로 높이 문제) 함께 확인한다.
-        if (geometry.screen === 'post-list') {
+        if (isMobilePortrait && geometry.screen === 'post-list') {
           const wrappedRows = geometry.postRows.filter((row) => row.rectCount !== 1 || row.height > 26);
           if (wrappedRows.length > 0) {
             const first = wrappedRows[0];
@@ -421,7 +529,7 @@ async function runMobileSmokeTests() {
         }
 
         const wrappedSeparators = geometry.separatorRows.filter((row) => row.rectCount !== 1 || row.height > 26);
-        if (wrappedSeparators.length > 0) {
+        if (isMobilePortrait && wrappedSeparators.length > 0) {
           const first = wrappedSeparators[0];
           console.error(`  (Separator wrapped on mobile: height=${first.height}, rects=${first.rectCount})`);
           errors.push({
@@ -486,7 +594,7 @@ async function runMobileSmokeTests() {
               };
             });
         });
-        if (!isLandscapeViewport && undersizedTargets.length > 0) {
+        if (isMobilePortrait && undersizedTargets.length > 0) {
           const first = undersizedTargets[0];
           console.error(`  (Interactive target below 24px: ${first.tag}.${first.className} ${first.width}x${first.height})`);
           errors.push({

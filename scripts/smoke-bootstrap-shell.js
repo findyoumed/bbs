@@ -30,10 +30,11 @@ function main() {
   assert(JSON.stringify(shell.menu) === JSON.stringify(expectedMenu), 'bootstrap shell menu should match MenuResolver output');
   assert(JSON.stringify(shell.boards) === JSON.stringify(expectedBoards), 'bootstrap shell boards should match resolver output');
   assert(navigation.includes("fetch('/bootstrap-shell.json'"), 'navigation should load the public bootstrap shell first');
+  assert(read('public/index.html').includes('rel="preload" href="/bootstrap-shell.json" as="fetch" type="application/json" crossorigin'), 'index should preload the public bootstrap shell with matching fetch credentials');
   assert(navigation.includes("apiFetch('/api/bootstrap', { silent: true })"), 'navigation should refresh live bootstrap data in the background');
   assert(navigation.includes('hydrateBoards(liveBootstrap.boards)'), 'live bootstrap refresh should update the board index');
-  assert(app.includes('await authReady;\n      await restoreStateFromURL();'), 'non-root routes should wait for authentication before restoring state');
-  assert(app.includes('await showMain();\n      void authReady.then'), 'root route should render before background authentication completes');
+  assert(app.includes('await ensureAuth();\n      await restoreStateFromURL();'), 'non-root routes should wait for authentication before restoring state');
+  assert(app.includes('await showMain();\n      scheduleIdle(() =>'), 'root route should render before background authentication completes');
 
   console.log(JSON.stringify({
     ok: true,

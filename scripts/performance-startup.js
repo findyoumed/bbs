@@ -16,7 +16,10 @@ const ASSERT_MODE = process.argv.includes('--assert');
 const COLD_RUNS = 5;
 const READY_TIMEOUT_MS = 15000;
 const TARGETS = {
-  maxApiRequests: 6,
+  // The public TOP now uses the generated shell and defers auth/session
+  // hydration, so only bootstrap should be on the critical guest path.
+  // Leave one fallback slot for a transient shell-cache miss.
+  maxApiRequests: 2,
   // [LOG_ID: 20260805_1435] Lock in the reduced optional-feature startup graph
   // while retaining headroom for small maintenance changes.
   maxColdTransferBytes: Math.floor(1.7 * 1024 * 1024),

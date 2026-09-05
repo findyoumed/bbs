@@ -238,6 +238,14 @@ async function streamFile(res, filePath, options = {}) {
     headers['Cache-Control'] = 'no-cache';
     validatorHeaders['Cache-Control'] = 'no-cache';
   }
+  // [LOG_ID: 20260905_0445] The generated public bootstrap shell is safe to
+  // reuse briefly: menuNavigation refreshes live data in the background, so
+  // a short browser/CDN cache removes a repeat request without making board
+  // changes stale for a full asset-cache lifetime.
+  if (path.basename(filePath) === 'bootstrap-shell.json') {
+    headers['Cache-Control'] = 'public, max-age=60, stale-while-revalidate=300';
+    validatorHeaders['Cache-Control'] = headers['Cache-Control'];
+  }
   if (['.woff', '.woff2', '.ttf'].includes(ext)) {
     headers['Cache-Control'] = 'public, max-age=86400, stale-while-revalidate=604800';
     validatorHeaders['Cache-Control'] = headers['Cache-Control'];

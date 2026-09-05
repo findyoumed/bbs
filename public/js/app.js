@@ -69,6 +69,22 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Defer non-critical authentication work until the first public frame has
+// painted. The timeout fallback keeps login state responsive on browsers that
+// do not implement requestIdleCallback.
+function scheduleIdle(callback, timeout = 1200) {
+  // requestIdleCallback may run immediately on an otherwise idle tab. Give
+  // the first terminal frame a small guaranteed head start before scheduling
+  // Supabase/auth work, while retaining an upper bound for responsiveness.
+  window.setTimeout(() => {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(callback, { timeout });
+      return;
+    }
+    callback();
+  }, 250);
+}
+
 // [LOG: 20260427_2033] 초기 렌더 전에 핵심 폰트를 먼저 준비해 FOUT(폰트 번쩍임)과 화면 튐을 줄인다.
 async function waitForPrimaryFonts(timeoutMs = 2500) {
   const rootEl = document.documentElement;
@@ -130,29 +146,46 @@ async function init() {
 
   try {
     // [LOG_ID: 20260804_1405] Bootstrap data is public and independent from
-    // auth setup, so start both network paths together.
+    // auth setup, so start the public bootstrap path immediately. Auth is
+    // scheduled after the first TOP frame below.
     void preloadBootstrap().catch(() => {});
     // [LOG: 20260416_2233] 병목 제거: 인증 초기화를 먼저 수행하여 중복 렌더링 방지
-    let authReady = Promise.resolve();
+    let authReady = null;
     try {
-      authReady = initAuth().catch(() => null);
+      // Authentication is started by ensureAuth() after the public shell is
+      // ready; this try block remains as a compatibility guard for older
+      // callers that expect authReady to be initialized here.
+      authReady = null;
     } catch (authError) {
       // [LOG_ID: 20260806_1600] AI 코딩 주석화 — console.warn 주석 처리
       // console.warn('인증 초기화 실패 (손님 모드 지속):', authError.message);
     }
 
+    const ensureAuth = () => {
+      if (!authReady) {
+        try {
+          authReady = Promise.resolve(initAuth()).catch(() => null);
+        } catch (authError) {
+          authReady = Promise.resolve(null);
+        }
+      }
+      return authReady;
+    };
+
     if (window.location.pathname !== '/') {
-      await authReady;
+      await ensureAuth();
       await restoreStateFromURL();
       await flushUnreadMemoNotification?.();
     } else {
       await showMain();
-      void authReady.then(async () => {
-        const input = document.getElementById('cmd-input');
-        if (!state.user?.isGuest && state.screen === 'main' && !String(input?.value || '').trim()) {
-          await showMain(true);
-        }
-        await flushUnreadMemoNotification?.();
+      scheduleIdle(() => {
+        void ensureAuth().then(async () => {
+          const input = document.getElementById('cmd-input');
+          if (!state.user?.isGuest && state.screen === 'main' && !String(input?.value || '').trim()) {
+            await showMain(true);
+          }
+          await flushUnreadMemoNotification?.();
+        });
       });
     }
   } catch (e) {
