@@ -204,16 +204,130 @@ async function verifyMobileEditorGeometry(browser) {
             viewport: window.innerWidth,
             scrollWidth: Math.max(root.scrollWidth, body.scrollWidth),
             contentWidth: root.clientWidth,
+            footer: (() => {
+              const el = document.querySelector('#terminal-footer');
+              return el ? { clientWidth: el.clientWidth, scrollWidth: el.scrollWidth } : null;
+            })(),
             visibleText
           };
         });
         assert(geometry.scrollWidth <= geometry.contentWidth + 1,
           `${viewport.label} ${pathname} overflowed horizontally: ${JSON.stringify(geometry)}`);
+        assert(geometry.footer && geometry.footer.scrollWidth <= geometry.footer.clientWidth + 1,
+          `${viewport.label} ${pathname} footer overflowed horizontally: ${JSON.stringify(geometry.footer)}`);
         const outside = geometry.visibleText.filter((item) =>
           item.left < -1.5 || item.right > geometry.viewport + 1.5
         );
         assert(outside.length === 0,
           `${viewport.label} ${pathname} content rail escaped viewport: ${JSON.stringify(outside)}`);
+      }
+    } finally {
+      await context.close();
+    }
+  }
+}
+
+async function verifyDesktopEditorGeometry(browser) {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const page = await context.newPage();
+  try {
+    await installApiStubs(page, { memo: [], contact: [] });
+    for (const pathname of ['/memo/write', '/guide/tosysop']) {
+      await openAuthenticated(page, pathname);
+      await page.waitForSelector(pathname === '/memo/write' ? '#memo-ed-target' : '#tosysop-ed-target');
+      const geometry = await page.evaluate(() => {
+        const screen = document.querySelector('#terminal-screen .ansi-screen');
+        const body = document.querySelector('#terminal-screen .ansi-screen-body');
+        const footer = document.querySelector('#terminal-footer');
+        const rect = (el) => {
+          if (!el) return null;
+          const value = el.getBoundingClientRect();
+          return { left: value.left, right: value.right, width: value.width };
+        };
+        return { screen: rect(screen), body: rect(body), footer: rect(footer) };
+      });
+      assert(geometry.screen && geometry.body,
+        `desktop ${pathname} editor geometry missing: ${JSON.stringify(geometry)}`);
+      assert(Math.abs(geometry.screen.width - geometry.body.width) <= 1,
+        `desktop ${pathname} body width diverged from screen rail: ${JSON.stringify(geometry)}`);
+      assert(Math.abs(geometry.screen.left - geometry.body.left) <= 1 &&
+        Math.abs(geometry.screen.right - geometry.body.right) <= 1,
+        `desktop ${pathname} body edges diverged from screen rail: ${JSON.stringify(geometry)}`);
+    }
+  } finally {
+    await context.close();
+  }
+}
+
+async function verifyLargeDesktopRail(browser) {
+  const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+  const page = await context.newPage();
+  try {
+    for (const pathname of ['/board/plaza', '/help']) {
+      await page.goto(`${config.BASE_URL}${pathname}`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('#terminal-screen .ansi-screen');
+      const geometry = await page.evaluate(() => {
+        const screen = document.querySelector('#terminal-screen .ansi-screen');
+        const body = document.querySelector('#terminal-screen .ansi-screen-body');
+        const rect = (el) => {
+          if (!el) return null;
+          const value = el.getBoundingClientRect();
+          return { left: value.left, right: value.right, width: value.width };
+        };
+        return {
+          screen: rect(screen),
+          body: rect(body),
+          screenClientWidth: screen?.clientWidth ?? 0,
+          screenScrollWidth: screen?.scrollWidth ?? 0,
+          bodyClientWidth: body?.clientWidth ?? 0,
+          bodyScrollWidth: body?.scrollWidth ?? 0
+        };
+      });
+      assert(geometry.screen && geometry.body,
+        `large desktop ${pathname} rail missing: ${JSON.stringify(geometry)}`);
+      assert(geometry.screenScrollWidth <= geometry.screenClientWidth + 1 &&
+        geometry.bodyScrollWidth <= geometry.bodyClientWidth + 1,
+        `large desktop ${pathname} rail overflowed: ${JSON.stringify(geometry)}`);
+      assert(Math.abs(geometry.screen.width - geometry.body.width) <= 1,
+        `large desktop ${pathname} body width diverged: ${JSON.stringify(geometry)}`);
+    }
+  } finally {
+    await context.close();
+  }
+}
+
+async function verifyCompactLandscapeRail(browser) {
+  for (const viewport of [
+    { width: 568, height: 320, label: 'compact landscape' },
+    { width: 844, height: 390, label: 'phone landscape' }
+  ]) {
+    const context = await browser.newContext({
+      viewport: { width: viewport.width, height: viewport.height },
+      isMobile: true,
+      hasTouch: true
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(`${config.BASE_URL}/board/plaza`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('#terminal-screen .ansi-screen');
+      const geometry = await page.evaluate(() => {
+        const selectors = ['#terminal-screen .ansi-screen', '#terminal-screen .ansi-screen-body', '#terminal-footer'];
+        const rect = (selector) => {
+          const value = document.querySelector(selector)?.getBoundingClientRect();
+          return value ? { left: value.left, right: value.right, width: value.width } : null;
+        };
+        return Object.fromEntries(selectors.map((selector) => [selector, rect(selector)]));
+      });
+      const screen = geometry['#terminal-screen .ansi-screen'];
+      const body = geometry['#terminal-screen .ansi-screen-body'];
+      const footer = geometry['#terminal-footer'];
+      assert(screen && body && footer,
+        `${viewport.label} shared rail missing: ${JSON.stringify(geometry)}`);
+      for (const [name, rail] of [['body', body], ['footer', footer]]) {
+        assert(Math.abs(screen.width - rail.width) <= 1 &&
+          Math.abs(screen.left - rail.left) <= 1 &&
+          Math.abs(screen.right - rail.right) <= 1,
+          `${viewport.label} ${name} rail diverged: ${JSON.stringify(geometry)}`);
       }
     } finally {
       await context.close();
@@ -294,6 +408,9 @@ async function main() {
       await verifyMemoEditor(page, calls);
       await verifyContactEditor(page, calls);
       await verifyMobileEditorGeometry(browser);
+      await verifyDesktopEditorGeometry(browser);
+      await verifyLargeDesktopRail(browser);
+      await verifyCompactLandscapeRail(browser);
       await verifyToastAndMobile(browser);
     } finally {
       await context.close();
@@ -303,6 +420,9 @@ async function main() {
       'memo click/Enter/Tab/empty validation/send',
       'fixed sysop contact click/Enter/send',
       'authenticated editor geometry at 320/390px',
+      'desktop editor body matches screen rail',
+      'large desktop 80-column rail has no internal overflow',
+      'compact landscape footer matches 80-column rail',
       'mobile horizontal overflow guard'
     ] }, null, 2));
   } finally {

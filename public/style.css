@@ -2979,6 +2979,16 @@ body[data-print-view="true"] .ansi-screen {
 
 /* [LOG: PC] Ultra-high resolution causing the terminal width to look unnaturally wide */
 @media (min-width: 1920px) {
+    /* The 20px high-resolution ANSI font renders 80 columns at 800px.
+       Leave room for the body's 16px gutters on both sides; otherwise the
+       800px app shell clips the last column and creates a 16px internal
+       scroll width on HELP and board lists. */
+    .app-shell,
+    #terminal-wrapper {
+        width: min(100%, 832px);
+        max-width: 832px;
+    }
+
     #terminal-wrapper {
         max-width: 1200px;
         height: min(calc(100vh - 120px), 800px);
@@ -3818,6 +3828,9 @@ body[data-screen="post-write"] .ansi-screen-body,
 body[data-screen="memo-write"] .ansi-screen-body,
 body[data-screen="contact-sysop"] .ansi-screen-body {
     flex: 1;
+    width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
     min-height: 0;
     overflow: hidden !important;
     display: flex;
@@ -3967,6 +3980,17 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
         margin-right: auto !important;
     }
 
+    /* The compact landscape body uses an 80-column rail. Keep the command
+       footer on that same rail instead of expanding it to the full viewport
+       while the keyboard-height layout is active. */
+    #terminal-footer {
+        width: min(100%, 80ch) !important;
+        max-width: 80ch !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        box-sizing: border-box;
+    }
+
     /* The portrait touch-chip size cannot fit a keyboard-height landscape
        footer.  Keep the hint on one compact line; keyboard focus remains the
        authoritative action path for this viewport. */
@@ -4053,6 +4077,16 @@ body[data-screen="contact-sysop"] .ansi-screen-body {
            can be rejected by older mobile CSS parsers. */
         padding-left: max(4px, calc((100vw - 330px) / 2)) !important;
         padding-right: max(4px, calc((100vw - 330px) / 2)) !important;
+    }
+
+    /* The divider is an unbreakable 80-column string. Without an explicit
+       flex shrink bound it keeps its intrinsic width on narrow screens and
+       leaves an invisible horizontal overflow inside the footer. Keep the
+       divider on the same mobile rail as the hint and prompt. */
+    #terminal-footer:not([data-footer-state="hidden"])::before {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
     }
 }
 
