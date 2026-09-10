@@ -18,7 +18,8 @@ const steps = [
   ['loop:verify', 'deterministic local regression gate'],
   ['smoke:mobile', 'mobile and responsive browser flows'],
   ['smoke:production', 'Production API/security smoke'],
-  ['smoke:production-ui', 'Production UI geometry/font smoke']
+  ['smoke:production-ui', 'Production UI geometry/font smoke'],
+  ['smoke:production-interactions', 'Production click/keyboard/touch smoke']
 ];
 
 function runStep(script, description) {
