@@ -85,7 +85,25 @@ async function main() {
     await input.fill(password);
     await input.press('Enter');
 
-    await page.waitForFunction(() => !document.querySelector('#login-transcript'), null, { timeout: TIMEOUT });
+    // A successful auth callback can leave the previous transcript node in
+    // place for one render tick while the main screen is mounting. Treat the
+    // persisted Supabase token as the authoritative completion signal.
+    try {
+      await page.waitForFunction(() => {
+        const hasToken = Object.values(localStorage).some((raw) => String(raw || '').includes('access_token'));
+        return hasToken || !document.querySelector('#login-transcript');
+      }, null, { timeout: TIMEOUT });
+    } catch (error) {
+      const diagnostics = await page.evaluate(() => ({
+        path: location.pathname,
+        loginTranscript: Boolean(document.querySelector('#login-transcript')),
+        inputPresent: Boolean(document.querySelector('#cmd-input')),
+        inputValueLength: document.querySelector('#cmd-input')?.value?.length || 0,
+        storageKeys: Object.keys(localStorage),
+        screenText: String(document.querySelector('#terminal-screen')?.textContent || '').slice(-240)
+      }));
+      throw new Error(`login UI did not establish a session: ${JSON.stringify(diagnostics)} (${error.message})`);
+    }
     const token = await readStoredAccessToken(page);
     if (!token) fail('authenticated UI flow completed without a stored Supabase access token');
 
