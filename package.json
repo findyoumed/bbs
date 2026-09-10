@@ -65,7 +65,8 @@
     "smoke:supabase-security": "node scripts/smoke-supabase-security-contract.js",
     "smoke:secret-scan": "node scripts/smoke-secret-scan.js",
     "qa:final": "node scripts/final-qa-report.js",
-    "loop:verify": "node scripts/loop-verify.js"
+    "loop:verify": "node scripts/loop-verify.js",
+    "qa:release": "node scripts/qa-release.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
