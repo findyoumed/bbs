@@ -61,6 +61,7 @@
     "smoke:all-menu-links": "node scripts/smoke-all-menu-links.mjs",
     "smoke:production": "node scripts/smoke-production.js",
     "smoke:production-ui": "node scripts/smoke-production-ui.mjs",
+    "smoke:production-auth": "node scripts/smoke-production-auth.mjs",
     "smoke:vercel-env": "node scripts/smoke-vercel-env-contract.js",
     "smoke:supabase-security": "node scripts/smoke-supabase-security-contract.js",
     "smoke:secret-scan": "node scripts/smoke-secret-scan.js",
