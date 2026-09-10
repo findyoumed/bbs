@@ -4,7 +4,9 @@
  * Set BBS_SMOKE_EMAIL and BBS_SMOKE_PASSWORD only in the invoking shell (or
  * CI secret store). The values are never printed or persisted. The smoke logs
  * in through the real terminal flow, then checks the bearer session against
- * authenticated read APIs without creating posts, memos, or email.
+ * authenticated read APIs. BBS_SMOKE_WRITE=1 additionally creates and
+ * removes one test post; memo writes stay disabled because recipients can
+ * trigger external email notifications.
  */
 'use strict';
 
@@ -13,6 +15,7 @@ import { chromium } from 'playwright';
 const BASE_URL = String(process.env.BBS_PRODUCTION_URL || 'https://01410.vercel.app').replace(/\/$/, '');
 const email = String(process.env.BBS_SMOKE_EMAIL || '').trim();
 const password = String(process.env.BBS_SMOKE_PASSWORD || '');
+const writeEnabled = process.env.BBS_SMOKE_WRITE === '1';
 const TIMEOUT = 30000;
 
 function fail(message) {
@@ -35,19 +38,25 @@ async function readStoredAccessToken(page) {
   });
 }
 
-async function fetchAuthed(page, token, path) {
-  return page.evaluate(async ({ token: accessToken, path: requestPath }) => {
+async function fetchAuthed(page, token, path, options = {}) {
+  return page.evaluate(async ({ token: accessToken, path: requestPath, method, body }) => {
     const response = await fetch(requestPath, {
-      headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}` }
+      method,
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {})
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {})
     });
-    let body = null;
+    let responseBody = null;
     try {
-      body = await response.json();
+      responseBody = await response.json();
     } catch {
-      body = null;
+      responseBody = null;
     }
-    return { status: response.status, body };
-  }, { token, path });
+    return { status: response.status, body: responseBody };
+  }, { token, path, method: options.method || 'GET', body: options.body });
 }
 
 async function main() {
@@ -95,7 +104,39 @@ async function main() {
       results.push({ path, status: result.status });
     }
 
-    console.log(JSON.stringify({ ok: true, baseUrl: BASE_URL, checks: results }, null, 2));
+    if (writeEnabled) {
+      const stamp = Date.now();
+      const title = `[auth smoke] ${stamp}`;
+      const created = await fetchAuthed(page, token, '/api/boards/plaza/posts', {
+        method: 'POST',
+        body: { title, content: `production auth smoke ${stamp}` }
+      });
+      if (created.status !== 201) {
+        fail(`/api/boards/plaza/posts expected 201 but received ${created.status}`);
+      }
+      const createdPost = created.body?.data?.post || created.body?.post || created.body?.data || created.body;
+      const postId = createdPost?.localId ?? createdPost?.id;
+      if (!postId) fail('production auth smoke post response did not include an id');
+
+      try {
+        const viewed = await fetchAuthed(page, token, `/api/boards/plaza/posts/${encodeURIComponent(postId)}`);
+        if (viewed.status !== 200) {
+          fail(`/api/boards/plaza/posts/${postId} expected 200 but received ${viewed.status}`);
+        }
+        results.push({ path: `/api/boards/plaza/posts/${postId}`, status: viewed.status });
+      } finally {
+        const removed = await fetchAuthed(page, token, `/api/boards/plaza/posts/${encodeURIComponent(postId)}`, {
+          method: 'DELETE',
+          body: {}
+        });
+        if (removed.status !== 200) {
+          fail(`/api/boards/plaza/posts/${postId} cleanup expected 200 but received ${removed.status}`);
+        }
+        results.push({ path: `/api/boards/plaza/posts/${postId}`, method: 'DELETE', status: removed.status });
+      }
+    }
+
+    console.log(JSON.stringify({ ok: true, baseUrl: BASE_URL, writeEnabled, checks: results }, null, 2));
     await context.close();
   } finally {
     await browser.close();
