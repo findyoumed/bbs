@@ -11,7 +11,21 @@ import { chromium } from 'playwright';
 
 const BASE_URL = String(process.env.PRODUCTION_BASE_URL || 'https://01410.vercel.app').replace(/\/$/, '');
 const TIMEOUT = 30000;
-const ROUTES = ['/', '/board/plaza', '/help', '/memo', '/guide/tosysop'];
+// Include the public auth entry points and guest-safe editor shells as well as
+// the main navigation routes. These paths do not submit data; they only verify
+// that the same responsive terminal rails survive auth/editor entry screens.
+const ROUTES = [
+  '/',
+  '/board/plaza',
+  '/help',
+  '/memo',
+  '/guide/tosysop',
+  '/log/login',
+  '/log/signup',
+  '/log/password',
+  '/memo/write',
+  '/myinfo'
+];
 const VIEWPORTS = [
   { width: 390, height: 844, label: 'iPhone 14' },
   { width: 568, height: 320, label: 'compact landscape' },
