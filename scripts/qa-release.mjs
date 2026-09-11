@@ -19,7 +19,8 @@ const steps = [
   ['smoke:mobile', 'mobile and responsive browser flows'],
   ['smoke:production', 'Production API/security smoke'],
   ['smoke:production-ui', 'Production UI geometry/font smoke'],
-  ['smoke:production-interactions', 'Production click/keyboard/touch smoke']
+  ['smoke:production-interactions', 'Production click/keyboard/touch smoke'],
+  ['smoke:production-performance', 'Production startup performance smoke']
 ];
 
 function runStep(script, description) {

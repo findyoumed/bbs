@@ -31,6 +31,21 @@ async function readInput(page) {
   }));
 }
 
+async function waitForLoginNotice(page) {
+  const notice = page.locator('#login-small-notice');
+  try {
+    await notice.waitFor({ state: 'visible', timeout: TIMEOUT });
+  } catch (error) {
+    // The notice is hydrated by a separate read-only request. A cold
+    // Supabase/Vercel edge can outlive the first browser timeout, so reload
+    // once before treating the missing notice as a regression.
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: TIMEOUT });
+    await page.waitForSelector('#terminal-screen', { timeout: TIMEOUT });
+    await notice.waitFor({ state: 'visible', timeout: TIMEOUT });
+  }
+  return notice;
+}
+
 async function verifyDesktop(page) {
   await openReady(page, '/');
   const prefill = page.locator('#cmd-hint [data-cmd-prefill^="GO"]').first();
@@ -54,15 +69,13 @@ async function verifyDesktop(page) {
   await page.waitForTimeout(500);
 
   await openReady(page, '/log/login');
-  const notice = page.locator('#login-small-notice');
-  await notice.waitFor({ state: 'visible', timeout: TIMEOUT });
+  const notice = await waitForLoginNotice(page);
   await notice.click();
   await page.waitForURL('**/notice', { timeout: TIMEOUT });
   assert(page.url().endsWith('/notice'), `notice click did not navigate: ${page.url()}`);
 
   await openReady(page, '/log/login');
-  const keyboardNotice = page.locator('#login-small-notice');
-  await keyboardNotice.waitFor({ state: 'visible', timeout: TIMEOUT });
+  const keyboardNotice = await waitForLoginNotice(page);
   await keyboardNotice.focus();
   await keyboardNotice.press('Enter');
   await page.waitForURL('**/notice', { timeout: TIMEOUT });
