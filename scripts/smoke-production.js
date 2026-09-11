@@ -15,6 +15,8 @@ const origin = String(process.env.BBS_PRODUCTION_URL || DEFAULT_ORIGIN)
   .trim()
   .replace(/\/+$/, '');
 const timeoutMs = Math.max(3000, Number(process.env.PRODUCTION_SMOKE_TIMEOUT_MS) || 20000);
+const rateLimitRetries = Math.max(0, Math.min(3, Number(process.env.PRODUCTION_SMOKE_429_RETRIES ?? 1)));
+const maxRateLimitWaitMs = Math.max(1000, Math.min(60000, Number(process.env.PRODUCTION_SMOKE_429_MAX_WAIT_MS) || 60000));
 
 if (!/^https:\/\//i.test(origin)) {
   throw new Error('BBS_PRODUCTION_URL must be an https origin');
@@ -82,25 +84,46 @@ const checks = [
   { path: '/api/members/search?nickName=__production_smoke_missing__&allowMissing=1', statuses: [200], label: 'member lookup' }
 ];
 
+function retryAfterMs(headers) {
+  const value = String(headers?.get?.('retry-after') || '').trim();
+  if (!value) return 5000;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(1000, seconds * 1000);
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? Math.max(1000, timestamp - Date.now()) : 5000;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchWithTimeout(url, options = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, {
-      method: options.method || 'GET',
-      redirect: 'error',
-      headers: {
-        Accept: 'application/json,text/html;q=0.9',
-        ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        ...(options.headers || {})
-      },
-      ...(options.body !== undefined ? { body: options.body } : {}),
-      signal: controller.signal
-    });
-    const body = await response.text();
-    return { status: response.status, body, headers: response.headers };
-  } finally {
-    clearTimeout(timer);
+  for (let attempt = 0; ; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, {
+        method: options.method || 'GET',
+        redirect: 'error',
+        headers: {
+          Accept: 'application/json,text/html;q=0.9',
+          ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...(options.headers || {})
+        },
+        ...(options.body !== undefined ? { body: options.body } : {}),
+        signal: controller.signal
+      });
+      const body = await response.text();
+      if (response.status === 429 && attempt < rateLimitRetries) {
+        const delayMs = Math.min(maxRateLimitWaitMs, retryAfterMs(response.headers));
+        console.log(`  ↻ rate limit (429); retrying ${options.method || 'GET'} ${url} in ${delayMs}ms`);
+        await wait(delayMs);
+        continue;
+      }
+      return { status: response.status, body, headers: response.headers };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 
