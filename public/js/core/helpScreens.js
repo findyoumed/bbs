@@ -1,6 +1,7 @@
 import { createAnsiBuilderUtils } from './ansiBuilderUtils.js';
 import { renderAnsiScreenWithTopbarSequential } from './ansiTopbarScreen.js';
 import { CMD_META } from './commandService.js';
+import { getHistoricalGoAliasEntries } from './historicalGoAliases.js';
 import { UI_TEXT } from './i18n.js';
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 
@@ -178,16 +179,29 @@ export function createHelpScreens(deps) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const targetCols = isMobile ? 44 : 80;
 
-    const meta = CMD_META[cmdKey.toUpperCase()];
+    const normalizedCmdKey = String(cmdKey || '').trim().toUpperCase();
+    const meta = CMD_META[normalizedCmdKey];
     if (!meta) return null;
 
+    const historicalAliasLines = normalizedCmdKey === 'GO'
+      ? buildLabeledWrappedLines(
+        '원전 별칭',
+        getHistoricalGoAliasEntries()
+          .map(({ alias, target }) => `${alias}→${target}`)
+          .join('  '),
+        14,
+        targetCols
+      )
+      : [];
+
     const parts = [
-      buildTopHeader({ leftLabel: 'HELP', centerLabel: `${UI_TEXT.HELP}: ${cmdKey.toUpperCase()}` }, buildPageLabel(1, 1), targetCols),
+      buildTopHeader({ leftLabel: 'HELP', centerLabel: `${UI_TEXT.HELP}: ${normalizedCmdKey}` }, buildPageLabel(1, 1), targetCols),
       '',
-      `${ansiColor(11)}${UI_TEXT.COMMAND_NAME}: ${ansiColor(14)}${cmdKey.toUpperCase()}${ANSI_RESET}`,
+      `${ansiColor(11)}${UI_TEXT.COMMAND_NAME}: ${ansiColor(14)}${normalizedCmdKey}${ANSI_RESET}`,
       `${ansiColor(11)}${UI_TEXT.LABEL}: ${ansiColor(15)}${meta.label}${ANSI_RESET}`,
       ...buildLabeledWrappedLines(UI_TEXT.DESCRIPTION, meta.desc || UI_TEXT.NO_DESCRIPTION, 15, targetCols),
       ...buildLabeledWrappedLines(UI_TEXT.USAGE, meta.tip, 14, targetCols),
+      ...historicalAliasLines,
       `${ansiColor(11)}${UI_TEXT.CATEGORY}: ${ansiColor(15)}${CAT_LABELS[meta.cat] || meta.cat}${ANSI_RESET}`,
       `${ansiColor(11)}${UI_TEXT.LOGIN_REQUIRED_SHORT}: ${ansiColor(15)}${meta.login ? 'YES' : 'NO'}${ANSI_RESET}`,
       '',

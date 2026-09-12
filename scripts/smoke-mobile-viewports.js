@@ -1030,6 +1030,30 @@ async function verifyMobileLongTextFlows(page, viewportLabel, errors) {
       && !/불러오는 중/.test(document.querySelector('#cmd-hint')?.textContent || ''),
     { timeout: 8000 }
   );
+  // The long-text assertion targets the renderer/layout, not the external
+  // RSS article crawler. Keep the live topic/list flow above, then provide a
+  // deterministic detail payload so a slow or unavailable provider cannot
+  // turn a mobile geometry check into a false negative.
+  const newsDetailRoute = async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        available: true,
+        article: {
+          no: 1,
+          title: '모바일 긴 본문 레이아웃 점검용 기사',
+          body: '가로폭을 확인하기 위한 긴 기사 본문입니다. '.repeat(80),
+          description: '',
+          link: 'https://example.com/mobile-layout-fixture',
+          date: '2026-09-12',
+          dateTime: '2026-09-12T00:00:00.000Z',
+          sourceTitle: '01410 UI smoke'
+        }
+      })
+    });
+  };
+  await page.route('**/api/services/news/*/*', newsDetailRoute);
   const newsInput = page.locator('#cmd-input');
   await newsInput.fill('1');
   await newsInput.press('Enter');
@@ -1044,6 +1068,7 @@ async function verifyMobileLongTextFlows(page, viewportLabel, errors) {
     () => document.body.dataset.screen === 'news-view',
     { timeout: 3500 }
   ).catch(() => {});
+  await page.unroute('**/api/services/news/*/*', newsDetailRoute);
   await page.waitForTimeout(300);
   const newsScreen = await page.evaluate(() => document.body.dataset.screen || '');
   if (newsScreen === 'news-view') {

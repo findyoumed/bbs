@@ -1,6 +1,10 @@
 import { shouldAutoFocusCommandInput } from './uiUtils.js';
 import { renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
 import { convertKoreanToEnglish } from './commandNormalizer.js';
+import {
+  isEditorEnterKey as isEnterKey,
+  isEditorForwardFieldKey as isForwardFieldKey
+} from './editorKeyboardUtils.js';
 
 /**
  * contactSysopScreen.js
@@ -355,7 +359,7 @@ export function createContactSysopScreen(deps) {
     function onSubjectKey(e) {
       if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape') { e.preventDefault(); cancelContactSysop(); return; }
-      if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      if (isForwardFieldKey(e)) {
         e.preventDefault();
         revealBodyStage();
         safeFocus(bodyEl);
@@ -366,7 +370,7 @@ export function createContactSysopScreen(deps) {
     function onTargetKey(e) {
       if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape') { e.preventDefault(); cancelContactSysop(); return; }
-      if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      if (isForwardFieldKey(e)) {
         e.preventDefault();
         safeFocus(subjectEl);
         subjectEl.setSelectionRange(0, 0);
@@ -390,7 +394,7 @@ export function createContactSysopScreen(deps) {
         subjectEl.setSelectionRange(subjectEl.value.length, subjectEl.value.length);
         return;
       }
-      if (e.key === 'Enter') {
+      if (isEnterKey(e)) {
         const pos = bodyEl.selectionStart;
         const before = bodyEl.value.substring(0, pos);
         const currentLine = before.split('\n').pop().trim();

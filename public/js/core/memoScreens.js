@@ -9,6 +9,10 @@ import { expandRecipients } from './memoGroups.js';
 // 전달) — 즉 전역 normalizeCommand()의 두벌식 자모 보정(koAliasMap: 'ㅔ'→P 등)을 거치지
 // 않는다. contactSysopScreen.js에서 같은 이유로 이미 고친 것과 동일한 헬퍼를 여기도 둔다.
 import { convertKoreanToEnglish } from './commandNormalizer.js';
+import {
+  isEditorEnterKey as isEnterKey,
+  isEditorForwardFieldKey as isForwardFieldKey
+} from './editorKeyboardUtils.js';
 
 // [LOG_ID: 20260713_1620] 하이텔 원전(길라잡이 p.105) 편지 종류 8종 — 비밀/답장요망/지연
 // 3개 속성의 조합. 서버 스키마 변경 없이 제목 앞 대괄호 태그로 인코딩한다.
@@ -842,20 +846,6 @@ export function createMemoScreens(deps) {
         // [LOG_ID: 20260811_1330] Keyboard layouts/IME modes can report Enter
         // as key, code, or legacy keyCode. Treat all browser variants as the
         // same next-field action, matching the existing Tab behavior.
-        function isEnterKey(e) {
-            return e?.key === 'Enter'
-                || e?.code === 'Enter'
-                || e?.code === 'NumpadEnter'
-                || e?.keyCode === 13
-                || e?.which === 13;
-        }
-
-        function isForwardFieldKey(e) {
-            return isEnterKey(e)
-                || e?.key === 'ArrowDown'
-                || (e?.key === 'Tab' && !e.shiftKey);
-        }
-
         function onTargetKey(e) {
             if (e.type === 'keypress' && !isForwardFieldKey(e)) return;
             if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) { e.preventDefault(); doSave(); return; }

@@ -31,10 +31,29 @@ export const HISTORICAL_GO_ALIASES = Object.freeze({
   BLUEHS: 'TOSYSOP'
 });
 
+// These commands already have dedicated global router branches.  Keep them
+// out of the alias resolver to avoid changing routing precedence, but expose
+// them to the historical command catalog and GO help screen.
+export const HISTORICAL_GO_DIRECT_COMMANDS = Object.freeze({
+  CMAIL: 'CMAIL',
+  ME: 'ME',
+  MEMO: 'MEMO',
+  RMAIL: 'RMAIL',
+  WMAIL: 'WMAIL'
+});
+
 export function resolveHistoricalGoAlias(target, normalize = null) {
   const normalizer = typeof normalize === 'function'
     ? normalize
     : (value) => String(value || '').replace(/\s+/g, '').trim().toUpperCase();
   const normalized = normalizer(target);
   return HISTORICAL_GO_ALIASES[normalized] || normalized;
+}
+
+// Keep help and command routing on the same source of truth.  Consumers can
+// render these entries without knowing how the alias object is represented.
+export function getHistoricalGoAliasEntries() {
+  return Object.entries({ ...HISTORICAL_GO_ALIASES, ...HISTORICAL_GO_DIRECT_COMMANDS })
+    .map(([alias, target]) => ({ alias, target }))
+    .sort((left, right) => left.alias.localeCompare(right.alias, 'ko'));
 }

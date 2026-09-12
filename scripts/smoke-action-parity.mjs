@@ -73,6 +73,18 @@ async function verifyImmediateClickAndEnter(page) {
   assert(page.url().endsWith('/help'), `H Enter should navigate to /help: ${page.url()}`);
 }
 
+async function verifyHistoricalGoHelp(page) {
+  await openMain(page);
+  const input = page.locator('#cmd-input');
+  await input.fill('HELP GO');
+  await input.press('Enter');
+  await page.waitForSelector('#terminal-container[data-screen="help"]');
+  const text = await page.locator('#terminal-screen').innerText();
+  assert(text.includes('TOJUNG'), `GO help should expose the historical TOJUNG alias: ${text}`);
+  assert(text.includes('RMAIL'), `GO help should expose the direct RMAIL command: ${text}`);
+  assert(text.includes('CHATIN'), `GO help should expose the historical CHATIN alias: ${text}`);
+}
+
 async function verifyMobilePrefill(browser) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -87,6 +99,41 @@ async function verifyMobilePrefill(browser) {
     assert(state.value === 'GO ', `mobile GO click should prefill exactly "GO ": ${JSON.stringify(state)}`);
     assert(state.screen === 'main' && state.url === '/', `mobile GO click should not navigate: ${JSON.stringify(state)}`);
     assert(state.active !== 'cmd-input', `mobile GO click should not force focus/keyboard: ${JSON.stringify(state)}`);
+  } finally {
+    await context.close();
+  }
+}
+
+async function verifyMobileHistoricalGoHelp(browser) {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true
+  });
+  const page = await context.newPage();
+  try {
+    await openMain(page);
+    const input = page.locator('#cmd-input');
+    await input.fill('HELP GO');
+    await input.press('Enter');
+    await page.waitForSelector('#terminal-container[data-screen="help"]');
+    const text = await page.locator('#terminal-screen').innerText();
+    const compactText = text.replace(/\s+/g, '');
+    assert(compactText.includes('TOJUNG'), `mobile GO help should expose TOJUNG: ${text}`);
+    assert(compactText.includes('RMAIL'), `mobile GO help should expose RMAIL: ${text}`);
+    const geometry = await page.evaluate(() => {
+      const screen = document.getElementById('terminal-screen');
+      const container = document.getElementById('terminal-container');
+      return {
+        screenWidth: screen?.scrollWidth || 0,
+        containerWidth: container?.clientWidth || 0,
+        viewportWidth: document.documentElement.clientWidth || 0
+      };
+    });
+    assert(
+      geometry.screenWidth <= geometry.viewportWidth + 1,
+      `mobile GO help should not overflow horizontally: ${JSON.stringify(geometry)}`
+    );
   } finally {
     await context.close();
   }
@@ -114,11 +161,13 @@ async function main() {
     try {
       await verifyPrefillClickAndEnter(page);
       await verifyImmediateClickAndEnter(page);
+      await verifyHistoricalGoHelp(page);
       await verifyMobilePrefill(browser);
+      await verifyMobileHistoricalGoHelp(browser);
     } finally {
       await context.close();
     }
-    console.log(JSON.stringify({ ok: true, checks: ['desktop prefill click', 'desktop prefill Enter', 'desktop immediate click', 'desktop immediate Enter', 'mobile prefill focus guard'] }, null, 2));
+    console.log(JSON.stringify({ ok: true, checks: ['desktop prefill click', 'desktop prefill Enter', 'desktop immediate click', 'desktop immediate Enter', 'historical GO help aliases', 'mobile prefill focus guard', 'mobile historical GO help layout'] }, null, 2));
   } finally {
     if (browser) await browser.close();
     await stopServer(serverHandle);

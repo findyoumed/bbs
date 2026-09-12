@@ -149,7 +149,8 @@ async function verifyContactEditor(page, calls) {
   await page.locator('#tosysop-ed-target').click();
   assert(await page.evaluate(() => document.activeElement?.id) === 'tosysop-ed-subject', 'target click should focus subject');
   await page.fill('#tosysop-ed-subject', 'Contact parity');
-  await page.locator('#tosysop-ed-subject').press('Enter');
+  // Exercise the shared editor key contract with the keypad variant too.
+  await page.locator('#tosysop-ed-subject').press('NumpadEnter');
   assert(await page.evaluate(() => document.activeElement?.id) === 'tosysop-ed-body', 'contact subject Enter should focus body');
   assert(await page.evaluate(() => getComputedStyle(document.getElementById('tosysop-ed-body-row')).display) === 'flex',
     'contact subject Enter should reveal body stage');

@@ -27,6 +27,7 @@ function resolveReferencePath(relativePath) {
 const { ansiToHTML } = loadBrowserHarnessModule(path.join(coreDir, 'ansiRenderUtils.js'), moduleCache);
 const { createTerminalHintMarkup } = loadBrowserHarnessModule(path.join(coreDir, 'terminalHintMarkup.js'), moduleCache);
 const { createMenuNavigationActions } = loadBrowserHarnessModule(path.join(coreDir, 'menuNavigationActions.js'), moduleCache);
+const { getHistoricalGoAliasEntries } = loadBrowserHarnessModule(path.join(coreDir, 'historicalGoAliases.js'), moduleCache);
 
 function verifyAnsiCsiSubset() {
   assert(ansiToHTML('A\x1b[sB\x1b[uC').rows[0] === 'AC', 'CSI save/restore must overwrite at the saved cell');
@@ -87,6 +88,12 @@ function verifyHistoricalMenuAliasSources() {
   // menu database, so only assert the transport text is present here.
   const ansi1 = fs.readFileSync(resolveReferencePath(path.join('nurie', 'ANSI1.NRE')), 'latin1');
   assert(/GO,HI,Z,X/i.test(ansi1), 'ANSI1.NRE should contain the historical GO footer hint');
+
+  const helpAliases = getHistoricalGoAliasEntries();
+  const helpAliasKeys = new Set(helpAliases.map(({ alias }) => alias));
+  for (const alias of ['TOJUNG', 'BIORYM', 'GUNGHAP', '유머란', 'CHATIN', 'RMAIL', 'WMAIL']) {
+    assert(helpAliasKeys.has(alias), `GO help alias catalog should expose ${alias}`);
+  }
 }
 
 async function verifyHistoricalGoAliases() {

@@ -62,12 +62,20 @@ function main() {
     'nurie-source/GOMENU.C',
     'public/js/core/commandRouterService.js',
     'public/js/core/terminalUiCore.js',
+    'public/js/core/editorKeyboardUtils.js',
     'public/style.css',
     'scripts/smoke-go-ansi.js',
     'scripts/smoke-command-parity.js',
     'scripts/smoke-mobile-viewports.js'
   ];
   for (const relativePath of referencedFiles) read(relativePath);
+
+  const editorKeyboard = read('public/js/core/editorKeyboardUtils.js');
+  assertIncludes(editorKeyboard, 'public/js/core/editorKeyboardUtils.js', [
+    'isEditorEnterKey',
+    'isEditorForwardFieldKey',
+    "event?.code === 'NumpadEnter'"
+  ]);
 
   const agents = read('AGENTS.md');
   assertIncludes(agents, 'AGENTS.md', [

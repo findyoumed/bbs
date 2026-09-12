@@ -338,6 +338,11 @@ async function verifyContactEditorInteraction(page, errors) {
             errors.push(`Fixed sysop recipient Enter did not advance to subject: ${targetEnterFocus}`);
         }
 
+        // The historical editor reveals the body after the subject is
+        // confirmed.  Fill must follow that state transition instead of
+        // attempting to write into the intentionally hidden body row.
+        await subject.press('Enter');
+        await body.waitFor({ state: 'visible' });
         await subject.fill('');
         await body.fill('');
         await subject.press('Control+s');

@@ -5,6 +5,10 @@ import { renderRawHtmlScreenWithTopbar } from './ansiTopbarScreen.js';
 // 않는다. contactSysopScreen.js/memoScreens.js에서 이미 고친 것과 동일한 헬퍼를 board 글쓰기
 // (가장 많이 쓰이는 화면)에도 적용한다.
 import { convertKoreanToEnglish } from './commandNormalizer.js';
+import {
+  isEditorEnterKey as isEnterKey,
+  isEditorForwardFieldKey as isForwardFieldKey
+} from './editorKeyboardUtils.js';
 
 export function createPostWriteView(deps) {
   const {
@@ -433,7 +437,7 @@ export function createPostWriteView(deps) {
     function onTitleKey(e) {
       if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
-      if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      if (isForwardFieldKey(e)) {
         e.preventDefault();
         focusFieldAfterTitle();
       }
@@ -442,7 +446,7 @@ export function createPostWriteView(deps) {
     function onKeywordKey(e) {
       if (e.ctrlKey && e.key === 's') { e.preventDefault(); doSave(); return; }
       if (e.key === 'Escape')         { e.preventDefault(); cleanup(); onCancel(); return; }
-      if (e.key === 'Enter' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      if (isForwardFieldKey(e)) {
         e.preventDefault();
         bodyEl.focus();
         revealBodyStage();
@@ -478,7 +482,7 @@ export function createPostWriteView(deps) {
         }
         return;
       }
-      if (e.key === 'Enter') {
+      if (isEnterKey(e)) {
         const pos = bodyEl.selectionStart;
         const before = bodyEl.value.substring(0, pos);
         const currentLine = before.split('\n').pop().trim();
