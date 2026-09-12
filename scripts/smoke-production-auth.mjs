@@ -40,22 +40,33 @@ async function readStoredAccessToken(page) {
 
 async function fetchAuthed(page, token, path, options = {}) {
   return page.evaluate(async ({ token: accessToken, path: requestPath, method, body }) => {
-    const response = await fetch(requestPath, {
-      method,
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {})
-      },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {})
-    });
-    let responseBody = null;
-    try {
-      responseBody = await response.json();
-    } catch {
-      responseBody = null;
+    for (let attempt = 0; attempt <= 2; attempt += 1) {
+      const response = await fetch(requestPath, {
+        method,
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {})
+        },
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+      });
+      if (response.status === 429 && attempt < 2) {
+        const retryAfter = Number(response.headers.get('retry-after') || '1');
+        const delayMs = Number.isFinite(retryAfter)
+          ? Math.min(5000, Math.max(1000, retryAfter * 1000))
+          : 1000;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      let responseBody = null;
+      try {
+        responseBody = await response.json();
+      } catch {
+        responseBody = null;
+      }
+      return { status: response.status, body: responseBody };
     }
-    return { status: response.status, body: responseBody };
+    return { status: 429, body: null };
   }, { token, path, method: options.method || 'GET', body: options.body });
 }
 
