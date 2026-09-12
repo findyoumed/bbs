@@ -13,17 +13,31 @@ function assignSupportedColumn(payload, capabilities, column, value, condition =
 }
 
 async function insertMappedPost(repo, payload, failureMessage) {
-  const { data, error } = await repo.client
-    .from(repo.tables.posts)
-    .insert(payload)
-    .select('*')
-    .single();
+  // Legacy deployments assign board-local local_id values in a trigger based
+  // on the current maximum. Two writers can therefore race on the same value
+  // even though the database unique constraint is working correctly. Retry
+  // only that known conflict; all other constraint errors remain fail-closed.
+  const maxLocalIdRetries = 2;
+  for (let attempt = 0; attempt <= maxLocalIdRetries; attempt += 1) {
+    const { data, error } = await repo.client
+      .from(repo.tables.posts)
+      .insert(payload)
+      .select('*')
+      .single();
 
-  if (error) {
-    throw createHttpError(502, `${failureMessage}: ${error.message}`);
+    if (!error) {
+      return mapPostRow(data);
+    }
+
+    const message = String(error.message || '').toLowerCase();
+    const isLocalIdConflict = error.code === '23505'
+      && (message.includes('local_id') || message.includes('board_id_local_id'));
+    if (!isLocalIdConflict || attempt >= maxLocalIdRetries) {
+      throw createHttpError(502, `${failureMessage}: ${error.message}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
   }
-
-  return mapPostRow(data);
 }
 
 async function initializeThreadRoot(repo, boardId, postId, now) {
